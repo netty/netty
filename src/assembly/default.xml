@@ -36,6 +36,7 @@
         <include>**/README*</include>
         <include>**/LICENSE*</include>
         <include>**/NOTICE*</include>
+        <include>**/COPYRIGHT*</include>
         <include>**/*.txt</include>
         <include>**/*.xml</include>
         <include>**/src/**</include>
