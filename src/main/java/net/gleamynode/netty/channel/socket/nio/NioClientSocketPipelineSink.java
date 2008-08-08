@@ -1,0 +1,289 @@
+/*
+ * Copyright (C) 2008  Trustin Heuiseung Lee
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, 5th Floor, Boston, MA 02110-1301 USA
+ */
+package net.gleamynode.netty.channel.socket.nio;
+
+import static net.gleamynode.netty.channel.ChannelUpstream.*;
+
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import net.gleamynode.netty.channel.AbstractChannelPipelineSink;
+import net.gleamynode.netty.channel.ChannelEvent;
+import net.gleamynode.netty.channel.ChannelException;
+import net.gleamynode.netty.channel.ChannelFuture;
+import net.gleamynode.netty.channel.ChannelFutureListener;
+import net.gleamynode.netty.channel.ChannelState;
+import net.gleamynode.netty.channel.ChannelStateEvent;
+import net.gleamynode.netty.channel.MessageEvent;
+import net.gleamynode.netty.pipeline.Pipeline;
+import net.gleamynode.netty.util.NamePreservingRunnable;
+
+class NioClientSocketPipelineSink extends AbstractChannelPipelineSink {
+
+    static final Logger logger =
+        Logger.getLogger(NioClientSocketPipelineSink.class.getName());
+    private static final AtomicInteger nextId = new AtomicInteger();
+
+    final int id = nextId.incrementAndGet();
+    final Executor bossExecutor;
+    private final Boss boss = new Boss();
+    private final NioWorker[] workers;
+    private final AtomicInteger workerIndex = new AtomicInteger();
+
+    NioClientSocketPipelineSink(
+            Executor bossExecutor, Executor workerExecutor, int workerCount) {
+        this.bossExecutor = bossExecutor;
+        workers = new NioWorker[workerCount];
+        for (int i = 0; i < workers.length; i ++) {
+            workers[i] = new NioWorker(id, i + 1, workerExecutor);
+        }
+    }
+
+    public void elementSunk(
+            Pipeline<ChannelEvent> pipeline, ChannelEvent element) throws Exception {
+        if (element instanceof ChannelStateEvent) {
+            ChannelStateEvent event = (ChannelStateEvent) element;
+            NioClientSocketChannel channel =
+                (NioClientSocketChannel) event.getChannel();
+            ChannelFuture future = event.getFuture();
+            ChannelState state = event.getState();
+            Object value = event.getValue();
+
+            switch (state) {
+            case OPEN:
+                if (Boolean.FALSE.equals(value)) {
+                    NioWorker.close(channel, future);
+                }
+                break;
+            case BOUND:
+                if (value != null) {
+                    bind(channel, future, (SocketAddress) value);
+                } else {
+                    NioWorker.close(channel, future);
+                }
+                break;
+            case CONNECTED:
+                if (value != null) {
+                    connect(channel, future, (SocketAddress) value);
+                } else {
+                    NioWorker.close(channel, future);
+                }
+                break;
+            case INTEREST_OPS:
+                NioWorker.setInterestOps(channel, future, ((Integer) value).intValue());
+                break;
+            }
+        } else if (element instanceof MessageEvent) {
+            MessageEvent event = (MessageEvent) element;
+            NioSocketChannel channel = (NioSocketChannel) event.getChannel();
+            channel.writeBuffer.offer(event);
+            NioWorker.write(channel);
+        }
+    }
+
+    private void bind(
+            NioClientSocketChannel channel, ChannelFuture future,
+            SocketAddress localAddress) {
+        try {
+            channel.socket.socket().bind(localAddress);
+            channel.boundManually = true;
+            future.setSuccess();
+            fireChannelBound(channel, channel.getLocalAddress());
+        } catch (Throwable t) {
+            future.setFailure(t);
+            fireExceptionCaught(channel, t);
+        }
+    }
+
+    private void connect(
+            final NioClientSocketChannel channel, ChannelFuture future,
+            SocketAddress remoteAddress) {
+        try {
+            if (channel.socket.connect(remoteAddress)) {
+                future.setSuccess();
+                nextWorker().register(channel);
+            } else {
+                future.addListener(new ChannelFutureListener() {
+                    public void operationComplete(ChannelFuture future) {
+                        if (future.isCancelled()) {
+                            channel.close();
+                        }
+                    }
+                });
+                channel.connectFuture = future;
+                boss.register(channel);
+            }
+
+        } catch (Throwable t) {
+            future.setFailure(t);
+            fireExceptionCaught(channel, t);
+        }
+    }
+
+    NioWorker nextWorker() {
+        return workers[Math.abs(
+                workerIndex.getAndIncrement() % workers.length)];
+    }
+
+    private class Boss implements Runnable {
+
+        private final AtomicBoolean started = new AtomicBoolean();
+        private volatile Selector selector;
+        private final Object selectorGuard = new Object();
+
+        Boss() {
+            super();
+        }
+
+        void register(NioSocketChannel channel) {
+            boolean firstChannel = started.compareAndSet(false, true);
+            Selector selector;
+            if (firstChannel) {
+                try {
+                    this.selector = selector = Selector.open();
+                } catch (IOException e) {
+                    throw new ChannelException(
+                            "Failed to create a selector.", e);
+                }
+            } else {
+                selector = this.selector;
+                if (selector == null) {
+                    do {
+                        Thread.yield();
+                        selector = this.selector;
+                    } while (selector == null);
+                }
+            }
+
+            if (firstChannel) {
+                try {
+                    channel.socket.register(selector, SelectionKey.OP_CONNECT, channel);
+                } catch (ClosedChannelException e) {
+                    throw new ChannelException(
+                            "Failed to register a socket to the selector.", e);
+                }
+                bossExecutor.execute(new NamePreservingRunnable(
+                        this,
+                        "New I/O client boss #" + id));
+            } else {
+                synchronized (selectorGuard) {
+                    selector.wakeup();
+                    try {
+                        channel.socket.register(selector, SelectionKey.OP_CONNECT, channel);
+                    } catch (ClosedChannelException e) {
+                        throw new ChannelException(
+                                "Failed to register a socket to the selector.", e);
+                    }
+                }
+            }
+        }
+
+        public void run() {
+            boolean shutdown = false;
+            Selector selector = this.selector;
+            for (;;) {
+                synchronized (selectorGuard) {
+                    // This empty synchronization block prevents the selector
+                    // from acquiring its lock.
+                }
+                try {
+                    int selectedKeyCount = selector.select(500);
+                    if (selectedKeyCount > 0) {
+                        processSelectedKeys(selector.selectedKeys());
+                    }
+
+                    if (selector.keys().isEmpty()) {
+                        if (shutdown) {
+                            try {
+                                selector.close();
+                            } catch (IOException e) {
+                                logger.log(
+                                        Level.WARNING,
+                                        "Failed to close a selector.", e);
+                            } finally {
+                                this.selector = null;
+                            }
+                            started.set(false);
+                            break;
+                        } else {
+                            // Give one more second.
+                            shutdown = true;
+                        }
+                    }
+                } catch (Throwable t) {
+                    logger.log(
+                            Level.WARNING,
+                            "Unexpected exception in the selector loop.", t);
+
+                    // Prevent possible consecutive immediate failures.
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        // Ignore.
+                    }
+                }
+            }
+        }
+
+        private void processSelectedKeys(Set<SelectionKey> selectedKeys) {
+            for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
+                SelectionKey k = i.next();
+                i.remove();
+
+                if (!k.isValid()) {
+                    close(k);
+                    continue;
+                }
+
+                if (k.isConnectable()) {
+                    connect(k);
+                }
+            }
+        }
+
+        private void connect(SelectionKey k) {
+            NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
+            try {
+                if (ch.socket.finishConnect()) {
+                    k.cancel();
+                    ch.connectFuture.setSuccess();
+                    nextWorker().register(ch);
+                }
+            } catch (IOException e) {
+                k.cancel();
+                fireExceptionCaught(ch, e);
+                close(k);
+            }
+        }
+
+        private void close(SelectionKey k) {
+            NioSocketChannel ch = (NioSocketChannel) k.attachment();
+            NioWorker.close(ch, ch.getSucceededFuture());
+        }
+    }
+}
