@@ -1,0 +1,56 @@
+
+                                     Netty
+
+                   Copyright (C) 2008  Trustin Heuiseung Lee
+
+--------------------------------------------------------------------------
+
+This product includes software developed by:
+
+ * Trustin Heuiseung Lee (http://gleamynode.net/)
+
+Please visit Netty web site for more information:
+
+ * http://www.jboss.org/netty/
+
+--------------------------------------------------------------------------
+
+This product is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This product is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, 5th Floor, Boston, MA 02110-1301 USA
+
+--------------------------------------------------------------------------
+
+Please refer to each LICENSE.<component>.txt file for the
+license terms of the components that Netty depends on.
+
+This product optionally depends on 'SLF4J', a simple logging facade for Java,
+which can be obtained at:
+
+  * http://www.slf4j.org/
+
+This product optionally depends on 'Apache Commons Logging', a logging
+framework, which can be obtained at:
+
+  * http://commons.apache.org/logging/
+
+This product optionally depends on 'Apache Log4J', a logging framework,
+which can be obtained at:
+
+  * http://logging.apache.org/log4j/
+
+This product optionally depends on 'JBoss Logging', a logging framework,
+which can be obtained at:
+
+  * http://anonsvn.jboss.org/repos/common/common-logging-spi/
+
