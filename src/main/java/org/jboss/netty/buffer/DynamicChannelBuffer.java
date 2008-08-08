@@ -201,9 +201,9 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public void writeNul(int length) {
+    public void writeZero(int length) {
         ensureWritableBytes(length);
-        super.writeNul(length);
+        super.writeZero(length);
     }
 
     public ChannelBuffer duplicate() {

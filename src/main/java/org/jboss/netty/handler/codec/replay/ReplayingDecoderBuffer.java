@@ -320,6 +320,10 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         reject();
     }
 
+    public void setZero(int index, int length) {
+        reject();
+    }
+
     public int setBytes(int index, ScatteringByteChannel in, int length)
             throws IOException {
         reject();
@@ -453,7 +457,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         reject();
     }
 
-    public void writeNul(int length) {
+    public void writeZero(int length) {
         reject();
     }
 

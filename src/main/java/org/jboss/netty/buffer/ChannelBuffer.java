@@ -401,24 +401,189 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      */
     void discardReadBytes();
 
+    /**
+     * Gets a byte at the specified absolute {@code index} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 1} is greater than {@code capacity}
+     */
     byte  getByte(int index);
+
+    /**
+     * Gets a 16-bit short integer at the specified absolute {@code index} in
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 2} is greater than {@code capacity}
+     */
     short getShort(int index);
+
+    /**
+     * Gets a 24-bit medium integer at the specified absolute {@code index} in
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 3} is greater than {@code capacity}
+     */
     int   getMedium(int index);
+
+    /**
+     * Gets a 32-bit integer at the specified absolute {@code index} in
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 4} is greater than {@code capacity}
+     */
     int   getInt(int index);
+
+    /**
+     * Gets a 64-bit long integer at the specified absolute {@code index} in
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 8} is greater than {@code capacity}
+     */
     long  getLong(int index);
 
+    /**
+     * Transfers this buffer's data to the specified destination starting at
+     * the specified absolute {@code index} until the destination becomes
+     * unwritable.  This method is basically same with {@link #getBytes(int, ChannelBuffer, int, int)},
+     * except that this method advances the {@code writerIndex} of the
+     * destination while {@link #getBytes(int, ChannelBuffer, int, int)}
+     * doesn't.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         if {@code index + dst.writableBytes} is greater than {@code capacity}
+     */
     void  getBytes(int index, ChannelBuffer dst);
+
+    /**
+     * Transfers this buffer's data to the specified destination starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0},
+     *         if the specified {@code dstIndex} is less than {@code 0},
+     *         if {@code index + length} is greater than {@code capacity}, or
+     *         if {@code dstIndex + length} is greater than {@code dst.capacity}
+     */
     void  getBytes(int index, ChannelBuffer dst, int dstIndex, int length);
+
+    /**
+     * Transfers this buffer's data to the specified destination starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         if {@code index + dst.length} is greater than {@code capacity}
+     */
     void  getBytes(int index, byte[] dst);
+
+    /**
+     * Transfers this buffer's data to the specified destination starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0},
+     *         if the specified {@code dstIndex} is less than {@code 0},
+     *         if {@code index + length} is greater than {@code capacity}, or
+     *         if {@code dstIndex + length} is greater than {@code dst.lenggth}
+     */
     void  getBytes(int index, byte[] dst, int dstIndex, int length);
+
+    /**
+     * Transfers this buffer's data to the specified destination starting at
+     * the specified absolute {@code index} until the destination's position
+     * reaches to its limit.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         if {@code index + dst.remaining()} is greater than {@code capacity}
+     */
     void  getBytes(int index, ByteBuffer dst);
+
+    /**
+     * Transfers this buffer's data to the specified stream starting at the
+     * specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         if {@code index + length} is greater than {@code capacity}
+     * @throws IOException
+     *         if the specified stream threw an exception during I/O
+     */
     void  getBytes(int index, OutputStream out, int length) throws IOException;
+
+    /**
+     * Transfers this buffer's data to the specified channel starting at the
+     * specified absolute {@code index}.
+     *
+     * @return the number of bytes written out to the specified channel
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         if {@code index + length} is greater than {@code capacity}
+     * @throws IOException
+     *         if the specified channel threw an exception during I/O
+     */
     int   getBytes(int index, GatheringByteChannel out, int length) throws IOException;
 
+    /**
+     * Sets the specified byte at the specified absolute {@code index} in this
+     * buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 1} is greater than {@code capacity}
+     */
     void setByte(int index, byte  value);
+
+    /**
+     * Sets the specified 16-bit short integer at the specified absolute
+     * {@code index} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 2} is greater than {@code capacity}
+     */
     void setShort(int index, short value);
+
+    /**
+     * Sets the specified 24-bit medium integer at the specified absolute
+     * {@code index} in this buffer.  Please note that the most significant
+     * byte is ignored in the specified value.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 3} is greater than {@code capacity}
+     */
     void setMedium(int index, int   value);
+
+    /**
+     * Sets the specified 32-bit integer at the specified absolute
+     * {@code index} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 4} is greater than {@code capacity}
+     */
     void setInt(int index, int   value);
+
+    /**
+     * Sets the specified 64-bit long integer at the specified absolute
+     * {@code index} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 8} is greater than {@code capacity}
+     */
     void setLong(int index, long  value);
 
     void setBytes(int index, ChannelBuffer src);
@@ -428,6 +593,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     void setBytes(int index, ByteBuffer src);
     void setBytes(int index, InputStream in, int length) throws IOException;
     int  setBytes(int index, ScatteringByteChannel in, int length) throws IOException;
+
+    void setZero(int index, int length);
 
     byte  readByte();
     short readShort();
@@ -465,7 +632,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     void writeBytes(InputStream in, int length) throws IOException;
     int  writeBytes(ScatteringByteChannel in, int length) throws IOException;
 
-    void writeNul(int length);
+    void writeZero(int length);
 
     int indexOf(int fromIndex, int toIndex, byte value);
     int indexOf(int fromIndex, int toIndex, ChannelBufferIndexFinder indexFinder);

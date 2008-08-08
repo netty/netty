@@ -139,6 +139,38 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         setBytes(index, src, src.readerIndex(), src.readableBytes());
     }
 
+    public void setZero(int index, int length) {
+        if (length == 0) {
+            return;
+        }
+        if (length < 0) {
+            throw new IllegalArgumentException(
+                    "length must be 0 or greater than 0.");
+        }
+
+        int nLong = length >>> 3;
+        int nBytes = length & 7;
+        for (int i = nLong; i > 0; i --) {
+            setLong(index, 0);
+            index += 8;
+        }
+        if (nBytes == 4) {
+            setInt(index, 0);
+        } else if (nBytes < 4) {
+            for (int i = nBytes; i > 0; i --) {
+                setByte(index, (byte) 0);
+                index ++;
+            }
+        } else {
+            setInt(index, 0);
+            index += 4;
+            for (int i = nBytes - 4; i > 0; i --) {
+                setByte(index, (byte) 0);
+                index ++;
+            }
+        }
+    }
+
     public byte readByte() {
         if (readerIndex == writerIndex) {
             throw new IndexOutOfBoundsException();
@@ -327,7 +359,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         return writtenBytes;
     }
 
-    public void writeNul(int length) {
+    public void writeZero(int length) {
         if (length == 0) {
             return;
         }
