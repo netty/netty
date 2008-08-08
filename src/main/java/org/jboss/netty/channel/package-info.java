@@ -28,8 +28,8 @@
  *
  * @apiviz.landmark
  * @apiviz.exclude ^java
- * @apiviz.exclude ^net\.gleamynode\.netty\.channel\.[^\.]+\.
- * @apiviz.exclude ^net\.gleamynode\.netty\.(bootstrap|handler)\.
+ * @apiviz.exclude ^org\.jboss\.netty\.channel\.[^\.]+\.
+ * @apiviz.exclude ^org\.jboss\.netty\.(bootstrap|handler)\.
  * @apiviz.exclude \.(Abstract|Default).*$
  * @apiviz.exclude \.[A-Za-z]+ChannelFuture$
  * @apiviz.exclude \.ChannelState$
