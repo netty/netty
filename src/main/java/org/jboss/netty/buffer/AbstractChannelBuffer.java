@@ -40,7 +40,6 @@ import java.util.NoSuchElementException;
  */
 public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
-    private int hashCode;
     private int readerIndex;
     private int writerIndex;
     private int markedReaderIndex;
@@ -406,6 +405,10 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         return new ByteBuffer[] { toByteBuffer(index, length) };
     }
 
+    public String toString(String charsetName) {
+        return toString(readerIndex, readableBytes(), charsetName);
+    }
+
     public int indexOf(int fromIndex, int toIndex, byte value) {
         return ChannelBuffers.indexOf(this, fromIndex, toIndex, value);
     }
@@ -416,14 +419,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     @Override
     public int hashCode() {
-        if (hashCode != 0) {
-            return hashCode;
-        }
-        return hashCode = ChannelBuffers.hashCode(this);
-    }
-
-    protected void clearHashCode() {
-        hashCode = 0;
+        return ChannelBuffers.hashCode(this);
     }
 
     @Override

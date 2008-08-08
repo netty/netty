@@ -231,6 +231,10 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         return buffer.toByteBuffer(index, length);
     }
 
+
+    public String toString(int index, int length, String charsetName) {
+        return buffer.toString(index, length, charsetName);
+    }
     private void ensureWritableBytes(int requestedBytes) {
         if (requestedBytes <= writableBytes()) {
             return;

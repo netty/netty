@@ -25,10 +25,12 @@ package org.jboss.netty.buffer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -418,6 +420,10 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
     public ByteBuffer toByteBuffer(int index, int length) {
+        if (slices.length == 1) {
+            return slices[0].toByteBuffer(index, length);
+        }
+
         ByteBuffer[] buffers = toByteBuffers(index, length);
         ByteBuffer merged = ByteBuffer.allocate(length);
         for (ByteBuffer b: buffers) {
@@ -448,6 +454,35 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
 
         return buffers.toArray(new ByteBuffer[buffers.size()]);
+    }
+
+    public String toString(int index, int length, String charsetName) {
+        int sliceId = sliceId(index);
+        if (index + length <= indices[sliceId + 1]) {
+            return slices[sliceId].toString(
+                    index - indices[sliceId], length, charsetName);
+        }
+
+        byte[] data = new byte[length];
+        int dataIndex = 0;
+        int i = sliceId;
+
+        while (length > 0) {
+            ChannelBuffer s = slices[i];
+            int adjustment = indices[i];
+            int localLength = Math.min(length, s.capacity() - (index - adjustment));
+            s.getBytes(index - adjustment, data, dataIndex, localLength);
+            index += localLength;
+            dataIndex += localLength;
+            length -= localLength;
+            i ++;
+        }
+
+        try {
+            return new String(data, charsetName);
+        } catch (UnsupportedEncodingException e) {
+            throw new UnsupportedCharsetException(charsetName);
+        }
     }
 
     private int sliceId(int index) {

@@ -26,10 +26,12 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.UnsupportedCharsetException;
 
 
 public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
@@ -231,6 +233,26 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
             return buffer.duplicate();
         } else {
             return ((ByteBuffer) buffer.duplicate().position(index).limit(index + length)).slice();
+        }
+    }
+
+    public String toString(int index, int length, String charsetName) {
+        if (!buffer.isReadOnly() && buffer.hasArray()) {
+            try {
+                return new String(
+                        buffer.array(), index + buffer.arrayOffset(), length,
+                        charsetName);
+            } catch (UnsupportedEncodingException e) {
+                throw new UnsupportedCharsetException(charsetName);
+            }
+        } else {
+            byte[] tmp = new byte[length];
+            ((ByteBuffer) buffer.duplicate().position(index)).get(tmp);
+            try {
+                return new String(tmp, charsetName);
+            } catch (UnsupportedEncodingException e) {
+                throw new UnsupportedCharsetException(charsetName);
+            }
         }
     }
 

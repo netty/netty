@@ -26,9 +26,11 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.UnsupportedCharsetException;
 
 /**
  *
@@ -150,5 +152,13 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
 
     public ByteBuffer toByteBuffer(int index, int length) {
         return ByteBuffer.wrap(array, index, length);
+    }
+
+    public String toString(int index, int length, String charsetName) {
+        try {
+            return new String(array, index, length, charsetName);
+        } catch (UnsupportedEncodingException e) {
+            throw new UnsupportedCharsetException(charsetName);
+        }
     }
 }

@@ -193,6 +193,11 @@ public class SlicedChannelBuffer extends AbstractChannelBuffer implements Wrappe
         return buffer.toByteBuffer(index + adjustment, length);
     }
 
+    public String toString(int index, int length, String charsetName) {
+        checkIndex(index, length);
+        return buffer.toString(index + adjustment, length, charsetName);
+    }
+
     private void checkIndex(int index) {
         if (index < 0 || index >= capacity()) {
             throw new IndexOutOfBoundsException();

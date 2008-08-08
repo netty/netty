@@ -648,6 +648,9 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     ByteBuffer[] toByteBuffers();
     ByteBuffer[] toByteBuffers(int index, int length);
 
+    String toString(String charsetName);
+    String toString(int index, int length, String charsetName);
+
     /**
      * Returns a hash code which was calculated from the content of this
      * buffer.  If there's a byte array which is

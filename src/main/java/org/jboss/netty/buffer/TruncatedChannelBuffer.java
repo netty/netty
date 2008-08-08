@@ -187,6 +187,11 @@ public class TruncatedChannelBuffer extends AbstractChannelBuffer implements Wra
         return buffer.toByteBuffer(index, length);
     }
 
+    public String toString(int index, int length, String charsetName) {
+        checkIndex(index, length);
+        return buffer.toString(index, length, charsetName);
+    }
+
     private void checkIndex(int index) {
         if (index < 0 || index >= capacity()) {
             throw new IndexOutOfBoundsException();

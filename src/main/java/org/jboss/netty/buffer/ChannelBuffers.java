@@ -22,8 +22,10 @@
  */
 package org.jboss.netty.buffer;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.UnsupportedCharsetException;
 
 
 /**
@@ -239,6 +241,14 @@ public class ChannelBuffers {
             wrappedBuffers[i] = wrappedBuffer(buffers[i]);
         }
         return wrappedBuffer(wrappedBuffers);
+    }
+
+    public static ChannelBuffer wrappedBuffer(String string, String charsetName) {
+        try {
+            return wrappedBuffer(string.getBytes(charsetName));
+        } catch (UnsupportedEncodingException e) {
+            throw new UnsupportedCharsetException(charsetName);
+        }
     }
 
     public static ChannelBuffer copiedBuffer(byte[] array) {

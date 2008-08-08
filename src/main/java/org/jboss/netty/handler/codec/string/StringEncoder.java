@@ -22,11 +22,11 @@
  */
 package org.jboss.netty.handler.codec.string;
 
+import static org.jboss.netty.buffer.ChannelBuffers.*;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.nio.charset.Charset;
 
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -73,7 +73,7 @@ public class StringEncoder implements ChannelDownstreamHandler {
             return;
         }
 
-        String src = (String) e.getMessage();
-        write(context, e.getChannel(), e.getFuture(), ChannelBuffers.wrappedBuffer(src.getBytes(charsetName)));
+        write(context, e.getChannel(), e.getFuture(),
+                wrappedBuffer(String.valueOf(e.getMessage()), charsetName));
     }
 }

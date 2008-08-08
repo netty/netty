@@ -166,4 +166,8 @@ public class DuplicatedChannelBuffer extends AbstractChannelBuffer implements Wr
     public ByteBuffer toByteBuffer(int index, int length) {
         return buffer.toByteBuffer(index, length);
     }
+
+    public String toString(int index, int length, String charsetName) {
+        return buffer.toString(index, length, charsetName);
+    }
 }

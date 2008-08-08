@@ -73,9 +73,8 @@ public class StringDecoder implements ChannelUpstreamHandler {
             return;
         }
 
-        ChannelBuffer src = (ChannelBuffer) e.getMessage();
-        byte[] dst = new byte[src.readableBytes()];
-        src.getBytes(src.readerIndex(), dst);
-        fireMessageReceived(context, e.getChannel(), new String(dst, charsetName));
+        fireMessageReceived(
+                context, e.getChannel(),
+                ((ChannelBuffer) e.getMessage()).toString(charsetName));
     }
 }

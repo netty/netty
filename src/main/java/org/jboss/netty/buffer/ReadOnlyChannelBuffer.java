@@ -165,6 +165,10 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
         return buffer.toByteBuffer(index, length).asReadOnlyBuffer();
     }
 
+    public String toString(int index, int length, String charsetName) {
+        return buffer.toString(index, length, charsetName);
+    }
+
     public int capacity() {
         return buffer.capacity();
     }
