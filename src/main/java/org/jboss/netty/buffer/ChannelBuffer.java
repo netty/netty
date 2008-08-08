@@ -465,7 +465,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     void writeBytes(InputStream in, int length) throws IOException;
     int  writeBytes(ScatteringByteChannel in, int length) throws IOException;
 
-    void writePlaceholder(int length);
+    void writeNul(int length);
 
     int indexOf(int fromIndex, int toIndex, byte value);
     int indexOf(int fromIndex, int toIndex, ChannelBufferIndexFinder indexFinder);

@@ -453,7 +453,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         reject();
     }
 
-    public void writePlaceholder(int length) {
+    public void writeNul(int length) {
         reject();
     }
 

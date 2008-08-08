@@ -327,7 +327,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         return writtenBytes;
     }
 
-    public void writePlaceholder(int length) {
+    public void writeNul(int length) {
         if (length == 0) {
             return;
         }
