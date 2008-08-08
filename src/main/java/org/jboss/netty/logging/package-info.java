@@ -23,6 +23,6 @@
 
 /**
  * Simplistic <em>internal-use-only</em> logging layer which allows a user to
- * decide what logging framework Netty should use to log its own messages.
+ * decide what logging framework Netty should use.
  */
 package org.jboss.netty.logging;
