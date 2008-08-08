@@ -258,8 +258,6 @@
             -version
             -author
             -breakiterator
-            -linksource
-            -sourcetab 4
             -windowtitle "${project.name} ${project.version} API Reference"
             -doctitle "${project.name} ${project.version} API Reference"
             -bottom "Copyright © ${project.inceptionYear}-Present ${project.organization.name}. All Rights Reserved."
