@@ -30,13 +30,13 @@ package org.jboss.netty.logging;
  * @version $Rev$, $Date$
  *
  */
-public class CommonsLoggerFactory extends LoggerFactory {
+public class CommonsLoggerFactory extends InternalLoggerFactory {
 
     @Override
-    public Logger getLogger(String name) {
+    public InternalLogger getInstance(String name) {
         final org.apache.commons.logging.Log logger =
             org.apache.commons.logging.LogFactory.getLog(name);
-        return new Logger() {
+        return new InternalLogger() {
             @Override
             public void debug(String msg) {
                 logger.debug(msg);

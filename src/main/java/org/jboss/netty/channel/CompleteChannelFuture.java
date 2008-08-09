@@ -24,12 +24,12 @@ package org.jboss.netty.channel;
 
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.netty.logging.Logger;
+import org.jboss.netty.logging.InternalLogger;
 
 public abstract class CompleteChannelFuture implements ChannelFuture {
 
-    private static final Logger logger =
-        Logger.getLogger(CompleteChannelFuture.class);
+    private static final InternalLogger logger =
+        InternalLogger.getLogger(CompleteChannelFuture.class);
 
     private final Channel channel;
 

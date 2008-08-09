@@ -22,7 +22,7 @@
  */
 package org.jboss.netty.channel;
 
-import org.jboss.netty.logging.Logger;
+import org.jboss.netty.logging.InternalLogger;
 
 
 /**
@@ -34,8 +34,8 @@ import org.jboss.netty.logging.Logger;
  */
 public class SimpleChannelHandler implements ChannelUpstreamHandler {
 
-    private static final Logger logger =
-        Logger.getLogger(SimpleChannelHandler.class.getName());
+    private static final InternalLogger logger =
+        InternalLogger.getLogger(SimpleChannelHandler.class.getName());
 
     public void handleUpstream(
             ChannelHandlerContext ctx, ChannelEvent e) throws Exception {

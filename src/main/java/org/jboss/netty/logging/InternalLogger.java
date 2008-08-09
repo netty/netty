@@ -29,19 +29,26 @@ package org.jboss.netty.logging;
  * @version $Rev$, $Date$
  *
  */
-public abstract class LoggerFactory {
-    private static volatile LoggerFactory defaultInstance = new JdkLoggerFactory();
-
-    public static LoggerFactory getDefault() {
-        return defaultInstance;
+public abstract class InternalLogger {
+    public static InternalLogger getLogger(Class<?> clazz) {
+        return getLogger(clazz.getName());
     }
 
-    public static void setDefault(LoggerFactory defaultInstance) {
-        if (defaultInstance == null) {
-            throw new NullPointerException("defaultInstance");
-        }
-        LoggerFactory.defaultInstance = defaultInstance;
+    public static InternalLogger getLogger(String name) {
+        return InternalLoggerFactory.getDefault().getInstance(name);
     }
 
-    public abstract Logger getLogger(String name);
+    public abstract boolean isDebugEnabled();
+    public abstract boolean isInfoEnabled();
+    public abstract boolean isWarnEnabled();
+    public abstract boolean isErrorEnabled();
+
+    public abstract void debug(String msg);
+    public abstract void debug(String msg, Throwable cause);
+    public abstract void info(String msg);
+    public abstract void info(String msg, Throwable cause);
+    public abstract void warn(String msg);
+    public abstract void warn(String msg, Throwable cause);
+    public abstract void error(String msg);
+    public abstract void error(String msg, Throwable cause);
 }

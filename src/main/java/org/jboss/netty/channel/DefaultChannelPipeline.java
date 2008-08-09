@@ -30,12 +30,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import org.jboss.netty.logging.Logger;
+import org.jboss.netty.logging.InternalLogger;
 
 
 public class DefaultChannelPipeline implements ChannelPipeline {
 
-    static final Logger logger = Logger.getLogger(DefaultChannelPipeline.class);
+    static final InternalLogger logger = InternalLogger.getLogger(DefaultChannelPipeline.class);
 
     private final ChannelSink discardingSink = new ChannelSink() {
         public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) {

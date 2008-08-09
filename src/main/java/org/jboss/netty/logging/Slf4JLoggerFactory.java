@@ -30,13 +30,13 @@ package org.jboss.netty.logging;
  * @version $Rev$, $Date$
  *
  */
-public class Slf4JLoggerFactory extends LoggerFactory {
+public class Slf4JLoggerFactory extends InternalLoggerFactory {
 
     @Override
-    public Logger getLogger(String name) {
+    public InternalLogger getInstance(String name) {
         final org.slf4j.Logger logger =
             org.slf4j.LoggerFactory.getLogger(name);
-        return new Logger() {
+        return new InternalLogger() {
             @Override
             public void debug(String msg) {
                 logger.debug(msg);

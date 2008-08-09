@@ -40,13 +40,13 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.logging.Logger;
+import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.util.NamePreservingRunnable;
 
 class NioServerSocketPipelineSink extends AbstractChannelSink {
 
-    static final Logger logger =
-        Logger.getLogger(NioServerSocketPipelineSink.class);
+    static final InternalLogger logger =
+        InternalLogger.getLogger(NioServerSocketPipelineSink.class);
     private static final AtomicInteger nextId = new AtomicInteger();
 
     private final int id = nextId.incrementAndGet();

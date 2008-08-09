@@ -31,13 +31,13 @@ import java.util.logging.Level;
  * @version $Rev$, $Date$
  *
  */
-public class JdkLoggerFactory extends LoggerFactory {
+public class JdkLoggerFactory extends InternalLoggerFactory {
 
     @Override
-    public Logger getLogger(String name) {
+    public InternalLogger getInstance(String name) {
         final java.util.logging.Logger logger =
             java.util.logging.Logger.getLogger(name);
-        return new Logger() {
+        return new InternalLogger() {
             @Override
             public void debug(String msg) {
                 logger.log(Level.FINE, msg);

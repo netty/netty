@@ -38,7 +38,7 @@ import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.logging.Logger;
+import org.jboss.netty.logging.InternalLogger;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -50,7 +50,7 @@ import org.jboss.netty.logging.Logger;
  */
 public class Bootstrap {
 
-    private static Logger logger = Logger.getLogger(Bootstrap.class);
+    private static InternalLogger logger = InternalLogger.getLogger(Bootstrap.class);
 
     private volatile ChannelFactory factory;
     private volatile ChannelPipeline pipeline = pipeline();

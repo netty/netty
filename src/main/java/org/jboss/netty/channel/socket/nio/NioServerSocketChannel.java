@@ -36,13 +36,13 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.socket.DefaultServerSocketChannelConfig;
 import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
-import org.jboss.netty.logging.Logger;
+import org.jboss.netty.logging.InternalLogger;
 
 class NioServerSocketChannel extends AbstractServerChannel
                              implements org.jboss.netty.channel.socket.ServerSocketChannel {
 
-    private static final Logger logger =
-        Logger.getLogger(NioServerSocketChannel.class);
+    private static final InternalLogger logger =
+        InternalLogger.getLogger(NioServerSocketChannel.class);
 
     final ServerSocketChannel socket;
     private final ServerSocketChannelConfig config;

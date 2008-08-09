@@ -26,13 +26,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.netty.logging.Logger;
+import org.jboss.netty.logging.InternalLogger;
 
 
 public class DefaultChannelFuture implements ChannelFuture {
 
-    private static final Logger logger =
-        Logger.getLogger(DefaultChannelFuture.class);
+    private static final InternalLogger logger =
+        InternalLogger.getLogger(DefaultChannelFuture.class);
     private static final int DEAD_LOCK_CHECK_INTERVAL = 5000;
     private static final Throwable CANCELLED = new Throwable();
 

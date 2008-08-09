@@ -32,12 +32,12 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.logging.Logger;
+import org.jboss.netty.logging.InternalLogger;
 
 class NioClientSocketChannel extends NioSocketChannel {
 
-    private static final Logger logger =
-        Logger.getLogger(NioClientSocketChannel.class);
+    private static final InternalLogger logger =
+        InternalLogger.getLogger(NioClientSocketChannel.class);
 
     private static SocketChannel newSocket() {
         SocketChannel socket;
