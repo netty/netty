@@ -44,7 +44,7 @@ public abstract class InternalLoggerFactory {
     }
 
     public static InternalLogger getInstance(Class<?> clazz) {
-        return getInstance(clazz);
+        return getInstance(clazz.getName());
     }
 
     public static InternalLogger getInstance(String name) {
