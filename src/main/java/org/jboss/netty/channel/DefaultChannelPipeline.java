@@ -31,11 +31,12 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 
 public class DefaultChannelPipeline implements ChannelPipeline {
 
-    static final InternalLogger logger = InternalLogger.getLogger(DefaultChannelPipeline.class);
+    static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
 
     private final ChannelSink discardingSink = new ChannelSink() {
         public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) {

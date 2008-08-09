@@ -39,12 +39,13 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.NamePreservingRunnable;
 
 class OioServerSocketPipelineSink extends AbstractChannelSink {
 
     static final InternalLogger logger =
-        InternalLogger.getLogger(OioServerSocketPipelineSink.class);
+        InternalLoggerFactory.getInstance(OioServerSocketPipelineSink.class);
 
     final Executor workerExecutor;
 

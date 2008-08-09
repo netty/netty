@@ -23,6 +23,7 @@
 package org.jboss.netty.example.telnet;
 
 import static org.jboss.netty.channel.Channels.*;
+
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;

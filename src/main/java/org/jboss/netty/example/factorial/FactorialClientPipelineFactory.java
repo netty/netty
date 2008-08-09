@@ -23,6 +23,7 @@
 package org.jboss.netty.example.factorial;
 
 import static org.jboss.netty.channel.Channels.*;
+
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 

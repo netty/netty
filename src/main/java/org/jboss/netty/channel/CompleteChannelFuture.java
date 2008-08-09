@@ -25,11 +25,12 @@ package org.jboss.netty.channel;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 public abstract class CompleteChannelFuture implements ChannelFuture {
 
     private static final InternalLogger logger =
-        InternalLogger.getLogger(CompleteChannelFuture.class);
+        InternalLoggerFactory.getInstance(CompleteChannelFuture.class);
 
     private final Channel channel;
 

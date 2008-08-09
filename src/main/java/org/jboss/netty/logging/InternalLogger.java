@@ -29,26 +29,18 @@ package org.jboss.netty.logging;
  * @version $Rev$, $Date$
  *
  */
-public abstract class InternalLogger {
-    public static InternalLogger getLogger(Class<?> clazz) {
-        return getLogger(clazz.getName());
-    }
+public interface InternalLogger {
+    boolean isDebugEnabled();
+    boolean isInfoEnabled();
+    boolean isWarnEnabled();
+    boolean isErrorEnabled();
 
-    public static InternalLogger getLogger(String name) {
-        return InternalLoggerFactory.getDefault().getInstance(name);
-    }
-
-    public abstract boolean isDebugEnabled();
-    public abstract boolean isInfoEnabled();
-    public abstract boolean isWarnEnabled();
-    public abstract boolean isErrorEnabled();
-
-    public abstract void debug(String msg);
-    public abstract void debug(String msg, Throwable cause);
-    public abstract void info(String msg);
-    public abstract void info(String msg, Throwable cause);
-    public abstract void warn(String msg);
-    public abstract void warn(String msg, Throwable cause);
-    public abstract void error(String msg);
-    public abstract void error(String msg, Throwable cause);
+    void debug(String msg);
+    void debug(String msg, Throwable cause);
+    void info(String msg);
+    void info(String msg, Throwable cause);
+    void warn(String msg);
+    void warn(String msg, Throwable cause);
+    void error(String msg);
+    void error(String msg, Throwable cause);
 }

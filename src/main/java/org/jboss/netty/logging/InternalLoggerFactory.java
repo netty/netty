@@ -43,5 +43,13 @@ public abstract class InternalLoggerFactory {
         InternalLoggerFactory.defaultInstance = defaultInstance;
     }
 
-    public abstract InternalLogger getInstance(String name);
+    public static InternalLogger getInstance(Class<?> clazz) {
+        return getInstance(clazz);
+    }
+
+    public static InternalLogger getInstance(String name) {
+        return getDefault().newInstance(name);
+    }
+
+    public abstract InternalLogger newInstance(String name);
 }

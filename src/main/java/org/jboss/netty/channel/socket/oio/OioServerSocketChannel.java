@@ -38,12 +38,13 @@ import org.jboss.netty.channel.socket.DefaultServerSocketChannelConfig;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
 import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 class OioServerSocketChannel extends AbstractServerChannel
                              implements ServerSocketChannel {
 
     private static final InternalLogger logger =
-        InternalLogger.getLogger(OioServerSocketChannel.class);
+        InternalLoggerFactory.getInstance(OioServerSocketChannel.class);
 
     final ServerSocket socket;
     private final ServerSocketChannelConfig config;

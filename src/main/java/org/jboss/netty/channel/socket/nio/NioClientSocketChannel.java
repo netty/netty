@@ -33,11 +33,12 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 class NioClientSocketChannel extends NioSocketChannel {
 
     private static final InternalLogger logger =
-        InternalLogger.getLogger(NioClientSocketChannel.class);
+        InternalLoggerFactory.getInstance(NioClientSocketChannel.class);
 
     private static SocketChannel newSocket() {
         SocketChannel socket;

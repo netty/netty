@@ -33,68 +33,56 @@ package org.jboss.netty.logging;
 public class JBossLoggerFactory extends InternalLoggerFactory {
 
     @Override
-    public InternalLogger getInstance(String name) {
+    public InternalLogger newInstance(String name) {
         final org.jboss.logging.Logger logger =
             org.jboss.logging.Logger.getLogger(name);
         return new InternalLogger() {
-            @Override
             public void debug(String msg) {
                 logger.debug(msg);
             }
 
-            @Override
             public void debug(String msg, Throwable cause) {
                 logger.debug(msg, cause);
             }
 
-            @Override
             public void error(String msg) {
                 logger.error(msg);
             }
 
-            @Override
             public void error(String msg, Throwable cause) {
                 logger.error(msg, cause);
             }
 
-            @Override
             public void info(String msg) {
                 logger.info(msg);
             }
 
-            @Override
             public void info(String msg, Throwable cause) {
                 logger.info(msg, cause);
             }
 
-            @Override
             @SuppressWarnings("deprecation")
             public boolean isDebugEnabled() {
                 return logger.isDebugEnabled();
             }
 
-            @Override
             public boolean isErrorEnabled() {
                 return true;
             }
 
-            @Override
             @SuppressWarnings("deprecation")
             public boolean isInfoEnabled() {
                 return logger.isInfoEnabled();
             }
 
-            @Override
             public boolean isWarnEnabled() {
                 return true;
             }
 
-            @Override
             public void warn(String msg) {
                 logger.warn(msg);
             }
 
-            @Override
             public void warn(String msg, Throwable cause) {
                 logger.warn(msg, cause);
             }

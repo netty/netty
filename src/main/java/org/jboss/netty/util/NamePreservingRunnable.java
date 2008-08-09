@@ -23,10 +23,11 @@
 package org.jboss.netty.util;
 
 import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 public class NamePreservingRunnable implements Runnable {
     private static final InternalLogger logger =
-        InternalLogger.getLogger(NamePreservingRunnable.class);
+        InternalLoggerFactory.getInstance(NamePreservingRunnable.class);
 
     private final String newName;
     private final Runnable runnable;

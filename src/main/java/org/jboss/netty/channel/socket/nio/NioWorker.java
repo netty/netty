@@ -41,11 +41,12 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.NamePreservingRunnable;
 
 class NioWorker implements Runnable {
 
-    private static final InternalLogger logger = InternalLogger.getLogger(NioWorker.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioWorker.class);
 
     private final int bossId;
     private final int id;
