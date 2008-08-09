@@ -246,6 +246,20 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return buffer.readBytes(length);
     }
 
+    public ChannelBuffer readSlice(
+            ChannelBufferIndexFinder endIndexFinder) {
+        int endIndex = buffer.indexOf(buffer.readerIndex(), buffer.writerIndex(), endIndexFinder);
+        if (endIndex < 0) {
+            throw REPLAY;
+        }
+        return readSlice(endIndex);
+    }
+
+    public ChannelBuffer readSlice(int length) {
+        checkReadableBytes(length);
+        return buffer.readSlice(length);
+    }
+
     public void readBytes(OutputStream out, int length) throws IOException {
         reject();
     }

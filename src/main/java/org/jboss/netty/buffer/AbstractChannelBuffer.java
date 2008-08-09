@@ -224,6 +224,20 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         return readBytes(endIndex);
     }
 
+    public ChannelBuffer readSlice(int length) {
+        ChannelBuffer slice = slice(readerIndex, length);
+        readerIndex += length;
+        return slice;
+    }
+
+    public ChannelBuffer readSlice(ChannelBufferIndexFinder endIndexFinder) {
+        int endIndex = indexOf(readerIndex, writerIndex, endIndexFinder);
+        if (endIndex < 0) {
+            throw new NoSuchElementException();
+        }
+        return readSlice(endIndex);
+    }
+
     public void readBytes(byte[] dst, int dstIndex, int length) {
         checkReadableBytes(length);
         getBytes(readerIndex, dst, dstIndex, length);
