@@ -6,7 +6,7 @@ sent to Trustin Lee <tlee@redhat.com>.
 
 SVN Login(s)            Name
 -------------------------------------------------------------------------------
-trustin                 Adrian Brock
+trustin                 Trustin Heuiseung Lee
 -------------------------------------------------------------------------------
 
 * JBoss is a registered trademark of Red Hat Middleware LLC.
