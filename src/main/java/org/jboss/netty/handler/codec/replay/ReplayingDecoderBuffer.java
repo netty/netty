@@ -197,11 +197,6 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return buffer.readByte();
     }
 
-    public ChannelBuffer readBytes() {
-        reject();
-        return null;
-    }
-
     public void readBytes(byte[] dst, int dstIndex, int length) {
         checkReadableBytes(length);
         buffer.readBytes(dst, dstIndex, length);

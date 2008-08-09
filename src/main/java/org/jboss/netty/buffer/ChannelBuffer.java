@@ -602,7 +602,6 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     int   readInt();
     long  readLong();
 
-    ChannelBuffer readBytes();
     ChannelBuffer readBytes(int length);
     ChannelBuffer readBytes(ChannelBufferIndexFinder endIndexFinder);
     void readBytes(ChannelBuffer dst);

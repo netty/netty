@@ -205,10 +205,6 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         return v;
     }
 
-    public ChannelBuffer readBytes() {
-        return readBytes(readableBytes());
-    }
-
     public ChannelBuffer readBytes(int length) {
         checkReadableBytes(length);
         if (length == 0) {
