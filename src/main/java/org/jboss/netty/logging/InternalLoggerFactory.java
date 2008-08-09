@@ -30,17 +30,17 @@ package org.jboss.netty.logging;
  *
  */
 public abstract class InternalLoggerFactory {
-    private static volatile InternalLoggerFactory defaultInstance = new JdkLoggerFactory();
+    private static volatile InternalLoggerFactory defaultFactory = new JdkLoggerFactory();
 
-    public static InternalLoggerFactory getDefault() {
-        return defaultInstance;
+    public static InternalLoggerFactory getDefaultFactory() {
+        return defaultFactory;
     }
 
-    public static void setDefault(InternalLoggerFactory defaultInstance) {
-        if (defaultInstance == null) {
-            throw new NullPointerException("defaultInstance");
+    public static void setDefaultFactory(InternalLoggerFactory defaultFactory) {
+        if (defaultFactory == null) {
+            throw new NullPointerException("defaultFactory");
         }
-        InternalLoggerFactory.defaultInstance = defaultInstance;
+        InternalLoggerFactory.defaultFactory = defaultFactory;
     }
 
     public static InternalLogger getInstance(Class<?> clazz) {
@@ -48,7 +48,7 @@ public abstract class InternalLoggerFactory {
     }
 
     public static InternalLogger getInstance(String name) {
-        return getDefault().newInstance(name);
+        return getDefaultFactory().newInstance(name);
     }
 
     public abstract InternalLogger newInstance(String name);
