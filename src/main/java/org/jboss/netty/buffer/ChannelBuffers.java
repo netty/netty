@@ -550,6 +550,12 @@ public class ChannelBuffers {
         }
     }
 
+    /**
+     * Creates a read-only buffer which disallows any modification operations
+     * on the specified {@code buffer}.  The new buffer has the same
+     * {@code readerIndex} and {@code writerIndex} with the specified
+     * {@code buffer}.
+     */
     public static ChannelBuffer unmodifiableBuffer(ChannelBuffer buffer) {
         if (buffer instanceof ReadOnlyChannelBuffer) {
             buffer = ((ReadOnlyChannelBuffer) buffer).unwrap();
@@ -557,10 +563,18 @@ public class ChannelBuffers {
         return new ReadOnlyChannelBuffer(buffer);
     }
 
+    /**
+     * Returns a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * of the specified buffer's readable bytes.
+     */
     public static String hexDump(ChannelBuffer buffer) {
         return hexDump(buffer, buffer.readerIndex(), buffer.readableBytes());
     }
 
+    /**
+     * Returns a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
+     * of the specified buffer's sub-region.
+     */
     public static String hexDump(ChannelBuffer buffer, int fromIndex, int length) {
         if (length < 0) {
             throw new IllegalArgumentException("length: " + length);
@@ -590,6 +604,10 @@ public class ChannelBuffers {
         return new String(buf);
     }
 
+    /**
+     * Calculates the hash code of the specified buffer.  This method is
+     * useful when implementing a new buffer type.
+     */
     public static int hashCode(ChannelBuffer buffer) {
         final int aLen = buffer.readableBytes();
         final int intCount = aLen >>> 2;
@@ -611,6 +629,12 @@ public class ChannelBuffers {
         return hashCode;
     }
 
+    /**
+     * Returns {@code true} if and only if the two specified buffers have the
+     * same content and the same readable bytes.  They don't need to have the
+     * same {@code readerIndex}.  This method is useful when implementing a
+     * new buffer type.
+     */
     public static boolean equals(ChannelBuffer bufferA, ChannelBuffer bufferB) {
         final int aLen = bufferA.readableBytes();
         if (aLen != bufferB.readableBytes()) {
@@ -641,6 +665,10 @@ public class ChannelBuffers {
         return true;
     }
 
+    /**
+     * Compares the two specified buffers as described in {@link Comparable}.
+     * This method is useful when implementing a new buffer type.
+     */
     public static int compare(ChannelBuffer bufferA, ChannelBuffer bufferB) {
         final int aLen = bufferA.readableBytes();
         final int bLen = bufferB.readableBytes();
@@ -693,19 +721,31 @@ public class ChannelBuffers {
         }
     }
 
+    /**
+     * Toggles the endianness of the specified 16-bit short integer.
+     */
     public static short swapShort(short value) {
         return (short) (value << 8 | value >>> 8 & 0xff);
     }
 
+    /**
+     * Toggles the endianness of the specified 24-bit medium integer.
+     */
     public static int swapMedium(int value) {
         return value << 16 & 0xff0000 | value & 0xff00 | value >>> 16 & 0xff;
     }
 
+    /**
+     * Toggles the endianness of the specified 32-bit integer.
+     */
     public static int swapInt(int value) {
         return swapShort((short) value) <<  16 |
                swapShort((short) (value >>> 16)) & 0xffff;
     }
 
+    /**
+     * Toggles the endianness of the specified 64-bit long integer.
+     */
     public static long swapLong(long value) {
         return (long) swapInt((int) value) <<  32 |
                       swapInt((int) (value >>> 32)) & 0xffffffffL;
