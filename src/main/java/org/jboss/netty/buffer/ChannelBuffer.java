@@ -69,7 +69,7 @@ import java.util.NoSuchElementException;
  *
  * <pre>
  *      +-------------------+------------------+------------------+
- *      | discardable bytes |  readable bytes  |  writable space  |
+ *      | discardable bytes |  readable bytes  |  writable bytes  |
  *      |                   |     (CONTENT)    |                  |
  *      +-------------------+------------------+------------------+
  *      |                   |                  |                  |
@@ -98,7 +98,7 @@ import java.util.NoSuchElementException;
  * }
  * </pre>
  *
- * <h4>Writable space</h4>
+ * <h4>Writable bytes</h4>
  *
  * This segment is a undefined space which needs to be filled.  Any operation
  * whose name ends with {@code write} will write the data at the current
@@ -107,14 +107,14 @@ import java.util.NoSuchElementException;
  * and no start index is specified, the specified buffer's
  * {@link #readerIndex() readerIndex} is increased together.
  * <p>
- * If there's not enough writable space left, {@link IndexOutOfBoundsException}
+ * If there's not enough writable bytes left, {@link IndexOutOfBoundsException}
  * is raised.  The default value of newly allocated buffer's
  * {@link #writerIndex() writerIndex} is {@code 0}.  The default value of
  * wrapped or copied buffer's {@link #writerIndex() writerIndex} is the
  * {@link #capacity() capacity} of the buffer.
  *
  * <pre>
- * // Fills the writable space of a buffer with random integers.
+ * // Fills the writable bytes of a buffer with random integers.
  * ChannelBuffer buffer = ...;
  * while (buffer.writableBytes() >= 4) {
  *     buffer.writeInt(random.nextInt());
@@ -133,7 +133,7 @@ import java.util.NoSuchElementException;
  *  BEFORE discardReadBytes()
  *
  *      +-------------------+------------------+------------------+
- *      | discardable bytes |  readable bytes  |  writable space  |
+ *      | discardable bytes |  readable bytes  |  writable bytes  |
  *      |                   |     (CONTENT)    |                  |
  *      +-------------------+------------------+------------------+
  *      |                   |                  |                  |
@@ -143,7 +143,7 @@ import java.util.NoSuchElementException;
  *  AFTER discardReadBytes()
  *
  *      +------------------+--------------------------------------+
- *      |  readable bytes  |    writable space (got more space)   |
+ *      |  readable bytes  |    writable bytes (got more space)   |
  *      |     (CONTENT)    |                                      |
  *      +------------------+--------------------------------------+
  *      |                  |                                      |
@@ -162,7 +162,7 @@ import java.util.NoSuchElementException;
  *  BEFORE clear()
  *
  *      +-------------------+------------------+------------------+
- *      | discardable bytes |  readable bytes  |  writable space  |
+ *      | discardable bytes |  readable bytes  |  writable bytes  |
  *      |                   |     (CONTENT)    |                  |
  *      +-------------------+------------------+------------------+
  *      |                   |                  |                  |
@@ -172,7 +172,7 @@ import java.util.NoSuchElementException;
  *  AFTER clear()
  *
  *      +---------------------------------------------------------+
- *      |             writable space (got more space)             |
+ *      |             writable bytes (got more space)             |
  *      +---------------------------------------------------------+
  *      |                                                         |
  *      0 = readerIndex = writerIndex            <=            capacity
