@@ -30,7 +30,7 @@ import java.nio.charset.UnsupportedCharsetException;
 
 /**
  * Creates a new {@link ChannelBuffer} by allocating new space or by wrapping
- * or copying existing byte arrays, byte buffer and string.
+ * or copying existing byte arrays, byte buffers and a string.
  *
  * <h3>Use static import</h3>
  * This classes is intended to be used with Java 5 static import statement:
