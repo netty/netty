@@ -205,15 +205,24 @@ import java.nio.channels.ScatteringByteChannel;
  *
  * <h3>Conversion to existing JDK types</h3>
  *
+ * <h4>NIO {@link ByteBuffer}</h4>
+ *
  * Various {@link #toByteBuffer()} and {@link #toByteBuffers()} methods convert
  * a {@link ChannelBuffer} into one or more NIO buffers.  These methods avoid
  * buffer allocation and memory copy whenever possible, but there's no
  * guarantee that memory copy will not be involved or that an explicit memory
  * copy will be involved.
- * <p>
- * In case you need to convert a {@link ChannelBuffer} into
- * an {@link InputStream} or an {@link OutputStream}, please refer to
- * {@link ChannelBufferInputStream} and {@link ChannelBufferOutputStream}.
+ *
+ * <h4>{@link String}</h4>
+ *
+ * Various {@link #toString(String)} methods convert a {@link ChannelBuffer}
+ * into a {@link String}.  Plesae note that {@link #toString()} is not a
+ * conversion method.
+ *
+ * <h4>{@link InputStream} and {@link OutputStream}</h4>
+ *
+ * Please refer to {@link ChannelBufferInputStream} and
+ * {@link ChannelBufferOutputStream}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -626,24 +635,181 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      */
     void setLong(int index, long  value);
 
+    /**
+     * Transfers the specified source buffer's data to this buffer starting at
+     * the specified absolute {@code index} until the destination becomes
+     * unreadable.  This method is basically same with {@link #setBytes(int, ChannelBuffer, int, int)},
+     * except that this method advances the {@code readerIndex} of the source
+     * buffer while {@link #getBytes(int, ChannelBuffer, int, int)} doesn't.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         if {@code index + dst.writableBytes} is greater than {@code capacity}
+     */
     void setBytes(int index, ChannelBuffer src);
+
+    /**
+     * Transfers the specified source buffer's data to this buffer starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0},
+     *         if the specified {@code srcIndex} is less than {@code 0},
+     *         if {@code index + length} is greater than {@code capacity}, or
+     *         if {@code srcIndex + length} is greater than {@code src.capacity}
+     */
     void setBytes(int index, ChannelBuffer src, int srcIndex, int length);
+
+    /**
+     * Transfers the specified source array's data to this buffer starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         if {@code index + src.length} is greater than {@code capacity}
+     */
     void setBytes(int index, byte[] src);
+
+    /**
+     * Transfers the specified source array's data to this buffer starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0},
+     *         if the specified {@code srcIndex} is less than {@code 0},
+     *         if {@code index + length} is greater than {@code capacity}, or
+     *         if {@code srcIndex + length} is greater than {@code src.lenggth}
+     */
     void setBytes(int index, byte[] src, int srcIndex, int length);
+
+    /**
+     * Transfers the specified source buffer's data to this buffer starting at
+     * the specified absolute {@code index} until the source buffer's position
+     * reaches to its limit.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         if {@code index + src.remaining()} is greater than {@code capacity}
+     */
     void setBytes(int index, ByteBuffer src);
+
+    /**
+     * Transfers the content of the specified source stream to this buffer
+     * starting at the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         if {@code index + length} is greater than {@code capacity}
+     * @throws IOException
+     *         if the specified stream threw an exception during I/O
+     */
     void setBytes(int index, InputStream in, int length) throws IOException;
+
+    /**
+     * Transfers the content of the specified source channel to this buffer
+     * starting at the specified absolute {@code index}.
+     *
+     * @return the number of bytes read from the specified channel
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         if {@code index + length} is greater than {@code capacity}
+     * @throws IOException
+     *         if the specified channel threw an exception during I/O
+     */
     int  setBytes(int index, ScatteringByteChannel in, int length) throws IOException;
 
+    /**
+     * Fills this buffer with <tt>NUL (0x00)</tt> starting at the specified
+     * absolute {@code index}.
+     *
+     * @param length the number of <tt>NUL</tt>s to write to the buffer
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         if {@code index + length} is greater than {@code capacity}
+     */
     void setZero(int index, int length);
 
+    /**
+     * Gets a byte at the current {@code readerIndex} and increases
+     * the {@code readerIndex} by {@code 1} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code readerIndex} is not less than {@code writerIndex}
+     */
     byte  readByte();
+
+    /**
+     * Gets a unsigned byte at the current {@code readerIndex} and increases
+     * the {@code readerIndex} by {@code 1} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code readerIndex + 1} is greater than {@code writerIndex}
+     */
     short readUnsignedByte();
+
+    /**
+     * Gets a 16-bit short integer at the current {@code readerIndex}
+     * and increases the {@code readerIndex} by {@code 2} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code readerIndex + 2} is greater than {@code writerIndex}
+     */
     short readShort();
+
+    /**
+     * Gets a unsigned 16-bit short integer at the current {@code readerIndex}
+     * and increases the {@code readerIndex} by {@code 2} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code readerIndex + 2} is greater than {@code writerIndex}
+     */
     int   readUnsignedShort();
+
+    /**
+     * Gets a 24-bit medium integer at the current {@code readerIndex}
+     * and increases the {@code readerIndex} by {@code 3} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code readerIndex + 3} is greater than {@code writerIndex}
+     */
     int   readMedium();
+
+    /**
+     * Gets a unsigned 24-bit medium integer at the current {@code readerIndex}
+     * and increases the {@code readerIndex} by {@code 3} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code readerIndex + 3} is greater than {@code writerIndex}
+     */
     int   readUnsignedMedium();
+
+    /**
+     * Gets a 32-bit integer at the current {@code readerIndex}
+     * and increases the {@code readerIndex} by {@code 4} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code readerIndex + 4} is greater than {@code writerIndex}
+     */
     int   readInt();
+
+    /**
+     * Gets a unsigned 32-bit integer at the current {@code readerIndex}
+     * and increases the {@code readerIndex} by {@code 4} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code readerIndex + 4} is greater than {@code writerIndex}
+     */
     long  readUnsignedInt();
+
+    /**
+     * Gets a 64-bit integer at the current {@code readerIndex}
+     * and increases the {@code readerIndex} by {@code 8} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code readerIndex + 8} is greater than {@code writerIndex}
+     */
     long  readLong();
 
     ChannelBuffer readBytes(int length);
