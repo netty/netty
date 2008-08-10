@@ -99,10 +99,10 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
-    public int getMedium(int index) {
+    public int getUnsignedMedium(int index) {
         int sliceId = sliceId(index);
         if (index + 3 <= indices[sliceId + 1]) {
-            return slices[sliceId].getMedium(index - indices[sliceId]);
+            return slices[sliceId].getUnsignedMedium(index - indices[sliceId]);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             return (getShort(index) & 0xffff) << 8 | getByte(index + 2) & 0xff;
         } else {

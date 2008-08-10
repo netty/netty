@@ -122,6 +122,26 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         readerIndex = 0;
     }
 
+    public short getUnsignedByte(int index) {
+        return (short) (getByte(index) & 0xFF);
+    }
+
+    public int getUnsignedShort(int index) {
+        return getShort(index) & 0xFFFF;
+    }
+
+    public int getMedium(int index) {
+        int value = getUnsignedMedium(index);
+        if ((value & 0x800000) != 0) {
+            value |= 0xff000000;
+        }
+        return value;
+    }
+
+    public long getUnsignedInt(int index) {
+        return getInt(index) & 0xFFFFFFFFL;
+    }
+
     public void getBytes(int index, byte[] dst) {
         getBytes(index, dst, 0, dst.length);
     }
@@ -177,6 +197,10 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         return getByte(readerIndex ++);
     }
 
+    public short readUnsignedByte() {
+        return (short) (readByte() & 0xFF);
+    }
+
     public short readShort() {
         checkReadableBytes(2);
         short v = getShort(readerIndex);
@@ -184,9 +208,21 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         return v;
     }
 
+    public int readUnsignedShort() {
+        return readShort() & 0xFFFF;
+    }
+
     public int readMedium() {
+        int value = readUnsignedMedium();
+        if ((value & 0x800000) != 0) {
+            value |= 0xff000000;
+        }
+        return value;
+    }
+
+    public int readUnsignedMedium() {
         checkReadableBytes(3);
-        int v = getMedium(readerIndex);
+        int v = getUnsignedMedium(readerIndex);
         readerIndex += 3;
         return v;
     }
@@ -196,6 +232,10 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         int v = getInt(readerIndex);
         readerIndex += 4;
         return v;
+    }
+
+    public long readUnsignedInt() {
+        return readInt() & 0xFFFFFFFFL;
     }
 
     public long readLong() {

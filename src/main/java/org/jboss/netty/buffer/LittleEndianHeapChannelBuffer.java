@@ -54,7 +54,7 @@ public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
         return (short) (array[index] & 0xFF | array[index+1] << 8);
     }
 
-    public int getMedium(int index) {
+    public int getUnsignedMedium(int index) {
         return (array[index  ] & 0xff) <<  0 |
                (array[index+1] & 0xff) <<  8 |
                (array[index+2] & 0xff) << 16;

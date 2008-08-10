@@ -93,6 +93,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return buffer.getByte(index);
     }
 
+    public short getUnsignedByte(int index) {
+        checkIndex(index);
+        return buffer.getUnsignedByte(index);
+    }
+
     public void getBytes(int index, byte[] dst, int dstIndex, int length) {
         checkIndex(index, length);
         buffer.getBytes(index, dst, dstIndex, length);
@@ -130,8 +135,13 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public int getInt(int index) {
-        checkIndex(index);
+        checkIndex(index, 4);
         return buffer.getInt(index);
+    }
+
+    public long getUnsignedInt(int index) {
+        checkIndex(index, 4);
+        return buffer.getUnsignedInt(index);
     }
 
     public long getLong(int index) {
@@ -144,9 +154,19 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return buffer.getMedium(index);
     }
 
+    public int getUnsignedMedium(int index) {
+        checkIndex(index, 3);
+        return buffer.getUnsignedMedium(index);
+    }
+
     public short getShort(int index) {
         checkIndex(index, 2);
         return buffer.getShort(index);
+    }
+
+    public int getUnsignedShort(int index) {
+        checkIndex(index, 2);
+        return buffer.getUnsignedShort(index);
     }
 
     @Override
@@ -195,6 +215,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     public byte readByte() {
         checkReadableBytes(1);
         return buffer.readByte();
+    }
+
+    public short readUnsignedByte() {
+        checkReadableBytes(1);
+        return buffer.readUnsignedByte();
     }
 
     public void readBytes(byte[] dst, int dstIndex, int length) {
@@ -277,6 +302,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return buffer.readInt();
     }
 
+    public long readUnsignedInt() {
+        checkReadableBytes(4);
+        return buffer.readUnsignedInt();
+    }
+
     public long readLong() {
         checkReadableBytes(8);
         return buffer.readLong();
@@ -287,9 +317,19 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return buffer.readMedium();
     }
 
+    public int readUnsignedMedium() {
+        checkReadableBytes(3);
+        return buffer.readUnsignedMedium();
+    }
+
     public short readShort() {
         checkReadableBytes(2);
         return buffer.readShort();
+    }
+
+    public int readUnsignedShort() {
+        checkReadableBytes(2);
+        return buffer.readUnsignedShort();
     }
 
     public void resetReaderIndex() {

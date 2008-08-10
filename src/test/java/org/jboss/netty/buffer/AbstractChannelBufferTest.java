@@ -324,7 +324,7 @@ public abstract class AbstractChannelBufferTest {
         random.setSeed(seed);
         for (int i = 0; i < buffer.capacity() - 2; i += 3) {
             int value = random.nextInt() & 0x00FFFFFF;
-            assertEquals(value, buffer.getMedium(i));
+            assertEquals(value, buffer.getUnsignedMedium(i));
         }
     }
 
@@ -431,7 +431,7 @@ public abstract class AbstractChannelBufferTest {
             int value = random.nextInt() & 0x00FFFFFF;
             assertEquals(i, buffer.readerIndex());
             assertTrue(buffer.readable());
-            assertEquals(value, buffer.readMedium());
+            assertEquals(value, buffer.readUnsignedMedium());
         }
 
         assertEquals(buffer.capacity() / 3 * 3, buffer.readerIndex());

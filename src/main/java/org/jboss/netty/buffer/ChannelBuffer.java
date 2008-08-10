@@ -411,6 +411,16 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     byte  getByte(int index);
 
     /**
+     * Gets a unsigned byte at the specified absolute {@code index} in this
+     * buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 1} is greater than {@code capacity}
+     */
+    short getUnsignedByte(int index);
+
+    /**
      * Gets a 16-bit short integer at the specified absolute {@code index} in
      * this buffer.
      *
@@ -419,6 +429,16 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         {@code index + 2} is greater than {@code capacity}
      */
     short getShort(int index);
+
+    /**
+     * Gets a unsigned 16-bit short integer at the specified absolute
+     * {@code index} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 2} is greater than {@code capacity}
+     */
+    int getUnsignedShort(int index);
 
     /**
      * Gets a 24-bit medium integer at the specified absolute {@code index} in
@@ -431,6 +451,16 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     int   getMedium(int index);
 
     /**
+     * Gets a unsigned 24-bit medium integer at the specified absolute
+     * {@code index} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 3} is greater than {@code capacity}
+     */
+    int   getUnsignedMedium(int index);
+
+    /**
      * Gets a 32-bit integer at the specified absolute {@code index} in
      * this buffer.
      *
@@ -439,6 +469,16 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         {@code index + 4} is greater than {@code capacity}
      */
     int   getInt(int index);
+
+    /**
+     * Gets a unsigned 32-bit integer at the specified absolute {@code index}
+     * in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 4} is greater than {@code capacity}
+     */
+    long  getUnsignedInt(int index);
 
     /**
      * Gets a 64-bit long integer at the specified absolute {@code index} in
@@ -597,9 +637,13 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     void setZero(int index, int length);
 
     byte  readByte();
+    short readUnsignedByte();
     short readShort();
+    int   readUnsignedShort();
     int   readMedium();
+    int   readUnsignedMedium();
     int   readInt();
+    long  readUnsignedInt();
     long  readLong();
 
     ChannelBuffer readBytes(int length);

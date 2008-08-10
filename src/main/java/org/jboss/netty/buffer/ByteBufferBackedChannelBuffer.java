@@ -71,7 +71,7 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         return buffer.getShort(index);
     }
 
-    public int getMedium(int index) {
+    public int getUnsignedMedium(int index) {
         return  (getByte(index)   & 0xff) << 16 |
                 (getByte(index+1) & 0xff) <<  8 |
                 (getByte(index+2) & 0xff) <<  0;

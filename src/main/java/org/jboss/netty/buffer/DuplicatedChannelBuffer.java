@@ -75,8 +75,8 @@ public class DuplicatedChannelBuffer extends AbstractChannelBuffer implements Wr
         return buffer.getShort(index);
     }
 
-    public int getMedium(int index) {
-        return buffer.getMedium(index);
+    public int getUnsignedMedium(int index) {
+        return buffer.getUnsignedMedium(index);
     }
 
     public int getInt(int index) {

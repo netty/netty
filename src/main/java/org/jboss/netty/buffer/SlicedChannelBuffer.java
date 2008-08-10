@@ -81,9 +81,9 @@ public class SlicedChannelBuffer extends AbstractChannelBuffer implements Wrappe
         return buffer.getShort(index + adjustment);
     }
 
-    public int getMedium(int index) {
+    public int getUnsignedMedium(int index) {
         checkIndex(index, 3);
-        return buffer.getMedium(index + adjustment);
+        return buffer.getUnsignedMedium(index + adjustment);
     }
 
     public int getInt(int index) {

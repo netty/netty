@@ -75,9 +75,9 @@ public class TruncatedChannelBuffer extends AbstractChannelBuffer implements Wra
         return buffer.getShort(index);
     }
 
-    public int getMedium(int index) {
+    public int getUnsignedMedium(int index) {
         checkIndex(index, 3);
-        return buffer.getMedium(index);
+        return buffer.getUnsignedMedium(index);
     }
 
     public int getInt(int index) {
