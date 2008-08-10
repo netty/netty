@@ -459,6 +459,25 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         return toString(readerIndex, readableBytes(), charsetName);
     }
 
+    public String toString(String charsetName, ChannelBufferIndexFinder terminatorFinder) {
+        return toString(readerIndex, readableBytes(), charsetName, terminatorFinder);
+    }
+
+    public String toString(
+            int index, int length, String charsetName,
+            ChannelBufferIndexFinder terminatorFinder) {
+        if (terminatorFinder == null) {
+            return toString(index, length, charsetName);
+        }
+
+        int terminatorIndex = indexOf(index, index + length, terminatorFinder);
+        if (terminatorIndex < 0) {
+            return toString(index, length, charsetName);
+        }
+
+        return toString(index, terminatorIndex - index, charsetName);
+    }
+
     public int indexOf(int fromIndex, int toIndex, byte value) {
         return ChannelBuffers.indexOf(this, fromIndex, toIndex, value);
     }

@@ -448,7 +448,20 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return buffer.toString(index, length, charsetName);
     }
 
+    public String toString(
+            int index, int length, String charsetName,
+            ChannelBufferIndexFinder terminatorFinder) {
+        checkIndex(index, length);
+        return buffer.toString(index, length, charsetName, terminatorFinder);
+    }
+
     public String toString(String charsetName) {
+        reject();
+        return null;
+    }
+
+    public String toString(
+            String charsetName, ChannelBufferIndexFinder terminatorFinder) {
         reject();
         return null;
     }
