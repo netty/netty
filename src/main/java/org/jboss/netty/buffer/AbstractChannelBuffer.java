@@ -153,6 +153,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     public void getBytes(int index, ChannelBuffer dst, int length) {
         getBytes(index, dst, dst.writerIndex(), length);
+        dst.writerIndex(dst.writerIndex() + length);
     }
 
     public void setBytes(int index, byte[] src) {
@@ -165,6 +166,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
     public void setBytes(int index, ChannelBuffer src, int length) {
         setBytes(index, src, src.readerIndex(), length);
+        src.readerIndex(src.readerIndex() + length);
     }
 
     public void setZero(int index, int length) {
