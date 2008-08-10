@@ -74,6 +74,6 @@ public class StringEncoder implements ChannelDownstreamHandler {
         }
 
         write(context, e.getChannel(), e.getFuture(),
-                wrappedBuffer(String.valueOf(e.getMessage()), charsetName));
+                copiedBuffer(String.valueOf(e.getMessage()), charsetName));
     }
 }

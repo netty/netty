@@ -60,20 +60,20 @@ import java.nio.charset.UnsupportedCharsetException;
  * <h3>Creating a wrapped buffer</h3>
  *
  * Wrapped buffer is a buffer which is a view of one or more existing
- * byte arrays, byte buffer and string.  Any changes in the content of the
- * original array or buffer will be reflected in the wrapped buffer.  Various
- * wrapper methods are provided and their name is all {@code wrappedBuffer()}.
+ * byte arrays and byte buffers.  Any changes in the content of the original
+ * array or buffer will be reflected in the wrapped buffer.  Various wrapper
+ * methods are provided and their name is all {@code wrappedBuffer()}.
  * You might want to take a look at this method closely if you want to create
  * a buffer which is composed of more than one array to reduce the number of
  * memory copy.
  *
  * <h3>Creating a copied buffer</h3>
  *
- * Copied buffer is a deep copy of one or more existing byte arrays or byte
- * buffer.  Unlike a wrapped buffer, there's no shared data between the
- * original arrays and the copied buffer.  Various copy methods are provided
- * and their name is all {@code copiedBuffer()}.  It's also convenient to
- * use this operation to merge multiple buffers into one buffer.
+ * Copied buffer is a deep copy of one or more existing byte arrays, byte
+ * buffers or a string.  Unlike a wrapped buffer, there's no shared data
+ * between the original data and the copied buffer.  Various copy methods are
+ * provided and their name is all {@code copiedBuffer()}.  It's also convenient
+ * to use this operation to merge multiple buffers into one buffer.
  *
  * <h3>Miscellaneous utility methods</h3>
  *
@@ -347,14 +347,6 @@ public class ChannelBuffers {
         return wrappedBuffer(wrappedBuffers);
     }
 
-    public static ChannelBuffer wrappedBuffer(String string, String charsetName) {
-        try {
-            return wrappedBuffer(string.getBytes(charsetName));
-        } catch (UnsupportedEncodingException e) {
-            throw new UnsupportedCharsetException(charsetName);
-        }
-    }
-
     public static ChannelBuffer copiedBuffer(byte[] array) {
         return copiedBuffer(BIG_ENDIAN, array);
     }
@@ -464,6 +456,14 @@ public class ChannelBuffers {
             copiedBuffers[i] = wrappedBuffer(buffers[i]).copy();
         }
         return wrappedBuffer(copiedBuffers);
+    }
+
+    public static ChannelBuffer copiedBuffer(String string, String charsetName) {
+        try {
+            return wrappedBuffer(string.getBytes(charsetName));
+        } catch (UnsupportedEncodingException e) {
+            throw new UnsupportedCharsetException(charsetName);
+        }
     }
 
     public static ChannelBuffer unmodifiableBuffer(ChannelBuffer buffer) {
