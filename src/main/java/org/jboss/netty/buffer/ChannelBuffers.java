@@ -347,10 +347,21 @@ public class ChannelBuffers {
         return wrappedBuffer(wrappedBuffers);
     }
 
+    /**
+     * Creates a new big-endian buffer whose content is a copy of the
+     * specified {@code array}.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0} and {@code array.length} respectively.
+     */
     public static ChannelBuffer copiedBuffer(byte[] array) {
         return copiedBuffer(BIG_ENDIAN, array);
     }
 
+    /**
+     * Creates a new buffer with the specified {@code endianness} whose
+     * content is a copy of the specified {@code array}.  The new buffer's
+     * {@code readerIndex} and {@code writerIndex} are {@code 0} and
+     * {@code array.length} respectively.
+     */
     public static ChannelBuffer copiedBuffer(ByteOrder endianness, byte[] array) {
         if (array.length == 0) {
             return ChannelBuffer.EMPTY_BUFFER;
@@ -364,10 +375,22 @@ public class ChannelBuffers {
         }
     }
 
+    /**
+     * Creates a new big-endian buffer whose content is a copy of the
+     * specified {@code array}'s sub-region.  The new buffer's
+     * {@code readerIndex} and {@code writerIndex} are {@code 0} and
+     * the specified {@code length} respectively.
+     */
     public static ChannelBuffer copiedBuffer(byte[] array, int offset, int length) {
         return copiedBuffer(BIG_ENDIAN, array, offset, length);
     }
 
+    /**
+     * Creates a new buffer with the specified {@code endianness} whose
+     * content is a copy of the specified {@code array}'s sub-region.  The new
+     * buffer's {@code readerIndex} and {@code writerIndex} are {@code 0} and
+     * the specified {@code length} respectively.
+     */
     public static ChannelBuffer copiedBuffer(ByteOrder endianness, byte[] array, int offset, int length) {
         if (length == 0) {
             return ChannelBuffer.EMPTY_BUFFER;
@@ -377,6 +400,12 @@ public class ChannelBuffers {
         return wrappedBuffer(endianness, copy);
     }
 
+    /**
+     * Creates a new buffer whose content is a copy of the specified
+     * {@code buffer}'s current slice.  The new buffer's {@code readerIndex}
+     * and {@code writerIndex} are {@code 0} and {@code buffer.remaining}
+     * respectively.
+     */
     public static ChannelBuffer copiedBuffer(ByteBuffer buffer) {
         int length = buffer.remaining();
         if (length == 0) {
@@ -392,14 +421,32 @@ public class ChannelBuffers {
         return wrappedBuffer(buffer.order(), copy);
     }
 
+    /**
+     * Creates a new buffer whose content is a copy of the specified
+     * {@code buffer}'s readable bytes.  The new buffer's {@code readerIndex}
+     * and {@code writerIndex} are {@code 0} and {@code buffer.readableBytes}
+     * respectively.
+     */
     public static ChannelBuffer copiedBuffer(ChannelBuffer buffer) {
         return buffer.copy();
     }
 
+    /**
+     * Creates a new big-endian buffer whose content is a merged copy of
+     * the specified {@code arrays}.  The new buffer's {@code readerIndex}
+     * and {@code writerIndex} are {@code 0} and the sum of all arrays'
+     * {@code length} respectively.
+     */
     public static ChannelBuffer copiedBuffer(byte[]... arrays) {
         return copiedBuffer(BIG_ENDIAN, arrays);
     }
 
+    /**
+     * Creates a new buffer with the specified {@code endianness} whose
+     * content is a merged copy of the specified {@code arrays}.  The new
+     * buffer's {@code readerIndex} and {@code writerIndex} are {@code 0}
+     * and the sum of all arrays' {@code length} respectively.
+     */
     public static ChannelBuffer copiedBuffer(ByteOrder endianness, byte[]... arrays) {
         switch (arrays.length) {
         case 0:
@@ -428,6 +475,16 @@ public class ChannelBuffers {
         return wrappedBuffer(endianness, mergedArray);
     }
 
+    /**
+     * Creates a new buffer whose content is a merged copy of the specified
+     * {@code buffers}' readable bytes.  The new buffer's {@code readerIndex}
+     * and {@code writerIndex} are {@code 0} and the sum of all buffers'
+     * {@code readableBytes} respectively.
+     *
+     * @throws IllegalArgumentException
+     *         if the specified buffers' endianness are different from each
+     *         other
+     */
     public static ChannelBuffer copiedBuffer(ChannelBuffer... buffers) {
         switch (buffers.length) {
         case 0:
@@ -443,6 +500,16 @@ public class ChannelBuffers {
         return wrappedBuffer(copiedBuffers);
     }
 
+    /**
+     * Creates a new buffer whose content is a merged copy of the specified
+     * {@code buffers}' slices.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0} and the sum of all buffers'
+     * {@code remaining} respectively.
+     *
+     * @throws IllegalArgumentException
+     *         if the specified buffers' endianness are different from each
+     *         other
+     */
     public static ChannelBuffer copiedBuffer(ByteBuffer... buffers) {
         switch (buffers.length) {
         case 0:
@@ -458,9 +525,26 @@ public class ChannelBuffers {
         return wrappedBuffer(copiedBuffers);
     }
 
+    /**
+     * Creates a new big-endian buffer whose content is the specified
+     * {@code string} encoded by the specified {@code charsetName}.
+     * The new buffer's {@code readerIndex} and {@code writerIndex} are
+     * {@code 0} and the length of the encoded string respectively.
+     */
     public static ChannelBuffer copiedBuffer(String string, String charsetName) {
+        return copiedBuffer(BIG_ENDIAN, string, charsetName);
+    }
+
+    /**
+     * Creates a new buffer with the specified {@code endianness} whose
+     * content is the specified {@code string} encoded by the specified
+     * {@code charsetName}.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0} and the length of the encoded string
+     * respectively.
+     */
+    public static ChannelBuffer copiedBuffer(ByteOrder endianness, String string, String charsetName) {
         try {
-            return wrappedBuffer(string.getBytes(charsetName));
+            return wrappedBuffer(endianness, string.getBytes(charsetName));
         } catch (UnsupportedEncodingException e) {
             throw new UnsupportedCharsetException(charsetName);
         }
