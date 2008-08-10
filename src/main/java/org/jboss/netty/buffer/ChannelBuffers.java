@@ -91,7 +91,14 @@ import java.nio.charset.UnsupportedCharsetException;
  */
 public class ChannelBuffers {
 
+    /**
+     * Big endian byte order.
+     */
     public static final ByteOrder BIG_ENDIAN = ByteOrder.BIG_ENDIAN;
+
+    /**
+     * Little endian byte order.
+     */
     public static final ByteOrder LITTLE_ENDIAN = ByteOrder.LITTLE_ENDIAN;
 
     private static final char[][] HEXDUMP_TABLE = new char[65536][];
@@ -102,53 +109,100 @@ public class ChannelBuffers {
         }
     }
 
-    public static ChannelBuffer buffer(int length) {
-        return buffer(BIG_ENDIAN, length);
+    /**
+     * Creates a new big-endian Java heap buffer with the specified
+     * {@code capacity}.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0}.
+     */
+    public static ChannelBuffer buffer(int capacity) {
+        return buffer(BIG_ENDIAN, capacity);
     }
 
-    public static ChannelBuffer buffer(ByteOrder endianness, int length) {
-        if (length == 0) {
+    /**
+     * Creates a new Java heap buffer with the specified {@code endianness}
+     * and {@code capacity}.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0}.
+     */
+    public static ChannelBuffer buffer(ByteOrder endianness, int capacity) {
+        if (capacity == 0) {
             return ChannelBuffer.EMPTY_BUFFER;
         }
         if (endianness == BIG_ENDIAN) {
-            return new BigEndianHeapChannelBuffer(length);
+            return new BigEndianHeapChannelBuffer(capacity);
         } else if (endianness == LITTLE_ENDIAN) {
-            return new LittleEndianHeapChannelBuffer(length);
+            return new LittleEndianHeapChannelBuffer(capacity);
         } else {
             throw new NullPointerException("endianness");
         }
     }
 
-    public static ChannelBuffer directBuffer(int length) {
-        return directBuffer(BIG_ENDIAN, length);
+    /**
+     * Creates a new big-endian direct buffer with the specified
+     * {@code capacity}.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0}.
+     */
+    public static ChannelBuffer directBuffer(int capacity) {
+        return directBuffer(BIG_ENDIAN, capacity);
     }
 
-    public static ChannelBuffer directBuffer(ByteOrder endianness, int length) {
-        if (length == 0) {
+    /**
+     * Creates a new direct buffer with the specified {@code endianness} and
+     * {@code capacity}.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0}.
+     */
+    public static ChannelBuffer directBuffer(ByteOrder endianness, int capacity) {
+        if (capacity == 0) {
             return ChannelBuffer.EMPTY_BUFFER;
         }
         ChannelBuffer buffer = new ByteBufferBackedChannelBuffer(
-                ByteBuffer.allocateDirect(length).order(endianness));
+                ByteBuffer.allocateDirect(capacity).order(endianness));
         buffer.clear();
         return buffer;
     }
 
+    /**
+     * Creates a new big-endian dynamic buffer whose estimated data length is
+     * {@code 256} bytes.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0}.
+     */
     public static ChannelBuffer dynamicBuffer() {
         return dynamicBuffer(BIG_ENDIAN, 256);
     }
 
+    /**
+     * Creates a new big-endian dynamic buffer with the specified estimated
+     * data length.  More accurate estimation yields less unexpected
+     * reallocation overhead.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0}.
+     */
     public static ChannelBuffer dynamicBuffer(int estimatedLength) {
         return dynamicBuffer(BIG_ENDIAN, estimatedLength);
     }
 
+    /**
+     * Creates a new dynamic buffer with the specified endianness and
+     * the specified estimated data length.  More accurate estimation yields
+     * less unexpected reallocation overhead.  The new buffer's
+     * {@code readerIndex} and {@code writerIndex} are {@code 0}.
+     */
     public static ChannelBuffer dynamicBuffer(ByteOrder endianness, int estimatedLength) {
         return new DynamicChannelBuffer(endianness, estimatedLength);
     }
 
+    /**
+     * Creates a new big-endian buffer which wraps the specified {@code array}.
+     * A modification on the specified array's content will be visible to the
+     * returned buffer.
+     */
     public static ChannelBuffer wrappedBuffer(byte[] array) {
         return wrappedBuffer(BIG_ENDIAN, array);
     }
 
+    /**
+     * Creates a new buffer which wraps the specified {@code array} with the
+     * specified {@code endianness}.  A modification on the specified array's
+     * content will be visible to the returned buffer.
+     */
     public static ChannelBuffer wrappedBuffer(ByteOrder endianness, byte[] array) {
         if (array.length == 0) {
             return ChannelBuffer.EMPTY_BUFFER;
@@ -162,10 +216,20 @@ public class ChannelBuffers {
         }
     }
 
+    /**
+     * Creates a new big-endian buffer which wraps the sub-region of the
+     * specified {@code array}.  A modification on the specified array's
+     * content will be visible to the returned buffer.
+     */
     public static ChannelBuffer wrappedBuffer(byte[] array, int offset, int length) {
         return wrappedBuffer(BIG_ENDIAN, array, offset, length);
     }
 
+    /**
+     * Creates a new buffer which wraps the sub-region of the specified
+     * {@code array} with the specified {@code endianness}.  A modification on
+     * the specified array's content will be visible to the returned buffer.
+     */
     public static ChannelBuffer wrappedBuffer(ByteOrder endianness, byte[] array, int offset, int length) {
         if (length == 0) {
             return ChannelBuffer.EMPTY_BUFFER;
@@ -181,6 +245,11 @@ public class ChannelBuffers {
         }
     }
 
+    /**
+     * Creates a new buffer which wraps the specified NIO buffer's current
+     * slice.  A modification on the specified buffer's content and endianness
+     * will be visible to the returned buffer.
+     */
     public static ChannelBuffer wrappedBuffer(ByteBuffer buffer) {
         if (!buffer.hasRemaining()) {
             return ChannelBuffer.EMPTY_BUFFER;
@@ -192,6 +261,11 @@ public class ChannelBuffers {
         }
     }
 
+    /**
+     * Creates a new buffer which wraps the specified buffer's readable bytes.
+     * A modification on the specified buffer's content will be visible to the
+     * returned buffer.
+     */
     public static ChannelBuffer wrappedBuffer(ChannelBuffer buffer) {
         if (buffer.readable()) {
             return buffer.slice();
@@ -200,10 +274,22 @@ public class ChannelBuffers {
         }
     }
 
+    /**
+     * Creates a new big-endian composite buffer which wraps the specified
+     * arrays without copying them.  A modification on the specified arrays'
+     * content will be visible to the returned buffer.
+     */
     public static ChannelBuffer wrappedBuffer(byte[]... arrays) {
         return wrappedBuffer(BIG_ENDIAN, arrays);
     }
 
+    /**
+     * Creates a new composite buffer which wraps the specified arrays without
+     * copying them.  A modification on the specified arrays' content will be
+     * visible to the returned buffer.
+     *
+     * @param endianness the endianness of the new buffer
+     */
     public static ChannelBuffer wrappedBuffer(ByteOrder endianness, byte[]... arrays) {
         switch (arrays.length) {
         case 0:
@@ -218,6 +304,15 @@ public class ChannelBuffers {
         return wrappedBuffer(wrappedBuffers);
     }
 
+    /**
+     * Creates a new composite buffer which wraps the specified buffers without
+     * copying them.  A modification on the specified buffers' content will be
+     * visible to the returned buffer.
+     *
+     * @throws IllegalArgumentException
+     *         if the specified buffers' endianness are different from each
+     *         other
+     */
     public static ChannelBuffer wrappedBuffer(ChannelBuffer... buffers) {
         switch (buffers.length) {
         case 0:
@@ -229,6 +324,15 @@ public class ChannelBuffers {
         }
     }
 
+    /**
+     * Creates a new composite buffer which wraps the specified NIO buffers
+     * without copying them.  A modification on the specified buffers' content
+     * will be visible to the returned buffer.
+     *
+     * @throws IllegalArgumentException
+     *         if the specified buffers' endianness are different from each
+     *         other
+     */
     public static ChannelBuffer wrappedBuffer(ByteBuffer... buffers) {
         switch (buffers.length) {
         case 0:
