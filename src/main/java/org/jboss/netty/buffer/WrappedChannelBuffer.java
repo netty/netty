@@ -23,6 +23,8 @@
 package org.jboss.netty.buffer;
 
 /**
+ * Common interface for buffer wrappers and derived buffers.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -30,5 +32,8 @@ package org.jboss.netty.buffer;
  *
  */
 public interface WrappedChannelBuffer extends ChannelBuffer {
+    /**
+     * Returns this buffer's parent that this buffer is wrapping.
+     */
     ChannelBuffer unwrap();
 }

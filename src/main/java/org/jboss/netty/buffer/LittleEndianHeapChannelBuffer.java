@@ -26,6 +26,7 @@ import java.nio.ByteOrder;
 
 
 /**
+ * Little-endian Java heap buffer.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

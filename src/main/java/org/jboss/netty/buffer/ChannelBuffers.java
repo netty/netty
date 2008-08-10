@@ -30,7 +30,7 @@ import java.nio.charset.UnsupportedCharsetException;
 
 /**
  * Creates a new {@link ChannelBuffer} by allocating new space or by wrapping
- * or copying existing byte arrays.
+ * or copying existing byte arrays, byte buffer and string.
  *
  * <h3>Use static import</h3>
  * This classes is intended to be used with Java 5 static import statement:
@@ -60,9 +60,9 @@ import java.nio.charset.UnsupportedCharsetException;
  * <h3>Creating a wrapped buffer</h3>
  *
  * Wrapped buffer is a buffer which is a view of one or more existing
- * byte arrays or byte buffer.  Any changes in the content of the original
- * array or buffer will be reflected in the wrapped buffer.  Various wrapper
- * methods are provided and their name is all {@code wrappedBuffer()}.
+ * byte arrays, byte buffer and string.  Any changes in the content of the
+ * original array or buffer will be reflected in the wrapped buffer.  Various
+ * wrapper methods are provided and their name is all {@code wrappedBuffer()}.
  * You might want to take a look at this method closely if you want to create
  * a buffer which is composed of more than one array to reduce the number of
  * memory copy.

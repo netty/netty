@@ -32,6 +32,9 @@ import java.nio.channels.ScatteringByteChannel;
 
 
 /**
+ * Derived buffer which simply forwards all data access requests to its
+ * parent.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

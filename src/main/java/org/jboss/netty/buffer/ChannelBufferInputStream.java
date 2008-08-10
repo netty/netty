@@ -29,6 +29,15 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
+ * {@link InputStream} which reads data from a {@link ChannelBuffer}.
+ * <p>
+ * A read operation against this stream will occur at the {@code readerIndex}
+ * of its underlying buffer and the {@code readerIndex} will increase during
+ * the read operation.
+ * <p>
+ * This stream implements {@link DataInput} for your convenience.
+ * The endianness of the stream is not always big endian but depends on
+ * the endianness of the underlying buffer.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -44,10 +53,24 @@ public class ChannelBufferInputStream extends InputStream implements DataInput {
     private final int startIndex;
     private final int endIndex;
 
+    /**
+     * Creates a new stream which reads data from the specified {@code buffer}
+     * starting at the current {@code readerIndex} and ending at the current
+     * {@code writerIndex}.
+     */
     public ChannelBufferInputStream(ChannelBuffer buffer) {
         this(buffer, buffer.readableBytes());
     }
 
+    /**
+     * Creates a new stream which reads data from the specified {@code buffer}
+     * starting at the current {@code readerIndex} and ending at
+     * {@code readerIndex + length}.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code readerIndex + length} is greater than
+     *            {@code writerIndex}
+     */
     public ChannelBufferInputStream(ChannelBuffer buffer, int length) {
         if (buffer == null) {
             throw new NullPointerException("buffer");
@@ -62,6 +85,9 @@ public class ChannelBufferInputStream extends InputStream implements DataInput {
         buffer.markReaderIndex();
     }
 
+    /**
+     * Returns the number of read bytes by this stream so far.
+     */
     public int readBytes() {
         return buffer.readerIndex() - startIndex;
     }

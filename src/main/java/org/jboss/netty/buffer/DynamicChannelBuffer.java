@@ -32,6 +32,8 @@ import java.nio.channels.ScatteringByteChannel;
 
 
 /**
+ * Dynamic capacity buffer which increases its capacity as needed.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

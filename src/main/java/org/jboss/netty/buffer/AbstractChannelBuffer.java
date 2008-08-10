@@ -32,6 +32,7 @@ import java.util.NoSuchElementException;
 
 
 /**
+ * Skeletal implementation of a buffer.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

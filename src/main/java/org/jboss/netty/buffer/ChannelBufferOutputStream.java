@@ -28,6 +28,15 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 /**
+ * {@link OutputStream} which writes data to a {@link ChannelBuffer}.
+ * <p>
+ * A write operation against this stream will occur at the {@code writerIndex}
+ * of its underlying buffer and the {@code writerIndex} will increase during
+ * the write operation.
+ * <p>
+ * This stream implements {@link DataOutput} for your convenience.
+ * The endianness of the stream is not always big endian but depends on
+ * the endianness of the underlying buffer.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -42,6 +51,9 @@ public class ChannelBufferOutputStream extends OutputStream implements DataOutpu
     private final ChannelBuffer buffer;
     private final DataOutputStream utf8out = new DataOutputStream(this);
 
+    /**
+     * Creates a new stream which writes data to the specified {@code buffer}.
+     */
     public ChannelBufferOutputStream(ChannelBuffer buffer) {
         if (buffer == null) {
             throw new NullPointerException("buffer");
@@ -118,6 +130,9 @@ public class ChannelBufferOutputStream extends OutputStream implements DataOutpu
         utf8out.writeUTF(s);
     }
 
+    /**
+     * Returns the buffer where this stream is writing data.
+     */
     public ChannelBuffer buffer() {
         return buffer;
     }

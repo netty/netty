@@ -32,6 +32,8 @@ import java.nio.channels.ScatteringByteChannel;
 
 
 /**
+ * Derived buffer which exposes its parent's sub-region only.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

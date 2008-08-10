@@ -32,6 +32,8 @@ import java.nio.channels.ScatteringByteChannel;
 
 
 /**
+ * Derived buffer which hides its parent's tail data beyond a certain index.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

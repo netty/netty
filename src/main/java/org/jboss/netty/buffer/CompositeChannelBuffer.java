@@ -36,6 +36,8 @@ import java.util.List;
 
 
 /**
+ * Virtual buffer which shows multiple buffers as a single merged buffer.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

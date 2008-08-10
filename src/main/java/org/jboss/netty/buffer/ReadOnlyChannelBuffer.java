@@ -30,6 +30,15 @@ import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
+/**
+ * Derived buffer which forbids any write requests to its parent.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements WrappedChannelBuffer {
 
     private final ChannelBuffer buffer;
