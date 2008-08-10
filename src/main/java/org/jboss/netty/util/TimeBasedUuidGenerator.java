@@ -32,7 +32,11 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Generates a time-based {@link UUID}.
+ * Generates a time-based {@link UUID}.  Please note that this generator
+ * uses a pseudo HMAC which is generated based on various VM properties.
+ * Therefore, the pseudo HMAC can change for each VM instance even if you
+ * launch the VM in the same machine.  Its purpose is to generate a unique
+ * ID for one VM at most.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -123,6 +127,9 @@ public class TimeBasedUuidGenerator {
         }
     }
 
+    /**
+     * Returns a new time-based {@link UUID}.
+     */
     public static UUID generate() {
         long time = System.currentTimeMillis();
         int clockSeq = TimeBasedUuidGenerator.SEQUENCE.getAndIncrement();

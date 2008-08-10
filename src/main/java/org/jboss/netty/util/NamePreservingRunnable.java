@@ -26,7 +26,7 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
- * {@link Runnable} that changes the current thread name and reverts it back
+ * Meta {@link Runnable} that changes the current thread name and reverts it back
  * when its execution ends.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -42,6 +42,11 @@ public class NamePreservingRunnable implements Runnable {
     private final String newName;
     private final Runnable runnable;
 
+    /**
+     * Creates a new instance which wraps the specified {@code runnable}
+     * and changes the thread name to the specified thread name when the
+     * specified {@code runnable} is running.
+     */
     public NamePreservingRunnable(Runnable runnable, String newName) {
         this.runnable = runnable;
         this.newName = newName;
@@ -63,8 +68,9 @@ public class NamePreservingRunnable implements Runnable {
     }
 
     /**
-     * Wraps {@link Thread#setName(String)} to catch a possible {@link Exception}s such as
-     * {@link SecurityException} in sandbox environments, such as applets
+     * Wraps {@link Thread#setName(String)} to catch a possible
+     * {@link Exception} such as a {@link SecurityException} in a sandbox
+     * environment, such as an applet
      */
     private void setName(Thread thread, String name) {
         try {
