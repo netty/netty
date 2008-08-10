@@ -23,7 +23,8 @@
 package org.jboss.netty.util;
 
 /**
- * Conversion utility class to parse a property represented as a string.
+ * Conversion utility class to parse a property represented as a string or
+ * an object.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -33,6 +34,9 @@ package org.jboss.netty.util;
  */
 public class ConvertUtil {
 
+    /**
+     * Converts the specified object into an integer.
+     */
     public static int toInt(Object value) {
         if (value instanceof Number) {
             return ((Number) value).intValue();
@@ -41,6 +45,9 @@ public class ConvertUtil {
         }
     }
 
+    /**
+     * Converts the specified object into a boolean.
+     */
     public static boolean toBoolean(Object value) {
         if (value instanceof Boolean) {
             return ((Boolean) value).booleanValue();
@@ -65,20 +72,6 @@ public class ConvertUtil {
             }
             return false;
         }
-    }
-
-    public static int toPowerOfTwo(int value) {
-        if (value <= 0) {
-            return 0;
-        }
-        int newValue = 1;
-        while (newValue < value) {
-            newValue <<= 1;
-            if (newValue > 0) {
-                return 0x40000000;
-            }
-        }
-        return newValue;
     }
 
     private ConvertUtil() {
