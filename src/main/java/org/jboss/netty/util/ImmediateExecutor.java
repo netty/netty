@@ -25,6 +25,8 @@ package org.jboss.netty.util;
 import java.util.concurrent.Executor;
 
 /**
+ * {@link Executor} which executes the command in the caller thread.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

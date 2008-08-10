@@ -32,6 +32,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * Generates a time-based {@link UUID}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

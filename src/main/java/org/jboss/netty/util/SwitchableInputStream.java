@@ -26,6 +26,9 @@ import java.io.FilterInputStream;
 import java.io.InputStream;
 
 /**
+ * {@link FilterInputStream} which allows a user to change the underlying
+ * stream at any time.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

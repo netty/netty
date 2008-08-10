@@ -25,6 +25,16 @@ package org.jboss.netty.util;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
+/**
+ * {@link Runnable} that changes the current thread name and reverts it back
+ * when its execution ends.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 public class NamePreservingRunnable implements Runnable {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NamePreservingRunnable.class);

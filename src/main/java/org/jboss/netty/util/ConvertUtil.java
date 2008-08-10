@@ -23,6 +23,8 @@
 package org.jboss.netty.util;
 
 /**
+ * Conversion utility class to parse a property represented as a string.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
