@@ -694,9 +694,12 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     ByteBuffer[] toByteBuffers(int index, int length);
 
     String toString(String charsetName);
-    String toString(String charsetName, ChannelBufferIndexFinder terminatorFinder);
+    String toString(
+            String charsetName, ChannelBufferIndexFinder terminatorFinder);
     String toString(int index, int length, String charsetName);
-    String toString(int index, int length, String charsetName, ChannelBufferIndexFinder terminatorFinder);
+    String toString(
+            int index, int length, String charsetName,
+            ChannelBufferIndexFinder terminatorFinder);
 
     /**
      * Returns a hash code which was calculated from the content of this
