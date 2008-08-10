@@ -109,8 +109,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void getBytes(int index, ByteBuffer dst) {
-        checkIndex(index, dst.remaining());
-        buffer.getBytes(index, dst);
+        reject();
     }
 
     public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
@@ -118,9 +117,12 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         buffer.getBytes(index, dst, dstIndex, length);
     }
 
+    public void getBytes(int index, ChannelBuffer dst, int length) {
+        reject();
+    }
+
     public void getBytes(int index, ChannelBuffer dst) {
-        checkIndex(index, dst.writableBytes());
-        buffer.getBytes(index, dst);
+        reject();
     }
 
     public int getBytes(int index, GatheringByteChannel out, int length)
@@ -233,8 +235,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void readBytes(ByteBuffer dst) {
-        checkReadableBytes(dst.remaining());
-        buffer.readBytes(dst);
+        reject();
     }
 
     public void readBytes(ChannelBuffer dst, int dstIndex, int length) {
@@ -243,13 +244,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void readBytes(ChannelBuffer dst, int length) {
-        checkReadableBytes(length);
-        buffer.readBytes(dst, length);
+        reject();
     }
 
     public void readBytes(ChannelBuffer dst) {
-        checkReadableBytes(dst.writableBytes());
-        buffer.readBytes(dst);
+        reject();
     }
 
     public ChannelBuffer readBytes(ChannelBufferIndexFinder endIndexFinder) {
@@ -357,6 +356,10 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
+        reject();
+    }
+
+    public void setBytes(int index, ChannelBuffer src, int length) {
         reject();
     }
 
