@@ -1354,7 +1354,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * Returns the string representation of this buffer.  This method doesn't
      * necessarily return the whole content of the buffer but returns
      * the values of the key properties such as {@link #readerIndex()},
-     * {@link #writerIndex()} and {@link #capacity()}..
+     * {@link #writerIndex()} and {@link #capacity()}.
      */
     String toString();
 }
