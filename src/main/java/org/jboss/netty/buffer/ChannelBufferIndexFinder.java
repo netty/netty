@@ -24,6 +24,11 @@ package org.jboss.netty.buffer;
 
 
 /**
+ * Locates an index of data in {@link ChannelBuffer}.
+ * <p>
+ * This interface enables the sequential search for the data which meets more
+ * complex and dynamic condition than just a simple value matching.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -33,44 +38,73 @@ package org.jboss.netty.buffer;
  */
 public interface ChannelBufferIndexFinder {
 
+    /**
+     * Returns {@code true} if and only if the data is found at the specified
+     * {@code guessedIndex} of the specified {@code buffer}.
+     * <p>
+     * The implementation should not perform an operation which raises an
+     * exception such as {@link IndexOutOfBoundsException} nor perform
+     * an operation which modifies the content of the buffer.
+     */
     boolean find(ChannelBuffer buffer, int guessedIndex);
 
+    /**
+     * Index finder which locates a {@code NUL (0x00)} byte.
+     */
     static ChannelBufferIndexFinder NUL = new ChannelBufferIndexFinder() {
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             return buffer.getByte(guessedIndex) == 0;
         }
     };
 
+    /**
+     * Index finder which locates a non-{@code NUL (0x00)} byte.
+     */
     static ChannelBufferIndexFinder NOT_NUL = new ChannelBufferIndexFinder() {
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             return buffer.getByte(guessedIndex) != 0;
         }
     };
 
+    /**
+     * Index finder which locates a {@code CR ('\r')} byte.
+     */
     static ChannelBufferIndexFinder CR = new ChannelBufferIndexFinder() {
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             return buffer.getByte(guessedIndex) == '\r';
         }
     };
 
+    /**
+     * Index finder which locates a non-{@code CR ('\r')} byte.
+     */
     static ChannelBufferIndexFinder NOT_CR = new ChannelBufferIndexFinder() {
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             return buffer.getByte(guessedIndex) != '\r';
         }
     };
 
+    /**
+     * Index finder which locates a {@code LF ('\n')} byte.
+     */
     static ChannelBufferIndexFinder LF = new ChannelBufferIndexFinder() {
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             return buffer.getByte(guessedIndex) == '\n';
         }
     };
 
+    /**
+     * Index finder which locates a non-{@code LF ('\n')} byte.
+     */
     static ChannelBufferIndexFinder NOT_LF = new ChannelBufferIndexFinder() {
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             return buffer.getByte(guessedIndex) != '\n';
         }
     };
 
+    /**
+     * Index finder which locates a {@code CR ('\r')} or {@code LF ('\n')}.
+     */
     static ChannelBufferIndexFinder CRLF = new ChannelBufferIndexFinder() {
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             byte b = buffer.getByte(guessedIndex);
@@ -78,6 +112,10 @@ public interface ChannelBufferIndexFinder {
         }
     };
 
+    /**
+     * Index finder which locates a byte which is neither a {@code CR ('\r')}
+     * nor a {@code LF ('\n')}.
+     */
     static ChannelBufferIndexFinder NOT_CRLF = new ChannelBufferIndexFinder() {
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             byte b = buffer.getByte(guessedIndex);
@@ -85,6 +123,10 @@ public interface ChannelBufferIndexFinder {
         }
     };
 
+    /**
+     * Index finder which locates a linear whitespace
+     * ({@code ' '} and {@code '\t'}).
+     */
     static ChannelBufferIndexFinder LINEAR_WHITESPACE = new ChannelBufferIndexFinder() {
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             byte b = buffer.getByte(guessedIndex);
@@ -92,6 +134,10 @@ public interface ChannelBufferIndexFinder {
         }
     };
 
+    /**
+     * Index finder which locates a byte which is not a linear whitespace
+     * (neither {@code ' '} nor {@code '\t'}).
+     */
     static ChannelBufferIndexFinder NOT_LINEAR_WHITESPACE = new ChannelBufferIndexFinder() {
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             byte b = buffer.getByte(guessedIndex);
