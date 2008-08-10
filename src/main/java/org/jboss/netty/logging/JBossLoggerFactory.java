@@ -24,6 +24,10 @@ package org.jboss.netty.logging;
 
 
 /**
+ * Logger factory which creates a
+ * <a href="http://anonsvn.jboss.org/repos/common/common-logging-spi/">JBoss Logging</a>
+ * logger.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

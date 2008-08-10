@@ -24,6 +24,10 @@ package org.jboss.netty.logging;
 
 
 /**
+ * Logger factory which creates an
+ * <a href="http://logging.apache.org/log4j/1.2/index.html">Apache Log4J</a>
+ * logger.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

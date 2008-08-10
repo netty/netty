@@ -25,6 +25,10 @@ package org.jboss.netty.logging;
 import java.util.logging.Level;
 
 /**
+ * Logger factory which creates a
+ * <a href="http://java.sun.com/javase/6/docs/technotes/guides/logging/index.html">java.util.logging</a>
+ * logger.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

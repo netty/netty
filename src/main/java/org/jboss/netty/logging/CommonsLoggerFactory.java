@@ -24,6 +24,10 @@ package org.jboss.netty.logging;
 
 
 /**
+ * Logger factory which creates an
+ * <a href="http://commons.apache.org/logging/">Apache Commons Logging</a>
+ * logger.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
