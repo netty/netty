@@ -49,7 +49,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * to {@link ClientBootstrap} and {@link ServerBootstrap} for client side and
  * server-side channel initialization respectively.
  *
- *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
