@@ -53,10 +53,8 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * <h3>Parent channel and its children</h3>
  *
  * A parent channel is a channel which is supposed to accept incoming
- * connections.  It is created by this bootstrap's
- * {@link #setPipelineFactory(ChannelPipelineFactory) pipelineFactory} or
- * {@link #setPipeline(ChannelPipeline) pipeline} property via {@link #bind()}
- * and {@link #bind(SocketAddress)}.
+ * connections.  It is created by this bootstrap's {@link ChannelFactory} via
+ * {@link #bind()} and {@link #bind(SocketAddress)}.
  * <p>
  * Once successfully bound, the parent channel starts to accept incoming
  * connections, and the accepted connections becomes the children of the
