@@ -886,10 +886,66 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      */
     long  readLong();
 
+    /**
+     * Transfers this buffer's data to a newly created buffer starting at
+     * the current {@code readerIndex} and increases the {@code readerIndex}
+     * by the number of the transferred bytes (= {@code length}).
+     * The returned buffer's {@code readerIndex} and {@code writerIndex} are
+     * {@code 0} and {@code length} respectively.
+     *
+     * @param length the number of bytes to transfer
+     *
+     * @return the newly created buffer which contains the transferred bytes
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code length} is greater than {@code this.readableBytes}
+     */
     ChannelBuffer readBytes(int length);
-    ChannelBuffer readBytes(ChannelBufferIndexFinder endIndexFinder);
+
+    /**
+     * Transfers this buffer's data to a newly created buffer starting at
+     * the current {@code readerIndex} until the specified {@code indexFinder}
+     * returns {@code true} and increases the {@code readerIndex}
+     * by the number of the transferred bytes.  The returned buffer's
+     * {@code readerIndex} and {@code writerIndex} are {@code 0} and
+     * the number of the transferred bytes respectively.
+     *
+     * @param length the number of bytes to transfer
+     *
+     * @return the newly created buffer which contains the transferred bytes
+     *
+     * @throws NoSuchElementException
+     *         if {@code indexFinder} didn't return {@code true} at all
+     */
+    ChannelBuffer readBytes(ChannelBufferIndexFinder indexFinder);
+
+    /**
+     * Returns a new slice of this buffer's sub-region starting at the current
+     * {@code readerIndex} and increases the {@code readerIndex} by the size
+     * of the new slice (= {@code length}).
+     *
+     * @param length the size of the new slice
+     *
+     * @return the newly created slice
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code length} is greater than {@code this.readableBytes}
+     */
     ChannelBuffer readSlice(int length);
-    ChannelBuffer readSlice(ChannelBufferIndexFinder endIndexFinder);
+
+    /**
+     * Returns a new slice of this buffer's sub-region starting at the current
+     * {@code readerIndex} and increases the {@code readerIndex} by the size
+     * of the new slice (determined by {@code indexFinder}).
+     *
+     * @param indexFinder finds the end index of the sub-region to be sliced
+     *
+     * @return the newly created slice
+     *
+     * @throws NoSuchElementException
+     *         if {@code indexFinder} didn't return {@code true} at all
+     */
+    ChannelBuffer readSlice(ChannelBufferIndexFinder indexFinder);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -1014,14 +1070,14 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 
     /**
      * Increases the current {@code readerIndex} until the specified
-     * {@code firstIndexFinder} returns {@code true} in this buffer.
+     * {@code indexFinder} returns {@code true} in this buffer.
      *
      * @return the number of skipped bytes
      *
      * @throws NoSuchElementException
      *         if {@code firstIndexFinder} didn't return {@code true} at all
      */
-    int  skipBytes(ChannelBufferIndexFinder firstIndexFinder);
+    int  skipBytes(ChannelBufferIndexFinder indexFinder);
 
     /**
      * Sets the specified byte at the current {@code writerIndex}
@@ -1201,7 +1257,32 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      */
     void writeZero(int length);
 
+    /**
+     * Locates the first occurrence of the specified {@code value} in this
+     * buffer.  The search takes place from the specified {@code fromIndex}
+     * (inclusive)  to the specified {@code toIndex} (exclusive).
+     * <p>
+     * If {@code fromIndex} is greater than {@code toIndex}, the search is
+     * performed in a reversed order.
+     *
+     * @return the absolute index of the first occurrence if found.
+     *         {@code -1} otherwise.
+     */
     int indexOf(int fromIndex, int toIndex, byte value);
+
+    /**
+     * Locates the first index where the specified {@code indexFinder}
+     * returns {@code true}.  The search takes place from the specified
+     * {@code fromIndex} (inclusive) to the specified {@code toIndex}
+     * (exclusive).
+     * <p>
+     * If {@code fromIndex} is greater than {@code toIndex}, the search is
+     * performed in a reversed order.
+     *
+     * @return the absolute index where the specified {@code indexFinder}
+     *         returned {@code true} if the {@code indexFinder} returned
+     *         {@code true}.  {@code -1} otherwise.
+     */
     int indexOf(int fromIndex, int toIndex, ChannelBufferIndexFinder indexFinder);
 
     /**

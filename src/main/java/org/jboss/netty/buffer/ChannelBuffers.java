@@ -630,10 +630,9 @@ public class ChannelBuffers {
     }
 
     /**
-     * Returns {@code true} if and only if the two specified buffers have the
-     * same content and the same readable bytes.  They don't need to have the
-     * same {@code readerIndex}.  This method is useful when implementing a
-     * new buffer type.
+     * Returns {@code true} if and only if the two specified buffers are
+     * identical to each other as described in {@code ChannelBuffer#equals(Object)}.
+     * This method is useful when implementing a new buffer type.
      */
     public static boolean equals(ChannelBuffer bufferA, ChannelBuffer bufferB) {
         final int aLen = bufferA.readableBytes();
@@ -666,7 +665,7 @@ public class ChannelBuffers {
     }
 
     /**
-     * Compares the two specified buffers as described in {@link Comparable}.
+     * Compares the two specified buffers as described in {@link ChannelBuffer#compareTo(ChannelBuffer)}.
      * This method is useful when implementing a new buffer type.
      */
     public static int compare(ChannelBuffer bufferA, ChannelBuffer bufferB) {
@@ -705,6 +704,10 @@ public class ChannelBuffers {
         return aLen - bLen;
     }
 
+    /**
+     * The default implementation of {@link ChannelBuffer#indexOf(int, int, byte)}.
+     * This method is useful when implementing a new buffer type.
+     */
     public static int indexOf(ChannelBuffer buffer, int fromIndex, int toIndex, byte value) {
         if (fromIndex <= toIndex) {
             return firstIndexOf(buffer, fromIndex, toIndex, value);
@@ -713,6 +716,10 @@ public class ChannelBuffers {
         }
     }
 
+    /**
+     * The default implementation of {@link ChannelBuffer#indexOf(int, int, ChannelBufferIndexFinder)}.
+     * This method is useful when implementing a new buffer type.
+     */
     public static int indexOf(ChannelBuffer buffer, int fromIndex, int toIndex, ChannelBufferIndexFinder indexFinder) {
         if (fromIndex <= toIndex) {
             return firstIndexOf(buffer, fromIndex, toIndex, indexFinder);
