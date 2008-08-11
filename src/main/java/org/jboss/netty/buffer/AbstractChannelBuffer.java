@@ -152,6 +152,9 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     }
 
     public void getBytes(int index, ChannelBuffer dst, int length) {
+        if (length > dst.writableBytes()) {
+            throw new IndexOutOfBoundsException();
+        }
         getBytes(index, dst, dst.writerIndex(), length);
         dst.writerIndex(dst.writerIndex() + length);
     }
@@ -165,6 +168,9 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     }
 
     public void setBytes(int index, ChannelBuffer src, int length) {
+        if (length > src.readableBytes()) {
+            throw new IndexOutOfBoundsException();
+        }
         setBytes(index, src, src.readerIndex(), length);
         src.readerIndex(src.readerIndex() + length);
     }

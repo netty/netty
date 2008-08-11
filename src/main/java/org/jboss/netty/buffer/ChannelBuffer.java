@@ -76,15 +76,14 @@ import java.util.NoSuchElementException;
  *      0      <=      readerIndex   <=   writerIndex    <=    capacity
  * </pre>
  *
- * <h4>Readable bytes (the actual 'content' of the buffer)</h4>
+ * <h4>Readable bytes (the actual content)</h4>
  *
- * This segment, so called 'the <strong>content</strong> of a buffer', is where
- * the actual data is stored.  Any operation whose name starts with
- * {@code read} or {@code skip} will get or skip the data at the current
- * {@link #readerIndex() readerIndex} and increase it by the number of read
- * bytes.  If the argument of the read operation is also a {@link ChannelBuffer}
- * and no start index is specified, the specified buffer's
- * {@link #readerIndex() readerIndex} is increased together.
+ * This segment is where the actual data is stored.  Any operation whose name
+ * starts with {@code read} or {@code skip} will get or skip the data at the
+ * current {@link #readerIndex() readerIndex} and increase it by the number of
+ * read bytes.  If the argument of the read operation is also a
+ * {@link ChannelBuffer} and no start index is specified, the specified
+ * buffer's {@link #readerIndex() readerIndex} is increased together.
  * <p>
  * If there's not enough content left, {@link IndexOutOfBoundsException} is
  * raised.  The default value of newly allocated, wrapped or copied buffer's
@@ -134,7 +133,6 @@ import java.util.NoSuchElementException;
  *
  *      +-------------------+------------------+------------------+
  *      | discardable bytes |  readable bytes  |  writable bytes  |
- *      |                   |     (CONTENT)    |                  |
  *      +-------------------+------------------+------------------+
  *      |                   |                  |                  |
  *      0      <=      readerIndex   <=   writerIndex    <=    capacity
@@ -144,7 +142,6 @@ import java.util.NoSuchElementException;
  *
  *      +------------------+--------------------------------------+
  *      |  readable bytes  |    writable bytes (got more space)   |
- *      |     (CONTENT)    |                                      |
  *      +------------------+--------------------------------------+
  *      |                  |                                      |
  * readerIndex (0) <= writerIndex (decreased)        <=        capacity
@@ -163,7 +160,6 @@ import java.util.NoSuchElementException;
  *
  *      +-------------------+------------------+------------------+
  *      | discardable bytes |  readable bytes  |  writable bytes  |
- *      |                   |     (CONTENT)    |                  |
  *      +-------------------+------------------+------------------+
  *      |                   |                  |                  |
  *      0      <=      readerIndex   <=   writerIndex    <=    capacity
@@ -200,14 +196,14 @@ import java.util.NoSuchElementException;
  * {@link #duplicate()}, {@link #slice()} or {@link #slice(int, int)}.
  * A derived buffer will have an independent {@link #readerIndex() readerIndex},
  * {@link #writerIndex() writerIndex} and marker indexes, while it shares
- * other internal data representation, just like a NIO {@link ByteBuffer} does.
+ * other internal data representation, just like a NIO buffer does.
  * <p>
  * In case a completely fresh copy of an existing buffer is required, please
  * call {@link #copy()} method instead.
  *
  * <h3>Conversion to existing JDK types</h3>
  *
- * <h4>NIO {@link ByteBuffer}</h4>
+ * <h4>NIO Buffers</h4>
  *
  * Various {@link #toByteBuffer()} and {@link #toByteBuffers()} methods convert
  * a {@link ChannelBuffer} into one or more NIO buffers.  These methods avoid
@@ -215,13 +211,13 @@ import java.util.NoSuchElementException;
  * guarantee that memory copy will not be involved or that an explicit memory
  * copy will be involved.
  *
- * <h4>{@link String}</h4>
+ * <h4>Strings</h4>
  *
  * Various {@link #toString(String)} methods convert a {@link ChannelBuffer}
  * into a {@link String}.  Plesae note that {@link #toString()} is not a
  * conversion method.
  *
- * <h4>{@link InputStream} and {@link OutputStream}</h4>
+ * <h4>I/O Streams</h4>
  *
  * Please refer to {@link ChannelBufferInputStream} and
  * {@link ChannelBufferOutputStream}.
@@ -260,8 +256,9 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * Sets the {@code readerIndex} of this buffer.
      *
      * @throws IndexOutOfBoundsException
-     *         if the specified {@code readerIndex} is less than 0 or
-     *         greater than {@code this.writerIndex}
+     *         if the specified {@code readerIndex} is
+     *            less than {@code 0} or
+     *            greater than {@code this.writerIndex}
      */
     void readerIndex(int readerIndex);
 
@@ -274,8 +271,9 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * Sets the {@code writerIndex} of this buffer.
      *
      * @throws IndexOutOfBoundsException
-     *         if the specified {@code writerIndex} is less than
-     *         {@code this.readerIndex} or greater than {@code this.capacity}
+     *         if the specified {@code writerIndex} is
+     *            less than {@code this.readerIndex} or
+     *            greater than {@code this.capacity}
      */
     void writerIndex(int writerIndex);
 
@@ -314,8 +312,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *
      * By contrast, {@link #setIndex(int, int)} guarantees that it never
      * throws an {@link IndexOutOfBoundsException} as long as the specified
-     * indexes meet all constraints, regardless what the current index values
-     * of the buffer are:
+     * indexes meet basic constraints, regardless what the current index
+     * values of the buffer are:
      *
      * <pre>
      * // No matter what the current state of the buffer is, the following
@@ -333,13 +331,13 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     void setIndex(int readerIndex, int writerIndex);
 
     /**
-     * Returns the number of readable bytes which equals to
+     * Returns the number of readable bytes which is equal to
      * {@code (this.writerIndex - this.readerIndex)}.
      */
     int readableBytes();
 
     /**
-     * Returns the number of writable bytes which equals to
+     * Returns the number of writable bytes which is equal to
      * {@code (this.capacity - this.writerIndex)}.
      */
     int writableBytes();
@@ -364,7 +362,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * This method is identical to {@link #setIndex(int, int) setIndex(0, 0)}.
      * <p>
      * Please note that the behavior of this method is different
-     * from that of NIO {@link ByteBuffer}, which sets the {@code limit} to
+     * from that of NIO buffer, which sets the {@code limit} to
      * the {@code capacity} of the buffer.
      */
     void clear();
