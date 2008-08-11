@@ -100,8 +100,8 @@ public class ClientBootstrap extends Bootstrap {
 
     /**
      * Creates a new instance with no {@link ChannelFactory} set.
-     * {@link #setFactory(ChannelFactory)} must be called at once before any
-     * I/O operation is requested.
+     * {@link #setFactory(ChannelFactory)} must be called before any I/O
+     * operation is requested.
      */
     public ClientBootstrap() {
         super();
