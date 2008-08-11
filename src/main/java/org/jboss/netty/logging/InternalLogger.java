@@ -30,7 +30,6 @@ package org.jboss.netty.logging;
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
- *
  */
 public interface InternalLogger {
     /**

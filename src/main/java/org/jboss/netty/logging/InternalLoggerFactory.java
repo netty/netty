@@ -41,6 +41,8 @@ package org.jboss.netty.logging;
  *
  * @version $Rev$, $Date$
  *
+ * @apiviz.landmark
+ * @apiviz.has org.jboss.netty.logging.InternalLogger oneway - - creates
  */
 public abstract class InternalLoggerFactory {
     private static volatile InternalLoggerFactory defaultFactory = new JdkLoggerFactory();
