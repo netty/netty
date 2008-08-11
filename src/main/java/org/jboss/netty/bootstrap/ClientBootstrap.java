@@ -29,17 +29,66 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineException;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
+ * Helper class which helps a user create a new client-side {@link Channel}
+ * and make a connection attempt.
+ *
+ * <h3>Configuring a channel</h3>
+ *
+ * {@link #setOption(String, Object) Options} are used to configure a channel:
+ *
+ * <pre>
+ * ClientBootstrap b = ...;
+ *
+ * // Options for a new channel
+ * b.setOption("remoteAddress", new InetSocketAddress("example.com", 8080));
+ * b.setOption("tcpNoDelay", true);
+ * b.setOption("receiveBufferSize", 1048576);
+ * </pre>
+ *
+ * <h3>Configuring a channel pipeline</h3>
+ *
+ * Every channel has its own {@link ChannelPipeline} and you can configure it
+ * in two ways.
+ *
+ * {@linkplain #setPipeline(ChannelPipeline) The first approach} is to use
+ * the default pipeline and let the bootstrap to clone it for each new channel:
+ *
+ * <pre>
+ * ClientBootstrap b = ...;
+ * ChannelPipeline p = b.getPipeline();
+ *
+ * // Add handlers to the pipeline.
+ * p.addLast("encoder", new EncodingHandler());
+ * p.addLast("decoder", new DecodingHandler());
+ * p.addLast("logic",   new LogicHandler());
+ * </pre>
+ *
+ * {@linkplain #setPipelineFactory(ChannelPipelineFactory) The second approach}
+ * is to specify a {@link ChannelPipelineFactory} by yourself and have full
+ * control over how a new pipeline is created, at the cost of more complexity:
+ *
+ * <pre>
+ * ClientBootstrap b = ...;
+ * b.setPipelineFactory(new MyPipelineFactory());
+ *
+ * public class MyPipelineFactory implements ChannelPipelineFactory {
+ *   // Create a new pipeline for a new channel and configure it here ...
+ * }
+ * </pre>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -49,30 +98,95 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  */
 public class ClientBootstrap extends Bootstrap {
 
+    /**
+     * Creates a new instance with no {@link ChannelFactory} set.
+     * {@link #setFactory(ChannelFactory)} must be called at once before any
+     * I/O operation is requested.
+     */
     public ClientBootstrap() {
         super();
     }
 
+    /**
+     * Creates a new instance with the specified initial {@link ChannelFactory}.
+     */
     public ClientBootstrap(ChannelFactory channelFactory) {
         super(channelFactory);
     }
 
+    /**
+     * Attempts a new connection with the current {@code "remoteAddress"} and
+     * {@code "localAddress"} option.  If the {@code "localAddress"} option is
+     * not set, the local address of a new channel is determined automatically.
+     * This method is similar to the following code:
+     *
+     * <pre>
+     * ClientBootstrap b = ...;
+     * b.connect(b.getOption("remoteAddress"), b.getOption("localAddress"));
+     * </pre>
+     *
+     * @return a future object which notifies when this connection attempt
+     *         succeeds or fails
+     *
+     * @throws IllegalStateException
+     *         if {@code "remoteAddress"} option was not set
+     * @throws ClassCastException
+     *         if {@code "remoteAddress"} or {@code "localAddress"} option's
+     *            value is neither a {@link SocketAddress} nor {@code null}
+     * @throws ChannelPipelineException
+     *         if this bootstrap's {@link #setPipelineFactory(ChannelPipelineFactory) pipelineFactory}
+     *            failed to create a new {@link ChannelPipeline}
+     */
     public ChannelFuture connect() {
         SocketAddress remoteAddress = (SocketAddress) getOption("remoteAddress");
         if (remoteAddress == null) {
             throw new IllegalStateException("remoteAddress option is not set.");
         }
-        SocketAddress localAddress = (SocketAddress) getOption("localAddress");
-        return connect(remoteAddress, localAddress);
+        return connect(remoteAddress);
     }
 
+    /**
+     * Attempts a new connection with the specified {@code remoteAddress} and
+     * the current {@code "localAddress"} option. If the {@code "localAddress"}
+     * option is not set, the local address of a new channel is determined
+     * automatically.  This method is identical with the following code:
+     *
+     * <pre>
+     * ClientBootstrap b = ...;
+     * b.connect(remoteAddress, b.getOption("localAddress"));
+     * </pre>
+     *
+     * @return a future object which notifies when this connection attempt
+     *         succeeds or fails
+     *
+     * @throws ClassCastException
+     *         if {@code "localAddress"} option's value is
+     *            neither a {@link SocketAddress} nor {@code null}
+     * @throws ChannelPipelineException
+     *         if this bootstrap's {@link #setPipelineFactory(ChannelPipelineFactory) pipelineFactory}
+     *            failed to create a new {@link ChannelPipeline}
+     */
     public ChannelFuture connect(SocketAddress remoteAddress) {
         if (remoteAddress == null) {
             throw new NullPointerException("remotedAddress");
         }
-        return connect(remoteAddress, null);
+        SocketAddress localAddress = (SocketAddress) getOption("localAddress");
+        return connect(remoteAddress, localAddress);
     }
 
+    /**
+     * Attempts a new connection with the specified {@code remoteAddress} and
+     * the specified {@code localAddress}.  If the specified local address is
+     * {@code null}, the local address of a new channel is determined
+     * automatically.
+     *
+     * @return a future object which notifies when this connection attempt
+     *         succeeds or fails
+     *
+     * @throws ChannelPipelineException
+     *         if this bootstrap's {@link #setPipelineFactory(ChannelPipelineFactory) pipelineFactory}
+     *            failed to create a new {@link ChannelPipeline}
+     */
     public ChannelFuture connect(final SocketAddress remoteAddress, final SocketAddress localAddress) {
 
         final BlockingQueue<ChannelFuture> futureQueue =
