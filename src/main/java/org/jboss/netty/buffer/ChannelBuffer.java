@@ -910,7 +910,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * {@code readerIndex} and {@code writerIndex} are {@code 0} and
      * the number of the transferred bytes respectively.
      *
-     * @param length the number of bytes to transfer
+     * @param indexFinder finds the end index of the sub-region
      *
      * @return the newly created buffer which contains the transferred bytes
      *
@@ -938,7 +938,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * {@code readerIndex} and increases the {@code readerIndex} by the size
      * of the new slice (determined by {@code indexFinder}).
      *
-     * @param indexFinder finds the end index of the sub-region to be sliced
+     * @param indexFinder finds the end index of the sub-region
      *
      * @return the newly created slice
      *
