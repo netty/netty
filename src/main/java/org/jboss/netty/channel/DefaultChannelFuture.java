@@ -29,11 +29,19 @@ import java.util.concurrent.TimeUnit;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
-
+/**
+ * The default {@link ChannelFuture} implementation.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public class DefaultChannelFuture implements ChannelFuture {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(DefaultChannelFuture.class);
+
     private static final int DEAD_LOCK_CHECK_INTERVAL = 5000;
     private static final Throwable CANCELLED = new Throwable();
 
@@ -46,6 +54,14 @@ public class DefaultChannelFuture implements ChannelFuture {
     private Throwable cause;
     private int waiters;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param channel
+     *        the {@link Channel} associated with this future
+     * @param cancellable
+     *        {@code true} if and only if this future can be canceled
+     */
     public DefaultChannelFuture(Channel channel, boolean cancellable) {
         this.channel = channel;
         this.cancellable = cancellable;

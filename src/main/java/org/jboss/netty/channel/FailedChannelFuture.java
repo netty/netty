@@ -22,11 +22,26 @@
  */
 package org.jboss.netty.channel;
 
-
+/**
+ * The {@link CompleteChannelFuture} which is failed already.  It is
+ * recommended to use {@link Channels#failedFuture(Channel, Throwable)}
+ * instead of calling the constructor of this future.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public class FailedChannelFuture extends CompleteChannelFuture {
 
     private final Throwable cause;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param channel the {@link Channel} associated with this future
+     * @param cause   the cause of failure
+     */
     public FailedChannelFuture(Channel channel, Throwable cause) {
         super(channel);
         if (cause == null) {

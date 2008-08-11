@@ -27,6 +27,15 @@ import java.util.concurrent.TimeUnit;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
+/**
+ * Skeletal {@link ChannelFuture} implementation which represents a future
+ * which is complete (done) already.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public abstract class CompleteChannelFuture implements ChannelFuture {
 
     private static final InternalLogger logger =
@@ -34,6 +43,11 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
 
     private final Channel channel;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param channel the {@link Channel} associated with this future
+     */
     protected CompleteChannelFuture(Channel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");

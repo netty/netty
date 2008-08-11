@@ -25,6 +25,11 @@ package org.jboss.netty.channel;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * The result of an asynchronous {@link Channel} I/O operation.  Methods are
+ * provided to check if the I/O operation is complete, to wait for its
+ * completion, and to retrieve the result of the I/O operation. It also allows
+ * you to add more than one {@link ChannelFutureListener} so you can get
+ * notified when the I/O operation is complete.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -35,25 +40,125 @@ import java.util.concurrent.TimeUnit;
  * @apiviz.owns org.jboss.netty.channel.ChannelFutureListener - - notifies
  */
 public interface ChannelFuture {
+
+    /**
+     * Returns a channel where the I/O operation associated with this future
+     * takes place.
+     */
     Channel getChannel();
 
+    /**
+     * Returns {@code true} if and only if this future is complete, regardless
+     * the operation was successful, failed, or canceled.
+     */
     boolean isDone();
+
+    /**
+     * Returns {@code true} if and only if this future was canceled by
+     * a {@link #cancel()} method.
+     */
     boolean isCancelled();
+
+    /**
+     * Returns {@code true} if and only if the I/O operation was done
+     * successfully.
+     */
     boolean isSuccess();
+
+    /**
+     * Returns the cause of the failed I/O operation if the I/O operation has
+     * failed.
+     *
+     * @return the cause of the failure.
+     *         {@code null} if succeeded or this future is not done yet.
+     */
     Throwable getCause();
 
+    /**
+     * Cancels the I/O operation associated with this future and notifies all
+     * listeners if canceled successfully.
+     *
+     * @return {@code true} if and only if the operation has been canceled.
+     *         {@code false} if the operation can't be canceled or is already done.
+     */
     boolean cancel();
 
+    /**
+     * Marks this future as a success and notifies all listeners.
+     */
     void setSuccess();
+
+    /**
+     * Marks this future as a failure and notifies all listeners.
+     */
     void setFailure(Throwable cause);
 
+    /**
+     * Adds the specified listener to this future.  The specified listener is
+     * notified when this future is {@linkplain #isDone() done}.  If this
+     * future is already done, the specified listener is notified immediately.
+     */
     void addListener(ChannelFutureListener listener);
+
+    /**
+     * Removes the specified listener from this future.  The specified
+     * listener is no longer notified when this future is
+     * {@linkplain #isDone() done}.  If this future is already done, this
+     * method has no effect and returns silently.
+     */
     void removeListener(ChannelFutureListener listener);
 
+    /**
+     * Waits for this future to be done.
+     *
+     * @throws InterruptedException
+     *         if the current thread was interrupted
+     */
     ChannelFuture await() throws InterruptedException;
+
+    /**
+     * Waits for this future to be done uninterruptibly.  This method catches
+     * an {@link InterruptedException} and discards it silently.
+     */
     ChannelFuture awaitUninterruptibly();
+
+    /**
+     * Waits for this future to be done with the specified time limit.
+     *
+     * @return {@code true} if and only if the future was done within
+     *         the specified time limit
+     *
+     * @throws InterruptedException
+     *         if the current thread was interrupted
+     */
     boolean await(long timeout, TimeUnit unit) throws InterruptedException;
+
+    /**
+     * Waits for this future to be done with the specified time limit.
+     *
+     * @return {@code true} if and only if the future was done within
+     *         the specified time limit
+     *
+     * @throws InterruptedException
+     *         if the current thread was interrupted
+     */
     boolean await(long timeoutMillis) throws InterruptedException;
+
+    /**
+     * Waits for this future to be done with the specified time limit.  This
+     * method catches an {@link InterruptedException} and discards it silently.
+     *
+     * @return {@code true} if and only if the future was done within
+     *         the specified time limit
+     */
     boolean awaitUninterruptibly(long timeout, TimeUnit unit);
+
+    /**
+     * Waits for this future to be done with the specified time limit.  This
+     * method catches an {@link InterruptedException} and discards it silently.
+     *
+     * @return {@code true} if and only if the future was done within
+     *         the specified time limit
+     */
     boolean awaitUninterruptibly(long timeoutMillis);
 }

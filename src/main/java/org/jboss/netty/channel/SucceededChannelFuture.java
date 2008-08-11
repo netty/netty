@@ -22,9 +22,23 @@
  */
 package org.jboss.netty.channel;
 
-
+/**
+ * The {@link CompleteChannelFuture} which is succeeded already.  It is
+ * recommended to use {@link Channels#succeededFuture(Channel)} instead of
+ * calling the constructor of this future.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public class SucceededChannelFuture extends CompleteChannelFuture {
 
+    /**
+     * Creates a new instance.
+     *
+     * @param channel the {@link Channel} associated with this future
+     */
     public SucceededChannelFuture(Channel channel) {
         super(channel);
     }
