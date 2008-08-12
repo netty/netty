@@ -24,15 +24,15 @@ package org.jboss.netty.example.discard;
 
 public class ThroughputMonitor extends Thread {
 
-    private final DiscardHandler echoHandler;
+    private final DiscardServerHandler handler;
 
-    public ThroughputMonitor(DiscardHandler echoHandler) {
-        this.echoHandler = echoHandler;
+    public ThroughputMonitor(DiscardServerHandler echoHandler) {
+        this.handler = echoHandler;
     }
 
     @Override
     public void run() {
-        long oldCounter = echoHandler.getTransferredBytes();
+        long oldCounter = handler.getTransferredBytes();
         long startTime = System.currentTimeMillis();
         for (;;) {
             try {
@@ -42,7 +42,7 @@ public class ThroughputMonitor extends Thread {
             }
 
             long endTime = System.currentTimeMillis();
-            long newCounter = echoHandler.getTransferredBytes();
+            long newCounter = handler.getTransferredBytes();
             System.err.format(
                     "%4.3f MiB/s%n",
                     (newCounter - oldCounter) * 1000 / (endTime - startTime) /

@@ -29,6 +29,14 @@ import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 
+/**
+ * Keeps sending random data to the specified address.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public class DiscardClient {
 
     public static void main(String[] args) throws Exception {
@@ -58,7 +66,7 @@ public class DiscardClient {
                     Executors.newCachedThreadPool());
 
         ClientBootstrap bootstrap = new ClientBootstrap(factory);
-        DiscardHandler handler = new DiscardHandler(firstMessageSize);
+        DiscardClientHandler handler = new DiscardClientHandler(firstMessageSize);
 
         bootstrap.getPipeline().addLast("handler", handler);
         bootstrap.setOption("tcpNoDelay", true);

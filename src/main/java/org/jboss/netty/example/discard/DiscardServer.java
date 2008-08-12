@@ -29,6 +29,14 @@ import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
+/**
+ * Discards any incoming data.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public class DiscardServer {
 
     public static void main(String[] args) throws Exception {
@@ -39,7 +47,7 @@ public class DiscardServer {
                     Executors.newCachedThreadPool());
 
         ServerBootstrap bootstrap = new ServerBootstrap(factory);
-        DiscardHandler handler = new DiscardHandler();
+        DiscardServerHandler handler = new DiscardServerHandler();
 
         bootstrap.getPipeline().addLast("handler", handler);
         bootstrap.setOption("child.tcpNoDelay", true);

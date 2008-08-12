@@ -22,14 +22,11 @@
  */
 package org.jboss.netty.example.discard;
 
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -38,27 +35,20 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
+/**
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 @ChannelPipelineCoverage("all")
-public class DiscardHandler extends SimpleChannelHandler {
+public class DiscardServerHandler extends SimpleChannelHandler {
 
     private static final Logger logger = Logger.getLogger(
-            DiscardHandler.class.getName());
+            DiscardServerHandler.class.getName());
 
-    private final Random random = new Random();
-    private final int messageSize;
     private final AtomicLong transferredBytes = new AtomicLong();
-
-    public DiscardHandler() {
-        this(0);
-    }
-
-    public DiscardHandler(int messageSize) {
-        if (messageSize < 0) {
-            throw new IllegalArgumentException(
-                    "messageSize: " + messageSize);
-        }
-        this.messageSize = messageSize;
-    }
 
     public long getTransferredBytes() {
         return transferredBytes.get();
@@ -69,51 +59,24 @@ public class DiscardHandler extends SimpleChannelHandler {
         if (e instanceof ChannelStateEvent) {
             logger.info(e.toString());
         }
+
+        // Let SimpleChannelHandler call actual event handler methods below.
         super.handleUpstream(ctx, e);
     }
 
     @Override
-    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
-        generateTraffic(e);
-    }
-
-    @Override
-    public void channelInterestChanged(ChannelHandlerContext ctx, ChannelStateEvent e) {
-        generateTraffic(e);
-    }
-
-    @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+        // Discard received data silently by doing nothing.
         transferredBytes.addAndGet(((ChannelBuffer) e.getMessage()).readableBytes());
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+        // Close the connection when an exception is raised.
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.",
                 e.getCause());
         e.getChannel().close();
-    }
-
-    private void generateTraffic(ChannelStateEvent e) {
-        Channel channel = e.getChannel();
-        while (channel.isWritable()) {
-            ChannelBuffer m = nextMessage();
-            if (m == null) {
-                break;
-            }
-            channel.write(m);
-        }
-    }
-
-    private ChannelBuffer nextMessage() {
-        if (messageSize == 0) {
-            return null;
-        }
-
-        byte[] content = new byte[messageSize];
-        random.nextBytes(content);
-        return ChannelBuffers.wrappedBuffer(content);
     }
 }
