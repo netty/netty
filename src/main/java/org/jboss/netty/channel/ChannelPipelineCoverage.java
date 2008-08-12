@@ -46,14 +46,61 @@ import java.lang.annotation.Target;
  * {@code "all"} means you can add the same instance of the annotated handler
  * type to more than one {@link ChannelPipeline}.  It means the member
  * variables of the handler instance is shared among multiple channels and it
- * is OK to do so.
+ * is OK to do so (or there's nothing to share.)  The following code shows an
+ * example of a handler type annotated with {@code "all"} value:
+ *
+ * <pre>
+ * public class StatelessHandler extends SimpleChannelHandler {
+ *
+ *     // No state properties - you are safe to add the same instance to
+ *     //                       multiple pipelines.
+ *
+ *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ *         // Prepend a length field to the message.
+ *         ChannelBuffer body = (ChannelBuffer) e.getMessage();
+ *         ChannelBuffer header = ChannelBuffers.buffer(4);
+ *         header.writeInt(body.readableBytes());
+ *
+ *         // Create a message prepended with the header and fire a new event.
+ *         ChannelBuffer message = ChannelBuffers.wrappedBuffer(header, body);
+ *         Channels.fireMessageReceived(ctx, message, e.getRemoteAddress());
+ *     }
+ *     ...
+ * }
+ * </pre>
  *
  * <h3>{@code ChannelPipelineCoverage("one")}</h3>
  *
  * {@code "one"} means you must create a new instance of the annotated handler
  * type for each new channel.  It means the member variables of the handler
  * instance can not be shared at all, and violating this contract will lead
- * the handler to a race condition.
+ * the handler to a race condition.  The following code shows an example of a
+ * handler type annotated with {@code "one"} value:
+ *
+ * <pre>
+ * public class StatefulHandler extends SimpleChannelHandler {
+ *
+ *     // Stateful property - adding the same instance to multiple pipelines
+ *     //                     can lead to a race condition.
+ *     private int messageId;
+ *
+ *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ *         // Prepend a message ID and length field to the message.
+ *         ChannelBuffer body = (ChannelBuffer) e.getMessage();
+ *         ChannelBuffer header = ChannelBuffers.buffer(8);
+ *         header.writeInt(messageId);
+ *         header.writeInt(body.readableBytes());
+ *
+ *         // Update the stateful property.
+ *         messageId ++;
+ *
+ *         // Create a message prepended with the header and fire a new event.
+ *         ChannelBuffer message = ChannelBuffers.wrappedBuffer(header, body);
+ *         Channels.fireMessageReceived(ctx, message, e.getRemoteAddress());
+ *     }
+ *     ...
+ * }
+ * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
