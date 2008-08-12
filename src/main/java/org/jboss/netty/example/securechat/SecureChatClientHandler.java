@@ -34,6 +34,14 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.ssl.SslHandler;
 
+/**
+ * Handles a client-side channel.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 @ChannelPipelineCoverage("all")
 public class SecureChatClientHandler extends SimpleChannelHandler {
 
@@ -52,9 +60,11 @@ public class SecureChatClientHandler extends SimpleChannelHandler {
     @Override
     public void channelConnected(
             ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-
-        // Get the SslHandler and begin handshake ASAP.
+        // Get the SslHandler from the pipeline
+        // which were added in SecureChatPipelineFactory.
         SslHandler sslHandler = ctx.getPipeline().get(SslHandler.class);
+
+        // Begin handshake.
         sslHandler.handshake(e.getChannel());
     }
 

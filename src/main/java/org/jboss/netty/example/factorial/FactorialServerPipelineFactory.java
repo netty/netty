@@ -28,6 +28,8 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 
 /**
+ * Creates a newly configured {@link ChannelPipeline} for a server-side channel.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -45,6 +47,8 @@ public class FactorialServerPipelineFactory implements
         pipeline.addLast("encoder", new NumberEncoder());
 
         // and then business logic.
+        // Please note we create a handler for every new channel
+        // because it has stateful properties.
         pipeline.addLast("handler", new FactorialServerHandler());
 
         return pipeline;

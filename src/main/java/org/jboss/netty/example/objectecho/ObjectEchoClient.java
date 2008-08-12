@@ -28,7 +28,16 @@ import java.util.concurrent.Executors;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.example.echo.EchoClient;
 
+/**
+ * Modification of {@link EchoClient} which utilizes Java object serialization.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public class ObjectEchoClient {
 
     public static void main(String[] args) throws Exception {
@@ -51,7 +60,7 @@ public class ObjectEchoClient {
             firstMessageSize = 256;
         }
 
-        // Start client.
+        // Configure the client.
         ChannelFactory factory =
             new NioClientSocketChannelFactory(
                     Executors.newCachedThreadPool(),
@@ -64,6 +73,7 @@ public class ObjectEchoClient {
         bootstrap.setOption("tcpNoDelay", true);
         bootstrap.setOption("keepAlive", true);
 
+        // Start the connection attempt.
         bootstrap.connect(new InetSocketAddress(host, port));
 
         // Start performance monitor.

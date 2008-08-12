@@ -41,6 +41,14 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.util.MapBackedSet;
 
+/**
+ * Handles a server-side channel.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 @ChannelPipelineCoverage("all")
 public class SecureChatServerHandler extends SimpleChannelHandler {
 
@@ -64,6 +72,7 @@ public class SecureChatServerHandler extends SimpleChannelHandler {
             ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
 
         // Get the SslHandler in the current pipeline.
+        // We added it in SecureChatPipelineFactory.
         final SslHandler sslHandler = ctx.getPipeline().get(SslHandler.class);
 
         // Get notified when SSL handshake is done.
@@ -113,7 +122,7 @@ public class SecureChatServerHandler extends SimpleChannelHandler {
             }
         }
 
-        // Close the connection if the client sent 'bye'.
+        // Close the connection if the client has sent 'bye'.
         if (request.toLowerCase().equals("bye")) {
             e.getChannel().close();
         }

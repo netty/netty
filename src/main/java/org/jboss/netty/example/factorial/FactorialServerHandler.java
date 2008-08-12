@@ -35,12 +35,27 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
-@ChannelPipelineCoverage("one")
+/**
+ * Handler for a server-side channel.  Please note that this handler's
+ * {@link ChannelPipelineCoverage} annotation value is "one".  It means
+ * this handler maintains some stateful information which is specific to
+ * a certain channel.  Therefore, an instance of this handler can
+ * cover only one ChannelPipeline and Channel pair.  You have to create
+ * a new handler instance whenever you create a new channel and insert
+ * this handler  to avoid a race condition.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
+@ChannelPipelineCoverage("one") // <-- HERE
 public class FactorialServerHandler extends SimpleChannelHandler {
 
     private static final Logger logger = Logger.getLogger(
             FactorialServerHandler.class.getName());
 
+    // Stateful properties.
     private int lastMultiplier = 1;
     private BigInteger factorial = new BigInteger(new byte[] { 1 });
 

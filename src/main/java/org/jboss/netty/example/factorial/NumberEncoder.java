@@ -35,6 +35,9 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
 /**
+ * Encodes a {@link Number} into the binary representation with a 32-bit length
+ * prefix.  For example, 42 will be encoded to { 0, 0, 0, 1, 42 }.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

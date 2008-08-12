@@ -29,11 +29,16 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 
 /**
+ * Creates a bogus {@link SSLContext}.  A client-side context created by this
+ * factory accepts any certificate even if it's invalid.  A server-side context
+ * created by this factory sends a bogus certificate defined in {@link SecureChatKeyStore}.
+ *
+ * You will have to create your context differently in a real world application.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
- *
  */
 public class SecureChatSslContextFactory {
 

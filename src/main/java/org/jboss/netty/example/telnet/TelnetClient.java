@@ -33,6 +33,14 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 
+/**
+ * Simplistic telnet client.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public class TelnetClient {
 
     public static void main(String[] args) throws Exception {
@@ -48,7 +56,7 @@ public class TelnetClient {
         String host = args[0];
         int port = Integer.parseInt(args[1]);
 
-        // Start client.
+        // Configure the client.
         ChannelFactory factory =
             new NioClientSocketChannelFactory(
                     Executors.newCachedThreadPool(),
@@ -61,6 +69,7 @@ public class TelnetClient {
         bootstrap.setOption("tcpNoDelay", true);
         bootstrap.setOption("keepAlive", true);
 
+        // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
 
         // Wait until the connection attempt succeeds or fails.
@@ -78,6 +87,8 @@ public class TelnetClient {
             if (line == null) {
                 break;
             }
+
+            // Sends the received line to the server.
             lastWriteFuture = channel.write(line + '\n');
         }
 
@@ -86,6 +97,8 @@ public class TelnetClient {
             lastWriteFuture.awaitUninterruptibly();
         }
 
+        // Close the connection.  Make sure the close operation ends because
+        // all I/O operations are asynchronous in Netty.
         channel.close().awaitUninterruptibly();
 
         // We should shut down all thread pools here to exit normally.

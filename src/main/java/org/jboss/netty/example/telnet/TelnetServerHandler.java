@@ -37,6 +37,14 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
+/**
+ * Handles a server-side channel.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 @ChannelPipelineCoverage("all")
 public class TelnetServerHandler extends SimpleChannelHandler {
 
@@ -55,7 +63,7 @@ public class TelnetServerHandler extends SimpleChannelHandler {
     @Override
     public void channelConnected(
             ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        // Send greeting.
+        // Send greeting for a new connection.
         e.getChannel().write(
                 "Welcome to " + InetAddress.getLocalHost().getHostName() + "!\n");
         e.getChannel().write("It's " + new Date() + " now.\n");
@@ -65,7 +73,8 @@ public class TelnetServerHandler extends SimpleChannelHandler {
     public void messageReceived(
             ChannelHandlerContext ctx, MessageEvent e) {
 
-        // Convert to a String first.
+        // Cast to a String first.
+        // We know it's a String because we put some codec in TelnetPipelineFactory.
         String request = (String) e.getMessage();
 
         // Generate and write a response.
@@ -80,9 +89,12 @@ public class TelnetServerHandler extends SimpleChannelHandler {
             response = "Did you say '" + request + "'?\n";
         }
 
+        // We don't need to write a ChannelBuffer here.
+        // We know the encoder inserted at TelnetPipelineFactory will do the conversion.
         ChannelFuture future = e.getChannel().write(response);
 
         // Close the connection after sending 'Have a good day!'
+        // if the client has sent 'bye'.
         if (close) {
             future.addListener(ChannelFutureListener.CLOSE);
         }

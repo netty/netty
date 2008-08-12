@@ -36,6 +36,15 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
+/**
+ * Handles both client-side and server-side handler depending on which
+ * constructor was called.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 @ChannelPipelineCoverage("all")
 public class EchoHandler extends SimpleChannelHandler {
 
@@ -45,12 +54,18 @@ public class EchoHandler extends SimpleChannelHandler {
     private final ChannelBuffer firstMessage;
     private final AtomicLong transferredBytes = new AtomicLong();
 
+    /**
+     * Creates a server-side handler.
+     */
     public EchoHandler() {
-        this(0);
+        firstMessage = ChannelBuffer.EMPTY_BUFFER;
     }
 
+    /**
+     * Creates a client-side handler.
+     */
     public EchoHandler(int firstMessageSize) {
-        if (firstMessageSize < 0) {
+        if (firstMessageSize <= 0) {
             throw new IllegalArgumentException(
                     "firstMessageSize: " + firstMessageSize);
         }
@@ -70,18 +85,23 @@ public class EchoHandler extends SimpleChannelHandler {
         if (e instanceof ChannelStateEvent) {
             logger.info(e.toString());
         }
+
+        // Let SimpleChannelHandler call actual event handler methods below.
         super.handleUpstream(ctx, e);
     }
 
     @Override
     public void channelConnected(
             ChannelHandlerContext ctx, ChannelStateEvent e) {
+        // Send the first message.  Server will not send anything here
+        // because the firstMessage's capacity is 0.
         e.getChannel().write(firstMessage);
     }
 
     @Override
     public void messageReceived(
             ChannelHandlerContext ctx, MessageEvent e) {
+        // Send back the received message to the remote peer.
         transferredBytes.addAndGet(((ChannelBuffer) e.getMessage()).readableBytes());
         e.getChannel().write(e.getMessage());
     }
@@ -89,6 +109,7 @@ public class EchoHandler extends SimpleChannelHandler {
     @Override
     public void exceptionCaught(
             ChannelHandlerContext ctx, ExceptionEvent e) {
+        // Close the connection when an exception is raised.
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.",

@@ -33,6 +33,8 @@ import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 
 /**
+ * Creates a newly configured {@link ChannelPipeline} for a new channel.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -49,9 +51,10 @@ public class TelnetPipelineFactory implements
     }
 
     public ChannelPipeline getPipeline() throws Exception {
+        // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();
 
-        // Add the text line codec first,
+        // Add the text line codec combination first,
         pipeline.addLast("framer", new DelimiterBasedFrameDecoder(
                 8192, Delimiters.lineDelimiter()));
         pipeline.addLast("decoder", new StringDecoder());

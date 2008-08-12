@@ -22,17 +22,25 @@
  */
 package org.jboss.netty.example.echo;
 
+/**
+ * Measures and prints the current throughput every 3 seconds.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public class ThroughputMonitor extends Thread {
 
-    private final EchoHandler echoHandler;
+    private final EchoHandler handler;
 
-    public ThroughputMonitor(EchoHandler echoHandler) {
-        this.echoHandler = echoHandler;
+    public ThroughputMonitor(EchoHandler handler) {
+        this.handler = handler;
     }
 
     @Override
     public void run() {
-        long oldCounter = echoHandler.getTransferredBytes();
+        long oldCounter = handler.getTransferredBytes();
         long startTime = System.currentTimeMillis();
         for (;;) {
             try {
@@ -42,7 +50,7 @@ public class ThroughputMonitor extends Thread {
             }
 
             long endTime = System.currentTimeMillis();
-            long newCounter = echoHandler.getTransferredBytes();
+            long newCounter = handler.getTransferredBytes();
             System.err.format(
                     "%4.3f MiB/s%n",
                     (newCounter - oldCounter) * 1000 / (endTime - startTime) /

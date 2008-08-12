@@ -23,11 +23,12 @@
 package org.jboss.netty.example.factorial;
 
 /**
+ * Thrown when there was a protocol violation during communication.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
- *
  */
 public class FactorialProtocolException extends Exception {
 

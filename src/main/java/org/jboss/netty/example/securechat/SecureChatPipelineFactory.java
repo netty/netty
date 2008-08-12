@@ -36,6 +36,8 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.handler.ssl.SslHandler;
 
 /**
+ * Creates a newly configured {@link ChannelPipeline} for a new channel.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -55,8 +57,11 @@ public class SecureChatPipelineFactory implements
         ChannelPipeline pipeline = pipeline();
 
         // Add SSL handler first to encrypt and decrypt everything.
+        // In this example, we use a bogus certificate in the server side
+        // and accept any invalid certificates in the client side.
         // You will need something more complicated to identify both
         // and server in the real world.
+
         SSLEngine engine;
         if (handler instanceof SecureChatClientHandler) {
             engine = SecureChatSslContextFactory.getClientContext().createSSLEngine();

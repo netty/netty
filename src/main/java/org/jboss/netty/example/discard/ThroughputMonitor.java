@@ -22,12 +22,20 @@
  */
 package org.jboss.netty.example.discard;
 
+/**
+ * Measures and prints the current throughput every 3 seconds.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public class ThroughputMonitor extends Thread {
 
     private final DiscardServerHandler handler;
 
-    public ThroughputMonitor(DiscardServerHandler echoHandler) {
-        this.handler = echoHandler;
+    public ThroughputMonitor(DiscardServerHandler handler) {
+        this.handler = handler;
     }
 
     @Override

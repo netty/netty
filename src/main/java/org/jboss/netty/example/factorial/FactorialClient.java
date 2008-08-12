@@ -30,6 +30,15 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 
+/**
+ * Sends a sequence of integers to a {@link FactorialServer} to calculate
+ * the factorial of the specified integer.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public class FactorialClient {
 
     public static void main(String[] args) throws Exception {

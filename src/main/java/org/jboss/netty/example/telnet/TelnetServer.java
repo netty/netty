@@ -29,10 +29,18 @@ import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
+/**
+ * Simplistic telnet server.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public class TelnetServer {
 
     public static void main(String[] args) throws Exception {
-        // Start server.
+        // Configure the server.
         ChannelFactory factory =
             new NioServerSocketChannelFactory(
                     Executors.newCachedThreadPool(),
@@ -45,6 +53,7 @@ public class TelnetServer {
         bootstrap.setOption("child.tcpNoDelay", true);
         bootstrap.setOption("child.keepAlive", true);
 
+        // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress(8080));
     }
 }

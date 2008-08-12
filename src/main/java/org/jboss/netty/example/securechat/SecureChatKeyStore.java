@@ -26,11 +26,13 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
 /**
+ * A bogus key store which provides all the required information to
+ * create an example SSL connection.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
- *
  */
 public class SecureChatKeyStore {
     private static final short[] DATA = new short[] {

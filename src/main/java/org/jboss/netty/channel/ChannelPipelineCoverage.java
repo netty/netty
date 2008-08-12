@@ -30,6 +30,31 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * Specifies if the same instance of the annotated {@link ChannelHandler} type
+ * can be added to more than one {@link ChannelPipeline}.
+ * <p>
+ * All handler types are expected to specify this annotation.  Otherwise you
+ * will be warned in runtime.  Only two values are allowed for this annotation:
+ * {@code "all"} and {@code "one"}.
+ * <p>
+ * Please note that this annotation doesn't prevent a handler annotated with
+ * the value {@code "one"} from being added to more than one pipeline.  This
+ * annotation is used for documentation purpose only.
+ *
+ * <h3>{@code ChannelPipelineCoverage("all")}</h3>
+ *
+ * {@code "all"} means you can add the same instance of the annotated handler
+ * type to more than one {@link ChannelPipeline}.  It means the member
+ * variables of the handler instance is shared among multiple channels and it
+ * is OK to do so.
+ *
+ * <h3>{@code ChannelPipelineCoverage("one")}</h3>
+ *
+ * {@code "one"} means you must create a new instance of the annotated handler
+ * type for each new channel.  It means the member variables of the handler
+ * instance can not be shared at all, and violating this contract will lead
+ * the handler to a race condition.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -42,8 +67,19 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ChannelPipelineCoverage {
+
+    /**
+     * {@code "all"}
+     */
     public static final String ALL = "all";
+
+    /**
+     * {@code "one"}
+     */
     public static final String ONE = "one";
 
+    /**
+     * The value of this annotation
+     */
     String value();
 }

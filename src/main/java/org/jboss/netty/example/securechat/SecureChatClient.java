@@ -32,7 +32,17 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.example.telnet.TelnetClient;
 
+/**
+ * Simple SSL chat client modified from {@link TelnetClient}.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 public class SecureChatClient {
 
     public static void main(String[] args) throws Exception {
@@ -48,7 +58,7 @@ public class SecureChatClient {
         String host = args[0];
         int port = Integer.parseInt(args[1]);
 
-        // Start client.
+        // Configure the client.
         ChannelFactory factory =
             new NioClientSocketChannelFactory(
                     Executors.newCachedThreadPool(),
@@ -61,6 +71,7 @@ public class SecureChatClient {
         bootstrap.setOption("tcpNoDelay", true);
         bootstrap.setOption("keepAlive", true);
 
+        // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
 
         // Wait until the connection attempt succeeds or fails.
@@ -86,6 +97,8 @@ public class SecureChatClient {
             lastWriteFuture.awaitUninterruptibly();
         }
 
+        // Close the connection.  Make sure the close operation ends because
+        // all I/O operations are asynchronous in Netty.
         channel.close().awaitUninterruptibly();
 
         // We should shut down all thread pools here to exit normally.

@@ -33,6 +33,14 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
+/**
+ * Handles a client-side channel.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 @ChannelPipelineCoverage("all")
 public class TelnetClientHandler extends SimpleChannelHandler {
 
@@ -51,6 +59,7 @@ public class TelnetClientHandler extends SimpleChannelHandler {
     @Override
     public void messageReceived(
             ChannelHandlerContext ctx, MessageEvent e) {
+        // Print out the line received from the server.
         System.err.println(e.getMessage());
     }
 

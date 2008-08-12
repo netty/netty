@@ -40,7 +40,7 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 public class DiscardServer {
 
     public static void main(String[] args) throws Exception {
-        // Start server.
+        // Configure the server.
         ChannelFactory factory =
             new NioServerSocketChannelFactory(
                     Executors.newCachedThreadPool(),
@@ -53,6 +53,7 @@ public class DiscardServer {
         bootstrap.setOption("child.tcpNoDelay", true);
         bootstrap.setOption("child.keepAlive", true);
 
+        // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress(8080));
 
         // Start performance monitor.

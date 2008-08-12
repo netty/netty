@@ -59,7 +59,7 @@ public class DiscardClient {
             firstMessageSize = 256;
         }
 
-        // Start client.
+        // Configure the client.
         ChannelFactory factory =
             new NioClientSocketChannelFactory(
                     Executors.newCachedThreadPool(),
@@ -72,6 +72,7 @@ public class DiscardClient {
         bootstrap.setOption("tcpNoDelay", true);
         bootstrap.setOption("keepAlive", true);
 
+        // Start the connection attempt.
         bootstrap.connect(new InetSocketAddress(host, port));
     }
 }

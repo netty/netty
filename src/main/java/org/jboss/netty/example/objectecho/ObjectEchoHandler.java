@@ -39,6 +39,15 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 
+/**
+ * Handles both client-side and server-side handler depending on which
+ * constructor was called.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 @ChannelPipelineCoverage("all")
 public class ObjectEchoHandler extends SimpleChannelHandler {
 
@@ -48,12 +57,18 @@ public class ObjectEchoHandler extends SimpleChannelHandler {
     private final List<Integer> firstMessage;
     private final AtomicLong transferredMessages = new AtomicLong();
 
+    /**
+     * Creates a server-side handler.
+     */
     public ObjectEchoHandler() {
-        this(0);
+        firstMessage = new ArrayList<Integer>();
     }
 
+    /**
+     * Creates a client-side handler.
+     */
     public ObjectEchoHandler(int firstMessageSize) {
-        if (firstMessageSize < 0) {
+        if (firstMessageSize <= 0) {
             throw new IllegalArgumentException(
                     "firstMessageSize: " + firstMessageSize);
         }
@@ -80,6 +95,8 @@ public class ObjectEchoHandler extends SimpleChannelHandler {
     @Override
     public void channelOpen(ChannelHandlerContext ctx,
             ChannelStateEvent e) throws Exception {
+        // Add encoder and decoder as soon as a new channel is created so that
+        // a Java object is serialized and deserialized.
         e.getChannel().getPipeline().addFirst("encoder", new ObjectEncoder());
         e.getChannel().getPipeline().addFirst("decoder", new ObjectDecoder());
     }
@@ -87,6 +104,7 @@ public class ObjectEchoHandler extends SimpleChannelHandler {
     @Override
     public void channelConnected(
             ChannelHandlerContext ctx, ChannelStateEvent e) {
+        // Send the first message if this handler is a client-side handler.
         if (!firstMessage.isEmpty()) {
             e.getChannel().write(firstMessage);
         }
@@ -95,6 +113,7 @@ public class ObjectEchoHandler extends SimpleChannelHandler {
     @Override
     public void messageReceived(
             ChannelHandlerContext ctx, MessageEvent e) {
+        // Echo back the received object to the client.
         transferredMessages.incrementAndGet();
         e.getChannel().write(e.getMessage());
     }

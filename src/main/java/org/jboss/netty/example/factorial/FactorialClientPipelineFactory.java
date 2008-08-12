@@ -28,11 +28,12 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 
 /**
+ * Creates a newly configured {@link ChannelPipeline} for a client-side channel.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
- *
  */
 public class FactorialClientPipelineFactory implements
         ChannelPipelineFactory {

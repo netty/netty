@@ -29,6 +29,16 @@ import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 
+/**
+ * Sends one message when a connection is open and echoes back any received
+ * data to the server.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 public class EchoClient {
 
     public static void main(String[] args) throws Exception {
@@ -51,7 +61,7 @@ public class EchoClient {
             firstMessageSize = 256;
         }
 
-        // Start client.
+        // Configure the client.
         ChannelFactory factory =
             new NioClientSocketChannelFactory(
                     Executors.newCachedThreadPool(),
@@ -64,6 +74,7 @@ public class EchoClient {
         bootstrap.setOption("tcpNoDelay", true);
         bootstrap.setOption("keepAlive", true);
 
+        // Start the connection attempt.
         bootstrap.connect(new InetSocketAddress(host, port));
 
         // Start performance monitor.

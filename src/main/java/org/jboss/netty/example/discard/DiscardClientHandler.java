@@ -39,6 +39,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
+ * Handles a client-side channel.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -106,6 +107,10 @@ public class DiscardClientHandler extends SimpleChannelHandler {
     }
 
     private void generateTraffic(ChannelStateEvent e) {
+        // Keep generating traffic until the channel is unwritable.
+        // A channel becomes unwritable when its internal buffer is full.
+        // If you keep writing messages ignoring this property,
+        // you will end up with an OutOfMemoryError.
         Channel channel = e.getChannel();
         while (channel.isWritable()) {
             ChannelBuffer m = nextMessage();
