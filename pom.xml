@@ -25,7 +25,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.jboss.netty</groupId>
   <artifactId>netty</artifactId>
-  <version>3.0.0.M8-SNAPSHOT</version>
+  <version>3.0.0.CR1-SNAPSHOT</version>
   <packaging>bundle</packaging>
 
   <name>The Netty Project</name>
@@ -35,7 +35,7 @@
 
   <url>http://www.jboss.org/netty/</url>
   <organization>
-    <name>JBoss.org</name>
+    <name>JBoss - a division of Red Hat</name>
     <url>http://www.jboss.org/</url>
   </organization>
 
@@ -85,12 +85,12 @@
     <repository>
       <id>repository.jboss.org</id>
       <name>JBoss.org Release Distribution Repository</name>
-      <url>http://repository.jboss.org/maven2</url>
+      <url>https://repository.jboss.org/maven2</url>
     </repository>
     <snapshotRepository>
       <id>snapshots.jboss.org</id>
       <name>JBoss.org Development Snapshot Repository</name>
-      <url>http://snapshots.jboss.org/maven2</url>
+      <url>https://snapshots.jboss.org/maven2</url>
     </snapshotRepository>
   </distributionManagement>
 
@@ -214,8 +214,10 @@
         <configuration>
           <instructions>
             <Bundle-SymbolicName>${project.groupId}</Bundle-SymbolicName>
-            <Export-Package>${project.groupId}.buffer.*,${project.groupId}.channel.*,${project.groupId}.bootstrap.*,${project.groupId}.handler.*</Export-Package>
-	    <Private-Package>${project.groupId}.util.*</Private-Package>
+            <Bundle-DocURL>${project.url}</Bundle-DocURL>
+            <Export-Package>!${project.groupId}.util.*,${project.groupId}.*</Export-Package>
+            <Private-Package>${project.groupId}.util.*</Private-Package>
+            <Import-Package>org.slf4j.*;resolution:=optional,org.apache.commons.logging.*;resolution:=optional,org.jboss.logging.*;resolution:=optional,org.apache.log4j.*;resolution:=optional,*</Import-Package>
           </instructions>
         </configuration>
       </plugin>
@@ -266,7 +268,7 @@
             -group "Central interface for all I/O operations" ${project.groupId}.channel*
             -group "Client &amp; Server bootstrapping utilities" ${project.groupId}.bootstrap*
             -group "Reusable I/O event interceptors" ${project.groupId}.handler*
-	    -group "Miscellaneous" ${project.groupId}.logging*
+            -group "Miscellaneous" ${project.groupId}.logging*
           </additionalparam>
           <encoding>UTF-8</encoding>
           <locale>en_US</locale>
