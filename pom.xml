@@ -85,7 +85,7 @@
     <repository>
       <id>repository.jboss.org</id>
       <name>JBoss.org Release Distribution Repository</name>
-      <url>https://repository.jboss.org/maven2</url>
+      <url>https://svn.jboss.org/repos/repository.jboss.org/maven2</url>
     </repository>
     <snapshotRepository>
       <id>snapshots.jboss.org</id>
