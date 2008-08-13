@@ -25,7 +25,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.jboss.netty</groupId>
   <artifactId>netty</artifactId>
-  <version>3.0.0.CR2-SNAPSHOT</version>
+  <version>3.0.0.M8-SNAPSHOT</version>
   <packaging>bundle</packaging>
 
   <name>The Netty Project</name>
