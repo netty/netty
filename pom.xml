@@ -25,7 +25,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.jboss.netty</groupId>
   <artifactId>netty</artifactId>
-  <version>3.0.0.CR1</version>
+  <version>3.0.0.CR2-SNAPSHOT</version>
   <packaging>bundle</packaging>
 
   <name>The Netty Project</name>
@@ -49,8 +49,8 @@
   </licenses>
 
   <scm>
-    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/tags/netty-3.0.0.CR1</connection>
-    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/tags/netty-3.0.0.CR1</developerConnection>
+    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/trunk</connection>
+    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/trunk</developerConnection>
   </scm>
 
   <repositories>
