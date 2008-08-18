@@ -205,7 +205,7 @@ public class BootstrapTest {
     }
 
     @Test
-    public void shouldUpdateOptionMapAsRequested() {
+    public void shouldUpdateOptionMapAsRequested1() {
         Bootstrap b = new Bootstrap();
         b.setOption("s", "x");
         b.setOption("b", true);
@@ -219,6 +219,25 @@ public class BootstrapTest {
     }
 
     @Test
+    public void shouldUpdateOptionMapAsRequested2() {
+        Bootstrap b = new Bootstrap();
+        Map<String, Object> o1 = new HashMap<String, Object>();
+        o1.put("s", "x");
+        o1.put("b", true);
+        o1.put("i", 42);
+        b.setOptions(o1);
+
+        Map<String, Object> o2 = b.getOptions();
+        assertEquals(3, o2.size());
+        assertEquals("x", o2.get("s"));
+        assertEquals(true, o2.get("b"));
+        assertEquals(42, o2.get("i"));
+
+        assertNotSame(o1, o2);
+        assertEquals(o1, o2);
+    }
+
+    @Test
     public void shouldRemoveOptionIfValueIsNull() {
         Bootstrap b = new Bootstrap();
 
@@ -228,5 +247,20 @@ public class BootstrapTest {
         b.setOption("s", null);
         assertNull(b.getOption("s"));
         assertTrue(b.getOptions().isEmpty());
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldNotAllowNullOptionKeyOnGet() {
+        new Bootstrap().getOption(null);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldNotAllowNullOptionKeyOnSet() {
+        new Bootstrap().setOption(null, "x");
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldNotAllowNullOptionMap() {
+        new Bootstrap().setOptions(null);
     }
 }
