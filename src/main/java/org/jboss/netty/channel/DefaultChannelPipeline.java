@@ -358,7 +358,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         try {
             ((ChannelUpstreamHandler) ctx.getHandler()).handleUpstream(ctx, e);
         } catch (Throwable t) {
-            notifyException(e, t);
+            notifyHandlerException(e, t);
         }
     }
 
@@ -369,7 +369,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 getSink().eventSunk(this, e);
                 return;
             } catch (Throwable t) {
-                notifyException(e, t);
+                notifyHandlerException(e, t);
             }
         }
 
@@ -380,7 +380,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         try {
             ((ChannelDownstreamHandler) ctx.getHandler()).handleDownstream(ctx, e);
         } catch (Throwable t) {
-            notifyException(e, t);
+            notifyHandlerException(e, t);
         }
     }
 
@@ -416,7 +416,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return realCtx;
     }
 
-    void notifyException(ChannelEvent e, Throwable t) {
+    void notifyHandlerException(ChannelEvent e, Throwable t) {
+        if (e instanceof ExceptionEvent) {
+            logger.warn(
+                    "An exception was thrown by a user handler " +
+                    "while handling an exception event (" + e + ")", t);
+            return;
+        }
+
         ChannelPipelineException pe;
         if (t instanceof ChannelPipelineException) {
             pe = (ChannelPipelineException) t;
@@ -561,7 +568,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 try {
                     getSink().eventSunk(DefaultChannelPipeline.this, e);
                 } catch (Throwable t) {
-                    notifyException(e, t);
+                    notifyHandlerException(e, t);
                 }
             } else {
                 DefaultChannelPipeline.this.sendDownstream(prev, e);
