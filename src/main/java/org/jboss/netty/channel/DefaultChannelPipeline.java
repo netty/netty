@@ -171,9 +171,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         DefaultChannelHandlerContext oldHead = head;
-        oldHead.next.prev = null;
-        head = oldHead.next;
-        name2ctx.remove(oldHead.getName());
+        if (oldHead == null) {
+            throw new NoSuchElementException();
+        }
+        if (oldHead.next == null) {
+            head = tail = null;
+            name2ctx.clear();
+        } else {
+            oldHead.next.prev = null;
+            head = oldHead.next;
+            name2ctx.remove(oldHead.getName());
+        }
         return oldHead.getHandler();
     }
 
@@ -183,9 +191,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         DefaultChannelHandlerContext oldTail = tail;
-        oldTail.prev.next = null;
-        tail = oldTail.prev;
-        name2ctx.remove(oldTail.getName());
+        if (oldTail == null) {
+            throw new NoSuchElementException();
+        }
+        if (oldTail.prev == null) {
+            head = tail = null;
+            name2ctx.clear();
+        } else {
+            oldTail.prev.next = null;
+            tail = oldTail.prev;
+            name2ctx.remove(oldTail.getName());
+        }
         return oldTail.getHandler();
     }
 
