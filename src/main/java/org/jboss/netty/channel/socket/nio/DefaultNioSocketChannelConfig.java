@@ -66,6 +66,7 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
             throw new IllegalArgumentException(
                     "writeSpinCount must be a positive integer.");
         }
+        this.writeSpinCount = writeSpinCount;
     }
 
     public ReceiveBufferSizePredictor getReceiveBufferSizePredictor() {
