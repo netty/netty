@@ -142,7 +142,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
             if (handshaking) {
                 return this.handshakeFuture;
             } else {
-                handshakeFuture = this.handshakeFuture = future(channel);
+                handshakeFuture = this.handshakeFuture = newHandshakeFuture(channel);
                 handshaking = true;
             }
         }
@@ -504,7 +504,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
             handshaken = true;
 
             if (handshakeFuture != null) {
-                handshakeFuture = future(channel);
+                handshakeFuture = newHandshakeFuture(channel);
             }
         }
         handshakeFuture.setSuccess();
@@ -516,7 +516,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
             handshaken = false;
 
             if (handshakeFuture != null) {
-                handshakeFuture = future(channel);
+                handshakeFuture = newHandshakeFuture(channel);
             }
         }
         handshakeFuture.setFailure(cause);
@@ -539,6 +539,19 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
         }
 
         context.sendDownstream(e);
+    }
+
+    private static ChannelFuture newHandshakeFuture(Channel channel) {
+        ChannelFuture future = future(channel);
+        future.addListener(new ChannelFutureListener() {
+            public void operationComplete(ChannelFuture future)
+                    throws Exception {
+                if (!future.isSuccess()) {
+                    fireExceptionCaught(future.getChannel(), future.getCause());
+                }
+            }
+        });
+        return future;
     }
 
     private static class PendingWrite {
