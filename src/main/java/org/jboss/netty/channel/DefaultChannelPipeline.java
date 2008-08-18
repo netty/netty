@@ -229,10 +229,18 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     public synchronized ChannelHandler getFirst() {
+        DefaultChannelHandlerContext head = this.head;
+        if (head == null) {
+            return null;
+        }
         return head.getHandler();
     }
 
     public synchronized ChannelHandler getLast() {
+        DefaultChannelHandlerContext tail = this.tail;
+        if (tail == null) {
+            return null;
+        }
         return tail.getHandler();
     }
 
