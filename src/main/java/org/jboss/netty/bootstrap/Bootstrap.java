@@ -123,11 +123,17 @@ public class Bootstrap {
      * {@link Channel} is created.  Bootstrap creates a new pipeline which has
      * the same entries with the returned pipeline for a new {@link Channel}.
      *
-     * @return the default {@link ChannelPipeline}. {@code null} if
-     *         {@link #setPipelineFactory(ChannelPipelineFactory)} was
-     *         called last time.
+     * @return the default {@link ChannelPipeline}
+     *
+     * @throws IllegalStateException
+     *         if {@link #setPipelineFactory(ChannelPipelineFactory)} was
+     *         called by a user last time.
      */
     public ChannelPipeline getPipeline() {
+        ChannelPipeline pipeline = this.pipeline;
+        if (pipeline == null) {
+            throw new IllegalStateException("pipelineFactory in use");
+        }
         return pipeline;
     }
 
@@ -143,7 +149,7 @@ public class Bootstrap {
         if (pipeline == null) {
             throw new NullPointerException("pipeline");
         }
-        pipeline = this.pipeline;
+        this.pipeline = pipeline;
         pipelineFactory = pipelineFactory(pipeline);
     }
 
