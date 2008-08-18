@@ -51,8 +51,8 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
     }
 
     public DynamicChannelBuffer(ByteOrder endianness, int estimatedLength) {
-        if (estimatedLength <= 0) {
-            throw new IllegalArgumentException("estimatedLength");
+        if (estimatedLength < 0) {
+            throw new IllegalArgumentException("estimatedLength: " + estimatedLength);
         }
         if (endianness == null) {
             throw new NullPointerException("endianness");
@@ -245,6 +245,9 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         int newCapacity;
         if (capacity() == 0) {
             newCapacity = initialCapacity;
+            if (newCapacity == 0) {
+                newCapacity = 1;
+            }
         } else {
             newCapacity = capacity();
         }
