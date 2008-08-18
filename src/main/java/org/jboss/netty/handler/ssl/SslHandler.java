@@ -328,7 +328,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
                             runDelegatedTasks();
                             break;
                         case FINISHED:
-                            setHandshakeSuccess();
+                            setHandshakeSuccess(channel);
                         default:
                             if (result.getStatus() == Status.CLOSED) {
                                 success = false;
@@ -341,7 +341,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
         } catch (SSLException e) {
             success = false;
             if (handshaking) {
-                setHandshakeFailure(e);
+                setHandshakeFailure(channel, e);
             }
             throw e;
         } finally {
@@ -413,7 +413,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
 
                 switch (result.getHandshakeStatus()) {
                 case FINISHED:
-                    setHandshakeSuccess();
+                    setHandshakeSuccess(channel);
                     break;
                 case NEED_TASK:
                     runDelegatedTasks();
@@ -426,7 +426,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
             }
         } catch (SSLException e) {
             if (handshaking) {
-                setHandshakeFailure(e);
+                setHandshakeFailure(channel, e);
             }
             throw e;
         } finally {
@@ -463,7 +463,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
                     runDelegatedTasks();
                     break;
                 case FINISHED:
-                    setHandshakeSuccess();
+                    setHandshakeSuccess(channel);
                 case NOT_HANDSHAKING:
                     wrap(ctx, channel);
                     break loop;
@@ -483,7 +483,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
             }
         } catch (SSLException e) {
             if (handshaking) {
-                setHandshakeFailure(e);
+                setHandshakeFailure(channel, e);
             }
             throw e;
         } finally {
@@ -498,18 +498,26 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
         }
     }
 
-    private void setHandshakeSuccess() {
+    private void setHandshakeSuccess(Channel channel) {
         synchronized (handshakeLock) {
             handshaking = false;
             handshaken = true;
+
+            if (handshakeFuture != null) {
+                handshakeFuture = future(channel);
+            }
         }
         handshakeFuture.setSuccess();
     }
 
-    private void setHandshakeFailure(SSLException cause) {
+    private void setHandshakeFailure(Channel channel, SSLException cause) {
         synchronized (handshakeLock) {
             handshaking = false;
             handshaken = false;
+
+            if (handshakeFuture != null) {
+                handshakeFuture = future(channel);
+            }
         }
         handshakeFuture.setFailure(cause);
     }
