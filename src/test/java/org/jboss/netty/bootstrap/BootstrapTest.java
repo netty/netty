@@ -61,7 +61,10 @@ public class BootstrapTest {
     @Test
     public void shouldNotAllowFactoryToChangeMoreThanOnce() {
         Bootstrap b = new Bootstrap();
-        b.setFactory(createMock(ChannelFactory.class));
+        ChannelFactory f = createMock(ChannelFactory.class);
+        b.setFactory(f);
+        assertSame(f, b.getFactory());
+
         try {
             b.setFactory(createMock(ChannelFactory.class));
             fail();
@@ -220,9 +223,10 @@ public class BootstrapTest {
         Bootstrap b = new Bootstrap();
 
         b.setOption("s", "x");
-        assertEquals("x", b.getOptions().get("s"));
+        assertEquals("x", b.getOption("s"));
 
         b.setOption("s", null);
+        assertNull(b.getOption("s"));
         assertTrue(b.getOptions().isEmpty());
     }
 }
