@@ -22,6 +22,16 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
+import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
@@ -36,16 +46,16 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  *
  */
 class NioProviderMetadata {
-    private static final InternalLogger logger =
+    static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioProviderMetadata.class);
 
     private static final String CONSTRAINT_LEVEL_PROPERTY =
         "java.nio.channels.spi.constraintLevel";
 
     /**
-     * 0 - no need to wake up to get / set interestOps
+     * 0 - no need to wake up to get / set interestOps (most cases)
      * 1 - no need to wake up to get interestOps, but need to wake up to set.
-     * 2 - need to wake up to get / set interestOps
+     * 2 - need to wake up to get / set interestOps    (old providers)
      */
     static final int CONSTRAINT_LEVEL;
 
@@ -74,6 +84,11 @@ class NioProviderMetadata {
                 logger.warn(
                         "Failed to autodetect the NIO constraint level; " +
                         "using the safest level (2)");
+            } else if (constraintLevel != 0) {
+                logger.warn(
+                        "Using the autodected NIO constraint level: " +
+                        constraintLevel +
+                        " (Use better NIO provider for better performance)");
             } else {
                 logger.debug(
                         "Using the autodected NIO constraint level: " +
@@ -91,7 +106,186 @@ class NioProviderMetadata {
     }
 
     private static int detectConstraintLevel() {
-        // FIXME Auto-detect the level
-        return 0;
+        // TODO Code cleanup - what a mess.
+        final int constraintLevel;
+        ExecutorService executor = Executors.newCachedThreadPool();
+        boolean success;
+        long startTime;
+        int interestOps;
+
+        SocketChannel ch = null;
+        SelectorLoop loop = null;
+
+        try {
+            // Open a channel.
+            ch = SocketChannel.open();
+
+            // Configure the channel
+            try {
+                ch.configureBlocking(false);
+            } catch (IOException e) {
+                logger.warn("Failed to configure a temporary socket.", e);
+                return -1;
+            }
+
+            // Prepare the selector loop.
+            try {
+                loop = new SelectorLoop();
+            } catch (IOException e) {
+                logger.warn("Failed to open a temporary selector.", e);
+                return -1;
+            }
+
+            // Register the channel
+            try {
+                ch.register(loop.selector, 0);
+            } catch (ClosedChannelException e) {
+                logger.warn("Failed to register a temporary selector.", e);
+                return -1;
+            }
+
+            SelectionKey key = ch.keyFor(loop.selector);
+
+            // Start the selector loop.
+            executor.execute(loop);
+
+            // Level 0
+            // TODO Make it run faster
+            success = true;
+            for (int i = 0; i < 10; i ++) {
+                // Increase the probability of calling interestOps
+                // while select() is running.
+                while (!loop.selecting) {
+                    Thread.yield();
+                }
+
+                // Wait a little bit more.
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    // Ignore
+                }
+
+                startTime = System.currentTimeMillis();
+                key.interestOps(key.interestOps() | SelectionKey.OP_READ);
+                key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
+
+                if (System.currentTimeMillis() - startTime >= 500) {
+                    success = false;
+                    break;
+                }
+            }
+
+            if (success) {
+                constraintLevel = 0;
+            } else {
+                // Level 1
+                success = true;
+                for (int i = 0; i < 10; i ++) {
+                    // Increase the probability of calling interestOps
+                    // while select() is running.
+                    while (!loop.selecting) {
+                        Thread.yield();
+                    }
+
+                    // Wait a little bit more.
+                    try {
+                        Thread.sleep(50);
+                    } catch (InterruptedException e) {
+                        // Ignore
+                    }
+
+                    startTime = System.currentTimeMillis();
+                    interestOps = key.interestOps();
+                    synchronized (loop) {
+                        loop.selector.wakeup();
+                        key.interestOps(interestOps | SelectionKey.OP_READ);
+                        key.interestOps(interestOps & ~SelectionKey.OP_READ);
+                    }
+
+                    if (System.currentTimeMillis() - startTime >= 500) {
+                        success = false;
+                        break;
+                    }
+                }
+                if (success) {
+                    constraintLevel = 1;
+                } else {
+                    constraintLevel = 2;
+                }
+            }
+        } catch (IOException e) {
+            return -1;
+        } finally {
+            if (ch != null) {
+                try {
+                    ch.close();
+                } catch (IOException e) {
+                    logger.warn("Failed to close a temporary socket.", e);
+                }
+            }
+
+            if (loop != null) {
+                loop.done = true;
+                loop.selector.wakeup();
+                try {
+                    executor.shutdown();
+                    for (;;) {
+                        try {
+                            if (executor.awaitTermination(1, TimeUnit.SECONDS)) {
+                                break;
+                            }
+                        } catch (InterruptedException e) {
+                            // Ignore
+                        }
+                    }
+                } catch (Exception e) {
+                    // Perhaps security exception.
+                }
+
+                try {
+                    loop.selector.close();
+                } catch (IOException e) {
+                    logger.warn("Failed to close a temporary selector.", e);
+                }
+            }
+        }
+
+        return constraintLevel;
+    }
+
+    private static class SelectorLoop implements Runnable {
+        final Selector selector;
+        volatile boolean done;
+        volatile boolean selecting; // Just an approximation
+
+        SelectorLoop() throws IOException {
+            selector = Selector.open();
+        }
+
+        public void run() {
+            while (!done) {
+                synchronized (this) {
+                    // Guard
+                }
+                try {
+                    selecting = true;
+                    try {
+                        selector.select(1000);
+                    } finally {
+                        selecting = false;
+                    }
+
+                    Set<SelectionKey> keys = selector.selectedKeys();
+                    for (SelectionKey k: keys) {
+                        System.out.println(k.readyOps());
+                        k.interestOps(0);
+                    }
+                    keys.clear();
+                } catch (IOException e) {
+                    logger.warn("Failed to wait for a temporary selector.", e);
+                }
+            }
+        }
     }
 }
