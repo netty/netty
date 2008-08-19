@@ -22,6 +22,9 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+
 /**
  * Provides information which is specific to a NIO service provider
  * implementation.
@@ -33,21 +36,62 @@ package org.jboss.netty.channel.socket.nio;
  *
  */
 class NioProviderMetadata {
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(NioProviderMetadata.class);
+
+    private static final String CONSTRAINT_LEVEL_PROPERTY =
+        "java.nio.channels.spi.constraintLevel";
 
     /**
-     * FIXME Auto-detect the level
-     *
      * 0 - no need to wake up to get / set interestOps
      * 1 - no need to wake up to get interestOps, but need to wake up to set.
      * 2 - need to wake up to get / set interestOps
      */
-    static final int CONSTRAINT_LEVEL = 0;
+    static final int CONSTRAINT_LEVEL;
 
     static {
+        int constraintLevel = -1;
+
+        // Use the system property if possible.
+        try {
+            String value = System.getProperty(CONSTRAINT_LEVEL_PROPERTY);
+            constraintLevel = Integer.parseInt(value);
+            if (constraintLevel < 0 || constraintLevel > 2) {
+                constraintLevel = -1;
+            } else {
+                logger.debug(
+                        "Using the specified NIO constraint level: " +
+                        constraintLevel);
+            }
+        } catch (Exception e) {
+            // format error or security issue
+        }
+
+        if (constraintLevel < 0) {
+            constraintLevel = detectConstraintLevel();
+            if (constraintLevel < 0) {
+                constraintLevel = 2;
+                logger.warn(
+                        "Failed to autodetect the NIO constraint level; " +
+                        "using the safest level (2)");
+            } else {
+                logger.debug(
+                        "Using the autodected NIO constraint level: " +
+                        constraintLevel);
+            }
+        }
+
+        CONSTRAINT_LEVEL = constraintLevel;
+
         if (CONSTRAINT_LEVEL < 0 || CONSTRAINT_LEVEL > 2) {
             throw new Error(
                     "Unexpected wakeup requirement level: " +
                     CONSTRAINT_LEVEL + ", please report this error.");
         }
+    }
+
+    private static int detectConstraintLevel() {
+        // FIXME Auto-detect the level
+        return 0;
     }
 }
