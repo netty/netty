@@ -39,8 +39,8 @@ public class ThreadRenamingRunnable implements Runnable {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ThreadRenamingRunnable.class);
 
-    private final String threadName;
     private final Runnable runnable;
+    private final String threadName;
 
     /**
      * Creates a new instance which wraps the specified {@code runnable}
@@ -48,14 +48,14 @@ public class ThreadRenamingRunnable implements Runnable {
      * specified {@code runnable} is running.
      */
     public ThreadRenamingRunnable(Runnable runnable, String threadName) {
-        if (threadName == null) {
-            throw new NullPointerException("threadName");
-        }
         if (runnable == null) {
             throw new NullPointerException("runnable");
         }
-        this.threadName = threadName;
+        if (threadName == null) {
+            throw new NullPointerException("threadName");
+        }
         this.runnable = runnable;
+        this.threadName = threadName;
     }
 
     public void run() {
