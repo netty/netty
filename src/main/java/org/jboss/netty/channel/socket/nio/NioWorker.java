@@ -49,22 +49,7 @@ class NioWorker implements Runnable {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioWorker.class);
 
-    /**
-     * FIXME Auto-detect the level
-     *
-     * 0 - no need to wake up to get / set interestOps
-     * 1 - no need to wake up to get interestOps, but need to wake up to set.
-     * 2 - need to wake up to get / set interestOps
-     */
-    private static final int WAKEUP_REQUIREMENT_LEVEL = 0;
-
-    static {
-        if (WAKEUP_REQUIREMENT_LEVEL < 0 || WAKEUP_REQUIREMENT_LEVEL > 2) {
-            throw new Error(
-                    "Unexpected wakeup requirement level: " +
-                    WAKEUP_REQUIREMENT_LEVEL + ", please report this error.");
-        }
-    }
+    private static final int CONSTRAINT_LEVEL = NioProviderMetadata.CONSTRAINT_LEVEL;
 
     private final int bossId;
     private final int id;
@@ -379,7 +364,7 @@ class NioWorker implements Runnable {
         int interestOps;
         boolean changed = false;
         if (opWrite) {
-            switch (WAKEUP_REQUIREMENT_LEVEL) {
+            switch (CONSTRAINT_LEVEL) {
             case 0:
                 interestOps = key.interestOps();
                 if ((interestOps & SelectionKey.OP_WRITE) == 0) {
@@ -429,7 +414,7 @@ class NioWorker implements Runnable {
                 throw new Error();
             }
         } else {
-            switch (WAKEUP_REQUIREMENT_LEVEL) {
+            switch (CONSTRAINT_LEVEL) {
             case 0:
                 interestOps = key.interestOps();
                 if ((interestOps & SelectionKey.OP_WRITE) != 0) {
@@ -542,7 +527,7 @@ class NioWorker implements Runnable {
 
         boolean changed = false;
         try {
-            switch (WAKEUP_REQUIREMENT_LEVEL) {
+            switch (CONSTRAINT_LEVEL) {
             case 0:
                 if (key.interestOps() != interestOps) {
                     key.interestOps(interestOps);
