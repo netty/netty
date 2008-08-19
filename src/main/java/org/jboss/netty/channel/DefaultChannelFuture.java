@@ -42,7 +42,6 @@ public class DefaultChannelFuture implements ChannelFuture {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(DefaultChannelFuture.class);
 
-    private static final int DEAD_LOCK_CHECK_INTERVAL = 5000;
     private static final Throwable CANCELLED = new Throwable();
 
     private final Channel channel;
@@ -142,8 +141,7 @@ public class DefaultChannelFuture implements ChannelFuture {
             while (!done) {
                 waiters++;
                 try {
-                    this.wait(DEAD_LOCK_CHECK_INTERVAL);
-                    checkDeadLock();
+                    this.wait();
                 } finally {
                     waiters--;
                 }
@@ -166,14 +164,11 @@ public class DefaultChannelFuture implements ChannelFuture {
             while (!done) {
                 waiters++;
                 try {
-                    this.wait(DEAD_LOCK_CHECK_INTERVAL);
+                    this.wait();
                 } catch (InterruptedException e) {
                     // Ignore.
                 } finally {
                     waiters--;
-                    if (!done) {
-                        checkDeadLock();
-                    }
                 }
             }
         }
@@ -208,7 +203,7 @@ public class DefaultChannelFuture implements ChannelFuture {
             try {
                 for (;;) {
                     try {
-                        this.wait(Math.min(waitTime, DEAD_LOCK_CHECK_INTERVAL));
+                        this.wait(waitTime);
                     } catch (InterruptedException e) {
                         if (interruptable) {
                             throw e;
@@ -227,40 +222,8 @@ public class DefaultChannelFuture implements ChannelFuture {
                 }
             } finally {
                 waiters--;
-                if (!done) {
-                    checkDeadLock();
-                }
             }
         }
-    }
-
-    private void checkDeadLock() {
-//        IllegalStateException e = new IllegalStateException(
-//                "DEAD LOCK: " + ChannelFuture.class.getSimpleName() +
-//                ".await() was invoked from an I/O processor thread.  " +
-//                "Please use " + ChannelFutureListener.class.getSimpleName() +
-//                " or configure a proper thread model alternatively.");
-//
-//        StackTraceElement[] stackTrace = e.getStackTrace();
-//
-//        // Simple and quick check.
-//        for (StackTraceElement s: stackTrace) {
-//            if (AbstractPollingIoProcessor.class.getName().equals(s.getClassName())) {
-//                throw e;
-//            }
-//        }
-//
-//        // And then more precisely.
-//        for (StackTraceElement s: stackTrace) {
-//            try {
-//                Class<?> cls = DefaultChannelFuture.class.getClassLoader().loadClass(s.getClassName());
-//                if (IoProcessor.class.isAssignableFrom(cls)) {
-//                    throw e;
-//                }
-//            } catch (Exception cnfe) {
-//                // Ignore
-//            }
-//        }
     }
 
     public void setSuccess() {
@@ -332,7 +295,6 @@ public class DefaultChannelFuture implements ChannelFuture {
                 }
                 otherListeners = null;
             }
-
         }
     }
 
