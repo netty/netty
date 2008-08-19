@@ -85,7 +85,7 @@ class NioProviderMetadata {
 
         if (CONSTRAINT_LEVEL < 0 || CONSTRAINT_LEVEL > 2) {
             throw new Error(
-                    "Unexpected wakeup requirement level: " +
+                    "Unexpected NIO constraint level: " +
                     CONSTRAINT_LEVEL + ", please report this error.");
         }
     }
