@@ -40,7 +40,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.NamePreservingRunnable;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 
 class OioServerSocketPipelineSink extends AbstractChannelSink {
 
@@ -141,7 +141,7 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
 
             Executor bossExecutor =
                 ((OioServerSocketChannelFactory) channel.getFactory()).bossExecutor;
-            bossExecutor.execute(new NamePreservingRunnable(
+            bossExecutor.execute(new ThreadRenamingRunnable(
                     new Boss(channel),
                     "Old I/O server boss (channelId: " + channel.getId() +
                     ", " + localAddress + ')'));
@@ -195,7 +195,7 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                                     OioServerSocketPipelineSink.this,
                                     acceptedSocket);
                         workerExecutor.execute(
-                                new NamePreservingRunnable(
+                                new ThreadRenamingRunnable(
                                         new OioWorker(acceptedChannel),
                                         "Old I/O server worker (parentId: " +
                                         channel.getId() +

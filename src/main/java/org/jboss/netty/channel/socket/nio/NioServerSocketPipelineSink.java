@@ -42,7 +42,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.NamePreservingRunnable;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 
 class NioServerSocketPipelineSink extends AbstractChannelSink {
 
@@ -146,7 +146,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
 
             Executor bossExecutor =
                 ((NioServerSocketChannelFactory) channel.getFactory()).bossExecutor;
-            bossExecutor.execute(new NamePreservingRunnable(
+            bossExecutor.execute(new ThreadRenamingRunnable(
                     new Boss(channel),
                     "New I/O server boss #" + id +" (channelId: " + channel.getId() +
                     ", " + channel.getLocalAddress() + ')'));

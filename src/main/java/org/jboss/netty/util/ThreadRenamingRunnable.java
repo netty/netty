@@ -26,8 +26,8 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
- * Meta {@link Runnable} that changes the current thread name and reverts it back
- * when its execution ends.
+ * Meta {@link Runnable} that changes the current thread name and reverts it
+ * back when its execution ends.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -35,11 +35,11 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * @version $Rev$, $Date$
  *
  */
-public class NamePreservingRunnable implements Runnable {
+public class ThreadRenamingRunnable implements Runnable {
     private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(NamePreservingRunnable.class);
+        InternalLoggerFactory.getInstance(ThreadRenamingRunnable.class);
 
-    private final String newName;
+    private final String threadName;
     private final Runnable runnable;
 
     /**
@@ -47,38 +47,41 @@ public class NamePreservingRunnable implements Runnable {
      * and changes the thread name to the specified thread name when the
      * specified {@code runnable} is running.
      */
-    public NamePreservingRunnable(Runnable runnable, String newName) {
+    public ThreadRenamingRunnable(Runnable runnable, String threadName) {
+        if (threadName == null) {
+            throw new NullPointerException("threadName");
+        }
+        if (runnable == null) {
+            throw new NullPointerException("runnable");
+        }
+        this.threadName = threadName;
         this.runnable = runnable;
-        this.newName = newName;
     }
 
     public void run() {
-        Thread currentThread = Thread.currentThread();
-        String oldName = currentThread.getName();
+        final Thread currentThread = Thread.currentThread();
+        final String oldThreadName = currentThread.getName();
 
-        if (newName != null) {
-            setName(currentThread, newName);
-        }
-
+        // Change the thread name before starting the actual runnable.
+        boolean renamed = false;
         try {
-            runnable.run();
-        } finally {
-            setName(currentThread, oldName);
-        }
-    }
-
-    /**
-     * Wraps {@link Thread#setName(String)} to catch a possible
-     * {@link Exception} such as a {@link SecurityException} in a sandbox
-     * environment, such as an applet
-     */
-    private void setName(Thread thread, String name) {
-        try {
-            thread.setName(name);
+            currentThread.setName(threadName);
+            renamed = true;
         } catch (Exception e) {
             // Probably SecurityException.
             logger.warn(
                     "Failed to set the current thread name.", e);
+        }
+
+        // Run the actual runnable and revert the name back when it ends.
+        try {
+            runnable.run();
+        } finally {
+            if (renamed) {
+                // Revert the name back if the current thread was renamed.
+                // We don't check the exception here because we know it works.
+                currentThread.setName(oldThreadName);
+            }
         }
     }
 }

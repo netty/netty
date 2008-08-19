@@ -42,7 +42,7 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.NamePreservingRunnable;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 
 class NioWorker implements Runnable {
 
@@ -106,7 +106,7 @@ class NioWorker implements Runnable {
                 (server ? "New I/O server worker #"
                         : "New I/O client worker #") + bossId + '-' + id;
 
-            executor.execute(new NamePreservingRunnable(this, threadName));
+            executor.execute(new ThreadRenamingRunnable(this, threadName));
         } else {
             synchronized (selectorGuard) {
                 selector.wakeup();

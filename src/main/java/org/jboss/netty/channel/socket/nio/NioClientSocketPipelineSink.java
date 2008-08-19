@@ -46,7 +46,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.NamePreservingRunnable;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 
 class NioClientSocketPipelineSink extends AbstractChannelSink {
 
@@ -193,9 +193,8 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                     throw new ChannelException(
                             "Failed to register a socket to the selector.", e);
                 }
-                bossExecutor.execute(new NamePreservingRunnable(
-                        this,
-                        "New I/O client boss #" + id));
+                bossExecutor.execute(new ThreadRenamingRunnable(
+                        this, "New I/O client boss #" + id));
             } else {
                 synchronized (selectorGuard) {
                     selector.wakeup();

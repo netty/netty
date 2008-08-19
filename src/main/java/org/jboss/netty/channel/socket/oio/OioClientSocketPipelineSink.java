@@ -36,7 +36,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.util.NamePreservingRunnable;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 
 class OioClientSocketPipelineSink extends AbstractChannelSink {
 
@@ -131,7 +131,7 @@ class OioClientSocketPipelineSink extends AbstractChannelSink {
             fireChannelConnected(channel, channel.getRemoteAddress());
 
             // Start the business.
-            workerExecutor.execute(new NamePreservingRunnable(
+            workerExecutor.execute(new ThreadRenamingRunnable(
                     new OioWorker(channel),
                     "Old I/O client worker (channelId: " + channel.getId() + ", " +
                     channel.getLocalAddress() + " => " +
