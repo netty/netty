@@ -49,7 +49,7 @@ public class ObjectEncoderOutputStream extends OutputStream implements
         if (out == null) {
             throw new NullPointerException("out");
         }
-        if (estimatedLength < 8) {
+        if (estimatedLength < 0) {
             throw new IllegalArgumentException("estimatedLength: " + estimatedLength);
         }
 
