@@ -53,7 +53,7 @@ public class ObjectEncoder implements ChannelDownstreamHandler {
     }
 
     public ObjectEncoder(int estimatedLength) {
-        if (estimatedLength <= 0) {
+        if (estimatedLength < 0) {
             throw new IllegalArgumentException(
                     "estimatedLength: " + estimatedLength);
         }
