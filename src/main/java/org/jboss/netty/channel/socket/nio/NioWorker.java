@@ -260,7 +260,7 @@ class NioWorker implements Runnable {
 
     private static void write(SelectionKey k) {
         NioSocketChannel ch = (NioSocketChannel) k.attachment();
-        write(ch);
+        write(ch, false);
     }
 
     private static void close(SelectionKey k) {
@@ -268,7 +268,7 @@ class NioWorker implements Runnable {
         close(ch, ch.getSucceededFuture());
     }
 
-    static void write(NioSocketChannel channel) {
+    static void write(NioSocketChannel channel, boolean mightNeedWakeup) {
         if (channel.writeBuffer.isEmpty() && channel.currentWriteEvent == null) {
             return;
         }
@@ -337,13 +337,14 @@ class NioWorker implements Runnable {
         }
 
         if (addOpWrite) {
-            setOpWrite(channel, true);
+            setOpWrite(channel, true, mightNeedWakeup);
         } else if (removeOpWrite) {
-            setOpWrite(channel, false);
+            setOpWrite(channel, false, mightNeedWakeup);
         }
     }
 
-    private static void setOpWrite(NioSocketChannel channel, boolean opWrite) {
+    private static void setOpWrite(
+            NioSocketChannel channel, boolean opWrite, boolean mightNeedWakeup) {
         NioWorker worker = channel.getWorker();
         if (worker == null) {
             IllegalStateException cause =
@@ -364,104 +365,122 @@ class NioWorker implements Runnable {
         int interestOps;
         boolean changed = false;
         if (opWrite) {
-            switch (CONSTRAINT_LEVEL) {
-            case 0:
+            if (!mightNeedWakeup) {
                 interestOps = key.interestOps();
                 if ((interestOps & SelectionKey.OP_WRITE) == 0) {
                     interestOps |= SelectionKey.OP_WRITE;
                     key.interestOps(interestOps);
                     changed = true;
                 }
-                break;
-            case 1:
-                interestOps = key.interestOps();
-                if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                    if (Thread.currentThread() == worker.thread) {
-                        interestOps |= SelectionKey.OP_WRITE;
-                        key.interestOps(interestOps);
-                        changed = true;
-                    } else {
-                        synchronized (worker.selectorGuard) {
-                            selector.wakeup();
-                            interestOps |= SelectionKey.OP_WRITE;
-                            key.interestOps(interestOps);
-                            changed = true;
-                        }
-                    }
-                }
-                break;
-            case 2:
-                if (Thread.currentThread() == worker.thread) {
+            } else {
+                switch (CONSTRAINT_LEVEL) {
+                case 0:
                     interestOps = key.interestOps();
                     if ((interestOps & SelectionKey.OP_WRITE) == 0) {
                         interestOps |= SelectionKey.OP_WRITE;
                         key.interestOps(interestOps);
                         changed = true;
                     }
-                } else {
-                    synchronized (worker.selectorGuard) {
-                        selector.wakeup();
+                    break;
+                case 1:
+                    interestOps = key.interestOps();
+                    if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                        if (Thread.currentThread() == worker.thread) {
+                            interestOps |= SelectionKey.OP_WRITE;
+                            key.interestOps(interestOps);
+                            changed = true;
+                        } else {
+                            synchronized (worker.selectorGuard) {
+                                selector.wakeup();
+                                interestOps |= SelectionKey.OP_WRITE;
+                                key.interestOps(interestOps);
+                                changed = true;
+                            }
+                        }
+                    }
+                    break;
+                case 2:
+                    if (Thread.currentThread() == worker.thread) {
                         interestOps = key.interestOps();
                         if ((interestOps & SelectionKey.OP_WRITE) == 0) {
                             interestOps |= SelectionKey.OP_WRITE;
                             key.interestOps(interestOps);
                             changed = true;
                         }
+                    } else {
+                        synchronized (worker.selectorGuard) {
+                            selector.wakeup();
+                            interestOps = key.interestOps();
+                            if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                                interestOps |= SelectionKey.OP_WRITE;
+                                key.interestOps(interestOps);
+                                changed = true;
+                            }
+                        }
                     }
+                    break;
+                default:
+                    throw new Error();
                 }
-                break;
-            default:
-                throw new Error();
             }
         } else {
-            switch (CONSTRAINT_LEVEL) {
-            case 0:
+            if (!mightNeedWakeup) {
                 interestOps = key.interestOps();
                 if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                     interestOps &= ~SelectionKey.OP_WRITE;
                     key.interestOps(interestOps);
                     changed = true;
                 }
-                break;
-            case 1:
-                interestOps = key.interestOps();
-                if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                    if (Thread.currentThread() == worker.thread) {
-                        interestOps &= ~SelectionKey.OP_WRITE;
-                        key.interestOps(interestOps);
-                        changed = true;
-                    } else {
-                        synchronized (worker.selectorGuard) {
-                            selector.wakeup();
-                            interestOps &= ~SelectionKey.OP_WRITE;
-                            key.interestOps(interestOps);
-                            changed = true;
-                        }
-                    }
-                }
-                break;
-            case 2:
-                if (Thread.currentThread() == worker.thread) {
+            } else {
+                switch (CONSTRAINT_LEVEL) {
+                case 0:
                     interestOps = key.interestOps();
                     if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                         interestOps &= ~SelectionKey.OP_WRITE;
                         key.interestOps(interestOps);
                         changed = true;
                     }
-                } else {
-                    synchronized (worker.selectorGuard) {
-                        selector.wakeup();
+                    break;
+                case 1:
+                    interestOps = key.interestOps();
+                    if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+                        if (Thread.currentThread() == worker.thread) {
+                            interestOps &= ~SelectionKey.OP_WRITE;
+                            key.interestOps(interestOps);
+                            changed = true;
+                        } else {
+                            synchronized (worker.selectorGuard) {
+                                selector.wakeup();
+                                interestOps &= ~SelectionKey.OP_WRITE;
+                                key.interestOps(interestOps);
+                                changed = true;
+                            }
+                        }
+                    }
+                    break;
+                case 2:
+                    if (Thread.currentThread() == worker.thread) {
                         interestOps = key.interestOps();
                         if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                             interestOps &= ~SelectionKey.OP_WRITE;
                             key.interestOps(interestOps);
                             changed = true;
                         }
+                    } else {
+                        synchronized (worker.selectorGuard) {
+                            selector.wakeup();
+                            interestOps = key.interestOps();
+                            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+                                interestOps &= ~SelectionKey.OP_WRITE;
+                                key.interestOps(interestOps);
+                                changed = true;
+                            }
+                        }
                     }
+                    break;
+                default:
+                    throw new Error();
                 }
-                break;
-            default:
-                throw new Error();
             }
         }
 
