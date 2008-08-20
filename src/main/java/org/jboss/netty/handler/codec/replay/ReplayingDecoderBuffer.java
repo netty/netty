@@ -367,9 +367,10 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         reject();
     }
 
-    public void setBytes(int index, InputStream in, int length)
+    public int setBytes(int index, InputStream in, int length)
             throws IOException {
         reject();
+        return -1;
     }
 
     public void setZero(int index, int length) {
