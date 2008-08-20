@@ -57,6 +57,7 @@ class NioWorker implements Runnable {
     private final AtomicBoolean started = new AtomicBoolean();
     volatile Thread thread;
     volatile Selector selector;
+    final AtomicBoolean wakenUp = new AtomicBoolean();
     final Object selectorGuard = new Object();
 
     NioWorker(int bossId, int id, Executor executor) {
@@ -137,6 +138,7 @@ class NioWorker implements Runnable {
         boolean shutdown = false;
         Selector selector = this.selector;
         for (;;) {
+            wakenUp.set(false);
             synchronized (selectorGuard) {
                 // This empty synchronization block prevents the selector
                 // from acquiring its lock.
@@ -379,6 +381,10 @@ class NioWorker implements Runnable {
                     if ((interestOps & SelectionKey.OP_WRITE) == 0) {
                         interestOps |= SelectionKey.OP_WRITE;
                         key.interestOps(interestOps);
+                        if (Thread.currentThread() != worker.thread &&
+                            worker.wakenUp.compareAndSet(false, true)) {
+                            selector.wakeup();
+                        }
                         changed = true;
                     }
                     break;
@@ -438,6 +444,10 @@ class NioWorker implements Runnable {
                     if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                         interestOps &= ~SelectionKey.OP_WRITE;
                         key.interestOps(interestOps);
+                        if (Thread.currentThread() != worker.thread &&
+                            worker.wakenUp.compareAndSet(false, true)) {
+                            selector.wakeup();
+                        }
                         changed = true;
                     }
                     break;
@@ -550,6 +560,10 @@ class NioWorker implements Runnable {
             case 0:
                 if (key.interestOps() != interestOps) {
                     key.interestOps(interestOps);
+                    if (Thread.currentThread() != worker.thread &&
+                        worker.wakenUp.compareAndSet(false, true)) {
+                        selector.wakeup();
+                    }
                     changed = true;
                 }
                 break;
