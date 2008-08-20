@@ -25,9 +25,8 @@ package org.jboss.netty.channel.socket.nio;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
@@ -219,20 +218,20 @@ class NioWorker implements Runnable {
     }
 
     private static void read(SelectionKey k) {
-        ReadableByteChannel ch = (ReadableByteChannel) k.channel();
+        ScatteringByteChannel ch = (ScatteringByteChannel) k.channel();
         NioSocketChannel channel = (NioSocketChannel) k.attachment();
 
         ReceiveBufferSizePredictor predictor =
             channel.getConfig().getReceiveBufferSizePredictor();
-        ByteBuffer buf = ByteBuffer.allocate(predictor.nextReceiveBufferSize());
+        ChannelBuffer buf = ChannelBuffers.buffer(predictor.nextReceiveBufferSize());
 
         int ret = 0;
         int readBytes = 0;
         boolean failure = true;
         try {
-            while ((ret = ch.read(buf)) > 0) {
+            while ((ret = buf.writeBytes(ch, buf.writableBytes())) > 0) {
                 readBytes += ret;
-                if (!buf.hasRemaining()) {
+                if (!buf.writable()) {
                     break;
                 }
             }
@@ -246,13 +245,7 @@ class NioWorker implements Runnable {
             predictor.previousReceiveBufferSize(readBytes);
 
             // Fire the event.
-            ChannelBuffer buffer;
-            if (readBytes == buf.capacity()) {
-                buffer = ChannelBuffers.wrappedBuffer(buf.array());
-            } else {
-                buffer = ChannelBuffers.wrappedBuffer(buf.array(), 0, readBytes);
-            }
-            fireMessageReceived(channel, buffer);
+            fireMessageReceived(channel, buf);
         }
 
         if (ret < 0 || failure) {

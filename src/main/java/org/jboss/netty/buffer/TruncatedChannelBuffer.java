@@ -172,10 +172,10 @@ public class TruncatedChannelBuffer extends AbstractChannelBuffer implements Wra
         return buffer.getBytes(index, out, length);
     }
 
-    public void setBytes(int index, InputStream in, int length)
+    public int setBytes(int index, InputStream in, int length)
             throws IOException {
         checkIndex(index, length);
-        buffer.setBytes(index, in, length);
+        return buffer.setBytes(index, in, length);
     }
 
     public int setBytes(int index, ScatteringByteChannel in, int length)

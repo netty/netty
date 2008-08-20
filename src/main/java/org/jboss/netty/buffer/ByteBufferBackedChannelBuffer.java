@@ -22,7 +22,6 @@
  */
 package org.jboss.netty.buffer;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -201,39 +200,69 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         return out.write((ByteBuffer) buffer.duplicate().position(index).limit(index + length));
     }
 
-    public void setBytes(int index, InputStream in, int length)
+    public int setBytes(int index, InputStream in, int length)
             throws IOException {
         if (length == 0) {
-            return;
+            return 0;
         }
+
+        int readBytes = 0;
 
         if (!buffer.isReadOnly() && buffer.hasArray()) {
             index += buffer.arrayOffset();
             do {
-                int readBytes = in.read(
-                        buffer.array(), index, length);
-                if (readBytes < 0) {
-                    throw new EOFException();
+                int localReadBytes = in.read(buffer.array(), index, length);
+                if (localReadBytes < 0) {
+                    if (readBytes == 0) {
+                        return -1;
+                    } else {
+                        break;
+                    }
                 }
-                index += readBytes;
-                length -= readBytes;
+                readBytes += localReadBytes;
+                index += localReadBytes;
+                length -= localReadBytes;
             } while (length > 0);
         } else {
             byte[] tmp = new byte[length];
             for (int i = 0; i < tmp.length;) {
-                int readBytes = in.read(tmp, i, tmp.length - i);
-                if (readBytes < 0) {
-                    throw new EOFException();
+                int localReadBytes = in.read(tmp, i, tmp.length - i);
+                if (localReadBytes < 0) {
+                    if (readBytes == 0) {
+                        return -1;
+                    } else {
+                        break;
+                    }
                 }
                 i += readBytes;
             }
             ((ByteBuffer) buffer.duplicate().position(index)).get(tmp);
         }
+
+        return readBytes;
     }
 
     public int setBytes(int index, ScatteringByteChannel in, int length)
             throws IOException {
-        return in.read((ByteBuffer) buffer.duplicate().limit(index + length).position(index));
+
+        ByteBuffer slice = (ByteBuffer) buffer.duplicate().limit(index + length).position(index);
+        int readBytes = 0;
+
+        while (readBytes < length) {
+            int localReadBytes = in.read(slice);
+            if (localReadBytes < 0) {
+                if (readBytes == 0) {
+                    return -1;
+                } else {
+                    return readBytes;
+                }
+            } else if (localReadBytes == 0) {
+                break;
+            }
+            readBytes += localReadBytes;
+        }
+
+        return readBytes;
     }
 
     public ByteBuffer toByteBuffer(int index, int length) {

@@ -22,7 +22,6 @@
  */
 package org.jboss.netty.buffer;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -114,29 +113,44 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
         src.get(array, index, src.remaining());
     }
 
-    public void setBytes(int index, InputStream in, int length) throws IOException {
+    public int setBytes(int index, InputStream in, int length) throws IOException {
+        int readBytes = 0;
         while (length > 0) {
-            int readBytes = in.read(array, index, length);
-            if (readBytes < 0) {
-                throw new EOFException();
+            int localReadBytes = in.read(array, index, length);
+            if (localReadBytes < 0) {
+                if (readBytes == 0) {
+                    return -1;
+                } else {
+                    break;
+                }
             }
-            index += readBytes;
-            length -= readBytes;
+            readBytes += localReadBytes;
+            index += localReadBytes;
+            length -= localReadBytes;
         }
+
+        return readBytes;
     }
 
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
         ByteBuffer buf = ByteBuffer.wrap(array, index, length);
-        while (length > 0) {
-            int readBytes = in.read(buf);
-            if (readBytes < 0) {
-                throw new EOFException();
-            } else if (readBytes == 0) {
+        int readBytes = 0;
+
+        while (readBytes < length) {
+            int localReadBytes = in.read(buf);
+            if (localReadBytes < 0) {
+                if (readBytes == 0) {
+                    return -1;
+                } else {
+                    break;
+                }
+            } else if (localReadBytes == 0) {
                 break;
             }
+            readBytes += localReadBytes;
         }
 
-        return buf.flip().remaining();
+        return readBytes;
     }
 
     public ChannelBuffer slice(int index, int length) {

@@ -343,7 +343,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
-    public void setBytes(int index, InputStream in, int length)
+    public int setBytes(int index, InputStream in, int length)
             throws IOException {
         int sliceId = sliceId(index);
         if (index + length >= capacity()) {
@@ -351,15 +351,26 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
 
         int i = sliceId;
+        int readBytes = 0;
+
         while (length > 0) {
             ChannelBuffer s = slices[i];
             int adjustment = indices[i];
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
-            s.setBytes(index - adjustment, in, localLength);
+            int localReadBytes = s.setBytes(index - adjustment, in, localLength);
+            if (localReadBytes < 0) {
+                if (readBytes == 0) {
+                    return -1;
+                } else {
+                    break;
+                }
+            }
             index += localLength;
             length -= localLength;
             i ++;
         }
+
+        return readBytes;
     }
 
     public int setBytes(int index, ScatteringByteChannel in, int length)

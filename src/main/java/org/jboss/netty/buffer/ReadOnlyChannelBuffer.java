@@ -101,9 +101,10 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
         rejectModification();
     }
 
-    public void setBytes(int index, InputStream in, int length)
+    public int setBytes(int index, InputStream in, int length)
             throws IOException {
         rejectModification();
+        return 0;
     }
 
     public int setBytes(int index, ScatteringByteChannel in, int length)
