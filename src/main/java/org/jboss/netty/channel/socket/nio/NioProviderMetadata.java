@@ -23,10 +23,11 @@
 package org.jboss.netty.channel.socket.nio;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.ServerSocketChannel;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -85,7 +86,7 @@ class NioProviderMetadata {
                         "Failed to autodetect the NIO constraint level; " +
                         "using the safest level (2)");
             } else if (constraintLevel != 0) {
-                logger.warn(
+                logger.info(
                         "Using the autodected NIO constraint level: " +
                         constraintLevel +
                         " (Use better NIO provider for better performance)");
@@ -113,15 +114,16 @@ class NioProviderMetadata {
         long startTime;
         int interestOps;
 
-        SocketChannel ch = null;
+        ServerSocketChannel ch = null;
         SelectorLoop loop = null;
 
         try {
             // Open a channel.
-            ch = SocketChannel.open();
+            ch = ServerSocketChannel.open();
 
             // Configure the channel
             try {
+                ch.socket().bind(new InetSocketAddress(0));
                 ch.configureBlocking(false);
             } catch (IOException e) {
                 logger.warn("Failed to configure a temporary socket.", e);
@@ -153,22 +155,25 @@ class NioProviderMetadata {
             // TODO Make it run faster
             success = true;
             for (int i = 0; i < 10; i ++) {
+
                 // Increase the probability of calling interestOps
                 // while select() is running.
-                while (!loop.selecting) {
-                    Thread.yield();
-                }
+                do {
+                    while (!loop.selecting) {
+                        Thread.yield();
+                    }
 
-                // Wait a little bit more.
-                try {
-                    Thread.sleep(50);
-                } catch (InterruptedException e) {
-                    // Ignore
-                }
+                    // Wait a little bit more.
+                    try {
+                        Thread.sleep(50);
+                    } catch (InterruptedException e) {
+                        // Ignore
+                    }
+                } while (!loop.selecting);
 
                 startTime = System.currentTimeMillis();
-                key.interestOps(key.interestOps() | SelectionKey.OP_READ);
-                key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
+                key.interestOps(key.interestOps() | SelectionKey.OP_ACCEPT);
+                key.interestOps(key.interestOps() & ~SelectionKey.OP_ACCEPT);
 
                 if (System.currentTimeMillis() - startTime >= 500) {
                     success = false;
@@ -182,25 +187,28 @@ class NioProviderMetadata {
                 // Level 1
                 success = true;
                 for (int i = 0; i < 10; i ++) {
+
                     // Increase the probability of calling interestOps
                     // while select() is running.
-                    while (!loop.selecting) {
-                        Thread.yield();
-                    }
+                    do {
+                        while (!loop.selecting) {
+                            Thread.yield();
+                        }
 
-                    // Wait a little bit more.
-                    try {
-                        Thread.sleep(50);
-                    } catch (InterruptedException e) {
-                        // Ignore
-                    }
+                        // Wait a little bit more.
+                        try {
+                            Thread.sleep(50);
+                        } catch (InterruptedException e) {
+                            // Ignore
+                        }
+                    } while (!loop.selecting);
 
                     startTime = System.currentTimeMillis();
                     interestOps = key.interestOps();
                     synchronized (loop) {
                         loop.selector.wakeup();
-                        key.interestOps(interestOps | SelectionKey.OP_READ);
-                        key.interestOps(interestOps & ~SelectionKey.OP_READ);
+                        key.interestOps(interestOps | SelectionKey.OP_ACCEPT);
+                        key.interestOps(interestOps & ~SelectionKey.OP_ACCEPT);
                     }
 
                     if (System.currentTimeMillis() - startTime >= 500) {
@@ -278,7 +286,6 @@ class NioProviderMetadata {
 
                     Set<SelectionKey> keys = selector.selectedKeys();
                     for (SelectionKey k: keys) {
-                        System.out.println(k.readyOps());
                         k.interestOps(0);
                     }
                     keys.clear();
