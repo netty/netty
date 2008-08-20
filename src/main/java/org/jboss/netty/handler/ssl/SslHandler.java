@@ -503,7 +503,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
             handshaking = false;
             handshaken = true;
 
-            if (handshakeFuture != null) {
+            if (handshakeFuture == null) {
                 handshakeFuture = newHandshakeFuture(channel);
             }
         }
@@ -515,7 +515,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
             handshaking = false;
             handshaken = false;
 
-            if (handshakeFuture != null) {
+            if (handshakeFuture == null) {
                 handshakeFuture = newHandshakeFuture(channel);
             }
         }
