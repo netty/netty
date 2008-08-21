@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.logging;
 
+import org.jboss.netty.util.StackTraceSimplifier;
+
 /**
  * Creates an {@link InternalLogger} or changes the default factory
  * implementation.  This factory allows you to choose what logging framework
@@ -76,7 +78,61 @@ public abstract class InternalLoggerFactory {
      * Creates a new logger instance with the specified name.
      */
     public static InternalLogger getInstance(String name) {
-        return getDefaultFactory().newInstance(name);
+        final InternalLogger logger = getDefaultFactory().newInstance(name);
+        return new InternalLogger() {
+
+            public void debug(String msg) {
+                logger.debug(msg);
+            }
+
+            public void debug(String msg, Throwable cause) {
+                StackTraceSimplifier.simplify(cause);
+                logger.debug(msg, cause);
+            }
+
+            public void error(String msg) {
+                logger.error(msg);
+            }
+
+            public void error(String msg, Throwable cause) {
+                StackTraceSimplifier.simplify(cause);
+                logger.error(msg, cause);
+            }
+
+            public void info(String msg) {
+                logger.info(msg);
+            }
+
+            public void info(String msg, Throwable cause) {
+                StackTraceSimplifier.simplify(cause);
+                logger.info(msg, cause);
+            }
+
+            public boolean isDebugEnabled() {
+                return logger.isDebugEnabled();
+            }
+
+            public boolean isErrorEnabled() {
+                return logger.isErrorEnabled();
+            }
+
+            public boolean isInfoEnabled() {
+                return logger.isInfoEnabled();
+            }
+
+            public boolean isWarnEnabled() {
+                return logger.isWarnEnabled();
+            }
+
+            public void warn(String msg) {
+                logger.warn(msg);
+            }
+
+            public void warn(String msg, Throwable cause) {
+                StackTraceSimplifier.simplify(cause);
+                logger.warn(msg, cause);
+            }
+        };
     }
 
     /**

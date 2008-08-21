@@ -20,31 +20,36 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel;
+package org.jboss.netty.util;
 
-import org.jboss.netty.util.StackTraceSimplifier;
+/**
+ * Determines if Netty is running in a debug mode or not.  Please note that
+ * this is not a Java debug mode.  You can enable Netty debug mode by
+ * specifying the {@code "org.jboss.netty.debug"} system property (e.g.
+ * {@code java -Dorg.jboss.netty.debug ...})
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
+public class DebugUtil {
 
-
-public class DefaultExceptionEvent extends DefaultChannelEvent implements
-        ExceptionEvent {
-
-    private final Throwable cause;
-
-    public DefaultExceptionEvent(Channel channel, ChannelFuture future, Throwable cause) {
-        super(channel, future);
-        if (cause == null) {
-            throw new NullPointerException("cause");
+    /**
+     * Returns {@code true} if and only if Netty debug mode is enabled.
+     */
+    public static boolean isDebugEnabled() {
+        String value;
+        try {
+            value = System.getProperty("org.jboss.netty.debug");
+        } catch (Exception e) {
+            value = null;
         }
-        this.cause = cause;
-        StackTraceSimplifier.simplify(cause);
+
+        return value != null;
     }
 
-    public Throwable getCause() {
-        return cause;
-    }
-
-    @Override
-    public String toString() {
-        return super.toString() + " - (cause: " + cause.getClass().getSimpleName() + ')';
+    private DebugUtil() {
+        // Unused
     }
 }
