@@ -46,7 +46,14 @@ public class DebugUtil {
             value = null;
         }
 
-        return value != null;
+        if (value == null) {
+            return false;
+        }
+
+        value = value.trim().toUpperCase();
+        return !value.startsWith("N") &&
+               !value.startsWith("F") &&
+               !value.equals("0");
     }
 
     private DebugUtil() {
