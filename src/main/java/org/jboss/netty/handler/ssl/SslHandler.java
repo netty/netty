@@ -210,7 +210,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
     public void channelDisconnected(ChannelHandlerContext ctx,
             ChannelStateEvent e) throws Exception {
         super.channelDisconnected(ctx, e);
-        unwrap(ctx, e.getChannel(), ChannelBuffer.EMPTY_BUFFER, 0, 0);
+        unwrap(ctx, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
         engine.closeOutbound();
         if (!sentCloseNotify.get() && handshaken) {
             try {
@@ -524,7 +524,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
 
     private void closeOutboundAndChannel(
             final ChannelHandlerContext context, final ChannelStateEvent e) throws SSLException {
-        unwrap(context, e.getChannel(), ChannelBuffer.EMPTY_BUFFER, 0, 0);
+        unwrap(context, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
         if (!engine.isInboundDone()) {
             if (sentCloseNotify.compareAndSet(false, true)) {
                 engine.closeOutbound();

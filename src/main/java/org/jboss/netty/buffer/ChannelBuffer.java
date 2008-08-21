@@ -232,11 +232,6 @@ import java.util.NoSuchElementException;
 public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 
     /**
-     * A buffer whose capacity is {@code 0}.
-     */
-    static ChannelBuffer EMPTY_BUFFER = new BigEndianHeapChannelBuffer(0);
-
-    /**
      * Returns the number of bytes (octets) this buffer can contain.
      */
     int capacity();

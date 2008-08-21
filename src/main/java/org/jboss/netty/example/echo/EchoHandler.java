@@ -58,7 +58,7 @@ public class EchoHandler extends SimpleChannelHandler {
      * Creates a server-side handler.
      */
     public EchoHandler() {
-        firstMessage = ChannelBuffer.EMPTY_BUFFER;
+        firstMessage = ChannelBuffers.EMPTY_BUFFER;
     }
 
     /**

@@ -23,6 +23,7 @@
 package org.jboss.netty.handler.codec.frame;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
@@ -81,7 +82,7 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
                 return frame;
             } else if (delimIndex == 0) {
                 buffer.skipBytes(delim.capacity());
-                return ChannelBuffer.EMPTY_BUFFER;
+                return ChannelBuffers.EMPTY_BUFFER;
             }
         }
 

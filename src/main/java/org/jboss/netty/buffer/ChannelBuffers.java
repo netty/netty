@@ -101,6 +101,11 @@ public class ChannelBuffers {
      */
     public static final ByteOrder LITTLE_ENDIAN = ByteOrder.LITTLE_ENDIAN;
 
+    /**
+     * A buffer whose capacity is {@code 0}.
+     */
+    public static ChannelBuffer EMPTY_BUFFER = new BigEndianHeapChannelBuffer(0);
+
     private static final char[][] HEXDUMP_TABLE = new char[65536][];
 
     static {
@@ -125,7 +130,7 @@ public class ChannelBuffers {
      */
     public static ChannelBuffer buffer(ByteOrder endianness, int capacity) {
         if (capacity == 0) {
-            return ChannelBuffer.EMPTY_BUFFER;
+            return EMPTY_BUFFER;
         }
         if (endianness == BIG_ENDIAN) {
             return new BigEndianHeapChannelBuffer(capacity);
@@ -152,7 +157,7 @@ public class ChannelBuffers {
      */
     public static ChannelBuffer directBuffer(ByteOrder endianness, int capacity) {
         if (capacity == 0) {
-            return ChannelBuffer.EMPTY_BUFFER;
+            return EMPTY_BUFFER;
         }
         ChannelBuffer buffer = new ByteBufferBackedChannelBuffer(
                 ByteBuffer.allocateDirect(capacity).order(endianness));
@@ -205,7 +210,7 @@ public class ChannelBuffers {
      */
     public static ChannelBuffer wrappedBuffer(ByteOrder endianness, byte[] array) {
         if (array.length == 0) {
-            return ChannelBuffer.EMPTY_BUFFER;
+            return EMPTY_BUFFER;
         }
         if (endianness == BIG_ENDIAN) {
             return new BigEndianHeapChannelBuffer(array);
@@ -232,7 +237,7 @@ public class ChannelBuffers {
      */
     public static ChannelBuffer wrappedBuffer(ByteOrder endianness, byte[] array, int offset, int length) {
         if (length == 0) {
-            return ChannelBuffer.EMPTY_BUFFER;
+            return EMPTY_BUFFER;
         }
         if (offset == 0) {
             if (length == array.length) {
@@ -252,7 +257,7 @@ public class ChannelBuffers {
      */
     public static ChannelBuffer wrappedBuffer(ByteBuffer buffer) {
         if (!buffer.hasRemaining()) {
-            return ChannelBuffer.EMPTY_BUFFER;
+            return EMPTY_BUFFER;
         }
         if (!buffer.isReadOnly() && buffer.hasArray()) {
             return wrappedBuffer(buffer.array(), buffer.arrayOffset(),buffer.remaining());
@@ -270,7 +275,7 @@ public class ChannelBuffers {
         if (buffer.readable()) {
             return buffer.slice();
         } else {
-            return ChannelBuffer.EMPTY_BUFFER;
+            return EMPTY_BUFFER;
         }
     }
 
@@ -293,7 +298,7 @@ public class ChannelBuffers {
     public static ChannelBuffer wrappedBuffer(ByteOrder endianness, byte[]... arrays) {
         switch (arrays.length) {
         case 0:
-            return ChannelBuffer.EMPTY_BUFFER;
+            return EMPTY_BUFFER;
         case 1:
             return wrappedBuffer(endianness, arrays[0]);
         }
@@ -316,7 +321,7 @@ public class ChannelBuffers {
     public static ChannelBuffer wrappedBuffer(ChannelBuffer... buffers) {
         switch (buffers.length) {
         case 0:
-            return ChannelBuffer.EMPTY_BUFFER;
+            return EMPTY_BUFFER;
         case 1:
             return wrappedBuffer(buffers[0]);
         default:
@@ -336,7 +341,7 @@ public class ChannelBuffers {
     public static ChannelBuffer wrappedBuffer(ByteBuffer... buffers) {
         switch (buffers.length) {
         case 0:
-            return ChannelBuffer.EMPTY_BUFFER;
+            return EMPTY_BUFFER;
         case 1:
             return wrappedBuffer(buffers[0]);
         }
@@ -364,7 +369,7 @@ public class ChannelBuffers {
      */
     public static ChannelBuffer copiedBuffer(ByteOrder endianness, byte[] array) {
         if (array.length == 0) {
-            return ChannelBuffer.EMPTY_BUFFER;
+            return EMPTY_BUFFER;
         }
         if (endianness == BIG_ENDIAN) {
             return new BigEndianHeapChannelBuffer(array.clone());
@@ -393,7 +398,7 @@ public class ChannelBuffers {
      */
     public static ChannelBuffer copiedBuffer(ByteOrder endianness, byte[] array, int offset, int length) {
         if (length == 0) {
-            return ChannelBuffer.EMPTY_BUFFER;
+            return EMPTY_BUFFER;
         }
         byte[] copy = new byte[length];
         System.arraycopy(array, offset, copy, 0, length);
@@ -409,7 +414,7 @@ public class ChannelBuffers {
     public static ChannelBuffer copiedBuffer(ByteBuffer buffer) {
         int length = buffer.remaining();
         if (length == 0) {
-            return ChannelBuffer.EMPTY_BUFFER;
+            return EMPTY_BUFFER;
         }
         byte[] copy = new byte[length];
         int position = buffer.position();
@@ -450,7 +455,7 @@ public class ChannelBuffers {
     public static ChannelBuffer copiedBuffer(ByteOrder endianness, byte[]... arrays) {
         switch (arrays.length) {
         case 0:
-            return ChannelBuffer.EMPTY_BUFFER;
+            return EMPTY_BUFFER;
         case 1:
             return copiedBuffer(endianness, arrays[0]);
         }
@@ -488,7 +493,7 @@ public class ChannelBuffers {
     public static ChannelBuffer copiedBuffer(ChannelBuffer... buffers) {
         switch (buffers.length) {
         case 0:
-            return ChannelBuffer.EMPTY_BUFFER;
+            return EMPTY_BUFFER;
         case 1:
             return copiedBuffer(buffers[0]);
         }
@@ -513,7 +518,7 @@ public class ChannelBuffers {
     public static ChannelBuffer copiedBuffer(ByteBuffer... buffers) {
         switch (buffers.length) {
         case 0:
-            return ChannelBuffer.EMPTY_BUFFER;
+            return EMPTY_BUFFER;
         case 1:
             return copiedBuffer(buffers[0]);
         }

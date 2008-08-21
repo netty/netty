@@ -44,7 +44,7 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
 
     private final int initialCapacity;
     private final ByteOrder endianness;
-    private ChannelBuffer buffer = ChannelBuffer.EMPTY_BUFFER;
+    private ChannelBuffer buffer = ChannelBuffers.EMPTY_BUFFER;
 
     public DynamicChannelBuffer(int estimatedLength) {
         this(ByteOrder.BIG_ENDIAN, estimatedLength);
@@ -216,7 +216,7 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         DynamicChannelBuffer copiedBuffer = new DynamicChannelBuffer(endianness, Math.max(length, 64));
         copiedBuffer.buffer = buffer.copy();
         if (copiedBuffer.buffer.capacity() == 0) {
-            copiedBuffer.buffer = ChannelBuffer.EMPTY_BUFFER;
+            copiedBuffer.buffer = ChannelBuffers.EMPTY_BUFFER;
         }
         return copiedBuffer;
     }
