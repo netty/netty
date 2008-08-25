@@ -88,7 +88,7 @@ public class ServerBootstrapTest {
         bootstrap.bind();
     }
 
-    @Test(timeout = 10000)
+    @Test //(timeout = 10000)
     public void testSuccessfulBindAttempt() throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new OioServerSocketChannelFactory(executor, executor));
@@ -129,6 +129,11 @@ public class ServerBootstrapTest {
 
         // Wait until the child connection is closed in the client side.
         // We don't use Channel.close() to make sure it's closed automatically.
+
+        while (pch.child.isOpen()) {
+            Thread.yield();
+        }
+
         while ("12".equals(pch.result.toString())) {
             Thread.yield();
         }
@@ -171,7 +176,6 @@ public class ServerBootstrapTest {
         public void childChannelClosed(ChannelHandlerContext ctx,
                 ChildChannelStateEvent e) throws Exception {
             result.append('2');
-            ctx.sendUpstream(e);
         }
 
         @Override
@@ -179,7 +183,6 @@ public class ServerBootstrapTest {
                 ChildChannelStateEvent e) throws Exception {
             child = e.getChildChannel();
             result.append('1');
-            ctx.sendUpstream(e);
         }
     }
 }
