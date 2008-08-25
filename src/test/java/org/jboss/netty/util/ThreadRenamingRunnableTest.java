@@ -22,12 +22,12 @@
  */
 package org.jboss.netty.util;
 
+import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
 import java.security.Permission;
+import java.util.concurrent.Executor;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 
@@ -38,30 +38,41 @@ import org.junit.Test;
  * @version $Rev$, $Date$
  *
  */
-public class DebugUtilTest {
+public class ThreadRenamingRunnableTest {
 
-    public void shouldReturnFalseIfPropertyIsNotSet() {
-        assertFalse(DebugUtil.isDebugEnabled());
+    @Test(expected = NullPointerException.class)
+    public void shouldNotAllowNullName() throws Exception {
+        new ThreadRenamingRunnable(createMock(Runnable.class), null);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldNotAllowNullRunnable() throws Exception {
+        new ThreadRenamingRunnable(null, "foo");
     }
 
     @Test
-    public void shouldReturnTrueInDebugMode() {
-        System.setProperty("org.jboss.netty.debug", "true");
-        assertTrue(DebugUtil.isDebugEnabled());
+    public void testWithoutSecurityManager() throws Exception {
+        final String oldThreadName = Thread.currentThread().getName();
+        Executor e = ImmediateExecutor.INSTANCE;
+        e.execute(new ThreadRenamingRunnable(
+                new Runnable() {
+                    public void run() {
+                        assertEquals("foo", Thread.currentThread().getName());
+                        assertFalse(oldThreadName.equals(Thread.currentThread().getName()));
+                    }
+                }, "foo"));
+
+        assertEquals(oldThreadName, Thread.currentThread().getName());
     }
 
     @Test
-    public void shouldReturnFalseInNonDebugMode() {
-        System.setProperty("org.jboss.netty.debug", "false");
-        assertFalse(DebugUtil.isDebugEnabled());
-    }
-
-    @Test
-    public void shouldNotBombOutWhenSecurityManagerIsInAction() {
-        System.setProperty("org.jboss.netty.debug", "true");
+    public void testWithSecurityManager() throws Exception {
+        final String oldThreadName = Thread.currentThread().getName();
+        Executor e = ImmediateExecutor.INSTANCE;
         System.setSecurityManager(new SecurityManager() {
+
             @Override
-            public void checkPropertyAccess(String key) {
+            public void checkAccess(Thread t) {
                 throw new SecurityException();
             }
 
@@ -74,17 +85,17 @@ public class DebugUtilTest {
             public void checkPermission(Permission perm) {
                 // Allow
             }
-
         });
         try {
-            assertFalse(DebugUtil.isDebugEnabled());
+            e.execute(new ThreadRenamingRunnable(
+                    new Runnable() {
+                        public void run() {
+                            assertEquals(oldThreadName, Thread.currentThread().getName());
+                        }
+                    }, "foo"));
         } finally {
             System.setSecurityManager(null);
+            assertEquals(oldThreadName, Thread.currentThread().getName());
         }
-    }
-
-    @Before @After
-    public void cleanup() {
-        System.clearProperty("org.jboss.netty.debug");
     }
 }
