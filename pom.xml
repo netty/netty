@@ -1,167 +1,30 @@
-<!--
-  JBoss, Home of Professional Open Source
- 
-  Copyright 2008, Red Hat Middleware LLC, and individual contributors
-  by the @author tags. See the COPYRIGHT.txt in the distribution for a
-  full listing of individual contributors.
- 
-  This is free software; you can redistribute it and/or modify it
-  under the terms of the GNU Lesser General Public License as
-  published by the Free Software Foundation; either version 2.1 of
-  the License, or (at your option) any later version.
- 
-  This software is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  Lesser General Public License for more details.
- 
-  You should have received a copy of the GNU Lesser General Public
-  License along with this software; if not, write to the Free
-  Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
-  02110-1301 USA, or see the FSF site: http://www.fsf.org.
- -->
- 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<?xml version="1.0" encoding="UTF-8"?><project>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.jboss.netty</groupId>
   <artifactId>netty</artifactId>
-  <version>3.0.0.CR3-SNAPSHOT</version>
   <packaging>bundle</packaging>
-
   <name>The Netty Project</name>
-  <description>
-    The Netty project is an effort to provide an asynchronous / event-driven network application framework for rapid development of high-performance / high-scalability protocol servers and clients, including its related out-of-the-box protocol extensions and tool suite.
-  </description>
-
+  <version>3.0.0.CR3-SNAPSHOT</version>
+  <description>The Netty project is an effort to provide an asynchronous / event-driven network application framework for rapid development of high-performance / high-scalability protocol servers and clients, including its related out-of-the-box protocol extensions and tool suite.</description>
   <url>http://www.jboss.org/netty/</url>
-  <organization>
-    <name>JBoss - a division of Red Hat</name>
-    <url>http://www.jboss.org/</url>
-  </organization>
-
   <inceptionYear>2008</inceptionYear>
-
   <licenses>
     <license>
       <name>GNU Lesser General Public License</name>
       <url>http://www.gnu.org/licenses/lgpl.html</url>
     </license>
   </licenses>
-
   <scm>
     <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/trunk</connection>
     <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/trunk</developerConnection>
   </scm>
-
-  <repositories>
-    <!-- APIviz repository -->
-    <repository>
-      <id>apiviz.release</id>
-      <name>APIviz releases</name>
-      <url>http://apiviz.googlecode.com/svn/site/repo/mvn/release</url>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </repository>
-    
-    <!-- JBoss repository -->
-    <repository>
-      <id>jboss.release</id>
-      <name>JBoss releases</name>
-      <url>http://repository.jboss.org/maven2</url>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </repository>
-  </repositories>
-
-  <distributionManagement>
-    <repository>
-      <id>repository.jboss.org</id>
-      <name>JBoss.org Release Distribution Repository</name>
-      <url>https://svn.jboss.org/repos/repository.jboss.org/maven2</url>
-    </repository>
-    <snapshotRepository>
-      <id>snapshots.jboss.org</id>
-      <name>JBoss.org Development Snapshot Repository</name>
-      <url>https://snapshots.jboss.org/maven2</url>
-    </snapshotRepository>
-  </distributionManagement>
-
-  <dependencies>
-    <!-- Logging frameworks (all optional) -->
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>1.5.2</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-      <version>1.1.1</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.jboss.logging</groupId>
-      <artifactId>jboss-logging-spi</artifactId>
-      <version>2.0.5.GA</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
-      <version>1.2.15</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-      <exclusions>
-        <exclusion>
-          <groupId>javax.mail</groupId>
-          <artifactId>mail</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.jms</groupId>
-          <artifactId>jms</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.sun.jdmk</groupId>
-          <artifactId>jmxtools</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.sun.jmx</groupId>
-          <artifactId>jmxri</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-            
-    <!-- Testing -->
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.4</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.easymock</groupId>
-      <artifactId>easymock</artifactId>
-      <version>2.4</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
-
+  <organization>
+    <name>JBoss - a division of Red Hat</name>
+    <url>http://www.jboss.org/</url>
+  </organization>
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
           <encoding>UTF-8</encoding>
@@ -195,7 +58,6 @@
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
         <executions>
           <execution>
@@ -208,7 +70,6 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
         <executions>
           <execution>
@@ -227,8 +88,7 @@
             <version>1.1.3</version>
           </docletArtifact>
           <aggregate>true</aggregate>
-          <additionalparam>
-            -charset UTF-8
+          <additionalparam>-charset UTF-8
             -docencoding UTF-8
             -version
             -author
@@ -241,35 +101,36 @@
             -group "Central interface for all I/O operations" ${project.groupId}.channel*
             -group "Client &amp; Server bootstrapping utilities" ${project.groupId}.bootstrap*
             -group "Reusable I/O event interceptors" ${project.groupId}.handler*
-            -group "Miscellaneous" ${project.groupId}.logging*
-          </additionalparam>
+            -group "Miscellaneous" ${project.groupId}.logging*</additionalparam>
           <encoding>UTF-8</encoding>
           <locale>en_US</locale>
           <excludePackageNames>${project.groupId}.example*:${project.groupId}.util*</excludePackageNames>
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
         <configuration>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
           <linkJavadoc>false</linkJavadoc>
         </configuration>
-      </plugin>      
+      </plugin>
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <execution>
             <id>add-license</id>
             <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
             <configuration>
               <tasks>
                 <taskdef resource="net/sf/antcontrib/antlib.xml" />
                 <if>
                   <or>
-                    <equals arg1="${project.packaging}" arg2="jar" />
-                    <equals arg1="${project.packaging}" arg2="bundle" />
+                    <equals arg2="jar" arg1="${project.packaging}" />
+                    <equals arg2="bundle" arg1="${project.packaging}" />
                   </or>
                   <then>
                     <move file="${project.build.directory}/${project.build.finalName}.jar" tofile="${project.build.directory}/${project.build.finalName}.orig.jar" />
@@ -278,7 +139,7 @@
                         <include name="LICENSE.*" />
                         <include name="NOTICE.*" />
                       </zipfileset>
-                      <zipfileset src="${project.build.directory}/${project.build.finalName}.orig.jar" filemode="644" dirmode="755">
+                      <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}.orig.jar" dirmode="755">
                         <exclude name="*/*/*/example/**" />
                       </zipfileset>
                     </zip>
@@ -289,7 +150,7 @@
                         <include name="LICENSE.*" />
                         <include name="NOTICE.*" />
                       </zipfileset>
-                      <zipfileset src="${project.build.directory}/${project.build.finalName}-sources.orig.jar" filemode="644" dirmode="755">
+                      <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}-sources.orig.jar" dirmode="755">
                         <exclude name="*/*/*/example/**" />
                       </zipfileset>
                     </zip>
@@ -300,16 +161,13 @@
                         <include name="LICENSE.*" />
                         <include name="NOTICE.*" />
                       </zipfileset>
-                      <zipfileset src="${project.build.directory}/${project.build.finalName}-javadoc.orig.jar" filemode="644" dirmode="755" />
+                      <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}-javadoc.orig.jar" dirmode="755" />
                     </zip>
                     <delete file="${project.build.directory}/${project.build.finalName}-javadoc.orig.jar" />
                   </then>
                 </if>
               </tasks>
             </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
           </execution>
         </executions>
         <dependencies>
@@ -342,15 +200,108 @@
       <plugin>
         <artifactId>maven-release-plugin</artifactId>
         <configuration>
-          <tagBase>
-            https://svn.jboss.org/repos/netty/tags
-          </tagBase>
+          <tagBase>https://svn.jboss.org/repos/netty/tags</tagBase>
         </configuration>
       </plugin>
     </plugins>
   </build>
-  <reporting>
-    <plugins>
-    </plugins>
-  </reporting>
+  <repositories>
+    <repository>
+      <releases />
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <id>apiviz.release</id>
+      <name>APIviz releases</name>
+      <url>http://apiviz.googlecode.com/svn/site/repo/mvn/release</url>
+    </repository>
+    <repository>
+      <releases />
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <id>jboss.release</id>
+      <name>JBoss releases</name>
+      <url>http://repository.jboss.org/maven2</url>
+    </repository>
+  </repositories>
+  <dependencies>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>1.5.2</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>commons-logging</groupId>
+      <artifactId>commons-logging</artifactId>
+      <version>1.1.1</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.logging</groupId>
+      <artifactId>jboss-logging-spi</artifactId>
+      <version>2.0.5.GA</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>1.2.15</version>
+      <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>mail</artifactId>
+          <groupId>javax.mail</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jms</artifactId>
+          <groupId>javax.jms</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jmxtools</artifactId>
+          <groupId>com.sun.jdmk</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jmxri</artifactId>
+          <groupId>com.sun.jmx</groupId>
+        </exclusion>
+      </exclusions>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.easymock</groupId>
+      <artifactId>easymock</artifactId>
+      <version>2.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.easymock</groupId>
+      <artifactId>easymockclassextension</artifactId>
+      <version>2.3</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <reporting />
+  <distributionManagement>
+    <repository>
+      <id>repository.jboss.org</id>
+      <name>JBoss.org Release Distribution Repository</name>
+      <url>https://svn.jboss.org/repos/repository.jboss.org/maven2</url>
+    </repository>
+    <snapshotRepository>
+      <id>snapshots.jboss.org</id>
+      <name>JBoss.org Development Snapshot Repository</name>
+      <url>https://snapshots.jboss.org/maven2</url>
+    </snapshotRepository>
+  </distributionManagement>
 </project>
