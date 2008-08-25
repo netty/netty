@@ -34,9 +34,11 @@ import org.apache.commons.logging.Log;
 class CommonsLogger implements InternalLogger {
 
     private final Log logger;
+    private final String loggerName;
 
-    CommonsLogger(Log logger) {
+    CommonsLogger(Log logger, String loggerName) {
         this.logger = logger;
+        this.loggerName = loggerName;
     }
 
     public void debug(String msg) {
@@ -89,6 +91,6 @@ class CommonsLogger implements InternalLogger {
 
     @Override
     public String toString() {
-        return logger.toString();
+        return loggerName;
     }
 }

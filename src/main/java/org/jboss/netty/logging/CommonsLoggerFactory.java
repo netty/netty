@@ -41,6 +41,6 @@ public class CommonsLoggerFactory extends InternalLoggerFactory {
     public InternalLogger newInstance(String name) {
         final org.apache.commons.logging.Log logger =
             org.apache.commons.logging.LogFactory.getLog(name);
-        return new CommonsLogger(logger);
+        return new CommonsLogger(logger, name);
     }
 }
