@@ -25,7 +25,7 @@ package org.jboss.netty.channel.socket.nio;
 import java.net.Socket;
 
 import org.jboss.netty.channel.socket.DefaultSocketChannelConfig;
-import org.jboss.netty.util.ConvertUtil;
+import org.jboss.netty.util.ConversionUtil;
 
 class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
         implements NioSocketChannelConfig {
@@ -46,9 +46,9 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
         }
 
         if (key.equals("readWriteFair")) {
-            setReadWriteFair(ConvertUtil.toBoolean(value));
+            setReadWriteFair(ConversionUtil.toBoolean(value));
         } else if (key.equals("writeSpinCount")) {
-            setWriteSpinCount(ConvertUtil.toInt(value));
+            setWriteSpinCount(ConversionUtil.toInt(value));
         } else if (key.equals("receiveBufferSizePredictor")) {
             setReceiveBufferSizePredictor((ReceiveBufferSizePredictor) value);
         } else {

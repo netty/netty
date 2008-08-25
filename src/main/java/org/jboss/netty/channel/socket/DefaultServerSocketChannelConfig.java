@@ -29,7 +29,7 @@ import java.util.Map.Entry;
 
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.util.ConvertUtil;
+import org.jboss.netty.util.ConversionUtil;
 
 public class DefaultServerSocketChannelConfig implements ServerSocketChannelConfig {
 
@@ -52,11 +52,11 @@ public class DefaultServerSocketChannelConfig implements ServerSocketChannelConf
 
     protected boolean setOption(String key, Object value) {
         if (key.equals("receiveBufferSize")) {
-            setReceiveBufferSize(ConvertUtil.toInt(value));
+            setReceiveBufferSize(ConversionUtil.toInt(value));
         } else if (key.equals("reuseAddress")) {
-            setReuseAddress(ConvertUtil.toBoolean(value));
+            setReuseAddress(ConversionUtil.toBoolean(value));
         } else if (key.equals("backlog")) {
-            setBacklog(ConvertUtil.toInt(value));
+            setBacklog(ConversionUtil.toInt(value));
         } else {
             return false;
         }

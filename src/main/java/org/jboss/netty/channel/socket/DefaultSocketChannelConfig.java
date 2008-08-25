@@ -29,7 +29,7 @@ import java.util.Map.Entry;
 
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.util.ConvertUtil;
+import org.jboss.netty.util.ConversionUtil;
 
 public class DefaultSocketChannelConfig implements SocketChannelConfig {
 
@@ -51,23 +51,23 @@ public class DefaultSocketChannelConfig implements SocketChannelConfig {
 
     protected boolean setOption(String key, Object value) {
         if (key.equals("receiveBufferSize")) {
-            setReceiveBufferSize(ConvertUtil.toInt(value));
+            setReceiveBufferSize(ConversionUtil.toInt(value));
         } else if (key.equals("sendBufferSize")) {
-            setSendBufferSize(ConvertUtil.toInt(value));
+            setSendBufferSize(ConversionUtil.toInt(value));
         } else if (key.equals("tcpNoDelay")) {
-            setTcpNoDelay(ConvertUtil.toBoolean(value));
+            setTcpNoDelay(ConversionUtil.toBoolean(value));
         } else if (key.equals("keepAlive")) {
-            setKeepAlive(ConvertUtil.toBoolean(value));
+            setKeepAlive(ConversionUtil.toBoolean(value));
         } else if (key.equals("reuseAddress")) {
-            setReuseAddress(ConvertUtil.toBoolean(value));
+            setReuseAddress(ConversionUtil.toBoolean(value));
         } else if (key.equals("soLinger")) {
-            setSoLinger(ConvertUtil.toInt(value));
+            setSoLinger(ConversionUtil.toInt(value));
         } else if (key.equals("trafficClass")) {
-            setTrafficClass(ConvertUtil.toInt(value));
+            setTrafficClass(ConversionUtil.toInt(value));
         } else if (key.equals("writeTimeoutMillis")) {
-            setWriteTimeoutMillis(ConvertUtil.toInt(value));
+            setWriteTimeoutMillis(ConversionUtil.toInt(value));
         } else if (key.equals("connectTimeoutMillis")) {
-            setConnectTimeoutMillis(ConvertUtil.toInt(value));
+            setConnectTimeoutMillis(ConversionUtil.toInt(value));
         } else if (key.equals("pipelineFactory")) {
             setPipelineFactory((ChannelPipelineFactory) value);
         } else {

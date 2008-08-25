@@ -32,7 +32,7 @@ package org.jboss.netty.util;
  * @version $Rev$, $Date$
  *
  */
-public class ConvertUtil {
+public class ConversionUtil {
 
     /**
      * Converts the specified object into an integer.
@@ -74,7 +74,7 @@ public class ConvertUtil {
         }
     }
 
-    private ConvertUtil() {
+    private ConversionUtil() {
         // Unused
     }
 }
