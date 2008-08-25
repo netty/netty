@@ -24,7 +24,6 @@ package org.jboss.netty.util;
 
 import java.io.Serializable;
 import java.util.AbstractSet;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -48,15 +47,6 @@ public class MapBackedSet<E> extends AbstractSet<E> implements Serializable {
      */
     public MapBackedSet(Map<E, Boolean> map) {
         this.map = map;
-    }
-
-    /**
-     * Creates a new instance which wraps the specified {@code map} and
-     * adds all elements of the specified collection.
-     */
-    public MapBackedSet(Map<E, Boolean> map, Collection<E> c) {
-        this.map = map;
-        addAll(c);
     }
 
     @Override
