@@ -104,7 +104,7 @@ public class ServerBootstrapTest {
         Socket socket = null;
         try {
             socket = new Socket(
-                    InetAddress.getLoopbackAddress(),
+                    InetAddress.getLocalHost(),
                     ((InetSocketAddress) channel.getLocalAddress()).getPort());
 
             // Wait until the connection is open in the server side.
@@ -158,7 +158,7 @@ public class ServerBootstrapTest {
         expect(pipelineFactory.getPipeline()).andThrow(new ChannelPipelineException());
         replay(pipelineFactory);
 
-        bootstrap.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(), 1));
+        bootstrap.connect(new InetSocketAddress(InetAddress.getLocalHost(), 1));
     }
 
     @Test(expected = IllegalStateException.class)

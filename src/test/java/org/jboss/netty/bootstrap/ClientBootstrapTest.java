@@ -98,7 +98,7 @@ public class ClientBootstrapTest {
             bootstrap.setOption(
                     "remoteAddress",
                     new InetSocketAddress(
-                            InetAddress.getLoopbackAddress(),
+                            InetAddress.getLocalHost(),
                             serverSocket.socket().getLocalPort()));
 
             ChannelFuture future = bootstrap.connect();
@@ -129,7 +129,7 @@ public class ClientBootstrapTest {
             bootstrap.setOption(
                     "remoteAddress",
                     new InetSocketAddress(
-                            InetAddress.getLoopbackAddress(),
+                            InetAddress.getLocalHost(),
                             serverSocket.socket().getLocalPort()));
             bootstrap.setOption("localAddress", new InetSocketAddress(0));
 
@@ -157,7 +157,7 @@ public class ClientBootstrapTest {
         expect(pipelineFactory.getPipeline()).andThrow(new ChannelPipelineException());
         replay(pipelineFactory);
 
-        bootstrap.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(), 1));
+        bootstrap.connect(new InetSocketAddress(InetAddress.getLocalHost(), 1));
     }
 
     @Test(expected = IllegalStateException.class)

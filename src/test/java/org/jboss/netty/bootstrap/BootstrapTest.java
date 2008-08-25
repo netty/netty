@@ -31,8 +31,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Map.Entry;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelFactory;
@@ -174,7 +172,6 @@ public class BootstrapTest {
 
     @Test
     public void shouldHaveOrderedPipelineWhenSetFromMap() {
-        Logger.getGlobal().setLevel(Level.SEVERE);
         Map<String, ChannelHandler> m = new LinkedHashMap<String, ChannelHandler>();
         m.put("a", createMock(ChannelDownstreamHandler.class));
         m.put("b", createMock(ChannelDownstreamHandler.class));
