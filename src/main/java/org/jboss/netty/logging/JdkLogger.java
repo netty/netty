@@ -35,33 +35,35 @@ import java.util.logging.Logger;
 class JdkLogger implements InternalLogger {
 
     private final Logger logger;
+    private final String loggerName;
 
-    JdkLogger(Logger logger) {
+    JdkLogger(Logger logger, String loggerName) {
         this.logger = logger;
+        this.loggerName = loggerName;
     }
 
     public void debug(String msg) {
-        logger.log(Level.FINE, msg);
+        logger.logp(Level.FINE, loggerName, "-", msg);
     }
 
     public void debug(String msg, Throwable cause) {
-        logger.log(Level.FINE, msg, cause);
+        logger.logp(Level.FINE, loggerName, "-", msg, cause);
     }
 
     public void error(String msg) {
-        logger.log(Level.SEVERE, msg);
+        logger.logp(Level.SEVERE, loggerName, "-", msg);
     }
 
     public void error(String msg, Throwable cause) {
-        logger.log(Level.SEVERE, msg, cause);
+        logger.logp(Level.SEVERE, loggerName, "-", msg, cause);
     }
 
     public void info(String msg) {
-        logger.log(Level.INFO, msg);
+        logger.logp(Level.INFO, loggerName, "-", msg);
     }
 
     public void info(String msg, Throwable cause) {
-        logger.log(Level.INFO, msg, cause);
+        logger.logp(Level.INFO, loggerName, "-", msg, cause);
     }
 
     public boolean isDebugEnabled() {
@@ -81,15 +83,15 @@ class JdkLogger implements InternalLogger {
     }
 
     public void warn(String msg) {
-        logger.log(Level.WARNING, msg);
+        logger.logp(Level.WARNING, loggerName, "-", msg);
     }
 
     public void warn(String msg, Throwable cause) {
-        logger.log(Level.WARNING, msg, cause);
+        logger.logp(Level.WARNING, loggerName, "-", msg, cause);
     }
 
     @Override
     public String toString() {
-        return String.valueOf(logger.getName());
+        return loggerName;
     }
 }

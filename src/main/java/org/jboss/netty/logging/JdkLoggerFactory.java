@@ -40,6 +40,6 @@ public class JdkLoggerFactory extends InternalLoggerFactory {
     public InternalLogger newInstance(String name) {
         final java.util.logging.Logger logger =
             java.util.logging.Logger.getLogger(name);
-        return new JdkLogger(logger);
+        return new JdkLogger(logger, name);
     }
 }
