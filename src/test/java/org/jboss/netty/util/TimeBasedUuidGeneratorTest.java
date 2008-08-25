@@ -40,7 +40,14 @@ import org.junit.Test;
  *
  */
 public class TimeBasedUuidGeneratorTest {
-    private static final int COUNT = 1048576;
+    private static final int COUNT = 100000;
+
+    @Test
+    public void shouldGenerateTimeBasedUuid() {
+        UUID uuid = TimeBasedUuidGenerator.generate();
+        assertEquals(1, uuid.version());
+        assertEquals(2, uuid.variant());
+    }
 
     @Test
     public void shouldNotDuplicate() {
