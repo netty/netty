@@ -94,8 +94,8 @@ public abstract class AbstractChannel implements Channel, Comparable<Channel> {
         return this == o;
     }
 
-    public int compareTo(Channel o) {
-        return System.identityHashCode(this) - System.identityHashCode(o);
+    public final int compareTo(Channel o) {
+        return getId().compareTo(o.getId());
     }
 
     public boolean isOpen() {
