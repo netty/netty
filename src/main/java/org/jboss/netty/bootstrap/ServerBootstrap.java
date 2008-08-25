@@ -212,6 +212,10 @@ public class ServerBootstrap extends Bootstrap {
      *                      bind it to the local address
      */
     public Channel bind(final SocketAddress localAddress) {
+        if (localAddress == null) {
+            throw new NullPointerException("localAddress");
+        }
+
         final BlockingQueue<ChannelFuture> futureQueue =
             new LinkedBlockingQueue<ChannelFuture>();
 

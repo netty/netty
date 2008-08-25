@@ -189,6 +189,10 @@ public class ClientBootstrap extends Bootstrap {
      */
     public ChannelFuture connect(final SocketAddress remoteAddress, final SocketAddress localAddress) {
 
+        if (remoteAddress == null) {
+            throw new NullPointerException("remoteAddress");
+        }
+
         final BlockingQueue<ChannelFuture> futureQueue =
             new LinkedBlockingQueue<ChannelFuture>();
 

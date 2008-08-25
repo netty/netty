@@ -30,8 +30,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 
@@ -69,11 +67,6 @@ public class MapUtilTest {
     @Test
     public void shouldReturnTrueIfMapIsOrdered() {
         assertTrue(MapUtil.isOrderedMap(new UnknownOrderedMap<String, String>()));
-    }
-
-    @BeforeClass
-    public static void setUp() {
-        InternalLoggerFactory.setDefaultFactory(new SilentLoggerFactory());
     }
 
     interface OrderedMap {

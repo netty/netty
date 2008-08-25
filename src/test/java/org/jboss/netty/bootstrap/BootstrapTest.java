@@ -39,9 +39,6 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.SilentLoggerFactory;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 
@@ -273,10 +270,5 @@ public class BootstrapTest {
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullOptionMap() {
         new Bootstrap().setOptions(null);
-    }
-
-    @BeforeClass
-    public static void setUp() {
-        InternalLoggerFactory.setDefaultFactory(new SilentLoggerFactory());
     }
 }
