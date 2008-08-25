@@ -31,12 +31,17 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Map.Entry;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.DefaultChannelPipeline;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 
@@ -86,6 +91,11 @@ public class BootstrapTest {
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullPipeline() {
         new Bootstrap().setPipeline(null);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldNotAllowNullPipelineMap() {
+        new Bootstrap().setPipelineAsMap(null);
     }
 
     @Test
@@ -167,6 +177,7 @@ public class BootstrapTest {
 
     @Test
     public void shouldHaveOrderedPipelineWhenSetFromMap() {
+        Logger.getGlobal().setLevel(Level.SEVERE);
         Map<String, ChannelHandler> m = new LinkedHashMap<String, ChannelHandler>();
         m.put("a", createMock(ChannelDownstreamHandler.class));
         m.put("b", createMock(ChannelDownstreamHandler.class));
@@ -262,5 +273,18 @@ public class BootstrapTest {
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullOptionMap() {
         new Bootstrap().setOptions(null);
+    }
+
+    @BeforeClass
+    public static void setUp() {
+        // DefaultChannelPipeline will generate expected warning messages.
+        // Suppress them.
+        Logger.getLogger(DefaultChannelPipeline.class.getName()).setLevel(Level.SEVERE);
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        // Revert the logger settings back.
+        Logger.getLogger(DefaultChannelPipeline.class.getName()).setLevel(Level.INFO);
     }
 }
