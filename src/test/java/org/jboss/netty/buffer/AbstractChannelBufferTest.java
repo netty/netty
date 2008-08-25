@@ -233,6 +233,21 @@ public abstract class AbstractChannelBufferTest {
         buffer.getBytes(-1, ByteBuffer.allocate(0));
     }
 
+    @Test(expected=IndexOutOfBoundsException.class)
+    public void setIndexBoundaryCheck1() {
+        buffer.setIndex(-1, CAPACITY);
+    }
+
+    @Test(expected=IndexOutOfBoundsException.class)
+    public void setIndexBoundaryCheck2() {
+        buffer.setIndex(CAPACITY / 2, CAPACITY / 4);
+    }
+
+    @Test(expected=IndexOutOfBoundsException.class)
+    public void setIndexBoundaryCheck3() {
+        buffer.setIndex(0, CAPACITY + 1);
+    }
+
     public void getByteBufferState1() {
         ByteBuffer dst = ByteBuffer.allocate(8);
         dst.position(1);
@@ -301,6 +316,20 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
+    public void testRandomUnsignedByteAccess() {
+        for (int i = 0; i < buffer.capacity(); i ++) {
+            byte value = (byte) random.nextInt();
+            buffer.setByte(i, value);
+        }
+
+        random.setSeed(seed);
+        for (int i = 0; i < buffer.capacity(); i ++) {
+            int value = random.nextInt() & 0xFF;
+            assertEquals(value, buffer.getUnsignedByte(i));
+        }
+    }
+
+    @Test
     public void testRandomShortAccess() {
         for (int i = 0; i < buffer.capacity() - 1; i += 2) {
             short value = (short) random.nextInt();
@@ -315,7 +344,35 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
+    public void testRandomUnsignedShortAccess() {
+        for (int i = 0; i < buffer.capacity() - 1; i += 2) {
+            short value = (short) random.nextInt();
+            buffer.setShort(i, value);
+        }
+
+        random.setSeed(seed);
+        for (int i = 0; i < buffer.capacity() - 1; i += 2) {
+            int value = random.nextInt() & 0xFFFF;
+            assertEquals(value, buffer.getUnsignedShort(i));
+        }
+    }
+
+    @Test
     public void testRandomMediumAccess() {
+        for (int i = 0; i < buffer.capacity() - 2; i += 3) {
+            int value = random.nextInt();
+            buffer.setMedium(i, value);
+        }
+
+        random.setSeed(seed);
+        for (int i = 0; i < buffer.capacity() - 2; i += 3) {
+            int value = random.nextInt() << 8 >> 8;
+            assertEquals(value, buffer.getMedium(i));
+        }
+    }
+
+    @Test
+    public void testRandomUnsignedMediumAccess() {
         for (int i = 0; i < buffer.capacity() - 2; i += 3) {
             int value = random.nextInt();
             buffer.setMedium(i, value);
@@ -339,6 +396,20 @@ public abstract class AbstractChannelBufferTest {
         for (int i = 0; i < buffer.capacity() - 3; i += 4) {
             int value = random.nextInt();
             assertEquals(value, buffer.getInt(i));
+        }
+    }
+
+    @Test
+    public void testRandomUnsignedIntAccess() {
+        for (int i = 0; i < buffer.capacity() - 3; i += 4) {
+            int value = random.nextInt();
+            buffer.setInt(i, value);
+        }
+
+        random.setSeed(seed);
+        for (int i = 0; i < buffer.capacity() - 3; i += 4) {
+            long value = random.nextInt() & 0xFFFFFFFFL;
+            assertEquals(value, buffer.getUnsignedInt(i));
         }
     }
 
