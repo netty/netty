@@ -23,6 +23,7 @@
 package org.jboss.netty.logging;
 
 
+
 /**
  * Logger factory which creates an
  * <a href="http://commons.apache.org/logging/">Apache Commons Logging</a>
@@ -40,59 +41,6 @@ public class CommonsLoggerFactory extends InternalLoggerFactory {
     public InternalLogger newInstance(String name) {
         final org.apache.commons.logging.Log logger =
             org.apache.commons.logging.LogFactory.getLog(name);
-        return new InternalLogger() {
-            public void debug(String msg) {
-                logger.debug(msg);
-            }
-
-            public void debug(String msg, Throwable cause) {
-                logger.debug(msg, cause);
-            }
-
-            public void error(String msg) {
-                logger.error(msg);
-            }
-
-            public void error(String msg, Throwable cause) {
-                logger.error(msg, cause);
-            }
-
-            public void info(String msg) {
-                logger.info(msg);
-            }
-
-            public void info(String msg, Throwable cause) {
-                logger.info(msg, cause);
-            }
-
-            public boolean isDebugEnabled() {
-                return logger.isDebugEnabled();
-            }
-
-            public boolean isErrorEnabled() {
-                return logger.isErrorEnabled();
-            }
-
-            public boolean isInfoEnabled() {
-                return logger.isInfoEnabled();
-            }
-
-            public boolean isWarnEnabled() {
-                return logger.isWarnEnabled();
-            }
-
-            public void warn(String msg) {
-                logger.warn(msg);
-            }
-
-            public void warn(String msg, Throwable cause) {
-                logger.warn(msg, cause);
-            }
-
-            @Override
-            public String toString() {
-                return logger.toString();
-            }
-        };
+        return new CommonsLogger(logger);
     }
 }

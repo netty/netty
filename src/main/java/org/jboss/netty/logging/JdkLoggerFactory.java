@@ -22,7 +22,6 @@
  */
 package org.jboss.netty.logging;
 
-import java.util.logging.Level;
 
 /**
  * Logger factory which creates a
@@ -41,59 +40,6 @@ public class JdkLoggerFactory extends InternalLoggerFactory {
     public InternalLogger newInstance(String name) {
         final java.util.logging.Logger logger =
             java.util.logging.Logger.getLogger(name);
-        return new InternalLogger() {
-            public void debug(String msg) {
-                logger.log(Level.FINE, msg);
-            }
-
-            public void debug(String msg, Throwable cause) {
-                logger.log(Level.FINE, msg, cause);
-            }
-
-            public void error(String msg) {
-                logger.log(Level.SEVERE, msg);
-            }
-
-            public void error(String msg, Throwable cause) {
-                logger.log(Level.SEVERE, msg, cause);
-            }
-
-            public void info(String msg) {
-                logger.log(Level.INFO, msg);
-            }
-
-            public void info(String msg, Throwable cause) {
-                logger.log(Level.INFO, msg, cause);
-            }
-
-            public boolean isDebugEnabled() {
-                return logger.isLoggable(Level.FINE);
-            }
-
-            public boolean isErrorEnabled() {
-                return logger.isLoggable(Level.SEVERE);
-            }
-
-            public boolean isInfoEnabled() {
-                return logger.isLoggable(Level.INFO);
-            }
-
-            public boolean isWarnEnabled() {
-                return logger.isLoggable(Level.WARNING);
-            }
-
-            public void warn(String msg) {
-                logger.log(Level.WARNING, msg);
-            }
-
-            public void warn(String msg, Throwable cause) {
-                logger.log(Level.WARNING, msg, cause);
-            }
-
-            @Override
-            public String toString() {
-                return String.valueOf(logger.getName());
-            }
-        };
+        return new JdkLogger(logger);
     }
 }
