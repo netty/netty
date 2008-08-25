@@ -128,16 +128,24 @@ public class ServerBootstrapTest {
 
         // Wait until the child connection is closed in the client side.
         // We don't use Channel.close() to make sure it's closed automatically.
-
         while (pch.child.isOpen()) {
-            Thread.yield();
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                // Ignore
+            }
         }
 
-        // FIXME Sometimes hangs here (seems like childChannelClosed is not called at all?)
+        // Wait until all child events are fired.
         while (pch.result.length() < 2) {
-            Thread.yield();
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                // Ignore
+            }
         }
 
+        // Confirm the received child events.
         assertEquals("12", pch.result.toString());
     }
 
