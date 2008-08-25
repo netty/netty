@@ -39,8 +39,8 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.DefaultChannelPipeline;
-import org.junit.AfterClass;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.SilentLoggerFactory;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -277,14 +277,6 @@ public class BootstrapTest {
 
     @BeforeClass
     public static void setUp() {
-        // DefaultChannelPipeline will generate expected warning messages.
-        // Suppress them.
-        Logger.getLogger(DefaultChannelPipeline.class.getName()).setLevel(Level.SEVERE);
-    }
-
-    @AfterClass
-    public static void tearDown() {
-        // Revert the logger settings back.
-        Logger.getLogger(DefaultChannelPipeline.class.getName()).setLevel(Level.INFO);
+        InternalLoggerFactory.setDefaultFactory(new SilentLoggerFactory());
     }
 }

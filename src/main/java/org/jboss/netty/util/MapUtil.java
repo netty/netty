@@ -29,8 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
@@ -45,8 +43,9 @@ public class MapUtil {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(MapUtil.class);
 
-    public static boolean isOrderedMap(Map<String, ChannelHandler> map) {
-        Class<Map<String, ChannelHandler>> mapType = getMapClass(map);
+    @SuppressWarnings("unchecked")
+    public static boolean isOrderedMap(Map<?, ?> map) {
+        Class<?> mapType = map.getClass();
         if (LinkedHashMap.class.isAssignableFrom(mapType)) {
             if (logger.isDebugEnabled()) {
                 logger.debug(mapType.getSimpleName() + " is an ordered map.");
@@ -90,9 +89,9 @@ public class MapUtil {
                 "default constructor and test if insertion order is " +
                 "maintained.");
 
-        Map<String, ChannelHandler> newMap;
+        Map newMap;
         try {
-            newMap = mapType.newInstance();
+            newMap = (Map) mapType.newInstance();
         } catch (Exception e) {
             if (logger.isDebugEnabled()) {
                 logger.debug(
@@ -103,20 +102,20 @@ public class MapUtil {
         }
 
         Random rand = new Random();
-        List<String> expectedNames = new ArrayList<String>();
-        ChannelHandler dummyHandler = new SimpleChannelHandler();
-        for (int i = 0; i < 65536; i ++) {
-            String filterName;
+        List<String> expectedKeys = new ArrayList<String>();
+        String dummyValue = "dummyValue";
+        for (int i = 0; i < 10000; i ++) {
+            String key;
             do {
-                filterName = String.valueOf(rand.nextInt());
-            } while (newMap.containsKey(filterName));
+                key = String.valueOf(rand.nextInt());
+            } while (newMap.containsKey(key));
 
-            newMap.put(filterName, dummyHandler);
-            expectedNames.add(filterName);
+            newMap.put(key, dummyValue);
+            expectedKeys.add(key);
 
-            Iterator<String> it = expectedNames.iterator();
-            for (Object key: newMap.keySet()) {
-                if (!it.next().equals(key)) {
+            Iterator<String> it = expectedKeys.iterator();
+            for (Object actualKey: newMap.keySet()) {
+                if (!it.next().equals(actualKey)) {
                     if (logger.isDebugEnabled()) {
                         logger.debug(
                                 "The specified map didn't pass the insertion " +
@@ -129,12 +128,6 @@ public class MapUtil {
 
         logger.debug("The specified map passed the insertion order test.");
         return true;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Class<Map<String, ChannelHandler>> getMapClass(
-            Map<String, ChannelHandler> map) {
-        return (Class<Map<String, ChannelHandler>>) map.getClass();
     }
 
     private MapUtil() {
