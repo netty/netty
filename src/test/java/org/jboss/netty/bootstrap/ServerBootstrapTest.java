@@ -79,7 +79,6 @@ public class ServerBootstrapTest {
         }
     }
 
-
     @Test(timeout = 10000, expected = ChannelException.class)
     public void testFailedBindAttempt() throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap();
@@ -88,7 +87,7 @@ public class ServerBootstrapTest {
         bootstrap.bind();
     }
 
-    @Test //(timeout = 10000)
+    @Test(timeout = 10000)
     public void testSuccessfulBindAttempt() throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new OioServerSocketChannelFactory(executor, executor));
@@ -134,9 +133,12 @@ public class ServerBootstrapTest {
             Thread.yield();
         }
 
-        while ("12".equals(pch.result.toString())) {
+        // FIXME Sometimes hangs here (seems like childChannelClosed is not called at all?)
+        while (pch.result.length() < 2) {
             Thread.yield();
         }
+
+        assertEquals("12", pch.result.toString());
     }
 
     @Test(expected = ChannelPipelineException.class)

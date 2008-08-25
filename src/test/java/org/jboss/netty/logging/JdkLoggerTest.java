@@ -99,7 +99,7 @@ public class JdkLoggerTest {
         java.util.logging.Logger mock =
             createStrictMock(java.util.logging.Logger.class);
 
-        mock.logp(Level.FINE, "foo", "-", "a");
+        mock.logp(Level.FINE, "foo", null, "a");
         replay(mock);
 
         InternalLogger logger = new JdkLogger(mock, "foo");
@@ -112,7 +112,7 @@ public class JdkLoggerTest {
         java.util.logging.Logger mock =
             createStrictMock(java.util.logging.Logger.class);
 
-        mock.logp(Level.FINE, "foo", "-", "a", e);
+        mock.logp(Level.FINE, "foo", null, "a", e);
         replay(mock);
 
         InternalLogger logger = new JdkLogger(mock, "foo");
@@ -125,7 +125,7 @@ public class JdkLoggerTest {
         java.util.logging.Logger mock =
             createStrictMock(java.util.logging.Logger.class);
 
-        mock.logp(Level.INFO, "foo", "-", "a");
+        mock.logp(Level.INFO, "foo", null, "a");
         replay(mock);
 
         InternalLogger logger = new JdkLogger(mock, "foo");
@@ -138,7 +138,7 @@ public class JdkLoggerTest {
         java.util.logging.Logger mock =
             createStrictMock(java.util.logging.Logger.class);
 
-        mock.logp(Level.INFO, "foo", "-", "a", e);
+        mock.logp(Level.INFO, "foo", null, "a", e);
         replay(mock);
 
         InternalLogger logger = new JdkLogger(mock, "foo");
@@ -151,7 +151,7 @@ public class JdkLoggerTest {
         java.util.logging.Logger mock =
             createStrictMock(java.util.logging.Logger.class);
 
-        mock.logp(Level.WARNING, "foo", "-", "a");
+        mock.logp(Level.WARNING, "foo", null, "a");
         replay(mock);
 
         InternalLogger logger = new JdkLogger(mock, "foo");
@@ -164,7 +164,7 @@ public class JdkLoggerTest {
         java.util.logging.Logger mock =
             createStrictMock(java.util.logging.Logger.class);
 
-        mock.logp(Level.WARNING, "foo", "-", "a", e);
+        mock.logp(Level.WARNING, "foo", null, "a", e);
         replay(mock);
 
         InternalLogger logger = new JdkLogger(mock, "foo");
@@ -177,7 +177,7 @@ public class JdkLoggerTest {
         java.util.logging.Logger mock =
             createStrictMock(java.util.logging.Logger.class);
 
-        mock.logp(Level.SEVERE, "foo", "-", "a");
+        mock.logp(Level.SEVERE, "foo", null, "a");
         replay(mock);
 
         InternalLogger logger = new JdkLogger(mock, "foo");
@@ -190,7 +190,7 @@ public class JdkLoggerTest {
         java.util.logging.Logger mock =
             createStrictMock(java.util.logging.Logger.class);
 
-        mock.logp(Level.SEVERE, "foo", "-", "a", e);
+        mock.logp(Level.SEVERE, "foo", null, "a", e);
         replay(mock);
 
         InternalLogger logger = new JdkLogger(mock, "foo");
