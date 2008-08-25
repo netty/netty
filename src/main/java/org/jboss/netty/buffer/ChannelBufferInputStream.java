@@ -232,7 +232,7 @@ public class ChannelBufferInputStream extends InputStream implements DataInput {
 
     private void checkAvailable(int fieldSize) throws IOException {
         if (fieldSize < 0) {
-            throw new IllegalArgumentException();
+            throw new IndexOutOfBoundsException();
         }
         if (fieldSize > available()) {
             throw new EOFException();
