@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -37,7 +38,6 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -50,7 +50,7 @@ import org.junit.Test;
  * @version $Rev$, $Date$
  *
  */
-public class ClientBootstrapTest {
+public abstract class AbstractSocketClientBootstrapTest {
 
     private static ExecutorService executor;
 
@@ -73,11 +73,12 @@ public class ClientBootstrapTest {
         }
     }
 
+    protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
 
     @Test(timeout = 10000)
     public void testFailedConnectionAttempt() throws Exception {
         ClientBootstrap bootstrap = new ClientBootstrap();
-        bootstrap.setFactory(new OioClientSocketChannelFactory(executor));
+        bootstrap.setFactory(newClientSocketChannelFactory(executor));
         bootstrap.setOption("remoteAddress", new InetSocketAddress("255.255.255.255", 1));
         ChannelFuture future = bootstrap.connect();
         future.awaitUninterruptibly();
@@ -94,7 +95,7 @@ public class ClientBootstrapTest {
             serverSocket.configureBlocking(false);
 
             ClientBootstrap bootstrap =
-                new ClientBootstrap(new OioClientSocketChannelFactory(executor));
+                new ClientBootstrap(newClientSocketChannelFactory(executor));
             bootstrap.setOption(
                     "remoteAddress",
                     new InetSocketAddress(
@@ -125,7 +126,7 @@ public class ClientBootstrapTest {
             serverSocket.configureBlocking(false);
 
             ClientBootstrap bootstrap =
-                new ClientBootstrap(new OioClientSocketChannelFactory(executor));
+                new ClientBootstrap(newClientSocketChannelFactory(executor));
             bootstrap.setOption(
                     "remoteAddress",
                     new InetSocketAddress(

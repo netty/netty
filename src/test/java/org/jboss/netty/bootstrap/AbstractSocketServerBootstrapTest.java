@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -43,7 +44,6 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChildChannelStateEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
-import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -56,7 +56,7 @@ import org.junit.Test;
  * @version $Rev$, $Date$
  *
  */
-public class ServerBootstrapTest {
+public abstract class AbstractSocketServerBootstrapTest {
 
     private static ExecutorService executor;
 
@@ -79,10 +79,12 @@ public class ServerBootstrapTest {
         }
     }
 
+    protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
+
     @Test(timeout = 10000, expected = ChannelException.class)
     public void testFailedBindAttempt() throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap();
-        bootstrap.setFactory(new OioServerSocketChannelFactory(executor, executor));
+        bootstrap.setFactory(newServerSocketChannelFactory(executor));
         bootstrap.setOption("localAddress", new InetSocketAddress("255.255.255.255", 0));
         bootstrap.bind();
     }
@@ -90,7 +92,7 @@ public class ServerBootstrapTest {
     @Test(timeout = 10000)
     public void testSuccessfulBindAttempt() throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap(
-                new OioServerSocketChannelFactory(executor, executor));
+                newServerSocketChannelFactory(executor));
 
         bootstrap.setParentHandler(new ParentChannelHandler());
         bootstrap.setOption("localAddress", new InetSocketAddress(0));
