@@ -99,7 +99,9 @@ public class SlicedChannelBuffer extends AbstractChannelBuffer implements Wrappe
     }
 
     public ChannelBuffer duplicate() {
-        return new SlicedChannelBuffer(buffer, adjustment, length);
+        ChannelBuffer duplicate = new SlicedChannelBuffer(buffer, adjustment, length);
+        duplicate.setIndex(readerIndex(), writerIndex());
+        return duplicate;
     }
 
     public ChannelBuffer copy(int index, int length) {

@@ -412,7 +412,9 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
     public ChannelBuffer duplicate() {
-        return new CompositeChannelBuffer(this);
+        ChannelBuffer duplicate = new CompositeChannelBuffer(this);
+        duplicate.setIndex(readerIndex(), writerIndex());
+        return duplicate;
     }
 
     public ChannelBuffer copy(int index, int length) {

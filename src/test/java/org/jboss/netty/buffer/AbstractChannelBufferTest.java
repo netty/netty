@@ -1238,20 +1238,49 @@ public abstract class AbstractChannelBufferTest {
         final int writerIndex = CAPACITY * 2 / 3;
         buffer.setIndex(readerIndex, writerIndex);
 
-        // Make sure all properties are cpoied.
+        // Make sure all properties are copied.
         ChannelBuffer copy = buffer.copy();
         assertEquals(0, copy.readerIndex());
         assertEquals(buffer.readableBytes(), copy.writerIndex());
-        assertEquals(copy.capacity(), buffer.readableBytes());
+        assertEquals(buffer.readableBytes(), copy.capacity());
+        assertSame(buffer.order(), copy.order());
         for (int i = 0; i < copy.capacity(); i ++) {
             assertEquals(buffer.getByte(i + readerIndex), copy.getByte(i));
         }
 
-        // Make sure the buffer contents are independent from each other.
+        // Make sure the buffer content is independent from each other.
         buffer.setByte(readerIndex, (byte) (buffer.getByte(readerIndex) + 1));
         assertTrue(buffer.getByte(readerIndex) != copy.getByte(0));
         copy.setByte(1, (byte) (copy.getByte(1) + 1));
         assertTrue(buffer.getByte(readerIndex + 1) != copy.getByte(1));
+    }
+
+    @Test
+    public void testDuplicate() {
+        for (int i = 0; i < buffer.capacity(); i ++) {
+            byte value = (byte) random.nextInt();
+            buffer.setByte(i, value);
+        }
+
+        final int readerIndex = CAPACITY / 3;
+        final int writerIndex = CAPACITY * 2 / 3;
+        buffer.setIndex(readerIndex, writerIndex);
+
+        // Make sure all properties are copied.
+        ChannelBuffer duplicate = buffer.duplicate();
+        assertEquals(buffer.readerIndex(), duplicate.readerIndex());
+        assertEquals(buffer.writerIndex(), duplicate.writerIndex());
+        assertEquals(buffer.capacity(), duplicate.capacity());
+        assertSame(buffer.order(), duplicate.order());
+        for (int i = 0; i < duplicate.capacity(); i ++) {
+            assertEquals(buffer.getByte(i), duplicate.getByte(i));
+        }
+
+        // Make sure the buffer content is shared.
+        buffer.setByte(readerIndex, (byte) (buffer.getByte(readerIndex) + 1));
+        assertTrue(buffer.getByte(readerIndex) == duplicate.getByte(readerIndex));
+        duplicate.setByte(1, (byte) (duplicate.getByte(1) + 1));
+        assertTrue(buffer.getByte(1) == duplicate.getByte(1));
     }
 
     @Test
