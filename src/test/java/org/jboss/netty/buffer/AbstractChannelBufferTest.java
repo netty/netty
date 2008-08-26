@@ -25,7 +25,10 @@ package org.jboss.netty.buffer;
 import static org.jboss.netty.buffer.ChannelBuffers.*;
 import static org.junit.Assert.*;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Random;
 
 import org.junit.After;
@@ -428,6 +431,24 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
+    public void testSetZero() {
+        buffer.clear();
+        while (buffer.writable()) {
+            buffer.writeByte((byte) 0xFF);
+        }
+
+        for (int i = 0; i < buffer.capacity();) {
+            int length = Math.min(buffer.capacity() - i, random.nextInt(32));
+            buffer.setZero(i, length);
+            i += length;
+        }
+
+        for (int i = 0; i < buffer.capacity(); i ++) {
+            assertEquals(0, buffer.getByte(i));
+        }
+    }
+
+    @Test
     public void testSequentialByteAccess() {
         buffer.writerIndex(0);
         for (int i = 0; i < buffer.capacity(); i ++) {
@@ -447,6 +468,34 @@ public abstract class AbstractChannelBufferTest {
             assertEquals(i, buffer.readerIndex());
             assertTrue(buffer.readable());
             assertEquals(value, buffer.readByte());
+        }
+
+        assertEquals(buffer.capacity(), buffer.readerIndex());
+        assertEquals(buffer.capacity(), buffer.writerIndex());
+        assertFalse(buffer.readable());
+        assertFalse(buffer.writable());
+    }
+
+    @Test
+    public void testSequentialUnsignedByteAccess() {
+        buffer.writerIndex(0);
+        for (int i = 0; i < buffer.capacity(); i ++) {
+            byte value = (byte) random.nextInt();
+            assertEquals(i, buffer.writerIndex());
+            assertTrue(buffer.writable());
+            buffer.writeByte(value);
+        }
+
+        assertEquals(0, buffer.readerIndex());
+        assertEquals(buffer.capacity(), buffer.writerIndex());
+        assertFalse(buffer.writable());
+
+        random.setSeed(seed);
+        for (int i = 0; i < buffer.capacity(); i ++) {
+            int value = random.nextInt() & 0xFF;
+            assertEquals(i, buffer.readerIndex());
+            assertTrue(buffer.readable());
+            assertEquals(value, buffer.readUnsignedByte());
         }
 
         assertEquals(buffer.capacity(), buffer.readerIndex());
@@ -484,7 +533,63 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
+    public void testSequentialUnsignedShortAccess() {
+        buffer.writerIndex(0);
+        for (int i = 0; i < buffer.capacity(); i += 2) {
+            short value = (short) random.nextInt();
+            assertEquals(i, buffer.writerIndex());
+            assertTrue(buffer.writable());
+            buffer.writeShort(value);
+        }
+
+        assertEquals(0, buffer.readerIndex());
+        assertEquals(buffer.capacity(), buffer.writerIndex());
+        assertFalse(buffer.writable());
+
+        random.setSeed(seed);
+        for (int i = 0; i < buffer.capacity(); i += 2) {
+            int value = random.nextInt() & 0xFFFF;
+            assertEquals(i, buffer.readerIndex());
+            assertTrue(buffer.readable());
+            assertEquals(value, buffer.readUnsignedShort());
+        }
+
+        assertEquals(buffer.capacity(), buffer.readerIndex());
+        assertEquals(buffer.capacity(), buffer.writerIndex());
+        assertFalse(buffer.readable());
+        assertFalse(buffer.writable());
+    }
+
+    @Test
     public void testSequentialMediumAccess() {
+        buffer.writerIndex(0);
+        for (int i = 0; i < buffer.capacity() / 3 * 3; i += 3) {
+            int value = random.nextInt();
+            assertEquals(i, buffer.writerIndex());
+            assertTrue(buffer.writable());
+            buffer.writeMedium(value);
+        }
+
+        assertEquals(0, buffer.readerIndex());
+        assertEquals(buffer.capacity() / 3 * 3, buffer.writerIndex());
+        assertEquals(buffer.capacity() % 3, buffer.writableBytes());
+
+        random.setSeed(seed);
+        for (int i = 0; i < buffer.capacity() / 3 * 3; i += 3) {
+            int value = random.nextInt() << 8 >> 8;
+            assertEquals(i, buffer.readerIndex());
+            assertTrue(buffer.readable());
+            assertEquals(value, buffer.readMedium());
+        }
+
+        assertEquals(buffer.capacity() / 3 * 3, buffer.readerIndex());
+        assertEquals(buffer.capacity() / 3 * 3, buffer.writerIndex());
+        assertEquals(0, buffer.readableBytes());
+        assertEquals(buffer.capacity() % 3, buffer.writableBytes());
+    }
+
+    @Test
+    public void testSequentialUnsignedMediumAccess() {
         buffer.writerIndex(0);
         for (int i = 0; i < buffer.capacity() / 3 * 3; i += 3) {
             int value = random.nextInt() & 0x00FFFFFF;
@@ -531,6 +636,34 @@ public abstract class AbstractChannelBufferTest {
             assertEquals(i, buffer.readerIndex());
             assertTrue(buffer.readable());
             assertEquals(value, buffer.readInt());
+        }
+
+        assertEquals(buffer.capacity(), buffer.readerIndex());
+        assertEquals(buffer.capacity(), buffer.writerIndex());
+        assertFalse(buffer.readable());
+        assertFalse(buffer.writable());
+    }
+
+    @Test
+    public void testSequentialUnsignedIntAccess() {
+        buffer.writerIndex(0);
+        for (int i = 0; i < buffer.capacity(); i += 4) {
+            int value = random.nextInt();
+            assertEquals(i, buffer.writerIndex());
+            assertTrue(buffer.writable());
+            buffer.writeInt(value);
+        }
+
+        assertEquals(0, buffer.readerIndex());
+        assertEquals(buffer.capacity(), buffer.writerIndex());
+        assertFalse(buffer.writable());
+
+        random.setSeed(seed);
+        for (int i = 0; i < buffer.capacity(); i += 4) {
+            long value = random.nextInt() & 0xFFFFFFFFL;
+            assertEquals(i, buffer.readerIndex());
+            assertTrue(buffer.readable());
+            assertEquals(value, buffer.readUnsignedInt());
         }
 
         assertEquals(buffer.capacity(), buffer.readerIndex());
@@ -588,7 +721,75 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
-    public void testRandomHeapBufferTransfer() {
+    public void testRandomByteArrayTransfer1() {
+        byte[] value= new byte[BLOCK_SIZE];
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            random.nextBytes(value);
+            buffer.setBytes(i, value);
+        }
+
+        random.setSeed(seed);
+        byte[] expectedValueContent = new byte[BLOCK_SIZE];
+        ChannelBuffer expectedValue = wrappedBuffer(expectedValueContent);
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            random.nextBytes(expectedValueContent);
+            buffer.getBytes(i, value);
+            for (int j = 0; j < BLOCK_SIZE; j ++) {
+                assertEquals(expectedValue.getByte(j), value[j]);
+            }
+        }
+    }
+
+    @Test
+    public void testRandomByteArrayTransfer2() {
+        byte[] value= new byte[BLOCK_SIZE * 2];
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            random.nextBytes(value);
+            buffer.setBytes(i, value, random.nextInt(BLOCK_SIZE), BLOCK_SIZE);
+        }
+
+        random.setSeed(seed);
+        byte[] expectedValueContent = new byte[BLOCK_SIZE * 2];
+        ChannelBuffer expectedValue = wrappedBuffer(expectedValueContent);
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            random.nextBytes(expectedValueContent);
+            int valueOffset = random.nextInt(BLOCK_SIZE);
+            buffer.getBytes(i, value, valueOffset, BLOCK_SIZE);
+            for (int j = valueOffset; j < valueOffset + BLOCK_SIZE; j ++) {
+                assertEquals(expectedValue.getByte(j), value[j]);
+            }
+        }
+    }
+
+    @Test
+    public void testRandomHeapBufferTransfer1() {
+        byte[] valueContent = new byte[BLOCK_SIZE];
+        ChannelBuffer value = wrappedBuffer(valueContent);
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            random.nextBytes(valueContent);
+            value.setIndex(0, BLOCK_SIZE);
+            buffer.setBytes(i, value);
+            assertEquals(BLOCK_SIZE, value.readerIndex());
+            assertEquals(BLOCK_SIZE, value.writerIndex());
+        }
+
+        random.setSeed(seed);
+        byte[] expectedValueContent = new byte[BLOCK_SIZE];
+        ChannelBuffer expectedValue = wrappedBuffer(expectedValueContent);
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            random.nextBytes(expectedValueContent);
+            value.clear();
+            buffer.getBytes(i, value);
+            assertEquals(0, value.readerIndex());
+            assertEquals(BLOCK_SIZE, value.writerIndex());
+            for (int j = 0; j < BLOCK_SIZE; j ++) {
+                assertEquals(expectedValue.getByte(j), value.getByte(j));
+            }
+        }
+    }
+
+    @Test
+    public void testRandomHeapBufferTransfer2() {
         byte[] valueContent = new byte[BLOCK_SIZE * 2];
         ChannelBuffer value = wrappedBuffer(valueContent);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
@@ -652,6 +853,56 @@ public abstract class AbstractChannelBufferTest {
             assertEquals(valueOffset + BLOCK_SIZE, value.position());
             for (int j = valueOffset; j < valueOffset + BLOCK_SIZE; j ++) {
                 assertEquals(expectedValue.get(j), value.get(j));
+            }
+        }
+    }
+
+    @Test
+    public void testSequentialByteArrayTransfer1() {
+        byte[] value= new byte[BLOCK_SIZE];
+        buffer.writerIndex(0);
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            random.nextBytes(value);
+            assertEquals(0, buffer.readerIndex());
+            assertEquals(i, buffer.writerIndex());
+            buffer.writeBytes(value);
+        }
+
+        random.setSeed(seed);
+        byte[] expectedValue = new byte[BLOCK_SIZE];
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            random.nextBytes(expectedValue);
+            assertEquals(i, buffer.readerIndex());
+            assertEquals(CAPACITY, buffer.writerIndex());
+            buffer.readBytes(value);
+            for (int j = 0; j < BLOCK_SIZE; j ++) {
+                assertEquals(expectedValue[j], value[j]);
+            }
+        }
+    }
+
+    @Test
+    public void testSequentialByteArrayTransfer2() {
+        byte[] value = new byte[BLOCK_SIZE * 2];
+        buffer.writerIndex(0);
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            random.nextBytes(value);
+            assertEquals(0, buffer.readerIndex());
+            assertEquals(i, buffer.writerIndex());
+            int readerIndex = random.nextInt(BLOCK_SIZE);
+            buffer.writeBytes(value, readerIndex, BLOCK_SIZE);
+        }
+
+        random.setSeed(seed);
+        byte[] expectedValue= new byte[BLOCK_SIZE * 2];
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            random.nextBytes(expectedValue);
+            int valueOffset = random.nextInt(BLOCK_SIZE);
+            assertEquals(i, buffer.readerIndex());
+            assertEquals(CAPACITY, buffer.writerIndex());
+            buffer.readBytes(value, valueOffset, BLOCK_SIZE);
+            for (int j = valueOffset; j < valueOffset + BLOCK_SIZE; j ++) {
+                assertEquals(expectedValue[j], value[j]);
             }
         }
     }
@@ -821,6 +1072,28 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
+    public void testWriteZero() {
+        buffer.clear();
+        while (buffer.writable()) {
+            buffer.writeByte((byte) 0xFF);
+        }
+
+        buffer.clear();
+        for (int i = 0; i < buffer.capacity();) {
+            int length = Math.min(buffer.capacity() - i, random.nextInt(32));
+            buffer.writeZero(length);
+            i += length;
+        }
+
+        assertEquals(0, buffer.readerIndex());
+        assertEquals(buffer.capacity(), buffer.writerIndex());
+
+        for (int i = 0; i < buffer.capacity(); i ++) {
+            assertEquals(0, buffer.getByte(i));
+        }
+    }
+
+    @Test
     public void testDiscardReadBytes() {
         buffer.writerIndex(0);
         for (int i = 0; i < buffer.capacity(); i += 4) {
@@ -860,6 +1133,25 @@ public abstract class AbstractChannelBufferTest {
         assertEquals(CAPACITY / 4 - 1, buffer.readerIndex());
         buffer.resetWriterIndex();
         assertEquals(CAPACITY / 3 - 1, buffer.writerIndex());
+    }
+
+    @Test
+    public void testStreamTransfer() throws Exception {
+        byte[] expected = new byte[buffer.capacity()];
+        random.nextBytes(expected);
+
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            ByteArrayInputStream in = new ByteArrayInputStream(expected, i, BLOCK_SIZE);
+            assertEquals(BLOCK_SIZE, buffer.setBytes(i, in, BLOCK_SIZE));
+            assertEquals(-1, buffer.setBytes(i, in, 0));
+        }
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            buffer.getBytes(i, out, BLOCK_SIZE);
+        }
+
+        assertTrue(Arrays.equals(expected, out.toByteArray()));
     }
 
     @Test

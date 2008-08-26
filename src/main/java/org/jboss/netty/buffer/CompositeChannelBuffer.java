@@ -353,7 +353,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         int i = sliceId;
         int readBytes = 0;
 
-        while (length > 0) {
+        do {
             ChannelBuffer s = slices[i];
             int adjustment = indices[i];
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
@@ -365,10 +365,18 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
                     break;
                 }
             }
-            index += localLength;
-            length -= localLength;
-            i ++;
-        }
+
+            if (localReadBytes == localLength) {
+                index += localLength;
+                length -= localLength;
+                readBytes += localLength;
+                i ++;
+            } else {
+                index += localReadBytes;
+                length -= localReadBytes;
+                readBytes += localReadBytes;
+            }
+        } while (length > 0);
 
         return readBytes;
     }
@@ -381,22 +389,26 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
 
         int i = sliceId;
-        int writtenBytes = 0;
-        while (length > 0) {
+        int readBytes = 0;
+        do {
             ChannelBuffer s = slices[i];
             int adjustment = indices[i];
             int localLength = Math.min(length, s.capacity() - (index - adjustment));
-            int localWrittenBytes = s.setBytes(index - adjustment, in, localLength);
-            writtenBytes += localWrittenBytes;
-            if (localLength != localWrittenBytes) {
-                break;
-            }
-            index += localLength;
-            length -= localLength;
-            i ++;
-        }
+            int localReadBytes = s.setBytes(index - adjustment, in, localLength);
 
-        return writtenBytes;
+            if (localReadBytes == localLength) {
+                index += localLength;
+                length -= localLength;
+                readBytes += localLength;
+                i ++;
+            } else {
+                index += localReadBytes;
+                length -= localReadBytes;
+                readBytes += localReadBytes;
+            }
+        } while (length > 0);
+
+        return readBytes;
     }
 
     public ChannelBuffer duplicate() {
