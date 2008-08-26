@@ -423,7 +423,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             throw new IndexOutOfBoundsException();
         }
 
-        ChannelBuffer dst = ChannelBuffers.buffer(length);
+        ChannelBuffer dst = ChannelBuffers.buffer(order(), length);
         int dstIndex = 0;
         int i = sliceId;
 
@@ -443,6 +443,9 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
     public ChannelBuffer slice(int index, int length) {
+        if (length == 0) {
+            return ChannelBuffers.EMPTY_BUFFER;
+        }
         return new SlicedChannelBuffer(this, index, length);
     }
 

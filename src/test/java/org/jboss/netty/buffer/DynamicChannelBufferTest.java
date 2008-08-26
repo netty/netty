@@ -24,44 +24,33 @@ package org.jboss.netty.buffer;
 
 import static org.junit.Assert.*;
 
-import java.util.ArrayList;
-import java.util.List;
 
 
 
+public class DynamicChannelBufferTest extends AbstractChannelBufferTest {
 
-public class CompositeChannelBufferTest extends AbstractChannelBufferTest {
-
-    private List<ChannelBuffer> buffers;
     private ChannelBuffer buffer;
 
     @Override
     protected ChannelBuffer newBuffer(int length) {
-        buffers = new ArrayList<ChannelBuffer>();
-        for (int i = 0; i < length; i += 10) {
-            buffers.add(ChannelBuffers.wrappedBuffer(new byte[1]));
-            buffers.add(ChannelBuffers.wrappedBuffer(new byte[2]));
-            buffers.add(ChannelBuffers.wrappedBuffer(new byte[3]));
-            buffers.add(ChannelBuffers.wrappedBuffer(new byte[4]));
-            buffers.add(ChannelBuffers.wrappedBuffer(new byte[5]));
-            buffers.add(ChannelBuffers.wrappedBuffer(new byte[6]));
-            buffers.add(ChannelBuffers.wrappedBuffer(new byte[7]));
-            buffers.add(ChannelBuffers.wrappedBuffer(new byte[8]));
-            buffers.add(ChannelBuffers.wrappedBuffer(new byte[9]));
-        }
+        buffer = ChannelBuffers.dynamicBuffer(length);
 
-        buffer = ChannelBuffers.wrappedBuffer(buffers.toArray(new ChannelBuffer[buffers.size()]));
-        buffer.writerIndex(length);
-        buffer = ChannelBuffers.wrappedBuffer(buffer);
+        // A dynamic buffer does lazy initialization.
+        assertEquals(0, buffer.capacity());
+
+        // Initialize.
+        buffer.writeZero(1);
+        buffer.clear();
+
+        // And validate the initial capacity
+        assertEquals(0, buffer.writerIndex());
         assertEquals(length, buffer.capacity());
-        assertEquals(length, buffer.readableBytes());
-        assertFalse(buffer.writable());
-        buffer.writerIndex(0);
+
         return buffer;
     }
 
     @Override
     protected ChannelBuffer[] components() {
-        return buffers.toArray(new ChannelBuffer[buffers.size()]);
+        return new ChannelBuffer[] { buffer };
     }
 }

@@ -30,7 +30,10 @@ import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.NoSuchElementException;
 import java.util.Random;
+import java.util.Set;
 
 import org.junit.After;
 import org.junit.Before;
@@ -38,7 +41,7 @@ import org.junit.Test;
 
 public abstract class AbstractChannelBufferTest {
 
-    private static final int CAPACITY = 4096;
+    private static final int CAPACITY = 4096; // Must be even
     private static final int BLOCK_SIZE = 128;
 
     private long seed;
@@ -1071,7 +1074,7 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
-    public void testSequentialCopiedBufferTransfer() {
+    public void testSequentialCopiedBufferTransfer1() {
         buffer.writerIndex(0);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             byte[] value = new byte[BLOCK_SIZE];
@@ -1097,7 +1100,31 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
-    public void testSequentialSlice() {
+    public void testSequentialCopiedBufferTransfer2() {
+        buffer.clear();
+        buffer.writeZero(buffer.capacity());
+        try {
+            buffer.readBytes(ChannelBufferIndexFinder.CR);
+            fail();
+        } catch (NoSuchElementException e) {
+            // Expected
+        }
+
+        assertSame(EMPTY_BUFFER, buffer.readBytes(ChannelBufferIndexFinder.NUL));
+
+        buffer.clear();
+        buffer.writeBytes(new byte[] { 1, 2, 3, 4, 0 });
+
+        ChannelBuffer copy = buffer.readBytes(ChannelBufferIndexFinder.NUL);
+        assertEquals(wrappedBuffer(new byte[] { 1, 2, 3, 4 }), copy);
+
+        // Make sure if it's a copied buffer.
+        copy.setByte(0, (byte) (copy.getByte(0) + 1));
+        assertFalse(buffer.getByte(0) == copy.getByte(0));
+    }
+
+    @Test
+    public void testSequentialSlice1() {
         buffer.writerIndex(0);
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             byte[] value = new byte[BLOCK_SIZE];
@@ -1123,7 +1150,38 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
+    public void testSequentialSlice2() {
+        buffer.clear();
+        buffer.writeZero(buffer.capacity());
+        try {
+            buffer.readSlice(ChannelBufferIndexFinder.CR);
+            fail();
+        } catch (NoSuchElementException e) {
+            // Expected
+        }
+
+        assertSame(EMPTY_BUFFER, buffer.readSlice(ChannelBufferIndexFinder.NUL));
+
+        buffer.clear();
+        buffer.writeBytes(new byte[] { 1, 2, 3, 4, 0 });
+
+        ChannelBuffer slice = buffer.readSlice(ChannelBufferIndexFinder.NUL);
+        assertEquals(wrappedBuffer(new byte[] { 1, 2, 3, 4 }), slice);
+
+        // Make sure if it's a sliced buffer.
+        slice.setByte(0, (byte) (slice.getByte(0) + 1));
+        assertTrue(buffer.getByte(0) == slice.getByte(0));
+    }
+
+    @Test
     public void testWriteZero() {
+        try {
+            buffer.writeZero(-1);
+            fail();
+        } catch (IllegalArgumentException e) {
+            // Expected
+        }
+
         buffer.clear();
         while (buffer.writable()) {
             buffer.writeByte((byte) 0xFF);
@@ -1432,5 +1490,73 @@ public abstract class AbstractChannelBufferTest {
 
             assertEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), nioBuffer);
         }
+    }
+
+    @Test
+    public void testSkipBytes1() {
+        buffer.setIndex(CAPACITY / 4, CAPACITY / 2);
+
+        buffer.skipBytes(CAPACITY / 4);
+        assertEquals(CAPACITY / 4 * 2, buffer.readerIndex());
+
+        try {
+            buffer.skipBytes(CAPACITY / 4 + 1);
+            fail();
+        } catch (IndexOutOfBoundsException e) {
+            // Expected
+        }
+
+        // Should remain unchanged.
+        assertEquals(CAPACITY / 4 * 2, buffer.readerIndex());
+    }
+
+    @Test
+    public void testSkipBytes2() {
+        buffer.clear();
+        buffer.writeZero(buffer.capacity());
+
+        try {
+            buffer.skipBytes(ChannelBufferIndexFinder.LF);
+            fail();
+        } catch (NoSuchElementException e) {
+            // Expected
+        }
+
+        buffer.skipBytes(ChannelBufferIndexFinder.NUL);
+        assertEquals(0, buffer.readerIndex());
+
+        buffer.clear();
+        buffer.writeBytes(new byte[] { 1, 2, 3, 4, 0 });
+        buffer.skipBytes(ChannelBufferIndexFinder.NUL);
+        assertEquals(4, buffer.readerIndex());
+    }
+
+    @Test
+    public void testHashCode() {
+        ChannelBuffer elemA = buffer(15);
+        ChannelBuffer elemB = directBuffer(15);
+        elemA.writeBytes(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5 });
+        elemB.writeBytes(new byte[] { 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9 });
+
+        Set<ChannelBuffer> set = new HashSet<ChannelBuffer>();
+        set.add(elemA);
+        set.add(elemB);
+
+        assertEquals(2, set.size());
+        assertTrue(set.contains(elemA.copy()));
+        assertTrue(set.contains(elemB.copy()));
+
+        buffer.clear();
+        buffer.writeBytes(elemA.duplicate());
+
+        assertTrue(set.remove(buffer));
+        assertFalse(set.contains(elemA));
+        assertEquals(1, set.size());
+
+        buffer.clear();
+        buffer.writeBytes(elemB.duplicate());
+        assertTrue(set.remove(buffer));
+        assertFalse(set.contains(elemB));
+        assertEquals(0, set.size());
     }
 }

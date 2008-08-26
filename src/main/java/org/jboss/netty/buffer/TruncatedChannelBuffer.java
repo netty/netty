@@ -104,6 +104,9 @@ public class TruncatedChannelBuffer extends AbstractChannelBuffer implements Wra
 
     public ChannelBuffer slice(int index, int length) {
         checkIndex(index, length);
+        if (length == 0) {
+            return ChannelBuffers.EMPTY_BUFFER;
+        }
         return buffer.slice(index, length);
     }
 

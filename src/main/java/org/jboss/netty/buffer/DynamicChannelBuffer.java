@@ -214,8 +214,10 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
 
     public ChannelBuffer copy(int index, int length) {
         DynamicChannelBuffer copiedBuffer = new DynamicChannelBuffer(endianness, Math.max(length, 64));
-        copiedBuffer.buffer = buffer.copy();
-        if (copiedBuffer.buffer.capacity() == 0) {
+        if (readable()) {
+            copiedBuffer.buffer = buffer.copy(readerIndex(), readableBytes());
+            copiedBuffer.setIndex(0, readableBytes());
+        } else {
             copiedBuffer.buffer = ChannelBuffers.EMPTY_BUFFER;
         }
         return copiedBuffer;
@@ -223,8 +225,14 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
 
     public ChannelBuffer slice(int index, int length) {
         if (index == 0) {
+            if (length == 0) {
+                return ChannelBuffers.EMPTY_BUFFER;
+            }
             return new TruncatedChannelBuffer(this, length);
         } else {
+            if (length == 0) {
+                return ChannelBuffers.EMPTY_BUFFER;
+            }
             return new SlicedChannelBuffer(this, index, length);
         }
     }

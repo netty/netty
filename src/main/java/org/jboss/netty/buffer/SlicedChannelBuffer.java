@@ -110,6 +110,9 @@ public class SlicedChannelBuffer extends AbstractChannelBuffer implements Wrappe
 
     public ChannelBuffer slice(int index, int length) {
         checkIndex(index, length);
+        if (length == 0) {
+            return ChannelBuffers.EMPTY_BUFFER;
+        }
         return new SlicedChannelBuffer(buffer, index + adjustment, length);
     }
 

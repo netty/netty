@@ -620,10 +620,18 @@ public class ChannelBuffers {
 
         int hashCode = 1;
         int arrayIndex = buffer.readerIndex();
-        for (int i = intCount; i > 0; i --) {
-            hashCode = 31 * hashCode + buffer.getInt(arrayIndex);
-            arrayIndex += 4;
+        if (buffer.order() == BIG_ENDIAN) {
+            for (int i = intCount; i > 0; i --) {
+                hashCode = 31 * hashCode + buffer.getInt(arrayIndex);
+                arrayIndex += 4;
+            }
+        } else {
+            for (int i = intCount; i > 0; i --) {
+                hashCode = 31 * hashCode + swapInt(buffer.getInt(arrayIndex));
+                arrayIndex += 4;
+            }
         }
+
         for (int i = byteCount; i > 0; i --) {
             hashCode = 31 * hashCode + buffer.getByte(arrayIndex ++);
         }
@@ -631,6 +639,7 @@ public class ChannelBuffers {
         if (hashCode == 0) {
             hashCode = 1;
         }
+
         return hashCode;
     }
 

@@ -296,6 +296,9 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         if (index == 0 && length == capacity()) {
             return duplicate();
         } else {
+            if (index >= 0 && length == 0) {
+                return ChannelBuffers.EMPTY_BUFFER;
+            }
             return new ByteBufferBackedChannelBuffer(
                     ((ByteBuffer) buffer.duplicate().position(index).limit(index + length)));
         }
