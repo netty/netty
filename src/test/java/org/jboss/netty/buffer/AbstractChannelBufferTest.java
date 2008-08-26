@@ -28,6 +28,7 @@ import static org.junit.Assert.*;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -1330,5 +1331,106 @@ public abstract class AbstractChannelBufferTest {
         assertTrue(buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value, 0, 31)) > 0);
         assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(BIG_ENDIAN, value)) < 0);
         assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(LITTLE_ENDIAN, value)) < 0);
+    }
+
+    @Test
+    public void testToString() {
+        try {
+            buffer.toString("UnsupportedCharsetName");
+            fail();
+        } catch (UnsupportedCharsetException e) {
+            // Expected
+        }
+
+        buffer.clear();
+        buffer.writeBytes(copiedBuffer("Hello, World!", "ISO-8859-1"));
+        assertEquals("Hello, World!", buffer.toString("ISO-8859-1"));
+
+        // Same with the previous one
+        assertEquals("Hello, World!", buffer.toString("ISO-8859-1", null));
+
+        // NUL not found.
+        assertEquals("Hello, World!", buffer.toString("ISO-8859-1", ChannelBufferIndexFinder.NUL));
+
+        // Linear space found.
+        assertEquals("Hello,", buffer.toString("ISO-8859-1", ChannelBufferIndexFinder.LINEAR_WHITESPACE));
+    }
+
+    @Test
+    public void testIndexOf() {
+        buffer.clear();
+        buffer.writeByte((byte) 1);
+        buffer.writeByte((byte) 2);
+        buffer.writeByte((byte) 3);
+        buffer.writeByte((byte) 2);
+        buffer.writeByte((byte) 1);
+
+        assertEquals(-1, buffer.indexOf(1, 4, (byte) 1));
+        assertEquals(-1, buffer.indexOf(4, 1, (byte) 1));
+        assertEquals(1, buffer.indexOf(1, 4, (byte) 2));
+        assertEquals(3, buffer.indexOf(4, 1, (byte) 2));
+    }
+
+    @Test
+    public void testToByteBuffer1() {
+        byte[] value = new byte[buffer.capacity()];
+        random.nextBytes(value);
+        buffer.clear();
+        buffer.writeBytes(value);
+
+        assertEquals(ByteBuffer.wrap(value), buffer.toByteBuffer());
+    }
+
+    @Test
+    public void testToByteBuffer2() {
+        byte[] value = new byte[buffer.capacity()];
+        random.nextBytes(value);
+        buffer.clear();
+        buffer.writeBytes(value);
+
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            assertEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), buffer.toByteBuffer(i, BLOCK_SIZE));
+        }
+    }
+
+    @Test
+    public void testToByteBuffers1() {
+        byte[] value = new byte[buffer.capacity()];
+        random.nextBytes(value);
+        buffer.clear();
+        buffer.writeBytes(value);
+
+        ByteBuffer[] nioBuffers = buffer.toByteBuffers();
+        int length = 0;
+        for (ByteBuffer b: nioBuffers) {
+            length += b.remaining();
+        }
+
+        ByteBuffer nioBuffer = ByteBuffer.allocate(length);
+        for (ByteBuffer b: nioBuffers) {
+            nioBuffer.put(b);
+        }
+        nioBuffer.flip();
+
+        assertEquals(ByteBuffer.wrap(value), nioBuffer);
+    }
+
+    @Test
+    public void testToByteBuffers2() {
+        byte[] value = new byte[buffer.capacity()];
+        random.nextBytes(value);
+        buffer.clear();
+        buffer.writeBytes(value);
+
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            ByteBuffer[] nioBuffers = buffer.toByteBuffers(i, BLOCK_SIZE);
+            ByteBuffer nioBuffer = ByteBuffer.allocate(BLOCK_SIZE);
+            for (ByteBuffer b: nioBuffers) {
+                nioBuffer.put(b);
+            }
+            nioBuffer.flip();
+
+            assertEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), nioBuffer);
+        }
     }
 }
