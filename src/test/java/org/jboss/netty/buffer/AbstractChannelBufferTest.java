@@ -1188,7 +1188,7 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
-    public void testStreamTransfer() throws Exception {
+    public void testStreamTransfer1() throws Exception {
         byte[] expected = new byte[buffer.capacity()];
         random.nextBytes(expected);
 
@@ -1201,6 +1201,29 @@ public abstract class AbstractChannelBufferTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             buffer.getBytes(i, out, BLOCK_SIZE);
+        }
+
+        assertTrue(Arrays.equals(expected, out.toByteArray()));
+    }
+
+    @Test
+    public void testStreamTransfer2() throws Exception {
+        byte[] expected = new byte[buffer.capacity()];
+        random.nextBytes(expected);
+        buffer.clear();
+
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            ByteArrayInputStream in = new ByteArrayInputStream(expected, i, BLOCK_SIZE);
+            assertEquals(i, buffer.writerIndex());
+            buffer.writeBytes(in, BLOCK_SIZE);
+            assertEquals(i + BLOCK_SIZE, buffer.writerIndex());
+        }
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            assertEquals(i, buffer.readerIndex());
+            buffer.readBytes(out, BLOCK_SIZE);
+            assertEquals(i + BLOCK_SIZE, buffer.readerIndex());
         }
 
         assertTrue(Arrays.equals(expected, out.toByteArray()));
@@ -1231,5 +1254,49 @@ public abstract class AbstractChannelBufferTest {
         assertTrue(buffer.getByte(readerIndex) != copy.getByte(0));
         copy.setByte(1, (byte) (copy.getByte(1) + 1));
         assertTrue(buffer.getByte(readerIndex + 1) != copy.getByte(1));
+    }
+
+    @Test
+    public void testEquals() {
+        assertFalse(buffer.equals(null));
+        assertFalse(buffer.equals(new Object()));
+
+        byte[] value = new byte[32];
+        buffer.setIndex(0, value.length);
+        random.nextBytes(value);
+        buffer.setBytes(0, value);
+
+        assertEquals(buffer, wrappedBuffer(BIG_ENDIAN, value));
+        assertEquals(buffer, wrappedBuffer(LITTLE_ENDIAN, value));
+
+        value[0] ++;
+        assertFalse(buffer.equals(wrappedBuffer(BIG_ENDIAN, value)));
+        assertFalse(buffer.equals(wrappedBuffer(LITTLE_ENDIAN, value)));
+    }
+
+    @Test
+    public void testCompareTo() {
+        try {
+            buffer.compareTo(null);
+            fail();
+        } catch (NullPointerException e) {
+            // Expected
+        }
+
+        byte[] value = new byte[32];
+        buffer.setIndex(0, value.length);
+        random.nextBytes(value);
+        buffer.setBytes(0, value);
+
+        assertEquals(0, buffer.compareTo(wrappedBuffer(BIG_ENDIAN, value)));
+        assertEquals(0, buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value)));
+
+        value[0] ++;
+        assertTrue(buffer.compareTo(wrappedBuffer(BIG_ENDIAN, value)) < 0);
+        assertTrue(buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value)) < 0);
+
+        value[0] -= 2;
+        assertTrue(buffer.compareTo(wrappedBuffer(BIG_ENDIAN, value)) > 0);
+        assertTrue(buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value)) > 0);
     }
 }

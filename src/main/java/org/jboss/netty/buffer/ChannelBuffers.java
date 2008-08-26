@@ -693,16 +693,31 @@ public class ChannelBuffers {
 
         int aIndex = bufferA.readerIndex();
         int bIndex = bufferB.readerIndex();
-        for (int i = longCount; i > 0; i --) {
-            long va = bufferA.getLong(aIndex);
-            long vb = bufferB.getLong(bIndex);
-            if (va > vb) {
-                return 1;
-            } else if (va < vb) {
-                return -1;
+
+        if (bufferA.order() == bufferB.order()) {
+            for (int i = longCount; i > 0; i --) {
+                long va = bufferA.getLong(aIndex);
+                long vb = bufferB.getLong(bIndex);
+                if (va > vb) {
+                    return 1;
+                } else if (va < vb) {
+                    return -1;
+                }
+                aIndex += 8;
+                bIndex += 8;
             }
-            aIndex += 8;
-            bIndex += 8;
+        } else {
+            for (int i = longCount; i > 0; i --) {
+                long va = bufferA.getLong(aIndex);
+                long vb = swapLong(bufferB.getLong(bIndex));
+                if (va > vb) {
+                    return 1;
+                } else if (va < vb) {
+                    return -1;
+                }
+                aIndex += 8;
+                bIndex += 8;
+            }
         }
 
         for (int i = byteCount; i > 0; i --) {
