@@ -33,7 +33,7 @@ public class DuplicateChannelBufferTest extends AbstractChannelBufferTest {
 
     @Override
     protected ChannelBuffer newBuffer(int length) {
-        buffer = ChannelBuffers.buffer(length).duplicate();
+        buffer = new DuplicatedChannelBuffer(ChannelBuffers.buffer(length));
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }
