@@ -1113,8 +1113,6 @@ public abstract class AbstractChannelBufferTest {
             assertEquals(i, buffer.readerIndex());
             assertEquals(CAPACITY, buffer.writerIndex());
             ChannelBuffer actualValue = buffer.readSlice(BLOCK_SIZE);
-            System.out.println(wrappedBuffer(expectedValue) + ", " + hexDump(wrappedBuffer(expectedValue)));
-            System.out.println(actualValue + ", " + hexDump(actualValue));
             assertEquals(wrappedBuffer(expectedValue), actualValue);
 
             // Make sure if it's a sliced buffer.
@@ -1294,9 +1292,14 @@ public abstract class AbstractChannelBufferTest {
         value[0] ++;
         assertTrue(buffer.compareTo(wrappedBuffer(BIG_ENDIAN, value)) < 0);
         assertTrue(buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value)) < 0);
-
         value[0] -= 2;
         assertTrue(buffer.compareTo(wrappedBuffer(BIG_ENDIAN, value)) > 0);
         assertTrue(buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value)) > 0);
+        value[0] ++;
+
+        assertTrue(buffer.compareTo(wrappedBuffer(BIG_ENDIAN, value, 0, 31)) > 0);
+        assertTrue(buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value, 0, 31)) > 0);
+        assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(BIG_ENDIAN, value)) < 0);
+        assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(LITTLE_ENDIAN, value)) < 0);
     }
 }
