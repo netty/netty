@@ -29,6 +29,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.junit.Test;
 
@@ -41,6 +43,11 @@ import org.junit.Test;
  *
  */
 public class MapUtilTest {
+
+    static {
+        Logger logger = Logger.getLogger(MapUtil.class.getName());
+        logger.setLevel(Level.ALL);
+    }
 
     @Test
     public void shouldReturnTrueIfLinkedHashMap() {

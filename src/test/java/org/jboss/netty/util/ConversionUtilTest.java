@@ -72,6 +72,7 @@ public class ConversionUtilTest {
         assertTrue(ConversionUtil.toBoolean("TRUE"));
         assertTrue(ConversionUtil.toBoolean("42"));
 
+        assertFalse(ConversionUtil.toBoolean(""));
         assertFalse(ConversionUtil.toBoolean("n"));
         assertFalse(ConversionUtil.toBoolean("no"));
         assertFalse(ConversionUtil.toBoolean("NO"));
