@@ -197,6 +197,7 @@ public abstract class AbstractChannelBufferTest {
         buffer.getBytes(-1, new byte[0], 0, 0);
     }
 
+    @Test
     public void getByteArrayBoundaryCheck3() {
         byte[] dst = new byte[4];
         buffer.setInt(0, 0x01020304);
@@ -214,6 +215,7 @@ public abstract class AbstractChannelBufferTest {
         assertEquals(0, dst[3]);
     }
 
+    @Test
     public void getByteArrayBoundaryCheck4() {
         byte[] dst = new byte[4];
         buffer.setInt(0, 0x01020304);
@@ -251,28 +253,26 @@ public abstract class AbstractChannelBufferTest {
         buffer.setIndex(0, CAPACITY + 1);
     }
 
-    public void getByteBufferState1() {
-        ByteBuffer dst = ByteBuffer.allocate(8);
-        dst.position(1);
-
-        buffer.setInt(0, 0x01020304);
-        buffer.getBytes(0, dst);
-
-        assertEquals(0x0001020304000000L, dst.getLong(0));
-        assertEquals(5, dst.position());
-        assertEquals(8, dst.limit());
-    }
-
-    public void getByteBufferState2() {
+    @Test
+    public void getByteBufferState() {
         ByteBuffer dst = ByteBuffer.allocate(4);
         dst.position(1);
         dst.limit(3);
 
-        buffer.setInt(0, 0x01020304);
+        buffer.setByte(0, (byte) 1);
+        buffer.setByte(1, (byte) 2);
+        buffer.setByte(2, (byte) 3);
+        buffer.setByte(3, (byte) 4);
         buffer.getBytes(1, dst);
-        assertEquals(0x00020300, dst.getInt(0));
+
         assertEquals(3, dst.position());
         assertEquals(3, dst.limit());
+
+        dst.clear();
+        assertEquals(0, dst.get(0));
+        assertEquals(2, dst.get(1));
+        assertEquals(3, dst.get(2));
+        assertEquals(0, dst.get(3));
     }
 
     @Test(expected=IndexOutOfBoundsException.class)
@@ -280,28 +280,26 @@ public abstract class AbstractChannelBufferTest {
         buffer.getBytes(-1, ByteBuffer.allocateDirect(0));
     }
 
-    public void getDirectByteBufferState1() {
-        ByteBuffer dst = ByteBuffer.allocateDirect(8);
-        dst.position(1);
-
-        buffer.setInt(0, 0x01020304);
-        buffer.getBytes(0, dst);
-
-        assertEquals(0x0001020304000000L, dst.getLong(0));
-        assertEquals(5, dst.position());
-        assertEquals(8, dst.limit());
-    }
-
-    public void getDirectByteBufferState2() {
+    @Test
+    public void getDirectByteBufferState() {
         ByteBuffer dst = ByteBuffer.allocateDirect(4);
         dst.position(1);
         dst.limit(3);
 
-        buffer.setInt(0, 0x01020304);
+        buffer.setByte(0, (byte) 1);
+        buffer.setByte(1, (byte) 2);
+        buffer.setByte(2, (byte) 3);
+        buffer.setByte(3, (byte) 4);
         buffer.getBytes(1, dst);
-        assertEquals(0x00020300, dst.getInt(0));
+
         assertEquals(3, dst.position());
         assertEquals(3, dst.limit());
+
+        dst.clear();
+        assertEquals(0, dst.get(0));
+        assertEquals(2, dst.get(1));
+        assertEquals(3, dst.get(2));
+        assertEquals(0, dst.get(3));
     }
 
     @Test

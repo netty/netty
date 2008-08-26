@@ -136,7 +136,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
     public void getBytes(int index, byte[] dst, int dstIndex, int length) {
         int sliceId = sliceId(index);
-        if (index + length >= capacity()) {
+        if (index > capacity() - length || dstIndex > dst.length - length) {
             throw new IndexOutOfBoundsException();
         }
 
@@ -157,7 +157,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         int sliceId = sliceId(index);
         int limit = dst.limit();
         int length = dst.remaining();
-        if (index + length >= capacity()) {
+        if (index > capacity() - length) {
             throw new IndexOutOfBoundsException();
         }
 
@@ -180,7 +180,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
     public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
         int sliceId = sliceId(index);
-        if (index + length >= capacity()) {
+        if (index > capacity() - length || dstIndex > dst.capacity() - length) {
             throw new IndexOutOfBoundsException();
         }
 
@@ -207,7 +207,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     public void getBytes(int index, OutputStream out, int length)
             throws IOException {
         int sliceId = sliceId(index);
-        if (index + length >= capacity()) {
+        if (index > capacity() - length) {
             throw new IndexOutOfBoundsException();
         }
 
@@ -282,7 +282,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
     public void setBytes(int index, byte[] src, int srcIndex, int length) {
         int sliceId = sliceId(index);
-        if (index + length >= capacity()) {
+        if (index > capacity() - length || srcIndex > src.length - length) {
             throw new IndexOutOfBoundsException();
         }
 
@@ -303,7 +303,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         int sliceId = sliceId(index);
         int limit = src.limit();
         int length = src.remaining();
-        if (index + length >= capacity()) {
+        if (index > capacity() - length) {
             throw new IndexOutOfBoundsException();
         }
 
@@ -326,7 +326,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
     public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
         int sliceId = sliceId(index);
-        if (index + length >= capacity()) {
+        if (index > capacity() - length || srcIndex > src.capacity() - length) {
             throw new IndexOutOfBoundsException();
         }
 
@@ -346,7 +346,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     public int setBytes(int index, InputStream in, int length)
             throws IOException {
         int sliceId = sliceId(index);
-        if (index + length >= capacity()) {
+        if (index > capacity() - length) {
             throw new IndexOutOfBoundsException();
         }
 
@@ -384,7 +384,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     public int setBytes(int index, ScatteringByteChannel in, int length)
             throws IOException {
         int sliceId = sliceId(index);
-        if (index + length >= capacity()) {
+        if (index > capacity() - length) {
             throw new IndexOutOfBoundsException();
         }
 
@@ -417,7 +417,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
     public ChannelBuffer copy(int index, int length) {
         int sliceId = sliceId(index);
-        if (index + length >= capacity()) {
+        if (index > capacity() - length) {
             throw new IndexOutOfBoundsException();
         }
 
