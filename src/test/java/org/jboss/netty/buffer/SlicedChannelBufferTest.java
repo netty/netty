@@ -26,7 +26,13 @@ import static org.junit.Assert.*;
 
 import java.util.Random;
 
-
+/**
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public class SlicedChannelBufferTest extends AbstractChannelBufferTest {
 
     private final Random random = new Random();

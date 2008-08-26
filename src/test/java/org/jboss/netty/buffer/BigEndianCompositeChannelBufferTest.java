@@ -27,11 +27,14 @@ import static org.junit.Assert.*;
 import java.util.ArrayList;
 import java.util.List;
 
-
-
-
+/**
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public class BigEndianCompositeChannelBufferTest extends AbstractChannelBufferTest {
-
     private List<ChannelBuffer> buffers;
     private ChannelBuffer buffer;
 

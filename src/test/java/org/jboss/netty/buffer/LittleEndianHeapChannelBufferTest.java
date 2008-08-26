@@ -26,6 +26,13 @@ import static org.junit.Assert.*;
 
 import java.nio.ByteOrder;
 
+/**
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public class LittleEndianHeapChannelBufferTest extends AbstractChannelBufferTest {
 
     private ChannelBuffer buffer;

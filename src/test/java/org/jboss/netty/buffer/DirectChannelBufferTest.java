@@ -24,9 +24,13 @@ package org.jboss.netty.buffer;
 
 import static org.junit.Assert.*;
 
-
-
-
+/**
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public class DirectChannelBufferTest extends AbstractChannelBufferTest {
 
     private ChannelBuffer buffer;

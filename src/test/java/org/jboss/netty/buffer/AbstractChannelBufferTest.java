@@ -39,6 +39,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+/**
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ */
 public abstract class AbstractChannelBufferTest {
 
     private static final int CAPACITY = 4096; // Must be even
