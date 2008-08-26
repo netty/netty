@@ -1070,6 +1070,60 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
+    public void testSequentialCopiedBufferTransfer() {
+        buffer.writerIndex(0);
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            byte[] value = new byte[BLOCK_SIZE];
+            random.nextBytes(value);
+            assertEquals(0, buffer.readerIndex());
+            assertEquals(i, buffer.writerIndex());
+            buffer.writeBytes(value);
+        }
+
+        random.setSeed(seed);
+        byte[] expectedValue = new byte[BLOCK_SIZE];
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            random.nextBytes(expectedValue);
+            assertEquals(i, buffer.readerIndex());
+            assertEquals(CAPACITY, buffer.writerIndex());
+            ChannelBuffer actualValue = buffer.readBytes(BLOCK_SIZE);
+            assertEquals(wrappedBuffer(expectedValue), actualValue);
+
+            // Make sure if it's a copied buffer.
+            actualValue.setByte(0, (byte) (actualValue.getByte(0) + 1));
+            assertFalse(buffer.getByte(i) == actualValue.getByte(0));
+        }
+    }
+
+    @Test
+    public void testSequentialSlice() {
+        buffer.writerIndex(0);
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            byte[] value = new byte[BLOCK_SIZE];
+            random.nextBytes(value);
+            assertEquals(0, buffer.readerIndex());
+            assertEquals(i, buffer.writerIndex());
+            buffer.writeBytes(value);
+        }
+
+        random.setSeed(seed);
+        byte[] expectedValue = new byte[BLOCK_SIZE];
+        for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
+            random.nextBytes(expectedValue);
+            assertEquals(i, buffer.readerIndex());
+            assertEquals(CAPACITY, buffer.writerIndex());
+            ChannelBuffer actualValue = buffer.readSlice(BLOCK_SIZE);
+            System.out.println(wrappedBuffer(expectedValue) + ", " + hexDump(wrappedBuffer(expectedValue)));
+            System.out.println(actualValue + ", " + hexDump(actualValue));
+            assertEquals(wrappedBuffer(expectedValue), actualValue);
+
+            // Make sure if it's a sliced buffer.
+            actualValue.setByte(0, (byte) (actualValue.getByte(0) + 1));
+            assertEquals(buffer.getByte(i), actualValue.getByte(0));
+        }
+    }
+
+    @Test
     public void testWriteZero() {
         buffer.clear();
         while (buffer.writable()) {
