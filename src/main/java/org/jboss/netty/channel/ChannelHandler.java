@@ -30,5 +30,5 @@ package org.jboss.netty.channel;
  * @version $Rev$, $Date$
  */
 public interface ChannelHandler {
-    // Thsi is a tag interface.
+    // This is a tag interface.
 }
