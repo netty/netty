@@ -74,18 +74,4 @@ class OioAcceptedSocketChannel extends OioSocketChannel {
     OutputStream getOutputStream() {
         return out;
     }
-
-    @Override
-    void setInputStream(PushbackInputStream in) {
-        if (this.in != in) {
-            throw new IllegalStateException("Should not reach here.");
-        }
-    }
-
-    @Override
-    void setOutputStream(OutputStream out) {
-        if (this.out != out) {
-            throw new IllegalStateException("Should not reach here.");
-        }
-    }
 }

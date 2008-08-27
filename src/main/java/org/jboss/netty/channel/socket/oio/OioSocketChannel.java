@@ -94,9 +94,7 @@ abstract class OioSocketChannel extends AbstractChannel
     }
 
     abstract PushbackInputStream getInputStream();
-    abstract void setInputStream(PushbackInputStream in);
     abstract OutputStream getOutputStream();
-    abstract void setOutputStream(OutputStream out);
 
     @Override
     public ChannelFuture write(Object message, SocketAddress remoteAddress) {
