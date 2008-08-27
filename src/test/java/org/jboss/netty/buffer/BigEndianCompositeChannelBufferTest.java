@@ -42,15 +42,25 @@ public class BigEndianCompositeChannelBufferTest extends AbstractChannelBufferTe
     protected ChannelBuffer newBuffer(int length) {
         buffers = new ArrayList<ChannelBuffer>();
         for (int i = 0; i < length; i += 10) {
+            buffers.add(ChannelBuffers.EMPTY_BUFFER);
             buffers.add(ChannelBuffers.wrappedBuffer(new byte[1]));
+            buffers.add(ChannelBuffers.EMPTY_BUFFER);
             buffers.add(ChannelBuffers.wrappedBuffer(new byte[2]));
+            buffers.add(ChannelBuffers.EMPTY_BUFFER);
             buffers.add(ChannelBuffers.wrappedBuffer(new byte[3]));
+            buffers.add(ChannelBuffers.EMPTY_BUFFER);
             buffers.add(ChannelBuffers.wrappedBuffer(new byte[4]));
+            buffers.add(ChannelBuffers.EMPTY_BUFFER);
             buffers.add(ChannelBuffers.wrappedBuffer(new byte[5]));
+            buffers.add(ChannelBuffers.EMPTY_BUFFER);
             buffers.add(ChannelBuffers.wrappedBuffer(new byte[6]));
+            buffers.add(ChannelBuffers.EMPTY_BUFFER);
             buffers.add(ChannelBuffers.wrappedBuffer(new byte[7]));
+            buffers.add(ChannelBuffers.EMPTY_BUFFER);
             buffers.add(ChannelBuffers.wrappedBuffer(new byte[8]));
+            buffers.add(ChannelBuffers.EMPTY_BUFFER);
             buffers.add(ChannelBuffers.wrappedBuffer(new byte[9]));
+            buffers.add(ChannelBuffers.EMPTY_BUFFER);
         }
 
         buffer = ChannelBuffers.wrappedBuffer(buffers.toArray(new ChannelBuffer[buffers.size()]));

@@ -353,7 +353,7 @@ public class ChannelBuffers {
             break;
         default:
             for (ChannelBuffer b: buffers) {
-                if (b.capacity() != 0) {
+                if (b.readable()) {
                     return new CompositeChannelBuffer(buffers);
                 }
             }

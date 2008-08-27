@@ -47,6 +47,7 @@ import java.util.List;
 public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
     private final ChannelBuffer[] slices;
+    private final ByteOrder order;
     private final int[] indices;
     private int lastSliceId;
 
@@ -66,6 +67,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             throw new IllegalArgumentException("buffers have only empty buffers.");
         }
 
+        order = expectedEndianness;
         slices = new ChannelBuffer[buffers.length];
         for (int i = 0; i < buffers.length; i ++) {
             if (buffers[i].capacity() != 0 && buffers[i].order() != expectedEndianness) {
@@ -82,13 +84,14 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
     private CompositeChannelBuffer(CompositeChannelBuffer buffer) {
+        order = buffer.order;
         slices = buffer.slices.clone();
         indices = buffer.indices.clone();
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
 
     public ByteOrder order() {
-        return slices[0].order();
+        return order;
     }
 
     public int capacity() {
@@ -453,10 +456,19 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
     public ChannelBuffer slice(int index, int length) {
-        if (length == 0) {
+        if (index == 0) {
+            if (length == 0) {
+                return ChannelBuffers.EMPTY_BUFFER;
+            } else {
+                return new TruncatedChannelBuffer(this, length);
+            }
+        } else if (index < 0 || index > capacity() - length) {
+            throw new IndexOutOfBoundsException();
+        } else if (length == 0) {
             return ChannelBuffers.EMPTY_BUFFER;
+        } else {
+            return new SlicedChannelBuffer(this, index, length);
         }
-        return new SlicedChannelBuffer(this, index, length);
     }
 
     public ByteBuffer toByteBuffer(int index, int length) {

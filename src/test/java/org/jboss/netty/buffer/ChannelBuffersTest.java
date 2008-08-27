@@ -25,13 +25,17 @@ package org.jboss.netty.buffer;
 import static org.jboss.netty.buffer.ChannelBuffers.*;
 import static org.junit.Assert.*;
 
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.easymock.classextension.EasyMock;
 import org.junit.Test;
 
 /**
@@ -226,8 +230,205 @@ public class ChannelBuffersTest {
 
     @Test
     public void shouldAllowEmptyBufferToCreateCompositeBuffer() {
-        wrappedBuffer(
+        ChannelBuffer buf = wrappedBuffer(
                 EMPTY_BUFFER,
-                buffer(LITTLE_ENDIAN, 16));
+                wrappedBuffer(LITTLE_ENDIAN, new byte[16]),
+                EMPTY_BUFFER);
+        assertEquals(16, buf.capacity());
+    }
+
+    @Test
+    public void testWrappedBuffer() {
+        assertEquals(16, wrappedBuffer(ByteBuffer.allocateDirect(16)).capacity());
+
+        assertEquals(
+                wrappedBuffer(new byte[] { 1, 2, 3 }),
+                wrappedBuffer(new byte[][] { new byte[] { 1, 2, 3 } }));
+
+        assertEquals(
+                wrappedBuffer(new byte[] { 1, 2, 3 }),
+                wrappedBuffer(
+                        new byte[] { 1 },
+                        new byte[] { 2 },
+                        new byte[] { 3 }));
+
+        assertEquals(
+                wrappedBuffer(new byte[] { 1, 2, 3 }),
+                wrappedBuffer(new ChannelBuffer[] {
+                        wrappedBuffer(new byte[] { 1, 2, 3 })
+                }));
+
+        assertEquals(
+                wrappedBuffer(new byte[] { 1, 2, 3 }),
+                wrappedBuffer(
+                        wrappedBuffer(new byte[] { 1 }),
+                        wrappedBuffer(new byte[] { 2 }),
+                        wrappedBuffer(new byte[] { 3 })));
+
+        assertEquals(
+                wrappedBuffer(new byte[] { 1, 2, 3 }),
+                wrappedBuffer(new ByteBuffer[] {
+                        ByteBuffer.wrap(new byte[] { 1, 2, 3 })
+                }));
+
+        assertEquals(
+                wrappedBuffer(new byte[] { 1, 2, 3 }),
+                wrappedBuffer(
+                        ByteBuffer.wrap(new byte[] { 1 }),
+                        ByteBuffer.wrap(new byte[] { 2 }),
+                        ByteBuffer.wrap(new byte[] { 3 })));
+    }
+
+    @Test
+    public void testCopiedBuffer() {
+        assertEquals(16, copiedBuffer(ByteBuffer.allocateDirect(16)).capacity());
+
+        assertEquals(
+                wrappedBuffer(new byte[] { 1, 2, 3 }),
+                copiedBuffer(new byte[][] { new byte[] { 1, 2, 3 } }));
+
+        assertEquals(
+                wrappedBuffer(new byte[] { 1, 2, 3 }),
+                copiedBuffer(
+                        new byte[] { 1 },
+                        new byte[] { 2 },
+                        new byte[] { 3 }));
+
+        assertEquals(
+                wrappedBuffer(new byte[] { 1, 2, 3 }),
+                copiedBuffer(new ChannelBuffer[] {
+                        wrappedBuffer(new byte[] { 1, 2, 3 })
+                }));
+
+        assertEquals(
+                wrappedBuffer(new byte[] { 1, 2, 3 }),
+                copiedBuffer(
+                        wrappedBuffer(new byte[] { 1 }),
+                        wrappedBuffer(new byte[] { 2 }),
+                        wrappedBuffer(new byte[] { 3 })));
+
+        assertEquals(
+                wrappedBuffer(new byte[] { 1, 2, 3 }),
+                copiedBuffer(new ByteBuffer[] {
+                        ByteBuffer.wrap(new byte[] { 1, 2, 3 })
+                }));
+
+        assertEquals(
+                wrappedBuffer(new byte[] { 1, 2, 3 }),
+                copiedBuffer(
+                        ByteBuffer.wrap(new byte[] { 1 }),
+                        ByteBuffer.wrap(new byte[] { 2 }),
+                        ByteBuffer.wrap(new byte[] { 3 })));
+
+        try {
+            copiedBuffer("", "UnsupportedCharset");
+            fail();
+        } catch (UnsupportedCharsetException e) {
+            // Expected
+        }
+    }
+
+    @Test
+    public void testHexDump() {
+        assertEquals("", hexDump(EMPTY_BUFFER));
+
+        assertEquals("123456", hexDump(wrappedBuffer(
+                new byte[] {
+                        0x12, 0x34, 0x56
+                })));
+
+        assertEquals("1234567890abcdef", hexDump(wrappedBuffer(
+                new byte[] {
+                        0x12, 0x34, 0x56, 0x78,
+                        (byte) 0x90, (byte) 0xAB, (byte) 0xCD, (byte) 0xEF
+                })));
+    }
+
+    @Test
+    public void testSwapMedium() {
+        assertEquals(0x563412, swapMedium(0x123456));
+        assertEquals(0x80, swapMedium(0x800000));
+    }
+
+    @Test
+    public void testUnmodifiableBuffer() throws Exception {
+        ChannelBuffer buf = unmodifiableBuffer(buffer(16));
+
+        try {
+            buf.discardReadBytes();
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // Expected
+        }
+
+        try {
+            buf.setByte(0, (byte) 0);
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // Expected
+        }
+
+        try {
+            buf.setBytes(0, EMPTY_BUFFER, 0, 0);
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // Expected
+        }
+
+        try {
+            buf.setBytes(0, new byte[0], 0, 0);
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // Expected
+        }
+
+        try {
+            buf.setBytes(0, ByteBuffer.allocate(0));
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // Expected
+        }
+
+        try {
+            buf.setShort(0, (short) 0);
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // Expected
+        }
+
+        try {
+            buf.setMedium(0, 0);
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // Expected
+        }
+
+        try {
+            buf.setInt(0, 0);
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // Expected
+        }
+
+        try {
+            buf.setLong(0, 0);
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // Expected
+        }
+
+        try {
+            buf.setBytes(0, EasyMock.createMock(InputStream.class), 0);
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // Expected
+        }
+
+        try {
+            buf.setBytes(0, EasyMock.createMock(ScatteringByteChannel.class), 0);
+            fail();
+        } catch (UnsupportedOperationException e) {
+            // Expected
+        }
     }
 }
