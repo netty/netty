@@ -55,10 +55,20 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             throw new IllegalArgumentException("buffers should not be empty.");
         }
 
-        ByteOrder expectedEndianness = buffers[0].order();
+        ByteOrder expectedEndianness = null;
+        for (ChannelBuffer buffer : buffers) {
+            if (buffer.capacity() != 0) {
+                expectedEndianness = buffer.order();
+            }
+        }
+
+        if (expectedEndianness == null) {
+            throw new IllegalArgumentException("buffers have only empty buffers.");
+        }
+
         slices = new ChannelBuffer[buffers.length];
         for (int i = 0; i < buffers.length; i ++) {
-            if (buffers[i].order() != expectedEndianness) {
+            if (buffers[i].capacity() != 0 && buffers[i].order() != expectedEndianness) {
                 throw new IllegalArgumentException(
                         "All buffers must have the same endianness.");
             }

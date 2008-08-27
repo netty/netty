@@ -22,8 +22,10 @@
  */
 package org.jboss.netty.buffer;
 
+import static org.jboss.netty.buffer.ChannelBuffers.*;
 import static org.junit.Assert.*;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,13 +45,13 @@ public class ChannelBuffersTest {
 
     @Test
     public void testCompositeWrappedBuffer() {
-        ChannelBuffer header = ChannelBuffers.dynamicBuffer(12);
-        ChannelBuffer payload = ChannelBuffers.dynamicBuffer(512);
+        ChannelBuffer header = dynamicBuffer(12);
+        ChannelBuffer payload = dynamicBuffer(512);
 
         header.writeBytes(new byte[12]);
         payload.writeBytes(new byte[512]);
 
-        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(header, payload);
+        ChannelBuffer buffer = wrappedBuffer(header, payload);
 
         assertTrue(header.readableBytes() == 12);
         assertTrue(payload.readableBytes() == 512);
@@ -74,7 +76,7 @@ public class ChannelBuffersTest {
         for (Entry<byte[], Integer> e: map.entrySet()) {
             assertEquals(
                     e.getValue().intValue(),
-                    ChannelBuffers.hashCode(ChannelBuffers.wrappedBuffer(e.getKey())));
+                    ChannelBuffers.hashCode(wrappedBuffer(e.getKey())));
         }
     }
 
@@ -83,81 +85,149 @@ public class ChannelBuffersTest {
         ChannelBuffer a, b;
 
         // Different length.
-        a = ChannelBuffers.wrappedBuffer(new byte[] { 1  });
-        b = ChannelBuffers.wrappedBuffer(new byte[] { 1, 2 });
+        a = wrappedBuffer(new byte[] { 1  });
+        b = wrappedBuffer(new byte[] { 1, 2 });
         assertFalse(ChannelBuffers.equals(a, b));
 
         // Same content, same firstIndex, short length.
-        a = ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3 });
-        b = ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3 });
+        a = wrappedBuffer(new byte[] { 1, 2, 3 });
+        b = wrappedBuffer(new byte[] { 1, 2, 3 });
         assertTrue(ChannelBuffers.equals(a, b));
 
         // Same content, different firstIndex, short length.
-        a = ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3 });
-        b = ChannelBuffers.wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 }, 1, 3);
+        a = wrappedBuffer(new byte[] { 1, 2, 3 });
+        b = wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 }, 1, 3);
         assertTrue(ChannelBuffers.equals(a, b));
 
         // Different content, same firstIndex, short length.
-        a = ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3 });
-        b = ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 4 });
+        a = wrappedBuffer(new byte[] { 1, 2, 3 });
+        b = wrappedBuffer(new byte[] { 1, 2, 4 });
         assertFalse(ChannelBuffers.equals(a, b));
 
         // Different content, different firstIndex, short length.
-        a = ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3 });
-        b = ChannelBuffers.wrappedBuffer(new byte[] { 0, 1, 2, 4, 5 }, 1, 3);
+        a = wrappedBuffer(new byte[] { 1, 2, 3 });
+        b = wrappedBuffer(new byte[] { 0, 1, 2, 4, 5 }, 1, 3);
         assertFalse(ChannelBuffers.equals(a, b));
 
         // Same content, same firstIndex, long length.
-        a = ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
-        b = ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+        a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+        b = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         assertTrue(ChannelBuffers.equals(a, b));
 
         // Same content, different firstIndex, long length.
-        a = ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
-        b = ChannelBuffers.wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 1, 10);
+        a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+        b = wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 1, 10);
         assertTrue(ChannelBuffers.equals(a, b));
 
         // Different content, same firstIndex, long length.
-        a = ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
-        b = ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3, 4, 6, 7, 8, 5, 9, 10 });
+        a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+        b = wrappedBuffer(new byte[] { 1, 2, 3, 4, 6, 7, 8, 5, 9, 10 });
         assertFalse(ChannelBuffers.equals(a, b));
 
         // Different content, different firstIndex, long length.
-        a = ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
-        b = ChannelBuffers.wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 1, 10);
+        a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+        b = wrappedBuffer(new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 1, 10);
         assertFalse(ChannelBuffers.equals(a, b));
     }
 
     @Test
     public void testCompare() {
         List<ChannelBuffer> expected = new ArrayList<ChannelBuffer>();
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 1 }));
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2 }));
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8,  9, 10 }));
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8,  9, 10, 11, 12 }));
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 2 }));
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 2, 3 }));
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 }));
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 }));
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 2, 3, 4 }, 1, 1));
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3, 4 }, 2, 2));
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 }, 1, 10));
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 }, 2, 12));
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 2, 3, 4, 5 }, 2, 1));
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3, 4, 5 }, 3, 2));
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 }, 2, 10));
-        expected.add(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }, 3, 12));
+        expected.add(wrappedBuffer(new byte[] { 1 }));
+        expected.add(wrappedBuffer(new byte[] { 1, 2 }));
+        expected.add(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8,  9, 10 }));
+        expected.add(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8,  9, 10, 11, 12 }));
+        expected.add(wrappedBuffer(new byte[] { 2 }));
+        expected.add(wrappedBuffer(new byte[] { 2, 3 }));
+        expected.add(wrappedBuffer(new byte[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 }));
+        expected.add(wrappedBuffer(new byte[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 }));
+        expected.add(wrappedBuffer(new byte[] { 2, 3, 4 }, 1, 1));
+        expected.add(wrappedBuffer(new byte[] { 1, 2, 3, 4 }, 2, 2));
+        expected.add(wrappedBuffer(new byte[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 }, 1, 10));
+        expected.add(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 }, 2, 12));
+        expected.add(wrappedBuffer(new byte[] { 2, 3, 4, 5 }, 2, 1));
+        expected.add(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5 }, 3, 2));
+        expected.add(wrappedBuffer(new byte[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 }, 2, 10));
+        expected.add(wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }, 3, 12));
 
         for (int i = 0; i < expected.size(); i ++) {
             for (int j = 0; j < expected.size(); j ++) {
                 if (i == j) {
-                    assertEquals(0, ChannelBuffers.compare(expected.get(i), expected.get(j)));
+                    assertEquals(0, compare(expected.get(i), expected.get(j)));
                 } else if (i < j) {
-                    assertTrue(ChannelBuffers.compare(expected.get(i), expected.get(j)) < 0);
+                    assertTrue(compare(expected.get(i), expected.get(j)) < 0);
                 } else {
-                    assertTrue(ChannelBuffers.compare(expected.get(i), expected.get(j)) > 0);
+                    assertTrue(compare(expected.get(i), expected.get(j)) > 0);
                 }
             }
         }
+    }
+
+    @Test
+    public void shouldReturnEmptyBufferWhenLengthIsZero() {
+        assertSame(EMPTY_BUFFER, buffer(0));
+        assertSame(EMPTY_BUFFER, buffer(LITTLE_ENDIAN, 0));
+        assertSame(EMPTY_BUFFER, directBuffer(0));
+
+        assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[0]));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(LITTLE_ENDIAN, new byte[0]));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[8], 0, 0));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(LITTLE_ENDIAN, new byte[8], 0, 0));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[8], 8, 0));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(LITTLE_ENDIAN, new byte[8], 8, 0));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(ByteBuffer.allocateDirect(0)));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(EMPTY_BUFFER));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[0][]));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[][] { new byte[0] }));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(new ByteBuffer[0]));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(new ByteBuffer[] { ByteBuffer.allocate(0) }));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(new ByteBuffer[] { ByteBuffer.allocate(0), ByteBuffer.allocate(0) }));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(new ChannelBuffer[0]));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(new ChannelBuffer[] { buffer(0) }));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(new ChannelBuffer[] { buffer(0), buffer(0) }));
+
+        assertSame(EMPTY_BUFFER, copiedBuffer(new byte[0]));
+        assertSame(EMPTY_BUFFER, copiedBuffer(LITTLE_ENDIAN, new byte[0]));
+        assertSame(EMPTY_BUFFER, copiedBuffer(new byte[8], 0, 0));
+        assertSame(EMPTY_BUFFER, copiedBuffer(LITTLE_ENDIAN, new byte[8], 0, 0));
+        assertSame(EMPTY_BUFFER, copiedBuffer(new byte[8], 8, 0));
+        assertSame(EMPTY_BUFFER, copiedBuffer(LITTLE_ENDIAN, new byte[8], 8, 0));
+        assertSame(EMPTY_BUFFER, copiedBuffer(ByteBuffer.allocateDirect(0)));
+        assertSame(EMPTY_BUFFER, copiedBuffer(EMPTY_BUFFER));
+        assertSame(EMPTY_BUFFER, copiedBuffer(new byte[0][]));
+        assertSame(EMPTY_BUFFER, copiedBuffer(new byte[][] { new byte[0] }));
+        assertSame(EMPTY_BUFFER, copiedBuffer(new ByteBuffer[0]));
+        assertSame(EMPTY_BUFFER, copiedBuffer(new ByteBuffer[] { ByteBuffer.allocate(0) }));
+        assertSame(EMPTY_BUFFER, copiedBuffer(new ByteBuffer[] { ByteBuffer.allocate(0), ByteBuffer.allocate(0) }));
+        assertSame(EMPTY_BUFFER, copiedBuffer(new ChannelBuffer[0]));
+        assertSame(EMPTY_BUFFER, copiedBuffer(new ChannelBuffer[] { buffer(0) }));
+        assertSame(EMPTY_BUFFER, copiedBuffer(new ChannelBuffer[] { buffer(0), buffer(0) }));
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldDisallowNullEndian1() {
+        buffer(null, 0);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldDisallowNullEndian2() {
+        directBuffer(null, 0);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldDisallowNullEndian3() {
+        wrappedBuffer(null, new byte[0]);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldDisallowNullEndian4() {
+        wrappedBuffer(null, new byte[0], 0, 0);
+    }
+
+    @Test
+    public void shouldAllowEmptyBufferToCreateCompositeBuffer() {
+        wrappedBuffer(
+                EMPTY_BUFFER,
+                buffer(LITTLE_ENDIAN, 16));
     }
 }
