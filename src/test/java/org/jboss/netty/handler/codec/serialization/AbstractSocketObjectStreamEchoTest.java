@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.frame;
+package org.jboss.netty.handler.codec.serialization;
 
 import static org.junit.Assert.*;
 
@@ -36,8 +36,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
@@ -47,7 +45,8 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.handler.codec.frame.FixedLengthFrameDecoder;
+import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
+import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -60,15 +59,24 @@ import org.junit.Test;
  * @version $Rev$, $Date$
  *
  */
-public abstract class AbstractSocketFixedLengthEchoTest {
+public abstract class AbstractSocketObjectStreamEchoTest {
 
-    private static final Random random = new Random();
-    static final byte[] data = new byte[1048576];
+    static final Random random = new Random();
+    static final String[] data = new String[1024];
 
     private static ExecutorService executor;
 
     static {
-        random.nextBytes(data);
+        for (int i = 0; i < data.length; i ++) {
+            int eLen = random.nextInt(512);
+            StringBuilder e = new StringBuilder(eLen);
+
+            for (int j = 0; j < eLen; j ++) {
+                e.append((char) ('a' + random.nextInt(26)));
+            }
+
+            data[i] = e.toString();
+        }
     }
 
     @BeforeClass
@@ -94,17 +102,20 @@ public abstract class AbstractSocketFixedLengthEchoTest {
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
 
     @Test
-    public void testFixedLengthEcho() throws Throwable {
+    public void testObjectEcho() throws Throwable {
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
 
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        sb.getPipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
-        sb.getPipeline().addAfter("decoder", "handler", sh);
-        cb.getPipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
-        cb.getPipeline().addAfter("decoder", "handler", ch);
+        sb.getPipeline().addLast("decoder", new ObjectDecoder());
+        sb.getPipeline().addLast("encoder", new ObjectEncoder());
+        sb.getPipeline().addLast("handler", sh);
+
+        cb.getPipeline().addLast("decoder", new ObjectDecoder());
+        cb.getPipeline().addLast("encoder", new ObjectEncoder());
+        cb.getPipeline().addLast("handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
@@ -113,10 +124,8 @@ public abstract class AbstractSocketFixedLengthEchoTest {
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
         Channel cc = ccf.getChannel();
-        for (int i = 0; i < data.length;) {
-            int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            cc.write(ChannelBuffers.wrappedBuffer(data, i, length));
-            i += length;
+        for (String element : data) {
+            cc.write(element);
         }
 
         while (ch.counter < data.length) {
@@ -186,17 +195,11 @@ public abstract class AbstractSocketFixedLengthEchoTest {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
                 throws Exception {
-            ChannelBuffer m = (ChannelBuffer) e.getMessage();
-            assertEquals(1024, m.readableBytes());
 
-            byte[] actual = new byte[m.readableBytes()];
-            m.getBytes(0, actual);
+            String m = (String) e.getMessage();
+            assertEquals(data[counter], m);
 
-            int lastIdx = counter;
-            for (int i = 0; i < actual.length; i ++) {
-                assertEquals(data[i + lastIdx], actual[i]);
-            }
-            counter += actual.length;
+            counter ++;
 
             if (channel.getParent() != null) {
                 channel.write(m);

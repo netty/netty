@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.string;
+package org.jboss.netty.handler.codec.frame;
 
 import java.util.concurrent.Executor;
 
@@ -35,7 +35,7 @@ import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
  * @version $Rev$, $Date$
  *
  */
-public class OioNioSocketStringEchoTest extends AbstractSocketStringEchoTest {
+public class OioNioSocketFixedLengthEchoTest extends AbstractSocketFixedLengthEchoTest {
 
     @Override
     protected ChannelFactory newClientSocketChannelFactory(Executor executor) {

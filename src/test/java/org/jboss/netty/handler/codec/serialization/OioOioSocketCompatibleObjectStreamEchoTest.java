@@ -20,13 +20,13 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.serialization;
+package org.jboss.netty.handler.codec.serialization;
 
 import java.util.concurrent.Executor;
 
 import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -35,16 +35,16 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * @version $Rev$, $Date$
  *
  */
-public class NioNioSocketCompatibleObjectStreamEchoTest extends AbstractSocketCompatibleObjectStreamEchoTest {
+public class OioOioSocketCompatibleObjectStreamEchoTest extends AbstractSocketCompatibleObjectStreamEchoTest {
 
     @Override
     protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
-        return new NioClientSocketChannelFactory(executor, executor);
+        return new OioClientSocketChannelFactory(executor);
     }
 
     @Override
     protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new NioServerSocketChannelFactory(executor, executor);
+        return new OioServerSocketChannelFactory(executor, executor);
     }
 
 }

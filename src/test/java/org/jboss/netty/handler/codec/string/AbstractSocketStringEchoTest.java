@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.serialization;
+package org.jboss.netty.handler.codec.string;
 
 import static org.junit.Assert.*;
 
@@ -45,8 +45,10 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
-import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
+import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
+import org.jboss.netty.handler.codec.frame.Delimiters;
+import org.jboss.netty.handler.codec.string.StringDecoder;
+import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -59,7 +61,7 @@ import org.junit.Test;
  * @version $Rev$, $Date$
  *
  */
-public abstract class AbstractSocketObjectStreamEchoTest {
+public abstract class AbstractSocketStringEchoTest {
 
     static final Random random = new Random();
     static final String[] data = new String[1024];
@@ -102,20 +104,22 @@ public abstract class AbstractSocketObjectStreamEchoTest {
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
 
     @Test
-    public void testObjectEcho() throws Throwable {
+    public void testStringEcho() throws Throwable {
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
 
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        sb.getPipeline().addLast("decoder", new ObjectDecoder());
-        sb.getPipeline().addLast("encoder", new ObjectEncoder());
-        sb.getPipeline().addLast("handler", sh);
+        sb.getPipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
+        sb.getPipeline().addLast("decoder", new StringDecoder("ISO-8859-1"));
+        sb.getPipeline().addBefore("decoder", "encoder", new StringEncoder("ISO-8859-1"));
+        sb.getPipeline().addAfter("decoder", "handler", sh);
 
-        cb.getPipeline().addLast("decoder", new ObjectDecoder());
-        cb.getPipeline().addLast("encoder", new ObjectEncoder());
-        cb.getPipeline().addLast("handler", ch);
+        cb.getPipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
+        cb.getPipeline().addLast("decoder", new StringDecoder("ISO-8859-1"));
+        cb.getPipeline().addBefore("decoder", "encoder", new StringEncoder("ISO-8859-1"));
+        cb.getPipeline().addAfter("decoder", "handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
@@ -125,7 +129,8 @@ public abstract class AbstractSocketObjectStreamEchoTest {
 
         Channel cc = ccf.getChannel();
         for (String element : data) {
-            cc.write(element);
+            String delimiter = random.nextBoolean() ? "\r\n" : "\n";
+            cc.write(element + delimiter);
         }
 
         while (ch.counter < data.length) {
@@ -202,7 +207,8 @@ public abstract class AbstractSocketObjectStreamEchoTest {
             counter ++;
 
             if (channel.getParent() != null) {
-                channel.write(m);
+                String delimiter = random.nextBoolean() ? "\r\n" : "\n";
+                channel.write(m + delimiter);
             }
         }
 
