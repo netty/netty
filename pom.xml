@@ -4,7 +4,7 @@
   <artifactId>netty</artifactId>
   <packaging>bundle</packaging>
   <name>The Netty Project</name>
-  <version>3.0.0.CR3</version>
+  <version>3.0.0.CR4-SNAPSHOT</version>
   <description>The Netty project is an effort to provide an asynchronous / event-driven network application framework for rapid development of high-performance / high-scalability protocol servers and clients, including its related out-of-the-box protocol extensions and tool suite.</description>
   <url>http://www.jboss.org/netty/</url>
   <inceptionYear>2008</inceptionYear>
@@ -15,8 +15,8 @@
     </license>
   </licenses>
   <scm>
-    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/tags/netty-3.0.0.CR3</connection>
-    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/tags/netty-3.0.0.CR3</developerConnection>
+    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/trunk</connection>
+    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/trunk</developerConnection>
   </scm>
   <organization>
     <name>JBoss - a division of Red Hat</name>
