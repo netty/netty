@@ -64,7 +64,7 @@ public abstract class AbstractSocketClientBootstrapTest {
         executor.shutdown();
         for (;;) {
             try {
-                if (executor.awaitTermination(1, TimeUnit.SECONDS)) {
+                if (executor.awaitTermination(1, TimeUnit.MILLISECONDS)) {
                     break;
                 }
             } catch (InterruptedException e) {

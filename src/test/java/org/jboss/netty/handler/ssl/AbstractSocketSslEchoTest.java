@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket;
+package org.jboss.netty.handler.ssl;
 
 import static org.junit.Assert.*;
 
@@ -31,6 +31,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.SSLEngine;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
@@ -45,6 +47,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -57,7 +60,7 @@ import org.junit.Test;
  * @version $Rev$, $Date$
  *
  */
-public abstract class AbstractSocketEchoTest {
+public abstract class AbstractSocketSslEchoTest {
 
     private static final Random random = new Random();
     static final byte[] data = new byte[1048576 * 32];
@@ -98,8 +101,15 @@ public abstract class AbstractSocketEchoTest {
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        sb.getPipeline().addFirst("handler", sh);
-        cb.getPipeline().addFirst("handler", ch);
+        SSLEngine sse = SecureChatSslContextFactory.getServerContext().createSSLEngine();
+        SSLEngine cse = SecureChatSslContextFactory.getClientContext().createSSLEngine();
+        sse.setUseClientMode(false);
+        cse.setUseClientMode(true);
+
+        sb.getPipeline().addFirst("ssl", new SslHandler(sse));
+        sb.getPipeline().addLast("handler", sh);
+        cb.getPipeline().addFirst("ssl", new SslHandler(cse));
+        cb.getPipeline().addLast("handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
@@ -108,6 +118,8 @@ public abstract class AbstractSocketEchoTest {
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
         Channel cc = ccf.getChannel();
+        assertTrue(cc.getPipeline().get(SslHandler.class).handshake(cc).awaitUninterruptibly().isSuccess());
+
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 512), data.length - i);
             cc.write(ChannelBuffers.wrappedBuffer(data, i, length));

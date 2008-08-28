@@ -252,12 +252,14 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
         }
 
         if (frame == null && engine.isInboundDone()) {
-            for (;;) {
-                ChannelFuture future = closeFutures.poll();
-                if (future == null) {
-                    break;
+            synchronized (closeFutures) {
+                for (;;) {
+                    ChannelFuture future = closeFutures.poll();
+                    if (future == null) {
+                        break;
+                    }
+                    Channels.close(ctx, channel, future);
                 }
-                Channels.close(ctx, channel, future);
             }
         }
         return frame;
@@ -528,12 +530,14 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
         if (!engine.isInboundDone()) {
             if (sentCloseNotify.compareAndSet(false, true)) {
                 engine.closeOutbound();
-                ChannelFuture closeNotifyFuture = wrapNonAppData(context, e.getChannel());
-                closeNotifyFuture.addListener(new ChannelFutureListener() {
-                    public void operationComplete(ChannelFuture closeNotifyFuture) throws Exception {
-                        closeFutures.offer(e.getFuture());
-                    }
-                });
+                synchronized (closeFutures) {
+                    ChannelFuture closeNotifyFuture = wrapNonAppData(context, e.getChannel());
+                    closeNotifyFuture.addListener(new ChannelFutureListener() {
+                        public void operationComplete(ChannelFuture closeNotifyFuture) throws Exception {
+                            closeFutures.offer(e.getFuture());
+                        }
+                    });
+                }
                 return;
             }
         }

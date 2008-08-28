@@ -218,7 +218,7 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                 } catch (IOException e) {
                     // Don't log the exception if the server socket was closed
                     // by a user.
-                    if (!channel.isBound()) {
+                    if (!channel.isBound() || !channel.isOpen()) {
                         break;
                     }
 
