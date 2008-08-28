@@ -32,6 +32,7 @@ import java.nio.channels.Selector;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -228,7 +229,9 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                     // connection attempts are made in a one-by-one manner
                     // instead of concurrent manner.
                     if (selector.keys().isEmpty()) {
-                        if (shutdown) {
+                        if (shutdown ||
+                            bossExecutor instanceof ExecutorService && ((ExecutorService) bossExecutor).isShutdown()) {
+
                             synchronized (selectorGuard) {
                                 if (selector.keys().isEmpty()) {
                                     try {
