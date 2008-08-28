@@ -1,10 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?><project>
+<?xml version="1.0" encoding="UTF-8"?><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.jboss.netty</groupId>
   <artifactId>netty</artifactId>
   <packaging>bundle</packaging>
   <name>The Netty Project</name>
-  <version>3.0.0.CR3-SNAPSHOT</version>
+  <version>3.0.0.CR3</version>
   <description>The Netty project is an effort to provide an asynchronous / event-driven network application framework for rapid development of high-performance / high-scalability protocol servers and clients, including its related out-of-the-box protocol extensions and tool suite.</description>
   <url>http://www.jboss.org/netty/</url>
   <inceptionYear>2008</inceptionYear>
@@ -15,8 +15,8 @@
     </license>
   </licenses>
   <scm>
-    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/trunk</connection>
-    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/trunk</developerConnection>
+    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/tags/netty-3.0.0.CR3</connection>
+    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/tags/netty-3.0.0.CR3</developerConnection>
   </scm>
   <organization>
     <name>JBoss - a division of Red Hat</name>
