@@ -201,6 +201,11 @@
         <artifactId>maven-release-plugin</artifactId>
         <configuration>
           <tagBase>https://svn.jboss.org/repos/netty/tags</tagBase>
+          <!-- We don't want to use the default release profile because it
+               causes the JavaDoc and source jars to be deployed twice. -->
+          <useReleaseProfile>false</useReleaseProfile>
+          <!-- Activate a custom profile called "release" -->
+          <arguments>-Prelease</arguments>
         </configuration>
       </plugin>
     </plugins>
@@ -310,4 +315,21 @@
       <url>https://snapshots.jboss.org/maven2</url>
     </snapshotRepository>
   </distributionManagement>
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <inherited>true</inherited>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <configuration>
+              <updateReleaseInfo>true</updateReleaseInfo>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
