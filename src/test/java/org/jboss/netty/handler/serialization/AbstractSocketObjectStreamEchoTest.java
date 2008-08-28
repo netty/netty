@@ -62,7 +62,7 @@ import org.junit.Test;
 public abstract class AbstractSocketObjectStreamEchoTest {
 
     static final Random random = new Random();
-    static final String[] data = new String[32768];
+    static final String[] data = new String[1024];
 
     private static ExecutorService executor;
 
