@@ -50,7 +50,7 @@ public class OioOioSocketSslEchoTest extends AbstractSocketSslEchoTest {
 
     @Test
     @Override
-    public void testEcho() throws Throwable {
+    public void testSslEcho() throws Throwable {
         // FIXME Disabled temporarily
     }
 }

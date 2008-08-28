@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.ssl;
+package org.jboss.netty.handler.frame;
 
 import static org.junit.Assert.*;
 
@@ -33,8 +33,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-
-import javax.net.ssl.SSLEngine;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
@@ -49,7 +47,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
+import org.jboss.netty.handler.codec.frame.FixedLengthFrameDecoder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -62,7 +60,7 @@ import org.junit.Test;
  * @version $Rev$, $Date$
  *
  */
-public abstract class AbstractSocketSslEchoTest {
+public abstract class AbstractSocketFixedLengthEchoTest {
 
     private static final Random random = new Random();
     static final byte[] data = new byte[1048576];
@@ -96,22 +94,17 @@ public abstract class AbstractSocketSslEchoTest {
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
 
     @Test
-    public void testSslEcho() throws Throwable {
+    public void testFixedLengthEcho() throws Throwable {
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
 
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        SSLEngine sse = SecureChatSslContextFactory.getServerContext().createSSLEngine();
-        SSLEngine cse = SecureChatSslContextFactory.getClientContext().createSSLEngine();
-        sse.setUseClientMode(false);
-        cse.setUseClientMode(true);
-
-        sb.getPipeline().addFirst("ssl", new SslHandler(sse));
-        sb.getPipeline().addLast("handler", sh);
-        cb.getPipeline().addFirst("ssl", new SslHandler(cse));
-        cb.getPipeline().addLast("handler", ch);
+        sb.getPipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
+        sb.getPipeline().addAfter("decoder", "handler", sh);
+        cb.getPipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
+        cb.getPipeline().addAfter("decoder", "handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
@@ -120,8 +113,6 @@ public abstract class AbstractSocketSslEchoTest {
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
         Channel cc = ccf.getChannel();
-        assertTrue(cc.getPipeline().get(SslHandler.class).handshake(cc).awaitUninterruptibly().isSuccess());
-
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
             cc.write(ChannelBuffers.wrappedBuffer(data, i, length));
@@ -196,6 +187,8 @@ public abstract class AbstractSocketSslEchoTest {
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
                 throws Exception {
             ChannelBuffer m = (ChannelBuffer) e.getMessage();
+            assertEquals(1024, m.readableBytes());
+
             byte[] actual = new byte[m.readableBytes()];
             m.getBytes(0, actual);
 

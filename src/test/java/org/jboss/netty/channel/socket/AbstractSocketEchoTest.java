@@ -24,6 +24,7 @@ package org.jboss.netty.channel.socket;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Random;
@@ -31,6 +32,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
@@ -60,7 +62,7 @@ import org.junit.Test;
 public abstract class AbstractSocketEchoTest {
 
     private static final Random random = new Random();
-    static final byte[] data = new byte[1048576 * 32];
+    static final byte[] data = new byte[1048576];
 
     private static ExecutorService executor;
 
@@ -91,7 +93,7 @@ public abstract class AbstractSocketEchoTest {
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
 
     @Test
-    public void testEcho() throws Throwable {
+    public void testSimpleEcho() throws Throwable {
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
 
@@ -109,13 +111,34 @@ public abstract class AbstractSocketEchoTest {
 
         Channel cc = ccf.getChannel();
         for (int i = 0; i < data.length;) {
-            int length = Math.min(random.nextInt(1024 * 512), data.length - i);
+            int length = Math.min(random.nextInt(1024 * 64), data.length - i);
             cc.write(ChannelBuffers.wrappedBuffer(data, i, length));
             i += length;
         }
 
         while (ch.counter < data.length) {
-            assertNull(ch.exception);
+            if (sh.exception.get() != null) {
+                break;
+            }
+            if (ch.exception.get() != null) {
+                break;
+            }
+
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                // Ignore.
+            }
+        }
+
+        while (sh.counter < data.length) {
+            if (sh.exception.get() != null) {
+                break;
+            }
+            if (ch.exception.get() != null) {
+                break;
+            }
+
             try {
                 Thread.sleep(1);
             } catch (InterruptedException e) {
@@ -124,27 +147,27 @@ public abstract class AbstractSocketEchoTest {
         }
 
         ch.channel.close().awaitUninterruptibly();
-
-        while (sh.counter < data.length) {
-            assertNull(sh.exception);
-            try {
-                Thread.sleep(1);
-            } catch (InterruptedException e) {
-                // Ignore.
-            }
-        }
-
         sh.channel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
 
-        assertNull(sh.exception);
-        assertNull(ch.exception);
+        if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
+            throw sh.exception.get();
+        }
+        if (ch.exception.get() != null && !(ch.exception.get() instanceof IOException)) {
+            throw ch.exception.get();
+        }
+        if (sh.exception.get() != null) {
+            throw sh.exception.get();
+        }
+        if (ch.exception.get() != null) {
+            throw ch.exception.get();
+        }
     }
 
     @ChannelPipelineCoverage("one")
     private class EchoHandler extends SimpleChannelHandler {
         volatile Channel channel;
-        volatile Throwable exception;
+        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
 
         EchoHandler() {
@@ -178,8 +201,9 @@ public abstract class AbstractSocketEchoTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
-            exception = e.getCause();
-            e.getChannel().close();
+            if (exception.compareAndSet(null, e.getCause())) {
+                e.getChannel().close();
+            }
         }
     }
 }

@@ -87,7 +87,7 @@ public abstract class AbstractSocketClientBootstrapTest {
     }
 
     @Test(timeout = 10000)
-    public void testSuccessfulConnectionAttempt() throws Exception {
+    public void testSuccessfulConnectionAttempt() throws Throwable {
         ServerSocketChannel serverSocket = ServerSocketChannel.open();
         serverSocket.socket().bind(new InetSocketAddress(0));
 
@@ -106,7 +106,11 @@ public abstract class AbstractSocketClientBootstrapTest {
             serverSocket.accept();
             future.awaitUninterruptibly();
 
+            if (future.getCause() != null) {
+                throw future.getCause();
+            }
             assertTrue(future.isSuccess());
+
             future.getChannel().close().awaitUninterruptibly();
         } finally {
             try {
@@ -118,7 +122,7 @@ public abstract class AbstractSocketClientBootstrapTest {
     }
 
     @Test(timeout = 10000)
-    public void testSuccessfulConnectionAttemptWithLocalAddress() throws Exception {
+    public void testSuccessfulConnectionAttemptWithLocalAddress() throws Throwable {
         ServerSocketChannel serverSocket = ServerSocketChannel.open();
         serverSocket.socket().bind(new InetSocketAddress(0));
 
@@ -138,7 +142,11 @@ public abstract class AbstractSocketClientBootstrapTest {
             serverSocket.accept();
             future.awaitUninterruptibly();
 
+            if (future.getCause() != null) {
+                throw future.getCause();
+            }
             assertTrue(future.isSuccess());
+
             future.getChannel().close().awaitUninterruptibly();
         } finally {
             try {

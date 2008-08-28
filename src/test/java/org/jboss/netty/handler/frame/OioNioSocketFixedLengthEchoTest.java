@@ -20,33 +20,31 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.codec.frame;
+package org.jboss.netty.handler.frame;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
+import java.util.concurrent.Executor;
+
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
- * @version $Rev:231 $, $Date:2008-06-12 16:44:50 +0900 (목, 12 6월 2008) $
+ * @version $Rev$, $Date$
  *
  */
-public class Delimiters {
+public class OioNioSocketFixedLengthEchoTest extends AbstractSocketFixedLengthEchoTest {
 
-    public static ChannelBuffer[] nulDelimiter() {
-        return new ChannelBuffer[] {
-                ChannelBuffers.wrappedBuffer(new byte[] { 0 }) };
+    @Override
+    protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
+        return new OioClientSocketChannelFactory(executor);
     }
 
-    public static ChannelBuffer[] lineDelimiter() {
-        return new ChannelBuffer[] {
-                ChannelBuffers.wrappedBuffer(new byte[] { '\r', '\n' }),
-                ChannelBuffers.wrappedBuffer(new byte[] { '\n' }),
-        };
+    @Override
+    protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
+        return new NioServerSocketChannelFactory(executor, executor);
     }
 
-    private Delimiters() {
-        // Unused
-    }
 }

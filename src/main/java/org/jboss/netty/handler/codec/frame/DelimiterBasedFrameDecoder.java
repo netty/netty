@@ -23,7 +23,6 @@
 package org.jboss.netty.handler.codec.frame;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
@@ -70,31 +69,35 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
     @Override
     protected Object decode(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
-        // Try all delimiters.
+        // Try all delimiters and choose the delimiter which yields the shortest frame.
+        int minDelimIndex = Integer.MAX_VALUE;
+        ChannelBuffer minDelim = null;
         for (ChannelBuffer delim: delimiters) {
             int delimIndex = indexOf(buffer, delim);
-            if (delimIndex > 0) {
-                ChannelBuffer frame = buffer.readBytes(delimIndex);
-                if (frame.capacity() > maxFrameLength) {
-                    fail();
-                }
-                buffer.skipBytes(delim.capacity());
-                return frame;
-            } else if (delimIndex == 0) {
-                buffer.skipBytes(delim.capacity());
-                return ChannelBuffers.EMPTY_BUFFER;
+            if (delimIndex >= 0 && delimIndex < minDelimIndex) {
+                minDelimIndex = delimIndex;
+                minDelim = delim;
             }
         }
 
+        if (minDelim != null) {
+            ChannelBuffer frame = buffer.readBytes(minDelimIndex);
+            if (frame.readableBytes() > maxFrameLength) {
+                fail(frame.readableBytes());
+            }
+            buffer.skipBytes(minDelim.capacity());
+            return frame;
+        }
+
         if (buffer.readableBytes() > maxFrameLength) {
-            fail();
+            fail(buffer.readableBytes());
         }
         return null;
     }
 
-    private void fail() throws TooLongFrameException {
+    private void fail(int frameLength) throws TooLongFrameException {
         throw new TooLongFrameException(
-                "The frame length exceeds " + maxFrameLength);
+                "The frame length exceeds " + maxFrameLength + ": " + frameLength);
     }
 
     private static int indexOf(ChannelBuffer haystack, ChannelBuffer needle) {

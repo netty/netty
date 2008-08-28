@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.ssl;
+package org.jboss.netty.handler.serialization;
 
 import static org.junit.Assert.*;
 
@@ -34,12 +34,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.net.ssl.SSLEngine;
-
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
@@ -49,7 +45,8 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
+import org.jboss.netty.handler.codec.serialization.CompatibleObjectDecoder;
+import org.jboss.netty.handler.codec.serialization.CompatibleObjectEncoder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -62,15 +59,24 @@ import org.junit.Test;
  * @version $Rev$, $Date$
  *
  */
-public abstract class AbstractSocketSslEchoTest {
+public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
 
-    private static final Random random = new Random();
-    static final byte[] data = new byte[1048576];
+    static final Random random = new Random();
+    static final String[] data = new String[1024];
 
     private static ExecutorService executor;
 
     static {
-        random.nextBytes(data);
+        for (int i = 0; i < data.length; i ++) {
+            int eLen = random.nextInt(512);
+            StringBuilder e = new StringBuilder(eLen);
+
+            for (int j = 0; j < eLen; j ++) {
+                e.append((char) ('a' + random.nextInt(26)));
+            }
+
+            data[i] = e.toString();
+        }
     }
 
     @BeforeClass
@@ -96,21 +102,19 @@ public abstract class AbstractSocketSslEchoTest {
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
 
     @Test
-    public void testSslEcho() throws Throwable {
+    public void testCompatibleObjectEcho() throws Throwable {
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
 
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        SSLEngine sse = SecureChatSslContextFactory.getServerContext().createSSLEngine();
-        SSLEngine cse = SecureChatSslContextFactory.getClientContext().createSSLEngine();
-        sse.setUseClientMode(false);
-        cse.setUseClientMode(true);
-
-        sb.getPipeline().addFirst("ssl", new SslHandler(sse));
+        sb.getPipeline().addLast("decoder", new CompatibleObjectDecoder());
+        sb.getPipeline().addLast("encoder", new CompatibleObjectEncoder());
         sb.getPipeline().addLast("handler", sh);
-        cb.getPipeline().addFirst("ssl", new SslHandler(cse));
+
+        cb.getPipeline().addLast("decoder", new CompatibleObjectDecoder());
+        cb.getPipeline().addLast("encoder", new CompatibleObjectEncoder());
         cb.getPipeline().addLast("handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(0));
@@ -120,12 +124,8 @@ public abstract class AbstractSocketSslEchoTest {
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
         Channel cc = ccf.getChannel();
-        assertTrue(cc.getPipeline().get(SslHandler.class).handshake(cc).awaitUninterruptibly().isSuccess());
-
-        for (int i = 0; i < data.length;) {
-            int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            cc.write(ChannelBuffers.wrappedBuffer(data, i, length));
-            i += length;
+        for (String element : data) {
+            cc.write(element);
         }
 
         while (ch.counter < data.length) {
@@ -195,15 +195,11 @@ public abstract class AbstractSocketSslEchoTest {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
                 throws Exception {
-            ChannelBuffer m = (ChannelBuffer) e.getMessage();
-            byte[] actual = new byte[m.readableBytes()];
-            m.getBytes(0, actual);
 
-            int lastIdx = counter;
-            for (int i = 0; i < actual.length; i ++) {
-                assertEquals(data[i + lastIdx], actual[i]);
-            }
-            counter += actual.length;
+            String m = (String) e.getMessage();
+            assertEquals(data[counter], m);
+
+            counter ++;
 
             if (channel.getParent() != null) {
                 channel.write(m);
