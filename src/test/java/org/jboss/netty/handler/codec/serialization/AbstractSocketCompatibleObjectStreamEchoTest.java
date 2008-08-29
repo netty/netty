@@ -45,8 +45,6 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.handler.codec.serialization.CompatibleObjectDecoder;
-import org.jboss.netty.handler.codec.serialization.CompatibleObjectEncoder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -69,13 +67,12 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
     static {
         for (int i = 0; i < data.length; i ++) {
             int eLen = random.nextInt(512);
-            StringBuilder e = new StringBuilder(eLen);
-
+            char[] e = new char[eLen];
             for (int j = 0; j < eLen; j ++) {
-                e.append((char) ('a' + random.nextInt(26)));
+                e[j] = (char) ('a' + random.nextInt(26));
             }
 
-            data[i] = e.toString();
+            data[i] = new String(e);
         }
     }
 
