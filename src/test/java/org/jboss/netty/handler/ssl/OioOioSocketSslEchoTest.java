@@ -27,7 +27,6 @@ import java.util.concurrent.Executor;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
-import org.junit.Test;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -46,11 +45,5 @@ public class OioOioSocketSslEchoTest extends AbstractSocketSslEchoTest {
     @Override
     protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
         return new OioServerSocketChannelFactory(executor, executor);
-    }
-
-    @Test
-    @Override
-    public void testSslEcho() throws Throwable {
-        // FIXME Disabled temporarily
     }
 }

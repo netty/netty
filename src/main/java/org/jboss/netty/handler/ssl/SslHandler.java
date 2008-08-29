@@ -386,6 +386,12 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
         }
 
         synchronized (pendingEncryptedWrites) {
+            if (pendingEncryptedWrites.isEmpty()) {
+                return;
+            }
+        }
+
+        synchronized (pendingEncryptedWrites) {
             MessageEvent e;
             while ((e = pendingEncryptedWrites.poll()) != null) {
                 ctx.sendDownstream(e);
