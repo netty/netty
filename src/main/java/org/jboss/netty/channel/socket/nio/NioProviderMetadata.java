@@ -28,6 +28,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.spi.SelectorProvider;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.SystemPropertyUtil;
 
 /**
  * Provides information which is specific to a NIO service provider
@@ -65,7 +67,7 @@ class NioProviderMetadata {
 
         // Use the system property if possible.
         try {
-            String value = System.getProperty(CONSTRAINT_LEVEL_PROPERTY);
+            String value = SystemPropertyUtil.get(CONSTRAINT_LEVEL_PROPERTY, "-1");
             constraintLevel = Integer.parseInt(value);
             if (constraintLevel < 0 || constraintLevel > 2) {
                 constraintLevel = -1;
@@ -75,11 +77,18 @@ class NioProviderMetadata {
                         constraintLevel);
             }
         } catch (Exception e) {
-            // format error or security issue
+            // format error
         }
 
         if (constraintLevel < 0) {
-            constraintLevel = detectConstraintLevel();
+            constraintLevel = detectConstraintLevelFromSystemProperties();
+
+            if (constraintLevel < 0) {
+                logger.debug(
+                        "Couldn't get the NIO constraint level from the system properties.");
+                constraintLevel = detectConstraintLevel();
+            }
+
             if (constraintLevel < 0) {
                 constraintLevel = 2;
                 logger.warn(
@@ -104,6 +113,51 @@ class NioProviderMetadata {
                     "Unexpected NIO constraint level: " +
                     CONSTRAINT_LEVEL + ", please report this error.");
         }
+    }
+
+    private static int detectConstraintLevelFromSystemProperties() {
+        String os = SystemPropertyUtil.get("os.name");
+        String vendor = SystemPropertyUtil.get("java.vm.vendor");
+        String provider;
+        try {
+            provider = SelectorProvider.provider().getClass().getName();
+        } catch (Exception e) {
+            // Perhaps security exception.
+            provider = null;
+        }
+
+        if (os == null || vendor == null || provider == null) {
+            return -1;
+        }
+
+        os = os.toLowerCase();
+        vendor = vendor.toLowerCase();
+
+        // Sun JVM
+        if (vendor.indexOf("sun") >= 0) {
+            // Linux
+            if (os.indexOf("linux") >= 0) {
+                if (provider.equals("sun.nio.ch.EPollSelectorProvider") ||
+                    provider.equals("sun.nio.ch.PollSelectorProvider")) {
+                    return 0;
+                }
+
+            // Windows
+            } else if (os.indexOf("windows") >= 0) {
+                if (provider.equals("sun.nio.ch.DevPollSelectorProvider")) {
+                    return 0;
+                }
+
+            // Solaris
+            } else if (os.indexOf("sunos") >= 0 || os.indexOf("solaris") >= 0) {
+                if (provider.equals("sun.nio.ch.WindowsSelectorProvider")) {
+                    return 0;
+                }
+            }
+        }
+
+        // Others: IBM JRE - 1 or 2, JRockIt - untested
+        return -1;
     }
 
     private static int detectConstraintLevel() {
@@ -152,7 +206,6 @@ class NioProviderMetadata {
             executor.execute(loop);
 
             // Level 0
-            // TODO Make it run faster
             success = true;
             for (int i = 0; i < 10; i ++) {
 
