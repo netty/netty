@@ -116,15 +116,7 @@ public class TimeBasedUuidGenerator {
 
     private static void appendSystemProperty(StringBuilder buf, String key) {
         buf.append(':');
-        buf.append(getSystemProperty(key));
-    }
-
-    private static String getSystemProperty(String key) {
-        try {
-            return System.getProperty(key, "null");
-        } catch (Exception e) {
-            return "null";
-        }
+        buf.append(SystemPropertyUtil.get(key, "null"));
     }
 
     /**

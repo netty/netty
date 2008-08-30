@@ -23,40 +23,31 @@
 package org.jboss.netty.util;
 
 /**
- * Determines if Netty is running in a debug mode or not.  Please note that
- * this is not a Java debug mode.  You can enable Netty debug mode by
- * specifying the {@code "org.jboss.netty.debug"} system property (e.g.
- * {@code java -Dorg.jboss.netty.debug ...})
- *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
+ *
  */
-public class DebugUtil {
+public class SystemPropertyUtil {
 
-    /**
-     * Returns {@code true} if and only if Netty debug mode is enabled.
-     */
-    public static boolean isDebugEnabled() {
-        String value;
+    public static String get(String key) {
         try {
-            value = SystemPropertyUtil.get("org.jboss.netty.debug");
+            return System.getProperty(key);
         } catch (Exception e) {
-            value = null;
+            return null;
         }
-
-        if (value == null) {
-            return false;
-        }
-
-        value = value.trim().toUpperCase();
-        return !value.startsWith("N") &&
-               !value.startsWith("F") &&
-               !value.equals("0");
     }
 
-    private DebugUtil() {
+    public static String get(String key, String def) {
+        String value = get(key);
+        if (value == null) {
+            value = def;
+        }
+        return value;
+    }
+
+    private SystemPropertyUtil() {
         // Unused
     }
 }
