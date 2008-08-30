@@ -114,7 +114,10 @@ class NioWorker implements Runnable {
             executor.execute(new ThreadRenamingRunnable(this, threadName));
         } else {
             synchronized (selectorGuard) {
-                selector.wakeup();
+                if (wakenUp.compareAndSet(false, true)) {
+                    selector.wakeup();
+                }
+
                 try {
                     channel.socket.register(selector, SelectionKey.OP_READ, channel);
                     if (future != null) {
@@ -366,7 +369,7 @@ class NioWorker implements Runnable {
         boolean changed = false;
         if (opWrite) {
             if (!mightNeedWakeup) {
-                interestOps = key.interestOps();
+                interestOps = channel.getInterestOps();
                 if ((interestOps & SelectionKey.OP_WRITE) == 0) {
                     interestOps |= SelectionKey.OP_WRITE;
                     key.interestOps(interestOps);
@@ -375,7 +378,7 @@ class NioWorker implements Runnable {
             } else {
                 switch (CONSTRAINT_LEVEL) {
                 case 0:
-                    interestOps = key.interestOps();
+                    interestOps = channel.getInterestOps();
                     if ((interestOps & SelectionKey.OP_WRITE) == 0) {
                         interestOps |= SelectionKey.OP_WRITE;
                         key.interestOps(interestOps);
@@ -387,7 +390,8 @@ class NioWorker implements Runnable {
                     }
                     break;
                 case 1:
-                    interestOps = key.interestOps();
+                case 2:
+                    interestOps = channel.getInterestOps();
                     if ((interestOps & SelectionKey.OP_WRITE) == 0) {
                         if (Thread.currentThread() == worker.thread) {
                             interestOps |= SelectionKey.OP_WRITE;
@@ -395,27 +399,9 @@ class NioWorker implements Runnable {
                             changed = true;
                         } else {
                             synchronized (worker.selectorGuard) {
-                                selector.wakeup();
-                                interestOps |= SelectionKey.OP_WRITE;
-                                key.interestOps(interestOps);
-                                changed = true;
-                            }
-                        }
-                    }
-                    break;
-                case 2:
-                    if (Thread.currentThread() == worker.thread) {
-                        interestOps = key.interestOps();
-                        if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                            interestOps |= SelectionKey.OP_WRITE;
-                            key.interestOps(interestOps);
-                            changed = true;
-                        }
-                    } else {
-                        synchronized (worker.selectorGuard) {
-                            selector.wakeup();
-                            interestOps = key.interestOps();
-                            if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                                if (worker.wakenUp.compareAndSet(false, true)) {
+                                    selector.wakeup();
+                                }
                                 interestOps |= SelectionKey.OP_WRITE;
                                 key.interestOps(interestOps);
                                 changed = true;
@@ -429,7 +415,7 @@ class NioWorker implements Runnable {
             }
         } else {
             if (!mightNeedWakeup) {
-                interestOps = key.interestOps();
+                interestOps = channel.getInterestOps();
                 if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                     interestOps &= ~SelectionKey.OP_WRITE;
                     key.interestOps(interestOps);
@@ -438,7 +424,7 @@ class NioWorker implements Runnable {
             } else {
                 switch (CONSTRAINT_LEVEL) {
                 case 0:
-                    interestOps = key.interestOps();
+                    interestOps = channel.getInterestOps();
                     if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                         interestOps &= ~SelectionKey.OP_WRITE;
                         key.interestOps(interestOps);
@@ -450,7 +436,8 @@ class NioWorker implements Runnable {
                     }
                     break;
                 case 1:
-                    interestOps = key.interestOps();
+                case 2:
+                    interestOps = channel.getInterestOps();
                     if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                         if (Thread.currentThread() == worker.thread) {
                             interestOps &= ~SelectionKey.OP_WRITE;
@@ -458,27 +445,9 @@ class NioWorker implements Runnable {
                             changed = true;
                         } else {
                             synchronized (worker.selectorGuard) {
-                                selector.wakeup();
-                                interestOps &= ~SelectionKey.OP_WRITE;
-                                key.interestOps(interestOps);
-                                changed = true;
-                            }
-                        }
-                    }
-                    break;
-                case 2:
-                    if (Thread.currentThread() == worker.thread) {
-                        interestOps = key.interestOps();
-                        if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                            interestOps &= ~SelectionKey.OP_WRITE;
-                            key.interestOps(interestOps);
-                            changed = true;
-                        }
-                    } else {
-                        synchronized (worker.selectorGuard) {
-                            selector.wakeup();
-                            interestOps = key.interestOps();
-                            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+                                if (worker.wakenUp.compareAndSet(false, true)) {
+                                    selector.wakeup();
+                                }
                                 interestOps &= ~SelectionKey.OP_WRITE;
                                 key.interestOps(interestOps);
                                 changed = true;
@@ -556,7 +525,7 @@ class NioWorker implements Runnable {
         try {
             switch (CONSTRAINT_LEVEL) {
             case 0:
-                if (key.interestOps() != interestOps) {
+                if (channel.getInterestOps() != interestOps) {
                     key.interestOps(interestOps);
                     if (Thread.currentThread() != worker.thread &&
                         worker.wakenUp.compareAndSet(false, true)) {
@@ -566,29 +535,16 @@ class NioWorker implements Runnable {
                 }
                 break;
             case 1:
-                if (key.interestOps() != interestOps) {
+            case 2:
+                if (channel.getInterestOps() != interestOps) {
                     if (Thread.currentThread() == worker.thread) {
                         key.interestOps(interestOps);
                         changed = true;
                     } else {
                         synchronized (worker.selectorGuard) {
-                            selector.wakeup();
-                            key.interestOps(interestOps);
-                            changed = true;
-                        }
-                    }
-                }
-                break;
-            case 2:
-                if (Thread.currentThread() == worker.thread) {
-                    if (key.interestOps() != interestOps) {
-                        key.interestOps(interestOps);
-                        changed = true;
-                    }
-                } else {
-                    synchronized (worker.selectorGuard) {
-                        selector.wakeup();
-                        if (key.interestOps() != interestOps) {
+                            if (worker.wakenUp.compareAndSet(false, true)) {
+                                selector.wakeup();
+                            }
                             key.interestOps(interestOps);
                             changed = true;
                         }
