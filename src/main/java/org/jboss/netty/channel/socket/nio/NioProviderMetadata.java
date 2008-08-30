@@ -87,12 +87,12 @@ class NioProviderMetadata {
                         "using the safest level (2)");
             } else if (constraintLevel != 0) {
                 logger.info(
-                        "Using the autodected NIO constraint level: " +
+                        "Using the autodetected NIO constraint level: " +
                         constraintLevel +
                         " (Use better NIO provider for better performance)");
             } else {
                 logger.debug(
-                        "Using the autodected NIO constraint level: " +
+                        "Using the autodetected NIO constraint level: " +
                         constraintLevel);
             }
         }
