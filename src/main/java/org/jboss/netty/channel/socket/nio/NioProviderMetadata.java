@@ -149,8 +149,16 @@ class NioProviderMetadata {
                 }
 
             // Solaris
-            } else if (os.indexOf("sunos") >= 0 || os.indexOf("solaris") >= 0) {
+            } else if (os.indexOf("sun") >= 0 || os.indexOf("solaris") >= 0) {
                 if (provider.equals("sun.nio.ch.WindowsSelectorProvider")) {
+                    return 0;
+                }
+            }
+        // Apple JVM
+        } else if (vendor.indexOf("apple") >= 0) {
+            // Mac OS
+            if (os.indexOf("mac") >= 0 && os.indexOf("os") >= 0) {
+                if (provider.equals("sun.nio.ch.KQueueSelectorProvider")) {
                     return 0;
                 }
             }
