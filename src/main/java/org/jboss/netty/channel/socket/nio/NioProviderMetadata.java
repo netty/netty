@@ -116,6 +116,7 @@ class NioProviderMetadata {
     }
 
     private static int detectConstraintLevelFromSystemProperties() {
+        String version = SystemPropertyUtil.get("java.specification.version");
         String os = SystemPropertyUtil.get("os.name");
         String vendor = SystemPropertyUtil.get("java.vm.vendor");
         String provider;
@@ -126,7 +127,7 @@ class NioProviderMetadata {
             provider = null;
         }
 
-        if (os == null || vendor == null || provider == null) {
+        if (version == null || os == null || vendor == null || provider == null) {
             return -1;
         }
 
@@ -162,9 +163,24 @@ class NioProviderMetadata {
                     return 0;
                 }
             }
+        // IBM
+        } else if (vendor.indexOf("ibm") >= 0) {
+            // Linux
+            if (os.indexOf("linux") >= 0) {
+                if (version.equals("1.5") || version.matches("^1\\.5\\D.*$")) {
+                    if (provider.equals("sun.nio.ch.PollSelectorProvider")) {
+                        return 1;
+                    }
+                } else if (version.equals("1.6") || version.matches("^1\\.6\\D.*$")) {
+                    if (provider.equals("sun.nio.ch.EPollSelectorProvider") ||
+                        provider.equals("sun.nio.ch.PollSelectorProvider")) {
+                        return 2;
+                    }
+                }
+            }
         }
 
-        // Others: IBM JRE - 1 or 2, JRockIt - untested
+        // Others (untested)
         return -1;
     }
 
