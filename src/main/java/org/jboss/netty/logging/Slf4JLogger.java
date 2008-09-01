@@ -25,6 +25,8 @@ package org.jboss.netty.logging;
 import org.slf4j.Logger;
 
 /**
+ * <a href="http://www.slf4j.org/">SLF4J</a> logger.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

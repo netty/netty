@@ -25,6 +25,9 @@ package org.jboss.netty.logging;
 import org.jboss.logging.Logger;
 
 /**
+ * <a href="http://anonsvn.jboss.org/repos/common/common-logging-spi/">JBoss Logging</a>
+ * logger.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

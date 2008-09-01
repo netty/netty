@@ -25,6 +25,9 @@ package org.jboss.netty.logging;
 import org.apache.log4j.Logger;
 
 /**
+ * <a href="http://logging.apache.org/log4j/1.2/index.html">Apache Log4J</a>
+ * logger.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
