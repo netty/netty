@@ -24,26 +24,50 @@ package org.jboss.netty.channel;
 
 import java.util.Map;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.ssl.SslHandler;
 
 
 /**
- * A chain of {@link ChannelHandler}s which handles a {@link ChannelEvent}.
- * Every {@link Channel} has its own pipeline instance.  You can add one or
- * more {@link ChannelHandler}s to the pipeline to receive I/O events
- * (e.g. read) and to request I/O operations (e.g. write and close).
+ * A list of {@link ChannelHandler}s which handles or intercepts a
+ * {@link ChannelEvent}.
+ * <p>
+ * {@link ChannelPipeline} implements an advanced form of the
+ * <a href="http://java.sun.com/blueprints/corej2eepatterns/Patterns/InterceptingFilter.html">Intercepting
+ * Filter</a> pattern to give a user full control over how an event is handled
+ * and how {@link ChannelHandler}s in the pipeline interact with each other.
+ * <p>
+ * Every {@link Channel} has its own pipeline instance.  Each pipeline is
+ * created by the {@link ChannelPipelineFactory} specified when a new channel
+ * is created by the {@link ChannelFactory}.
+ * <p>
+ * A user is supposed to have one or more {@link ChannelHandler}s in a
+ * pipeline to receive I/O events (e.g. read) and to request I/O operations
+ * (e.g. write and close).  For example, a typical server will have the following
+ * handlers in each channel's pipeline, but your mileage may vary depending on
+ * the complexity and characteristics of the protocol and business logic:
+ *
+ * <ol>
+ * <li>Protocol Decoder - translates binary data (e.g. {@link ChannelBuffer})
+ *                        into a Java object.</li>
+ * <li>Protocol Encoder - translates a Java object into binary data.</li>
+ * <li>{@link ExecutionHandler} - applies a thread model.</li>
+ * <li>Business Logic Handler - performs the actual business logic
+ *                              (e.g. database access).</li>
+ * </ol>
  *
  * <h3>Thread safety</h3>
  * <p>
- * You can also add or remove a {@link ChannelHandler} at any time because a
+ * A {@link ChannelHandler} can be added or removed at any time because a
  * {@link ChannelPipeline} is thread safe.  For example, you can insert a
  * {@link SslHandler} when a sensitive information is about to be exchanged,
  * and remove it after the exchange.
  *
  * <h3>How an event flows in a pipeline</h3>
  * <p>
- * The following diagram describes how events flows up and down in a
- * {@link ChannelPipeline} typically:
+ * The following diagram describes how events flow upstream and downstream in
+ * a {@link ChannelPipeline} typically:
  *
  * <pre>
  *                                      I/O Request

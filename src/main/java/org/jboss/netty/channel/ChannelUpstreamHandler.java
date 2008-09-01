@@ -99,6 +99,9 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  *                                      / \
  * Thread Y: --- Channel B (Event 1) --'   '-- Channel A (Event 2) --- Channel A (Event 3) ---&gt;
  * </pre>
+ * <p>
+ * Also, please refer to the {@link ChannelPipelineCoverage} annotation to
+ * understand the relationship between a handler and its stateful properties.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
