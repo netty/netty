@@ -30,7 +30,8 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 
 /**
  * Handles or intercepts a upstream {@link ChannelEvent}, and fires a
- * {@link ChannelEvent} to the next handler in a {@link ChannelPipeline}.
+ * {@link ChannelEvent} to the next or previous handler in a
+ * {@link ChannelPipeline}.
  * <p>
  * A upstream event is an event which is supposed to be processed from the
  * first handler to the last handler in the {@link ChannelPipeline}.
@@ -40,6 +41,32 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * this interface more easily.  You might want to implement this interface
  * directly though, when you want to handle various types of events in more
  * generic way.
+ *
+ * <h3>Firing an event to the next or previous handler</h3>
+ * <p>
+ * You can forward the received event upstream or downstream.  In most cases,
+ * {@link ChannelUpstreamHandler} will fire the event to the next handler
+ * (upstream) although it is absolutely normal to fire the event to the
+ * previous handler (downstream):
+ *
+ * <pre>
+ * // Sending the event forward (upstream)
+ * void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+ *     ...
+ *     ctx.sendUpstream(e);
+ *     ...
+ * }
+ *
+ * // Sending the event backward (downstream)
+ * void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+ *     ...
+ *     ctx.sendDownstream(new MessageEvent(...));
+ *     ...
+ * }
+ * </pre>
+ * <p>
+ * You will also find various helper methods in {@link Channels} to be useful
+ * to generate and fire an artificial or manipulated event.
  *
  * <a name="thread_safety"></a>
  * <h3>Thread safety</h3>

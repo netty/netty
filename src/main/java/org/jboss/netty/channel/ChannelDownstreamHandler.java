@@ -25,7 +25,8 @@ package org.jboss.netty.channel;
 
 /**
  * Handles or intercepts a downstream {@link ChannelEvent}, and fires a
- * {@link ChannelEvent} to the next handler in a {@link ChannelPipeline}.
+ * {@link ChannelEvent} to the previous or next handler in a
+ * {@link ChannelPipeline}.
  * <p>
  * A downstream event is an event which is supposed to be processed from the
  * last handler to the first handler in the {@link ChannelPipeline}.
@@ -34,6 +35,32 @@ package org.jboss.netty.channel;
  * <p>
  * In most common use case of this interface is to intercept an I/O request
  * such as {@link Channel#write(Object)} and {@link Channel#close()}.
+ *
+ * <h3>Firing an event to the previous or next handler</h3>
+ * <p>
+ * You can forward the received event downstream or upstream.  In most cases,
+ * {@link ChannelDownstreamHandler} will fire the event to the previous handler
+ * (downstream) although it is absolutely normal to fire the event to the next
+ * handler (upstream):
+ *
+ * <pre>
+ * // Sending the event forward (downstream)
+ * void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+ *     ...
+ *     ctx.sendDownstream(e);
+ *     ...
+ * }
+ *
+ * // Sending the event backward (upstream)
+ * void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+ *     ...
+ *     ctx.sendUpstream(new DefaultChannelStateEvent(...));
+ *     ...
+ * }
+ * </pre>
+ * <p>
+ * You will also find various helper methods in {@link Channels} to be useful
+ * to generate and fire an artificial or manipulated event.
  *
  * <h3>Thread safety</h3>
  * <p>

@@ -24,7 +24,8 @@ package org.jboss.netty.channel;
 
 /**
  * Handles or intercepts a {@link ChannelEvent}, and fires a
- * {@link ChannelEvent} to the next handler in a {@link ChannelPipeline}.
+ * {@link ChannelEvent} to the next or previous handler in a
+ * {@link ChannelPipeline}.
  * <p>
  * This is a tag interface.  There are two sub-interfaces which processes
  * a received event actually, one for upstream events and the other for

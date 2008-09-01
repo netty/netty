@@ -24,8 +24,71 @@ package org.jboss.netty.channel;
 
 import java.util.Map;
 
+import org.jboss.netty.handler.ssl.SslHandler;
+
 
 /**
+ * A chain of {@link ChannelHandler}s which handles a {@link ChannelEvent}.
+ * Every {@link Channel} has its own pipeline instance.  You can add one or
+ * more {@link ChannelHandler}s to the pipeline to receive I/O events
+ * (e.g. read) and to request I/O operations (e.g. write and close).
+ *
+ * <h3>Thread safety</h3>
+ * <p>
+ * You can also add or remove a {@link ChannelHandler} at any time because a
+ * {@link ChannelPipeline} is thread safe.  For example, you can insert a
+ * {@link SslHandler} when a sensitive information is about to be exchanged,
+ * and remove it after the exchange.
+ *
+ * <h3>How an event flows in a pipeline</h3>
+ * <p>
+ * The following diagram describes how events flows up and down in a
+ * {@link ChannelPipeline} typically:
+ *
+ * <pre>
+ *                                      I/O Request
+ *                                      via Channel
+ *                                           |
+ * +-----------------------------------------+----------------+
+ * |                     ChannelPipeline     |                |
+ * |                                        \|/               |
+ * |   +----------------------+  +-----------+------------+   |
+ * |   | Upstream Handler  N  |  | Downstream Handler  1  |   |
+ * |   +----------+-----------+  +-----------+------------+   |
+ * |             /|\                         |                |
+ * |              |                         \|/               |
+ * |   +----------+-----------+  +-----------+------------+   |
+ * |   | Upstream Handler N-1 |  | Downstream Handler  2  |   |
+ * |   +----------+-----------+  +-----------+------------+   |
+ * |             /|\                         |                |
+ * |              |                         \|/               |
+ * |   +----------+-----------+  +-----------+------------+   |
+ * |   | Upstream Handler N-2 |  | Downstream Handler  3  |   |
+ * |   +----------+-----------+  +-----------+------------+   |
+ * |              .                          .                |
+ * |              .                          .                |
+ * |             /|\                         |                |
+ * |              |                         \|/               |
+ * |   +----------+-----------+  +-----------+------------+   |
+ * |   | Upstream Handler  3  |  | Downstream Handler M-2 |   |
+ * |   +----------+-----------+  +-----------+------------+   |
+ * |             /|\                         |                |
+ * |              |                         \|/               |
+ * |   +----------+-----------+  +-----------+------------+   |
+ * |   | Upstream Handler  2  |  | Downstream Handler M-1 |   |
+ * |   +----------+-----------+  +-----------+------------+   |
+ * |             /|\                         |                |
+ * |              |                         \|/               |
+ * |   +----------+-----------+  +-----------+------------+   |
+ * |   | Upstream Handler  1  |  | Downstream Handler  M  |   |
+ * |   +----------+-----------+  +-----------+------------+   |
+ * |             /|\                         |                |
+ * +--------------+--------------------------+----------------+
+ *                |                         \|/
+ * +--------------+--------------------------+----------------+
+ * |         I/O Threads (Transport Implementation)           |
+ * +----------------------------------------------------------+
+ * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
