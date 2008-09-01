@@ -57,7 +57,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * {@link #bind()} and {@link #bind(SocketAddress)}.
  * <p>
  * Once successfully bound, the parent channel starts to accept incoming
- * connections, and the accepted connections becomes the children of the
+ * connections, and the accepted connections become the children of the
  * parent channel.
  *
  * <h3>Configuring channels</h3>
