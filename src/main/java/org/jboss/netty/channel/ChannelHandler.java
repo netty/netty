@@ -23,6 +23,19 @@
 package org.jboss.netty.channel;
 
 /**
+ * Handles or intercepts a {@link ChannelEvent}, and fires a new, modified, or
+ * existing {@link ChannelEvent} to the next handler in a {@link ChannelPipeline}.
+ * <p>
+ * This is a tag interface.  There are two sub-interfaces which processes
+ * a received event actually, one for upstream events and the other for
+ * downstream events:
+ * <ul>
+ * <li>{@link ChannelUpstreamHandler} handles and intercepts
+ *     a {@link ChannelEvent} fired by an I/O thread.</li>
+ * <li>{@link ChannelDownstreamHandler} handles and intercepts
+ *     a {@link ChannelEvent} fired by a user via the methods in
+ *     the {@link Channel} interface and the {@link Channels} utility class.</li>
+ * </ul>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

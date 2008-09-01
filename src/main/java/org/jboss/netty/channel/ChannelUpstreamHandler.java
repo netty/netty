@@ -22,8 +22,56 @@
  */
 package org.jboss.netty.channel;
 
+import java.util.concurrent.Executor;
+
+import org.jboss.netty.handler.execution.ExecutionHandler;
+import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+
 
 /**
+ * Handles or intercepts a upstream {@link ChannelEvent}, and fires a
+ * {@link ChannelEvent} to the next handler in a {@link ChannelPipeline}.
+ * <p>
+ * A upstream event is an event which is supposed to be processed from the
+ * first handler to the last handler in the {@link ChannelPipeline}.
+ * For example, all events fired by an I/O thread are upstream events.
+ * <p>
+ * In most cases, you should use a {@link SimpleChannelHandler} to implement
+ * this interface more easily.  You might want to implement this interface
+ * directly though, when you want to handle various types of events in more
+ * generic way.
+ *
+ * <a name="thread_safety"></a>
+ * <h3>Thread safety</h3>
+ * <p>
+ * If there's no {@link ExecutionHandler} in the {@link ChannelPipeline},
+ * {@link #handleUpstream(ChannelHandlerContext, ChannelEvent) handleUpstream}
+ * will be invoked sequentially by the same thread (i.e. an I/O thread).
+ * Please note that this doesn't necessarily mean that there's a dedicated
+ * thread per {@link Channel}; the I/O thread of some transport can serve more
+ * than one {@link Channel} (e.g. NIO transport), while the I/O thread of
+ * others can serve only one (e.g. OIO transport).
+ * <p>
+ * If an {@link ExecutionHandler} is added in the {@link ChannelPipeline},
+ * {@link #handleUpstream(ChannelHandlerContext, ChannelEvent) handleUpstream}
+ * may be invoked by different threads at the same time, depending on what
+ * {@link Executor} implementation is used with the {@link ExecutionHandler}.
+ * <p>
+ * {@link OrderedMemoryAwareThreadPoolExecutor} is provided to guarantee the
+ * order of {@link ChannelEvent}s.  It does not guarantee that the invocation
+ * will be made by the same thread for the same channel, but it does guarantee
+ * that the invocation will be made sequentially for the events of the same
+ * channel.  For example, the events can be processed as depicted below:
+ *
+ * <pre>
+ *           -----------------------------------&gt; Timeline -----------------------------------&gt;
+ *
+ * Thread X: --- Channel A (Event 1) --.   .-- Channel B (Event 2) --- Channel B (Event 3) ---&gt;
+ *                                      \ /
+ *                                       X
+ *                                      / \
+ * Thread Y: --- Channel B (Event 1) --'   '-- Channel A (Event 2) --- Channel A (Event 3) ---&gt;
+ * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -33,5 +81,12 @@ package org.jboss.netty.channel;
  * @apiviz.landmark
  */
 public interface ChannelUpstreamHandler extends ChannelHandler {
+
+    /**
+     * Handles the specified upstream event.
+     *
+     * @param ctx  the context object for this handler
+     * @param e    the upstream event to process or intercept
+     */
     void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception;
 }
