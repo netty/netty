@@ -145,13 +145,13 @@ class NioProviderMetadata {
 
             // Windows
             } else if (os.indexOf("windows") >= 0) {
-                if (provider.equals("sun.nio.ch.DevPollSelectorProvider")) {
+                if (provider.equals("sun.nio.ch.WindowsSelectorProvider")) {
                     return 0;
                 }
 
             // Solaris
             } else if (os.indexOf("sun") >= 0 || os.indexOf("solaris") >= 0) {
-                if (provider.equals("sun.nio.ch.WindowsSelectorProvider")) {
+                if (provider.equals("sun.nio.ch.DevPollSelectorProvider")) {
                     return 0;
                 }
             }
@@ -176,6 +176,21 @@ class NioProviderMetadata {
                         provider.equals("sun.nio.ch.PollSelectorProvider")) {
                         return 2;
                     }
+                }
+            }
+        // BEA
+        } else if (vendor.indexOf("bea") >= 0 || vendor.indexOf("oracle") >= 0) {
+            // Linux
+            if (os.indexOf("linux") >= 0) {
+                if (provider.equals("sun.nio.ch.EPollSelectorProvider") ||
+                    provider.equals("sun.nio.ch.PollSelectorProvider")) {
+                    return 0;
+                }
+
+            // Windows
+            } else if (os.indexOf("windows") >= 0) {
+                if (provider.equals("sun.nio.ch.WindowsSelectorProvider")) {
+                    return 0;
                 }
             }
         }
