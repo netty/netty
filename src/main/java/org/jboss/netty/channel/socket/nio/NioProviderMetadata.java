@@ -177,6 +177,14 @@ class NioProviderMetadata {
                         return 2;
                     }
                 }
+
+            // AIX
+            } if (os.indexOf("aix") >= 0) {
+                if (version.equals("1.5") || version.matches("^1\\.5\\D.*$")) {
+                    if (provider.equals("sun.nio.ch.PollSelectorProvider")) {
+                        return 1;
+                    }
+                }
             }
         // BEA
         } else if (vendor.indexOf("bea") >= 0 || vendor.indexOf("oracle") >= 0) {
