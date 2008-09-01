@@ -66,8 +66,8 @@ import org.jboss.netty.handler.ssl.SslHandler;
  *
  * <h3>How an event flows in a pipeline</h3>
  * <p>
- * The following diagram describes how events flow upstream and downstream in
- * a {@link ChannelPipeline} typically:
+ * The following diagram describes how {@link ChannelEvent}s are processed by
+ * {@link ChannelHandler}s in a {@link ChannelPipeline} typically:
  *
  * <pre>
  *                                      I/O Request
