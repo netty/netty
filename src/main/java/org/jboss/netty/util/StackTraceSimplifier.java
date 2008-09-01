@@ -26,7 +26,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import org.jboss.netty.channel.DefaultChannelPipeline;
+import org.jboss.netty.channel.SimpleChannelHandler;
+
 /**
+ * Simplifies an exception stack trace by removing unnecessary
+ * {@link StackTraceElement}s.  Please note that the stack trace simplification
+ * is disabled if {@linkplain DebugUtil debug mode} is turned on.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -42,6 +49,11 @@ public class StackTraceSimplifier {
                 "(util\\.(ThreadRenamingRunnable)" +
                 "|channel\\.(SimpleChannelHandler|DefaultChannelPipeline.*))$");
 
+    /**
+     * Removes unnecessary {@link StackTraceElement}s from the specified
+     * exception. {@link ThreadRenamingRunnable}, {@link SimpleChannelHandler},
+     * and {@link DefaultChannelPipeline} will be dropped from the trace.
+     */
     public static void simplify(Throwable e) {
         if (!SIMPLIFY_STACK_TRACE) {
             return;

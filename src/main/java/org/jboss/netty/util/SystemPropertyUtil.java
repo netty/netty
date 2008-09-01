@@ -23,6 +23,8 @@
 package org.jboss.netty.util;
 
 /**
+ * Accesses the system property swallowing a {@link SecurityException}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -31,6 +33,14 @@ package org.jboss.netty.util;
  */
 public class SystemPropertyUtil {
 
+    /**
+     * Returns the value of the Java system property with the specified
+     * {@code key}.
+     *
+     * @return the property value.
+     *         {@code null} if there's no such property or if an access to the
+     *         specified property is not allowed.
+     */
     public static String get(String key) {
         try {
             return System.getProperty(key);
@@ -39,6 +49,15 @@ public class SystemPropertyUtil {
         }
     }
 
+    /**
+     * Returns the value of the Java system property with the specified
+     * {@code key}, while falling back to the specified default value if
+     * the property access fails.
+     *
+     * @return the property value.
+     *         {@code def} if there's no such property or if an access to the
+     *         specified property is not allowed.
+     */
     public static String get(String key, String def) {
         String value = get(key);
         if (value == null) {

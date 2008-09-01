@@ -33,16 +33,21 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
+ * A set of utility methods related with a {@link Map}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
- *
  */
 public class MapUtil {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(MapUtil.class);
 
+    /**
+     * Returns {@code true} if and only if the specified {@code map} is an
+     * ordered map, like {@link LinkedHashMap} is.
+     */
     @SuppressWarnings("unchecked")
     public static boolean isOrderedMap(Map<?, ?> map) {
         Class<?> mapType = map.getClass();
