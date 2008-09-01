@@ -46,8 +46,8 @@ import java.lang.annotation.Target;
  * {@code "all"} means you can add the same instance of the annotated handler
  * type to more than one {@link ChannelPipeline}.  It means the member
  * variables of the handler instance is shared among multiple channels and it
- * is OK to do so (or there's nothing to share.)  The following code shows an
- * example of a handler type annotated with {@code "all"} value:
+ * is designed to be OK to do so (or there's nothing to share.)  The following
+ * code shows an example of a handler type annotated with {@code "all"} value:
  *
  * <pre>
  * public class StatelessHandler extends SimpleChannelHandler {
