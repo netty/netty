@@ -25,9 +25,9 @@ package org.jboss.netty.channel;
 import java.util.EventListener;
 
 /**
- * Listens to the result of an asynchronous I/O operation.  The result of the
- * I/O operation is notified by {@link ChannelFuture} once this listener is
- * added to the future.
+ * Listens to the result of a {@link ChannelFuture}.  The result of the
+ * asynchronous {@link Channel} I/O operation is notified once this listener
+ * is added by calling {@link ChannelFuture#addListener(ChannelFutureListener)}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

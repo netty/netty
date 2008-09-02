@@ -25,12 +25,15 @@ package org.jboss.netty.channel;
 import java.io.IOException;
 import java.util.Map;
 
+import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
+
 
 /**
  * The configuration properties of a {@link Channel}.
  * <p>
- * Please down-cast to the transport-specific configuration type or use
- * {@link #setOptions(Map)} to set the transport-specific properties.
+ * Please down-cast to the transport-specific configuration type such as
+ * {@link NioSocketChannelConfig} or use {@link #setOptions(Map)} to set the
+ * transport-specific properties.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -48,25 +51,33 @@ public interface ChannelConfig {
 
     /**
      * Returns the {@link ChannelPipelineFactory} which will be used when
-     * a child channel is created.
+     * a child channel is created.  If the {@link Channel} doesn't create
+     * a child channel, this property is not used at all, and therefore will
+     * be ignored.
      */
     ChannelPipelineFactory getPipelineFactory();
 
     /**
      * Sets the {@link ChannelPipelineFactory} which will be used when
-     * a child channel is created.
+     * a child channel is created.  If the {@link Channel} doesn't create
+     * a child channel, this property is not used at all, and therefore will
+     * be ignored.
      */
     void setPipelineFactory(ChannelPipelineFactory pipelineFactory);
 
     /**
-     * Returns the connect timeout of the channel in milliseconds.
+     * Returns the connect timeout of the channel in milliseconds.  If the
+     * {@link Channel} doesn't support connect operation, this property is not
+     * used at all, and therefore will be ignored.
      *
      * @return the connect timeout in milliseconds.  {@code 0} if disabled.
      */
     int getConnectTimeoutMillis();
 
     /**
-     * Sets the connect timeout of the channel in milliseconds.
+     * Sets the connect timeout of the channel in milliseconds.  If the
+     * {@link Channel} doesn't support connect operation, this property is not
+     * used at all, and therefore will be ignored.
      *
      * @param connectTimeoutMillis the connect timeout in milliseconds.
      *                             {@code 0} to disable.
@@ -76,7 +87,8 @@ public interface ChannelConfig {
     /**
      * Returns the write timeout of the channel in milliseconds.  If a write
      * operation is not done within the write timeout, an {@link IOException}
-     * will be raised.
+     * will be raised.  If the {@link Channel} doesn't support write operation,
+     * this property is not used at all, and therefore will be ignored.
      *
      * @return the write timeout in milliseconds.  {@code 0} if disabled.
      */
@@ -85,7 +97,8 @@ public interface ChannelConfig {
     /**
      * Sets the write timeout of the channel in milliseconds.  If a write
      * operation is not done within the write timeout, an {@link IOException}
-     * will be raised.
+     * will be raised.  If the {@link Channel} doesn't support write operation,
+     * this property is not used at all, and therefore will be ignored.
      *
      * @param writeTimeoutMillis the write timeout in milliseconds.
      *                           {@code 0} to disable.

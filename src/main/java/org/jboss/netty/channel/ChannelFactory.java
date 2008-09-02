@@ -26,14 +26,10 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 
 /**
- * Creates a new {@link Channel}.
- * <p>
- * {@link ChannelFactory} is the central interface of a transport
- * implementation.  It creates a {@link Channel} which is associated with a
- * specific communication entity such as a network socket, depending on its
- * implementation.  For example, the {@link NioServerSocketChannelFactory}
- * creates a channel which has a NIO-based server socket as its underlying
- * communication entity.
+ * The main interface to a transport that creates a {@link Channel} associated
+ * with a certain communication entity such as a network socket.  For example,
+ * the {@link NioServerSocketChannelFactory} creates a channel which has a
+ * NIO-based server socket as its underlying communication entity.
  * <p>
  * Once a new {@link Channel} is created, the {@link ChannelPipeline} which
  * was specified as a parameter in the {@link #newChannel(ChannelPipeline)}

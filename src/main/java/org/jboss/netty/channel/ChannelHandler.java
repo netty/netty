@@ -37,6 +37,13 @@ package org.jboss.netty.channel;
  *     a {@link ChannelEvent} fired by a user via the methods in
  *     the {@link Channel} interface and the {@link Channels} helper class.</li>
  * </ul>
+ * <p>
+ * A {@link ChannelHandler} is provided with a {@link ChannelHandlerContext}
+ * object.  The {@link ChannelHandler} is supposed to interact with the
+ * {@link ChannelPipeline} it belongs to via the context object.  Using the
+ * context object, the {@link ChannelHandler} can fire events to the next
+ * or previous handler or modify the behavior of the pipeline by adding or
+ * removing a handler for example.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
