@@ -29,6 +29,8 @@ import java.net.SocketAddress;
  * Handles or intercepts a downstream {@link ChannelEvent}, and fires a
  * {@link ChannelEvent} to the previous or next handler in a
  * {@link ChannelPipeline}.
+ *
+ * <h3>Downstream events</h3>
  * <p>
  * A downstream event is an event which is supposed to be processed from the
  * last handler to the first handler in the {@link ChannelPipeline}.
@@ -70,11 +72,15 @@ import java.net.SocketAddress;
  * </table>
  * <p>
  * Other event types and conditions which were not addressed here will be
- * ignored and discarded.  You also might want to refer to {@link ChannelUpstreamHandler}
- * to see how a {@link ChannelEvent} is interpreted when going upstream.  Also,
- * please refer to the {@link ChannelEvent} documentation to find out what a
- * upstream event and a downstream event are and what fundamental differences
- * they have, if you didn't read yet.
+ * ignored and discarded.
+ *
+ * <h4>Additional resources worth reading</h4>
+ * <p>
+ * You might want to refer to {@link ChannelUpstreamHandler} to see how a
+ * {@link ChannelEvent} is interpreted when going upstream.  Also, please refer
+ * to the {@link ChannelEvent} documentation to find out what a upstream event
+ * and a downstream event are and what fundamental differences they have, if
+ * you didn't read yet.
  *
  * <h3>Firing an event to the previous or next handler</h3>
  * <p>
@@ -85,19 +91,21 @@ import java.net.SocketAddress;
  *
  * <pre>
  * // Sending the event forward (downstream)
- * void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+ * void handleDownstream({@link ChannelHandlerContext} ctx, {@link ChannelEvent} e) throws Exception {
  *     ...
  *     ctx.sendDownstream(e);
  *     ...
  * }
  *
  * // Sending the event backward (upstream)
- * void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+ * void handleDownstream({@link ChannelHandlerContext} ctx, {@link ChannelEvent} e) throws Exception {
  *     ...
  *     ctx.sendUpstream(new DefaultChannelStateEvent(...));
  *     ...
  * }
  * </pre>
+ *
+ * <h4>Using the helper class to fire an event</h4>
  * <p>
  * You will also find various helper methods in {@link Channels} to be useful
  * to generate and fire an artificial or manipulated event.

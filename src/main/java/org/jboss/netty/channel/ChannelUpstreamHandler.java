@@ -35,12 +35,14 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * Handles or intercepts a upstream {@link ChannelEvent}, and fires a
  * {@link ChannelEvent} to the next or previous handler in a
  * {@link ChannelPipeline}.
+ *
+ * <h3>Upstream events</h3>
  * <p>
  * A upstream event is an event which is supposed to be processed from the
  * first handler to the last handler in the {@link ChannelPipeline}.
  * For example, all events fired by an I/O thread are upstream events, and
  * they have the following meaning:
- *
+ * <p>
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
  * <th>Event name</th></th><th>Event type and condition</th><th>Meaning</th>
@@ -94,7 +96,7 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * <p>
  * These two additional event types are used only for a parent channel which
  * can have a child channel (e.g. {@link ServerSocketChannel}).
- *
+ * <p>
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
  * <th>Event name</th><th>Event type and condition</th><th>Meaning</th>
@@ -110,12 +112,16 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * <td>a child {@link Channel} was closed (e.g. the accepted connection was closed.)</td>
  * </tr>
  * </table>
+ *
+ * <h4>Additional resources worth reading</h4>
  * <p>
- * You also might want to refer to {@link ChannelDownstreamHandler} to see
- * how a {@link ChannelEvent} is interpreted when going downstream.  Also,
- * please refer to the {@link ChannelEvent} documentation to find out what a
- * upstream event and a downstream event are and what fundamental differences
- * they have, if you didn't read yet.
+ * You might want to refer to {@link ChannelDownstreamHandler} to see how a
+ * {@link ChannelEvent} is interpreted when going downstream.  Also, please
+ * refer to the {@link ChannelEvent} documentation to find out what a upstream
+ * event and a downstream event are and what fundamental differences they have,
+ * if you didn't read yet.
+ *
+ * <h3>{@link SimpleChannelHandler}</h3>
  * <p>
  * In most cases, you will get to use a {@link SimpleChannelHandler} to
  * implement a upstream handler because it provides an individual handler
@@ -132,19 +138,21 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  *
  * <pre>
  * // Sending the event forward (upstream)
- * void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+ * void handleUpstream({@link ChannelHandlerContext} ctx, {@link ChannelEvent} e) throws Exception {
  *     ...
  *     ctx.sendUpstream(e);
  *     ...
  * }
  *
  * // Sending the event backward (downstream)
- * void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+ * void handleDownstream({@link ChannelHandlerContext} ctx, {@link ChannelEvent} e) throws Exception {
  *     ...
  *     ctx.sendDownstream(new MessageEvent(...));
  *     ...
  * }
  * </pre>
+ *
+ * <h4>Using the helper class to fire an event</h4>
  * <p>
  * You will also find various helper methods in {@link Channels} to be useful
  * to generate and fire an artificial or manipulated event.

@@ -46,6 +46,8 @@ package org.jboss.netty.channel;
  * in the future.  For example, a {@link MessageEvent} represents the
  * notification of a received message when it goes upstream, while it
  * represents the request of writing a message when it goes downstream.
+ *
+ * <h4>Additional resources worth reading</h4>
  * <p>
  * Please refer to the documentation of {@link ChannelHandler} and its sub-types
  * ({@link ChannelUpstreamHandler} for upstream events and

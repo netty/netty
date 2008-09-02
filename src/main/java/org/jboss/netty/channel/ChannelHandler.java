@@ -26,17 +26,18 @@ package org.jboss.netty.channel;
  * Handles or intercepts a {@link ChannelEvent}, and fires a
  * {@link ChannelEvent} to the next or previous handler in a
  * {@link ChannelPipeline}.
+ *
+ * <h3>Sub-types</h3>
  * <p>
  * This is a tag interface.  There are two sub-interfaces which processes
  * a received event actually, one for upstream events and the other for
  * downstream events:
  * <ul>
- * <li>{@link ChannelUpstreamHandler} handles and intercepts
- *     a {@link ChannelEvent} fired by an I/O thread.</li>
- * <li>{@link ChannelDownstreamHandler} handles and intercepts
- *     a {@link ChannelEvent} fired by a user via the methods in
- *     the {@link Channel} interface and the {@link Channels} helper class.</li>
+ * <li>{@link ChannelUpstreamHandler} handles and intercepts a upstream {@link ChannelEvent}.</li>
+ * <li>{@link ChannelDownstreamHandler} handles and intercepts a downstream {@link ChannelEvent}.</li>
  * </ul>
+ *
+ * <h3>The context object</h3>
  * <p>
  * A {@link ChannelHandler} is provided with a {@link ChannelHandlerContext}
  * object.  The {@link ChannelHandler} is supposed to interact with the
@@ -44,6 +45,12 @@ package org.jboss.netty.channel;
  * context object, the {@link ChannelHandler} can fire events to the next
  * or previous handler or modify the behavior of the pipeline by adding or
  * removing a handler for example.
+ *
+ * <h3>Additional resources worth reading</h3>
+ * <p>
+ * Please refer to the {@link ChannelEvent} documentation to find out what a
+ * upstream event and a downstream event are and what fundamental differences
+ * they have, if you didn't read yet.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

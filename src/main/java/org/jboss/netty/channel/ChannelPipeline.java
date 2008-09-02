@@ -27,6 +27,7 @@ import java.util.NoSuchElementException;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.execution.ExecutionHandler;
+import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import org.jboss.netty.handler.ssl.SslHandler;
 
 
@@ -38,6 +39,8 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * <a href="http://java.sun.com/blueprints/corej2eepatterns/Patterns/InterceptingFilter.html">Intercepting
  * Filter</a> pattern to give a user full control over how an event is handled
  * and how the {@link ChannelHandler}s in the pipeline interact with each other.
+ *
+ * <h3>Building a pipeline</h3>
  * <p>
  * A user is supposed to have one or more {@link ChannelHandler}s in a
  * pipeline to receive I/O events (e.g. read) and to request I/O operations
@@ -53,6 +56,16 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * <li>Business Logic Handler - performs the actual business logic
  *                              (e.g. database access).</li>
  * </ol>
+ *
+ * and it could be represented as shown in the following example:
+ *
+ * <pre>
+ * ChannelPipeline pipeline = {@link Channels#pipeline() Channels.pipeline()};
+ * pipeline.addLast("decoder", new MyProtocolDecoder());
+ * pipeline.addLast("encoder", new MyProtocolEncoder());
+ * pipeline.addLast("executor", new {@link ExecutionHandler}(new {@link OrderedMemoryAwareThreadPoolExecutor}(16, 1048576, 1048576)));
+ * pipeline.addLast("handler", new MyBusinessLogicHandler());
+ * </pre>
  *
  * <h3>Thread safety</h3>
  * <p>

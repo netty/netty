@@ -24,6 +24,7 @@ package org.jboss.netty.bootstrap;
 
 import static org.jboss.netty.channel.Channels.*;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -53,7 +54,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * ClientBootstrap b = ...;
  *
  * // Options for a new channel
- * b.setOption("remoteAddress", new InetSocketAddress("example.com", 8080));
+ * b.setOption("remoteAddress", new {@link InetSocketAddress}("example.com", 8080));
  * b.setOption("tcpNoDelay", true);
  * b.setOption("receiveBufferSize", 1048576);
  * </pre>
@@ -68,7 +69,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  *
  * <pre>
  * ClientBootstrap b = ...;
- * ChannelPipeline p = b.getPipeline();
+ * {@link ChannelPipeline} p = b.getPipeline();
  *
  * // Add handlers to the pipeline.
  * p.addLast("encoder", new EncodingHandler());
@@ -84,7 +85,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * ClientBootstrap b = ...;
  * b.setPipelineFactory(new MyPipelineFactory());
  *
- * public class MyPipelineFactory implements ChannelPipelineFactory {
+ * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
  *   // Create a new pipeline for a new channel and configure it here ...
  * }
  * </pre>

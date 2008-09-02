@@ -24,6 +24,7 @@ package org.jboss.netty.bootstrap;
 
 import static org.jboss.netty.channel.Channels.*;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.Map;
@@ -71,7 +72,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * ServerBootstrap b = ...;
  *
  * // Options for a parent channel
- * b.setOption("localAddress", new InetSocketAddress(8080));
+ * b.setOption("localAddress", new {@link InetSocketAddress}(8080));
  * b.setOption("reuseAddress", true);
  *
  * // Options for its children
@@ -102,7 +103,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  *
  * <pre>
  * ServerBootstrap b = ...;
- * ChannelPipeline p = b.getPipeline();
+ * {@link ChannelPipeline} p = b.getPipeline();
  *
  * // Add handlers to the pipeline.
  * p.addLast("encoder", new EncodingHandler());
@@ -118,7 +119,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * ServerBootstrap b = ...;
  * b.setPipelineFactory(new MyPipelineFactory());
  *
- * public class MyPipelineFactory implements ChannelPipelineFactory {
+ * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
  *   // Create a new pipeline for a new child channel and configure it here ...
  * }
  * </pre>

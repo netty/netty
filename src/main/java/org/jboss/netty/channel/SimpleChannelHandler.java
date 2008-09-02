@@ -44,8 +44,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * </p>
  * <pre>public class MyChannelHandler extends SimpleChannelHandler {
  *
- *     public void handleUpstream(
- *             ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+ *     public void handleUpstream({@link ChannelHandlerContext} ctx, {@link ChannelEvent} e) throws Exception {
  *
  *         // Log all channel state changes.
  *         if (e instanceof ChannelStateEvent) {
