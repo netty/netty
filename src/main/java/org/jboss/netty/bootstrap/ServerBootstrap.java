@@ -47,8 +47,8 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
- * Helper class which helps a user create a new server-side {@link Channel}
- * and accept incoming connections.
+ * A helper class which creates a new server-side {@link Channel} and accept
+ * incoming connections.
  *
  * <h3>Parent channel and its children</h3>
  *

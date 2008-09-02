@@ -37,10 +37,10 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.util.MapUtil;
 
 /**
- * Helper class which helps a user initialize a {@link Channel}.  This class
- * provides the common data structure for its subclasses which implement an
- * actual channel initialization from the common data structure.  Please refer
- * to {@link ClientBootstrap} and {@link ServerBootstrap} for client side and
+ * A helper class which initializes a {@link Channel}.  This class provides
+ * the common data structure for its subclasses which implement an actual
+ * channel initialization from the common data structure.  Please refer to
+ * {@link ClientBootstrap} and {@link ServerBootstrap} for client side and
  * server-side channel initialization respectively.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)

@@ -33,7 +33,17 @@ import java.util.NoSuchElementException;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
-
+/**
+ * The default {@link ChannelPipeline} implementation.  It is recommended
+ * to use {@link Channels#pipeline()} to create a new {@link ChannelPipeline}
+ * instance rather than calling the constructor directly.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 public class DefaultChannelPipeline implements ChannelPipeline {
 
     static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);

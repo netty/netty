@@ -26,7 +26,9 @@ import java.nio.ByteOrder;
 
 
 /**
- * Big-endian Java heap buffer.
+ * A big-endian Java heap buffer.  It is recommended to use {@link ChannelBuffers#buffer(int)}
+ * and {@link ChannelBuffers#wrappedBuffer(byte[])} instead of calling the
+ * constructor explicitly.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -35,10 +37,20 @@ import java.nio.ByteOrder;
  */
 public class BigEndianHeapChannelBuffer extends HeapChannelBuffer {
 
+    /**
+     * Creates a new big-endian heap buffer with a newly allocated byte array.
+     *
+     * @param length the length of the new byte array
+     */
     public BigEndianHeapChannelBuffer(int length) {
         super(length);
     }
 
+    /**
+     * Creates a new big-endian heap buffer with an existing byte array.
+     *
+     * @param array the byte array to wrap
+     */
     public BigEndianHeapChannelBuffer(byte[] array) {
         super(array);
     }

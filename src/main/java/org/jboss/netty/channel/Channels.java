@@ -27,6 +27,8 @@ import java.util.Map;
 
 
 /**
+ * Provides various factory methods related with {@link Channel} and
+ * {@link ChannelPipeline}, and fires an I/O event and request.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -39,10 +41,19 @@ public class Channels {
 
     // pipeline factory methods
 
+    /**
+     * Creates a new {@link ChannelPipeline}.
+     */
     public static ChannelPipeline pipeline() {
         return new DefaultChannelPipeline();
     }
 
+    /**
+     * Creates a new {@link ChannelPipeline} which contains the same entries
+     * with the specified {@code pipeline}.  Please note that only the names
+     * and the references of the {@link ChannelHandler}s will be copied; a new
+     * {@link ChannelHandler} instance will never be created.
+     */
     public static ChannelPipeline pipeline(ChannelPipeline pipeline) {
         ChannelPipeline newPipeline = pipeline();
         for (Map.Entry<String, ChannelHandler> e: pipeline.toMap().entrySet()) {
@@ -51,6 +62,13 @@ public class Channels {
         return newPipeline;
     }
 
+    /**
+     * Creates a new {@link ChannelPipelineFactory} which creates a new
+     * {@link ChannelPipeline} which contains the same entries with the
+     * specified {@code pipeline}.  Please note that only the names and the
+     * references of the {@link ChannelHandler}s will be copied; a new
+     * {@link ChannelHandler} instance will never be created.
+     */
     public static ChannelPipelineFactory pipelineFactory(
             final ChannelPipeline pipeline) {
         return new ChannelPipelineFactory() {
@@ -62,14 +80,28 @@ public class Channels {
 
     // future factory methods
 
+    /**
+     * Creates a new uncancellable {@link ChannelFuture} for the specified
+     * {@link Channel}.
+     */
     public static ChannelFuture future(Channel channel) {
         return future(channel, false);
     }
 
+    /**
+     * Creates a new {@link ChannelFuture} for the specified {@link Channel}.
+     *
+     * @param cancellable {@code true} if and only if the returned future
+     *                    can be canceled by {@link ChannelFuture#cancel()}
+     */
     public static ChannelFuture future(Channel channel, boolean cancellable) {
         return new DefaultChannelFuture(channel, cancellable);
     }
 
+    /**
+     * Creates a new {@link ChannelFuture} which is already succeeded for the
+     * specified {@link Channel}.
+     */
     public static ChannelFuture succeededFuture(Channel channel) {
         if (channel instanceof AbstractChannel) {
             return ((AbstractChannel) channel).getSucceededFuture();
@@ -78,22 +110,56 @@ public class Channels {
         }
     }
 
+    /**
+     * Creates a new {@link ChannelFuture} which is already failed for the
+     * specified {@link Channel}.
+     *
+     * @param cause the cause of the failure
+     */
     public static ChannelFuture failedFuture(Channel channel, Throwable cause) {
         return new FailedChannelFuture(channel, cause);
     }
 
     // event factory methods
 
+    /**
+     * Creates a new {@link MessageEvent}
+     *
+     * @param channel the channel which is associated with the event
+     * @param future  the future which will be notified when a message is sent
+     *                (only meaningful when the event is sent downstream)
+     * @param message the received or sent message object
+     *                ('received' when the event is sent upstream, and
+     *                 'sent' when the event is sent downstream)
+     */
     public static MessageEvent messageEvent(Channel channel, ChannelFuture future, Object message) {
         return messageEvent(channel, future, message, null);
     }
 
+    /**
+     * Creates a new {@link MessageEvent}
+     *
+     * @param channel the channel which is associated with the event
+     * @param future  the future which will be notified when a message is sent
+     *                (only meaningful when the event is sent downstream)
+     * @param message the received or sent message object
+     *                ('received' when the event is sent upstream, and
+     *                 'sent' when the event is sent downstream)
+     * @param remoteAddress the source or destination address of the message
+     *                      ('source' when the event is sent upstream, and
+     *                       'destination' when the event is sent downstream)
+     */
     public static MessageEvent messageEvent(Channel channel, ChannelFuture future, Object message, SocketAddress remoteAddress) {
         return new DefaultMessageEvent(channel, future, message, remoteAddress);
     }
 
     // event emission methods
 
+    /**
+     * Fires a {@link SimpleChannelHandler channelOpen} event to the specified
+     * {@link Channel}.  If the specified channel has a parent, a
+     * {@link SimpleChannelHandler childChannelOpen} event will be fired too.
+     */
     public static void fireChannelOpen(Channel channel) {
         if (channel.getParent() != null) {
             fireChildChannelStateChanged(channel.getParent(), channel);
@@ -104,6 +170,12 @@ public class Channels {
                         ChannelState.OPEN, Boolean.TRUE));
     }
 
+    /**
+     * Fires a {@link SimpleChannelHandler channelOpen} event to the specified
+     * {@link ChannelHandlerContext}.  Please note that this method doesn't
+     * fire a {@link SimpleChannelHandler childChannelOpen} event unlike
+     * {@link #fireChannelOpen(Channel)} method.
+     */
     public static void fireChannelOpen(
             ChannelHandlerContext ctx, Channel channel) {
 
@@ -112,6 +184,13 @@ public class Channels {
                 ChannelState.OPEN, Boolean.TRUE));
     }
 
+    /**
+     * Fires a {@link SimpleChannelHandler channelBound} event to the specified
+     * {@link Channel}.
+     *
+     * @param localAddress
+     *        the local address where the specified channel is bound
+     */
     public static void fireChannelBound(Channel channel, SocketAddress localAddress) {
         channel.getPipeline().sendUpstream(
                 new DefaultChannelStateEvent(
@@ -119,6 +198,13 @@ public class Channels {
                         ChannelState.BOUND, localAddress));
     }
 
+    /**
+     * Fires a {@link SimpleChannelHandler channelBound} event to the specified
+     * {@link Channel}.
+     *
+     * @param localAddress
+     *        the local address where the specified channel is bound
+     */
     public static void fireChannelBound(
             ChannelHandlerContext ctx, Channel channel, SocketAddress localAddress) {
 
@@ -336,6 +422,13 @@ public class Channels {
                 channel, future, ChannelState.CONNECTED, null));
     }
 
+    /**
+     * Sends a close request to the specified {@link Channel}.
+     *
+     * @param channel the channel to close
+     *
+     * @return the future which will be notified on closure
+     */
     public static ChannelFuture close(Channel channel) {
         ChannelFuture future = future(channel);
         channel.getPipeline().sendDownstream(new DefaultChannelStateEvent(
@@ -343,6 +436,18 @@ public class Channels {
         return future;
     }
 
+    /**
+     * Sends a close request to the specified {@link ChannelHandlerContext}.
+     * This method is a shortcut to the following code:
+     * <pre>
+     * ctx.sendDownstream(new DefaultChannelStateEvent(
+     *         channel, future, ChannelState.OPEN, Boolean.FALSE));
+     * </pre>
+     *
+     * @param ctx     the context
+     * @param channel the channel to close
+     * @param future  the future which will be notified on closure
+     */
     public static void close(
             ChannelHandlerContext ctx, Channel channel, ChannelFuture future) {
         ctx.sendDownstream(new DefaultChannelStateEvent(

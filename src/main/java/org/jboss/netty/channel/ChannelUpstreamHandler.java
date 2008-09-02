@@ -77,7 +77,7 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * Please note that this doesn't necessarily mean that there's a dedicated
  * thread per {@link Channel}; the I/O thread of some transport can serve more
  * than one {@link Channel} (e.g. NIO transport), while the I/O thread of
- * others can serve only one (e.g. OIO transport).
+ * other transports can serve only one (e.g. OIO transport).
  * <p>
  * If an {@link ExecutionHandler} is added in the {@link ChannelPipeline},
  * {@link #handleUpstream(ChannelHandlerContext, ChannelEvent) handleUpstream}

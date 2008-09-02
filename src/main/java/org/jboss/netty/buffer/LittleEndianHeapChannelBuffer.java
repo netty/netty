@@ -26,7 +26,9 @@ import java.nio.ByteOrder;
 
 
 /**
- * Little-endian Java heap buffer.
+ * A little-endian Java heap buffer.  It is recommended to use {@link ChannelBuffers#buffer(ByteOrder, int)}
+ * and {@link ChannelBuffers#wrappedBuffer(ByteOrder, byte[])} instead of
+ * calling the constructor explicitly.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -35,10 +37,20 @@ import java.nio.ByteOrder;
  */
 public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
 
+    /**
+     * Creates a new little-endian heap buffer with a newly allocated byte array.
+     *
+     * @param length the length of the new byte array
+     */
     public LittleEndianHeapChannelBuffer(int length) {
         super(length);
     }
 
+    /**
+     * Creates a new little-endian heap buffer with an existing byte array.
+     *
+     * @param array the byte array to wrap
+     */
     public LittleEndianHeapChannelBuffer(byte[] array) {
         super(array);
     }

@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * {@link InputStream} which reads data from a {@link ChannelBuffer}.
+ * An {@link InputStream} which reads data from a {@link ChannelBuffer}.
  * <p>
  * A read operation against this stream will occur at the {@code readerIndex}
  * of its underlying buffer and the {@code readerIndex} will increase during

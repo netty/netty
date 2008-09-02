@@ -24,6 +24,19 @@ package org.jboss.netty.channel;
 
 import java.net.SocketAddress;
 
+/**
+ * The default {@link MessageEvent} implementation.  It is recommended to
+ * use {@link Channels#messageEvent(Channel, ChannelFuture, Object)} and
+ * {@link Channels#messageEvent(Channel, ChannelFuture, Object, SocketAddress)}
+ * to create a new {@link MessageEvent} instance rather than calling the
+ * constructor explicitly.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 public class DefaultMessageEvent extends DefaultChannelEvent implements
         MessageEvent {
 

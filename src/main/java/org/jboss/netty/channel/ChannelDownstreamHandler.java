@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.channel;
 
+import java.net.SocketAddress;
+
 
 /**
  * Handles or intercepts a downstream {@link ChannelEvent}, and fires a
@@ -34,7 +36,42 @@ package org.jboss.netty.channel;
  * events.
  * <p>
  * In most common use case of this interface is to intercept an I/O request
- * such as {@link Channel#write(Object)} and {@link Channel#close()}.
+ * such as {@link Channel#write(Object)} and {@link Channel#close()}.  The
+ * reveived {@link ChannelEvent} object is interpreted as described in the
+ * following table:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Event type and condition</th><th>Interperatation</th>
+ * </tr>
+ * <tr>
+ * <td>{@link MessageEvent}</td><td>Send a message to the {@link Channel}.</td>
+ * </tr>
+ * <tr>
+ * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#BOUND}, value={@link SocketAddress})</td>
+ * <td>Bind the {@link Channel} to the specified local address.</td>
+ * </tr>
+ * <tr>
+ * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#BOUND}, value={@code null})</td>
+ * <td>Unbind the {@link Channel} from the current local address.</td>
+ * </tr>
+ * <tr>
+ * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#CONNECTED}, value={@link SocketAddress})</td>
+ * <td>Connect the {@link Channel} to the specified remote address.</td>
+ * </tr>
+ * <tr>
+ * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#CONNECTED}, value={@code null})</td>
+ * <td>Disconnect the {@link Channel} from the current remote address.</td>
+ * </tr>
+ * <tr>
+ * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#OPEN}, value={@code false})</td>
+ * <td>Close the {@link Channel}.</td>
+ * </tr>
+ * </table>
+ * <p>
+ * Other event types and conditions which were not addressed here will be
+ * ignored and discarded.  You also might want to refer to {@link SimpleChannelHandler}
+ * to see how a {@link ChannelEvent} is interpreted when going upstream.
  *
  * <h3>Firing an event to the previous or next handler</h3>
  * <p>
@@ -70,6 +107,9 @@ package org.jboss.netty.channel;
  * proper synchronization in the handler implementation.  Also, please refer to
  * the {@link ChannelPipelineCoverage} annotation to understand the
  * relationship between a handler and its stateful properties.
+ * <p>
+ * Also, please refer to the {@link ChannelPipelineCoverage} annotation to
+ * understand the relationship between a handler and its stateful properties.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

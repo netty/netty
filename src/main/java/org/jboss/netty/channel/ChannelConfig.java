@@ -22,10 +22,15 @@
  */
 package org.jboss.netty.channel;
 
+import java.io.IOException;
 import java.util.Map;
 
 
 /**
+ * The configuration properties of a {@link Channel}.
+ * <p>
+ * Please down-cast to the transport-specific configuration type or use
+ * {@link #setOptions(Map)} to set the transport-specific properties.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -35,11 +40,55 @@ import java.util.Map;
  * @apiviz.has org.jboss.netty.channel.ChannelPipelineFactory
  */
 public interface ChannelConfig {
+
+    /**
+     * Sets the configuration properties from the specified {@link Map}.
+     */
     void setOptions(Map<String, Object> options);
+
+    /**
+     * Returns the {@link ChannelPipelineFactory} which will be used when
+     * a child channel is created.
+     */
     ChannelPipelineFactory getPipelineFactory();
+
+    /**
+     * Sets the {@link ChannelPipelineFactory} which will be used when
+     * a child channel is created.
+     */
     void setPipelineFactory(ChannelPipelineFactory pipelineFactory);
+
+    /**
+     * Returns the connect timeout of the channel in milliseconds.
+     *
+     * @return the connect timeout in milliseconds.  {@code 0} if disabled.
+     */
     int getConnectTimeoutMillis();
+
+    /**
+     * Sets the connect timeout of the channel in milliseconds.
+     *
+     * @param connectTimeoutMillis the connect timeout in milliseconds.
+     *                             {@code 0} to disable.
+     */
     void setConnectTimeoutMillis(int connectTimeoutMillis);
+
+    /**
+     * Returns the write timeout of the channel in milliseconds.  If a write
+     * operation is not done within the write timeout, an {@link IOException}
+     * will be raised.
+     *
+     * @return the write timeout in milliseconds.  {@code 0} if disabled.
+     */
     int getWriteTimeoutMillis();
+
+    /**
+     * Sets the write timeout of the channel in milliseconds.  If a write
+     * operation is not done within the write timeout, an {@link IOException}
+     * will be raised.
+     *
+     * @param writeTimeoutMillis the write timeout in milliseconds.
+     *                           {@code 0} to disable.
+     */
     void setWriteTimeoutMillis(int writeTimeoutMillis);
 }

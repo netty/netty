@@ -30,7 +30,10 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
- * The default {@link ChannelFuture} implementation.
+ * The default {@link ChannelFuture} implementation.  It is recommended to
+ * use {@link Channels#future(Channel)} and {@link Channels#future(Channel, boolean)}
+ * to create a new {@link ChannelFuture} rather than calling the constructor
+ * explicitly.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

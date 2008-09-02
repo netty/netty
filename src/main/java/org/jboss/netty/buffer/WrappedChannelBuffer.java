@@ -23,7 +23,7 @@
 package org.jboss.netty.buffer;
 
 /**
- * Common interface for buffer wrappers and derived buffers.  Most users won't
+ * The common interface for buffer wrappers and derived buffers.  Most users won't
  * need to use this interface.  It's used internally in most cases.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)

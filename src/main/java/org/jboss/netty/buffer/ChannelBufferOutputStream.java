@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 /**
- * {@link OutputStream} which writes data to a {@link ChannelBuffer}.
+ * An {@link OutputStream} which writes data to a {@link ChannelBuffer}.
  * <p>
  * A write operation against this stream will occur at the {@code writerIndex}
  * of its underlying buffer and the {@code writerIndex} will increase during

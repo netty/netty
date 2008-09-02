@@ -42,8 +42,8 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
- * Helper class which helps a user create a new client-side {@link Channel}
- * and make a connection attempt.
+ * A helper class which creates a new client-side {@link Channel} and make a
+ * connection attempt.
  *
  * <h3>Configuring a channel</h3>
  *

@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.channel;
 
+import java.net.SocketAddress;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.logging.InternalLogger;
@@ -29,14 +31,14 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 
 
 /**
- * Generic {@link ChannelUpstreamHandler} implementation that satisfies most
+ * A generic {@link ChannelUpstreamHandler} implementation that satisfies most
  * use cases.  This handler down-casts the received upstream event into more
  * meaningful sub-type event and calls an appropriate handler method with the
  * down-casted event.  The following table shows the provided handler methods:
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>Handler method</th><th>Event type</th><th>Invoked when ...</th>
+ * <th>Handler method</th><th>Event type and condition</th><th>Invoked when ...</th>
  * </tr>
  * <tr>
  * <td>{@link #messageReceived(ChannelHandlerContext, MessageEvent) messageReceived}</td>
@@ -50,42 +52,37 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * </tr>
  * <tr>
  * <td>{@link #channelOpen(ChannelHandlerContext, ChannelStateEvent) channelOpen}</td>
- * <td>{@link ChannelStateEvent}</td>
- * <td>a {@link Channel} is open, but not bound nor connected</td>
- * </tr>
- * <tr>
- * <td>{@link #channelOpen(ChannelHandlerContext, ChannelStateEvent) channelOpen}</td>
- * <td>{@link ChannelStateEvent}</td>
+ * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#OPEN}, value={@code true})</td>
  * <td>a {@link Channel} is open, but not bound nor connected</td>
  * </tr>
  * <tr>
  * <td>{@link #channelBound(ChannelHandlerContext, ChannelStateEvent) channelBound}</td>
- * <td>{@link ChannelStateEvent}</td>
+ * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#BOUND}, value={@link SocketAddress})</td>
  * <td>a {@link Channel} is open and bound to a local address, but not connected</td>
  * </tr>
  * <tr>
  * <td>{@link #channelConnected(ChannelHandlerContext, ChannelStateEvent) channelConnected}</td>
- * <td>{@link ChannelStateEvent}</td>
+ * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#CONNECTED}, value={@link SocketAddress})</td>
  * <td>a {@link Channel} is open, bound to a local address, and connected to a remote address</td>
  * </tr>
  * <tr>
  * <td>{@link #channelInterestChanged(ChannelHandlerContext, ChannelStateEvent) channelInterestedChanged}</td>
- * <td>{@link ChannelStateEvent}</td>
+ * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#INTEREST_OPS}, value=an integer)</td>
  * <td>a {@link Channel}'s {@link Channel#getInterestOps() interestOps} was changed</td>
  * </tr>
  * <tr>
  * <td>{@link #channelDisconnected(ChannelHandlerContext, ChannelStateEvent) channelDisconnected}</td>
- * <td>{@link ChannelStateEvent}</td>
+ * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#CONNECTED}, value={@code null})</td>
  * <td>a {@link Channel} was disconnected from its remote peer</td>
  * </tr>
  * <tr>
  * <td>{@link #channelUnbound(ChannelHandlerContext, ChannelStateEvent) channelUnbound}</td>
- * <td>{@link ChannelStateEvent}</td>
+ * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#BOUND}, value={@code null})</td>
  * <td>a {@link Channel} was unbound from the current local address</td>
  * </tr>
  * <tr>
  * <td>{@link #channelClosed(ChannelHandlerContext, ChannelStateEvent) channelClosed}</td>
- * <td>{@link ChannelStateEvent}</td>
+ * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#OPEN}, value={@code false})</td>
  * <td>a {@link Channel} was closed and all its related resources were released</td>
  * </tr>
  * </table>
@@ -93,23 +90,25 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * <p>
  * These two handler methods are used only for a parent channel which can have
  * a child channel (e.g. {@link ServerSocketChannel}).
- * </p>
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>Handler method</th><th>Event type</th><th>Invoked when ...</th>
+ * <th>Handler method</th><th>Event type and condition</th><th>Invoked when ...</th>
  * </tr>
  * <tr>
  * <td>{@link #childChannelOpen(ChannelHandlerContext, ChildChannelStateEvent) childChannelOpen}</td>
- * <td>{@link ChildChannelStateEvent}</td>
+ * <td>{@link ChildChannelStateEvent}<br/>({@code childChannel.isOpen() = true})</td>
  * <td>a child {@link Channel} was open (e.g. a server channel accepted a connection.)</td>
  * </tr>
  * <tr>
  * <td>{@link #childChannelClosed(ChannelHandlerContext, ChildChannelStateEvent) childChannelClosed}</td>
- * <td>{@link ChildChannelStateEvent}</td>
+ * <td>{@link ChildChannelStateEvent}<br/>({@code childChannel.isOpen() = false})</td>
  * <td>a child {@link Channel} was closed (e.g. the accepted connection was closed.)</td>
  * </tr>
  * </table>
+ * <p>
+ * You also might want to refer to {@link ChannelDownstreamHandler} to see
+ * how a {@link ChannelEvent} is interpreted when going downstream.
  *
  * <h3>Overriding {@link #handleUpstream(ChannelHandlerContext, ChannelEvent) handleUpstream} method</h3>
  * <p>

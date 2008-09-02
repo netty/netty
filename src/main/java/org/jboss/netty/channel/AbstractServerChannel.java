@@ -24,9 +24,19 @@ package org.jboss.netty.channel;
 
 import java.net.SocketAddress;
 
-
-
 /**
+ * A skeletal server-side {@link Channel} implementation.  A server-side
+ * {@link Channel} doesn't allow the following operations:
+ * <ul>
+ * <li>{@link #connect(SocketAddress)}</li>
+ * <li>{@link #disconnect()}</li>
+ * <li>{@link #getInterestOps()}</li>
+ * <li>{@link #setInterestOps(int)}</li>
+ * <li>{@link #write(Object)}</li>
+ * <li>{@link #write(Object, SocketAddress)}</li>
+ * <li>and the shortcut methods which calls the methods mentioned above
+ * </ul>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -35,6 +45,17 @@ import java.net.SocketAddress;
  */
 public abstract class AbstractServerChannel extends AbstractChannel {
 
+    /**
+     * Creates a new instance.
+     *
+     * @param factory
+     *        the factory which created this channel
+     * @param pipeline
+     *        the pipeline which is going to be attached to this channel
+     * @param sink
+     *        the sink which will receive downstream events from the pipeline
+     *        and send upstream events to the pipeline
+     */
     protected AbstractServerChannel(
             ChannelFactory factory,
             ChannelPipeline pipeline,

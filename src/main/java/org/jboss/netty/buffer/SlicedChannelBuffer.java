@@ -32,7 +32,10 @@ import java.nio.channels.ScatteringByteChannel;
 
 
 /**
- * Derived buffer which exposes its parent's sub-region only.
+ * A derived buffer which exposes its parent's sub-region only.  It is
+ * recommended to use {@link ChannelBuffer#slice()} and
+ * {@link ChannelBuffer#slice(int, int)} instead of calling the constructor
+ * explicitly.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

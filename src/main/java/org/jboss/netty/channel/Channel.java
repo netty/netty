@@ -27,6 +27,17 @@ import java.util.UUID;
 
 
 /**
+ * A nexus to a network socket or a component which is capable of predefined
+ * I/O operations such as read, write, connect, and bind.
+ * <p>
+ * A channel provides a user:
+ * <ul>
+ * <li>the current state of the channel,</li>
+ * <li>the configuration parameters of the channel,</li>
+ * <li>the I/O operations that the channel supports, and</li>
+ * <li>the {@link ChannelPipeline} which handles all I/O events and requests
+ *     associated with the channel.</li>
+ * </ul>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -38,35 +49,217 @@ import java.util.UUID;
  * @apiviz.composedOf org.jboss.netty.channel.ChannelPipeline
  */
 public interface Channel {
+
+    /**
+     * The {@link #getInterestOps() interestOps} value which tells that the
+     * I/O thread will not read a message from the channel but will perform
+     * the requested write operation immediately.
+     */
     static int OP_NONE = 0;
+
+    /**
+     * The {@link #getInterestOps() interestOps} value which tells that the
+     * I/O thread will read a message from the channel and will perform the
+     * requested write operation immediately.
+     */
     static int OP_READ = 1;
+
+    /**
+     * The {@link #getInterestOps() interestOps} value which tells that the
+     * I/O thread will not read a message from the channel and will not perform
+     * the requested write operation immediately.  Any write requests made when
+     * {@link #OP_WRITE} flag is set are queued until the I/O thread is ready
+     * to process the queued write requests.
+     */
     static int OP_WRITE = 4;
+
+    /**
+     * The {@link #getInterestOps() interestOps} value which tells that the
+     * I/O thread will read a message from the channel but will not perform
+     * the requested write operation immediately.  Any write requests made when
+     * {@link #OP_WRITE} flag is set are queued until the I/O thread is ready
+     * to process the queued write requests.
+     */
     static int OP_READ_WRITE = OP_READ | OP_WRITE;
 
+    /**
+     * Returns the {@link UUID} of this channel.
+     */
     UUID getId();
+
+    /**
+     * Returns the {@link ChannelFactory} which created this channel.
+     */
     ChannelFactory getFactory();
+
+    /**
+     * Returns the parent of this channel.
+     *
+     * @return the parent channel.
+     *         {@code null} if this channel doesn't have a parent channel.
+     */
     Channel getParent();
+
+    /**
+     * Returns the configuration of this channel.
+     */
     ChannelConfig getConfig();
+
+    /**
+     * Returns the {@link ChannelPipeline} which handles {@link ChannelEvent}s
+     * associated with this channel.
+     */
     ChannelPipeline getPipeline();
 
+    /**
+     * Return {@code true} if and only if this channel is open.
+     */
     boolean isOpen();
+
+    /**
+     * Return {@code true} if and only if this channel is bound to a
+     * {@linkplain #getLocalAddress() local address}.
+     */
     boolean isBound();
+
+    /**
+     * Return {@code true} if and only if this channel is connected to a
+     * {@linkplain #getRemoteAddress() remote address}.
+     */
     boolean isConnected();
 
+    /**
+     * Returns the local address where this channel is bound to.
+     *
+     * @return the local address of this channel.
+     *         {@code null} if this channel is not bound.
+     */
     SocketAddress getLocalAddress();
+
+    /**
+     * Returns the remote address where this channel is connected to.
+     *
+     * @return the remote address of this channel.
+     *         {@code null} if this channel is not connected.
+     */
     SocketAddress getRemoteAddress();
 
+    /**
+     * Sends a message to this channel asynchronously.
+     *
+     * @param message the message to write
+     *
+     * @return the {@link ChannelFuture} which will be notified when the
+     *         write request succeeds or fails
+     */
     ChannelFuture write(Object message);
+
+    /**
+     * Sends a message to this channel asynchronously.  It has an additional
+     * parameter that allows a user to specify where to send the specified
+     * message instead of this channel's current remote address.
+     *
+     * @param message       the message to write
+     * @param remoteAddress where to send the specified message
+     *
+     * @return the {@link ChannelFuture} which will be notified when the
+     *         write request succeeds or fails
+     */
     ChannelFuture write(Object message, SocketAddress remoteAddress);
 
+    /**
+     * Binds this channel to the specified local address asynchronously.
+     *
+     * @param localAddress where to bind
+     *
+     * @return the {@link ChannelFuture} which will be notified when the
+     *         bind request succeeds or fails
+     */
     ChannelFuture bind(SocketAddress localAddress);
+
+    /**
+     * Connects this channel to the specified remote address asynchronously.
+     *
+     * @param remoteAddress where to connect
+     *
+     * @return the {@link ChannelFuture} which will be notified when the
+     *         connection request succeeds or fails
+     */
     ChannelFuture connect(SocketAddress remoteAddress);
+
+    /**
+     * Disconnects this channel from the current remote address asynchronously.
+     *
+     * @return the {@link ChannelFuture} which will be notified when the
+     *         disconnection request succeeds or fails
+     */
     ChannelFuture disconnect();
+
+    /**
+     * Closes this channel asynchronously.  If this channel is bound or
+     * connected, it will be disconnected and unbound first.
+     *
+     * @return the {@link ChannelFuture} which will be notified when the
+     *         close request succeeds or fails
+     */
     ChannelFuture close();
 
+    /**
+     * Returns the current {@code interestOps} of this channel.
+     *
+     * @return {@link #OP_NONE}, {@link #OP_READ}, {@link #OP_WRITE}, or
+     *         {@link #OP_READ_WRITE}
+     */
     int getInterestOps();
+
+    /**
+     * Returns {@code true} if and only if the I/O thread will read a message
+     * from this channel.  This method is a shortcut to the following code:
+     * <pre>
+     * return (getInterestOps() & OP_READ) != 0;
+     * </pre>
+     */
     boolean isReadable();
+
+    /**
+     * Returns {@code true} if and only if the I/O thread will perform the
+     * requested write operation immediately.  Any write requests made when
+     * this method returns {@code false} are queued until the I/O thread is
+     * ready to process the queued write requests.  This method is a shortcut
+     * to the following code:
+     * <pre>
+     * return (getInterestOps() & OP_WRITE) != 0;
+     * </pre>
+     */
     boolean isWritable();
+
+    /**
+     * Changes the {@code interestOps} of this channel asynchronously.
+     *
+     * @param interestOps the new {@code interestOps}
+     *
+     * @return the {@link ChannelFuture} which will be notified when the
+     *         {@code interestOps} change request succeeds or fails
+     */
     ChannelFuture setInterestOps(int interestOps);
+
+    /**
+     * Suspends or resumes the read operation of the I/O thread asynchronously.
+     * This method is a shortcut to the following code:
+     * <pre>
+     * int interestOps = getInterestOps();
+     * if (readable) {
+     *     setInterestOps(interestOps | OP_READ);
+     * } else {
+     *     setInterestOps(interestOps & ~OP_READ);
+     * }
+     * </pre>
+     *
+     * @param readable {@code true} to resume the read operation and
+     *                 {@code false} to suspend the read operation
+     *
+     * @return the {@link ChannelFuture} which will be notified when the
+     *         {@code interestOps} change request succeeds or fails
+     */
     ChannelFuture setReadable(boolean readable);
 }

@@ -32,7 +32,7 @@ import java.util.NoSuchElementException;
 
 
 /**
- * Skeletal implementation of a buffer.
+ * A skeletal implementation of a buffer.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -535,6 +535,11 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
                ')';
     }
 
+    /**
+     * Throws an {@link IndexOutOfBoundsException} is the current
+     * {@linkplain #readableBytes() readable bytes} of this buffer is less
+     * than the specified value.
+     */
     protected void checkReadableBytes(int minimumReadableBytes) {
         if (readableBytes() < minimumReadableBytes) {
             throw new IndexOutOfBoundsException();

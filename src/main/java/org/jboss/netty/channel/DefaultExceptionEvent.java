@@ -24,7 +24,15 @@ package org.jboss.netty.channel;
 
 import org.jboss.netty.util.StackTraceSimplifier;
 
-
+/**
+ * The default {@link ExceptionEvent} implementation.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 public class DefaultExceptionEvent extends DefaultChannelEvent implements
         ExceptionEvent {
 

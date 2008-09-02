@@ -36,7 +36,9 @@ import java.util.List;
 
 
 /**
- * Virtual buffer which shows multiple buffers as a single merged buffer.
+ * A virtual buffer which shows multiple buffers as a single merged buffer.  It
+ * is recommended to use {@link ChannelBuffers#wrappedBuffer(ChannelBuffer...)}
+ * instead of calling the constructor explicitly.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

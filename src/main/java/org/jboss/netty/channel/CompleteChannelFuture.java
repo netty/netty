@@ -28,7 +28,7 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
- * Skeletal {@link ChannelFuture} implementation which represents a future
+ * A skeletal {@link ChannelFuture} implementation which represents a future
  * which is complete (done) already.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)

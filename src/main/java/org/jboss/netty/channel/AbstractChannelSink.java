@@ -25,6 +25,7 @@ package org.jboss.netty.channel;
 import static org.jboss.netty.channel.Channels.*;
 
 /**
+ * A skeletal {@link ChannelSink} implementation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -33,6 +34,20 @@ import static org.jboss.netty.channel.Channels.*;
  */
 public abstract class AbstractChannelSink implements ChannelSink {
 
+    /**
+     * Creates a new instance.
+     */
+    protected AbstractChannelSink() {
+        super();
+    }
+
+    /**
+     * Fires an {@link ExceptionEvent} upstream with the specified {@code cause}.
+     *
+     * @param event the {@link ChannelEvent} which caused a
+     *              {@link ChannelHandler} to raise an exception
+     * @param cause the exception raised by a {@link ChannelHandler}
+     */
     public void exceptionCaught(ChannelPipeline pipeline,
             ChannelEvent event, ChannelPipelineException cause) throws Exception {
         Throwable actualCause = cause.getCause();

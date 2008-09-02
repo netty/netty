@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.jboss.netty.util.TimeBasedUuidGenerator;
 
 /**
+ * A skeletal {@link Channel} implementation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -50,6 +51,19 @@ public abstract class AbstractChannel implements Channel, Comparable<Channel> {
     /** Cache for the string representation of this channel */
     private String strVal;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param parent
+     *        the parent of this channel. {@code null} if there's no parent.
+     * @param factory
+     *        the factory which created this channel
+     * @param pipeline
+     *        the pipeline which is going to be attached to this channel
+     * @param sink
+     *        the sink which will receive downstream events from the pipeline
+     *        and send upstream events to the pipeline
+     */
     protected AbstractChannel(
             Channel parent, ChannelFactory factory,
             ChannelPipeline pipeline, ChannelSink sink) {
@@ -76,24 +90,42 @@ public abstract class AbstractChannel implements Channel, Comparable<Channel> {
         return pipeline;
     }
 
+    /**
+     * Returns the cached {@link SucceededChannelFuture} instance.
+     */
     protected ChannelFuture getSucceededFuture() {
         return succeededFuture;
     }
 
+    /**
+     * Returns the {@link FailedChannelFuture} whose cause is a
+     * {@link UnsupportedOperationException}.
+     */
     protected ChannelFuture getUnsupportedOperationFuture() {
         return new FailedChannelFuture(this, new UnsupportedOperationException());
     }
 
+    /**
+     * Returns the {@linkplain System#identityHashCode(Object) identity hash code}
+     * of this channel.
+     */
     @Override
     public final int hashCode() {
         return System.identityHashCode(this);
     }
 
+    /**
+     * Returns if and only if the specified object is identical with this
+     * channel (i.e. {@code this == o}).
+     */
     @Override
     public final boolean equals(Object o) {
         return this == o;
     }
 
+    /**
+     * Compares the {@linkplain #getId() ID} of the two channel.
+     */
     public final int compareTo(Channel o) {
         return getId().compareTo(o.getId());
     }
@@ -102,6 +134,14 @@ public abstract class AbstractChannel implements Channel, Comparable<Channel> {
         return !closed.get();
     }
 
+    /**
+     * Marks this channel as closed.  This method is intended to be called by
+     * an internal component - please do not call it unless you know what you
+     * are doing.
+     *
+     * @return {@code true} if and only if this channel was not marked as
+     *                      closed yet
+     */
     protected boolean setClosed() {
         return closed.compareAndSet(false, true);
     }
@@ -130,6 +170,11 @@ public abstract class AbstractChannel implements Channel, Comparable<Channel> {
         return Channels.setInterestOps(this, interestOps);
     }
 
+    /**
+     * Sets the {@link #getInterestOps() interestOps} property of this channel
+     * immediately.  This method is intended to be called by an internal
+     * component - please do not call it unless you know what you are doing.
+     */
     protected void setInterestOpsNow(int interestOps) {
         this.interestOps = interestOps;
     }
@@ -158,6 +203,12 @@ public abstract class AbstractChannel implements Channel, Comparable<Channel> {
         return Channels.write(this, message, remoteAddress);
     }
 
+    /**
+     * Returns the {@link String} representation of this channel.  The returned
+     * string contains the {@linkplain #getId() ID}, {@linkplain #getLocalAddress() local address},
+     * and {@linkplain #getRemoteAddress() remote address} of this channel for
+     * easier identification.
+     */
     @Override
     public String toString() {
         if (strVal != null) {

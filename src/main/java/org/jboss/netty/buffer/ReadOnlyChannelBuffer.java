@@ -31,7 +31,9 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
 /**
- * Derived buffer which forbids any write requests to its parent.
+ * A derived buffer which forbids any write requests to its parent.  It is
+ * recommended to use {@link ChannelBuffers#unmodifiableBuffer(ChannelBuffer)}
+ * instead of calling the constructor explicitly.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

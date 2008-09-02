@@ -35,7 +35,7 @@ package org.jboss.netty.channel;
  *     a {@link ChannelEvent} fired by an I/O thread.</li>
  * <li>{@link ChannelDownstreamHandler} handles and intercepts
  *     a {@link ChannelEvent} fired by a user via the methods in
- *     the {@link Channel} interface and the {@link Channels} utility class.</li>
+ *     the {@link Channel} interface and the {@link Channels} helper class.</li>
  * </ul>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)

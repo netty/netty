@@ -32,7 +32,10 @@ import java.nio.channels.ScatteringByteChannel;
 
 
 /**
- * Derived buffer which hides its parent's tail data beyond a certain index.
+ * A derived buffer which hides its parent's tail data beyond a certain index.
+ * It is recommended to use {@link ChannelBuffer#slice()} and
+ * {@link ChannelBuffer#slice(int, int)} instead of calling the constructor
+ * explicitly.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

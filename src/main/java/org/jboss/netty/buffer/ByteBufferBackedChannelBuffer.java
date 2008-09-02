@@ -33,7 +33,9 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.UnsupportedCharsetException;
 
 /**
- * NIO direct buffer based buffer.
+ * A NIO {@link ByteBuffer} based buffer.  It is recommended to use {@link ChannelBuffers#directBuffer(int)}
+ * and {@link ChannelBuffers#wrappedBuffer(ByteBuffer)} instead of calling the
+ * constructor explicitly.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -46,6 +48,9 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     private final ByteBuffer buffer;
     private final int capacity;
 
+    /**
+     * Creates a new buffer which wraps the specified buffer's slice.
+     */
     public ByteBufferBackedChannelBuffer(ByteBuffer buffer) {
         if (buffer == null) {
             throw new NullPointerException("buffer");

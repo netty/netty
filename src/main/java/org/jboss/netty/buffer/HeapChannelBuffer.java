@@ -32,7 +32,7 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.UnsupportedCharsetException;
 
 /**
- * Skeletal implementation for Java heap buffers.
+ * A skeletal implementation for Java heap buffers.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -41,16 +41,36 @@ import java.nio.charset.UnsupportedCharsetException;
  */
 public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
 
+    /**
+     * The underlying heap byte array that this buffer is wrapping.
+     */
     protected final byte[] array;
 
+    /**
+     * Creates a new heap buffer with a newly allocated byte array.
+     *
+     * @param length the length of the new byte array
+     */
     public HeapChannelBuffer(int length) {
         this(new byte[length], 0, 0);
     }
 
+    /**
+     * Creates a new heap buffer with an existing byte array.
+     *
+     * @param array the byte array to wrap
+     */
     public HeapChannelBuffer(byte[] array) {
         this(array, 0, array.length);
     }
 
+    /**
+     * Creates a new heap buffer with an existing byte array.
+     *
+     * @param array        the byte array to wrap
+     * @param readerIndex  the initial reader index of this buffer
+     * @param writerIndex  the initial writer index of this buffer
+     */
     protected HeapChannelBuffer(byte[] array, int readerIndex, int writerIndex) {
         if (array == null) {
             throw new NullPointerException("array");
