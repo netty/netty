@@ -22,6 +22,7 @@
  */
 package org.jboss.netty.channel;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.UUID;
 
@@ -113,24 +114,27 @@ public interface Channel {
     ChannelPipeline getPipeline();
 
     /**
-     * Return {@code true} if and only if this channel is open.
+     * Returns {@code true} if and only if this channel is open.
      */
     boolean isOpen();
 
     /**
-     * Return {@code true} if and only if this channel is bound to a
+     * Returns {@code true} if and only if this channel is bound to a
      * {@linkplain #getLocalAddress() local address}.
      */
     boolean isBound();
 
     /**
-     * Return {@code true} if and only if this channel is connected to a
+     * Returns {@code true} if and only if this channel is connected to a
      * {@linkplain #getRemoteAddress() remote address}.
      */
     boolean isConnected();
 
     /**
-     * Returns the local address where this channel is bound to.
+     * Returns the local address where this channel is bound to.  The returned
+     * {@link SocketAddress} is supposed to be down-cast into more concrete
+     * type such as {@link InetSocketAddress} to retrieve the detailed
+     * information.
      *
      * @return the local address of this channel.
      *         {@code null} if this channel is not bound.
@@ -138,7 +142,10 @@ public interface Channel {
     SocketAddress getLocalAddress();
 
     /**
-     * Returns the remote address where this channel is connected to.
+     * Returns the remote address where this channel is connected to.  The
+     * returned {@link SocketAddress} is supposed to be down-cast into more
+     * concrete type such as {@link InetSocketAddress} to retrieve the detailed
+     * information.
      *
      * @return the remote address of this channel.
      *         {@code null} if this channel is not connected.
@@ -152,6 +159,8 @@ public interface Channel {
      *
      * @return the {@link ChannelFuture} which will be notified when the
      *         write request succeeds or fails
+     *
+     * @throws NullPointerException if the specified message is {@code null}
      */
     ChannelFuture write(Object message);
 
@@ -161,10 +170,14 @@ public interface Channel {
      * message instead of this channel's current remote address.
      *
      * @param message       the message to write
-     * @param remoteAddress where to send the specified message
+     * @param remoteAddress where to send the specified message.
+     *                      This method is identical to {@link #write(Object)}
+     *                      if {@code null} is specified here.
      *
      * @return the {@link ChannelFuture} which will be notified when the
      *         write request succeeds or fails
+     *
+     * @throws NullPointerException if the specified message is {@code null}
      */
     ChannelFuture write(Object message, SocketAddress remoteAddress);
 
@@ -175,6 +188,8 @@ public interface Channel {
      *
      * @return the {@link ChannelFuture} which will be notified when the
      *         bind request succeeds or fails
+     *
+     * @throws NullPointerException if the specified address is {@code null}
      */
     ChannelFuture bind(SocketAddress localAddress);
 
@@ -185,6 +200,8 @@ public interface Channel {
      *
      * @return the {@link ChannelFuture} which will be notified when the
      *         connection request succeeds or fails
+     *
+     * @throws NullPointerException if the specified address is {@code null}
      */
     ChannelFuture connect(SocketAddress remoteAddress);
 

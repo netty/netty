@@ -22,8 +22,9 @@
  */
 package org.jboss.netty.channel;
 
-
 /**
+ * The context of a {@link ChannelHandler} which enables the interaction with
+ * its {@link ChannelPipeline}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -33,13 +34,46 @@ package org.jboss.netty.channel;
  * @apiviz.owns org.jboss.netty.channel.ChannelHandler
  */
 public interface ChannelHandlerContext {
+
+    /**
+     * Returns the {@link ChannelPipeline} that the {@link ChannelHandler}
+     * belongs to.
+     */
     ChannelPipeline getPipeline();
 
+    /**
+     * Returns the name of the {@link ChannelHandler} in the
+     * {@link ChannelPipeline}.
+     */
     String getName();
+
+    /**
+     * Returns the {@link ChannelHandler} that this context object is
+     * serving.
+     */
     ChannelHandler getHandler();
+
+    /**
+     * Returns {@code true} if and only if the {@link ChannelHandler} is an
+     * instance of {@link ChannelUpstreamHandler}.
+     */
     boolean canHandleUpstream();
+
+    /**
+     * Returns {@code true} if and only if the {@link ChannelHandler} is an
+     * instance of {@link ChannelDownstreamHandler}.
+     */
     boolean canHandleDownstream();
 
+    /**
+     * Sends the specified {@link ChannelEvent} to the next handler in the
+     * {@link ChannelPipeline}.
+     */
     void sendUpstream(ChannelEvent e);
+
+    /**
+     * Sends the specified {@link ChannelEvent} to the previous handler in the
+     * {@link ChannelPipeline}.
+     */
     void sendDownstream(ChannelEvent e);
 }

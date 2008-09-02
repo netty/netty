@@ -23,6 +23,9 @@
 package org.jboss.netty.channel;
 
 /**
+ * A {@link ChannelException} which is thrown when a {@link ChannelPipeline}
+ * failed to process a {@link ChannelEvent} or when a {@link ChannelPipelineFactory}
+ * failed to initialize a {@link ChannelPipeline}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -35,18 +38,30 @@ public class ChannelPipelineException extends ChannelException {
 
     private static final long serialVersionUID = 3379174210419885980L;
 
+    /**
+     * Creates a new instance.
+     */
     public ChannelPipelineException() {
         super();
     }
 
+    /**
+     * Creates a new instance.
+     */
     public ChannelPipelineException(String message, Throwable cause) {
         super(message, cause);
     }
 
+    /**
+     * Creates a new instance.
+     */
     public ChannelPipelineException(String message) {
         super(message);
     }
 
+    /**
+     * Creates a new instance.
+     */
     public ChannelPipelineException(Throwable cause) {
         super(cause);
     }

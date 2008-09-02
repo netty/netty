@@ -23,6 +23,7 @@
 package org.jboss.netty.channel;
 
 /**
+ * A {@link RuntimeException} which is thrown when an I/O operation fails.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -35,18 +36,30 @@ public class ChannelException extends RuntimeException {
 
     private static final long serialVersionUID = 2908618315971075004L;
 
+    /**
+     * Creates a new exception.
+     */
     public ChannelException() {
         super();
     }
 
+    /**
+     * Creates a new exception.
+     */
     public ChannelException(String message, Throwable cause) {
         super(message, cause);
     }
 
+    /**
+     * Creates a new exception.
+     */
     public ChannelException(String message) {
         super(message);
     }
 
+    /**
+     * Creates a new exception.
+     */
     public ChannelException(Throwable cause) {
         super(cause);
     }

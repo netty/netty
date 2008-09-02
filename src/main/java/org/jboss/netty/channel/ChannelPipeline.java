@@ -125,37 +125,176 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * @apiviz.uses       org.jboss.netty.channel.ChannelSink - - sends events downstream
  */
 public interface ChannelPipeline {
+
+    /**
+     * Inserts a {@link ChannelHandler} at the first position of this pipeline.
+     *
+     * @param name     the name of the handler to insert first
+     * @param handler  the handler to insert first
+     */
     void addFirst (String name, ChannelHandler handler);
+
+    /**
+     * Appends a {@link ChannelHandler} at the last position of this pipeline.
+     *
+     * @param name     the name of the handler to append
+     * @param handler  the handler to append
+     */
     void addLast  (String name, ChannelHandler handler);
+
+    /**
+     * Inserts a {@link ChannelHandler} before an existing handler of this
+     * pipeline.
+     *
+     * @param baseName  the name of the existing handler
+     * @param name      the name of the handler to insert before
+     * @param handler   the handler to insert before
+     */
     void addBefore(String baseName, String name, ChannelHandler handler);
+
+    /**
+     * Inserts a {@link ChannelHandler} after an existing handler of this
+     * pipeline.
+     *
+     * @param baseName  the name of the existing handler
+     * @param name      the name of the handler to insert after
+     * @param handler   the handler to insert after
+     */
     void addAfter (String baseName, String name, ChannelHandler handler);
 
+    /**
+     * Removes the specified {@link ChannelHandler} from this pipeline.
+     */
     void remove(ChannelHandler handler);
+
+    /**
+     * Removes the {@link ChannelHandler} with the specified name from this
+     * pipeline.
+     *
+     * @return the removed handler
+     */
     ChannelHandler remove(String name);
+
+    /**
+     * Removes the {@link ChannelHandler} of the specified type from this
+     * pipeline
+     *
+     * @param <T>          the type of the handler
+     * @param handlerType  the type of the handler
+     *
+     * @return the removed handler
+     */
     <T extends ChannelHandler> T remove(Class<T> handlerType);
+
+    /**
+     * Removes the first {@link ChannelHandler} in this pipeline.
+     *
+     * @return the removed handler
+     */
     ChannelHandler removeFirst();
+
+    /**
+     * Removes the last {@link ChannelHandler} in this pipeline.
+     *
+     * @return the removed handler
+     */
     ChannelHandler removeLast();
 
+    /**
+     * Replaces the specified {@link ChannelHandler} with a new handler in
+     * this pipeline.
+     */
     void replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler);
+
+    /**
+     * Replaces the {@link ChannelHandler} of the specified name with a new
+     * handler in this pipeline.
+     *
+     * @return the removed handler
+     */
     ChannelHandler replace(String oldName, String newName, ChannelHandler newHandler);
+
+    /**
+     * Replaces the {@link ChannelHandler} of the specified type with a new
+     * handler in this pipeline.
+     *
+     * @return the removed handler
+     */
     <T extends ChannelHandler> T replace(Class<T> oldHandlerType, String newName, ChannelHandler newHandler);
 
+    /**
+     * Returns the first {@link ChannelHandler} in this pipeline.
+     */
     ChannelHandler getFirst();
+
+    /**
+     * Returns the last {@link ChannelHandler} in this pipeline.
+     */
     ChannelHandler getLast();
 
+    /**
+     * Returns the {@link ChannelHandler} with the specified name in this
+     * pipeline.
+     */
     ChannelHandler get(String name);
+
+    /**
+     * Returns the {@link ChannelHandler} of the specified type in this
+     * pipeline.
+     */
     <T extends ChannelHandler> T get(Class<T> handlerType);
 
+    /**
+     * Returns the context object of the specified {@link ChannelHandler} in
+     * this pipeline.
+     */
     ChannelHandlerContext getContext(ChannelHandler handler);
+
+    /**
+     * Returns the context object of the {@link ChannelHandler} with the
+     * specified name in this pipeline.
+     */
     ChannelHandlerContext getContext(String name);
+
+    /**
+     * Returns the context object of the {@link ChannelHandler} of the
+     * specified type in this pipeline.
+     */
     ChannelHandlerContext getContext(Class<? extends ChannelHandler> handlerType);
 
+
+    /**
+     * Fires the specified {@link ChannelEvent} to the first
+     * {@link ChannelUpstreamHandler} in this pipeline.
+     */
     void sendUpstream(ChannelEvent e);
+
+    /**
+     * Fires the specified {@link ChannelEvent} to the last
+     * {@link ChannelDownstreamHandler} in this pipeline.
+     */
     void sendDownstream(ChannelEvent e);
 
+    /**
+     * Returns the {@link Channel} that this pipeline is attached to.
+     */
     Channel getChannel();
+
+    /**
+     * Returns the {@link ChannelSink} that this pipeline is attached to.
+     */
     ChannelSink getSink();
+
+    /**
+     * Attaches this pipeline to the specified {@link Channel} and
+     * {@link ChannelSink}.  Once a pipeline is attached, it can't be detached
+     * nor attached again.
+     */
     void attach(Channel channel, ChannelSink sink);
 
+    /**
+     * Converts this pipeline into an ordered {@link Map} whose keys are
+     * handler names and whose values are handlers.
+     */
     Map<String, ChannelHandler> toMap();
 }

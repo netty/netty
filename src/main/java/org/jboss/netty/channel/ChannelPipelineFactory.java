@@ -23,6 +23,7 @@
 package org.jboss.netty.channel;
 
 /**
+ * Creates a new {@link ChannelPipeline} for a new {@link Channel}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -32,5 +33,9 @@ package org.jboss.netty.channel;
  * @apiviz.has org.jboss.netty.channel.ChannelPipeline oneway - - creates
  */
 public interface ChannelPipelineFactory {
+
+    /**
+     * Returns a newly created {@link ChannelPipeline}.
+     */
     ChannelPipeline getPipeline() throws Exception;
 }

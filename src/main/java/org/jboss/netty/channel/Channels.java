@@ -213,6 +213,13 @@ public class Channels {
                 ChannelState.BOUND, localAddress));
     }
 
+    /**
+     * Fires a {@link SimpleChannelHandler channelConnected} event to the
+     * specified {@link Channel}.
+     *
+     * @param remoteAddress
+     *        the remote address where the specified channel is connected
+     */
     public static void fireChannelConnected(Channel channel, SocketAddress remoteAddress) {
         channel.getPipeline().sendUpstream(
                 new DefaultChannelStateEvent(
@@ -220,6 +227,13 @@ public class Channels {
                         ChannelState.CONNECTED, remoteAddress));
     }
 
+    /**
+     * Fires a {@link SimpleChannelHandler channelConnected} event to the
+     * specified {@link ChannelHandlerContext}.
+     *
+     * @param remoteAddress
+     *        the remote address where the specified channel is connected
+     */
     public static void fireChannelConnected(
             ChannelHandlerContext ctx, Channel channel, SocketAddress remoteAddress) {
 
@@ -228,10 +242,24 @@ public class Channels {
                 ChannelState.CONNECTED, remoteAddress));
     }
 
+    /**
+     * Fires a {@link SimpleChannelHandler messageReceived} event to the
+     * specified {@link Channel}.
+     *
+     * @param message  the received message
+     */
     public static void fireMessageReceived(Channel channel, Object message) {
         fireMessageReceived(channel, message, null);
     }
 
+    /**
+     * Fires a {@link SimpleChannelHandler messageReceived} event to the
+     * specified {@link Channel}.
+     *
+     * @param message        the received message
+     * @param remoteAddress  the remote address where the received message
+     *                       came from
+     */
     public static void fireMessageReceived(Channel channel, Object message, SocketAddress remoteAddress) {
         channel.getPipeline().sendUpstream(
                 new DefaultMessageEvent(
@@ -239,12 +267,26 @@ public class Channels {
                         message, remoteAddress));
     }
 
+    /**
+     * Fires a {@link SimpleChannelHandler messageReceived} event to the
+     * specified {@link ChannelHandlerContext}.
+     *
+     * @param message  the received message
+     */
     public static void fireMessageReceived(
             ChannelHandlerContext ctx, Channel channel, Object message) {
         ctx.sendUpstream(new DefaultMessageEvent(
                 channel, succeededFuture(channel), message, null));
     }
 
+    /**
+     * Fires a {@link SimpleChannelHandler messageReceived} event to the
+     * specified {@link ChannelHandlerContext}.
+     *
+     * @param message        the received message
+     * @param remoteAddress  the remote address where the received message
+     *                       came from
+     */
     public static void fireMessageReceived(
             ChannelHandlerContext ctx, Channel channel,
             Object message, SocketAddress remoteAddress) {
@@ -252,6 +294,12 @@ public class Channels {
                 channel, succeededFuture(channel), message, remoteAddress));
     }
 
+    /**
+     * Fires a {@link SimpleChannelHandler channelInterestChanged} event to the
+     * specified {@link Channel}.
+     *
+     * @param interestOps the new interestOps
+     */
     public static void fireChannelInterestChanged(Channel channel, int interestOps) {
         validateInterestOps(interestOps);
         channel.getPipeline().sendUpstream(
@@ -260,6 +308,12 @@ public class Channels {
                         ChannelState.INTEREST_OPS, Integer.valueOf(interestOps)));
     }
 
+    /**
+     * Fires a {@link SimpleChannelHandler channelInterestChanged} event to the
+     * specified {@link ChannelHandlerContext}.
+     *
+     * @param interestOps the new interestOps
+     */
     public static void fireChannelInterestChanged(
             ChannelHandlerContext ctx, Channel channel, int interestOps) {
 
@@ -270,6 +324,10 @@ public class Channels {
                         ChannelState.INTEREST_OPS, Integer.valueOf(interestOps)));
     }
 
+    /**
+     * Fires a {@link SimpleChannelHandler channelDisconnected} event to the
+     * specified {@link Channel}.
+     */
     public static void fireChannelDisconnected(Channel channel) {
         channel.getPipeline().sendUpstream(
                 new DefaultChannelStateEvent(
@@ -277,6 +335,10 @@ public class Channels {
                         ChannelState.CONNECTED, null));
     }
 
+    /**
+     * Fires a {@link SimpleChannelHandler channelDisconnected} event to the
+     * specified {@link ChannelHandlerContext}.
+     */
     public static void fireChannelDisconnected(
             ChannelHandlerContext ctx, Channel channel) {
         ctx.sendUpstream(new DefaultChannelStateEvent(
@@ -334,6 +396,9 @@ public class Channels {
     }
 
     public static ChannelFuture bind(Channel channel, SocketAddress localAddress) {
+        if (localAddress == null) {
+            throw new NullPointerException("localAddress");
+        }
         ChannelFuture future = future(channel);
         channel.getPipeline().sendDownstream(new DefaultChannelStateEvent(
                 channel, future, ChannelState.BOUND, localAddress));
@@ -343,12 +408,17 @@ public class Channels {
     public static void bind(
             ChannelHandlerContext ctx, Channel channel,
             ChannelFuture future, SocketAddress localAddress) {
-
+        if (localAddress == null) {
+            throw new NullPointerException("localAddress");
+        }
         ctx.sendDownstream(new DefaultChannelStateEvent(
                 channel, future, ChannelState.BOUND, localAddress));
     }
 
     public static ChannelFuture connect(Channel channel, SocketAddress remoteAddress) {
+        if (remoteAddress == null) {
+            throw new NullPointerException("remoteAddress");
+        }
         ChannelFuture future = future(channel, true);
         channel.getPipeline().sendDownstream(new DefaultChannelStateEvent(
                 channel, future, ChannelState.CONNECTED, remoteAddress));
@@ -358,7 +428,9 @@ public class Channels {
     public static void connect(
             ChannelHandlerContext ctx, Channel channel,
             ChannelFuture future, SocketAddress remoteAddress) {
-
+        if (remoteAddress == null) {
+            throw new NullPointerException("remoteAddress");
+        }
         ctx.sendDownstream(new DefaultChannelStateEvent(
                 channel, future, ChannelState.CONNECTED, remoteAddress));
     }
