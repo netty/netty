@@ -48,23 +48,23 @@ import java.net.SocketAddress;
  * <td>{@link MessageEvent}</td><td>Send a message to the {@link Channel}.</td>
  * </tr>
  * <tr>
- * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#BOUND}, value = {@link SocketAddress})</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#BOUND BOUND}, value = {@link SocketAddress})</td>
  * <td>Bind the {@link Channel} to the specified local address.</td>
  * </tr>
  * <tr>
- * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#BOUND}, value = {@code null})</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#BOUND BOUND}, value = {@code null})</td>
  * <td>Unbind the {@link Channel} from the current local address.</td>
  * </tr>
  * <tr>
- * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#CONNECTED}, value = {@link SocketAddress})</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#CONNECTED CONNECTED}, value = {@link SocketAddress})</td>
  * <td>Connect the {@link Channel} to the specified remote address.</td>
  * </tr>
  * <tr>
- * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#CONNECTED}, value = {@code null})</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#CONNECTED CONNECTED}, value = {@code null})</td>
  * <td>Disconnect the {@link Channel} from the current remote address.</td>
  * </tr>
  * <tr>
- * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#OPEN}, value = {@code false})</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#OPEN OPEN}, value = {@code false})</td>
  * <td>Close the {@link Channel}.</td>
  * </tr>
  * </table>
