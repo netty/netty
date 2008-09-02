@@ -30,6 +30,29 @@ import java.util.Map;
  * Provides various factory methods related with {@link Channel} and
  * {@link ChannelPipeline}, and fires an I/O event and request.
  *
+ * <h3>Factory methods</h3>
+ * <p>
+ * It is always recommended to use the factory methods provided by
+ * {@link Channels} rather than calling the constructor of the implementation
+ * types.
+ * <ul>
+ * <li>{@link #pipeline()}</li>
+ * <li>{@link #pipeline(ChannelPipeline)}</li>
+ * <li>{@link #pipelineFactory(ChannelPipeline)}</li>
+ * <li>{@link #succeededFuture(Channel)}</li>
+ * <li>{@link #failedFuture(Channel, Throwable)}</li>
+ * <li>{@link #messageEvent(Channel, ChannelFuture, Object)}</li>
+ * <li>{@link #messageEvent(Channel, ChannelFuture, Object, SocketAddress)}</li>
+ * </ul>
+ *
+ * <h3>Upstream and downstream event generation</h3>
+ * <p>
+ * Various event generation methods are provided to simplify the generation of
+ * upstream events and downstream events.  It is always recommended to use the
+ * event generation methods provided by {@link Channels} rather than calling
+ * {@link ChannelHandlerContext#sendUpstream(ChannelEvent)} or
+ * {@link ChannelHandlerContext#sendDownstream(ChannelEvent)} by yourself.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

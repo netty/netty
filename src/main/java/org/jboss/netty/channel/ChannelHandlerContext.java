@@ -67,13 +67,17 @@ public interface ChannelHandlerContext {
 
     /**
      * Sends the specified {@link ChannelEvent} to the next handler in the
-     * {@link ChannelPipeline}.
+     * {@link ChannelPipeline}.  It is always recommended to use the
+     * event generation methods provided by {@link Channels} rather than
+     * calling this method directly by yourself.
      */
     void sendUpstream(ChannelEvent e);
 
     /**
      * Sends the specified {@link ChannelEvent} to the previous handler in the
-     * {@link ChannelPipeline}.
+     * {@link ChannelPipeline}.  It is always recommended to use the
+     * event generation methods provided by {@link Channels} rather than
+     * calling this method directly by yourself.
      */
     void sendDownstream(ChannelEvent e);
 }
