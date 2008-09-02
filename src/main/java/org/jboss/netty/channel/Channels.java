@@ -27,8 +27,8 @@ import java.util.Map;
 
 
 /**
- * Provides various factory methods related with {@link Channel} and
- * {@link ChannelPipeline}, and fires an I/O event and request.
+ * A helper class which provides various convenience methods related with
+ * {@link Channel}, {@link ChannelHandler}, and {@link ChannelPipeline}.
  *
  * <h3>Factory methods</h3>
  * <p>
