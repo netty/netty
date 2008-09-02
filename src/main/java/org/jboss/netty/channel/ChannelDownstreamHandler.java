@@ -35,9 +35,9 @@ import java.net.SocketAddress;
  * For example, all I/O requests made by a user application are downstream
  * events.
  * <p>
- * In most common use case of this interface is to intercept an I/O request
+ * The most common use case of this interface is to intercept an I/O request
  * such as {@link Channel#write(Object)} and {@link Channel#close()}.  The
- * reveived {@link ChannelEvent} object is interpreted as described in the
+ * received {@link ChannelEvent} object is interpreted as described in the
  * following table:
  *
  * <table border="1" cellspacing="0" cellpadding="6">
@@ -104,9 +104,7 @@ import java.net.SocketAddress;
  * {@link #handleDownstream(ChannelHandlerContext, ChannelEvent) handleDownstream}
  * may be invoked by more than one thread simultaneously.  If the handler
  * accesses a shared resource or stores stateful information, you might need
- * proper synchronization in the handler implementation.  Also, please refer to
- * the {@link ChannelPipelineCoverage} annotation to understand the
- * relationship between a handler and its stateful properties.
+ * proper synchronization in the handler implementation.
  * <p>
  * Also, please refer to the {@link ChannelPipelineCoverage} annotation to
  * understand the relationship between a handler and its stateful properties.

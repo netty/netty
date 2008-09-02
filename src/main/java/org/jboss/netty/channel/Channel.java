@@ -27,16 +27,17 @@ import java.util.UUID;
 
 
 /**
- * A nexus to a network socket or a component which is capable of predefined
- * I/O operations such as read, write, connect, and bind.
+ * A nexus to a network socket or a component which is capable of I/O
+ * operations such as read, write, connect, and bind.
  * <p>
  * A channel provides a user:
  * <ul>
- * <li>the current state of the channel,</li>
- * <li>the configuration parameters of the channel,</li>
- * <li>the I/O operations that the channel supports, and</li>
+ * <li>the current state of the channel (e.g. open, bound, and connected),</li>
+ * <li>the configuration parameters of the channel (e.g. receive buffer size),</li>
+ * <li>the I/O operations that the channel supports (e.g. read, write, connect, and bind), and</li>
  * <li>the {@link ChannelPipeline} which handles all I/O events and requests
- *     associated with the channel.</li>
+ *     associated with the channel.  This is the most important place, where
+ *     your application logic kicks into an action.</li>
  * </ul>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
