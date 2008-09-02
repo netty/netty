@@ -113,8 +113,9 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * <p>
  * You also might want to refer to {@link ChannelDownstreamHandler} to see
  * how a {@link ChannelEvent} is interpreted when going downstream.  Also,
- * please refer to {@link ChannelEvent} to understand the fundamental difference
- * between a upstream event and a downstream event.
+ * please refer to the {@link ChannelEvent} documentation to find out what a
+ * upstream event and a downstream event are and what fundamental differences
+ * they have, if you didn't read yet.
  * <p>
  * In most cases, you will get to use a {@link SimpleChannelHandler} to
  * implement a upstream handler because it provides an individual handler

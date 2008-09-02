@@ -29,11 +29,16 @@ import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
 
 
 /**
- * The configuration properties of a {@link Channel}.
+ * A set of configuration properties of a {@link Channel}.
  * <p>
  * Please down-cast to the transport-specific configuration type such as
  * {@link NioSocketChannelConfig} or use {@link #setOptions(Map)} to set the
- * transport-specific properties.
+ * transport-specific properties:
+ * <pre>
+ * Channel ch = ...;
+ * NioSocketChannelConfig cfg = <strong>(NioSocketChannelConfig) ch.getConfig();</strong>
+ * cfg.setWriteSpinCount(4);
+ * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

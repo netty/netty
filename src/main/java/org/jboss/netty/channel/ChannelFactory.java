@@ -33,8 +33,8 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * <p>
  * Once a new {@link Channel} is created, the {@link ChannelPipeline} which
  * was specified as a parameter in the {@link #newChannel(ChannelPipeline)}
- * is attached to the new {@link Channel}, and starts to handle all
- * {@link ChannelEvent}s associated with the new {@link Channel}.
+ * is attached to the new {@link Channel}, and starts to handle all associated
+ * {@link ChannelEvent}s.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -47,8 +47,8 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 public interface ChannelFactory {
 
     /**
-     * Creates and opens a new {@link Channel} and attaches it to the
-     * specified {@link ChannelPipeline}.
+     * Creates and opens a new {@link Channel} and attaches the specified
+     * {@link ChannelPipeline} to the new {@link Channel}.
      *
      * @param pipeline the {@link ChannelPipeline} which is going to be
      *                 attached to the new {@link Channel}

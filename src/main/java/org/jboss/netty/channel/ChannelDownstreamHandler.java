@@ -48,23 +48,23 @@ import java.net.SocketAddress;
  * <td>{@link MessageEvent}</td><td>Send a message to the {@link Channel}.</td>
  * </tr>
  * <tr>
- * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#BOUND}, value={@link SocketAddress})</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#BOUND}, value = {@link SocketAddress})</td>
  * <td>Bind the {@link Channel} to the specified local address.</td>
  * </tr>
  * <tr>
- * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#BOUND}, value={@code null})</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#BOUND}, value = {@code null})</td>
  * <td>Unbind the {@link Channel} from the current local address.</td>
  * </tr>
  * <tr>
- * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#CONNECTED}, value={@link SocketAddress})</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#CONNECTED}, value = {@link SocketAddress})</td>
  * <td>Connect the {@link Channel} to the specified remote address.</td>
  * </tr>
  * <tr>
- * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#CONNECTED}, value={@code null})</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#CONNECTED}, value = {@code null})</td>
  * <td>Disconnect the {@link Channel} from the current remote address.</td>
  * </tr>
  * <tr>
- * <td>{@link ChannelStateEvent}<br/>(state={@link ChannelState#OPEN}, value={@code false})</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#OPEN}, value = {@code false})</td>
  * <td>Close the {@link Channel}.</td>
  * </tr>
  * </table>
@@ -72,8 +72,9 @@ import java.net.SocketAddress;
  * Other event types and conditions which were not addressed here will be
  * ignored and discarded.  You also might want to refer to {@link ChannelUpstreamHandler}
  * to see how a {@link ChannelEvent} is interpreted when going upstream.  Also,
- * please refer to {@link ChannelEvent} to understand the fundamental difference
- * between a upstream event and a downstream event.
+ * please refer to the {@link ChannelEvent} documentation to find out what a
+ * upstream event and a downstream event are and what fundamental differences
+ * they have, if you didn't read yet.
  *
  * <h3>Firing an event to the previous or next handler</h3>
  * <p>
