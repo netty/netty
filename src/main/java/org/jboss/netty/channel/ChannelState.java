@@ -25,7 +25,7 @@ package org.jboss.netty.channel;
 import java.net.SocketAddress;
 
 /**
- * Represents the current or requested state of a {@link Channel}.
+ * Represents the current or future state of a {@link Channel}.
  * <p>
  * The state of a {@link Channel} is interpreted differently depending on the
  * {@linkplain ChannelStateEvent#getValue() value} of a {@link ChannelStateEvent}
