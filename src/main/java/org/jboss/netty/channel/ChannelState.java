@@ -25,33 +25,57 @@ package org.jboss.netty.channel;
 import java.net.SocketAddress;
 
 /**
- * Represents the current state of a {@link Channel} combined with the
- * {@linkplain ChannelStateEvent#getValue() value} of a {@link ChannelStateEvent}.
+ * Represents the current or requested state of a {@link Channel}.
+ * <p>
+ * The state of a {@link Channel} is interpreted differently depending on the
+ * {@linkplain ChannelStateEvent#getValue() value} of a {@link ChannelStateEvent}
+ * and the direction of the event propagation in a {@link ChannelPipeline}:
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>State</th><th>Value</th><th>Description</th>
+ * <th>Direction</th><th>State</th><th>Value</th><th>Meaning</th>
  * </tr>
  * <tr>
- * <td>{@link #OPEN}</td><td>{@code true}</td><td>The channel is open.</td>
+ * <td>Upstream</td><td>{@link #OPEN}</td><td>{@code true}</td><td>The channel is open.</td>
  * </tr>
  * <tr>
- * <td>{@link #OPEN}</td><td>{@code false}</td><td>The channel is closed.</td>
+ * <td>Upstream</td><td>{@link #OPEN}</td><td>{@code false}</td><td>The channel is closed.</td>
  * </tr>
  * <tr>
- * <td>{@link #BOUND}</td><td>{@link SocketAddress}</td><td>The channel is bound to a local address.</td>
+ * <td>Upstream</td><td>{@link #BOUND}</td><td>{@link SocketAddress}</td><td>The channel is bound to a local address.</td>
  * </tr>
  * <tr>
- * <td>{@link #BOUND}</td><td>{@code null}</td><td>The channel is unbound to a local address.</td>
+ * <td>Upstream</td><td>{@link #BOUND}</td><td>{@code null}</td><td>The channel is unbound to a local address.</td>
  * </tr>
  * <tr>
- * <td>{@link #CONNECTED}</td><td>{link SocketAddress}</td><td>The channel is connected to a remote address.</td>
+ * <td>Upstream</td><td>{@link #CONNECTED}</td><td>{@link SocketAddress}</td><td>The channel is connected to a remote address.</td>
  * </tr>
  * <tr>
- * <td>{@link #CONNECTED}</td><td>{@code null}</td><td>The channel is disconnected from a remote address.</td>
+ * <td>Upstream</td><td>{@link #CONNECTED}</td><td>{@code null}</td><td>The channel is disconnected from a remote address.</td>
  * </tr>
  * <tr>
- * <td>{@link #INTEREST_OPS}</td><td>an integer</td><td>The channel interestOps has been changed.</td>
+ * <td>Upstream</td><td>{@link #INTEREST_OPS}</td><td>an integer</td><td>The channel interestOps has been changed.</td>
+ * </tr>
+ * <tr>
+ * <td>Downstream</td><td>{@link #OPEN}</td><td>{@code true}</td><td>N/A</td>
+ * </tr>
+ * <tr>
+ * <td>Downstream</td><td>{@link #OPEN}</td><td>{@code false}</td><td>Close the channel.</td>
+ * </tr>
+ * <tr>
+ * <td>Downstream</td><td>{@link #BOUND}</td><td>{@link SocketAddress}</td><td>Bind the channel to the specified local address.</td>
+ * </tr>
+ * <tr>
+ * <td>Downstream</td><td>{@link #BOUND}</td><td>{@code null}</td><td>Unbind the channel from the current local address.</td>
+ * </tr>
+ * <tr>
+ * <td>Downstream</td><td>{@link #CONNECTED}</td><td>{@link SocketAddress}</td><td>Connect the channel to the specified remote address.</td>
+ * </tr>
+ * <tr>
+ * <td>Downstream</td><td>{@link #CONNECTED}</td><td>{@code null}</td><td>Disconnect the channel from the current remote address.</td>
+ * </tr>
+ * <tr>
+ * <td>Downstream</td><td>{@link #INTEREST_OPS}</td><td>an integer</td><td>Change the interestOps of the channel.</td>
  * </tr>
  * </table>
  * <p>

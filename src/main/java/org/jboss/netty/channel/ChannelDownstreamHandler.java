@@ -42,7 +42,7 @@ import java.net.SocketAddress;
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>Event type and condition</th><th>Interperatation</th>
+ * <th>Event type and condition</th><th>Meaning</th>
  * </tr>
  * <tr>
  * <td>{@link MessageEvent}</td><td>Send a message to the {@link Channel}.</td>
