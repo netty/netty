@@ -80,7 +80,7 @@ import java.net.SocketAddress;
  * </table>
  * <p>
  * To see how a {@link ChannelEvent} is interpreted further, please refer to
- * {@link SimpleChannelHandler} and {@link ChannelDownstreamHandler}.
+ * {@link ChannelUpstreamHandler} and {@link ChannelDownstreamHandler}.
  *
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)

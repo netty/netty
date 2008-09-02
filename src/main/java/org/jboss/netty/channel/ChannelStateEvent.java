@@ -24,6 +24,10 @@ package org.jboss.netty.channel;
 
 
 /**
+ * A {@link ChannelEvent} which represents the change of the {@link Channel}
+ * state.  It can mean the notification of a change or the request for a
+ * change, depending on whether it is a upstream event or a downstream event
+ * respectively.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -33,6 +37,16 @@ package org.jboss.netty.channel;
  * @apiviz.has org.jboss.netty.channel.ChannelState
  */
 public interface ChannelStateEvent extends ChannelEvent {
+
+    /**
+     * Returns the changed property of the {@link Channel}.
+     */
     ChannelState getState();
+
+    /**
+     * Returns the value of the changed property of the {@link Channel}.
+     * Please refer to {@link ChannelState} documentation to find out the
+     * allowed values for each property.
+     */
     Object getValue();
 }

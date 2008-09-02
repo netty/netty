@@ -23,6 +23,9 @@
 package org.jboss.netty.channel;
 
 /**
+ * A {@link ChannelEvent} which represents the notification of an exception
+ * raised by a {@link ChannelHandler} or an I/O thread.  This event is allowed
+ * to go upstream only.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -30,5 +33,9 @@ package org.jboss.netty.channel;
  * @version $Rev$, $Date$
  */
 public interface ExceptionEvent extends ChannelEvent {
+
+    /**
+     * Returns the raised exception.
+     */
     Throwable getCause();
 }

@@ -70,8 +70,10 @@ import java.net.SocketAddress;
  * </table>
  * <p>
  * Other event types and conditions which were not addressed here will be
- * ignored and discarded.  You also might want to refer to {@link SimpleChannelHandler}
- * to see how a {@link ChannelEvent} is interpreted when going upstream.
+ * ignored and discarded.  You also might want to refer to {@link ChannelUpstreamHandler}
+ * to see how a {@link ChannelEvent} is interpreted when going upstream.  Also,
+ * please refer to {@link ChannelEvent} to understand the fundamental difference
+ * between a upstream event and a downstream event.
  *
  * <h3>Firing an event to the previous or next handler</h3>
  * <p>

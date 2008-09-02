@@ -22,8 +22,11 @@
  */
 package org.jboss.netty.channel;
 
+import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 
@@ -35,11 +38,88 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * <p>
  * A upstream event is an event which is supposed to be processed from the
  * first handler to the last handler in the {@link ChannelPipeline}.
- * For example, all events fired by an I/O thread are upstream events.
+ * For example, all events fired by an I/O thread are upstream events, and
+ * they have the following meaning:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Event name</th></th><th>Event type and condition</th><th>Meaning</th>
+ * </tr>
+ * <tr>
+ * <td>{@code "messageReceived"}</td>
+ * <td>{@link MessageEvent}</td>
+ * <td>a message object (e.g. {@link ChannelBuffer}) was received from a remote peer</td>
+ * </tr>
+ * <tr>
+ * <td>{@code "exceptionCaught"}</td>
+ * <td>{@link ExceptionEvent}</td>
+ * <td>an exception was raised by an I/O thread or a {@link ChannelHandler}</td>
+ * </tr>
+ * <tr>
+ * <td>{@code "channelOpen"}</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#OPEN OPEN}, value = {@code true})</td>
+ * <td>a {@link Channel} is open, but not bound nor connected</td>
+ * </tr>
+ * <tr>
+ * <td>{@code "channelClosed"}</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#OPEN OPEN}, value = {@code false})</td>
+ * <td>a {@link Channel} was closed and all its related resources were released</td>
+ * </tr>
+ * <tr>
+ * <td>{@code "channelBound"}</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#BOUND BOUND}, value = {@link SocketAddress})</td>
+ * <td>a {@link Channel} is open and bound to a local address, but not connected</td>
+ * </tr>
+ * <tr>
+ * <td>{@code "channelUnbound"}</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#BOUND BOUND}, value = {@code null})</td>
+ * <td>a {@link Channel} was unbound from the current local address</td>
+ * </tr>
+ * <tr>
+ * <td>{@code "channelConnected"}</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#CONNECTED CONNECTED}, value = {@link SocketAddress})</td>
+ * <td>a {@link Channel} is open, bound to a local address, and connected to a remote address</td>
+ * </tr>
+ * <tr>
+ * <td>{@code "channelDisconnected"}</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#CONNECTED CONNECTED}, value = {@code null})</td>
+ * <td>a {@link Channel} was disconnected from its remote peer</td>
+ * </tr>
+ * <tr>
+ * <td>{@code "channelInterestChanged"}</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#INTEREST_OPS INTEREST_OPS}, value = {@code int}</td>
+ * <td>a {@link Channel}'s {@link Channel#getInterestOps() interestOps} was changed</td>
+ * </tr>
+ * </table>
  * <p>
- * In most cases, you should use a {@link SimpleChannelHandler} to implement
- * this interface more easily.  You might want to implement this interface
- * directly though, when you want to handle various types of events in more
+ * These two additional event types are used only for a parent channel which
+ * can have a child channel (e.g. {@link ServerSocketChannel}).
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Event name</th><th>Event type and condition</th><th>Meaning</th>
+ * </tr>
+ * <tr>
+ * <td>{@code "childChannelOpen"}</td>
+ * <td>{@link ChildChannelStateEvent}<br/>({@code childChannel.isOpen() = true})</td>
+ * <td>a child {@link Channel} was open (e.g. a server channel accepted a connection.)</td>
+ * </tr>
+ * <tr>
+ * <td>{@code "childChannelClosed"}</td>
+ * <td>{@link ChildChannelStateEvent}<br/>({@code childChannel.isOpen() = false})</td>
+ * <td>a child {@link Channel} was closed (e.g. the accepted connection was closed.)</td>
+ * </tr>
+ * </table>
+ * <p>
+ * You also might want to refer to {@link ChannelDownstreamHandler} to see
+ * how a {@link ChannelEvent} is interpreted when going downstream.  Also,
+ * please refer to {@link ChannelEvent} to understand the fundamental difference
+ * between a upstream event and a downstream event.
+ * <p>
+ * In most cases, you will get to use a {@link SimpleChannelHandler} to
+ * implement a upstream handler because it provides an individual handler
+ * method for each event type.  You might want to implement this interface
+ * directly though if you want to handle various types of events in more
  * generic way.
  *
  * <h3>Firing an event to the next or previous handler</h3>
@@ -68,7 +148,6 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * You will also find various helper methods in {@link Channels} to be useful
  * to generate and fire an artificial or manipulated event.
  *
- * <a name="thread_safety"></a>
  * <h3>Thread safety</h3>
  * <p>
  * If there's no {@link ExecutionHandler} in the {@link ChannelPipeline},

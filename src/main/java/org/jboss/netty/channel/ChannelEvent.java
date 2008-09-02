@@ -30,6 +30,26 @@ package org.jboss.netty.channel;
  * the event belongs to.  Once an event is sent to a {@link ChannelPipeline},
  * it is handled by a list of {@link ChannelHandler}s.
  *
+ * <h3>Upstream and downstream events, and their interpretation</h3>
+ * <p>
+ * If an event flows from the first handler to the last handler, we call it a
+ * upstream event and say "an event goes upstream".  If an event flows from
+ * the last handler to the first handler, we call it a downstream event and say
+ * "an event goes downstream".
+ * <p>
+ * A {@link ChannelEvent} is interpreted differently by a {@link ChannelHandler}
+ * depending on whether the event is a upstream event or a downstream event.
+ * A upstream event represents the notification of what happened in the past.
+ * By contrast, a downstream event represents the request of what should happen
+ * in the future.  For example, a {@link MessageEvent} represents the
+ * notification of a received message when it goes upstream, while it
+ * represents the request of writing a message when it goes downstream.
+ * <p>
+ * Please refer to the documentation of {@link ChannelHandler} and its sub-types
+ * ({@link ChannelUpstreamHandler} for upstream events and
+ *  {@link ChannelDownstreamHandler} for downstream events) to find out how
+ * a {@link ChannelEvent} is interpreted depending on the type of the handler.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

@@ -156,9 +156,9 @@ public class Channels {
     // event emission methods
 
     /**
-     * Fires a {@link SimpleChannelHandler channelOpen} event to the specified
+     * Fires a {@link ChannelUpstreamHandler channelOpen} event to the specified
      * {@link Channel}.  If the specified channel has a parent, a
-     * {@link SimpleChannelHandler childChannelOpen} event will be fired too.
+     * {@link ChannelUpstreamHandler childChannelOpen} event will be fired too.
      */
     public static void fireChannelOpen(Channel channel) {
         if (channel.getParent() != null) {
@@ -171,9 +171,9 @@ public class Channels {
     }
 
     /**
-     * Fires a {@link SimpleChannelHandler channelOpen} event to the specified
+     * Fires a {@link ChannelUpstreamHandler channelOpen} event to the specified
      * {@link ChannelHandlerContext}.  Please note that this method doesn't
-     * fire a {@link SimpleChannelHandler childChannelOpen} event unlike
+     * fire a {@link ChannelUpstreamHandler childChannelOpen} event unlike
      * {@link #fireChannelOpen(Channel)} method.
      */
     public static void fireChannelOpen(
@@ -185,7 +185,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@link SimpleChannelHandler channelBound} event to the specified
+     * Fires a {@link ChannelUpstreamHandler channelBound} event to the specified
      * {@link Channel}.
      *
      * @param localAddress
@@ -199,7 +199,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@link SimpleChannelHandler channelBound} event to the specified
+     * Fires a {@link ChannelUpstreamHandler channelBound} event to the specified
      * {@link Channel}.
      *
      * @param localAddress
@@ -214,7 +214,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@link SimpleChannelHandler channelConnected} event to the
+     * Fires a {@link ChannelUpstreamHandler channelConnected} event to the
      * specified {@link Channel}.
      *
      * @param remoteAddress
@@ -228,7 +228,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@link SimpleChannelHandler channelConnected} event to the
+     * Fires a {@link ChannelUpstreamHandler channelConnected} event to the
      * specified {@link ChannelHandlerContext}.
      *
      * @param remoteAddress
@@ -243,7 +243,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@link SimpleChannelHandler messageReceived} event to the
+     * Fires a {@link ChannelUpstreamHandler messageReceived} event to the
      * specified {@link Channel}.
      *
      * @param message  the received message
@@ -253,7 +253,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@link SimpleChannelHandler messageReceived} event to the
+     * Fires a {@link ChannelUpstreamHandler messageReceived} event to the
      * specified {@link Channel}.
      *
      * @param message        the received message
@@ -268,7 +268,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@link SimpleChannelHandler messageReceived} event to the
+     * Fires a {@link ChannelUpstreamHandler messageReceived} event to the
      * specified {@link ChannelHandlerContext}.
      *
      * @param message  the received message
@@ -280,7 +280,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@link SimpleChannelHandler messageReceived} event to the
+     * Fires a {@link ChannelUpstreamHandler messageReceived} event to the
      * specified {@link ChannelHandlerContext}.
      *
      * @param message        the received message
@@ -295,7 +295,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@link SimpleChannelHandler channelInterestChanged} event to the
+     * Fires a {@link ChannelUpstreamHandler channelInterestChanged} event to the
      * specified {@link Channel}.
      *
      * @param interestOps the new interestOps
@@ -309,7 +309,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@link SimpleChannelHandler channelInterestChanged} event to the
+     * Fires a {@link ChannelUpstreamHandler channelInterestChanged} event to the
      * specified {@link ChannelHandlerContext}.
      *
      * @param interestOps the new interestOps
@@ -325,7 +325,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@link SimpleChannelHandler channelDisconnected} event to the
+     * Fires a {@link ChannelUpstreamHandler channelDisconnected} event to the
      * specified {@link Channel}.
      */
     public static void fireChannelDisconnected(Channel channel) {
@@ -336,7 +336,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@link SimpleChannelHandler channelDisconnected} event to the
+     * Fires a {@link ChannelUpstreamHandler channelDisconnected} event to the
      * specified {@link ChannelHandlerContext}.
      */
     public static void fireChannelDisconnected(
