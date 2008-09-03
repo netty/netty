@@ -35,6 +35,14 @@ import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
+/**
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 class NioClientSocketChannel extends NioSocketChannel {
 
     private static final InternalLogger logger =

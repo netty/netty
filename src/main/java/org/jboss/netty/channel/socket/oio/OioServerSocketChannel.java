@@ -40,6 +40,14 @@ import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
+/**
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 class OioServerSocketChannel extends AbstractServerChannel
                              implements ServerSocketChannel {
 

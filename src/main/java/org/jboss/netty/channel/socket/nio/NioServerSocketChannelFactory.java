@@ -29,6 +29,14 @@ import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 
+/**
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 public class NioServerSocketChannelFactory implements ServerSocketChannelFactory {
 
     final Executor bossExecutor;

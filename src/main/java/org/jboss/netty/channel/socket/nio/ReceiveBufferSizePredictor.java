@@ -22,6 +22,14 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
+/**
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 public interface ReceiveBufferSizePredictor {
     int nextReceiveBufferSize();
     void previousReceiveBufferSize(int previousReceiveBufferSize);

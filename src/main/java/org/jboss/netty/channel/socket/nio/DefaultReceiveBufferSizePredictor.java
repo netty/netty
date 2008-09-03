@@ -22,6 +22,15 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
+/**
+ * The default {@link ReceiveBufferSizePredictor} implementation.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 public class DefaultReceiveBufferSizePredictor implements
         ReceiveBufferSizePredictor {
     private static final int DEFAULT_MINIMUM = 256;

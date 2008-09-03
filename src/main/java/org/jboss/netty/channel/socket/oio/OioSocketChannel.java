@@ -38,6 +38,14 @@ import org.jboss.netty.channel.socket.DefaultSocketChannelConfig;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 
+/**
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 abstract class OioSocketChannel extends AbstractChannel
                                 implements SocketChannel {
 
