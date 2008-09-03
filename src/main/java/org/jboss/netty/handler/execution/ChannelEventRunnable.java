@@ -25,6 +25,14 @@ package org.jboss.netty.handler.execution;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
+/**
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 public class ChannelEventRunnable implements Runnable {
     private final ChannelHandlerContext ctx;
     private final ChannelEvent e;

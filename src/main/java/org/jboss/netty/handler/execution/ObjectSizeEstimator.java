@@ -22,6 +22,14 @@
  */
 package org.jboss.netty.handler.execution;
 
+/**
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 public interface ObjectSizeEstimator {
     int estimateSize(Object o);
 }
