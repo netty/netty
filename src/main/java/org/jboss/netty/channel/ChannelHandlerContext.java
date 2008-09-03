@@ -23,8 +23,8 @@
 package org.jboss.netty.channel;
 
 /**
- * The context of a {@link ChannelHandler} which enables the interaction with
- * its {@link ChannelPipeline}.
+ * The context type which enables the interaction
+ * between a {@link ChannelHandler} and its {@link ChannelPipeline}
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
