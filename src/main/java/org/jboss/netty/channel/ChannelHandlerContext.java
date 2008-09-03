@@ -66,18 +66,18 @@ public interface ChannelHandlerContext {
     boolean canHandleDownstream();
 
     /**
-     * Sends the specified {@link ChannelEvent} to the next handler in the
-     * {@link ChannelPipeline}.  It is always recommended to use the
-     * event generation methods provided by {@link Channels} rather than
-     * calling this method directly by yourself.
+     * Sends the specified {@link ChannelEvent} to the next
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline}.  It is
+     * recommended to use the event generation methods in {@link Channels}
+     * rather than calling this method directly.
      */
     void sendUpstream(ChannelEvent e);
 
     /**
-     * Sends the specified {@link ChannelEvent} to the previous handler in the
-     * {@link ChannelPipeline}.  It is always recommended to use the
-     * event generation methods provided by {@link Channels} rather than
-     * calling this method directly by yourself.
+     * Sends the specified {@link ChannelEvent} to the previous
+     * {@link ChannelDownstreamHandler} in the {@link ChannelPipeline}.  It is
+     * recommended to use the event generation methods in {@link Channels}
+     * rather than calling this method directly.
      */
     void sendDownstream(ChannelEvent e);
 }

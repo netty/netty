@@ -94,6 +94,10 @@ import org.jboss.netty.handler.ssl.SslHandler;
  *  |             I/O Threads (Transport Implementation)               |
  *  +------------------------------------------------------------------+
  * </pre>
+ * Please note that a upstream event is processed by from the first upstream
+ * handler to the last upstream handler (i.e. to the next) and a downstream
+ * event is processed by from the last downstream handler to the first
+ * downstream handler (i.e. to the previous).
  *
  * <h3>Building a pipeline</h3>
  * <p>
