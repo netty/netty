@@ -32,11 +32,108 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
+ * Assembles and splits incoming {@link ChannelBuffer}s into a meaningful
+ * frame object.
+ * <p>
+ * In a stream-based transport such as TCP/IP, packets can be fragmented and
+ * reassembled during transmission even in a LAN environment.  For example,
+ * let's assume you have received three packets:
+ * <pre>
+ * +-----+-----+-----+
+ * | ABC | DEF | GHI |
+ * +-----+-----+-----+
+ * </pre>
+ * because of the packet fragmentation, a server can receive them like the
+ * following:
+ * <pre>
+ * +----+-------+---+---+
+ * | AB | CDEFG | H | I |
+ * +----+-------+---+---+
+ * </pre>
+ * <p>
+ * {@link FrameDecoder} helps you defrag and split the received packets into
+ * one or more meaningful <strong>frames</strong> that could be easily
+ * understood by the application logic.  In case of the example above, your
+ * {@link FrameDecoder} implementation could defrag the received packets like
+ * the following:
+ * <pre>
+ * +-----+-----+-----+
+ * | ABC | DEF | GHI |
+ * +-----+-----+-----+
+ * </pre>
+ * <p>
+ * The following code shows an example decoder which decodes a frame whose
+ * first 4 bytes header represents the length of the frame, excluding the
+ * header.
+ * <pre>
+ * MESSAGE FORMAT
+ * ==============
+ *
+ * Offset:  0        4                   (Length + 4)
+ *          +--------+------------------------+
+ * Fields:  | Length | Actual message content |
+ *          +--------+------------------------+
+ *
+ * DECODER IMPLEMENTATION
+ * ======================
+ *
+ * public class IntegerHeaderFrameDecoder extends FrameDecoder {
+ *   protected Object decode(ChannelHandlerContext ctx,
+ *                           Channel channel,
+ *                           ChannelBuffer buf) throws Exception {
+ *
+ *     // Make sure if the length field was received.
+ *     if (buf.readableBytes() &lt; 4) {
+ *        // The length field was not received yet - return null.
+ *        // This method will be invoked again when more packets are
+ *        // received and appended to the buffer.
+ *        return <strong>null</strong>;
+ *     }
+ *
+ *     // The length field is in the buffer.
+ *
+ *     // Mark the current buffer position before reading the length field
+ *     // because the whole frame might not be in the buffer yet.
+ *     // We will reset the buffer position to the marked position if
+ *     // there's not enough bytes in the buffer.
+ *     buf.markReaderIndex();
+ *
+ *     // Read the length field.
+ *     int length = buf.readInt();
+ *
+ *     // Make sure if there's enough bytes in the buffer.
+ *     if (buf.readableBytes() &lt; length) {
+ *        // The whole bytes were not received yet - return null.
+ *        // This method will be invoked again when more packets are
+ *        // received and appended to the buffer.
+ *
+ *        // Reset to the marked position to read the length field again
+ *        // next time.
+ *        buf.resetReaderIndex();
+ *
+ *        return <strong>null</strong>;
+ *     }
+ *
+ *     // There's enough bytes in the buffer. Read it.
+ *     ChannelBuffer frame = buf.readBytes(length);
+ *
+ *     // Successfully decoded a frame.  Return the decoded frame.
+ *     // Please note that you can return a different type than
+ *     // {@link ChannelBuffer} although this example returns a {@link ChannelBuffer}.
+ *     // For example, you could return a <a href="http://en.wikipedia.org/wiki/POJO">POJO</a> here so that the next
+ *     // {@link ChannelUpstreamHandler} receives a {@link MessageEvent} which contains
+ *     // a POJO rather than a {@link ChannelBuffer}.
+ *     return <strong>frame</strong>;
+ *   }
+ * }
+ * </pre>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -93,9 +190,30 @@ public abstract class FrameDecoder extends SimpleChannelHandler {
         ctx.sendUpstream(e);
     }
 
+    /**
+     * Decodes the received packets so far into a frame.
+     *
+     * @param ctx      the context of this handler
+     * @param channel  the current channel
+     * @param buffer   the cumulative buffer of received packets so far
+     *
+     * @return the decoded frame if a full frame was received and decoded.
+     *         {@code null} if there's not enough data in the buffer to decode a frame.
+     */
     protected abstract Object decode(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception;
 
+    /**
+     * Decodes the received data so far into a frame when the channel is
+     * disconnected.
+     *
+     * @param ctx      the context of this handler
+     * @param channel  the current channel
+     * @param buffer   the cumulative buffer of received packets so far
+     *
+     * @return the decoded frame if a full frame was received and decoded.
+     *         {@code null} if there's not enough data in the buffer to decode a frame.
+     */
     protected Object decodeLast(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
         return decode(ctx, channel, buffer);
