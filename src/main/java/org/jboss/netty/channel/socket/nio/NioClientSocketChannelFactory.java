@@ -57,7 +57,7 @@ import org.jboss.netty.channel.socket.SocketChannel;
  * <p>
  * One {@link NioClientSocketChannelFactory} can have one or more worker
  * threads.  A worker thread performs non-blocking read and write for one or
- * more {@link Channel}s on request.
+ * more {@link Channel}s in a non-blocking mode.
  *
  * <h3>Life cycle of threads and graceful shutdown</h3>
  * <p>
