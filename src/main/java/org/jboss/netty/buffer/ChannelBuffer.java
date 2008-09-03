@@ -39,8 +39,9 @@ import java.util.NoSuchElementException;
  *
  * <h3>Creation of a buffer</h3>
  *
- * It is common for a user to create a new buffer using {@link ChannelBuffers}
- * utility class rather than calling an individual implementation's constructor.
+ * It is recommended to create a new buffer using the helper methods in
+ * {@link ChannelBuffers} rather than calling an individual implementation's
+ * constructor.
  *
  * <h3>Random Access Indexing</h3>
  *
