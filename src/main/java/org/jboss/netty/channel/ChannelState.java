@@ -29,7 +29,7 @@ import java.net.SocketAddress;
  * <p>
  * The state of a {@link Channel} is interpreted differently depending on the
  * {@linkplain ChannelStateEvent#getValue() value} of a {@link ChannelStateEvent}
- * and the direction of the event propagation in a {@link ChannelPipeline}:
+ * and the direction of the event in a {@link ChannelPipeline}:
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
