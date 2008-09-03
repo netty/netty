@@ -36,6 +36,9 @@ public class DefaultChildChannelStateEvent extends DefaultChannelEvent implement
 
     private final Channel childChannel;
 
+    /**
+     * Creates a new instance.
+     */
     public DefaultChildChannelStateEvent(
             Channel channel, ChannelFuture future, Channel childChannel) {
 

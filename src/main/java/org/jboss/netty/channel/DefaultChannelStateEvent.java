@@ -37,6 +37,9 @@ public class DefaultChannelStateEvent extends DefaultChannelEvent implements
     private final ChannelState state;
     private final Object value;
 
+    /**
+     * Creates a new instance.
+     */
     public DefaultChannelStateEvent(
             Channel channel, ChannelFuture future,
             ChannelState state, Object value) {

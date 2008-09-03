@@ -43,6 +43,9 @@ public class DefaultMessageEvent extends DefaultChannelEvent implements
     private final Object message;
     private final SocketAddress remoteAddress;
 
+    /**
+     * Creates a new instance.
+     */
     public DefaultMessageEvent(
             Channel channel, ChannelFuture future,
             Object message, SocketAddress remoteAddress) {
