@@ -40,40 +40,6 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * Filter</a> pattern to give a user full control over how an event is handled
  * and how the {@link ChannelHandler}s in the pipeline interact with each other.
  *
- * <h3>Building a pipeline</h3>
- * <p>
- * A user is supposed to have one or more {@link ChannelHandler}s in a
- * pipeline to receive I/O events (e.g. read) and to request I/O operations
- * (e.g. write and close).  For example, a typical server will have the following
- * handlers in each channel's pipeline, but your mileage may vary depending on
- * the complexity and characteristics of the protocol and business logic:
- *
- * <ol>
- * <li>Protocol Decoder - translates binary data (e.g. {@link ChannelBuffer})
- *                        into a Java object.</li>
- * <li>Protocol Encoder - translates a Java object into binary data.</li>
- * <li>{@link ExecutionHandler} - applies a thread model.</li>
- * <li>Business Logic Handler - performs the actual business logic
- *                              (e.g. database access).</li>
- * </ol>
- *
- * and it could be represented as shown in the following example:
- *
- * <pre>
- * ChannelPipeline pipeline = {@link Channels#pipeline() Channels.pipeline()};
- * pipeline.addLast("decoder", new MyProtocolDecoder());
- * pipeline.addLast("encoder", new MyProtocolEncoder());
- * pipeline.addLast("executor", new {@link ExecutionHandler}(new {@link OrderedMemoryAwareThreadPoolExecutor}(16, 1048576, 1048576)));
- * pipeline.addLast("handler", new MyBusinessLogicHandler());
- * </pre>
- *
- * <h3>Thread safety</h3>
- * <p>
- * A {@link ChannelHandler} can be added or removed at any time because a
- * {@link ChannelPipeline} is thread safe.  For example, you can insert a
- * {@link SslHandler} when a sensitive information is about to be exchanged,
- * and remove it after the exchange.
- *
  * <h3>How an event flows in a pipeline</h3>
  * <p>
  * The following diagram describes how {@link ChannelEvent}s are processed by
@@ -128,6 +94,40 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * |         I/O Threads (Transport Implementation)           |
  * +----------------------------------------------------------+
  * </pre>
+ *
+ * <h3>Building a pipeline</h3>
+ * <p>
+ * A user is supposed to have one or more {@link ChannelHandler}s in a
+ * pipeline to receive I/O events (e.g. read) and to request I/O operations
+ * (e.g. write and close).  For example, a typical server will have the following
+ * handlers in each channel's pipeline, but your mileage may vary depending on
+ * the complexity and characteristics of the protocol and business logic:
+ *
+ * <ol>
+ * <li>Protocol Decoder - translates binary data (e.g. {@link ChannelBuffer})
+ *                        into a Java object.</li>
+ * <li>Protocol Encoder - translates a Java object into binary data.</li>
+ * <li>{@link ExecutionHandler} - applies a thread model.</li>
+ * <li>Business Logic Handler - performs the actual business logic
+ *                              (e.g. database access).</li>
+ * </ol>
+ *
+ * and it could be represented as shown in the following example:
+ *
+ * <pre>
+ * ChannelPipeline pipeline = {@link Channels#pipeline() Channels.pipeline()};
+ * pipeline.addLast("decoder", new MyProtocolDecoder());
+ * pipeline.addLast("encoder", new MyProtocolEncoder());
+ * pipeline.addLast("executor", new {@link ExecutionHandler}(new {@link OrderedMemoryAwareThreadPoolExecutor}(16, 1048576, 1048576)));
+ * pipeline.addLast("handler", new MyBusinessLogicHandler());
+ * </pre>
+ *
+ * <h3>Thread safety</h3>
+ * <p>
+ * A {@link ChannelHandler} can be added or removed at any time because a
+ * {@link ChannelPipeline} is thread safe.  For example, you can insert a
+ * {@link SslHandler} when a sensitive information is about to be exchanged,
+ * and remove it after the exchange.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
