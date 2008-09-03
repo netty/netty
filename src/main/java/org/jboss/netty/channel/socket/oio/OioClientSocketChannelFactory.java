@@ -88,6 +88,12 @@ public class OioClientSocketChannelFactory implements ClientSocketChannelFactory
 
     final OioClientSocketPipelineSink sink;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param workerExecutor
+     *        the {@link Executor} which will execute the I/O worker threads
+     */
     public OioClientSocketChannelFactory(Executor workerExecutor) {
         if (workerExecutor == null) {
             throw new NullPointerException("workerExecutor");

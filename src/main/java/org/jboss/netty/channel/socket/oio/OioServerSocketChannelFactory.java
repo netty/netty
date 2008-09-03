@@ -101,6 +101,14 @@ public class OioServerSocketChannelFactory implements ServerSocketChannelFactory
     final Executor bossExecutor;
     private final ChannelSink sink;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param bossExecutor
+     *        the {@link Executor} which will execute the boss threads
+     * @param workerExecutor
+     *        the {@link Executor} which will execute the I/O worker threads
+     */
     public OioServerSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor) {
         if (bossExecutor == null) {

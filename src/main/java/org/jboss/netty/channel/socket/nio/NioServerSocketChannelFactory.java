@@ -100,11 +100,32 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
     final Executor bossExecutor;
     private final ChannelSink sink;
 
+    /**
+     * Creates a new instance.  Calling this constructor is same with calling
+     * {@link #NioServerSocketChannelFactory(Executor, Executor, int)} with
+     * the number of available processors in the machine.  The number of
+     * available processors is calculated by {@link Runtime#availableProcessors()}.
+     *
+     * @param bossExecutor
+     *        the {@link Executor} which will execute the boss threads
+     * @param workerExecutor
+     *        the {@link Executor} which will execute the I/O worker threads
+     */
     public NioServerSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor) {
         this(bossExecutor, workerExecutor, Runtime.getRuntime().availableProcessors());
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param bossExecutor
+     *        the {@link Executor} which will execute the boss threads
+     * @param workerExecutor
+     *        the {@link Executor} which will execute the I/O worker threads
+     * @param workerCount
+     *        the maximum number of I/O worker threads
+     */
     public NioServerSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor,
             int workerCount) {

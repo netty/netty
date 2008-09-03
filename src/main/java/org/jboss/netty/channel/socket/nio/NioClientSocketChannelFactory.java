@@ -120,7 +120,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
      * @param workerExecutor
      *        the {@link Executor} which will execute the I/O worker threads
      * @param workerCount
-     *        the number of I/O worker threads to start
+     *        the maximum number of I/O worker threads
      */
     public NioClientSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor,
