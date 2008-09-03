@@ -37,6 +37,10 @@ package org.jboss.netty.channel;
  * <li>{@link ChannelDownstreamHandler} handles and intercepts a downstream {@link ChannelEvent}.</li>
  * </ul>
  *
+ * You will also find more detailed explanation from the documentation of
+ * each sub-type about how an event is interpreted when it goes upstream and
+ * downstream respectively.
+ *
  * <h3>The context object</h3>
  * <p>
  * A {@link ChannelHandler} is provided with a {@link ChannelHandlerContext}
