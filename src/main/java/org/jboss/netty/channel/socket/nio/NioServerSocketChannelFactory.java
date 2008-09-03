@@ -104,7 +104,7 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
      * Creates a new instance.  Calling this constructor is same with calling
      * {@link #NioServerSocketChannelFactory(Executor, Executor, int)} with
      * the number of available processors in the machine.  The number of
-     * available processors is calculated by {@link Runtime#availableProcessors()}.
+     * available processors is obtained by {@link Runtime#availableProcessors()}.
      *
      * @param bossExecutor
      *        the {@link Executor} which will execute the boss threads
