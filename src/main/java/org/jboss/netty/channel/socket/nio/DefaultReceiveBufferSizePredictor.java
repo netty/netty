@@ -24,6 +24,12 @@ package org.jboss.netty.channel.socket.nio;
 
 /**
  * The default {@link ReceiveBufferSizePredictor} implementation.
+ * <p>
+ * It doubles the expected number of readable bytes if the previous read
+ * filled the allocated buffer.  It halves the expected number of readable
+ * bytes if the read operation was not able to fill a quarter of the allocated
+ * buffer two times consecutively.  Otherwise, it keeps returning the previous
+ * prediction.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -42,10 +48,22 @@ public class DefaultReceiveBufferSizePredictor implements
     private int nextReceiveBufferSize = 1024;
     private boolean shouldHalveNow;
 
+    /**
+     * Creates a new predictor with the default parameters.  With the default
+     * parameters, the expected buffer size starts from {@code 1024}, doesn't
+     * go down below {@code 256}, and doesn't go up above {@code 1048576}.
+     */
     public DefaultReceiveBufferSizePredictor() {
         this(DEFAULT_MINIMUM, DEFAULT_INITIAL, DEFAULT_MAXIMUM);
     }
 
+    /**
+     * Creates a new predictor with the specified parameters.
+     *
+     * @param minimum  the inclusive lower bound of the expected buffer size
+     * @param initial  the initial buffer size when no feed back was received
+     * @param maximum  the inclusive upper bound of the expected buffer size
+     */
     public DefaultReceiveBufferSizePredictor(int minimum, int initial, int maximum) {
         if (minimum <= 0) {
             throw new IllegalArgumentException("minimum: " + minimum);
@@ -73,7 +91,7 @@ public class DefaultReceiveBufferSizePredictor implements
             } else {
                 shouldHalveNow = true;
             }
-        } else if (previousReceiveBufferSize == nextReceiveBufferSize) {
+        } else if (previousReceiveBufferSize >= nextReceiveBufferSize) {
             nextReceiveBufferSize = Math.min(maximum, nextReceiveBufferSize << 1);
             shouldHalveNow = false;
         }

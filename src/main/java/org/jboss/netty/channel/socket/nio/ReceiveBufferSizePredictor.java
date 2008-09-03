@@ -22,7 +22,19 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+
 /**
+ * Predicts the number of readable bytes in the socket receive buffer.
+ * <p>
+ * It calculates the close-to-optimal capacity of the {@link ChannelBuffer}
+ * for the next read operation depending on the actual number of read bytes
+ * in the previous read operation.  More accurate the prediction is, more
+ * effective the memory utilization will be.
+ * <p>
+ * Once a read operation is performed and the actual number of read bytes is
+ * known, an I/O thread should call {@link #previousReceiveBufferSize(int)} to
+ * update the predictor so it can predict more accurately.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -31,6 +43,22 @@ package org.jboss.netty.channel.socket.nio;
  *
  */
 public interface ReceiveBufferSizePredictor {
+
+    /**
+     * Predicts the capacity of the {@link ChannelBuffer} for the next
+     * read operation depending on the actual number of read bytes in the
+     * previous read operation.
+     *
+     * @return the expected number of readable bytes this time
+     */
     int nextReceiveBufferSize();
+
+    /**
+     * Updates this predictor by telling the actual number of read bytes
+     * in the previous read operation.
+     *
+     * @param previousReceiveBufferSize
+     *        the actual number of read bytes in the previous read operation
+     */
     void previousReceiveBufferSize(int previousReceiveBufferSize);
 }

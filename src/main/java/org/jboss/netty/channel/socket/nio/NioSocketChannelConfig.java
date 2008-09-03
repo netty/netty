@@ -25,9 +25,11 @@ package org.jboss.netty.channel.socket.nio;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
+import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 
 /**
+ * A {@link SocketChannelConfig} for a NIO TCP/IP {@link SocketChannel}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -38,19 +40,59 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  */
 public interface NioSocketChannelConfig extends SocketChannelConfig {
 
+    /**
+     * Returns the maximum loop count for a write operation until
+     * {@link WritableByteChannel#write(ByteBuffer)} returns a non-zero value.
+     * It is similar to what a spin lock is for in concurrency programming.
+     * It improves memory utilization and write throughput depending on
+     * the platform that JVM runs on.  The default value is {@code 16}.
+     */
     int getWriteSpinCount();
 
     /**
-     * The maximum loop count for a write operation until
+     * Sets the maximum loop count for a write operation until
      * {@link WritableByteChannel#write(ByteBuffer)} returns a non-zero value.
      * It is similar to what a spin lock is for in concurrency programming.
-     * It improves memory utilization and write throughput significantly.
+     * It improves memory utilization and write throughput depending on
+     * the platform that JVM runs on.  The default value is {@code 16}.
+     *
+     * @throws IllegalArgumentException
+     *         if the specified value is {@code 0} or less than {@code 0}
      */
     void setWriteSpinCount(int writeSpinCount);
 
+    /**
+     * Returns the {@link ReceiveBufferSizePredictor} which predicts the
+     * number of readable bytes in the socket receive buffer.  The default
+     * predictor is {@link DefaultReceiveBufferSizePredictor}.
+     * .
+     */
     ReceiveBufferSizePredictor getReceiveBufferSizePredictor();
+
+    /**
+     * Sets the {@link ReceiveBufferSizePredictor} which predicts the
+     * number of readable bytes in the socket receive buffer.  The default
+     * predictor is {@link DefaultReceiveBufferSizePredictor}.
+     */
     void setReceiveBufferSizePredictor(ReceiveBufferSizePredictor predictor);
 
+    /**
+     * Returns {@code true} if and only if an I/O thread should do its effort
+     * to balance the ratio of read operations and write operations.  Assuring
+     * the read-write fairness is sometimes necessary in a high speed network
+     * because a certain channel can spend too much time on flushing the
+     * large number of write requests not giving enough time for other channels
+     * to perform I/O.  The default value is {@code false}.
+     */
     boolean isReadWriteFair();
+
+    /**
+     * Sets if an I/O thread should do its effort to balance the ratio of read
+     * operations and write operations.  Assuring the read-write fairness is
+     * sometimes necessary in a high speed network because a certain channel
+     * can spend too much time on flushing the large number of write requests
+     * not giving enough time for other channels to perform I/O.  The default
+     * value is {@code false}.
+     */
     void setReadWriteFair(boolean fair);
 }
