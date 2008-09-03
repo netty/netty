@@ -33,57 +33,66 @@ import org.jboss.netty.handler.ssl.SslHandler;
 
 /**
  * A list of {@link ChannelHandler}s which handles or intercepts
- * {@link ChannelEvent}s of a {@link Channel}.
- * <p>
- * {@link ChannelPipeline} implements an advanced form of the
+ * {@link ChannelEvent}s of a {@link Channel}.  {@link ChannelPipeline}
+ * implements an advanced form of the
  * <a href="http://java.sun.com/blueprints/corej2eepatterns/Patterns/InterceptingFilter.html">Intercepting
  * Filter</a> pattern to give a user full control over how an event is handled
  * and how the {@link ChannelHandler}s in the pipeline interact with each other.
+ *
+ * <h3>Creation of a pipeline</h3>
+ * <p>
+ * It is recommended to create a new pipeline using the helper methods in
+ * {@link Channels} rather than calling an individual implementation's
+ * constructor.
  *
  * <h3>How an event flows in a pipeline</h3>
  * <p>
  * The following diagram describes how {@link ChannelEvent}s are processed by
  * {@link ChannelHandler}s in a {@link ChannelPipeline} typically.
  * A {@link ChannelEvent} can be handled by either a {@link ChannelUpstreamHandler}
- * or a {@link ChannelDownstreamHandler}.  The meaning of the event is
- * interpreted somewhat differently depending on whether it's going upstream or
- * going downstream.  Please refer to the {@link ChannelEvent} documentation
- * for more explanation.
+ * or a {@link ChannelDownstreamHandler} and be forwarded to the next or
+ * previous handler by calling {@link ChannelHandlerContext#sendUpstream(ChannelEvent)}
+ * or {@link ChannelHandlerContext#sendDownstream(ChannelEvent)}.  The meaning
+ * of the event is interpreted somewhat differently depending on whether it's
+ * going upstream or going downstream. Please refer to {@link ChannelEvent} for
+ * more explanation.
  *
  * <pre>
- *                                      I/O Request
- *                                      via Channel
- *                                           |
- * +-----------------------------------------+----------------+
- * |                     ChannelPipeline     |                |
- * |                                        \|/               |
- * |   +----------------------+  +-----------+------------+   |
- * |   | Upstream Handler  N  |  | Downstream Handler  1  |   |
- * |   +----------+-----------+  +-----------+------------+   |
- * |             /|\                         |                |
- * |              |                         \|/               |
- * |   +----------+-----------+  +-----------+------------+   |
- * |   | Upstream Handler N-1 |  | Downstream Handler  2  |   |
- * |   +----------+-----------+  +-----------+------------+   |
- * |             /|\                         .                |
- * |              .                          .                |
- * |      [ Going Upstream ]        [ Going Downstream ]      |
- * |              .                          .                |
- * |              .                         \|/               |
- * |   +----------+-----------+  +-----------+------------+   |
- * |   | Upstream Handler  2  |  | Downstream Handler M-1 |   |
- * |   +----------+-----------+  +-----------+------------+   |
- * |             /|\                         |                |
- * |              |                         \|/               |
- * |   +----------+-----------+  +-----------+------------+   |
- * |   | Upstream Handler  1  |  | Downstream Handler  M  |   |
- * |   +----------+-----------+  +-----------+------------+   |
- * |             /|\                         |                |
- * +--------------+--------------------------+----------------+
- *                |                         \|/
- * +--------------+--------------------------+----------------+
- * |         I/O Threads (Transport Implementation)           |
- * +----------------------------------------------------------+
+ *
+ *                                         I/O Request
+ *                                       via {@link Channel} or
+ *                                   {@link ChannelHandlerContext}
+ *                                             |
+ *   +-----------------------------------------+----------------+
+ *   |                     ChannelPipeline     |                |
+ *   |                                        \|/               |
+ *   |   +----------------------+  +-----------+------------+   |
+ *   |   | Upstream Handler  N  |  | Downstream Handler  1  |   |
+ *   |   +----------+-----------+  +-----------+------------+   |
+ *   |             /|\                         |                |
+ *   |              |                         \|/               |
+ *   |   +----------+-----------+  +-----------+------------+   |
+ *   |   | Upstream Handler N-1 |  | Downstream Handler  2  |   |
+ *   |   +----------+-----------+  +-----------+------------+   |
+ *   |             /|\                         .                |
+ *   |              .                          .                |
+ *   |      [ Going Upstream ]        [ Going Downstream ]      |
+ *   |              .                          .                |
+ *   |              .                         \|/               |
+ *   |   +----------+-----------+  +-----------+------------+   |
+ *   |   | Upstream Handler  2  |  | Downstream Handler M-1 |   |
+ *   |   +----------+-----------+  +-----------+------------+   |
+ *   |             /|\                         |                |
+ *   |              |                         \|/               |
+ *   |   +----------+-----------+  +-----------+------------+   |
+ *   |   | Upstream Handler  1  |  | Downstream Handler  M  |   |
+ *   |   +----------+-----------+  +-----------+------------+   |
+ *   |             /|\                         |                |
+ *   +--------------+--------------------------+----------------+
+ *                  |                         \|/
+ *   +--------------+--------------------------+----------------+
+ *   |         I/O Threads (Transport Implementation)           |
+ *   +----------------------------------------------------------+
  * </pre>
  *
  * <h3>Building a pipeline</h3>
