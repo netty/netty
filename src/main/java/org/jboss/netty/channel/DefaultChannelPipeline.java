@@ -66,6 +66,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final Map<String, DefaultChannelHandlerContext> name2ctx =
         new HashMap<String, DefaultChannelHandlerContext>(4);
 
+    /**
+     * Creates a new empty pipeline.
+     */
+    public DefaultChannelPipeline() {
+        super();
+    }
+
     public Channel getChannel() {
         return channel;
     }
@@ -351,6 +358,31 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
         return map;
+    }
+
+    /**
+     * Returns the {@link String} representation of this pipeline.
+     */
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        buf.append(getClass().getSimpleName());
+        buf.append('{');
+        DefaultChannelHandlerContext ctx = head;
+        for (;;) {
+            buf.append('(');
+            buf.append(ctx.getName());
+            buf.append(" = ");
+            buf.append(ctx.getHandler().getClass().getName());
+            buf.append(')');
+            ctx = ctx.next;
+            if (ctx == null) {
+                break;
+            }
+            buf.append(", ");
+        }
+        buf.append('}');
+        return buf.toString();
     }
 
     public void sendUpstream(ChannelEvent e) {
