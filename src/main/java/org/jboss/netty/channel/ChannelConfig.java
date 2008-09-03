@@ -25,19 +25,19 @@ package org.jboss.netty.channel;
 import java.io.IOException;
 import java.util.Map;
 
-import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
+import org.jboss.netty.channel.socket.SocketChannelConfig;
 
 
 /**
  * A set of configuration properties of a {@link Channel}.
  * <p>
- * Please down-cast to the transport-specific configuration type such as
- * {@link NioSocketChannelConfig} or use {@link #setOptions(Map)} to set the
+ * Please down-cast to more specific configuration type such as
+ * {@link SocketChannelConfig} or use {@link #setOptions(Map)} to set the
  * transport-specific properties:
  * <pre>
  * Channel ch = ...;
- * NioSocketChannelConfig cfg = <strong>(NioSocketChannelConfig) ch.getConfig();</strong>
- * cfg.setWriteSpinCount(4);
+ * SocketChannelConfig cfg = <strong>(SocketChannelConfig) ch.getConfig();</strong>
+ * cfg.setTcpNoDelay(false);
  * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
