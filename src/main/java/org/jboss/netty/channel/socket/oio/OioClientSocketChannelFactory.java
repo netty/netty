@@ -72,6 +72,12 @@ import org.jboss.netty.channel.socket.SocketChannel;
  * closed.  Otherwise, you will end up with a {@link RejectedExecutionException}
  * and the related resources might not be released properly.
  *
+ * <h3>Limitation</h3>
+ * <p>
+ * A {@link SocketChannel} created by this factory doesn't support asynchronous
+ * operations.  Any I/O requests such as {@code "connect"} and {@code "write"}
+ * will be performed in a blocking manner.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
