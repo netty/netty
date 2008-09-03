@@ -27,6 +27,9 @@ import java.net.InetSocketAddress;
 import org.jboss.netty.channel.Channel;
 
 /**
+ * A server-side TCP/IP socket {@link Channel} which accepts incoming TCP/IP
+ * connections.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

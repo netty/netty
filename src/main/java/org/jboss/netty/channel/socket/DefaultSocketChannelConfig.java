@@ -31,11 +31,23 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.util.ConversionUtil;
 
+/**
+ * The default {@link SocketChannelConfig} implementation.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
+ *
+ */
 public class DefaultSocketChannelConfig implements SocketChannelConfig {
 
     private final Socket socket;
     private volatile int connectTimeoutMillis = 10000; // 10 seconds
 
+    /**
+     * Creates a new instance.
+     */
     public DefaultSocketChannelConfig(Socket socket) {
         if (socket == null) {
             throw new NullPointerException("socket");
@@ -49,6 +61,10 @@ public class DefaultSocketChannelConfig implements SocketChannelConfig {
         }
     }
 
+    /**
+     * Sets an individual option.  You can override this method to support
+     * additional configuration parameters.
+     */
     protected boolean setOption(String key, Object value) {
         if (key.equals("receiveBufferSize")) {
             setReceiveBufferSize(ConversionUtil.toInt(value));

@@ -27,6 +27,9 @@ import java.net.InetSocketAddress;
 import org.jboss.netty.channel.Channel;
 
 /**
+ * A TCP/IP socket {@link Channel} which was either accepted by
+ * {@link ServerSocketChannel} or created by {@link ClientSocketChannelFactory}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
