@@ -44,35 +44,43 @@ import java.net.SocketAddress;
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>Event type and condition</th><th>Meaning</th>
+ * <th>Event name</th><th>Event type and condition</th><th>Meaning</th>
  * </tr>
  * <tr>
+ * <td>{@code "write"}</td>
  * <td>{@link MessageEvent}</td><td>Send a message to the {@link Channel}.</td>
  * </tr>
  * <tr>
+ * <td>{@code "bind"}</td>
  * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#BOUND BOUND}, value = {@link SocketAddress})</td>
  * <td>Bind the {@link Channel} to the specified local address.</td>
  * </tr>
  * <tr>
+ * <td>{@code "unbind"}</td>
  * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#BOUND BOUND}, value = {@code null})</td>
  * <td>Unbind the {@link Channel} from the current local address.</td>
  * </tr>
  * <tr>
+ * <td>{@code "connect"}</td>
  * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#CONNECTED CONNECTED}, value = {@link SocketAddress})</td>
  * <td>Connect the {@link Channel} to the specified remote address.</td>
  * </tr>
  * <tr>
+ * <td>{@code "disconnect"}</td>
  * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#CONNECTED CONNECTED}, value = {@code null})</td>
  * <td>Disconnect the {@link Channel} from the current remote address.</td>
  * </tr>
  * <tr>
+ * <td>{@code "close"}</td>
  * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#OPEN OPEN}, value = {@code false})</td>
  * <td>Close the {@link Channel}.</td>
  * </tr>
  * </table>
  * <p>
  * Other event types and conditions which were not addressed here will be
- * ignored and discarded.
+ * ignored and discarded.  Please note that there's no {@code "open"} in the
+ * table.  It's because a {@link Channel} is always open when it's created
+ * by a {@link ChannelFactory}.
  *
  * <h4>Additional resources worth reading</h4>
  * <p>
