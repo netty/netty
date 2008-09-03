@@ -124,15 +124,19 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  *     ChannelBuffer frame = buf.readBytes(length);
  *
  *     // Successfully decoded a frame.  Return the decoded frame.
- *     // Please note that you can return a different type than
- *     // {@link ChannelBuffer} although this example returns a {@link ChannelBuffer}.
- *     // For example, you could return a <a href="http://en.wikipedia.org/wiki/POJO">POJO</a> here so that the next
- *     // {@link ChannelUpstreamHandler} receives a {@link MessageEvent} which contains
- *     // a POJO rather than a {@link ChannelBuffer}.
  *     return <strong>frame</strong>;
  *   }
  * }
  * </pre>
+ *
+ * <h3>Returning a POJO rather than a {@link ChannelBuffer}</h3>
+ * <p>
+ * Please note that you can return an object of a different type than
+ * {@link ChannelBuffer} in your {@code decode()} and {@code decodeLast()}
+ * implementation.  For example, you could return a
+ * <a href="http://en.wikipedia.org/wiki/POJO">POJO</a> so that the next
+ * {@link ChannelUpstreamHandler} receives a {@link MessageEvent} which
+ * contains a POJO rather than a {@link ChannelBuffer}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
