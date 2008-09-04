@@ -27,18 +27,43 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.nio.charset.Charset;
 
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
+import org.jboss.netty.handler.codec.frame.Delimiters;
 
 /**
+ * Encodes the requested {@link String} into a {@link ChannelBuffer}.
+ * The typical decoder setup for a text-based line protocol in a TCP/IP socket
+ * would be:
+ * <pre>
+ * {@link ChannelPipeline} pipeline = ...;
+ *
+ * // Decoders
+ * pipeline.addLast("frameDecoder", new {@link DelimiterBasedFrameDecoder}({@link Delimiters#lineDelimiter()}));
+ * pipeline.addLast("stringDecoder", new {@link StringDecoder}("UTF-8"));
+ *
+ * // Encoder
+ * pipeline.addLast("stringEncoder", new {@link StringEncoder}("UTF-8"));
+ * </pre>
+ * and then you can use {@link String}s instead of {@link ChannelBuffer}s
+ * as a message:
+ * <pre>
+ * void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ *     String msg = (String) e.getMessage();
+ *     ch.write("Did you say '" + msg + "'?\n");
+ * }
+ * </pre>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev:231 $, $Date:2008-06-12 16:44:50 +0900 (목, 12 6월 2008) $
- *
  */
 @ChannelPipelineCoverage("all")
 public class StringEncoder implements ChannelDownstreamHandler {
