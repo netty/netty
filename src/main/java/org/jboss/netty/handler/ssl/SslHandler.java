@@ -44,6 +44,7 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
@@ -51,6 +52,42 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.util.ImmediateExecutor;
 
 /**
+ * Adds <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL
+ * &middot; TLS</a> and StartTLS support to a {@link Channel}.  Please refer
+ * to the <strong>"SecureChat"</strong> example in the distribution or the web
+ * site for the detailed usage.
+ *
+ * <h3>Beginning the handshake</h3>
+ * <p>
+ * A user should make sure not to write a message while the
+ * {@linkplain #handshake(Channel) handshake} is in progress unless it's a
+ * renegotiation.  You will be notified by the {@link ChannelFuture} which is
+ * returned by the {@link #handshake(Channel)} method when the handshake
+ * process succeeds or fails.
+ *
+ * <h3>Renegotiation</h3>
+ * <p>
+ * Once the initial handshake is done successfully.  You can always call
+ * {@link #handshake(Channel)} again to renegotiate the SSL session parameters.
+ *
+ * <h3>Closing the session</h3>
+ * <p>
+ * To close the SSL session, the {@link #close(Channel)} method should be
+ * called to send the {@code close_notify} message to the remote peer.  One
+ * exception is when you close the {@link Channel} - {@link SslHandler}
+ * intercepts the close request and send the {@code close_notify} message
+ * before the channel closure automatically.  Once the SSL session is closed,
+ * it's not reusable, and consequently you should create a new
+ * {@link SslHandler} with a new {@link SSLEngine} as explained in the
+ * following section.
+ *
+ * <h3>Restarting the session</h3>
+ * <p>
+ * To restart the SSL session, you must remove the existing closed
+ * {@link SslHandler} from the {@link ChannelPipeline}, insert a new
+ * {@link SslHandler} with a new {@link SSLEngine} into the pipeline,
+ * and start the handshake process as described in the first section.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -65,7 +102,11 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
 
     private static SslBufferPool defaultBufferPool;
 
-    private static synchronized SslBufferPool getDefaultBufferPool() {
+    /**
+     * Returns the default {@link SslBufferPool} used when no pool is
+     * specified in the constructor.
+     */
+    public static synchronized SslBufferPool getDefaultBufferPool() {
         if (defaultBufferPool == null) {
             defaultBufferPool = new SslBufferPool();
         }
@@ -88,34 +129,110 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
     private final Queue<PendingWrite> pendingUnencryptedWrites = new LinkedList<PendingWrite>();
     private final Queue<MessageEvent> pendingEncryptedWrites = new LinkedList<MessageEvent>();
 
+    /**
+     * Creates a new instance.
+     *
+     * @param engine  the {@link SSLEngine} this handler will use
+     */
     public SslHandler(SSLEngine engine) {
         this(engine, getDefaultBufferPool(), ImmediateExecutor.INSTANCE);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param engine      the {@link SSLEngine} this handler will use
+     * @param bufferPool  the {@link SslBufferPool} where this handler will
+     *                    acquire the buffers required by the {@link SSLEngine}
+     */
     public SslHandler(SSLEngine engine, SslBufferPool bufferPool) {
         this(engine, bufferPool, ImmediateExecutor.INSTANCE);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param engine    the {@link SSLEngine} this handler will use
+     * @param startTls  {@code true} if the first write request shouldn't be
+     *                  encrypted by the {@link SSLEngine}
+     */
     public SslHandler(SSLEngine engine, boolean startTls) {
         this(engine, getDefaultBufferPool(), startTls);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param engine      the {@link SSLEngine} this handler will use
+     * @param bufferPool  the {@link SslBufferPool} where this handler will
+     *                    acquire the buffers required by the {@link SSLEngine}
+     * @param startTls    {@code true} if the first write request shouldn't be
+     *                    encrypted by the {@link SSLEngine}
+     */
     public SslHandler(SSLEngine engine, SslBufferPool bufferPool, boolean startTls) {
         this(engine, bufferPool, startTls, ImmediateExecutor.INSTANCE);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param engine
+     *        the {@link SSLEngine} this handler will use
+     * @param delegatedTaskExecutor
+     *        the {@link Executor} which will execute the delegated task
+     *        that {@link SSLEngine#getDelegatedTask()} will return
+     */
     public SslHandler(SSLEngine engine, Executor delegatedTaskExecutor) {
         this(engine, getDefaultBufferPool(), delegatedTaskExecutor);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param engine
+     *        the {@link SSLEngine} this handler will use
+     * @param bufferPool
+     *        the {@link SslBufferPool} where this handler will acquire
+     *        the buffers required by the {@link SSLEngine}
+     * @param delegatedTaskExecutor
+     *        the {@link Executor} which will execute the delegated task
+     *        that {@link SSLEngine#getDelegatedTask()} will return
+     */
     public SslHandler(SSLEngine engine, SslBufferPool bufferPool, Executor delegatedTaskExecutor) {
         this(engine, bufferPool, false, delegatedTaskExecutor);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param engine
+     *        the {@link SSLEngine} this handler will use
+     * @param startTls
+     *        {@code true} if the first write request shouldn't be encrypted
+     *        by the {@link SSLEngine}
+     * @param delegatedTaskExecutor
+     *        the {@link Executor} which will execute the delegated task
+     *        that {@link SSLEngine#getDelegatedTask()} will return
+     */
     public SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor) {
         this(engine, getDefaultBufferPool(), startTls, delegatedTaskExecutor);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param engine
+     *        the {@link SSLEngine} this handler will use
+     * @param bufferPool
+     *        the {@link SslBufferPool} where this handler will acquire
+     *        the buffers required by the {@link SSLEngine}
+     * @param startTls
+     *        {@code true} if the first write request shouldn't be encrypted
+     *        by the {@link SSLEngine}
+     * @param delegatedTaskExecutor
+     *        the {@link Executor} which will execute the delegated task
+     *        that {@link SSLEngine#getDelegatedTask()} will return
+     */
     public SslHandler(SSLEngine engine, SslBufferPool bufferPool, boolean startTls, Executor delegatedTaskExecutor) {
         if (engine == null) {
             throw new NullPointerException("engine");
@@ -132,10 +249,19 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
         this.startTls = startTls;
     }
 
+    /**
+     * Returns the {@link SSLEngine} which is used by this handler.
+     */
     public SSLEngine getEngine() {
         return engine;
     }
 
+    /**
+     * Starts SSL / TLS handshake for the specified channel.
+     *
+     * @return a {@link ChannelFuture} which is notified when the handshake
+     *         succeeds or fails.
+     */
     public ChannelFuture handshake(Channel channel) throws SSLException {
         ChannelFuture handshakeFuture;
         synchronized (handshakeLock) {
@@ -153,6 +279,10 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
         return handshakeFuture;
     }
 
+    /**
+     * Sends a SSL {@code close_notify} message to the specified channel and
+     * destroys the underlying {@link SSLEngine}.
+     */
     public ChannelFuture close(Channel channel) throws SSLException {
         ChannelHandlerContext ctx = context(channel);
         engine.closeOutbound();
