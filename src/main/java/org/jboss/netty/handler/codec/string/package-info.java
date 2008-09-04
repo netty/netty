@@ -22,7 +22,7 @@
  */
 
 /**
- * Encoder and decoder which transform a string into a byte buffer and vice
- * versa.
+ * Encoder and decoder which transform a {@link String} into a
+ * {@link org.jboss.netty.buffer.ChannelBuffer} and vice versa.
  */
 package org.jboss.netty.handler.codec.string;
