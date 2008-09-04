@@ -59,7 +59,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
  * For example, the events can be processed as depicted below:
  *
  * <pre>
- *           --------------------------------&gt; Timeline ---------------------------------&gt;
+ *           --------------------------------&gt; Timeline --------------------------------&gt;
  *
  * Thread X: --- Channel A (Event 2) --- Channel A (Event 1) ---------------------------&gt;
  *
