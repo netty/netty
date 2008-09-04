@@ -99,6 +99,8 @@ public abstract class AbstractSocketServerBootstrapTest {
         bootstrap.setOption("child.receiveBufferSize", 9753);
         bootstrap.setOption("child.sendBufferSize", 8642);
 
+        bootstrap.getPipeline().addLast("dummy", new DummyHandler());
+
         Channel channel = bootstrap.bind();
         ParentChannelHandler pch =
             channel.getPipeline().get(ParentChannelHandler.class);
@@ -195,6 +197,13 @@ public abstract class AbstractSocketServerBootstrapTest {
                 ChildChannelStateEvent e) throws Exception {
             child = e.getChildChannel();
             result.append('1');
+        }
+    }
+
+    @ChannelPipelineCoverage("all")
+    private static class DummyHandler extends SimpleChannelHandler {
+        DummyHandler() {
+            super();
         }
     }
 }
