@@ -146,7 +146,7 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
     }
 
     public ChannelBuffer copy(int index, int length) {
-        return new ReadOnlyChannelBuffer(buffer.copy(index, length));
+        return buffer.copy(index, length);
     }
 
     public ChannelBuffer slice(int index, int length) {
@@ -175,6 +175,15 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
 
     public ByteBuffer toByteBuffer(int index, int length) {
         return buffer.toByteBuffer(index, length).asReadOnlyBuffer();
+    }
+
+    @Override
+    public ByteBuffer[] toByteBuffers(int index, int length) {
+        ByteBuffer[] bufs = buffer.toByteBuffers(index, length);
+        for (int i = 0; i < bufs.length; i ++) {
+            bufs[i] = bufs[i].asReadOnlyBuffer();
+        }
+        return bufs;
     }
 
     public String toString(int index, int length, String charsetName) {
