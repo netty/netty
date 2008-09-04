@@ -113,9 +113,10 @@ class NioWorker implements Runnable {
             boolean server = !(channel instanceof NioClientSocketChannel);
             if (server) {
                 fireChannelOpen(channel);
+                fireChannelBound(channel, channel.getLocalAddress());
+            } else if (!((NioClientSocketChannel) channel).boundManually) {
+                fireChannelBound(channel, channel.getLocalAddress());
             }
-
-            fireChannelBound(channel, channel.getLocalAddress());
             fireChannelConnected(channel, channel.getRemoteAddress());
 
             String threadName =
@@ -141,8 +142,13 @@ class NioWorker implements Runnable {
                             "Failed to register a socket to the selector.", e);
                 }
 
-                fireChannelOpen(channel);
-                fireChannelBound(channel, channel.getLocalAddress());
+                boolean server = !(channel instanceof NioClientSocketChannel);
+                if (server) {
+                    fireChannelOpen(channel);
+                    fireChannelBound(channel, channel.getLocalAddress());
+                } else if (!((NioClientSocketChannel) channel).boundManually) {
+                    fireChannelBound(channel, channel.getLocalAddress());
+                }
                 fireChannelConnected(channel, channel.getRemoteAddress());
             } finally {
                 selectorGuard.readLock().unlock();
