@@ -218,8 +218,6 @@ public class ClientBootstrap extends Bootstrap {
             }
         } while (future == null);
 
-        pipeline.remove(pipeline.get("connector"));
-
         return future;
     }
 
