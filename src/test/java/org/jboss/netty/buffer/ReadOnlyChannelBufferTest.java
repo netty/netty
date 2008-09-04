@@ -177,6 +177,7 @@ public class ReadOnlyChannelBufferTest {
     public void shouldRejectSetBytes2() throws IOException {
         unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ScatteringByteChannel) null, 0);
     }
+
     @Test(expected = UnsupportedOperationException.class)
     public void shouldRejectSetBytes3() {
         unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (byte[]) null, 0, 0);
