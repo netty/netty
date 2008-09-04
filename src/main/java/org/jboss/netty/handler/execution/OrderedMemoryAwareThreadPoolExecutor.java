@@ -33,8 +33,28 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelEvent;
 
 /**
+ * A {@link MemoryAwareThreadPoolExecutor} which maintains the
+ * {@link ChannelEvent} order for the same {@link Channel}.
+ * <p>
+ * Although {@link OrderedMemoryAwareThreadPoolExecutor} guarantees the order
+ * of {@link ChannelEvent}s.  It does not guarantee that the invocation will be
+ * made by the same thread for the same channel, but it does guarantee that
+ * the invocation will be made sequentially for the events of the same channel.
+ * For example, the events can be processed as depicted below:
+ *
+ * <pre>
+ *           -----------------------------------&gt; Timeline -----------------------------------&gt;
+ *
+ * Thread X: --- Channel A (Event 1) --.   .-- Channel B (Event 2) --- Channel B (Event 3) ---&gt;
+ *                                      \ /
+ *                                       X
+ *                                      / \
+ * Thread Y: --- Channel B (Event 1) --'   '-- Channel A (Event 2) --- Channel A (Event 3) ---&gt;
+ * </pre>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @author David M. Lloyd (david.lloyd@redhat.com)
@@ -48,33 +68,82 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
     private final ConcurrentMap<Channel, Executor> childExecutors =
         new ConcurrentHashMap<Channel, Executor>();
 
-    public OrderedMemoryAwareThreadPoolExecutor(int corePoolSize,
-            int maxChannelMemorySize, int maxTotalMemorySize,
+    /**
+     * Creates a new instance.
+     *
+     * @param corePoolSize          the maximum number of active threads
+     * @param maxChannelMemorySize  the maximum total size of the queued events per channel.
+     *                              Specify {@code 0} to disable.
+     * @param maxTotalMemorySize    the maximum total size of the queued events for this pool
+     *                              Specify {@code 0} to disable.
+     */
+    public OrderedMemoryAwareThreadPoolExecutor(
+            int corePoolSize, int maxChannelMemorySize, int maxTotalMemorySize) {
+        super(corePoolSize, maxChannelMemorySize, maxTotalMemorySize);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param corePoolSize          the maximum number of active threads
+     * @param maxChannelMemorySize  the maximum total size of the queued events per channel.
+     *                              Specify {@code 0} to disable.
+     * @param maxTotalMemorySize    the maximum total size of the queued events for this pool
+     *                              Specify {@code 0} to disable.
+     * @param keepAliveTime         the amount of time for an inactive thread to shut itself down
+     * @param unit                  the {@link TimeUnit} of {@code keepAliveTime}
+     */
+    public OrderedMemoryAwareThreadPoolExecutor(
+            int corePoolSize, int maxChannelMemorySize, int maxTotalMemorySize,
+            long keepAliveTime, TimeUnit unit) {
+        super(corePoolSize, maxChannelMemorySize, maxTotalMemorySize,
+                keepAliveTime, unit);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param corePoolSize          the maximum number of active threads
+     * @param maxChannelMemorySize  the maximum total size of the queued events per channel.
+     *                              Specify {@code 0} to disable.
+     * @param maxTotalMemorySize    the maximum total size of the queued events for this pool
+     *                              Specify {@code 0} to disable.
+     * @param keepAliveTime         the amount of time for an inactive thread to shut itself down
+     * @param unit                  the {@link TimeUnit} of {@code keepAliveTime}
+     * @param threadFactory         the {@link ThreadFactory} of this pool
+     */
+    public OrderedMemoryAwareThreadPoolExecutor(
+            int corePoolSize, int maxChannelMemorySize, int maxTotalMemorySize,
+            long keepAliveTime, TimeUnit unit, ThreadFactory threadFactory) {
+        super(corePoolSize, maxChannelMemorySize, maxTotalMemorySize,
+                keepAliveTime, unit, threadFactory);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param corePoolSize          the maximum number of active threads
+     * @param maxChannelMemorySize  the maximum total size of the queued events per channel.
+     *                              Specify {@code 0} to disable.
+     * @param maxTotalMemorySize    the maximum total size of the queued events for this pool
+     *                              Specify {@code 0} to disable.
+     * @param keepAliveTime         the amount of time for an inactive thread to shut itself down
+     * @param unit                  the {@link TimeUnit} of {@code keepAliveTime}
+     * @param threadFactory         the {@link ThreadFactory} of this pool
+     * @param objectSizeEstimator   the {@link ObjectSizeEstimator} of this pool
+     */
+    public OrderedMemoryAwareThreadPoolExecutor(
+            int corePoolSize, int maxChannelMemorySize, int maxTotalMemorySize,
             long keepAliveTime, TimeUnit unit,
             ObjectSizeEstimator objectSizeEstimator, ThreadFactory threadFactory) {
         super(corePoolSize, maxChannelMemorySize, maxTotalMemorySize,
                 keepAliveTime, unit, objectSizeEstimator, threadFactory);
     }
 
-    public OrderedMemoryAwareThreadPoolExecutor(int corePoolSize,
-            int maxChannelMemorySize, int maxTotalMemorySize,
-            long keepAliveTime, TimeUnit unit, ThreadFactory threadFactory) {
-        super(corePoolSize, maxChannelMemorySize, maxTotalMemorySize,
-                keepAliveTime, unit, threadFactory);
-    }
-
-    public OrderedMemoryAwareThreadPoolExecutor(int corePoolSize,
-            int maxChannelMemorySize, int maxTotalMemorySize,
-            long keepAliveTime, TimeUnit unit) {
-        super(corePoolSize, maxChannelMemorySize, maxTotalMemorySize,
-                keepAliveTime, unit);
-    }
-
-    public OrderedMemoryAwareThreadPoolExecutor(int corePoolSize,
-            int maxChannelMemorySize, int maxTotalMemorySize) {
-        super(corePoolSize, maxChannelMemorySize, maxTotalMemorySize);
-    }
-
+    /**
+     * Executes the specified task concurrently while maintaining the event
+     * order.
+     */
     @Override
     protected void doExecute(Runnable task) {
         if (!(task instanceof ChannelEventRunnable)) {

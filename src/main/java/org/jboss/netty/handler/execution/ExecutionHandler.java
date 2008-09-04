@@ -26,10 +26,30 @@ import java.util.concurrent.Executor;
 
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 
 /**
+ * Forwards a upstream {@link ChannelEvent} to an {@link Executor}.
+ * <p>
+ * You can implement various thread model by adding this handler to a
+ * {@link ChannelPipeline}.  The most common use case of this handler is to
+ * add a {@link ExecutionHandler} which was specified with
+ * {@link OrderedMemoryAwareThreadPoolExecutor}:
+ * <pre>
+ * ChannelPipeline pipeline = ...;
+ * pipeline.addLast("decoder", new MyProtocolDecoder());
+ * pipeline.addLast("encoder", new MyProtocolEncoder());
+ *
+ * // HERE
+ * <strong>pipeline.addLast("executor", new {@link ExecutionHandler}(new {@link OrderedMemoryAwareThreadPoolExecutor}(16, 1048576, 1048576)));</strong>
+ *
+ * pipeline.addLast("handler", new MyBusinessLogicHandler());
+ * </pre>
+ * to utilize more processors to handle {@link ChannelEvent}s.  You can also
+ * use other {@link Executor} implementation than the recommended
+ * {@link OrderedMemoryAwareThreadPoolExecutor}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -44,6 +64,9 @@ public class ExecutionHandler implements ChannelUpstreamHandler {
 
     private final Executor executor;
 
+    /**
+     * Creates a new instance with the specified {@link Executor}.
+     */
     public ExecutionHandler(Executor executor) {
         if (executor == null) {
             throw new NullPointerException("executor");
@@ -51,6 +74,9 @@ public class ExecutionHandler implements ChannelUpstreamHandler {
         this.executor = executor;
     }
 
+    /**
+     * Returns the {@link Executor} which was specified with the constructor.
+     */
     public final Executor getExecutor() {
         return executor;
     }

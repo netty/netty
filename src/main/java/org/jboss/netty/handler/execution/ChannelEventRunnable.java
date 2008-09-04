@@ -22,10 +22,15 @@
  */
 package org.jboss.netty.handler.execution;
 
+import java.util.concurrent.Executor;
+
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
+ * a {@link Runnable} which sends the specified {@link ChannelEvent} upstream.
+ * Most users will not see this type at all because it's used by
+ * {@link Executor} implementors only
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -34,22 +39,37 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  *
  */
 public class ChannelEventRunnable implements Runnable {
+
     private final ChannelHandlerContext ctx;
     private final ChannelEvent e;
 
+    /**
+     * Creates a {@link Runnable} which sends the specified {@link ChannelEvent}
+     * upstream via the specified {@link ChannelHandlerContext}.
+     */
     public ChannelEventRunnable(ChannelHandlerContext ctx, ChannelEvent e) {
         this.ctx = ctx;
         this.e = e;
     }
 
+    /**
+     * Returns the {@link ChannelHandlerContext} which will be used to
+     * send the {@link ChannelEvent} upstream.
+     */
     public ChannelHandlerContext getContext() {
         return ctx;
     }
 
+    /**
+     * Returns the {@link ChannelEvent} which will be sent upstream.
+     */
     public ChannelEvent getEvent() {
         return e;
     }
 
+    /**
+     * Sends the event upstream.
+     */
     public void run() {
         ctx.sendUpstream(e);
     }
