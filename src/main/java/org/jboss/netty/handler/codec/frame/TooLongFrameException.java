@@ -23,6 +23,9 @@
 package org.jboss.netty.handler.codec.frame;
 
 /**
+ * An {@link Exception} which is thrown when the length of the frame
+ * decoded by {@link DelimiterBasedFrameDecoder} is greater than the maximum.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -34,18 +37,30 @@ public class TooLongFrameException extends Exception {
 
     private static final long serialVersionUID = -1995801950698951640L;
 
+    /**
+     * Creates a new instance.
+     */
     public TooLongFrameException() {
         super();
     }
 
+    /**
+     * Creates a new instance.
+     */
     public TooLongFrameException(String message, Throwable cause) {
         super(message, cause);
     }
 
+    /**
+     * Creates a new instance.
+     */
     public TooLongFrameException(String message) {
         super(message);
     }
 
+    /**
+     * Creates a new instance.
+     */
     public TooLongFrameException(Throwable cause) {
         super(cause);
     }

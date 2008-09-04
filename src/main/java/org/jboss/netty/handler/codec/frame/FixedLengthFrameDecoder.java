@@ -27,16 +27,36 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
+ * A {@link FrameDecoder} which decodes the received {@link ChannelBuffer}s
+ * into the {@link ChannelBuffer}s of the fixed length.  For example, if you
+ * received the following four fragmented packets:
+ * <pre>
+ * +---+----+------+----+
+ * | A | BC | DEFG | HI |
+ * +---+----+------+----+
+ * </pre>
+ * A {@link FixedLengthFrameDecoder}{@code (3)} will decode them into the
+ * following three packets with the fixed length:
+ * <pre>
+ * +-----+-----+-----+
+ * | ABC | DEF | GHI |
+ * +-----+-----+-----+
+ * </pre>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev:231 $, $Date:2008-06-12 16:44:50 +0900 (목, 12 6월 2008) $
- *
  */
 public class FixedLengthFrameDecoder extends FrameDecoder {
 
     private final int frameLength;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param frameLength  the length of the frame
+     */
     public FixedLengthFrameDecoder(int frameLength) {
         if (frameLength <= 0) {
             throw new IllegalArgumentException(

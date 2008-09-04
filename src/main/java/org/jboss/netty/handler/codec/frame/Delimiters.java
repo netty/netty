@@ -26,6 +26,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
+ * A set of delimiters for {@link DelimiterBasedFrameDecoder} for common use.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -34,11 +36,19 @@ import org.jboss.netty.buffer.ChannelBuffers;
  */
 public class Delimiters {
 
+    /**
+     * Returns a {@code NUL (0x00)} delimiter, which could be used for
+     * Flash XML socket or any similar protocols.
+     */
     public static ChannelBuffer[] nulDelimiter() {
         return new ChannelBuffer[] {
                 ChannelBuffers.wrappedBuffer(new byte[] { 0 }) };
     }
 
+    /**
+     * Returns {@code CR ('\r')} and {@code LF ('\n')} delimiters, which could
+     * be used for text-based line protocols.
+     */
     public static ChannelBuffer[] lineDelimiter() {
         return new ChannelBuffer[] {
                 ChannelBuffers.wrappedBuffer(new byte[] { '\r', '\n' }),

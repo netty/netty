@@ -27,6 +27,41 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
+ * A {@link FrameDecoder} which decodes the received {@link ChannelBuffer}s
+ * into the {@link ChannelBuffer}s split by one or more delimiters.  It is
+ * particularly useful for decoding the frames which ends with a delimiter
+ * such as {@link Delimiters#nulDelimiter() NUL} or
+ *         {@linkplain Delimiters#lineDelimiter() newline characters}.
+ *
+ * <h3>Predefined delimiters</h3>
+ * <p>
+ * {@link Delimiters} defines frequently used delimiters for convenience' sake.
+ *
+ * <h3>Specifying more than one delimiter</h3>
+ * <p>
+ * {@link DelimiterBasedFrameDecoder} allows you to specify more than one
+ * delimiter.  If more than one delimiter is found in the buffer, it chooses
+ * the delimiter which produces the shortest frame.  For example, if you have
+ * the following data in the buffer:
+ * <pre>
+ * +--------------+
+ * | ABC\nDEF\r\n |
+ * +--------------+
+ * </pre>
+ * a {@link DelimiterBasedFrameDecoder}{@code (}{@link Delimiters#lineDelimiter() Delimiters.lineDelimiter()}{@code )}
+ * will choose {@code '\n'} as the first delimiter and produce two frames:
+ * <pre>
+ * +-----+-----+
+ * | ABC | DEF |
+ * +-----+-----+
+ * </pre>
+ * rather than incorrectly choosing {@code '\r\n'} as the first delimiter:
+ * <pre>
+ * +----------+
+ * | ABC\nDEF |
+ * +----------+
+ * </pre>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -39,6 +74,14 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
     private final ChannelBuffer[] delimiters;
     private final int maxFrameLength;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param maxFrameLength  the maximum length of the decoded frame.
+     *                        A {@link TooLongFrameException} is thrown if
+     *                        the length of the frame exceeds this value.
+     * @param delimiter  the delimiter
+     */
     public DelimiterBasedFrameDecoder(int maxFrameLength, ChannelBuffer delimiter) {
         validateMaxFrameLength(maxFrameLength);
         validateDelimiter(delimiter);
@@ -49,6 +92,14 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
         this.maxFrameLength = maxFrameLength;
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param maxFrameLength  the maximum length of the decoded frame.
+     *                        A {@link TooLongFrameException} is thrown if
+     *                        the length of the frame exceeds this value.
+     * @param delimiters  the delimiters
+     */
     public DelimiterBasedFrameDecoder(int maxFrameLength, ChannelBuffer... delimiters) {
         validateMaxFrameLength(maxFrameLength);
         if (delimiters == null) {

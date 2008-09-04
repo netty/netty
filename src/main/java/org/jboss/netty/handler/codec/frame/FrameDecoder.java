@@ -38,8 +38,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
- * Assembles and splits incoming {@link ChannelBuffer}s into a meaningful
- * frame object.
+ * Decodes the received {@link ChannelBuffer}s into a meaningful frame object.
  * <p>
  * In a stream-based transport such as TCP/IP, packets can be fragmented and
  * reassembled during transmission even in a LAN environment.  For example,
@@ -57,18 +56,17 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * +----+-------+---+---+
  * </pre>
  * <p>
- * {@link FrameDecoder} helps you defrag and split the received packets into
- * one or more meaningful <strong>frames</strong> that could be easily
- * understood by the application logic.  In case of the example above, your
- * {@link FrameDecoder} implementation could defrag the received packets like
- * the following:
+ * {@link FrameDecoder} helps you defrag the received packets into one or more
+ * meaningful <strong>frames</strong> that could be easily understood by the
+ * application logic.  In case of the example above, your {@link FrameDecoder}
+ * implementation could defrag the received packets like the following:
  * <pre>
  * +-----+-----+-----+
  * | ABC | DEF | GHI |
  * +-----+-----+-----+
  * </pre>
  * <p>
- * The following code shows an example decoder which decodes a frame whose
+ * The following code shows an example handler which decodes a frame whose
  * first 4 bytes header represents the length of the frame, excluding the
  * header.
  * <pre>
@@ -84,6 +82,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * ======================
  *
  * public class IntegerHeaderFrameDecoder extends FrameDecoder {
+ *
  *   protected Object decode(ChannelHandlerContext ctx,
  *                           Channel channel,
  *                           ChannelBuffer buf) throws Exception {
