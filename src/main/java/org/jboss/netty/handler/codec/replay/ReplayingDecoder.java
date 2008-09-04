@@ -35,13 +35,151 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.handler.codec.frame.FrameDecoder;
 
 /**
+ * A specialized variation of {@link FrameDecoder} which enables implementation
+ * of a non-blocking decoder in the blocking I/O paradigm.
+ * <p>
+ * The biggest difference between {@link ReplayingDecoder} and
+ * {@link FrameDecoder} is that {@link ReplayingDecoder} allows you to
+ * implement the {@code decode()} and {@code decodeLast()} methods just like
+ * all required bytes were received already, rather than checking the
+ * availability of the required bytes.  For example, the following
+ * {@link FrameDecoder} implementation:
+ * <pre>
+ * public class IntegerHeaderFrameDecoder extends FrameDecoder {
+ *
+ *   protected Object decode(ChannelHandlerContext ctx,
+ *                           Channel channel,
+ *                           ChannelBuffer buf) throws Exception {
+ *
+ *     if (buf.readableBytes() &lt; 4) {
+ *        return <strong>null</strong>;
+ *     }
+ *
+ *     buf.markReaderIndex();
+ *     int length = buf.readInt();
+ *
+ *     if (buf.readableBytes() &lt; length) {
+ *        buf.resetReaderIndex();
+ *        return <strong>null</strong>;
+ *     }
+ *
+ *     return buf.readBytes(length);
+ *   }
+ * }
+ * </pre>
+ * is simplified like the following with {@link ReplayingDecoder}:
+ * <pre>
+ * public class IntegerHeaderFrameDecoder
+ *      extends ReplayingDecoder&lt;VoidEnum&gt; {
+ *
+ *   protected Object decode(ChannelHandlerContext ctx,
+ *                           Channel channel,
+ *                           ChannelBuffer buf,
+ *                           VoidEnum state) throws Exception {
+ *
+ *     return buf.readBytes(buf.readInt());
+ *   }
+ * }
+ * </pre>
+ *
+ * <h3>Limitations</h3>
+ * <p>
+ * At the cost of the simplicity, {@link ReplayingDecoder} enforces you a few
+ * limitations:
+ * <ul>
+ * <li>Some buffer operations are prohibited.</li>
+ * <li>Performance can be worse if the network is slow and the message
+ *     format is complicated unlike the example above.</li>
+ * </ul>
+ *
+ * <h3>Improving the performance</h3>
+ * <p>
+ * Fortunately, the performance of a {@link ReplayingDecoder} implementation
+ * can be improved significantly by using the {@code checkpoint()} method.
+ *
+ * <h4>Calling {@code checkpoint(T)} with an {@link Enum}</h4>
+ * <p>
+ * The easiest way is to create an {@link Enum} type which represents the
+ * current state of the decoder and to call {@code checkpoint(T)} method
+ * whenever the state changes.  You can have as many states as you want
+ * depending on the complexity of the message:
+ *
+ * <pre>
+ * public enum MyDecoderState {
+ *   READ_LENGTH,
+ *   READ_CONTENT;
+ * }
+ *
+ * public class IntegerHeaderFrameDecoder
+ *      extends ReplayingDecoder&lt;<strong>MyDecoderState</strong>&gt; {
+ *
+ *   private int length;
+ *
+ *   public IntegerHeaderFrameDecoder() {
+ *     // Set the initial state.
+ *     <strong>super(MyDecoderState.READ_LENGTH);</strong>
+ *   }
+ *
+ *   protected Object decode(ChannelHandlerContext ctx,
+ *                           Channel channel,
+ *                           ChannelBuffer buf,
+ *                           MyDecoderState state) throws Exception {
+ *     switch (state) {
+ *     case READ_LENGTH:
+ *       length = buf.readInt();
+ *       <strong>checkpoint(MyDecoderState.READ_CONTENT);</strong>
+ *     case READ_CONTENT:
+ *       ChannelBuffer frame = buf.readBytes(length);
+ *       <strong>checkpoint(MyDecoderState.READ_LENGTH);</strong>
+ *       return frame;
+ *     default:
+ *       throw new Error("Shouldn't reach here.");
+ *     }
+ *   }
+ * }
+ * </pre>
+ *
+ * <h4>Calling {@code checkpoint()} with no parameter</h4>
+ * <p>
+ * An alternative way to manage the decoder state is to manage it by yourself.
+ * <pre>
+ * public class IntegerHeaderFrameDecoder
+ *      extends ReplayingDecoder&lt;<strong>VoidEnum</strong>&gt; {
+ *
+ *   <strong>private boolean readLength;</strong>
+ *   private int length;
+ *
+ *   protected Object decode(ChannelHandlerContext ctx,
+ *                           Channel channel,
+ *                           ChannelBuffer buf,
+ *                           MyDecoderState state) throws Exception {
+ *     if (!readLength) {
+ *       length = buf.readInt();
+ *       <strong>readLength = true;</strong>
+ *       <strong>checkpoint();</strong>
+ *     }
+ *
+ *     if (readLength) {
+ *       ChannelBuffer frame = buf.readBytes(length);
+ *       <strong>readLength = false;</strong>
+ *       <strong>checkpoint();</strong>
+ *       return frame;
+ *     }
+ *   }
+ * }
+ * </pre>
+ *
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
  *
+ * @param <T>
+ *        the state type; use {@link VoidEnum} if state management is unused
  */
 @ChannelPipelineCoverage("one")
 public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelHandler {
@@ -51,12 +189,63 @@ public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelH
     private volatile T state;
     private volatile int checkpoint;
 
+    /**
+     * Creates a new instance with no initial state (i.e. {@code null}).
+     */
     protected ReplayingDecoder() {
         this(null);
     }
 
+    /**
+     * Creates a new instance with the specified initial state.
+     */
     protected ReplayingDecoder(T initialState) {
         this.state = initialState;
+    }
+
+    /**
+     * Stores the internal cumulative buffer's reader position.
+     */
+    protected void checkpoint() {
+        checkpoint = cumulation.readerIndex();
+    }
+
+    /**
+     * Stores the internal cumulative buffer's reader position and updates
+     * the current decoder state.
+     */
+    protected void checkpoint(T state) {
+        this.state = state;
+        checkpoint = cumulation.readerIndex();
+    }
+
+    /**
+     * Decodes the received packets so far into a frame.
+     *
+     * @param ctx      the context of this handler
+     * @param channel  the current channel
+     * @param buffer   the cumulative buffer of received packets so far\
+     * @param state    the current decoder state ({@code null} if unused)
+     *
+     * @return the decoded frame
+     */
+    protected abstract Object decode(ChannelHandlerContext ctx,
+            Channel channel, ChannelBuffer buffer, T state) throws Exception;
+
+    /**
+     * Decodes the received data so far into a frame when the channel is
+     * disconnected.
+     *
+     * @param ctx      the context of this handler
+     * @param channel  the current channel
+     * @param buffer   the cumulative buffer of received packets so far
+     * @param state    the current decoder state ({@code null} if unused)
+     *
+     * @return the decoded frame
+     */
+    protected Object decodeLast(
+            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, T state) throws Exception {
+        return decode(ctx, channel, buffer, state);
     }
 
     @Override
@@ -154,22 +343,5 @@ public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelH
         } finally {
             ctx.sendUpstream(e);
         }
-    }
-
-    protected void checkpoint() {
-        checkpoint = cumulation.readerIndex();
-    }
-
-    protected void checkpoint(T state) {
-        this.state = state;
-        checkpoint = cumulation.readerIndex();
-    }
-
-    protected abstract Object decode(ChannelHandlerContext ctx,
-            Channel channel, ChannelBuffer buffer, T state) throws Exception;
-
-    protected Object decodeLast(
-            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, T state) throws Exception {
-        return decode(ctx, channel, buffer, state);
     }
 }

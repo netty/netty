@@ -22,7 +22,9 @@
  */
 
 /**
- * Specialized decoder which enables implementation of a non-blocking decoder
- * with blocking I/O paradigm.
+ * Specialized variation of {@link org.jboss.netty.handler.codec.frame.FrameDecoder}
+ * which enables implementation of a non-blocking decoder in the blocking I/O
+ * paradigm.
  */
 package org.jboss.netty.handler.codec.replay;
+

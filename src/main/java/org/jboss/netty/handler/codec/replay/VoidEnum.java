@@ -23,6 +23,10 @@
 package org.jboss.netty.handler.codec.replay;
 
 /**
+ * A placeholder {@link Enum} which could be specified as a type parameter of
+ * {@link ReplayingDecoder} when a user wants to manage the decoder state by
+ * oneself or there's no state to manage.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
