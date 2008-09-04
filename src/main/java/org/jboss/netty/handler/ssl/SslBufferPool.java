@@ -35,10 +35,10 @@ import javax.net.ssl.SSLEngine;
  * <p>
  * The reason why {@link SslHandler} requires a buffer pool is because the
  * current {@link SSLEngine} implementation always requires a 17KiB buffer for
- * the 'wrap' and 'unwrap' operation.  In most cases, the size of the required
- * buffer is much smaller than that, and therefore allocating a 17KiB buffer
- * for every 'wrap' and 'unwrap' operation wastes a lot of memory bandwidth,
- * resulting in the application performance degradation.
+ * every 'wrap' and 'unwrap' operation.  In most cases, the actual size of the
+ * required buffer is much smaller than that, and therefore allocating a 17KiB
+ * buffer for every 'wrap' and 'unwrap' operation wastes a lot of memory
+ * bandwidth, resulting in the application performance degradation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

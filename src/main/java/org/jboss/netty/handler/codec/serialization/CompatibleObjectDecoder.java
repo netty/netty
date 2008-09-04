@@ -24,6 +24,7 @@ package org.jboss.netty.handler.codec.serialization;
 
 import java.io.InputStream;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.ObjectStreamConstants;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -34,6 +35,20 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 import org.jboss.netty.util.SwitchableInputStream;
 
 /**
+ * A decoder which deserializes the received {@link ChannelBuffer}s into Java
+ * objects (interoperability version).
+ * <p>
+ * This decoder is interoperable with the standard Java object
+ * streams such as {@link ObjectInputStream} and {@link ObjectOutputStream}.
+ * <p>
+ * However, this decoder might perform worse than {@link ObjectDecoder} if
+ * the serialized object is big and complex.  Also, it doesn't limit the
+ * maximum size of the object, and consequently your application might face
+ * the risk of <a href="http://en.wikipedia.org/wiki/DoS">DoS attack</a>.
+ * Please use {@link ObjectEncoder} and {@link ObjectDecoder} if you are not
+ * required to keep the interoperability with the standard object streams.
+ *
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -45,8 +60,20 @@ public class CompatibleObjectDecoder extends ReplayingDecoder<CompatibleObjectDe
     private final SwitchableInputStream bin = new SwitchableInputStream();
     private volatile ObjectInputStream oin;
 
+    /**
+     * Creates a new decoder.
+     */
     public CompatibleObjectDecoder() {
         super(CompatibleObjectDecoderState.READ_HEADER);
+    }
+
+    /**
+     * Creates a new {@link ObjectInputStream} which wraps the specified
+     * {@link InputStream}.  Override this method to use a subclass of the
+     * {@link ObjectInputStream}.
+     */
+    protected ObjectInputStream newObjectInputStream(InputStream in) throws Exception {
+        return new ObjectInputStream(in);
     }
 
     @Override
@@ -63,10 +90,6 @@ public class CompatibleObjectDecoder extends ReplayingDecoder<CompatibleObjectDe
         default:
             throw new IllegalStateException("Unknown state: " + state);
         }
-    }
-
-    protected ObjectInputStream newObjectInputStream(InputStream in) throws Exception {
-        return new ObjectInputStream(in);
     }
 
     @Override

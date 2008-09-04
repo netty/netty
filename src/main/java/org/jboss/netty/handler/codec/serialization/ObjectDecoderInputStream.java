@@ -29,6 +29,9 @@ import java.io.ObjectInput;
 import java.io.StreamCorruptedException;
 
 /**
+ * An {@link ObjectInput} which is interoperable with {@link ObjectEncoder}
+ * and {@link ObjectEncoderOutputStream}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -42,18 +45,60 @@ public class ObjectDecoderInputStream extends InputStream implements
     private final ClassLoader classLoader;
     private final int maxObjectSize;
 
+    /**
+     * Creates a new {@link ObjectInput}.
+     *
+     * @param in
+     *        the {@link InputStream} where the serialized form will be
+     *        read from
+     */
     public ObjectDecoderInputStream(InputStream in) {
-        this(in, Thread.currentThread().getContextClassLoader());
+        this(in, null);
     }
 
+    /**
+     * Creates a new {@link ObjectInput}.
+     *
+     * @param in
+     *        the {@link InputStream} where the serialized form will be
+     *        read from
+     * @param classLoader
+     *        the {@link ClassLoader} which will load the class of the
+     *        serialized object
+     */
     public ObjectDecoderInputStream(InputStream in, ClassLoader classLoader) {
         this(in, classLoader, 1048576);
     }
 
+    /**
+     * Creates a new {@link ObjectInput}.
+     *
+     * @param in
+     *        the {@link InputStream} where the serialized form will be
+     *        read from
+     * @param maxObjectSize
+     *        the maximum byte length of the serialized object.  if the length
+     *        of the received object is greater than this value,
+     *        a {@link StreamCorruptedException} will be raised.
+     */
     public ObjectDecoderInputStream(InputStream in, int maxObjectSize) {
-        this(in, Thread.currentThread().getContextClassLoader(), maxObjectSize);
+        this(in, null, maxObjectSize);
     }
 
+    /**
+     * Creates a new {@link ObjectInput}.
+     *
+     * @param in
+     *        the {@link InputStream} where the serialized form will be
+     *        read from
+     * @param classLoader
+     *        the {@link ClassLoader} which will load the class of the
+     *        serialized object
+     * @param maxObjectSize
+     *        the maximum byte length of the serialized object.  if the length
+     *        of the received object is greater than this value,
+     *        a {@link StreamCorruptedException} will be raised.
+     */
     public ObjectDecoderInputStream(InputStream in, ClassLoader classLoader, int maxObjectSize) {
         if (in == null) {
             throw new NullPointerException("in");

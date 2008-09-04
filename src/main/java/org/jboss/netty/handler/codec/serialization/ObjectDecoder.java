@@ -22,6 +22,7 @@
  */
 package org.jboss.netty.handler.codec.serialization;
 
+import java.io.ObjectOutputStream;
 import java.io.StreamCorruptedException;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -31,31 +32,64 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 
 /**
+ * A decoder which deserializes the received {@link ChannelBuffer}s into Java
+ * objects.
+ * <p>
+ * Please note that the serialized form this decoder expects is not
+ * compatible with the standard {@link ObjectOutputStream}.  Please use
+ * {@link ObjectEncoder} or {@link ObjectEncoderOutputStream} to ensure the
+ * interoperability with this decoder.
+ * <p>
+ * Unless there's a requirement for the interoperability with the standard
+ * object streams, it is recommended to use {@link ObjectEncoder} and
+ * {@link ObjectDecoder} rather than {@link CompatibleObjectEncoder} and
+ * {@link CompatibleObjectDecoder}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
- *
  */
 public class ObjectDecoder extends FrameDecoder {
 
     private final int maxObjectSize;
     private final ClassLoader classLoader;
 
+    /**
+     * Creates a new decoder whose maximum object size is {@code 1048576}
+     * bytes.  If the size of the received object is greater than
+     * {@code 1048576} bytes, a {@link StreamCorruptedException} will be
+     * raised.
+     */
     public ObjectDecoder() {
         this(1048576);
     }
 
+    /**
+     * Creates a new decoder with the specified maximum object size.
+     *
+     * @param maxObjectSize  the maximum byte length of the serialized object.
+     *                       if the length of the received object is greater
+     *                       than this value, {@link StreamCorruptedException}
+     *                       will be raised.
+     */
     public ObjectDecoder(int maxObjectSize) {
-        this(maxObjectSize, Thread.currentThread().getContextClassLoader());
+        this(maxObjectSize, null);
     }
 
+    /**
+     * Creates a new decoder with the specified maximum object size.
+     *
+     * @param maxObjectSize  the maximum byte length of the serialized object.
+     *                       if the length of the received object is greater
+     *                       than this value, {@link StreamCorruptedException}
+     *                       will be raised.
+     * @param classLoader    the {@link ClassLoader} which will load the class
+     *                       of the serialized object
+     */
     public ObjectDecoder(int maxObjectSize, ClassLoader classLoader) {
         if (maxObjectSize <= 0) {
             throw new IllegalArgumentException("maxObjectSize: " + maxObjectSize);
-        }
-        if (classLoader == null) {
-            classLoader = Thread.currentThread().getContextClassLoader();
         }
 
         this.maxObjectSize = maxObjectSize;
@@ -83,8 +117,7 @@ public class ObjectDecoder extends FrameDecoder {
         }
 
         buffer.skipBytes(4);
-        return new CompactObjectInputStream(
-                new ChannelBufferInputStream(buffer, dataLen),
-                classLoader).readObject();
+        return new CompactObjectInputStream(new ChannelBufferInputStream(
+                        buffer, dataLen), classLoader).readObject();
     }
 }

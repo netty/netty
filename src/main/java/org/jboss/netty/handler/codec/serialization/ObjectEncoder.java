@@ -25,6 +25,7 @@ package org.jboss.netty.handler.codec.serialization;
 import static org.jboss.netty.buffer.ChannelBuffers.*;
 import static org.jboss.netty.channel.Channels.*;
 
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -36,11 +37,22 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 
 /**
+ * An encoder which serializes a Java object into a {@link ChannelBuffer}.
+ * <p>
+ * Please note that the serialized form this encoder produces is not
+ * compatible with the standard {@link ObjectInputStream}.  Please use
+ * {@link ObjectDecoder} or {@link ObjectDecoderInputStream} to ensure the
+ * interoperability with this encoder.
+ * <p>
+ * Unless there's a requirement for the interoperability with the standard
+ * object streams, it is recommended to use {@link ObjectEncoder} and
+ * {@link ObjectDecoder} rather than {@link CompatibleObjectEncoder} and
+ * {@link CompatibleObjectDecoder}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev:231 $, $Date:2008-06-12 16:44:50 +0900 (목, 12 6월 2008) $
- *
  */
 @ChannelPipelineCoverage("all")
 public class ObjectEncoder implements ChannelDownstreamHandler {
@@ -48,10 +60,24 @@ public class ObjectEncoder implements ChannelDownstreamHandler {
 
     private final int estimatedLength;
 
+    /**
+     * Creates a new encoder with the estimated length of 512 bytes.
+     */
     public ObjectEncoder() {
         this(512);
     }
 
+    /**
+     * Creates a new encoder.
+     *
+     * @param estimatedLength
+     *        the estimated byte length of the serialized form of an object.
+     *        If the length of the serialized form exceeds this value, the
+     *        internal buffer will be expanded automatically at the cost of
+     *        memory bandwidth.  If this value is too big, it will also waste
+     *        memory bandwidth.  To avoid unnecessary memory copy or allocation
+     *        cost, please specify the properly estimated value.
+     */
     public ObjectEncoder(int estimatedLength) {
         if (estimatedLength < 0) {
             throw new IllegalArgumentException(
