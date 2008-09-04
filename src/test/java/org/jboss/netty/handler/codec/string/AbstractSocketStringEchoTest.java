@@ -201,12 +201,12 @@ public abstract class AbstractSocketStringEchoTest {
             String m = (String) e.getMessage();
             assertEquals(data[counter], m);
 
-            counter ++;
-
             if (channel.getParent() != null) {
                 String delimiter = random.nextBoolean() ? "\r\n" : "\n";
                 channel.write(m + delimiter);
             }
+
+            counter ++;
         }
 
         @Override
