@@ -24,6 +24,8 @@ package org.jboss.netty.buffer;
 
 import static org.junit.Assert.*;
 
+import org.junit.Test;
+
 /**
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -56,5 +58,10 @@ public class DynamicChannelBufferTest extends AbstractChannelBufferTest {
     @Override
     protected ChannelBuffer[] components() {
         return new ChannelBuffer[] { buffer };
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldNotAllowNullInConstructor() {
+        new DynamicChannelBuffer(null, 0);
     }
 }

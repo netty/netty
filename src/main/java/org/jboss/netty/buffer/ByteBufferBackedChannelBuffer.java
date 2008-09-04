@@ -314,7 +314,13 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     }
 
     public ChannelBuffer copy(int index, int length) {
-        ByteBuffer src = (ByteBuffer) buffer.duplicate().position(index).limit(index + length);
+        ByteBuffer src;
+        try {
+            src = (ByteBuffer) buffer.duplicate().position(index).limit(index + length);
+        } catch (IllegalArgumentException e) {
+            throw new IndexOutOfBoundsException();
+        }
+
         ByteBuffer dst = buffer.isDirect() ? ByteBuffer.allocateDirect(length) : ByteBuffer.allocate(length);
         dst.put(src);
         dst.clear();

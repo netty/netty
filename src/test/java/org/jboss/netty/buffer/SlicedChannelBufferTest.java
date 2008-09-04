@@ -26,6 +26,8 @@ import static org.junit.Assert.*;
 
 import java.util.Random;
 
+import org.junit.Test;
+
 /**
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -49,5 +51,10 @@ public class SlicedChannelBufferTest extends AbstractChannelBufferTest {
     @Override
     protected ChannelBuffer[] components() {
         return new ChannelBuffer[] { buffer };
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldNotAllowNullInConstructor() {
+        new SlicedChannelBuffer(null, 0, 0);
     }
 }

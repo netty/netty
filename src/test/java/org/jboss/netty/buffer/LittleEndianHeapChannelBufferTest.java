@@ -26,6 +26,8 @@ import static org.junit.Assert.*;
 
 import java.nio.ByteOrder;
 
+import org.junit.Test;
+
 /**
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -47,5 +49,10 @@ public class LittleEndianHeapChannelBufferTest extends AbstractChannelBufferTest
     @Override
     protected ChannelBuffer[] components() {
         return new ChannelBuffer[] { buffer };
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldNotAllowNullInConstructor() {
+        new LittleEndianHeapChannelBuffer(null);
     }
 }

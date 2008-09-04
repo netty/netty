@@ -24,6 +24,8 @@ package org.jboss.netty.buffer;
 
 import java.nio.ByteBuffer;
 
+import org.junit.Test;
+
 /**
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -44,5 +46,10 @@ public class ByteBufferBackedHeapChannelBufferTest extends AbstractChannelBuffer
     @Override
     protected ChannelBuffer[] components() {
         return new ChannelBuffer[] { buffer };
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldNotAllowNullInConstructor() {
+        new ByteBufferBackedChannelBuffer(null);
     }
 }

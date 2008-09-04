@@ -216,12 +216,8 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
 
     public ChannelBuffer copy(int index, int length) {
         DynamicChannelBuffer copiedBuffer = new DynamicChannelBuffer(endianness, Math.max(length, 64));
-        if (readable()) {
-            copiedBuffer.buffer = buffer.copy(readerIndex(), readableBytes());
-            copiedBuffer.setIndex(0, readableBytes());
-        } else {
-            copiedBuffer.buffer = ChannelBuffers.EMPTY_BUFFER;
-        }
+        copiedBuffer.buffer = buffer.copy(index, length);
+        copiedBuffer.setIndex(0, length);
         return copiedBuffer;
     }
 

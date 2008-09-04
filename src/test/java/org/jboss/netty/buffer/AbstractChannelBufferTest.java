@@ -250,6 +250,26 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test(expected=IndexOutOfBoundsException.class)
+    public void copyBoundaryCheck1() {
+        buffer.copy(-1, 0);
+    }
+
+    @Test(expected=IndexOutOfBoundsException.class)
+    public void copyBoundaryCheck2() {
+        buffer.copy(0, buffer.capacity() + 1);
+    }
+
+    @Test(expected=IndexOutOfBoundsException.class)
+    public void copyBoundaryCheck3() {
+        buffer.copy(buffer.capacity() + 1, 0);
+    }
+
+    @Test(expected=IndexOutOfBoundsException.class)
+    public void copyBoundaryCheck4() {
+        buffer.copy(buffer.capacity(), 1);
+    }
+
+    @Test(expected=IndexOutOfBoundsException.class)
     public void setIndexBoundaryCheck1() {
         buffer.setIndex(-1, CAPACITY);
     }

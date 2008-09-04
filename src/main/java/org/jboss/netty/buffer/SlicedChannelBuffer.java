@@ -108,6 +108,7 @@ public class SlicedChannelBuffer extends AbstractChannelBuffer implements Wrappe
     }
 
     public ChannelBuffer copy(int index, int length) {
+        checkIndex(index, length);
         return buffer.copy(index + adjustment, length);
     }
 
