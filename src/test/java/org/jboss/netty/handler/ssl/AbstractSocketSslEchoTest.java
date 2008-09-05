@@ -158,8 +158,8 @@ public abstract class AbstractSocketSslEchoTest {
             }
         }
 
-        ch.channel.close().awaitUninterruptibly();
         sh.channel.close().awaitUninterruptibly();
+        ch.channel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
@@ -203,11 +203,12 @@ public abstract class AbstractSocketSslEchoTest {
             for (int i = 0; i < actual.length; i ++) {
                 assertEquals(data[i + lastIdx], actual[i]);
             }
-            counter += actual.length;
 
             if (channel.getParent() != null) {
                 channel.write(m);
             }
+
+            counter += actual.length;
         }
 
         @Override

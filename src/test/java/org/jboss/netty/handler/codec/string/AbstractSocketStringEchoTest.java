@@ -160,8 +160,8 @@ public abstract class AbstractSocketStringEchoTest {
             }
         }
 
-        ch.channel.close().awaitUninterruptibly();
         sh.channel.close().awaitUninterruptibly();
+        ch.channel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {

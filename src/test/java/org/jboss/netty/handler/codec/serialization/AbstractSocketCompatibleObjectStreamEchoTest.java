@@ -155,8 +155,8 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
             }
         }
 
-        ch.channel.close().awaitUninterruptibly();
         sh.channel.close().awaitUninterruptibly();
+        ch.channel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
@@ -196,11 +196,11 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
             String m = (String) e.getMessage();
             assertEquals(data[counter], m);
 
-            counter ++;
-
             if (channel.getParent() != null) {
                 channel.write(m);
             }
+
+            counter ++;
         }
 
         @Override
