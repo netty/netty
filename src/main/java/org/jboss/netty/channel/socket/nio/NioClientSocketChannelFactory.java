@@ -76,7 +76,7 @@ import org.jboss.netty.channel.socket.SocketChannel;
  *
  * <ol>
  * <li>close all channels created by the factory,</li>
- * <li>call {@link ExecutorService#shutdown()} for all executors which were
+ * <li>call {@link ExecutorService#shutdownNow()} for all executors which were
  *     specified to create the factory, and</li>
  * <li>call {@link ExecutorService#awaitTermination(long, TimeUnit)}
  *     until it returns {@code true}.</li>
