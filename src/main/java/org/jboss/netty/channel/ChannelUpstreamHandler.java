@@ -195,8 +195,6 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
- *
- * @apiviz.landmark
  */
 public interface ChannelUpstreamHandler extends ChannelHandler {
 

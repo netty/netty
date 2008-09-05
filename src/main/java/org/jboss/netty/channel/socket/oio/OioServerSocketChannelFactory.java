@@ -95,6 +95,7 @@ import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
  *
  * @version $Rev$, $Date$
  *
+ * @apiviz.landmark
  */
 public class OioServerSocketChannelFactory implements ServerSocketChannelFactory {
 

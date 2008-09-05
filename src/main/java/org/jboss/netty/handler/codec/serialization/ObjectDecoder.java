@@ -49,6 +49,8 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 public class ObjectDecoder extends FrameDecoder {
 

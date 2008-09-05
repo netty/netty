@@ -60,6 +60,8 @@ package org.jboss.netty.channel;
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 public interface ChannelHandler {
     // This is a tag interface.

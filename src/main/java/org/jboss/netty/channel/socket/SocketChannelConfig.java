@@ -34,6 +34,7 @@ import org.jboss.netty.channel.ChannelConfig;
  *
  * @version $Rev$, $Date$
  *
+ * @apiviz.landmark
  */
 public interface SocketChannelConfig extends ChannelConfig {
 

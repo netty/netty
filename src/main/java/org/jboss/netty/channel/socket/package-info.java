@@ -23,5 +23,7 @@
 
 /**
  * Abstract TCP and UDP socket interfaces which extend the core channel API.
+ *
+ * @apiviz.exclude \.(Abstract|Default).*$
  */
 package org.jboss.netty.channel.socket;

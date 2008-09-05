@@ -33,8 +33,6 @@ import java.util.EventListener;
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
- *
- * @apiviz.landmark
  */
 public interface ChannelFutureListener extends EventListener {
 

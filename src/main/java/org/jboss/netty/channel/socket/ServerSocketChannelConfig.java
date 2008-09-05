@@ -33,6 +33,8 @@ import org.jboss.netty.channel.ChannelConfig;
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 public interface ServerSocketChannelConfig extends ChannelConfig {
 

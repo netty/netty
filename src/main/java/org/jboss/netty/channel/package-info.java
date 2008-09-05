@@ -32,6 +32,8 @@
  * @apiviz.exclude ^org\.jboss\.netty\.(bootstrap|handler)\.
  * @apiviz.exclude \.(Abstract|Default).*$
  * @apiviz.exclude \.[A-Za-z]+ChannelFuture$
- * @apiviz.exclude \.ChannelState$
+ * @apiviz.exclude \.ChannelPipelineFactory$
+ * @apiviz.exclude \.ChannelHandlerContext$
+ * @apiviz.exclude \.ChannelSink$
  */
 package org.jboss.netty.channel;

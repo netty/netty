@@ -91,6 +91,7 @@ import org.jboss.netty.channel.socket.SocketChannel;
  *
  * @version $Rev$, $Date$
  *
+ * @apiviz.landmark
  */
 public class NioClientSocketChannelFactory implements ClientSocketChannelFactory {
 

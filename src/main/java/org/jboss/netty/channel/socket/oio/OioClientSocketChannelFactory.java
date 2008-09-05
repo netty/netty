@@ -83,6 +83,7 @@ import org.jboss.netty.channel.socket.SocketChannel;
  *
  * @version $Rev$, $Date$
  *
+ * @apiviz.landmark
  */
 public class OioClientSocketChannelFactory implements ClientSocketChannelFactory {
 

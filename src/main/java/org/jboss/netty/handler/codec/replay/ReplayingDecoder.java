@@ -180,6 +180,8 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  *
  * @param <T>
  *        the state type; use {@link VoidEnum} if state management is unused
+ *
+ * @apiviz.landmark
  */
 @ChannelPipelineCoverage("one")
 public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelHandler {
