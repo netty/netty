@@ -402,6 +402,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
         ChannelBuffer msg;
         ByteBuffer outNetBuf = bufferPool.acquire();
         boolean success = true;
+        boolean offered = false;
         try {
             loop:
             for (;;) {
@@ -446,6 +447,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
                                 pendingEncryptedWrites.offer(encryptedWrite);
                             }
                         }
+                        offered = true;
                     } else {
                         switch (result.getHandshakeStatus()) {
                         case NEED_WRAP:
@@ -479,7 +481,9 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
         } finally {
             bufferPool.release(outNetBuf);
 
-            flushPendingEncryptedWrites(context);
+            if (offered) {
+                flushPendingEncryptedWrites(context);
+            }
 
             if (!success) {
                 // Mark all remaining pending writes as failure if anything
