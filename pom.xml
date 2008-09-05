@@ -81,11 +81,11 @@
           </execution>
         </executions>
         <configuration>
-          <doclet>net.gleamynode.apiviz.APIviz</doclet>
+          <doclet>org.jboss.apiviz.APIviz</doclet>
           <docletArtifact>
-            <groupId>net.gleamynode.apiviz</groupId>
+            <groupId>org.jboss.apiviz</groupId>
             <artifactId>apiviz</artifactId>
-            <version>1.1.3</version>
+            <version>1.2.0.GA</version>
           </docletArtifact>
           <aggregate>true</aggregate>
           <additionalparam>-charset UTF-8
@@ -214,15 +214,6 @@
     </plugins>
   </build>
   <repositories>
-    <repository>
-      <releases />
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <id>apiviz.release</id>
-      <name>APIviz releases</name>
-      <url>http://apiviz.googlecode.com/svn/site/repo/mvn/release</url>
-    </repository>
     <repository>
       <releases />
       <snapshots>
