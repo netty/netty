@@ -138,6 +138,7 @@
                       <zipfileset dir="${basedir}" prefix="META-INF/">
                         <include name="LICENSE.*" />
                         <include name="NOTICE.*" />
+                        <include name="COPYRIGHT.*" />
                       </zipfileset>
                       <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}.orig.jar" dirmode="755">
                         <exclude name="*/*/*/example/**" />
@@ -149,6 +150,7 @@
                       <zipfileset dir="${basedir}" prefix="META-INF/">
                         <include name="LICENSE.*" />
                         <include name="NOTICE.*" />
+                        <include name="COPYRIGHT.*" />
                       </zipfileset>
                       <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}-sources.orig.jar" dirmode="755">
                         <exclude name="*/*/*/example/**" />
@@ -160,6 +162,7 @@
                       <zipfileset dir="${basedir}" prefix="META-INF/">
                         <include name="LICENSE.*" />
                         <include name="NOTICE.*" />
+                        <include name="COPYRIGHT.*" />
                       </zipfileset>
                       <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}-javadoc.orig.jar" dirmode="755" />
                     </zip>
