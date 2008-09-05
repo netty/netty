@@ -85,7 +85,7 @@ public abstract class AbstractSocketStringEchoTest {
 
     @AfterClass
     public static void destroy() {
-        executor.shutdown();
+        executor.shutdownNow();
         for (;;) {
             try {
                 if (executor.awaitTermination(1, TimeUnit.MILLISECONDS)) {

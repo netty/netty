@@ -47,7 +47,6 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.handler.codec.frame.FixedLengthFrameDecoder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -78,7 +77,7 @@ public abstract class AbstractSocketFixedLengthEchoTest {
 
     @AfterClass
     public static void destroy() {
-        executor.shutdown();
+        executor.shutdownNow();
         for (;;) {
             try {
                 if (executor.awaitTermination(1, TimeUnit.MILLISECONDS)) {

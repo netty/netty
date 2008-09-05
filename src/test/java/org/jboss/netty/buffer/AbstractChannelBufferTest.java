@@ -1470,10 +1470,19 @@ public abstract class AbstractChannelBufferTest {
             // Expected
         }
 
+        // Fill the random stuff
         byte[] value = new byte[32];
-        buffer.setIndex(0, value.length);
         random.nextBytes(value);
+        // Prevent overflow / underflow
+        if (value[0] == 0) {
+            value[0] ++;
+        } else if (value[0] == -1) {
+            value[0] --;
+        }
+
+        buffer.setIndex(0, value.length);
         buffer.setBytes(0, value);
+
 
         assertEquals(0, buffer.compareTo(wrappedBuffer(BIG_ENDIAN, value)));
         assertEquals(0, buffer.compareTo(wrappedBuffer(LITTLE_ENDIAN, value)));

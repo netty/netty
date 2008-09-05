@@ -337,7 +337,7 @@ class NioProviderMetadata {
                 loop.done = true;
                 loop.selector.wakeup();
                 try {
-                    executor.shutdown();
+                    executor.shutdownNow();
                     for (;;) {
                         try {
                             if (executor.awaitTermination(1, TimeUnit.SECONDS)) {

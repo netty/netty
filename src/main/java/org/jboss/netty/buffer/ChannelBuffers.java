@@ -753,35 +753,35 @@ public class ChannelBuffers {
         final int aLen = bufferA.readableBytes();
         final int bLen = bufferB.readableBytes();
         final int minLength = Math.min(aLen, bLen);
-        final int longCount = minLength >>> 3;
-        final int byteCount = minLength & 7;
+        final int uintCount = minLength >>> 2;
+        final int byteCount = minLength & 3;
 
         int aIndex = bufferA.readerIndex();
         int bIndex = bufferB.readerIndex();
 
         if (bufferA.order() == bufferB.order()) {
-            for (int i = longCount; i > 0; i --) {
-                long va = bufferA.getLong(aIndex);
-                long vb = bufferB.getLong(bIndex);
+            for (int i = uintCount; i > 0; i --) {
+                long va = bufferA.getUnsignedInt(aIndex);
+                long vb = bufferB.getUnsignedInt(bIndex);
                 if (va > vb) {
                     return 1;
                 } else if (va < vb) {
                     return -1;
                 }
-                aIndex += 8;
-                bIndex += 8;
+                aIndex += 4;
+                bIndex += 4;
             }
         } else {
-            for (int i = longCount; i > 0; i --) {
-                long va = bufferA.getLong(aIndex);
-                long vb = swapLong(bufferB.getLong(bIndex));
+            for (int i = uintCount; i > 0; i --) {
+                long va = bufferA.getUnsignedInt(aIndex);
+                long vb = swapInt(bufferB.getInt(bIndex)) & 0xFFFFFFFFL;
                 if (va > vb) {
                     return 1;
                 } else if (va < vb) {
                     return -1;
                 }
-                aIndex += 8;
-                bIndex += 8;
+                aIndex += 4;
+                bIndex += 4;
             }
         }
 
