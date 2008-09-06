@@ -427,7 +427,9 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     public int writeBytes(ScatteringByteChannel in, int length)
             throws IOException {
         int writtenBytes = setBytes(writerIndex, in, length);
-        writerIndex += writtenBytes;
+        if (writtenBytes > 0) {
+            writerIndex += writtenBytes;
+        }
         return writtenBytes;
     }
 
