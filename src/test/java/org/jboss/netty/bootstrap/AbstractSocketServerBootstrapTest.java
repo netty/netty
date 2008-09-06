@@ -44,6 +44,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChildChannelStateEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
+import org.jboss.netty.util.DummyHandler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -197,13 +198,6 @@ public abstract class AbstractSocketServerBootstrapTest {
                 ChildChannelStateEvent e) throws Exception {
             child = e.getChildChannel();
             result.append('1');
-        }
-    }
-
-    @ChannelPipelineCoverage("all")
-    private static class DummyHandler extends SimpleChannelHandler {
-        DummyHandler() {
-            super();
         }
     }
 }

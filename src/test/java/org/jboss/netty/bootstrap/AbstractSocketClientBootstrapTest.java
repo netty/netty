@@ -38,6 +38,7 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.util.DummyHandler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -96,6 +97,8 @@ public abstract class AbstractSocketClientBootstrapTest {
 
             ClientBootstrap bootstrap =
                 new ClientBootstrap(newClientSocketChannelFactory(executor));
+
+            bootstrap.getPipeline().addLast("dummy", new DummyHandler());
             bootstrap.setOption(
                     "remoteAddress",
                     new InetSocketAddress(
@@ -131,6 +134,8 @@ public abstract class AbstractSocketClientBootstrapTest {
 
             ClientBootstrap bootstrap =
                 new ClientBootstrap(newClientSocketChannelFactory(executor));
+
+            bootstrap.getPipeline().addLast("dummy", new DummyHandler());
             bootstrap.setOption(
                     "remoteAddress",
                     new InetSocketAddress(

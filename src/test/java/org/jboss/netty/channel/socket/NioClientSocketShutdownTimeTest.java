@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.util.DummyHandler;
 import org.junit.Test;
 
 
@@ -57,6 +58,7 @@ public class NioClientSocketShutdownTimeTest {
         ExecutorService e1 = Executors.newCachedThreadPool();
         ExecutorService e2 = Executors.newCachedThreadPool();
         ClientBootstrap b = new ClientBootstrap(new NioClientSocketChannelFactory(e1, e2));
+        b.getPipeline().addLast("handler", new DummyHandler());
 
         try {
             serverSocket.configureBlocking(false);
