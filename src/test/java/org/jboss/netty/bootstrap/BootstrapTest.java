@@ -32,11 +32,11 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Map.Entry;
 
-import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.util.DummyHandler;
 import org.junit.Test;
 
 
@@ -134,10 +134,10 @@ public class BootstrapTest {
     public void shouldReturnOrderedPipelineMap() {
         Bootstrap b = new Bootstrap();
         ChannelPipeline p = b.getPipeline();
-        p.addLast("a", createMock(ChannelDownstreamHandler.class));
-        p.addLast("b", createMock(ChannelDownstreamHandler.class));
-        p.addLast("c", createMock(ChannelDownstreamHandler.class));
-        p.addLast("d", createMock(ChannelDownstreamHandler.class));
+        p.addLast("a", new DummyHandler());
+        p.addLast("b", new DummyHandler());
+        p.addLast("c", new DummyHandler());
+        p.addLast("d", new DummyHandler());
 
         Iterator<Entry<String, ChannelHandler>> m =
             b.getPipelineAsMap().entrySet().iterator();
@@ -161,10 +161,10 @@ public class BootstrapTest {
     @Test(expected = IllegalArgumentException.class)
     public void shouldNotAllowUnorderedPipelineMap() {
         Map<String, ChannelHandler> m = new HashMap<String, ChannelHandler>();
-        m.put("a", createMock(ChannelDownstreamHandler.class));
-        m.put("b", createMock(ChannelDownstreamHandler.class));
-        m.put("c", createMock(ChannelDownstreamHandler.class));
-        m.put("d", createMock(ChannelDownstreamHandler.class));
+        m.put("a", new DummyHandler());
+        m.put("b", new DummyHandler());
+        m.put("c", new DummyHandler());
+        m.put("d", new DummyHandler());
 
         Bootstrap b = new Bootstrap();
         b.setPipelineAsMap(m);
@@ -173,10 +173,10 @@ public class BootstrapTest {
     @Test
     public void shouldHaveOrderedPipelineWhenSetFromMap() {
         Map<String, ChannelHandler> m = new LinkedHashMap<String, ChannelHandler>();
-        m.put("a", createMock(ChannelDownstreamHandler.class));
-        m.put("b", createMock(ChannelDownstreamHandler.class));
-        m.put("c", createMock(ChannelDownstreamHandler.class));
-        m.put("d", createMock(ChannelDownstreamHandler.class));
+        m.put("a", new DummyHandler());
+        m.put("b", new DummyHandler());
+        m.put("c", new DummyHandler());
+        m.put("d", new DummyHandler());
 
         Bootstrap b = new Bootstrap();
         b.setPipelineAsMap(m);
