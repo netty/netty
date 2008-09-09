@@ -89,8 +89,8 @@
           </docletArtifact>
           <aggregate>true</aggregate>
           <additionalparam>
-	    -d ${project.build.directory}/apidocs
-	    -charset UTF-8
+            -d ${project.build.directory}/apidocs
+            -charset UTF-8
             -docencoding UTF-8
             -version
             -author
@@ -105,7 +105,7 @@
             -group "Reusable I/O event interceptors" ${project.groupId}.handler*
             -group "Miscellaneous" ${project.groupId}.logging*
             -sourceclasspath ${project.build.outputDirectory}
-	  </additionalparam>
+          </additionalparam>
           <encoding>UTF-8</encoding>
           <locale>en_US</locale>
           <excludePackageNames>${project.groupId}.example*:${project.groupId}.util*</excludePackageNames>
@@ -119,66 +119,66 @@
           <linkJavadoc>false</linkJavadoc>
         </configuration>
       </plugin>
-            <plugin>
-                <groupId>org.jboss.maven.plugins</groupId>
-                <artifactId>maven-jdocbook-plugin</artifactId>
-                <version>2.0.0</version>
-		<executions>
-		  <execution>
-		    <id>generate-docbook</id>
-		    <phase>package</phase>
-		    <goals>
-		      <goal>resources</goal>
-		      <goal>generate</goal>
-		    </goals>
-		  </execution>
-		</executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.jboss</groupId>
-                        <artifactId>jbossorg-docbook-xslt</artifactId>
-                        <version>1.0.0</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.jboss</groupId>
-                        <artifactId>jbossorg-jdocbook-style</artifactId>
-                        <version>1.0.0</version>
-                        <type>jdocbook-style</type>
-                    </dependency>
-                </dependencies>
-                <configuration>
-                    <sourceDocumentName>master.xml</sourceDocumentName>
-                    <sourceDirectory>${basedir}/src/docbook</sourceDirectory>
-                    <imageResource>
-                        <directory>${basedir}/src/docbook</directory>
-                        <includes>
-                          <include>image/**/*</include>
-                        </includes>
-                    </imageResource>
-                    <formats>
-                        <format>
-                            <formatName>pdf</formatName>
-                            <stylesheetResource>classpath:/xslt/org/jboss/main-pdf.xsl</stylesheetResource>
-                            <finalName>${project.artifactId}.pdf</finalName>
-                        </format>
-                        <format>
-                            <formatName>html</formatName>
-                            <stylesheetResource>classpath:/xslt/org/jboss/main-html.xsl</stylesheetResource>
-                            <finalName>index.html</finalName>
-                        </format>
-                        <format>
-                            <formatName>html_single</formatName>
-                            <stylesheetResource>classpath:/xslt/org/jboss/nochunk-html.xsl</stylesheetResource>
-                            <finalName>index.html</finalName>
-                        </format>
-                    </formats>
-                    <options>
-                        <xincludeSupported>true</xincludeSupported>
-                        <xmlTransformerType>saxon</xmlTransformerType>
-                        <docbookVersion>1.72.0</docbookVersion>
-                    </options>
-                </configuration>
-            </plugin>
+      <plugin>
+        <groupId>org.jboss.maven.plugins</groupId>
+        <artifactId>maven-jdocbook-plugin</artifactId>
+        <version>2.0.0</version>
+        <executions>
+          <execution>
+            <id>generate-docbook</id>
+            <phase>package</phase>
+            <goals>
+              <goal>resources</goal>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>org.jboss</groupId>
+            <artifactId>jbossorg-docbook-xslt</artifactId>
+            <version>1.0.0</version>
+          </dependency>
+          <dependency>
+            <groupId>org.jboss</groupId>
+            <artifactId>jbossorg-jdocbook-style</artifactId>
+            <version>1.0.0</version>
+            <type>jdocbook-style</type>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <sourceDocumentName>master.xml</sourceDocumentName>
+          <sourceDirectory>${basedir}/src/docbook</sourceDirectory>
+          <imageResource>
+            <directory>${basedir}/src/docbook</directory>
+            <includes>
+              <include>image/**/*</include>
+            </includes>
+          </imageResource>
+          <formats>
+            <format>
+              <formatName>pdf</formatName>
+              <stylesheetResource>classpath:/xslt/org/jboss/main-pdf.xsl</stylesheetResource>
+              <finalName>${project.artifactId}.pdf</finalName>
+            </format>
+            <format>
+              <formatName>html</formatName>
+              <stylesheetResource>classpath:/xslt/org/jboss/main-html.xsl</stylesheetResource>
+              <finalName>index.html</finalName>
+            </format>
+            <format>
+              <formatName>html_single</formatName>
+              <stylesheetResource>classpath:/xslt/org/jboss/nochunk-html.xsl</stylesheetResource>
+              <finalName>index.html</finalName>
+            </format>
+          </formats>
+          <options>
+            <xincludeSupported>true</xincludeSupported>
+            <xmlTransformerType>saxon</xmlTransformerType>
+            <docbookVersion>1.72.0</docbookVersion>
+          </options>
+        </configuration>
+      </plugin>
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
