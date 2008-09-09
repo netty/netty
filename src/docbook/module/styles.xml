@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8'?><chapter id="styles">
+  <title>Maintaining the JBoss DocBook system</title>
+  <para>The structure of the <literal>
+      <ulink url="http://anonsvn.jboss.org/repos/jbossas/trunk/docbook-support/">docbook-support</ulink>
+    </literal> project is
+        illustrated in <xref linkend="docbook.fig"/>. The contents are as follows:</para>
+  <figure id="docbook.fig">
+    <title>The docbook-support project </title>
+    <mediaobject>
+      <imageobject>
+        <imagedata align="center" fileref="image/docbook-dir.png"/>
+      </imageobject>
+    </mediaobject>
+  </figure>
+  <itemizedlist>
+    <listitem>
+      <para>The <literal>docs</literal> directory contains the DocBook source for this guide  to
+            serve as a template for other projects. </para>
+    </listitem>
+    <listitem>
+      <para>The <literal>jbossorg-documentation</literal> directory contains the maven plugin source for the parent POM that is referenced by each project&apos;s <literal>pom.xml</literal> file. The parent POM contains common configuration information  so that it does not have to be duplicated across multiple JBoss.org projects.</para>
+    </listitem>
+    <listitem>
+      <para>The <literal>jbossorg-docbook-xslt</literal> directory contains the maven plugin source for the default JBoss.org XSL stylesheets. These stylesheets produce XHTML, PDF and Eclipse Help output.</para>
+    </listitem>
+    <listitem>
+      <para>The <literal>jbossorg-jdocbook-style</literal> directory contains the maven plugin source for the default JBoss.org CSS and image files. These provide the JBoss.org community-driven look &amp; feel.</para>
+    </listitem>
+    <listitem>
+      <para>The <literal>styles</literal> and  <literal>support</literal> directories together with the <literal>support.xml</literal> file  are provided for backwards compatibility with projects that wish to continue using Ant instead of Maven.  The <literal>styles</literal> directory contains XSL stylesheets together with CSS files to produce HTML and PDF outputs. The <literal>support</literal> directory contains the DocBook 
+            libraries and DTDs along with 
+            the standard  XSL stylesheets.  The <literal>support.xml</literal> file contains common Ant tasks to perform the build.</para>
+    </listitem>
+  </itemizedlist>
+</chapter>

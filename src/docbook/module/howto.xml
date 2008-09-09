@@ -1,0 +1,179 @@
+<?xml version='1.0' encoding='UTF-8'?><chapter id="howto">
+  <title>How to develop content for JBoss DocBook</title>
+  <section>
+    <title>Install Maven2</title>
+    <para>Before you can start to build DocBook documents  you first need to install and configure <ulink url="http://maven.apache.org/">Maven2</ulink>.   At the time of writing Maven 2.0.8 is the latest released version that has been tested and found to work correctly. System requirements and download instructions can be found <ulink url="http://maven.apache.org/download.html">here</ulink>.</para>
+    <para>In order for Maven to reference the JBoss public maven repository you will need to create a <literal>~/.m2/settings.xml</literal> file with the following contents:</para>
+    <programlisting>&lt;settings&gt;
+  &lt;profiles&gt;
+    &lt;profile&gt;
+      &lt;id&gt;jboss.repository&lt;/id&gt;
+      &lt;activation&gt;
+        &lt;property&gt;          
+          &lt;name&gt;!jboss.repository.off&lt;/name&gt;
+        &lt;/property&gt;
+      &lt;/activation&gt;
+      &lt;repositories&gt;
+        &lt;repository&gt;          
+          &lt;id&gt;snapshots.jboss.org&lt;/id&gt;
+          &lt;url&gt;http://snapshots.jboss.org/maven2&lt;/url&gt;
+          &lt;snapshots&gt;
+            &lt;enabled&gt;true&lt;/enabled&gt;
+          &lt;/snapshots&gt;
+        &lt;/repository&gt;
+        &lt;repository&gt;
+          &lt;id&gt;repository.jboss.org&lt;/id&gt;
+          &lt;url&gt;http://repository.jboss.org/maven2&lt;/url&gt;
+          &lt;snapshots&gt;
+            &lt;enabled&gt;false&lt;/enabled&gt;
+          &lt;/snapshots&gt;
+        &lt;/repository&gt;
+      &lt;/repositories&gt;
+      &lt;pluginRepositories&gt;
+        &lt;pluginRepository&gt;
+          &lt;id&gt;repository.jboss.org&lt;/id&gt;
+          &lt;url&gt;http://repository.jboss.org/maven2&lt;/url&gt;
+          &lt;snapshots&gt;
+            &lt;enabled&gt;false&lt;/enabled&gt;
+          &lt;/snapshots&gt;
+        &lt;/pluginRepository&gt;
+        &lt;pluginRepository&gt;
+          &lt;id&gt;snapshots.jboss.org&lt;/id&gt;
+          &lt;url&gt;http://snapshots.jboss.org/maven2&lt;/url&gt;
+          &lt;snapshots&gt;
+            &lt;enabled&gt;true&lt;/enabled&gt;
+          &lt;/snapshots&gt;
+        &lt;/pluginRepository&gt;
+      &lt;/pluginRepositories&gt;
+    &lt;/profile&gt;
+  &lt;/profiles&gt;
+&lt;/settings&gt;</programlisting>
+    <para>If you already have a <literal>~/.m2/settings.xml</literal> file then you simply need to add the above <literal>&lt;profile&gt;</literal> element to your <literal>&lt;profiles&gt;</literal>.</para>
+  </section>
+  <section>
+    <title>Setup the directories</title>
+    <para>Each JBoss.org project stores its documentation in a <literal>docs</literal> directory, typically located at <literal>&lt;projectName&gt;/trunk/docs</literal>. By convention the source for each DocBook should be placed into  subdirectories directly beneath this. For example, the  DocBook source for a project&apos;s User Guide should be placed in
+            <literal>&lt;projectName&gt;/trunk/docs/userguide</literal> whilst the DocBook source for a Reference Guide should be placed in <literal>&lt;projectName&gt;/trunk/docs/reference</literal>.  Alongside these DocBook subdirectories any number
+            of other subdirectories containing API references,  code examples, and  articles may also be created.</para>
+    <para>For example the
+            docs directory for the JBoss Messaging
+            project is shown in <xref linkend="aop.fig"/>. </para>
+    <figure id="aop.fig">
+      <title>The JBoss Messaging docs directory</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata align="center" fileref="image/messaging-docs.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+    <para>To facilitate translation into other languages the original source of a DocBook is written in English and located in a directory named <literal>en</literal>. Within this  there are typically two  subdirectories for the content:</para>
+    <itemizedlist>
+      <listitem>
+        <para><literal>images </literal>-  stores images</para>
+      </listitem>
+      <listitem>
+        <para> <literal>modules</literal> - stores DocBook
+                text modules, usually one per chapter</para>
+      </listitem>
+    </itemizedlist>
+    <para>The <literal>master.xml</literal> file contains the top-level <literal>&lt;book&gt;</literal> element and is used to group all of the other text modules together. If you choose to use Ant to perform the build then a <literal>build.xml</literal> file is used to call the relevant tasks. Otherwise a <literal>pom.xml</literal> file can be called using Maven2.</para>
+    <para>The easiest way to
+            setup a DocBook subdirectory within your project  is to copy the
+            <literal>
+        <ulink url="http://anonsvn.jboss.org/repos/jbossas/trunk/docbook-support/docs/guide/">docbook-support/docs/guide</ulink>
+      </literal> directory (containing the DocBook source for this guide) and use it as a template. </para>
+  </section>
+  <section>
+    <title>Author the content</title>
+    <para>Now you can write your content in DocBook format. Make sure that
+            the master file of your DocBook (i.e. the file that contains the
+            <literal>&lt;book&gt;</literal> element) is called 
+            <literal>master.xml</literal> and lives directly under the <literal>en</literal>
+            directory (see <xref linkend="aop.fig"/>). You can either put the
+            entire content in <literal>master.xml</literal> or divide up the
+            chapters and place them in the <literal>modules/</literal>
+            directory. If you do the latter, you should reference the chapter
+            files from the <literal>master.xml</literal> file via entity
+            references. Please see the
+            <literal>
+        <ulink url="http://anonsvn.jboss.org/repos/jbossas/trunk/docbook-support/docs/guide/en/master.xml">docbook-support/docs/guide/en/master.xml</ulink>
+      </literal> file to
+            see how this is done. </para>
+  </section>
+  <section>
+    <title>Build the documents</title>
+    <para>To perform a build using Maven you simply need to enter the following commands from the directory containing the <literal>pom.xml</literal> file:</para>
+    <itemizedlist>
+      <listitem>
+        <para><command>mvn compile</command> - processes the DocBook source using the XSL stylesheets</para>
+      </listitem>
+      <listitem>
+        <para><command>mvn package</command> - creates WAR archives containing the various output formats</para>
+      </listitem>
+      <listitem>
+        <para><command>mvn clean</command> - removes the target directory containing the build output</para>
+      </listitem>
+    </itemizedlist>
+    <para>It is also possible to chain commands together if required. e.g. <command>mvn clean compile</command></para>
+    <para>Once the <literal>compile</literal> or <literal>package</literal> goals have been reached then a <literal>target/</literal> directory will be created containing the build output.</para>
+    <figure>
+      <title>The JBoss Messaging target directory</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata align="center" fileref="image/target-dir.png"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+    <para>The <literal>attach</literal> directory contains WAR archives that package together all of the files for the various output formats. The intention is that these can be easily deployed into a web server such as Tomcat or JBoss AS.</para>
+    <para>The <literal>docbook</literal> directory contains  a number of subdirectories; one per output format. This is where you will find the XHTML, PDF and Eclipse Help files.</para>
+    <para>The <literal>staging</literal> directory contains resources such as CSS files, images and fonts that are needed for the final output. They need to be placed into this directory during the build as the DocBook XSL stylesheets can only reference a single location for images. Similarly the FOP libraries can only reference a single location for fonts.</para>
+  </section>
+  <section>
+    <title>Migrating from Ant </title>
+    <para>Previously the JBoss DocBook system used Ant to perform builds. This meant that each DocBook subdirectory contained a <literal>build.xml </literal>file as follows:</para>
+    <programlisting>
+&lt;project name=&quot;Documentation&quot; default=&quot;all.doc&quot; basedir=&quot;.&quot;&gt;
+
+    &lt;property name=&quot;pdf.name&quot; value=&quot;jboss-mybook.pdf&quot; /&gt;
+    &lt;import file=&quot;../../../docbook-support/support.xml&quot; /&gt;
+
+    &lt;target name=&quot;all.doc&quot; depends=&quot;clean&quot;&gt;
+        &lt;antcall target=&quot;lang.all&quot;&gt;
+            &lt;param name=&quot;lang&quot; value=&quot;en&quot;/&gt;
+        &lt;/antcall&gt;
+    &lt;/target&gt;
+
+&lt;/project&gt;
+        </programlisting>
+    <para>The idea was for this file to delegate most of the work to a
+            <literal>support.xml</literal> file maintained by the
+            <literal>
+        <ulink url="http://anonsvn.jboss.org/repos/jbossas/trunk/docbook-support/">docbook-support</ulink>
+      </literal> project. Developers were supposed to check out the <literal>docbook-support</literal> project alongside their own project in order to reference this file together with the associated libraries and XSL stylesheets. However what usually happened was that the contents of the <literal>docbook-support</literal> project were copied into each project&apos;s SVN tree. This meant that projects ended up having to maintain their own DocBook build systems and any changes made to the <literal>docbook-support</literal> project would have to be manually synchronised with their own copy.</para>
+    <para>With the new Maven2 based system this is no longer an issue as Maven takes care of downloading dependencies automatically. As a result all of the build environment can now be centrally maintained by the Content Team as a set of Maven plugins. You are free to continue using Ant if you prefer but since you won&apos;t be using the Maven plugins you will have to maintain any DocBook libraries, XSL stylesheets and  CSS files copied or referenced  from the <literal>docbook-support</literal> project yourself.</para>
+    <para>To perform the build using Ant simply enter the <command>ant</command> command from the directory containing the <literal>build.xml</literal> file. After it is finished, you should have three output documents in the following places:</para>
+    <itemizedlist>
+      <listitem>
+        <para>The <literal>build/en/html </literal>directory contains
+                the HTML version of the document. Each chapter is broken into a
+                separate HTML file and they are linked together by an
+                <literal>index.html</literal> file.</para>
+      </listitem>
+      <listitem>
+        <para>The <literal>build/en/html_single</literal> directory
+                contains a single <literal>index.html</literal> file which holds
+                the entire document. </para>
+      </listitem>
+      <listitem>
+        <para>The <literal>build/en/pdf</literal> directory contains
+                the PDF version of the document. </para>
+      </listitem>
+    </itemizedlist>
+    <note>
+      <para>The HTML output created by Ant is not XHTML. If you wish to gaurantee the separation of content and style then Maven2 should be used instead to produce strict XHTML.</para>
+    </note>
+    <para>If you wish to migrate from Ant to Maven then all you need to do is copy the <literal>
+        <ulink url="http://anonsvn.jboss.org/repos/jbossas/trunk/docbook-support/docs/guide/pom.xml">docbook-support/docs/guide/pom.xml</ulink>
+      </literal> file to your own DocBook subdirectory (alongside the <literal>build.xml</literal> file) and then follow the instructions in the previous section. You can then delete the <literal>build.xml</literal> file as it&apos;s not longer needed.</para>
+  </section>
+</chapter>

@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='UTF-8'?><chapter id="introduction">
+  <title>Introduction to DocBook processing</title>
+  <para>DocBook is an XML format for writing documents. It allows the author to
+        focus on the content itself during the writing process instead of
+        worrying about the presentation. </para>
+  <para>Using standard DocBook tags, we can tag the content according to
+        its syntatic structure. The DocBook document is then processed using
+        XSL stylesheets so that each tagged DocBook element is transformed to a
+        corresponding element in the target output format. For example each &lt;para&gt;&lt;/para&gt; element in DocBook could be transformed into a &lt;p&gt;&lt;/p&gt; element in XHTML. </para>
+  <para>Using different XSL stylesheets, we can generate different
+        output formats. For example, we can generate both XHTML and PDF outputs from
+        a single DocBook source. We can also generate multiple versions of XHTML
+        (or PDF) files each with a different  style if necessary.</para>
+  <para>In the JBoss DocBook system, we provide XSL stylesheets to build XHTML, PDF and Eclipse Help output formats from the DocBook source. The build process is
+        illustrated in <xref linkend="build.fig"/>. </para>
+  <figure id="build.fig">
+    <title>The DocBook build process </title>
+    <mediaobject>
+      <imageobject>
+        <imagedata align="center" fileref="image/build.png"/>
+      </imageobject>
+    </mediaobject>
+  </figure>
+  <para>XHTML is used  instead of HTML as it ensures  that the content is completely separated from  its style using Cascading Style Sheets (CSS) and image files.</para>
+</chapter>

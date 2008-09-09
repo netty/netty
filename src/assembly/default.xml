@@ -47,12 +47,30 @@
       </excludes>
     </fileSet>
 
-    <!-- JAR -->
+    <!-- JARs -->
     <fileSet>
       <directory>target</directory>
       <outputDirectory>jar</outputDirectory>
       <includes>
         <include>${project.build.finalName}*.jar</include>
+      </includes>
+    </fileSet>
+
+    <!-- Documentation (API) -->
+    <fileSet>
+      <directory>target/apidocs</directory>
+      <outputDirectory>doc/api</outputDirectory>
+      <includes>
+        <include>**/**</include>
+      </includes>
+    </fileSet>
+
+    <!-- Documentation (Docbook) -->
+    <fileSet>
+      <directory>target/docbook/en</directory>
+      <outputDirectory>doc/guide</outputDirectory>
+      <includes>
+        <include>**/**</include>
       </includes>
     </fileSet>
   </fileSets>

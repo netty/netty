@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='ISO-8859-1'?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.3CR3//EN" "../support/support/docbook-dtd/docbookx.dtd" [
+<!ENTITY introduction          SYSTEM "module/introduction.xml">
+<!ENTITY howto                 SYSTEM "module/howto.xml">
+<!ENTITY styles                SYSTEM "module/styles.xml">
+]>
+<book lang="en">
+  <bookinfo>
+    <title>How to use the JBoss DocBook system</title>
+    <subtitle>A guide for content developers</subtitle>
+    <releaseinfo>2.0</releaseinfo>
+  </bookinfo>
+  <toc/>
+  <preface id="target" revision="1">
+    <title>Target Audience</title>
+    <para>All JBoss.org documentation content developers and style developers
+            should read this document. You should also read this if you want to
+            build JBoss.org DocBooks from the <ulink url="http://anonsvn.jboss.org">public SVN repositories</ulink>. </para>
+  </preface>
+  <preface id="preface" revision="1">
+    <title>Preface</title>
+    <para>This document introduces the  unified DocBook system for JBoss.org
+            documentation based on Maven2. Using this system provides the following benefits:</para>
+    <itemizedlist>
+      <listitem>
+        <para>The DocBook libraries and all other dependencies are stored in Maven plugins located in the <ulink url="http://repository.jboss.org/maven2">JBoss public maven repository</ulink>. This allows the entire build environment to be automatically downloaded and configured  from just a single <literal>pom.xml</literal> file stored in a project&apos;s <literal>docs</literal> directory.</para>
+      </listitem>
+      <listitem>
+        <para>Styles  are also stored in Maven plugins so that they can be managed from a central location. This allows updates to be automatically downloaded when new designs are created or bugs are fixed.</para>
+      </listitem>
+      <listitem>
+        <para>It provides a default style based on the JBoss.org community-driven theme that looks clean, fresh and modern.</para>
+      </listitem>
+      <listitem>
+        <para>Custom styles can easily be created for individual projects, or groups of related projects, to cater for different requirements.  For example some projects may have their own logos or wish to have collapsable menus at the start of each chapter. </para>
+      </listitem>
+      <listitem>
+        <para>The build process is simplified and standardized. Just
+                follow the instructions in this guide to setup your <literal>docs</literal>
+                directory and copy a very simple  <literal>pom.xml</literal> file. </para>
+      </listitem>
+    </itemizedlist>
+    <para> If you have any questions, please feel free to contact <ulink url="mailto:mark.newton@jboss.org">Mark Newton</ulink> (Content Lead) for more information. </para>
+  </preface>
+&introduction;&howto;&styles;</book>
