@@ -88,7 +88,8 @@
             <version>1.2.2.GA</version>
           </docletArtifact>
           <aggregate>true</aggregate>
-          <additionalparam>-charset UTF-8
+          <additionalparam>
+	    -charset UTF-8
             -docencoding UTF-8
             -version
             -author
@@ -101,7 +102,9 @@
             -group "Central interface for all I/O operations" ${project.groupId}.channel*
             -group "Client &amp; Server bootstrapping utilities" ${project.groupId}.bootstrap*
             -group "Reusable I/O event interceptors" ${project.groupId}.handler*
-            -group "Miscellaneous" ${project.groupId}.logging*</additionalparam>
+            -group "Miscellaneous" ${project.groupId}.logging*
+            -sourceclasspath ${project.build.outputDirectory}
+	  </additionalparam>
           <encoding>UTF-8</encoding>
           <locale>en_US</locale>
           <excludePackageNames>${project.groupId}.example*:${project.groupId}.util*</excludePackageNames>
