@@ -268,11 +268,6 @@
           </imageResource>
           <formats>
             <format>
-              <formatName>pdf</formatName>
-              <stylesheetResource>classpath:/xslt/org/jboss/main-pdf.xsl</stylesheetResource>
-              <finalName>${project.artifactId}.pdf</finalName>
-            </format>
-            <format>
               <formatName>html</formatName>
               <stylesheetResource>classpath:/xslt/org/jboss/main-html.xsl</stylesheetResource>
               <finalName>index.html</finalName>
