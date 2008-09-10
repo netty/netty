@@ -196,7 +196,7 @@
           <docletArtifact>
             <groupId>org.jboss.apiviz</groupId>
             <artifactId>apiviz</artifactId>
-            <version>1.2.2.GA</version>
+            <version>1.2.3.GA</version>
           </docletArtifact>
           <aggregate>true</aggregate>
           <additionalparam>
