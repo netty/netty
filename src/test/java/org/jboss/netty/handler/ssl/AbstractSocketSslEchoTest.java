@@ -109,8 +109,8 @@ public abstract class AbstractSocketSslEchoTest {
         cse.setUseClientMode(true);
 
         // Workaround for blocking I/O transport write-write dead lock.
-        sb.setOption("receiveBuffer", 1048576);
-        sb.setOption("receiveBuffer", 1048576);
+        sb.setOption("receiveBufferSize", 1048576);
+        sb.setOption("receiveBufferSize", 1048576);
 
         sb.getPipeline().addFirst("ssl", new SslHandler(sse));
         sb.getPipeline().addLast("handler", sh);
