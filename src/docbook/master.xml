@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.3CR3//EN" "../support/support/docbook-dtd/docbookx.dtd" [
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd" [
 <!ENTITY introduction SYSTEM "module/introduction.xml">
 <!ENTITY architecture SYSTEM "module/architecture.xml">
 <!ENTITY codec        SYSTEM "module/codec.xml">
