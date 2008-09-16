@@ -1,32 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd" [
-<!ENTITY introduction SYSTEM "module/introduction.xml">
-<!ENTITY architecture SYSTEM "module/architecture.xml">
-<!ENTITY codec        SYSTEM "module/codec.xml">
-<!ENTITY threading    SYSTEM "module/threading.xml">
-<!ENTITY security     SYSTEM "module/security.xml">
-<!ENTITY transport    SYSTEM "module/transport.xml">
-<!ENTITY appendix     SYSTEM "module/appendix.xml">
-]>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd">
 <book lang="en">
   <bookinfo>
     <title>The Netty Project 3.0 User Guide</title>
-    <subtitle>The proven approach for rapid network application development</subtitle>
-    <releaseinfo>$Rev$, $Date$</releaseinfo>
+    <subtitle>The Proven Approach for Rapid Network Application Development</subtitle>
+    <releaseinfo>
+      <xi:include href="../../target/version.txt" parse="text"
+                  xmlns:xi="http://www.w3.org/2001/XInclude" />
+    </releaseinfo>
   </bookinfo>
 
   <toc/>
 
-  <preface id="preface">
-    <title>Preface</title>
-    <para>To be written...</para>
-  </preface>
+  <xi:include href="module/preface.xml"
+              xmlns:xi="http://www.w3.org/2001/XInclude" />
+              
+  <xi:include href="module/introduction.xml"
+              xmlns:xi="http://www.w3.org/2001/XInclude" />
+              
+  <xi:include href="module/architecture.xml"
+              xmlns:xi="http://www.w3.org/2001/XInclude" />
+              
+  <xi:include href="module/codec.xml"
+              xmlns:xi="http://www.w3.org/2001/XInclude" />
+              
+  <xi:include href="module/threading.xml"
+              xmlns:xi="http://www.w3.org/2001/XInclude" />
+              
+  <xi:include href="module/security.xml"
+              xmlns:xi="http://www.w3.org/2001/XInclude" />
+              
+  <xi:include href="module/transport.xml"
+              xmlns:xi="http://www.w3.org/2001/XInclude" /> 
+              
+  <xi:include href="module/appendix.xml"
+              xmlns:xi="http://www.w3.org/2001/XInclude" />
 
-  &introduction;
-  &architecture;
-  &codec;
-  &threading;
-  &security;
-  &transport;
-  &appendix;
 </book>

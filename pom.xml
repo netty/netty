@@ -177,17 +177,88 @@
             <goals>
               <goal>jar</goal>
             </goals>
+            <configuration>
+              <attach>true</attach>
+            </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>write-version</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <tasks>
+                <echo message="${project.version}" file="${project.build.directory}/version.txt" />
+              </tasks>
+            </configuration>
+          </execution>
+          <execution>
+            <id>add-license</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <tasks>
+                <taskdef resource="net/sf/antcontrib/antlib.xml" />
+                <if>
+                  <or>
+                    <equals arg2="jar" arg1="${project.packaging}" />
+                    <equals arg2="bundle" arg1="${project.packaging}" />
+                  </or>
+                  <then>
+                    <move file="${project.build.directory}/${project.build.finalName}.jar" tofile="${project.build.directory}/${project.build.finalName}.orig.jar" />
+                    <zip destfile="${project.build.directory}/${project.build.finalName}.jar">
+                      <zipfileset dir="${basedir}" prefix="META-INF/">
+                        <include name="LICENSE.*" />
+                        <include name="NOTICE.*" />
+                        <include name="COPYRIGHT.*" />
+                      </zipfileset>
+                      <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}.orig.jar" dirmode="755">
+                        <exclude name="*/*/*/example/**" />
+                      </zipfileset>
+                    </zip>
+                    <delete file="${project.build.directory}/${project.build.finalName}.orig.jar" />
+                    <move file="${project.build.directory}/${project.build.finalName}-sources.jar" tofile="${project.build.directory}/${project.build.finalName}-sources.orig.jar" />
+                    <zip destfile="${project.build.directory}/${project.build.finalName}-sources.jar">
+                      <zipfileset dir="${basedir}" prefix="META-INF/">
+                        <include name="LICENSE.*" />
+                        <include name="NOTICE.*" />
+                        <include name="COPYRIGHT.*" />
+                      </zipfileset>
+                      <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}-sources.orig.jar" dirmode="755">
+                        <exclude name="*/*/*/example/**" />
+                      </zipfileset>
+                    </zip>
+                    <delete file="${project.build.directory}/${project.build.finalName}-sources.orig.jar" />
+                  </then>
+                </if>
+              </tasks>
+            </configuration>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>ant-contrib</groupId>
+            <artifactId>ant-contrib</artifactId>
+            <version>1.0b2</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
         <executions>
           <execution>
-            <id>attach-javadoc</id>
+            <id>generate-javadoc</id>
             <phase>package</phase>
             <goals>
-              <goal>jar</goal>
+              <goal>javadoc</goal>
             </goals>
           </execution>
         </executions>
@@ -199,6 +270,7 @@
             <version>1.2.3.GA</version>
           </docletArtifact>
           <aggregate>true</aggregate>
+          <attach>false</attach>
           <additionalparam>
             -d ${project.build.directory}/apidocs
             -charset UTF-8
@@ -263,7 +335,7 @@
           <imageResource>
             <directory>${basedir}/src/docbook</directory>
             <includes>
-              <include>image/**/*</include>
+              <include>images/**/*</include>
             </includes>
           </imageResource>
           <formats>
@@ -284,72 +356,6 @@
             <docbookVersion>1.72.0</docbookVersion>
           </options>
         </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>add-license</id>
-            <phase>package</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <tasks>
-                <taskdef resource="net/sf/antcontrib/antlib.xml" />
-                <if>
-                  <or>
-                    <equals arg2="jar" arg1="${project.packaging}" />
-                    <equals arg2="bundle" arg1="${project.packaging}" />
-                  </or>
-                  <then>
-                    <move file="${project.build.directory}/${project.build.finalName}.jar" tofile="${project.build.directory}/${project.build.finalName}.orig.jar" />
-                    <zip destfile="${project.build.directory}/${project.build.finalName}.jar">
-                      <zipfileset dir="${basedir}" prefix="META-INF/">
-                        <include name="LICENSE.*" />
-                        <include name="NOTICE.*" />
-                        <include name="COPYRIGHT.*" />
-                      </zipfileset>
-                      <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}.orig.jar" dirmode="755">
-                        <exclude name="*/*/*/example/**" />
-                      </zipfileset>
-                    </zip>
-                    <delete file="${project.build.directory}/${project.build.finalName}.orig.jar" />
-                    <move file="${project.build.directory}/${project.build.finalName}-sources.jar" tofile="${project.build.directory}/${project.build.finalName}-sources.orig.jar" />
-                    <zip destfile="${project.build.directory}/${project.build.finalName}-sources.jar">
-                      <zipfileset dir="${basedir}" prefix="META-INF/">
-                        <include name="LICENSE.*" />
-                        <include name="NOTICE.*" />
-                        <include name="COPYRIGHT.*" />
-                      </zipfileset>
-                      <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}-sources.orig.jar" dirmode="755">
-                        <exclude name="*/*/*/example/**" />
-                      </zipfileset>
-                    </zip>
-                    <delete file="${project.build.directory}/${project.build.finalName}-sources.orig.jar" />
-                    <move file="${project.build.directory}/${project.build.finalName}-javadoc.jar" tofile="${project.build.directory}/${project.build.finalName}-javadoc.orig.jar" />
-                    <zip destfile="${project.build.directory}/${project.build.finalName}-javadoc.jar">
-                      <zipfileset dir="${basedir}" prefix="META-INF/">
-                        <include name="LICENSE.*" />
-                        <include name="NOTICE.*" />
-                        <include name="COPYRIGHT.*" />
-                      </zipfileset>
-                      <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}-javadoc.orig.jar" dirmode="755" />
-                    </zip>
-                    <delete file="${project.build.directory}/${project.build.finalName}-javadoc.orig.jar" />
-                  </then>
-                </if>
-              </tasks>
-            </configuration>
-          </execution>
-        </executions>
-        <dependencies>
-          <dependency>
-            <groupId>ant-contrib</groupId>
-            <artifactId>ant-contrib</artifactId>
-            <version>1.0b2</version>
-          </dependency>
-        </dependencies>
       </plugin>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
