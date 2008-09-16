@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<chapter id="appendix">
+<!DOCTYPE appendix PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd">
+<appendix id="appendix">
   <title>Additional Resources</title>
   <para>To be written...</para>
-</chapter>
+</appendix>
