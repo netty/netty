@@ -22,6 +22,9 @@
   <xi:include href="module/architecture.xml"
               xmlns:xi="http://www.w3.org/2001/XInclude" />
               
+  <xi:include href="module/state-mgmt.xml"
+              xmlns:xi="http://www.w3.org/2001/XInclude" />
+              
   <xi:include href="module/codec.xml"
               xmlns:xi="http://www.w3.org/2001/XInclude" />
               

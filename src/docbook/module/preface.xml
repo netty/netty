@@ -2,5 +2,67 @@
 <!DOCTYPE preface PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd">
 <preface id="preface">
   <title>Preface</title>
-  <para>To be written...</para>
+  <para>
+    The most fundamental question, <quote>What is Netty and why should I
+    care?</quote>, will be answered here.
+  </para>
+  
+  <section>
+    <title>The Problem</title>
+    <para>
+      We are using a general purpose application or library to communicate
+      with each other nowadays.  For example, we often use an open source
+      HTTP client library to retrieve information from an open source web
+      server and to invoke a remote procedure call via web services.
+    </para>
+    <para>
+      However, a general purpose protocol or its implementation sometimes 
+      doesn't scale very well.  It's like we don't use a general purpose
+      HTTP server to exchange huge files, e-mail messages, and near-realtime
+      messages such as financial information and multiplayer game data.
+      What's required is a highly optimized protocol implementation which is
+      dedicated to a special purpose.  For example, you might want to
+      implement an HTTP server which is optimized for AJAX-based chat
+      application.  You could even want to design and implement a whole new
+      protocol which is precisely tailored to your need.
+    </para>
+    <para>
+      Another inevitable case is when you have to deal with a legacy
+      proprietary protocol to ensure the interoperability with an old system.
+      What matters in this case is how quickly we can implement that protocol
+      while not sacrificing the stability and performance of the resulting
+      application.
+    </para>
+  </section>
+  
+  <section>
+    <title>The Solution</title>
+    <para>
+      <firstterm>The Netty project</firstterm> is an effort to provide an
+      asynchronous &middot; event-driven network application framework and
+      tooling for rapid development of maintainable high-performance &middot;
+      high-scalability protocol servers and clients.  To simplify, Netty
+      helps you to write your own network application very easily -- it's
+      often called <firstterm>rapid network application development</firstterm>.
+    </para>
+    <para>
+      Rapid network application development doesn't mean that a resulting
+      application will suffer from a maintainability or a performance issue.
+      Netty has been designed carefully with the experiences earned from 
+      the implementation of a lot of protocols such as FTP, SMTP, HTTP, and
+      various binary and text-based legacy protocols.  As a result, Netty
+      has succeeded to find a way to achieve ease of development,
+      performance, stability, and flexibility without a compromise.
+    </para>
+    <para>
+      Some of you might already have found other network application
+      framework that claims to have the same advantage, and you might want
+      to ask what makes Netty so different from them.  The answer is the
+      philosophy where it is built on.  It's designed to give you the most
+      comfortable experience both in terms of the API and the implementation
+      from the day one.  It's not something tangible but you will get to
+      realize that this philosophy will make your life much easier as you
+      read this guide and play with Netty. 
+    </para>
+  </section>
 </preface>
