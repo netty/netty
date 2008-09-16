@@ -38,12 +38,13 @@
   <section>
     <title>The Solution</title>
     <para>
-      <firstterm>The Netty project</firstterm> is an effort to provide an
-      asynchronous &middot; event-driven network application framework and
-      tooling for rapid development of maintainable high-performance &middot;
-      high-scalability protocol servers and clients.  To simplify, Netty
-      helps you to write your own network application very easily -- it's
-      often called <firstterm>rapid network application development</firstterm>.
+      <firstterm><ulink url="http://www.jboss.org/netty/">The Netty
+      project</ulink></firstterm> is an effort to provide an asynchronous
+      &middot; event-driven network application framework and tooling for the
+      rapid development of maintainable high-performance &middot;
+      high-scalability protocol servers and clients.  To simplify, Netty helps
+      you write your own network application very easily -- it's often called
+      <firstterm>rapid network application development</firstterm>.
     </para>
     <para>
       Rapid network application development doesn't mean that a resulting
@@ -62,7 +63,7 @@
       comfortable experience both in terms of the API and the implementation
       from the day one.  It's not something tangible but you will get to
       realize that this philosophy will make your life much easier as you
-      read this guide and play with Netty. 
+      read this guide on and play with Netty. 
     </para>
   </section>
 </preface>
