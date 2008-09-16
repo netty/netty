@@ -61,8 +61,17 @@
 
     <!-- Documentation (API) -->
     <fileSet>
-      <directory>target/apidocs</directory>
+      <directory>target/api</directory>
       <outputDirectory>doc/api</outputDirectory>
+      <includes>
+        <include>**/**</include>
+      </includes>
+    </fileSet>
+
+    <!-- Documentation (XRef) -->
+    <fileSet>
+      <directory>target/xref</directory>
+      <outputDirectory>doc/xref</outputDirectory>
       <includes>
         <include>**/**</include>
       </includes>

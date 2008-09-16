@@ -272,7 +272,7 @@
           <aggregate>true</aggregate>
           <attach>false</attach>
           <additionalparam>
-            -d ${project.build.directory}/apidocs
+            -d ${project.build.directory}/api
             -charset UTF-8
             -docencoding UTF-8
             -version
@@ -296,10 +296,21 @@
       </plugin>
       <plugin>
         <artifactId>maven-jxr-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate-xref</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jxr</goal>
+            </goals>
+          </execution>
+        </executions>
         <configuration>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
-          <linkJavadoc>false</linkJavadoc>
+          <linkJavadoc>true</linkJavadoc>
+          <destDir>${project.build.directory}/xref</destDir>
+          <javadocDir>${project.build.directory}/api</javadocDir>
         </configuration>
       </plugin>
       <plugin>
@@ -361,7 +372,7 @@
         <artifactId>maven-assembly-plugin</artifactId>
         <executions>
           <execution>
-            <id>attach-distribution</id>
+            <id>generate-distribution</id>
             <phase>package</phase>
             <goals>
               <goal>attached</goal>
@@ -372,6 +383,7 @@
           <descriptors>
             <descriptor>${basedir}/src/assembly/default.xml</descriptor>
           </descriptors>
+          <attach>false</attach>
           <appendAssemblyId>true</appendAssemblyId>
           <tarLongFileMode>gnu</tarLongFileMode>
         </configuration>
