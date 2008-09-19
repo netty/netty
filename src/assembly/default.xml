@@ -79,7 +79,7 @@
 
     <!-- Documentation (Docbook) -->
     <fileSet>
-      <directory>target/docbook</directory>
+      <directory>target/docbook/publish/en-US</directory>
       <outputDirectory>doc/guide</outputDirectory>
       <includes>
         <include>**/**</include>
