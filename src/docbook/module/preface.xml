@@ -41,7 +41,7 @@
   <section>
     <title>The Solution</title>
     <para>
-      <firstterm><ulink url="http://www.jboss.org/netty/">The Netty
+      <firstterm><ulink url="&Home;">The Netty
       project</ulink></firstterm> is an effort to provide an asynchronous
       &middot; event-driven network application framework and tooling for the
       rapid development of maintainable high-performance &middot;
