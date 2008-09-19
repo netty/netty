@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd">
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd" [
+<!ENTITY home "http://www.jboss.org/netty">
+<!ENTITY doc  "http://www.jboss.org/file-access/default/members/netty/freezone">
+<!ENTITY api  "&doc;/api/3.0">
+<!ENTITY xref "&doc;/xref/3.0">
+]>
 <chapter id="start">
   <title>Getting Started</title>
   <para>
@@ -19,16 +24,15 @@
       The minimum requirements to run the examples which are introduced in
       this chapter are just two; the latest version of Netty release and JDK
       1.5 or above.  The latest version of Netty is available in
-      <ulink url="http://www.jboss.org/netty/downloads.html">the project
-      download page</ulink>.  To get the right version of JDK, please refer to
-      your preferred JDK vendor's web site.  
+      <ulink url="&home;/downloads.html">the project download page</ulink>.
+      To get the right version of JDK, please refer to your preferred JDK
+      vendor's web site.  
     </para>
     <para>
       Is that all?  To tell the truth, you should find these two are just
       enough to implement almost any type of protocols.  Otherwise, please
-      feel free to
-      <ulink url="http://www.jboss.org/netty/community.html">contact the Netty
-      project team </ulink> and let us know what's missing.
+      feel free to <ulink url="&home;/community.html">contact the Netty
+      project team</ulink> and let us know what's missing.
     </para>
   </section>
   
@@ -72,11 +76,11 @@ public class DiscardServerHandler extends SimpleChannelHandler {
       <calloutlist>
         <callout arearefs="example.discard.c1">
           <para>
-            TEST! 
+            <ulink url="&api;/org/jboss/netty/channel/ChannelPipelineCoverage.html"><interfacename>ChannelPipelineCoverage</interfacename></ulink>
+            annotates a handler 
           </para>
         </callout>
       </calloutlist>
     </programlistingco>
   </section>
-    
 </chapter>
