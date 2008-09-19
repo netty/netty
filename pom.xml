@@ -316,7 +316,6 @@
       <plugin>
         <groupId>org.jboss.maven.plugins</groupId>
         <artifactId>maven-jdocbook-plugin</artifactId>
-        <version>2.0.0</version>
         <executions>
           <execution>
             <id>generate-docbook</id>
@@ -331,12 +330,12 @@
           <dependency>
             <groupId>org.jboss</groupId>
             <artifactId>jbossorg-docbook-xslt</artifactId>
-            <version>1.0.0</version>
+            <version>1.1.0</version>
           </dependency>
           <dependency>
             <groupId>org.jboss</groupId>
             <artifactId>jbossorg-jdocbook-style</artifactId>
-            <version>1.0.0</version>
+            <version>1.1.0</version>
             <type>jdocbook-style</type>
           </dependency>
         </dependencies>
@@ -352,12 +351,12 @@
           <formats>
             <format>
               <formatName>html</formatName>
-              <stylesheetResource>classpath:/xslt/org/jboss/main-html.xsl</stylesheetResource>
+              <stylesheetResource>classpath:/xslt/org/jboss/xhtml.xsl</stylesheetResource>
               <finalName>index.html</finalName>
             </format>
             <format>
               <formatName>html_single</formatName>
-              <stylesheetResource>classpath:/xslt/org/jboss/nochunk-html.xsl</stylesheetResource>
+              <stylesheetResource>classpath:/xslt/org/jboss/xhtml-single.xsl</stylesheetResource>
               <finalName>index.html</finalName>
             </format>
           </formats>
