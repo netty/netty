@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd" [
-<!ENTITY home "http://www.jboss.org/netty">
-<!ENTITY doc  "http://www.jboss.org/file-access/default/members/netty/freezone">
-<!ENTITY api  "&doc;/api/3.0">
-<!ENTITY xref "&doc;/xref/3.0">
+<!ENTITY % CustomDTD SYSTEM "../custom.dtd">
+%CustomDTD; 
 ]>
 <chapter id="start">
   <title>Getting Started</title>
@@ -50,7 +48,10 @@
     </para>
     <programlistingco>
       <areaspec>
-        <area id="example.discard.c1" coords="1" />
+        <area id="example.discard.c1" coords="9" />
+        <area id="example.discard.c2" coords="10" />
+        <area id="example.discard.c3" coords="13" />
+        <area id="example.discard.c4" coords="17" />
       </areaspec>
       <programlisting>package org.jboss.netty.example.discard;
 
@@ -60,7 +61,7 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
-@ChannelPipelineCoverage("all")
+@<ulink url="&api;/org/jboss/netty/channel/ChannelPipelineCoverage.html">ChannelPipelineCoverage</ulink>("all")
 public class DiscardServerHandler extends SimpleChannelHandler {
 
     @Override
@@ -77,7 +78,117 @@ public class DiscardServerHandler extends SimpleChannelHandler {
         <callout arearefs="example.discard.c1">
           <para>
             <ulink url="&api;/org/jboss/netty/channel/ChannelPipelineCoverage.html"><interfacename>ChannelPipelineCoverage</interfacename></ulink>
-            annotates a handler 
+            annotates a handler type to tell if the handler instance of the
+            annotated type can be shared by more than one
+            <ulink url="&api;/org/jboss/netty/channel/Channel.html"><interfacename>Channel</interfacename></ulink>
+            (and its associated <ulink url="&api;/org/jboss/netty/channel/ChannelPipeline.html"><interfacename>ChannelPipeline</interfacename></ulink>).
+            <classname>DiscardServerHandler</classname> doesn't manage any
+            stateful information, and therefore it's annotated with the value
+            <literal>"all"</literal>.  It's OK even if you are confused with
+            this yet.  We will revisit it soon. 
+          </para>
+        </callout>
+        <callout arearefs="example.discard.c2">
+          <para>
+            <classname>DiscardServerHandler</classname> extends
+            <ulink url="&api;/org/jboss/netty/channel/SimpleChannelHandler.html"><classname>SimpleChannelHandler</classname></ulink>,
+            which is an implementation of
+            <ulink url="&api;/org/jboss/netty/channel/ChannelUpstreamHandler.html"><interfacename>ChannelUpstreamHandler</interfacename></ulink>.
+            <classname>SimpleChannelHandler</classname> provides various
+            event handler methods that you can override.  For now, it's just
+            enough to extend <classname>SimpleChannelHandler</classname>
+            rather than to implement handler interfaces.
+          </para>
+        </callout>
+        <callout arearefs="example.discard.c3">
+          <para>
+            We override the <methodname>messageReceived</methodname> event
+            handler method here.  This method is called with a
+            <ulink url="&api;/org/jboss/netty/channel/MessageEvent.html"><interfacename>MessageEvent</interfacename></ulink>,
+            which contains the received data, whenever new data is received
+            from a client.  In this example, we just ignore the received data
+            by doing nothing to implement the DISCARD protocol.
+          </para>
+        </callout>
+        <callout arearefs="example.discard.c4">
+          <para>
+            <methodname>exceptionCaught</methodname> event handler method is
+            called with an
+            <ulink url="&api;/org/jboss/netty/channel/ExceptionEvent.html"><interfacename>ExceptionEvent</interfacename></ulink>
+            when an exception was raised by Netty due to I/O error or by
+            a handler implementation due to the exception thrown while
+            processing events.  In most cases, the caught exception should be
+            logged and its associated channel should be closed here, although
+            the implementation of this method can be different depending on
+            what you want to do to deal with an exceptional situation.  For
+            example, you might want to send a response message with an error
+            code before closing the connection.
+          </para>
+        </callout>
+      </calloutlist>
+    </programlistingco>
+    <para>
+      So far so good.  We have implemented the half of the DISCARD server.
+      What's left now is to write the <methodname>main</methodname> method
+      which starts the server up with the <classname>DiscardServerHandler</classname>.
+    </para>
+    <programlistingco>
+      <areaspec>
+        <area id="example.discard2.c1" coords="13" />
+        <area id="example.discard2.c2" coords="18" />
+        <area id="example.discard2.c3" coords="21" />
+        <area id="example.discard2.c4" coords="23" />
+        <area id="example.discard2.c5" coords="26" />
+      </areaspec>
+      <programlisting>package org.jboss.netty.example.discard;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
+
+import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+
+public class DiscardServer {
+
+    public static void main(String[] args) throws Exception {
+        ChannelFactory factory =
+            new NioServerSocketChannelFactory(
+                    Executors.newCachedThreadPool(),
+                    Executors.newCachedThreadPool());
+
+        ServerBootstrap bootstrap = new ServerBootstrap(factory);
+
+        DiscardServerHandler handler = new DiscardServerHandler();
+        bootstrap.getPipeline().addLast("handler", handler);
+
+        bootstrap.setOption("child.tcpNoDelay", true);
+        bootstrap.setOption("child.keepAlive", true);
+
+        bootstrap.bind(new InetSocketAddress(8080));
+    }
+}</programlisting>
+      <calloutlist>
+        <callout arearefs="example.discard2.c1">
+          <para>
+            <ulink url="&api;/org/jboss/netty/channel/ChannelFactory.html"><interfacename>ChannelFactory</interfacename></ulink>
+            is a factory which creates a <classname>Channel</classname>
+          </para>
+        </callout>
+        <callout arearefs="example.discard2.c2">
+          <para>
+          </para>
+        </callout>
+        <callout arearefs="example.discard2.c3">
+          <para>
+          </para>
+        </callout>
+        <callout arearefs="example.discard2.c4">
+          <para>
+          </para>
+        </callout>
+        <callout arearefs="example.discard2.c5">
+          <para>
           </para>
         </callout>
       </calloutlist>

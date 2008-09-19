@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd" [
-<!ENTITY home "http://www.jboss.org/netty">
-<!ENTITY doc  "http://www.jboss.org/file-access/default/members/netty/freezone">
-<!ENTITY api  "&doc;/api/3.0">
-<!ENTITY xref "&doc;/xref/3.0">
+<!ENTITY % CustomDTD SYSTEM "../custom.dtd">
+%CustomDTD; 
 ]>
 <chapter id="transport">
   <title>Transports</title>
