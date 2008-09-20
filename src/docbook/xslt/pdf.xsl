@@ -14,6 +14,9 @@
   <xsl:param name="programlisting.font" select="$monospace.font.family" />
   <xsl:param name="programlisting.font.size" select="'75%'" />
 
+  <!-- Remove the blank pages between the chapters -->
+  <xsl:param name="double.sided" select="0" />
+
   <!-- Use SVG for callout images instead of PNG -->
   <xsl:param name="callout.graphics" select="1" />
   <xsl:param name="callout.graphics.extension" select="'.svg'" />
