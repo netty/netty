@@ -342,6 +342,12 @@
         <configuration>
           <sourceDocumentName>master.xml</sourceDocumentName>
           <sourceDirectory>${basedir}/src/docbook</sourceDirectory>
+          <cssResource>
+            <directory>${basedir}/src/docbook</directory>
+            <includes>
+              <include>css/**/*</include>
+            </includes>
+          </cssResource>
           <imageResource>
             <directory>${basedir}/src/docbook</directory>
             <includes>
@@ -351,13 +357,23 @@
           <formats>
             <format>
               <formatName>html</formatName>
-              <stylesheetResource>classpath:/xslt/org/jboss/xhtml.xsl</stylesheetResource>
+              <stylesheetResource>file://${basedir}/src/docbook/xslt/xhtml.xsl</stylesheetResource>
               <finalName>index.html</finalName>
             </format>
             <format>
               <formatName>html_single</formatName>
-              <stylesheetResource>classpath:/xslt/org/jboss/xhtml-single.xsl</stylesheetResource>
+              <stylesheetResource>file://${basedir}/src/docbook/xslt/xhtml-single.xsl</stylesheetResource>
               <finalName>index.html</finalName>
+            </format>
+            <format>
+              <formatName>eclipse</formatName>
+              <stylesheetResource>file://${basedir}/src/docbook/xslt/eclipse.xsl</stylesheetResource>
+              <finalName>index.html</finalName>
+            </format>
+            <format>
+              <formatName>pdf</formatName>
+              <stylesheetResource>file://${basedir}/src/docbook/xslt/pdf.xsl</stylesheetResource>
+              <finalName>netty.pdf</finalName>
             </format>
           </formats>
           <options>
