@@ -90,8 +90,14 @@ pre a:link * {color:#0066cc !important;}
 
 pre a:visited * {color:#6699cc !important;}
 
-.programlistingco pre {
+.programlisting, .programlistingco pre {
   line-height: 160%;
+}
+
+.programlisting img {
+  margin: 0;
+  padding: 0;
+  vertical-align: middle;
 }
 
 span.co {
