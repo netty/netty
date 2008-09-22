@@ -13,16 +13,25 @@
 <!ENTITY ClientBootstrap          "<ulink url='&API;bootstrap/ClientBootstrap.html'><classname>ClientBootstrap</classname></ulink>">
 <!ENTITY ServerBootstrap          "<ulink url='&API;bootstrap/ServerBootstrap.html'><classname>ServerBootstrap</classname></ulink>">
 
+<!-- Types in the buffer package -->
+
+<!ENTITY ChannelBuffer            "<ulink url='&API;buffer/ChannelBuffer.html'><interfacename>ChannelBuffer</interfacename></ulink>">
+<!ENTITY ChannelBuffers           "<ulink url='&API;buffer/ChannelBuffers.html'><classname>ChannelBuffers</classname></ulink>">
+
 <!-- Types in the channel package -->
 
 <!ENTITY Channel                  "<ulink url='&API;channel/Channel.html'><interfacename>Channel</interfacename></ulink>">
 <!ENTITY ChannelDownstreamHandler "<ulink url='&API;channel/ChannelDownstreamHandler.html'><interfacename>ChannelDownstreamHandler</interfacename></ulink>">
 <!ENTITY ChannelEvent             "<ulink url='&API;channel/ChannelEvent.html'><interfacename>ChannelEvent</interfacename></ulink>">
 <!ENTITY ChannelFactory           "<ulink url='&API;channel/ChannelFactory.html'><interfacename>ChannelFactory</interfacename></ulink>">
+<!ENTITY ChannelFuture            "<ulink url='&API;channel/ChannelFuture.html'><interfacename>ChannelFuture</interfacename></ulink>">
+<!ENTITY ChannelFutureListener    "<ulink url='&API;channel/ChannelFutureListener.html'><interfacename>ChannelFutureListener</interfacename></ulink>">
 <!ENTITY ChannelHandler           "<ulink url='&API;channel/ChannelHandler.html'><interfacename>ChannelHandler</interfacename></ulink>">
 <!ENTITY ChannelHandlerContext    "<ulink url='&API;channel/ChannelHandlerContext.html'><interfacename>ChannelHandlerContext</interfacename></ulink>">
 <!ENTITY ChannelPipeline          "<ulink url='&API;channel/ChannelPipeline.html'><interfacename>ChannelPipeline</interfacename></ulink>">
 <!ENTITY ChannelPipelineCoverage  "<ulink url='&API;channel/ChannelPipelineCoverage.html'><interfacename>ChannelPipelineCoverage</interfacename></ulink>">
+<!ENTITY Channels                 "<ulink url='&API;channel/Channels.html'><classname>Channels</classname></ulink>">
+<!ENTITY ChannelStateEvent        "<ulink url='&API;channel/ChannelStateEvent.html'><interfacename>ChannelStateEvent</interfacename></ulink>">
 <!ENTITY ChannelUpstreamHandler   "<ulink url='&API;channel/ChannelUpstreamHandler.html'><interfacename>ChannelUpstreamHandler</interfacename></ulink>">
 <!ENTITY ExceptionEvent           "<ulink url='&API;channel/ExceptionEvent.html'><interfacename>ExceptionEvent</interfacename></ulink>">
 <!ENTITY MessageEvent             "<ulink url='&API;channel/MessageEvent.html'><interfacename>MessageEvent</interfacename></ulink>">

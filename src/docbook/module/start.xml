@@ -17,7 +17,7 @@
   </para>
   
   <section>
-    <title>Minimum Requirement</title>
+    <title>Minimum Requirements</title>
     <para>
       The minimum requirements to run the examples which are introduced in
       this chapter are just two; the latest version of Netty release and JDK
@@ -191,18 +191,260 @@ public class DiscardServer {
           <literal>keepAlive</literal>.  Please note that the
           <literal>"child."</literal> prefix was added to all options.  It
           means the options will be applied to the accepted &Channel;s instead
-          of the options of the &ServerSocketChannel;.  To set the options of
-          the &ServerSocketChannel;, you could do the following:
+          of the options of the &ServerSocketChannel;.  You could do like the following:
           <programlisting>bootstrap.setOption("reuseAddress", true);</programlisting>
+          to set the options of the &ServerSocketChannel;. 
         </para>
       </callout>
       <callout arearefs="example.discard2.co5">
         <para>
-          OK, we are all set.  What's left is bind to the port to start the
-          server.  Here, we bind to the port <literal>8080</literal> of all
-          NICs in the machine.  You are allowed to call the
-          <methodname>bind</methodname> method as many times as you want with
-          different bind addresses. 
+          We are ready to go now.  What's left is to bind to the port and to
+          start the server.  Here, we bind to the port <literal>8080</literal>
+          of all NICs (network interface cards) in the machine.  You are fine
+          to call the <methodname>bind</methodname> method as many times as
+          you want, with different bind addresses. 
+        </para>
+      </callout>
+    </calloutlist>
+    <para>
+      Congratulations!  You've just finished your first server on top of Netty.
+    </para>
+  </section>
+  
+  <section>
+    <title>Looking into the Received Data</title>
+    <para>
+      Now that we wrote our first server.  We need to test if it really works.
+      The easiest way to test it is to use the <command>telnet</command>
+      command.  For example, you could enter "<command>telnet localhost
+      8080</command>" in the command line and type something.
+    </para>
+    <para>
+      However, can we say that the server is working fine?  We can't really
+      know that because it's a discard server.  You will not going to get any
+      response at all.  To prove it's really working, let's modify the server
+      to print what it has received.
+    </para>
+    <para>
+      We already know that &MessageEvent; is generated whenever data is
+      received and the <methodname>messageReceived</methodname> handler method
+      will be invoked.  Let's put some code into the
+      <methodname>messageReceived</methodname> method of the
+      <classname>DiscardServerHandler</classname>: 
+    </para>
+    <programlisting>@Override
+public void messageReceived(&ChannelHandlerContext; ctx, &MessageEvent; e) {
+    &ChannelBuffer;<co id="example.discard3.co1"/> buf = (ChannelBuffer) e.getMessage();
+    while(buf.readable()) {
+        System.out.println((char) buf.readByte(i));
+    }
+}</programlisting>
+    <calloutlist>
+      <callout arearefs="example.discard3.co1">
+        <para>
+          It is safe to assume the message type in socket transports is always
+          &ChannelBuffer;.  &ChannelBuffer; is a fundamental data structure
+          which stores a sequence of bytes in Netty.  It's similar to NIO
+          <classname>ByteBuffer</classname>, but it's easier to use and more
+          flexible.  For example, Netty allows you to create a composite
+          &ChannelBuffer; which combines multiple &ChannelBuffer;s reducing
+          the number of unnecessary memory copy.
+        </para>
+        <para>
+          Although it resembles to NIO <classname>ByteBuffer</classname> a lot,
+          it is highly recommended to refer to the API reference documentation.
+          Learning how to use &ChannelBuffer; correctly is a critical step in
+          using Netty without difficulty.  
+        </para>
+      </callout>
+    </calloutlist>
+    <para>
+      If you run the <command>telnet</command> command again, you will see the
+      server prints what has received.
+    </para>
+    <para>
+      The full source code of the discard server is located in the
+      <literal>org.jboss.netty.example.discard</literal> package of the
+      distribution.
+    </para>
+  </section>
+  <section>
+    <title>Writing an Echo Server</title>
+    <para>
+      So far, we have been consuming data without responding at all.  A server,
+      however, is usually supposed to respond to a request.  Let's learn how to
+      write a response message to a client by implementing the 
+      <ulink url="http://tools.ietf.org/html/rfc862">ECHO</ulink> protocol,
+      where any received data is sent back. 
+    </para>
+    <para>
+      The only difference from the discard server we have implemented in the
+      previous sections is that it sends the received data back instead of
+      printing the received data out to the console.  Therefore, it's just
+      enough again to modify the <methodname>messageReceived</methodname>
+      method:
+    </para>
+    <programlisting>@Override
+public void messageReceived(&ChannelHandlerContext; ctx, &MessageEvent; e) {
+    &Channel;<co id="example.echo.co1"/> ch = e.getChannel();
+    ch.write(e.getMessage());
+}</programlisting>
+    <calloutlist>
+      <callout arearefs="example.echo.co1">
+        <para>
+          A &ChannelEvent; object has a reference to its associated &Channel;.
+          Here, the returned &Channel; represents the connection which received
+          the &MessageEvent;.  We can get the &Channel; and call the
+          <methodname>write</methodname> method to write something back to
+          the remote peer. 
+        </para>
+      </callout>
+    </calloutlist>
+    <para>
+      If you run the <command>telnet</command> command again, you will see the
+      server sends back whatever you have sent to it.
+    </para>
+    <para>
+      The full source code of the echo server is located in the
+      <literal>org.jboss.netty.example.echo</literal> package of the
+      distribution.
+    </para>
+  </section>
+  
+  <section>
+    <title>Writing a Time Server</title>
+    <para>
+      The protocol to implement time time is the <ulink url="">TIME</ulink>
+      protocol.  It is different from the previous examples in that it sends a
+      message, which contains a 32-bit integer, without receiving any requests
+      and closes the connection once the message is sent.  In this example, you
+      will learn how to construct and send a message, and to close the
+      connection on completion.
+    </para>
+    <para>
+      Because we are going to ignore any received data but to send a message
+      as soon as a connection is established, we can't use the
+      <methodname>messageReceived</methodname> method this time.  Instead,
+      we should override the <methodname>channelConnected</methodname> method.
+      Here's the implementation:
+    </para>
+    <programlisting>package org.jboss.netty.example.time;
+
+
+import org.jboss.netty.channel.&ChannelBuffers;;
+import org.jboss.netty.channel.&ChannelHandlerContext;;
+import org.jboss.netty.channel.&ChannelPipelineCoverage;;
+import org.jboss.netty.channel.&ExceptionEvent;;
+import org.jboss.netty.channel.&MessageEvent;;
+import org.jboss.netty.channel.&SimpleChannelHandler;;
+
+@&ChannelPipelineCoverage;("all")
+public class TimeServerHandler extends &SimpleChannelHandler; {
+
+    @Override
+    public void channelConnected(&ChannelHandlerContext; ctx, &ChannelStateEvent; e) {<co id="example.time.co1"/>
+        &Channel; ch = e.getChannel();
+        
+        &ChannelBuffer; time = &ChannelBuffers;.buffer(4);<co id="example.time.co2"/>
+        time.writeInt(System.currentTimeMillis() / 1000);
+        
+        &ChannelFuture; f = ch.write(time);<co id="example.time.co3"/>
+        
+        f.addListener(new &ChannelFutureListener;() {<co id="example.time.co4"/>
+            public void operationComplete(&ChannelFuture; f) {
+                &Channel; ch = future.getChannel();
+                ch.close();
+            }
+        });
+    }
+
+    @Override
+    public void exceptionCaught(&ChannelHandlerContext; ctx, &ExceptionEvent; e) {
+        e.getCause().printStackTrace();
+        &Channel; ch = e.getChannel();
+        ch.close();
+    }
+}</programlisting>
+    <calloutlist>
+      <callout arearefs="example.time.co1">
+        <para>
+          As explained, <methodname>channelConnected</methodname> method will
+          be invoked when a connection is established.  Let's write the 32-bit
+          integer that represents the current time in seconds here.
+        </para>
+      </callout>
+      <callout arearefs="example.time.co2">
+        <para>
+          To send a new message, we need to allocate a new buffer which will
+          contain the message.  We are going to write a 32-bit integer, and
+          therefore we need a &ChannelBuffer; whose capacity is
+          <literal>4</literal> bytes.  The &ChannelBuffers; helper class is
+          used to allocate a new buffer.  Besides the
+          <methodname>buffer</methodname> method, &ChannelBuffers; provides a
+          lot of useful methods related with &ChannelBuffer;.  Please refer to
+          the API reference.
+        </para>
+        <para>
+          On the other hand, it's a good idea to use static imports for
+          &ChannelBuffers;:
+          <programlisting>import static org.jboss.netty.buffer.ChannelBuffers.*;
+...
+&ChannelBuffer; buf = dynamicBuffer(1024);</programlisting>
+        </para>
+      </callout>
+      <callout arearefs="example.time.co3">
+        <para>
+          As usual, we write the constructed message.
+        </para>
+        <para>
+          But wait, where's the <methodname>flip</methodname>?  Didn't we used
+          to call <methodname>ByteBuffer.flip()</methodname> before sending a
+          message in NIO?  &ChannelBuffer; doesn't have such a method because
+          it has two pointers; one for read operations and the other for write
+          operations.  The writer index increases when you write something to
+          a &ChannelBuffer; while the reader index doesn't change.  The reader
+          index and the writer index represents where the message starts and
+          ends respectively.
+        </para>
+        <para>
+          In contrast, NIO buffer doesn't provide a clean way to figure out
+          where the message content starts and ends without calling the
+          <methodname>flip</methodname> method.  You will be in trouble when
+          you forget to flip the buffer because nothing or incorrect data will
+          be sent.  Such an error doesn't happen in Netty because we have
+          different pointer for different operation types.  You will find it
+          makes your life much easier as you get used to it -- a life without
+          flipping out!
+        </para>
+        <para>
+          Another point to note is that the <methodname>write</methodname>
+          method returns a &ChannelFuture;.  A &ChannelFuture; represents an
+          I/O operation which was not occurred yet.  It means, even if you have
+          called the <methodname>write</methodname> method, the requested
+          operation might not have been performed yet because all operations
+          are asynchronous in Netty.  For example, the following code might
+          close the connection even before a message is sent:
+        </para>
+        <programlisting>&Channel; ch = ...;
+ch.write(message);
+ch.close();</programlisting>
+        <para>
+          Therefore, you need to call the <methodname>close</methodname>
+          method after the &ChannelFuture;, which was returned by the
+          <methodname>write</methodname> method, tells you that the write
+          operation has been done.
+        </para>
+      </callout>
+      <callout arearefs="example.time.co4">
+        <para>
+          How do we get notified when the write request is finished then?
+          It's as simple as adding a &ChannelFutureListener; to the returned
+          &ChannelFuture;.  Here, we created a new anonymous &ChannelFutureListener;
+          which closes the &Channel; when the operation is done.
+        </para>
+        <para>
+          Alternatively, you could simplify the code like this:
+          <programlisting>f.addListener(&ChannelFutureListener;.CLOSE);</programlisting>
         </para>
       </callout>
     </calloutlist>

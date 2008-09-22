@@ -30,13 +30,33 @@
   </xsl:attribute-set>
 
   <!-- Decrease the link font size in the program listing -->
-  <xsl:template match="//programlisting/*/text()|//programlisting/*/*/text()">
-    <fo:inline font-size="80%" margin="0em" padding="0em">
-      <xsl:value-of select="." />
-    </fo:inline>
+  <xsl:attribute-set name="monospace.properties">
+    <xsl:attribute name="font-size">1em</xsl:attribute>
+    <xsl:attribute name="font-family">
+        <xsl:value-of select="$monospace.font.family"/>
+    </xsl:attribute>
+  </xsl:attribute-set>
+  
+  <!-- Add some spacing between callout listing items -->
+  <xsl:template match="callout">
+    <xsl:variable name="id"><xsl:call-template name="object.id"/></xsl:variable>
+    <fo:list-item id="{$id}" space-before="1em">
+      <fo:list-item-label end-indent="label-end()">
+        <fo:block>
+          <xsl:call-template name="callout.arearefs">
+            <xsl:with-param name="arearefs" select="@arearefs"/>
+          </xsl:call-template>
+        </fo:block>
+      </fo:list-item-label>
+      <fo:list-item-body start-indent="body-start()">
+        <fo:block padding-top="0.2em">
+          <xsl:apply-templates/>
+        </fo:block>
+      </fo:list-item-body>
+    </fo:list-item>
   </xsl:template>
-
-  <!-- Slight baseline-shift -->
+  
+  <!-- Slight baseline-shift for callouts in the program listing -->
   <xsl:template name="callout-bug">
     <xsl:param name="conum" select='1'/>
     <xsl:choose>
