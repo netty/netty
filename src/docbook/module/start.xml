@@ -38,10 +38,10 @@
       At last but least, please refer to the API reference whenever you want
       to know more about the classes introduced here.  All class names in
       this document are linked to the online API reference for your
-      convenience.  Also, please feel free to <ulink url="&Community;">contact
-      the Netty project community</ulink> and let us know if there's any
-      incorrect information, errors in grammar and typo, and if you have a
-      good idea to improve the documentation. 
+      convenience.  Also, please don't hesitate to
+      <ulink url="&Community;">contact the Netty project community</ulink> and
+      let us know if there's any incorrect information, errors in grammar and
+      typo, and if you have a good idea to improve the documentation. 
     </para>
   </section>
   
