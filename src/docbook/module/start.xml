@@ -22,11 +22,11 @@
     <title>Before Getting Started</title>
     <para>
       The minimum requirements to run the examples which are introduced in
-      this chapter are just two; the latest version of Netty release and JDK
-      1.5 or above.  The latest version of Netty is available in
-      <ulink url="&Downloads;">the project download page</ulink>.
-      To get the right version of JDK, please refer to your preferred JDK
-      vendor's web site.  
+      this chapter are just two; the latest version of Netty and JDK 1.5 or
+      above.  The latest version of Netty is available in
+      <ulink url="&Downloads;">the project download page</ulink>.  To get the
+      right version of JDK, please refer to your preferred JDK vendor's web
+      site.  
     </para>
     <para>
       Is that all?  To tell the truth, you should find these two are just
