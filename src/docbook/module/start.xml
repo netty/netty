@@ -77,8 +77,7 @@ public class DiscardServerHandler extends &SimpleChannelHandler; {<co id="exampl
           one &Channel; (and its associated &ChannelPipeline;).
           <classname>DiscardServerHandler</classname> doesn't manage any
           stateful information, and therefore it's annotated with the value
-          <literal>"all"</literal>.  It's OK even if you are confused with
-          this yet.  We will revisit it soon.
+          <literal>"all"</literal>.
         </para>
       </callout>
       <callout arearefs="example.discard.co2">
@@ -131,47 +130,79 @@ import org.jboss.netty.channel.socket.nio.&NioServerSocketChannelFactory;;
 public class DiscardServer {
 
     public static void main(String[] args) throws Exception {
-        &ChannelFactory;<co id="example.discard2.co1" /> factory =
-            new &NioServerSocketChannelFactory;<co id="example.discard2.co2" />(
+        &ChannelFactory; factory =
+            new &NioServerSocketChannelFactory;<co id="example.discard2.co1" />(
                     Executors.newCachedThreadPool(),
                     Executors.newCachedThreadPool());
 
-        &ServerBootstrap; bootstrap = new &ServerBootstrap;<co id="example.discard2.co3" />(factory);
+        &ServerBootstrap; bootstrap = new &ServerBootstrap;<co id="example.discard2.co2" />(factory);
 
         DiscardServerHandler handler = new DiscardServerHandler();
         &ChannelPipeline; pipeline = bootstrap.getPipeline();
-        pipeline.addLast("handler", handler);<co id="example.discard2.co4" />
+        pipeline.addLast("handler", handler);<co id="example.discard2.co3" />
 
-        bootstrap.setOption("child.tcpNoDelay", true);<co id="example.discard2.co5" />
+        bootstrap.setOption("child.tcpNoDelay", true);<co id="example.discard2.co4" />
         bootstrap.setOption("child.keepAlive", true);
 
-        bootstrap.bind(new InetSocketAddress(8080));<co id="example.discard2.co6" />
+        bootstrap.bind(new InetSocketAddress(8080));<co id="example.discard2.co5" />
     }
 }</programlisting>
     <calloutlist>
       <callout arearefs="example.discard2.co1">
         <para>
-          &ChannelFactory; is a factory which creates a &Channel;
+          &ChannelFactory; is a factory which creates and manages &Channel;s
+          and its related resources.  It processes all I/O requests and
+          performs I/O to generate &ChannelEvent;s.  Netty provides various
+          &ChannelFactory; implementations.  We are implementing a server-side
+          application in this example, and therefore
+          &NioServerSocketChannelFactory; was used.  Another thing to note is
+          that it doesn't create I/O threads by itself.  It is supposed to
+          acquire threads from the thread pool you specified in the
+          constructor, and it gives you more control over how threads should
+          be managed in the environment where your application runs, such as
+          an application server with a security manager.
         </para>
       </callout>
       <callout arearefs="example.discard2.co2">
         <para>
+          &ServerBootstrap; is a helper class that sets up a server. You can
+          set up the server by yourself using a &Channel; directly, but it's a
+          tedious process and you won't need to do that in most cases.
         </para>
       </callout>
       <callout arearefs="example.discard2.co3">
         <para>
+          Here, we add the <classname>DiscardServerHandler</classname> to the
+          <emphasis>default</emphasis> &ChannelPipeline;.  Whenever a new
+          connection is accepted by the server, a new &ChannelPipeline; will
+          be created for a newly accepted &Channel; and all the
+          &ChannelHandler;s added here will be added to the new
+          &ChannelPipeline;.  It's just like
+          <ulink url="http://en.wikipedia.org/wiki/Object_copy">a shallow-copy
+          operation</ulink>; all &Channel; and their &ChannelPipeline;s will
+          share the same <classname>DiscardServerHandler</classname> instance.
         </para>
       </callout>
       <callout arearefs="example.discard2.co4">
         <para>
+          You can also set the parameters which are specific to the &Channel;
+          implementation.  We are writing a TCP/IP server, so we are allowed
+          to set the socket options such as <literal>tcpNoDelay</literal> and
+          <literal>keepAlive</literal>.  Please note that the
+          <literal>"child."</literal> prefix was added to all options.  It
+          means the options will be applied to the accepted &Channel;s instead
+          of the options of the &ServerSocketChannel;.  To set the options of
+          the &ServerSocketChannel;, you could do the following:
+          <programlisting>bootstrap.setOption("reuseAddress", true);</programlisting>
         </para>
       </callout>
       <callout arearefs="example.discard2.co5">
         <para>
-        </para>
-      </callout>
-      <callout arearefs="example.discard2.co6">
-        <para>
+          OK, we are all set.  What's left is bind to the port to start the
+          server.  Here, we bind to the port <literal>8080</literal> of all
+          NICs in the machine.  You are allowed to call the
+          <methodname>bind</methodname> method as many times as you want with
+          different bind addresses. 
         </para>
       </callout>
     </calloutlist>

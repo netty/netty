@@ -17,6 +17,7 @@
 
 <!ENTITY Channel                  "<ulink url='&API;channel/Channel.html'><interfacename>Channel</interfacename></ulink>">
 <!ENTITY ChannelDownstreamHandler "<ulink url='&API;channel/ChannelDownstreamHandler.html'><interfacename>ChannelDownstreamHandler</interfacename></ulink>">
+<!ENTITY ChannelEvent             "<ulink url='&API;channel/ChannelEvent.html'><interfacename>ChannelEvent</interfacename></ulink>">
 <!ENTITY ChannelFactory           "<ulink url='&API;channel/ChannelFactory.html'><interfacename>ChannelFactory</interfacename></ulink>">
 <!ENTITY ChannelHandler           "<ulink url='&API;channel/ChannelHandler.html'><interfacename>ChannelHandler</interfacename></ulink>">
 <!ENTITY ChannelHandlerContext    "<ulink url='&API;channel/ChannelHandlerContext.html'><interfacename>ChannelHandlerContext</interfacename></ulink>">
@@ -26,6 +27,10 @@
 <!ENTITY ExceptionEvent           "<ulink url='&API;channel/ExceptionEvent.html'><interfacename>ExceptionEvent</interfacename></ulink>">
 <!ENTITY MessageEvent             "<ulink url='&API;channel/MessageEvent.html'><interfacename>MessageEvent</interfacename></ulink>">
 <!ENTITY SimpleChannelHandler     "<ulink url='&API;channel/SimpleChannelHandler.html'><classname>SimpleChannelHandler</classname></ulink>">
+
+<!-- Types in the channel.socket package -->
+
+<!ENTITY ServerSocketChannel  "<ulink url='&API;channel/socket/ServerSocketChannel.html'><classname>ServerSocketChannel</classname></ulink>">
 
 <!-- Types in the channel.socket.nio package -->
 

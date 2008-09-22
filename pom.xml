@@ -433,6 +433,9 @@
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
+      <releases>
+        <updatePolicy>interval:10080</updatePolicy>
+      </releases>
       <id>jboss.release</id>
       <name>JBoss releases</name>
       <url>http://repository.jboss.org/maven2</url>
