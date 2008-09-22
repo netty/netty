@@ -30,6 +30,7 @@
 <!ENTITY ChannelHandlerContext    "<ulink url='&API;channel/ChannelHandlerContext.html'><interfacename>ChannelHandlerContext</interfacename></ulink>">
 <!ENTITY ChannelPipeline          "<ulink url='&API;channel/ChannelPipeline.html'><interfacename>ChannelPipeline</interfacename></ulink>">
 <!ENTITY ChannelPipelineCoverage  "<ulink url='&API;channel/ChannelPipelineCoverage.html'><interfacename>ChannelPipelineCoverage</interfacename></ulink>">
+<!ENTITY ChannelPipelineFactory   "<ulink url='&API;channel/ChannelPipelineFactory.html'><interfacename>ChannelPipelineFactory</interfacename></ulink>">
 <!ENTITY Channels                 "<ulink url='&API;channel/Channels.html'><classname>Channels</classname></ulink>">
 <!ENTITY ChannelStateEvent        "<ulink url='&API;channel/ChannelStateEvent.html'><interfacename>ChannelStateEvent</interfacename></ulink>">
 <!ENTITY ChannelUpstreamHandler   "<ulink url='&API;channel/ChannelUpstreamHandler.html'><interfacename>ChannelUpstreamHandler</interfacename></ulink>">
@@ -39,8 +40,21 @@
 
 <!-- Types in the channel.socket package -->
 
-<!ENTITY ServerSocketChannel  "<ulink url='&API;channel/socket/ServerSocketChannel.html'><classname>ServerSocketChannel</classname></ulink>">
+<!ENTITY ServerSocketChannel  "<ulink url='&API;channel/socket/ServerSocketChannel.html'><interfacename>ServerSocketChannel</interfacename></ulink>">
+<!ENTITY SocketChannel        "<ulink url='&API;channel/socket/SocketChannel.html'><interfacename>SocketChannel</interfacename></ulink>">
 
 <!-- Types in the channel.socket.nio package -->
 
+<!ENTITY NioClientSocketChannelFactory  "<ulink url='&API;channel/socket/nio/NioClientSocketChannelFactory.html'><classname>NioClientSocketChannelFactory</classname></ulink>">
 <!ENTITY NioServerSocketChannelFactory  "<ulink url='&API;channel/socket/nio/NioServerSocketChannelFactory.html'><classname>NioServerSocketChannelFactory</classname></ulink>">
+
+<!-- Types in the handler.codec.frame package -->
+
+<!ENTITY FrameDecoder  "<ulink url='&API;handler/codec/frame/FrameDecoder.html'><classname>FrameDecoder</classname></ulink>">
+
+<!-- Types in the handler.codec.replay package -->
+
+<!ENTITY ReplayingDecoder  "<ulink url='&API;handler/codec/replay/ReplayingDecoder.html'><classname>ReplayingDecoder</classname></ulink>">
+<!ENTITY VoidEnum          "<ulink url='&API;handler/codec/replay/VoidEnum.html'><classname>VoidEnum</classname></ulink>">
+
+
