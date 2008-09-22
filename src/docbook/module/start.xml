@@ -1016,8 +1016,8 @@ public class TimeDecoder implements &ChannelUpstreamHandler; {
     }
 }</programlisting>
     <para>
-      The last task left is to add the <classname>TimeEncoder</classname> to
-      the &ChannelPipeline; of the &ServerBootstrap;, and it's left as a
+      The last task left is to insert a <classname>TimeEncoder</classname>
+      into the &ChannelPipeline; on the server side, and it's left as a
       trivial exercise.
     </para>
   </section>
