@@ -1,35 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!--
- * JBoss, Home of Professional Open Source
- *
- * Copyright 2008, Red Hat Middleware LLC, and individual contributors
- * by the @author tags. See the COPYRIGHT.txt in the distribution for a
- * full listing of individual contributors.
- *
- * This is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 2.1 of
- * the License, or (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this software; if not, write to the Free
- * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
- * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
--->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.jboss.netty</groupId>
   <artifactId>netty</artifactId>
   <packaging>bundle</packaging>
-  <version>3.0.0.CR4-SNAPSHOT</version>
+  <version>3.0.0.CR4</version>
 
   <name>The Netty Project</name>
   <url>http://www.jboss.org/netty/</url>
@@ -53,8 +28,8 @@
   <inceptionYear>2008</inceptionYear>
 
   <scm>
-    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/trunk</connection>
-    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/trunk</developerConnection>
+    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/tags/netty-3.0.0.CR4</connection>
+    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/tags/netty-3.0.0.CR4</developerConnection>
   </scm>
 
   <dependencies>
