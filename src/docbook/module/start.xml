@@ -964,9 +964,9 @@ public class TimeEncoder implements &ChannelDownstreamHandler; {<co id="example.
           Once done with transforming a POJO into a &ChannelBuffer;, you should
           forward the new buffer to the previous &ChannelDownstreamHandler; in
           the &ChannelPipeline;.  &Channels; provides various helper methods
-          which generates and fires a &ChannelEvent;.  In this example,
+          which generates and sends a &ChannelEvent;.  In this example,
           &Channels;<literal>.write(...)</literal> method creates a new
-          &MessageEvent; and fires it to the previous &ChannelDownstreamHandler;
+          &MessageEvent; and sends it to the previous &ChannelDownstreamHandler;
           in the &ChannelPipeline;.
         </para>
         <para>
