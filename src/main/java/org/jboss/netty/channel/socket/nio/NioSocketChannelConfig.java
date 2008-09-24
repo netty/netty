@@ -37,7 +37,8 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  * In addition to the options provided by {@link ChannelConfig} and
  * {@link SocketChannelConfig}, {@link NioSocketChannelConfig} allows the
  * following options in the option map:
- * <table>
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>

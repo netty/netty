@@ -48,7 +48,8 @@ import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
  * {@link ChannelConfig}.  To update an option map, please call {@link #setOptions(Map)}.
  * <p>
  * All {@link ChannelConfig} has the following options:
- * <table>
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
@@ -59,7 +60,7 @@ import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
  * <td>{@code "pipelineFactory"}</td><td>{@link #setPipelineFactory(ChannelPipelineFactory)}</td>
  * </tr>
  * </table>
- *
+ * <p>
  * More options are available in the sub-types of {@link ChannelConfig}.  For
  * example, you can configure the parameters which are specific to a TCP/IP
  * socket as explained in {@link SocketChannelConfig} or {@link NioSocketChannelConfig}.
