@@ -91,9 +91,10 @@ public interface ChannelConfig {
 
     /**
      * Returns the write timeout of the channel in milliseconds.  If a write
-     * operation is not done within the write timeout, an {@link IOException}
-     * will be raised.  If the {@link Channel} doesn't support write operation,
-     * this property is not used at all, and therefore will be ignored.
+     * operation is not completed within the write timeout, an
+     * {@link IOException} will be raised.  If the {@link Channel} doesn't
+     * support write operation, this property is not used at all, and therefore
+     * will be ignored.
      *
      * @return the write timeout in milliseconds.  {@code 0} if disabled.
      */
@@ -101,9 +102,10 @@ public interface ChannelConfig {
 
     /**
      * Sets the write timeout of the channel in milliseconds.  If a write
-     * operation is not done within the write timeout, an {@link IOException}
-     * will be raised.  If the {@link Channel} doesn't support write operation,
-     * this property is not used at all, and therefore will be ignored.
+     * operation is not completed within the write timeout, an
+     * {@link IOException} will be raised.  If the {@link Channel} doesn't
+     * support write operation, this property is not used at all, and therefore
+     * will be ignored.
      *
      * @param writeTimeoutMillis the write timeout in milliseconds.
      *                           {@code 0} to disable.

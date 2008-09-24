@@ -375,7 +375,7 @@ public interface ChannelPipeline {
 
 
     /**
-     * Fires the specified {@link ChannelEvent} to the first
+     * Sends the specified {@link ChannelEvent} to the first
      * {@link ChannelUpstreamHandler} in this pipeline.
      *
      * @throws NullPointerException
@@ -384,7 +384,7 @@ public interface ChannelPipeline {
     void sendUpstream(ChannelEvent e);
 
     /**
-     * Fires the specified {@link ChannelEvent} to the last
+     * Sends the specified {@link ChannelEvent} to the last
      * {@link ChannelDownstreamHandler} in this pipeline.
      *
      * @throws NullPointerException

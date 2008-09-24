@@ -61,7 +61,7 @@ import java.lang.annotation.Target;
  *         ChannelBuffer header = ChannelBuffers.buffer(4);
  *         header.writeInt(body.readableBytes());
  *
- *         // Create a message prepended with the header and fire a new event.
+ *         // Create a message prepended with the header and send a new event.
  *         ChannelBuffer message = ChannelBuffers.wrappedBuffer(header, body);
  *         Channels.fireMessageReceived(ctx, message, e.getRemoteAddress());
  *     }
@@ -94,7 +94,7 @@ import java.lang.annotation.Target;
  *         // Update the stateful property.
  *         messageId ++;
  *
- *         // Create a message prepended with the header and fire a new event.
+ *         // Create a message prepended with the header and send a new event.
  *         ChannelBuffer message = ChannelBuffers.wrappedBuffer(header, body);
  *         Channels.fireMessageReceived(ctx, message, e.getRemoteAddress());
  *     }

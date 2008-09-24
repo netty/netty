@@ -419,7 +419,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     byte  getByte(int index);
 
     /**
-     * Gets a unsigned byte at the specified absolute {@code index} in this
+     * Gets an unsigned byte at the specified absolute {@code index} in this
      * buffer.
      *
      * @throws IndexOutOfBoundsException
@@ -439,7 +439,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     short getShort(int index);
 
     /**
-     * Gets a unsigned 16-bit short integer at the specified absolute
+     * Gets an unsigned 16-bit short integer at the specified absolute
      * {@code index} in this buffer.
      *
      * @throws IndexOutOfBoundsException
@@ -459,7 +459,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     int   getMedium(int index);
 
     /**
-     * Gets a unsigned 24-bit medium integer at the specified absolute
+     * Gets an unsigned 24-bit medium integer at the specified absolute
      * {@code index} in this buffer.
      *
      * @throws IndexOutOfBoundsException
@@ -479,7 +479,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     int   getInt(int index);
 
     /**
-     * Gets a unsigned 32-bit integer at the specified absolute {@code index}
+     * Gets an unsigned 32-bit integer at the specified absolute {@code index}
      * in this buffer.
      *
      * @throws IndexOutOfBoundsException
@@ -501,7 +501,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers this buffer's data to the specified destination starting at
      * the specified absolute {@code index} until the destination becomes
-     * unwritable.  This method is basically same with
+     * non-writable.  This method is basically same with
      * {@link #getBytes(int, ChannelBuffer, int, int)}, except that this
      * method increases the {@code writerIndex} of the destination by the
      * number of the transferred bytes while
@@ -580,7 +580,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers this buffer's data to the specified destination starting at
      * the specified absolute {@code index} until the destination's position
-     * reaches to its limit.
+     * reaches its limit.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -750,7 +750,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers the specified source buffer's data to this buffer starting at
      * the specified absolute {@code index} until the source buffer's position
-     * reaches to its limit.
+     * reaches its limit.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -815,7 +815,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     byte  readByte();
 
     /**
-     * Gets a unsigned byte at the current {@code readerIndex} and increases
+     * Gets an unsigned byte at the current {@code readerIndex} and increases
      * the {@code readerIndex} by {@code 1} in this buffer.
      *
      * @throws IndexOutOfBoundsException
@@ -833,7 +833,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     short readShort();
 
     /**
-     * Gets a unsigned 16-bit short integer at the current {@code readerIndex}
+     * Gets an unsigned 16-bit short integer at the current {@code readerIndex}
      * and increases the {@code readerIndex} by {@code 2} in this buffer.
      *
      * @throws IndexOutOfBoundsException
@@ -851,7 +851,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     int   readMedium();
 
     /**
-     * Gets a unsigned 24-bit medium integer at the current {@code readerIndex}
+     * Gets an unsigned 24-bit medium integer at the current {@code readerIndex}
      * and increases the {@code readerIndex} by {@code 3} in this buffer.
      *
      * @throws IndexOutOfBoundsException
@@ -869,7 +869,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     int   readInt();
 
     /**
-     * Gets a unsigned 32-bit integer at the current {@code readerIndex}
+     * Gets an unsigned 32-bit integer at the current {@code readerIndex}
      * and increases the {@code readerIndex} by {@code 4} in this buffer.
      *
      * @throws IndexOutOfBoundsException
@@ -950,7 +950,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers this buffer's data to the specified destination starting at
      * the current {@code readerIndex} until the destination becomes
-     * unwritable, and increases the {@code readerIndex} by the number of the
+     * non-writable, and increases the {@code readerIndex} by the number of the
      * transferred bytes.  This method is basically same with
      * {@link #readBytes(ChannelBuffer, int, int)}, except that this method
      * increases the {@code writerIndex} of the destination by the number of
@@ -1022,7 +1022,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers this buffer's data to the specified destination starting at
      * the current {@code readerIndex} until the destination's position
-     * reaches to its limit, and increases the {@code readerIndex} by the
+     * reaches its limit, and increases the {@code readerIndex} by the
      * number of the transferred bytes.
      *
      * @throws IndexOutOfBoundsException
@@ -1206,7 +1206,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers the specified source buffer's data to this buffer starting at
      * the current {@code writerIndex} until the source buffer's position
-     * reaches to its limit, and increases the {@code writerIndex} by the
+     * reaches its limit, and increases the {@code writerIndex} by the
      * number of the transferred bytes.
      *
      * @throws IndexOutOfBoundsException

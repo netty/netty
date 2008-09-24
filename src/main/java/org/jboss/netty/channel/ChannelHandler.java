@@ -23,7 +23,7 @@
 package org.jboss.netty.channel;
 
 /**
- * Handles or intercepts a {@link ChannelEvent}, and fires a
+ * Handles or intercepts a {@link ChannelEvent}, and sends a
  * {@link ChannelEvent} to the next or previous handler in a
  * {@link ChannelPipeline}.
  *
@@ -46,7 +46,7 @@ package org.jboss.netty.channel;
  * A {@link ChannelHandler} is provided with a {@link ChannelHandlerContext}
  * object.  The {@link ChannelHandler} is supposed to interact with the
  * {@link ChannelPipeline} it belongs to via the context object.  Using the
- * context object, the {@link ChannelHandler} can fire events to the next
+ * context object, the {@link ChannelHandler} can pass events to the next
  * or previous handler or modify the behavior of the pipeline by adding or
  * removing a handler for example.
  *

@@ -192,7 +192,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelH
     private volatile int checkpoint;
 
     /**
-     * Creates a new instance with no initial state (i.e. {@code null}).
+     * Creates a new instance with no initial state (i.e: {@code null}).
      */
     protected ReplayingDecoder() {
         this(null);

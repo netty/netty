@@ -78,7 +78,7 @@ public interface NioSocketChannelConfig extends SocketChannelConfig {
 
     /**
      * Returns {@code true} if and only if an I/O thread should do its effort
-     * to balance the ratio of read operations and write operations.  Assuring
+     * to balance the ratio of read and write operations.  Assuring
      * the read-write fairness is sometimes necessary in a high speed network
      * because a certain channel can spend too much time on flushing the
      * large number of write requests not giving enough time for other channels
@@ -87,12 +87,12 @@ public interface NioSocketChannelConfig extends SocketChannelConfig {
     boolean isReadWriteFair();
 
     /**
-     * Sets if an I/O thread should do its effort to balance the ratio of read
-     * operations and write operations.  Assuring the read-write fairness is
-     * sometimes necessary in a high speed network because a certain channel
-     * can spend too much time on flushing the large number of write requests
-     * not giving enough time for other channels to perform I/O.  The default
-     * value is {@code false}.
+     * Sets if an I/O thread should balance the ratio of read and write
+     * operations.  Assuring the read-write fairness is sometimes necessary
+     * in a high speed network because a certain channel can spend too much
+     * time on flushing the large number of write requests not giving enough
+     * time for other channels to perform I/O.  The default value is
+     * {@code false}.
      */
     void setReadWriteFair(boolean fair);
 }

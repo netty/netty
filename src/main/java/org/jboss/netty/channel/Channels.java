@@ -102,7 +102,7 @@ public class Channels {
     // future factory methods
 
     /**
-     * Creates a new uncancellable {@link ChannelFuture} for the specified
+     * Creates a new non-cancellable {@link ChannelFuture} for the specified
      * {@link Channel}.
      */
     public static ChannelFuture future(Channel channel) {
@@ -132,7 +132,7 @@ public class Channels {
     }
 
     /**
-     * Creates a new {@link ChannelFuture} which is already failed for the
+     * Creates a new {@link ChannelFuture} which has failed already for the
      * specified {@link Channel}.
      *
      * @param cause the cause of the failure
@@ -177,10 +177,10 @@ public class Channels {
     // event emission methods
 
     /**
-     * Fires a {@code "channelOpen"} event to the first
+     * Sends a {@code "channelOpen"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.  If the specified channel has a parent,
-     * a {@code "childChannelOpen"} event will be fired, too.
+     * a {@code "childChannelOpen"} event will be sent, too.
      */
     public static void fireChannelOpen(Channel channel) {
         if (channel.getParent() != null) {
@@ -193,10 +193,10 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "channelOpen"} event to the next
+     * Sends a {@code "channelOpen"} event to the next
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
      * the specified {@link ChannelHandlerContext} belongs.  Please note that
-     * this method doesn't fire a {@code "childChannelOpen"} event unlike
+     * this method doesn't send a {@code "childChannelOpen"} event unlike
      * {@link #fireChannelOpen(Channel)} method.
      */
     public static void fireChannelOpen(
@@ -208,7 +208,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "channelBound"} event to the first
+     * Sends a {@code "channelBound"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
      *
@@ -223,7 +223,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "channelBound"} event to the next
+     * Sends a {@code "channelBound"} event to the next
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
      * the specified {@link ChannelHandlerContext} belongs.
      *
@@ -239,7 +239,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "channelConnected"} event to the first
+     * Sends a {@code "channelConnected"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
      *
@@ -254,7 +254,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "channelConnected"} event to the next
+     * Sends a {@code "channelConnected"} event to the next
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
      * the specified {@link ChannelHandlerContext} belongs.
      *
@@ -270,7 +270,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "messageReceived"} event to the first
+     * Sends a {@code "messageReceived"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
      *
@@ -281,7 +281,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "messageReceived"} event to the first
+     * Sends a {@code "messageReceived"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel} belongs.
      *
@@ -297,7 +297,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "messageReceived"} event to the next
+     * Sends a {@code "messageReceived"} event to the next
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
      * the specified {@link ChannelHandlerContext} belongs.
      *
@@ -310,7 +310,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "messageReceived"} event to the next
+     * Sends a {@code "messageReceived"} event to the next
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
      * the specified {@link ChannelHandlerContext} belongs.
      *
@@ -326,7 +326,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "channelInterestChanged"} event to the first
+     * Sends a {@code "channelInterestChanged"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
      *
@@ -341,7 +341,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "channelInterestChanged"} event to the next
+     * Sends a {@code "channelInterestChanged"} event to the next
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
      * the specified {@link ChannelHandlerContext} belongs.
      *
@@ -358,7 +358,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "channelDisconnected"} event to the first
+     * Sends a {@code "channelDisconnected"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
      */
@@ -370,7 +370,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "channelDisconnected"} event to the next
+     * Sends a {@code "channelDisconnected"} event to the next
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
      * the specified {@link ChannelHandlerContext} belongs.
      */
@@ -382,7 +382,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "channelUnbound"} event to the first
+     * Sends a {@code "channelUnbound"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
      */
@@ -392,7 +392,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "channelUnbound"} event to the next
+     * Sends a {@code "channelUnbound"} event to the next
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
      * the specified {@link ChannelHandlerContext} belongs.
      */
@@ -404,7 +404,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "channelClosed"} event to the first
+     * Sends a {@code "channelClosed"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
      */
@@ -419,7 +419,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "channelClosed"} event to the next
+     * Sends a {@code "channelClosed"} event to the next
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
      * the specified {@link ChannelHandlerContext} belongs.
      */
@@ -432,7 +432,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "exceptionCaught"} event to the first
+     * Sends a {@code "exceptionCaught"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
      */
@@ -443,7 +443,7 @@ public class Channels {
     }
 
     /**
-     * Fires a {@code "exceptionCaught"} event to the next
+     * Sends a {@code "exceptionCaught"} event to the next
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
      * the specified {@link ChannelHandlerContext} belongs.
      */

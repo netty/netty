@@ -37,7 +37,7 @@ import java.util.EventListener;
 public interface ChannelFutureListener extends EventListener {
 
     /**
-     * An {@link ChannelFutureListener} that closes the {@link Channel} which is
+     * A {@link ChannelFutureListener} that closes the {@link Channel} which is
      * associated with the specified {@link ChannelFuture}.
      */
     static ChannelFutureListener CLOSE = new ChannelFutureListener() {

@@ -125,7 +125,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler {
     }
 
     /**
-     * Invoked when a message object (e.g. {@link ChannelBuffer}) was received
+     * Invoked when a message object (e.g: {@link ChannelBuffer}) was received
      * from a remote peer.
      */
     public void messageReceived(

@@ -92,11 +92,11 @@ public class SslBufferPool {
     }
 
     /**
-     * Returns the number of bytes which were allocated but not acquired yet.
-     * You can estimate how optimal the specified maximum pool size is from
-     * this value.  If it keeps returning {@code 0}, it means the pool is
-     * getting exhausted.  If it keeps returns a unnecessarily big value, it
-     * means the pool is wasting the heap space.
+     * Returns the number of bytes which were allocated but have not been
+     * acquired yet.  You can estimate how optimal the specified maximum pool
+     * size is from this value.  If it keeps returning {@code 0}, it means the
+     * pool is getting exhausted.  If it keeps returns a unnecessarily big
+     * value, it means the pool is wasting the heap space.
      */
     public synchronized int getUnacquiredPoolSize() {
         return index * MAX_PACKET_SIZE;

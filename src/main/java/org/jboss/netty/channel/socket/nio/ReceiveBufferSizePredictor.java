@@ -54,7 +54,7 @@ public interface ReceiveBufferSizePredictor {
     int nextReceiveBufferSize();
 
     /**
-     * Updates this predictor by telling the actual number of read bytes
+     * Updates this predictor by specifying the actual number of read bytes
      * in the previous read operation.
      *
      * @param previousReceiveBufferSize

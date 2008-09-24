@@ -32,7 +32,7 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 
 
 /**
- * Handles or intercepts a upstream {@link ChannelEvent}, and fires a
+ * Handles or intercepts an upstream {@link ChannelEvent}, and sends a
  * {@link ChannelEvent} to the next or previous handler in a
  * {@link ChannelPipeline}.
  *
@@ -40,7 +40,7 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * <p>
  * A upstream event is an event which is supposed to be processed from the
  * first handler to the last handler in the {@link ChannelPipeline}.
- * For example, all events fired by an I/O thread are upstream events, and
+ * For example, all events initiated by an I/O thread are upstream events, and
  * they have the following meaning:
  * <p>
  * <table border="1" cellspacing="0" cellpadding="6">
@@ -132,8 +132,8 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * <h3>Firing an event to the next or previous handler</h3>
  * <p>
  * You can forward the received event upstream or downstream.  In most cases,
- * {@link ChannelUpstreamHandler} will fire the event to the next handler
- * (upstream) although it is absolutely normal to fire the event to the
+ * {@link ChannelUpstreamHandler} will sent the event to the next handler
+ * (upstream) although it is absolutely normal to sent the event to the
  * previous handler (downstream):
  *
  * <pre>
@@ -152,10 +152,10 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * }
  * </pre>
  *
- * <h4>Using the helper class to fire an event</h4>
+ * <h4>Using the helper class to send an event</h4>
  * <p>
  * You will also find various helper methods in {@link Channels} to be useful
- * to generate and fire an artificial or manipulated event.
+ * to generate and send an artificial or manipulated event.
  *
  * <h3>Thread safety</h3>
  * <p>

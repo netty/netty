@@ -23,6 +23,6 @@
 
 /**
  * Old blocking I/O based socket channel API implementation - recommended for
- * small number of connections (&lt; 1000).
+ * a small number of connections (&lt; 1000).
  */
 package org.jboss.netty.channel.socket.oio;

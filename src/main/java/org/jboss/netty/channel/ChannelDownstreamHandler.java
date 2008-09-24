@@ -26,7 +26,7 @@ import java.net.SocketAddress;
 
 
 /**
- * Handles or intercepts a downstream {@link ChannelEvent}, and fires a
+ * Handles or intercepts a downstream {@link ChannelEvent}, and sends a
  * {@link ChannelEvent} to the previous or next handler in a
  * {@link ChannelPipeline}.
  *
@@ -93,9 +93,9 @@ import java.net.SocketAddress;
  * <h3>Firing an event to the previous or next handler</h3>
  * <p>
  * You can forward the received event downstream or upstream.  In most cases,
- * {@link ChannelDownstreamHandler} will fire the event to the previous handler
- * (downstream) although it is absolutely normal to fire the event to the next
- * handler (upstream):
+ * {@link ChannelDownstreamHandler} will pass the event to the previous
+ * handler (downstream) although it is absolutely normal to pass the event
+ * to the next handler (upstream):
  *
  * <pre>
  * // Sending the event forward (downstream)
@@ -113,10 +113,10 @@ import java.net.SocketAddress;
  * }
  * </pre>
  *
- * <h4>Using the helper class to fire an event</h4>
+ * <h4>Using the helper class to send an event</h4>
  * <p>
  * You will also find various helper methods in {@link Channels} to be useful
- * to generate and fire an artificial or manipulated event.
+ * to generate and send an artificial or manipulated event.
  *
  * <h3>Thread safety</h3>
  * <p>

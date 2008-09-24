@@ -257,7 +257,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
     }
 
     /**
-     * Starts SSL / TLS handshake for the specified channel.
+     * Starts an SSL / TLS handshake for the specified channel.
      *
      * @return a {@link ChannelFuture} which is notified when the handshake
      *         succeeds or fails.
@@ -280,7 +280,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
     }
 
     /**
-     * Sends a SSL {@code close_notify} message to the specified channel and
+     * Sends an SSL {@code close_notify} message to the specified channel and
      * destroys the underlying {@link SSLEngine}.
      */
     public ChannelFuture close(Channel channel) throws SSLException {

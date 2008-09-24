@@ -538,7 +538,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     }
 
     /**
-     * Throws an {@link IndexOutOfBoundsException} is the current
+     * Throws an {@link IndexOutOfBoundsException} if the current
      * {@linkplain #readableBytes() readable bytes} of this buffer is less
      * than the specified value.
      */

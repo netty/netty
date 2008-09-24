@@ -98,7 +98,7 @@ public abstract class AbstractChannel implements Channel, Comparable<Channel> {
     }
 
     /**
-     * Returns the {@link FailedChannelFuture} whose cause is a
+     * Returns the {@link FailedChannelFuture} whose cause is an
      * {@link UnsupportedOperationException}.
      */
     protected ChannelFuture getUnsupportedOperationFuture() {
@@ -115,8 +115,8 @@ public abstract class AbstractChannel implements Channel, Comparable<Channel> {
     }
 
     /**
-     * Returns if and only if the specified object is identical with this
-     * channel (i.e. {@code this == o}).
+     * Returns {@code true} if and only if the specified object is identical
+     * with this channel (i.e: {@code this == o}).
      */
     @Override
     public final boolean equals(Object o) {
@@ -124,7 +124,7 @@ public abstract class AbstractChannel implements Channel, Comparable<Channel> {
     }
 
     /**
-     * Compares the {@linkplain #getId() ID} of the two channel.
+     * Compares the {@linkplain #getId() ID} of the two channels.
      */
     public final int compareTo(Channel o) {
         return getId().compareTo(o.getId());

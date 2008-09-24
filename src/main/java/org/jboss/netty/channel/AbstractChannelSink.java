@@ -42,7 +42,8 @@ public abstract class AbstractChannelSink implements ChannelSink {
     }
 
     /**
-     * Fires an {@link ExceptionEvent} upstream with the specified {@code cause}.
+     * Sends an {@link ExceptionEvent} upstream with the specified
+     * {@code cause}.
      *
      * @param event the {@link ChannelEvent} which caused a
      *              {@link ChannelHandler} to raise an exception

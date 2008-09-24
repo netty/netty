@@ -48,7 +48,7 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
- * A helper class which creates a new server-side {@link Channel} and accept
+ * A helper class which creates a new server-side {@link Channel} and accepts
  * incoming connections.
  *
  * <h3>Parent channel and its children</h3>
@@ -175,7 +175,7 @@ public class ServerBootstrap extends Bootstrap {
     }
 
     /**
-     * Creates a new channel which is bound to the local address which were
+     * Creates a new channel which is bound to the local address which was
      * specified in the current {@code "localAddress"} option.  This method is
      * similar to the following code:
      *
