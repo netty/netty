@@ -25,11 +25,18 @@ package org.jboss.netty.channel;
 import java.util.concurrent.TimeUnit;
 
 /**
- * The result of an asynchronous {@link Channel} I/O operation.  Methods are
- * provided to check if the I/O operation is complete, to wait for its
- * completion, and to retrieve the result of the I/O operation. It also allows
- * you to add more than one {@link ChannelFutureListener} so you can get
- * notified when the I/O operation is complete.
+ * The result of an asynchronous {@link Channel} I/O operation.
+ * <p>
+ * All I/O operations in Netty are asynchronous.  It means any I/O calls will
+ * return immediately with no guarantee that the requested I/O operation has
+ * been completed at the end of the call.  Instead, you will be returned with
+ * a {@link ChannelFuture} instance which tells you when the requested I/O
+ * operation has succeeded, failed, or canceled.
+ * <p>
+ * Various methods are provided to let you check if the I/O operation has been
+ * completed, wait for the completion, and retrieve the result of the I/O
+ * operation. It also allows you to add more than one {@link ChannelFutureListener}
+ * so you can get notified when the I/O operation has been completed.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
