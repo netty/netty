@@ -1027,7 +1027,7 @@ public class TimeDecoder implements &ChannelUpstreamHandler; {
       Summary
     </title>
     <para>
-      In this section, we had a quick tour of Netty so that you can start to
+      In this chapter, we had a quick tour of Netty so that you can start to
       write a network application on top of Netty right away.  I believe you
       still have a lot of questions about various topics, and they will be
       covered in the upcoming chapters and the revised version of this chapter.
