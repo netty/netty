@@ -21,7 +21,9 @@
               
   <xi:include href="module/start.xml"
               xmlns:xi="http://www.w3.org/2001/XInclude" />
-              
+  
+  <!-- The following chapters are not written yet.  -->
+  <!--
   <xi:include href="module/architecture.xml"
               xmlns:xi="http://www.w3.org/2001/XInclude" />
               
@@ -42,5 +44,5 @@
               
   <xi:include href="module/appendix.xml"
               xmlns:xi="http://www.w3.org/2001/XInclude" />
-
+  -->
 </book>
