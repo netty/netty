@@ -45,8 +45,9 @@
       project</ulink></firstterm> is an effort to provide an asynchronous
       &middot; event-driven network application framework and tooling for the
       rapid development of maintainable high-performance &middot;
-      high-scalability protocol servers and clients.  To simplify, Netty helps
-      you write your own network application very easily -- it's often called
+      high-scalability protocol servers and clients.  Netty is a NIO client
+      server framework which enables quick and easy development of network
+      applications such as protocol servers and clients. -- it's often called
       <firstterm>rapid network application development</firstterm>.
     </para>
     <para>
