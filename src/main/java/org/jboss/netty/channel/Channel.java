@@ -40,6 +40,14 @@ import java.util.UUID;
  *     associated with the channel.</li>
  * </ul>
  *
+ * <h3>All I/O operations are asynchronous.</h3>
+ *
+ * All I/O operations in Netty are asynchronous.  It means any I/O calls will
+ * return immediately with no guarantee that the requested I/O operation has
+ * been completed at the end of the call.  Instead, you will be returned with
+ * a {@link ChannelFuture} instance which tells you when the requested I/O
+ * operation has succeeded, failed, or canceled.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
