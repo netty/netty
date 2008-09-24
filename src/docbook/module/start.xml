@@ -661,7 +661,7 @@ public class TimeClientHandler extends &SimpleChannelHandler; {
         added a <classname>TimeClientHandler</classname> instance to the
         <emphasis>default</emphasis> &ChannelPipeline; of the &ClientBootstrap;?
         It means one <classname>TimeClientHandler</classname> is going to handle
-        multiple &Channel;s and consequently the date will be messed up.  To
+        multiple &Channel;s and consequently the data will be messed up.  To
         create a new <classname>TimeClientHandler</classname> instance per
         &Channel;, we should implement a &ChannelPipelineFactory;:
       </para>
