@@ -43,21 +43,24 @@
     <para>
       <firstterm><ulink url="&Home;">The Netty
       project</ulink></firstterm> is an effort to provide an asynchronous
-      &middot; event-driven network application framework and tooling for the
-      rapid development of maintainable high-performance &middot;
-      high-scalability protocol servers and clients.  Netty is a NIO client
-      server framework which enables quick and easy development of network
-      applications such as protocol servers and clients. -- it's often called
-      <firstterm>rapid network application development</firstterm>.
+      event-driven network application framework and tooling for the rapid
+      development of maintainable high-performance &middot; high-scalability
+      protocol servers and clients.
     </para>
     <para>
-      Rapid network application development doesn't mean that a resulting
-      application will suffer from a maintainability or a performance issue.
-      Netty has been designed carefully with the experiences earned from 
-      the implementation of a lot of protocols such as FTP, SMTP, HTTP, and
-      various binary and text-based legacy protocols.  As a result, Netty
-      has succeeded to find a way to achieve ease of development,
-      performance, stability, and flexibility without a compromise.
+      In other words, Netty is a NIO client server framework which enables
+      quick and easy development of network applications such as protocol
+      servers and clients.  It greatly simplifies and streamlines network
+      programming such as TCP/IP socket server development.
+    </para>
+    <para>
+      'Quick and easy' doesn't mean that a resulting application will suffer
+      from a maintainability or a performance issue.  Netty has been designed
+      carefully with the experiences earned from the implementation of a lot
+      of protocols such as FTP, SMTP, HTTP, and various binary and text-based
+      legacy protocols.  As a result, Netty has succeeded to find a way to
+      achieve ease of development, performance, stability, and flexibility
+      without a compromise.
     </para>
     <para>
       Some of you might already have found other network application
