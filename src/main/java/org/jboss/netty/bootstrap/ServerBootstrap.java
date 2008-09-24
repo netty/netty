@@ -124,6 +124,15 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * }
  * </pre>
  *
+ * <h3>Applying different settings for different {@link Channel}s</h3>
+ *
+ * {@link ServerBootstrap} is just a helper class.  It neither allocates nor
+ * manages any resources.  What manages the resources is the
+ * {@link ChannelFactory} implementation you specified in the constructor of
+ * {@link ServerBootstrap}.  Therefore, it is OK to create as many
+ * {@link ServerBootstrap} instances as you want to apply different settings
+ * for different {@link Channel}s.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
