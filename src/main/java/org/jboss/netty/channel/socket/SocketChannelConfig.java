@@ -29,6 +29,30 @@ import org.jboss.netty.channel.ChannelConfig;
 /**
  * A {@link ChannelConfig} for a {@link SocketChannel}.
  *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link ChannelConfig},
+ * {@link SocketChannelConfig} allows the following options in the option map:
+ * <table>
+ * <tr>
+ * <th>Name</th><th>Associated setter method</th>
+ * </tr><tr>
+ * <td>{@code "keepAlive"}</td><td>{@link #setKeepAlive(boolean)}</td>
+ * </tr><tr>
+ * <td>{@code "reuseAddress"}</td><td>{@link #setReuseAddress(boolean)}</td>
+ * </tr><tr>
+ * <td>{@code "soLinger"}</td><td>{@link #setSoLinger(int)}</td>
+ * </tr><tr>
+ * <td>{@code "tcpNoDelay"}</td><td>{@link #setTcpNoDelay(boolean)}</td>
+ * </tr><tr>
+ * <td>{@code "receiveBufferSize"}</td><td>{@link #setReceiveBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@code "sendBufferSize"}</td><td>{@link #setSendBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@code "trafficClass"}</td><td>{@link #setTrafficClass(int)}</td>
+ * </tr>
+ * </table>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

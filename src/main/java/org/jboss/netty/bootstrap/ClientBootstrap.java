@@ -31,6 +31,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -58,6 +59,9 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * b.setOption("tcpNoDelay", true);
  * b.setOption("receiveBufferSize", 1048576);
  * </pre>
+ *
+ * For the detailed list of available options, please refer to
+ * {@link ChannelConfig} and its sub-types
  *
  * <h3>Configuring a channel pipeline</h3>
  *

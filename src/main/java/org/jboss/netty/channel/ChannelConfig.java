@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.jboss.netty.channel.socket.SocketChannelConfig;
+import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
 
 
 /**
@@ -39,6 +40,29 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  * SocketChannelConfig cfg = <strong>(SocketChannelConfig) ch.getConfig();</strong>
  * cfg.setTcpNoDelay(false);
  * </pre>
+ *
+ * <h3>Option map</h3>
+ *
+ * An option map property is a dynamic write-only property which allows
+ * the configuration of a {@link Channel} without down-casting its associated
+ * {@link ChannelConfig}.  To update an option map, please call {@link #setOptions(Map)}.
+ * <p>
+ * All {@link ChannelConfig} has the following options:
+ * <table>
+ * <tr>
+ * <th>Name</th><th>Associated setter method</th>
+ * </tr><tr>
+ * <td>{@code "connectTimeoutMillis"}</td><td>{@link #setConnectTimeoutMillis(int)}</td>
+ * </tr><tr>
+ * <td>{@code "writeTimeoutMillis"}</td><td>{@link #setWriteTimeoutMillis(int)}</td>
+ * </tr><tr>
+ * <td>{@code "pipelineFactory"}</td><td>{@link #setPipelineFactory(ChannelPipelineFactory)}</td>
+ * </tr>
+ * </table>
+ *
+ * More options are available in the sub-types of {@link ChannelConfig}.  For
+ * example, you can configure the parameters which are specific to a TCP/IP
+ * socket as explained in {@link SocketChannelConfig} or {@link NioSocketChannelConfig}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

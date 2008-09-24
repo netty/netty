@@ -29,6 +29,23 @@ import org.jboss.netty.channel.ChannelConfig;
 /**
  * A {@link ChannelConfig} for a {@link ServerSocketChannel}.
  *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link ChannelConfig},
+ * {@link ServerSocketChannelConfig} allows the following options in the
+ * option map:
+ * <table>
+ * <tr>
+ * <th>Name</th><th>Associated setter method</th>
+ * </tr><tr>
+ * <td>{@code "backlog"}</td><td>{@link #setBacklog(int)}</td>
+ * </tr><tr>
+ * <td>{@code "reuseAddress"}</td><td>{@link #setReuseAddress(boolean)}</td>
+ * </tr><tr>
+ * <td>{@code "receiveBufferSize"}</td><td>{@link #setReceiveBufferSize(int)}</td>
+ * </tr>
+ * </table>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
