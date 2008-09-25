@@ -202,6 +202,10 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
             for (;;) {
                 try {
                     SocketChannel acceptedSocket = channel.socket.accept();
+                    if (acceptedSocket == null) {
+                        continue;
+                    }
+
                     try {
                         ChannelPipeline pipeline =
                             channel.getConfig().getPipelineFactory().getPipeline();
