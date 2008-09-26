@@ -22,10 +22,7 @@
  */
 package org.jboss.netty.handler.execution;
 
-import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -172,19 +169,21 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
     }
 
     private class ChildExecutor implements Executor, Runnable {
-        private final Set<ChildExecutor> runningChildren = new HashSet<ChildExecutor>();
-        private final Queue<Runnable> tasks = new LinkedList<Runnable>();
+        private final LinkedList<Runnable> tasks = new LinkedList<Runnable>();
 
         ChildExecutor() {
             super();
         }
 
         public void execute(Runnable command) {
+            boolean needsExecution;
             synchronized (tasks) {
+                needsExecution = tasks.isEmpty();
                 tasks.add(command);
-                if (tasks.size() == 1 && runningChildren.add(this)) {
-                    doUnorderedExecute(this);
-                }
+            }
+
+            if (needsExecution) {
+                doUnorderedExecute(this);
             }
         }
 
@@ -192,13 +191,19 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
             for (;;) {
                 final Runnable task;
                 synchronized (tasks) {
-                    task = tasks.poll();
-                    if (task == null) {
-                        runningChildren.remove(this);
-                        return;
+                    task = tasks.getFirst();
+                }
+
+                try {
+                    task.run();
+                } finally {
+                    synchronized (tasks) {
+                        tasks.removeFirst();
+                        if (tasks.isEmpty()) {
+                            break;
+                        }
                     }
                 }
-                task.run();
             }
         }
     }
