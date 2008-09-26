@@ -370,6 +370,7 @@ class NioWorker implements Runnable {
             if (internalWriteBuffer.isEmpty()) {
                 channel.writeBuffer.drainTo(internalWriteBuffer);
             }
+
             evt = channel.currentWriteEvent;
             for (;;) {
                 if (evt == null) {
