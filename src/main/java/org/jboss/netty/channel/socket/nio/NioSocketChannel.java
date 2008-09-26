@@ -25,10 +25,7 @@ package org.jboss.netty.channel.socket.nio;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
-import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jboss.netty.channel.AbstractChannel;
@@ -54,10 +51,9 @@ abstract class NioSocketChannel extends AbstractChannel
 
     final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
     final Runnable writeTask = new WriteTask();
-    final BlockingQueue<MessageEvent> writeBuffer =
-        new LinkedBlockingQueue<MessageEvent>();
-    final Queue<MessageEvent> internalWriteBuffer =
-        new LinkedList<MessageEvent>();
+    final Object writeLock = new Object();
+    final WriteMessageQueue writeBuffer = new WriteMessageQueue();
+    private Queue<MessageEvent> internalWriteBuffer;
     MessageEvent currentWriteEvent;
     int currentWriteIndex;
 
@@ -73,6 +69,17 @@ abstract class NioSocketChannel extends AbstractChannel
 
     abstract NioWorker getWorker();
     abstract void setWorker(NioWorker worker);
+
+    Queue<MessageEvent> getInternalWriteBuffer() {
+        if (internalWriteBuffer == null) {
+            internalWriteBuffer = writeBuffer.drainAll();
+        }
+        return internalWriteBuffer;
+    }
+
+    void clearInternalWriteBuffer() {
+        internalWriteBuffer = null;
+    }
 
     public NioSocketChannelConfig getConfig() {
         return config;

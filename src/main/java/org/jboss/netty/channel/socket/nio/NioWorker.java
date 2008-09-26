@@ -361,21 +361,18 @@ class NioWorker implements Runnable {
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
 
-        Queue<MessageEvent> internalWriteBuffer = channel.internalWriteBuffer;
         MessageEvent evt;
         ChannelBuffer buf;
         int bufIdx;
 
-        synchronized (internalWriteBuffer) {
-            if (internalWriteBuffer.isEmpty()) {
-                channel.writeBuffer.drainTo(internalWriteBuffer);
-            }
-
+        synchronized (channel.writeLock) {
+            Queue<MessageEvent> internalWriteBuffer = channel.getInternalWriteBuffer();
             evt = channel.currentWriteEvent;
             for (;;) {
                 if (evt == null) {
                     evt = internalWriteBuffer.poll();
                     if (evt == null) {
+                        channel.clearInternalWriteBuffer();
                         channel.currentWriteEvent = null;
                         removeOpWrite = true;
                         break;
@@ -440,22 +437,19 @@ class NioWorker implements Runnable {
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
 
-        Queue<MessageEvent> internalWriteBuffer = channel.internalWriteBuffer;
         MessageEvent evt;
         ChannelBuffer buf;
         int bufIdx;
         int writtenBytes = 0;
 
-        synchronized (internalWriteBuffer) {
-            if (internalWriteBuffer.isEmpty()) {
-                channel.writeBuffer.drainTo(internalWriteBuffer);
-            }
-
+        synchronized (channel.writeLock) {
+            Queue<MessageEvent> internalWriteBuffer = channel.getInternalWriteBuffer();
             evt = channel.currentWriteEvent;
             for (;;) {
                 if (evt == null) {
                     evt = internalWriteBuffer.poll();
                     if (evt == null) {
+                        channel.clearInternalWriteBuffer();
                         channel.currentWriteEvent = null;
                         removeOpWrite = true;
                         break;
@@ -689,12 +683,7 @@ class NioWorker implements Runnable {
         }
 
         // Clean up the stale messages in the write buffer.
-        Queue<MessageEvent> internalWriteBuffer = channel.internalWriteBuffer;
-        synchronized (internalWriteBuffer) {
-            if (internalWriteBuffer.isEmpty()) {
-                channel.writeBuffer.drainTo(internalWriteBuffer);
-            }
-
+        synchronized (channel.writeLock) {
             MessageEvent evt = channel.currentWriteEvent;
             if (evt != null) {
                 channel.currentWriteEvent = null;
@@ -703,12 +692,12 @@ class NioWorker implements Runnable {
                 fireExceptionCaught(channel, cause);
             }
 
+            Queue<MessageEvent> internalWriteBuffer = channel.getInternalWriteBuffer();
             for (;;) {
                 evt = internalWriteBuffer.poll();
                 if (evt == null) {
                     break;
                 }
-
                 evt.getFuture().setFailure(cause);
                 fireExceptionCaught(channel, cause);
             }
