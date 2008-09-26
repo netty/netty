@@ -32,7 +32,9 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
+import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -72,6 +74,7 @@ class NioWorker implements Runnable {
     volatile Selector selector;
     final AtomicBoolean wakenUp = new AtomicBoolean();
     final ReadWriteLock selectorGuard = new ReentrantReadWriteLock();
+    final Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
 
     NioWorker(int bossId, int id, Executor executor) {
         this.bossId = bossId;
@@ -172,6 +175,9 @@ class NioWorker implements Runnable {
 
             try {
                 int selectedKeyCount = selector.select(500);
+
+                processTaskQueue();
+
                 if (selectedKeyCount > 0) {
                     processSelectedKeys(selector.selectedKeys());
                 }
@@ -222,6 +228,17 @@ class NioWorker implements Runnable {
                     // Ignore.
                 }
             }
+        }
+    }
+
+    private void processTaskQueue() {
+        for (;;) {
+            final Runnable task = taskQueue.poll();
+            if (task == null) {
+                break;
+            }
+
+            task.run();
         }
     }
 
@@ -298,7 +315,19 @@ class NioWorker implements Runnable {
         close(ch, ch.getSucceededFuture());
     }
 
-    static void write(NioSocketChannel channel, boolean mightNeedWakeup) {
+    // FIXME I/O 스레드냐 아니냐에 따라서 task queue 에 안넣거나 넣거나 IoSocketHandler, IoSocketDispatcher
+    static void write(final NioSocketChannel channel, boolean mightNeedWakeup) {
+        if (mightNeedWakeup) {
+            NioWorker worker = channel.getWorker();
+            if (worker != null && Thread.currentThread() != worker.thread) {
+                worker.taskQueue.offer(channel.writeTask);
+                if (worker.wakenUp.compareAndSet(false, true)) {
+                    worker.selector.wakeup();
+                }
+                return;
+            }
+        }
+
         if (!channel.isConnected()) {
             cleanUpWriteBuffer(channel);
             return;

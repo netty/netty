@@ -49,6 +49,7 @@ abstract class NioSocketChannel extends AbstractChannel
     final SocketChannel socket;
     private final NioSocketChannelConfig config;
 
+    final Runnable writeTask = new WriteTask();
     final Queue<MessageEvent> writeBuffer =
         new ConcurrentLinkedQueue<MessageEvent>();
     MessageEvent currentWriteEvent;
@@ -108,6 +109,17 @@ abstract class NioSocketChannel extends AbstractChannel
             return super.write(message, null);
         } else {
             return getUnsupportedOperationFuture();
+        }
+    }
+
+    private class WriteTask implements Runnable {
+
+        WriteTask() {
+            super();
+        }
+
+        public void run() {
+            NioWorker.write(NioSocketChannel.this, false);
         }
     }
 }
