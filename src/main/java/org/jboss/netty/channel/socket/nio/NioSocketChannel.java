@@ -26,7 +26,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jboss.netty.channel.AbstractChannel;
@@ -52,8 +52,7 @@ abstract class NioSocketChannel extends AbstractChannel
 
     final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
     final Runnable writeTask = new WriteTask();
-    final Queue<MessageEvent> writeBuffer =
-        new ConcurrentLinkedQueue<MessageEvent>();
+    final Queue<MessageEvent> writeBuffer = new LinkedBlockingQueue<MessageEvent>();
     MessageEvent currentWriteEvent;
     int currentWriteIndex;
 
