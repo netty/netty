@@ -320,7 +320,9 @@ class NioWorker implements Runnable {
         if (mightNeedWakeup) {
             NioWorker worker = channel.getWorker();
             if (worker != null && Thread.currentThread() != worker.thread) {
-                worker.taskQueue.offer(channel.writeTask);
+                if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
+                    worker.taskQueue.offer(channel.writeTask);
+                }
                 if (worker.wakenUp.compareAndSet(false, true)) {
                     worker.selector.wakeup();
                 }
