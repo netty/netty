@@ -315,7 +315,6 @@ class NioWorker implements Runnable {
         close(ch, ch.getSucceededFuture());
     }
 
-    // FIXME I/O 스레드냐 아니냐에 따라서 task queue 에 안넣거나 넣거나 IoSocketHandler, IoSocketDispatcher
     static void write(final NioSocketChannel channel, boolean mightNeedWakeup) {
         if (mightNeedWakeup) {
             NioWorker worker = channel.getWorker();
@@ -359,15 +358,20 @@ class NioWorker implements Runnable {
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
 
+        Queue<MessageEvent> internalWriteBuffer = channel.internalWriteBuffer;
         MessageEvent evt;
         ChannelBuffer buf;
         int bufIdx;
 
-        synchronized (channel.writeBuffer) {
+        synchronized (internalWriteBuffer) {
+            if (internalWriteBuffer.isEmpty()) {
+                channel.writeBuffer.drainTo(internalWriteBuffer);
+            }
+
             evt = channel.currentWriteEvent;
             for (;;) {
                 if (evt == null) {
-                    evt = channel.writeBuffer.poll();
+                    evt = internalWriteBuffer.poll();
                     if (evt == null) {
                         channel.currentWriteEvent = null;
                         removeOpWrite = true;
@@ -433,16 +437,21 @@ class NioWorker implements Runnable {
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
 
-        int writtenBytes = 0;
+        Queue<MessageEvent> internalWriteBuffer = channel.internalWriteBuffer;
         MessageEvent evt;
         ChannelBuffer buf;
         int bufIdx;
+        int writtenBytes = 0;
 
-        synchronized (channel.writeBuffer) {
+        synchronized (internalWriteBuffer) {
+            if (internalWriteBuffer.isEmpty()) {
+                channel.writeBuffer.drainTo(internalWriteBuffer);
+            }
+
             evt = channel.currentWriteEvent;
             for (;;) {
                 if (evt == null) {
-                    evt = channel.writeBuffer.poll();
+                    evt = internalWriteBuffer.poll();
                     if (evt == null) {
                         channel.currentWriteEvent = null;
                         removeOpWrite = true;
@@ -677,7 +686,12 @@ class NioWorker implements Runnable {
         }
 
         // Clean up the stale messages in the write buffer.
-        synchronized (channel.writeBuffer) {
+        Queue<MessageEvent> internalWriteBuffer = channel.internalWriteBuffer;
+        synchronized (internalWriteBuffer) {
+            if (internalWriteBuffer.isEmpty()) {
+                channel.writeBuffer.drainTo(internalWriteBuffer);
+            }
+
             MessageEvent evt = channel.currentWriteEvent;
             if (evt != null) {
                 channel.currentWriteEvent = null;
@@ -687,7 +701,7 @@ class NioWorker implements Runnable {
             }
 
             for (;;) {
-                evt = channel.writeBuffer.poll();
+                evt = internalWriteBuffer.poll();
                 if (evt == null) {
                     break;
                 }

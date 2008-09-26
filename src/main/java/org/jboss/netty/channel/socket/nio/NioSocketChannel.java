@@ -25,7 +25,9 @@ package org.jboss.netty.channel.socket.nio;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
+import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -52,7 +54,10 @@ abstract class NioSocketChannel extends AbstractChannel
 
     final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
     final Runnable writeTask = new WriteTask();
-    final Queue<MessageEvent> writeBuffer = new LinkedBlockingQueue<MessageEvent>();
+    final BlockingQueue<MessageEvent> writeBuffer =
+        new LinkedBlockingQueue<MessageEvent>();
+    final Queue<MessageEvent> internalWriteBuffer =
+        new LinkedList<MessageEvent>();
     MessageEvent currentWriteEvent;
     int currentWriteIndex;
 
