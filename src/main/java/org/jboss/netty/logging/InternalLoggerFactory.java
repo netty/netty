@@ -49,6 +49,13 @@ import org.jboss.netty.util.StackTraceSimplifier;
 public abstract class InternalLoggerFactory {
     private static volatile InternalLoggerFactory defaultFactory = new JdkLoggerFactory();
 
+    static {
+        // Load the dependent classes in advance to avoid the case where
+        // the VM fails to load the required classes because of too many open
+        // files.
+        StackTraceSimplifier.simplify(new Exception());
+    }
+
     /**
      * Returns the default factory.  The initial default factory is
      * {@link JdkLoggerFactory}.
