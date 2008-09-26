@@ -81,8 +81,9 @@ import org.jboss.netty.channel.ChannelStateEvent;
  */
 public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
-    private volatile int maxChannelMemorySize;
-    private volatile int maxTotalMemorySize;
+    private volatile Settings settings = new Settings(0, 0);
+
+    // XXX Can be changed in runtime now.  Make it mutable in 3.1.
     private final ObjectSizeEstimator objectSizeEstimator;
 
     private final ConcurrentMap<Channel, AtomicInteger> channelCounters =
@@ -184,7 +185,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
      * Returns the maximum total size of the queued events per channel.
      */
     public int getMaxChannelMemorySize() {
-        return maxChannelMemorySize;
+        return settings.maxChannelMemorySize;
     }
 
     /**
@@ -196,14 +197,14 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             throw new IllegalArgumentException(
                     "maxChannelMemorySize: " + maxChannelMemorySize);
         }
-        this.maxChannelMemorySize = maxChannelMemorySize;
+        settings = new Settings(maxChannelMemorySize, settings.maxTotalMemorySize);
     }
 
     /**
      * Returns the maximum total size of the queued events for this pool.
      */
     public int getMaxTotalMemorySize() {
-        return maxTotalMemorySize;
+        return settings.maxTotalMemorySize;
     }
 
     /**
@@ -215,7 +216,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             throw new IllegalArgumentException(
                     "maxTotalMemorySize: " + maxTotalMemorySize);
         }
-        this.maxTotalMemorySize = maxTotalMemorySize;
+        settings = new Settings(settings.maxChannelMemorySize, maxTotalMemorySize);
     }
 
     @Override
@@ -269,13 +270,17 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             return false;
         }
 
+        Settings settings = this.settings;
+        int maxTotalMemorySize = settings.maxTotalMemorySize;
+        int maxChannelMemorySize = settings.maxChannelMemorySize;
+
         int increment = getObjectSizeEstimator().estimateSize(task);
-        int maxTotalMemorySize = getMaxTotalMemorySize();
         int totalCounter = this.totalCounter.addAndGet(increment);
 
         if (task instanceof ChannelEventRunnable) {
-            Channel channel = ((ChannelEventRunnable) task).getEvent().getChannel();
-            int maxChannelMemorySize = getMaxChannelMemorySize();
+            ChannelEventRunnable eventTask = (ChannelEventRunnable) task;
+            eventTask.estimatedSize = increment;
+            Channel channel = eventTask.getEvent().getChannel();
             int channelCounter = getChannelCounter(channel).addAndGet(increment);
             if (maxChannelMemorySize != 0 && channelCounter >= maxChannelMemorySize && channel.isOpen()) {
                 if (channel.isReadable()) {
@@ -292,8 +297,17 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             return;
         }
 
-        int increment = getObjectSizeEstimator().estimateSize(task);
-        int maxTotalMemorySize = getMaxTotalMemorySize();
+        Settings settings = this.settings;
+        int maxTotalMemorySize = settings.maxTotalMemorySize;
+        int maxChannelMemorySize = settings.maxChannelMemorySize;
+
+        int increment;
+        if (task instanceof ChannelEventRunnable) {
+            increment = ((ChannelEventRunnable) task).estimatedSize;
+        } else {
+            increment = getObjectSizeEstimator().estimateSize(task);
+        }
+
         int totalCounter = this.totalCounter.addAndGet(-increment);
 
         if (maxTotalMemorySize == 0 || totalCounter < maxTotalMemorySize) {
@@ -302,7 +316,6 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
         if (task instanceof ChannelEventRunnable) {
             Channel channel = ((ChannelEventRunnable) task).getEvent().getChannel();
-            int maxChannelMemorySize = getMaxChannelMemorySize();
             int channelCounter = getChannelCounter(channel).addAndGet(-increment);
             if ((maxChannelMemorySize == 0 || channelCounter < maxChannelMemorySize) && channel.isOpen()) {
                 if (!channel.isReadable()) {
@@ -340,5 +353,15 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             }
         }
         return false;
+    }
+
+    private static class Settings {
+        final int maxChannelMemorySize;
+        final int maxTotalMemorySize;
+
+        Settings(int maxChannelMemorySize, int maxTotalMemorySize) {
+            this.maxChannelMemorySize = maxChannelMemorySize;
+            this.maxTotalMemorySize = maxTotalMemorySize;
+        }
     }
 }
