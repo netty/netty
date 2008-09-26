@@ -318,14 +318,17 @@ class NioWorker implements Runnable {
     static void write(final NioSocketChannel channel, boolean mightNeedWakeup) {
         if (mightNeedWakeup) {
             NioWorker worker = channel.getWorker();
-            if (worker != null && Thread.currentThread() != worker.thread) {
-                if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
-                    worker.taskQueue.offer(channel.writeTask);
+            if (worker != null) {
+                Thread workerThread = worker.thread;
+                if (workerThread != null && Thread.currentThread() != workerThread) {
+                    if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
+                        worker.taskQueue.offer(channel.writeTask);
+                    }
+                    if (worker.wakenUp.compareAndSet(false, true)) {
+                        worker.selector.wakeup();
+                    }
+                    return;
                 }
-                if (worker.wakenUp.compareAndSet(false, true)) {
-                    worker.selector.wakeup();
-                }
-                return;
             }
         }
 
@@ -367,7 +370,6 @@ class NioWorker implements Runnable {
             if (internalWriteBuffer.isEmpty()) {
                 channel.writeBuffer.drainTo(internalWriteBuffer);
             }
-
             evt = channel.currentWriteEvent;
             for (;;) {
                 if (evt == null) {
