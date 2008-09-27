@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.nio;
+package org.jboss.netty.util;
 
 import java.util.AbstractQueue;
 import java.util.Iterator;
@@ -35,16 +35,12 @@ import org.jboss.netty.channel.MessageEvent;
  * @version $Rev$, $Date$
  *
  */
-class WriteMessageQueue {
+public class WriteMessageQueue {
 
     private static final Queue<MessageEvent> EMPTY_QUEUE = new EmptyQueue();
 
     private MessageEvent[] elements;
     private int size;
-
-    WriteMessageQueue() {
-        super();
-    }
 
     public synchronized void offer(MessageEvent e) {
         if (elements == null) {

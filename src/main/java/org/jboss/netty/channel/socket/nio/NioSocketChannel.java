@@ -35,6 +35,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.util.WriteMessageQueue;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
