@@ -32,7 +32,6 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
@@ -49,6 +48,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.FastQueue;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 
 /**
@@ -74,7 +74,8 @@ class NioWorker implements Runnable {
     volatile Selector selector;
     final AtomicBoolean wakenUp = new AtomicBoolean();
     final ReadWriteLock selectorGuard = new ReentrantReadWriteLock();
-    final Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
+    final ConcurrentLinkedQueue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
+    //final ConcurrentFastQueue<Runnable> taskQueue = new ConcurrentFastQueue<Runnable>();
 
     NioWorker(int bossId, int id, Executor executor) {
         this.bossId = bossId;
@@ -366,13 +367,12 @@ class NioWorker implements Runnable {
         int bufIdx;
 
         synchronized (channel.writeLock) {
-            Queue<MessageEvent> internalWriteBuffer = channel.getInternalWriteBuffer();
+            FastQueue<MessageEvent> internalWriteBuffer = channel.writeBuffer;
             evt = channel.currentWriteEvent;
             for (;;) {
                 if (evt == null) {
                     evt = internalWriteBuffer.poll();
                     if (evt == null) {
-                        channel.clearInternalWriteBuffer();
                         channel.currentWriteEvent = null;
                         removeOpWrite = true;
                         break;
@@ -443,13 +443,12 @@ class NioWorker implements Runnable {
         int writtenBytes = 0;
 
         synchronized (channel.writeLock) {
-            Queue<MessageEvent> internalWriteBuffer = channel.getInternalWriteBuffer();
+            FastQueue<MessageEvent> internalWriteBuffer = channel.writeBuffer;
             evt = channel.currentWriteEvent;
             for (;;) {
                 if (evt == null) {
                     evt = internalWriteBuffer.poll();
                     if (evt == null) {
-                        channel.clearInternalWriteBuffer();
                         channel.currentWriteEvent = null;
                         removeOpWrite = true;
                         break;
@@ -692,7 +691,7 @@ class NioWorker implements Runnable {
                 fireExceptionCaught(channel, cause);
             }
 
-            Queue<MessageEvent> internalWriteBuffer = channel.getInternalWriteBuffer();
+            FastQueue<MessageEvent> internalWriteBuffer = channel.writeBuffer;
             for (;;) {
                 evt = internalWriteBuffer.poll();
                 if (evt == null) {
