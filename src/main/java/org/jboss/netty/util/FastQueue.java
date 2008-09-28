@@ -55,7 +55,6 @@ public class FastQueue<E> {
         elements[size ++] = e;
     }
 
-    @SuppressWarnings("unchecked")
     public E poll() {
         for (;;) {
             if (drainedElements == null) {
@@ -72,11 +71,16 @@ public class FastQueue<E> {
             }
 
             if (index < drainedElementCount) {
-                return (E) drainedElements[index ++];
+                return cast(drainedElements[index ++]);
             }
 
             drainedElements = null;
         }
         return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private E cast(Object o) {
+        return (E) o;
     }
 }
