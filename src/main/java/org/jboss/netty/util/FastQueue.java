@@ -71,6 +71,11 @@ public class FastQueue<E> {
         return null;
     }
 
+    public synchronized boolean isEmpty() {
+        return offeredElements == null &&
+               (drainedElements == null || drainedElements.isEmpty());
+    }
+
     @SuppressWarnings("unchecked")
     private E cast(Object o) {
         return (E) o;
