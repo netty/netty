@@ -66,6 +66,7 @@ public class ConcurrentFastQueue<E> {
     }
 
     public E poll() {
+        int oldPollIndex = pollIndex;
         while (pollIndex < segments.length) {
             E v = segments[pollIndex].poll();
             if (v != null) {
@@ -74,7 +75,14 @@ public class ConcurrentFastQueue<E> {
 
             pollIndex ++;
         }
-        pollIndex = 0;
+
+        for (pollIndex = 0; pollIndex < oldPollIndex; pollIndex ++) {
+            E v = segments[pollIndex].poll();
+            if (v != null) {
+                return v;
+            }
+        }
+
         return null;
     }
 
