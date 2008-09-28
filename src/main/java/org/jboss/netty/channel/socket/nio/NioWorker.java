@@ -75,7 +75,7 @@ class NioWorker implements Runnable {
     private volatile Selector selector;
     private final AtomicBoolean wakenUp = new AtomicBoolean();
     private final ReadWriteLock selectorGuard = new ReentrantReadWriteLock();
-    private final ReadWriteLock shutdownLock = new ReentrantReadWriteLock();
+    private final Object shutdownLock = new Object();
     //private final FastQueue<Runnable> taskQueue = new FastQueue<Runnable>();
     //private final ConcurrentFastQueue<Runnable> taskQueue = new ConcurrentFastQueue<Runnable>();
     private final FastQueue<Runnable> registerTaskQueue = new FastQueue<Runnable>();
@@ -117,11 +117,8 @@ class NioWorker implements Runnable {
 
             executor.execute(new ThreadRenamingRunnable(this, threadName));
         } else {
-            shutdownLock.readLock().lock();
-            try {
+            synchronized (shutdownLock) {
                 registerTaskQueue.offer(registerTask);
-            } finally {
-                shutdownLock.readLock().unlock();
             }
             if (wakenUp.compareAndSet(false, true)) {
                 selector.wakeup();
@@ -163,8 +160,7 @@ class NioWorker implements Runnable {
                     if (shutdown ||
                         executor instanceof ExecutorService && ((ExecutorService) executor).isShutdown()) {
 
-                        shutdownLock.writeLock().lock();
-                        try {
+                        synchronized (shutdownLock) {
                             if (registerTaskQueue.isEmpty() && selector.keys().isEmpty()) {
                                 try {
                                     selector.close();
@@ -179,8 +175,6 @@ class NioWorker implements Runnable {
                             } else {
                                 shutdown = false;
                             }
-                        } finally {
-                            shutdownLock.writeLock().unlock();
                         }
                     } else {
                         // Give one more second.
