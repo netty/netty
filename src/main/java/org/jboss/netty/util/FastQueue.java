@@ -57,21 +57,26 @@ public class FastQueue<E> {
 
     @SuppressWarnings("unchecked")
     public E poll() {
-        if (drainedElements == null) {
-            synchronized (this) {
-                drainedElements = elements;
-                drainedElementCount = size;
-                elements = null;
-                size = 0;
+        for (;;) {
+            if (drainedElements == null) {
+                synchronized (this) {
+                    drainedElements = elements;
+                    if (elements == null) {
+                        break;
+                    }
+                    drainedElementCount = size;
+                    elements = null;
+                    size = 0;
+                }
+                index = 0;
             }
-            index = 0;
-        }
 
-        if (index < drainedElementCount) {
-            return (E) drainedElements[index ++];
-        }
+            if (index < drainedElementCount) {
+                return (E) drainedElements[index ++];
+            }
 
-        drainedElements = null;
+            drainedElements = null;
+        }
         return null;
     }
 }
