@@ -22,6 +22,9 @@
  */
 package org.jboss.netty.util;
 
+import java.util.LinkedList;
+import java.util.Queue;
+
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -32,46 +35,35 @@ package org.jboss.netty.util;
  */
 public class FastQueue<E> {
 
-    static final int INITIAL_CAPACITY = 4;
-
     // Put
-    private Object[] elements;
-    private int size;
+    private Queue<E> offeredElements;
 
     // Take
-    private Object[] drainedElements;
-    private int drainedElementCount;
-    private int index;
+    private Queue<E> drainedElements;
 
     public synchronized void offer(E e) {
-        if (elements == null) {
-            elements = new Object[INITIAL_CAPACITY];
-        } else if (size == elements.length) {
-            Object[] newElements = new Object[size << 1];
-            System.arraycopy(elements, 0, newElements, 0, size);
-            elements = newElements;
+        if (offeredElements == null) {
+            offeredElements = new LinkedList<E>();
         }
 
-        elements[size ++] = e;
+        offeredElements.offer(e);
     }
 
     public E poll() {
         for (;;) {
             if (drainedElements == null) {
                 synchronized (this) {
-                    drainedElements = elements;
-                    if (elements == null) {
+                    drainedElements = offeredElements;
+                    if (offeredElements == null) {
                         break;
                     }
-                    drainedElementCount = size;
-                    elements = null;
-                    size = 0;
+                    offeredElements = null;
                 }
-                index = 0;
             }
 
-            if (index < drainedElementCount) {
-                return cast(drainedElements[index ++]);
+            E e = cast(drainedElements.poll());
+            if (e != null) {
+                return e;
             }
 
             drainedElements = null;
