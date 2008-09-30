@@ -197,6 +197,12 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             throw new IllegalArgumentException(
                     "maxChannelMemorySize: " + maxChannelMemorySize);
         }
+
+        if (getTaskCount() > 0) {
+            throw new IllegalStateException(
+                    "can't be changed after a task is executed");
+        }
+
         settings = new Settings(maxChannelMemorySize, settings.maxTotalMemorySize);
     }
 
@@ -216,6 +222,12 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             throw new IllegalArgumentException(
                     "maxTotalMemorySize: " + maxTotalMemorySize);
         }
+
+        if (getTaskCount() > 0) {
+            throw new IllegalStateException(
+                    "can't be changed after a task is executed");
+        }
+
         settings = new Settings(settings.maxChannelMemorySize, maxTotalMemorySize);
     }
 
