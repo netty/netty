@@ -168,6 +168,15 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
         return executor;
     }
 
+    @Override
+    protected boolean shouldCount(Runnable task) {
+        if (task instanceof ChildExecutor) {
+            return false;
+        }
+
+        return super.shouldCount(task);
+    }
+
     private class ChildExecutor implements Executor, Runnable {
         private final LinkedList<Runnable> tasks = new LinkedList<Runnable>();
 

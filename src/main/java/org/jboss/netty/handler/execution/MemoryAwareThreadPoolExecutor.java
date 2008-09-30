@@ -374,10 +374,6 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
      * make sure important tasks are not counted.
      */
     protected boolean shouldCount(Runnable task) {
-        if (task instanceof Executor) {
-            return false;
-        }
-
         if (task instanceof ChannelEventRunnable) {
             ChannelEventRunnable r = (ChannelEventRunnable) task;
             if (r.getEvent() instanceof ChannelStateEvent) {
