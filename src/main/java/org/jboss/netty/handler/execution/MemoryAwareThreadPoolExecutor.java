@@ -367,7 +367,13 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         return counter;
     }
 
-    private static boolean shouldCount(Runnable task) {
+    /**
+     * Returns {@code true} if and only if the specified {@code task} should
+     * be counted to limit the global and per-channel memory consumption.
+     * To override this method, you must call {@code super.shouldCount()} to
+     * make sure important tasks are not counted.
+     */
+    protected boolean shouldCount(Runnable task) {
         if (task instanceof Executor) {
             return false;
         }
