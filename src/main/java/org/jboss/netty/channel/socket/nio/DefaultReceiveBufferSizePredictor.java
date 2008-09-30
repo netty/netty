@@ -160,7 +160,7 @@ public class DefaultReceiveBufferSizePredictor implements
     }
 
     public void previousReceiveBufferSize(int previousReceiveBufferSize) {
-        if (previousReceiveBufferSize <= SIZE_TABLE[Math.max(0, index - 2)]) {
+        if (previousReceiveBufferSize <= SIZE_TABLE[Math.max(0, index - INDEX_DECREMENT - 1)]) {
             if (decreaseNow) {
                 index = Math.max(index - INDEX_DECREMENT, minIndex);
                 nextReceiveBufferSize = SIZE_TABLE[index];
