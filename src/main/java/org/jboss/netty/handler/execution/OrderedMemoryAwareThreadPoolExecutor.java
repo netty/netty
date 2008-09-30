@@ -75,7 +75,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
      *                              Specify {@code 0} to disable.
      */
     public OrderedMemoryAwareThreadPoolExecutor(
-            int corePoolSize, int maxChannelMemorySize, int maxTotalMemorySize) {
+            int corePoolSize, long maxChannelMemorySize, long maxTotalMemorySize) {
         super(corePoolSize, maxChannelMemorySize, maxTotalMemorySize);
     }
 
@@ -91,7 +91,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
      * @param unit                  the {@link TimeUnit} of {@code keepAliveTime}
      */
     public OrderedMemoryAwareThreadPoolExecutor(
-            int corePoolSize, int maxChannelMemorySize, int maxTotalMemorySize,
+            int corePoolSize, long maxChannelMemorySize, long maxTotalMemorySize,
             long keepAliveTime, TimeUnit unit) {
         super(corePoolSize, maxChannelMemorySize, maxTotalMemorySize,
                 keepAliveTime, unit);
@@ -110,7 +110,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
      * @param threadFactory         the {@link ThreadFactory} of this pool
      */
     public OrderedMemoryAwareThreadPoolExecutor(
-            int corePoolSize, int maxChannelMemorySize, int maxTotalMemorySize,
+            int corePoolSize, long maxChannelMemorySize, long maxTotalMemorySize,
             long keepAliveTime, TimeUnit unit, ThreadFactory threadFactory) {
         super(corePoolSize, maxChannelMemorySize, maxTotalMemorySize,
                 keepAliveTime, unit, threadFactory);
@@ -130,7 +130,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
      * @param objectSizeEstimator   the {@link ObjectSizeEstimator} of this pool
      */
     public OrderedMemoryAwareThreadPoolExecutor(
-            int corePoolSize, int maxChannelMemorySize, int maxTotalMemorySize,
+            int corePoolSize, long maxChannelMemorySize, long maxTotalMemorySize,
             long keepAliveTime, TimeUnit unit,
             ObjectSizeEstimator objectSizeEstimator, ThreadFactory threadFactory) {
         super(corePoolSize, maxChannelMemorySize, maxTotalMemorySize,
