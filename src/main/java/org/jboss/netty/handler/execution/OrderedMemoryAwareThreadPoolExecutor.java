@@ -188,14 +188,24 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
         }
 
         public void run() {
+            Thread thread = Thread.currentThread();
             for (;;) {
                 final Runnable task;
                 synchronized (tasks) {
                     task = tasks.getFirst();
                 }
 
+                boolean ran = false;
+                OrderedMemoryAwareThreadPoolExecutor.this.beforeExecute(thread, task);
                 try {
                     task.run();
+                    ran = true;
+                    OrderedMemoryAwareThreadPoolExecutor.this.afterExecute(task, null);
+                } catch (RuntimeException e) {
+                    if (!ran) {
+                        OrderedMemoryAwareThreadPoolExecutor.this.afterExecute(task, e);
+                    }
+                    throw e;
                 } finally {
                     synchronized (tasks) {
                         tasks.removeFirst();

@@ -279,8 +279,12 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         decreaseCounter(r);
     }
 
-    private boolean increaseCounter(Runnable task) {
-        if (isInterestOpsEvent(task)) {
+    @Override
+    protected void afterExecute(Runnable r, Throwable e) {
+        super.afterExecute(r, e);
+    }
+    protected boolean increaseCounter(Runnable task) {
+        if (!shouldCount(task)) {
             return false;
         }
 
@@ -296,8 +300,10 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             eventTask.estimatedSize = increment;
             Channel channel = eventTask.getEvent().getChannel();
             long channelCounter = getChannelCounter(channel).addAndGet(increment);
+            //System.out.println("IC: " + channelCounter + ", " + increment);
             if (maxChannelMemorySize != 0 && channelCounter >= maxChannelMemorySize && channel.isOpen()) {
                 if (channel.isReadable()) {
+                    //System.out.println("UNREADABLE");
                     channel.setReadable(false);
                 }
             }
@@ -307,8 +313,8 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         return maxTotalMemorySize != 0 && totalCounter >= maxTotalMemorySize;
     }
 
-    private void decreaseCounter(Runnable task) {
-        if (isInterestOpsEvent(task)) {
+    protected void decreaseCounter(Runnable task) {
+        if (!shouldCount(task)) {
             return;
         }
 
@@ -334,8 +340,10 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         if (task instanceof ChannelEventRunnable) {
             Channel channel = ((ChannelEventRunnable) task).getEvent().getChannel();
             long channelCounter = getChannelCounter(channel).addAndGet(-increment);
-            if (maxChannelMemorySize != 0 && channelCounter + increment >= maxChannelMemorySize && channel.isOpen()) {
+            //System.out.println("DC: " + channelCounter + ", " + increment);
+            if (maxChannelMemorySize != 0 && channelCounter < maxChannelMemorySize && channel.isOpen()) {
                 if (!channel.isReadable()) {
+                    //System.out.println("READABLE");
                     channel.setReadable(true);
                 }
             }
@@ -359,17 +367,21 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         return counter;
     }
 
-    private static boolean isInterestOpsEvent(Runnable task) {
+    private static boolean shouldCount(Runnable task) {
+        if (task instanceof Executor) {
+            return false;
+        }
+
         if (task instanceof ChannelEventRunnable) {
             ChannelEventRunnable r = (ChannelEventRunnable) task;
             if (r.getEvent() instanceof ChannelStateEvent) {
                 ChannelStateEvent e = (ChannelStateEvent) r.getEvent();
                 if (e.getState() == ChannelState.INTEREST_OPS) {
-                    return true;
+                    return false;
                 }
             }
         }
-        return false;
+        return true;
     }
 
     private static class Settings {
