@@ -224,14 +224,8 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         boolean pause = increaseCounter(command);
         doExecute(command);
         if (pause) {
-            for (;;) {
-                try {
-                    semaphore.acquire();
-                    break;
-                } catch (InterruptedException e) {
-                    // Ignore.
-                }
-            }
+            //System.out.println("ACQUIRE");
+            semaphore.acquireUninterruptibly();
         }
     }
 
@@ -289,6 +283,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             }
         }
 
+        //System.out.println("I: " + totalCounter + ", " + increment);
         return maxTotalMemorySize != 0 && totalCounter >= maxTotalMemorySize;
     }
 
@@ -310,14 +305,16 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
         int totalCounter = this.totalCounter.addAndGet(-increment);
 
-        if (maxTotalMemorySize == 0 || totalCounter < maxTotalMemorySize) {
+        //System.out.println("D: " + totalCounter + ", " + increment);
+        if (maxTotalMemorySize != 0 && totalCounter + increment >= maxTotalMemorySize) {
+            //System.out.println("RELEASE");
             semaphore.release();
         }
 
         if (task instanceof ChannelEventRunnable) {
             Channel channel = ((ChannelEventRunnable) task).getEvent().getChannel();
             int channelCounter = getChannelCounter(channel).addAndGet(-increment);
-            if ((maxChannelMemorySize == 0 || channelCounter < maxChannelMemorySize) && channel.isOpen()) {
+            if (maxChannelMemorySize != 0 && channelCounter + increment >= maxChannelMemorySize && channel.isOpen()) {
                 if (!channel.isReadable()) {
                     channel.setReadable(true);
                 }
