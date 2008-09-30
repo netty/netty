@@ -41,7 +41,7 @@ public class DefaultReceiveBufferSizePredictor implements
         ReceiveBufferSizePredictor {
     private static final int DEFAULT_MINIMUM = 256;
     private static final int DEFAULT_INITIAL = 1024;
-    private static final int DEFAULT_MAXIMUM = 1048576;
+    private static final int DEFAULT_MAXIMUM = 65536;
 
     private final int minimum;
     private final int maximum;
