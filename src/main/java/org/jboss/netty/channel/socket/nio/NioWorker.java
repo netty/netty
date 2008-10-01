@@ -763,6 +763,10 @@ class NioWorker implements Runnable {
             fireExceptionCaught(channel, cause);
         }
 
+        // Override OP_WRITE flag - a user cannot change this flag.
+        interestOps &= ~Channel.OP_WRITE;
+        interestOps |= channel.getInterestOps() & Channel.OP_WRITE;
+
         boolean changed = false;
         try {
             switch (CONSTRAINT_LEVEL) {

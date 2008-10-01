@@ -126,6 +126,10 @@ class OioWorker implements Runnable {
     static void setInterestOps(
             OioSocketChannel channel, ChannelFuture future, int interestOps) {
 
+        // Override OP_WRITE flag - a user cannot change this flag.
+        interestOps &= ~Channel.OP_WRITE;
+        interestOps |= channel.getInterestOps() & Channel.OP_WRITE;
+
         boolean changed = false;
         try {
             if (channel.getInterestOps() != interestOps) {

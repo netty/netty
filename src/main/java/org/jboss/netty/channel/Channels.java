@@ -628,7 +628,7 @@ public class Channels {
      */
     public static ChannelFuture setInterestOps(Channel channel, int interestOps) {
         validateInterestOps(interestOps);
-        validateDownstreamInterestOps(channel, interestOps);
+        interestOps = filterDownstreamInterestOps(interestOps);
 
         ChannelFuture future = future(channel);
         channel.getPipeline().sendDownstream(new DefaultChannelStateEvent(
@@ -650,7 +650,7 @@ public class Channels {
             ChannelHandlerContext ctx, Channel channel,
             ChannelFuture future, int interestOps) {
         validateInterestOps(interestOps);
-        validateDownstreamInterestOps(channel, interestOps);
+        interestOps = filterDownstreamInterestOps(interestOps);
 
         ctx.sendDownstream(
                 new DefaultChannelStateEvent(
@@ -733,10 +733,8 @@ public class Channels {
         }
     }
 
-    private static void validateDownstreamInterestOps(Channel channel, int interestOps) {
-        if (((channel.getInterestOps() ^ interestOps) & Channel.OP_WRITE) != 0) {
-            throw new IllegalArgumentException("OP_WRITE can't be modified by user.");
-        }
+    private static int filterDownstreamInterestOps(int interestOps) {
+        return interestOps & ~Channel.OP_WRITE;
     }
 
     private Channels() {
