@@ -50,9 +50,11 @@ abstract class NioSocketChannel extends AbstractChannel
     final SocketChannel socket;
     private final NioSocketChannelConfig config;
 
+    final Object interestOpsLock = new Object();
+    final Object writeLock = new Object();
+
     final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
     final Runnable writeTask = new WriteTask();
-    final Object writeLock = new Object();
     final Queue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>();
     MessageEvent currentWriteEvent;
     int currentWriteIndex;
