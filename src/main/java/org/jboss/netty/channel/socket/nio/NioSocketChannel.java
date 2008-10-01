@@ -25,6 +25,7 @@ package org.jboss.netty.channel.socket.nio;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jboss.netty.channel.AbstractChannel;
@@ -34,7 +35,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.util.FastQueue;
+import org.jboss.netty.util.LinkedTransferQueue;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -52,7 +53,7 @@ abstract class NioSocketChannel extends AbstractChannel
     final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
     final Runnable writeTask = new WriteTask();
     final Object writeLock = new Object();
-    final FastQueue<MessageEvent> writeBuffer = new FastQueue<MessageEvent>();
+    final Queue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>();
     MessageEvent currentWriteEvent;
     int currentWriteIndex;
 

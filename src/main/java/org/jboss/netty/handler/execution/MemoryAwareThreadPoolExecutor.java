@@ -27,7 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -38,6 +37,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.util.LinkedTransferQueue;
 
 /**
  * A {@link ThreadPoolExecutor} which blocks the task submission when there's
@@ -162,7 +162,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             long keepAliveTime, TimeUnit unit, ObjectSizeEstimator objectSizeEstimator,
             ThreadFactory threadFactory) {
 
-        super(corePoolSize, corePoolSize, keepAliveTime, unit, new LinkedBlockingQueue<Runnable>(), threadFactory);
+        super(corePoolSize, corePoolSize, keepAliveTime, unit, new LinkedTransferQueue<Runnable>(), threadFactory);
 
         if (objectSizeEstimator == null) {
             throw new NullPointerException("objectSizeEstimator");

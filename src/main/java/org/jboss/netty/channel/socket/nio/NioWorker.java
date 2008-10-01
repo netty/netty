@@ -32,8 +32,8 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
+import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,7 +48,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.FastQueue;
+import org.jboss.netty.util.LinkedTransferQueue;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 
 /**
@@ -76,10 +76,8 @@ class NioWorker implements Runnable {
     private final AtomicBoolean wakenUp = new AtomicBoolean();
     private final ReadWriteLock selectorGuard = new ReentrantReadWriteLock();
     private final Object shutdownLock = new Object();
-    //private final FastQueue<Runnable> taskQueue = new FastQueue<Runnable>();
-    //private final ConcurrentFastQueue<Runnable> taskQueue = new ConcurrentFastQueue<Runnable>();
-    private final FastQueue<Runnable> registerTaskQueue = new FastQueue<Runnable>();
-    private final ConcurrentLinkedQueue<Runnable> writeTaskQueue = new ConcurrentLinkedQueue<Runnable>();
+    private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
+    private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
 
     NioWorker(int bossId, int id, Executor executor) {
         this.bossId = bossId;
@@ -409,7 +407,7 @@ class NioWorker implements Runnable {
         int bufIdx;
 
         synchronized (channel.writeLock) {
-            FastQueue<MessageEvent> writeBuffer = channel.writeBuffer;
+            Queue<MessageEvent> writeBuffer = channel.writeBuffer;
             evt = channel.currentWriteEvent;
             for (;;) {
                 if (evt == null) {
@@ -485,7 +483,7 @@ class NioWorker implements Runnable {
         int writtenBytes = 0;
 
         synchronized (channel.writeLock) {
-            FastQueue<MessageEvent> writeBuffer = channel.writeBuffer;
+            Queue<MessageEvent> writeBuffer = channel.writeBuffer;
             evt = channel.currentWriteEvent;
             for (;;) {
                 if (evt == null) {
@@ -733,7 +731,7 @@ class NioWorker implements Runnable {
                 fireExceptionCaught(channel, cause);
             }
 
-            FastQueue<MessageEvent> writeBuffer = channel.writeBuffer;
+            Queue<MessageEvent> writeBuffer = channel.writeBuffer;
             for (;;) {
                 evt = writeBuffer.poll();
                 if (evt == null) {

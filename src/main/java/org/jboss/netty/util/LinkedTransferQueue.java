@@ -150,26 +150,26 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * cleanMe, to alleviate contention across threads CASing one vs
      * the other.
      */
-    static final class PaddedAtomicReference<T> extends AtomicReference<T> {
-        private static final long serialVersionUID = 4684288940772921317L;
-
-        // enough padding for 64bytes with 4byte refs
-        Object p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, pa, pb, pc, pd, pe;
-        PaddedAtomicReference(T r) { super(r); }
-    }
+//    static final class PaddedAtomicReference<T> extends AtomicReference<T> {
+//        private static final long serialVersionUID = 4684288940772921317L;
+//
+//        // enough padding for 64bytes with 4byte refs
+//        Object p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, pa, pb, pc, pd, pe;
+//        PaddedAtomicReference(T r) { super(r); }
+//    }
 
 
     /** head of the queue */
-    private transient final PaddedAtomicReference<QNode> head;
+    private transient final AtomicReference<QNode> head;
     /** tail of the queue */
-    private transient final PaddedAtomicReference<QNode> tail;
+    private transient final AtomicReference<QNode> tail;
 
     /**
      * Reference to a cancelled node that might not yet have been
      * unlinked from queue because it was the last inserted node
      * when it cancelled.
      */
-    private transient final PaddedAtomicReference<QNode> cleanMe;
+    private transient final AtomicReference<QNode> cleanMe;
 
     /**
      * Tries to cas nh as new head; if successful, unlink
@@ -194,8 +194,8 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
     private Object xfer(Object e, int mode, long nanos) {
         boolean isData = e != null;
         QNode s = null;
-        final PaddedAtomicReference<QNode> head = this.head;
-        final PaddedAtomicReference<QNode> tail = this.tail;
+        final AtomicReference<QNode> head = this.head;
+        final AtomicReference<QNode> tail = this.tail;
 
         for (;;) {
             QNode t = tail.get();
@@ -238,8 +238,8 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      */
     private Object fulfill(Object e) {
         boolean isData = e != null;
-        final PaddedAtomicReference<QNode> head = this.head;
-        final PaddedAtomicReference<QNode> tail = this.tail;
+        final AtomicReference<QNode> head = this.head;
+        final AtomicReference<QNode> tail = this.tail;
 
         for (;;) {
             QNode t = tail.get();
@@ -410,9 +410,9 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      */
     public LinkedTransferQueue() {
         QNode dummy = new QNode(null, false);
-        head = new PaddedAtomicReference<QNode>(dummy);
-        tail = new PaddedAtomicReference<QNode>(dummy);
-        cleanMe = new PaddedAtomicReference<QNode>(null);
+        head = new AtomicReference<QNode>(dummy);
+        tail = new AtomicReference<QNode>(dummy);
+        cleanMe = new AtomicReference<QNode>(null);
     }
 
     /**
