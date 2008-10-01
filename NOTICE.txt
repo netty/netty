@@ -27,6 +27,10 @@ Inc., 51 Franklin Street, 5th Floor, Boston, MA 02110-1301 USA
 Also, please refer to each LICENSE.<component>.txt file for the license
 terms of the components that this product depends on.
 
+This product contains a file derived from LinkedTransferQueue by Doug Lea:
+
+  * http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/src/jsr166y/LinkedTransferQueue.java
+
 This product optionally depends on 'SLF4J', a simple logging facade for Java,
 which can be obtained at:
 
