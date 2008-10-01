@@ -448,6 +448,8 @@ class NioWorker implements Runnable {
                         addOpWrite = true;
                         break;
                     }
+                } catch (AsynchronousCloseException e) {
+                    // Doesn't need a user attention - ignore.
                 } catch (Throwable t) {
                     evt.getFuture().setFailure(t);
                     evt = null;
@@ -527,6 +529,8 @@ class NioWorker implements Runnable {
                         addOpWrite = true;
                         break;
                     }
+                } catch (AsynchronousCloseException e) {
+                    // Doesn't need a user attention - ignore.
                 } catch (Throwable t) {
                     evt.getFuture().setFailure(t);
                     evt = null;
