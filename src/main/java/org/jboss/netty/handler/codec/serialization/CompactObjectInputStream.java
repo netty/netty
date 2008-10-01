@@ -41,7 +41,7 @@ class CompactObjectInputStream extends ObjectInputStream {
     private final ClassLoader classLoader;
 
     CompactObjectInputStream(InputStream in) throws IOException {
-        this(in, Thread.currentThread().getContextClassLoader());
+        this(in, null);
     }
 
     CompactObjectInputStream(InputStream in, ClassLoader classLoader) throws IOException {
@@ -71,8 +71,14 @@ class CompactObjectInputStream extends ObjectInputStream {
             return super.readClassDescriptor();
         case CompactObjectOutputStream.TYPE_NON_PRIMITIVE:
             String className = readUTF();
-            Class<?> clazz =
-                Class.forName(className, true, classLoader);
+            Class<?> clazz;
+            if (classLoader == null) {
+                clazz = Class.forName(
+                        className, true,
+                        Thread.currentThread().getContextClassLoader());
+            } else {
+                clazz = Class.forName(className, true, classLoader);
+            }
             return ObjectStreamClass.lookup(clazz);
         default:
             throw new StreamCorruptedException(

@@ -119,7 +119,7 @@ public class ObjectDecoder extends FrameDecoder {
         }
 
         buffer.skipBytes(4);
-        return new CompactObjectInputStream(new ChannelBufferInputStream(
-                        buffer, dataLen), classLoader).readObject();
+        return new CompactObjectInputStream(
+                new ChannelBufferInputStream(buffer, dataLen), classLoader).readObject();
     }
 }
