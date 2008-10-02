@@ -50,19 +50,19 @@ public interface ChannelFuture {
 
     /**
      * Returns a channel where the I/O operation associated with this
-     * {@link ChannelFuture} takes place.
+     * future takes place.
      */
     Channel getChannel();
 
     /**
-     * Returns {@code true} if and only if this {@link ChannelFuture} is
+     * Returns {@code true} if and only if this future is
      * complete, regardless of whether the operation was successful, failed,
      * or canceled.
      */
     boolean isDone();
 
     /**
-     * Returns {@code true} if and only if this {@link ChannelFuture} was
+     * Returns {@code true} if and only if this future was
      * canceled by a {@link #cancel()} method.
      */
     boolean isCancelled();
@@ -78,13 +78,13 @@ public interface ChannelFuture {
      * failed.
      *
      * @return the cause of the failure.
-     *         {@code null} if succeeded or this {@link ChannelFuture} is not
+     *         {@code null} if succeeded or this future is not
      *         completed yet.
      */
     Throwable getCause();
 
     /**
-     * Cancels the I/O operation associated with this {@link ChannelFuture}
+     * Cancels the I/O operation associated with this future
      * and notifies all listeners if canceled successfully.
      *
      * @return {@code true} if and only if the operation has been canceled.
@@ -94,36 +94,36 @@ public interface ChannelFuture {
     boolean cancel();
 
     /**
-     * Marks this {@link ChannelFuture} as a success and notifies all
+     * Marks this future as a success and notifies all
      * listeners.
      */
     void setSuccess();
 
     /**
-     * Marks this {@link ChannelFuture} as a failure and notifies all
+     * Marks this future as a failure and notifies all
      * listeners.
      */
     void setFailure(Throwable cause);
 
     /**
-     * Adds the specified listener to this {@link ChannelFuture}.  The
-     * specified listener is notified when this {@link ChannelFuture} is
-     * {@linkplain #isDone() done}.  If this {@link ChannelFuture} is already
+     * Adds the specified listener to this future.  The
+     * specified listener is notified when this future is
+     * {@linkplain #isDone() done}.  If this future is already
      * completed, the specified listener is notified immediately.
      */
     void addListener(ChannelFutureListener listener);
 
     /**
-     * Removes the specified listener from this {@link ChannelFuture}.
+     * Removes the specified listener from this future.
      * The specified listener is no longer notified when this
-     * {@link ChannelFuture} is {@linkplain #isDone() done}.  If this
-     * {@link ChannelFuture} is already completed, this method has no effect
+     * future is {@linkplain #isDone() done}.  If this
+     * future is already completed, this method has no effect
      * and returns silently.
      */
     void removeListener(ChannelFutureListener listener);
 
     /**
-     * Waits for this {@link ChannelFuture} to be completed.
+     * Waits for this future to be completed.
      *
      * @throws InterruptedException
      *         if the current thread was interrupted
@@ -131,14 +131,14 @@ public interface ChannelFuture {
     ChannelFuture await() throws InterruptedException;
 
     /**
-     * Waits for this {@link ChannelFuture} to be completed without
+     * Waits for this future to be completed without
      * interruption.  This method catches an {@link InterruptedException} and
      * discards it silently.
      */
     ChannelFuture awaitUninterruptibly();
 
     /**
-     * Waits for this {@link ChannelFuture} to be completed within the
+     * Waits for this future to be completed within the
      * specified time limit.
      *
      * @return {@code true} if and only if the future was completed within
@@ -150,7 +150,7 @@ public interface ChannelFuture {
     boolean await(long timeout, TimeUnit unit) throws InterruptedException;
 
     /**
-     * Waits for this {@link ChannelFuture} to be completed within the
+     * Waits for this future to be completed within the
      * specified time limit.
      *
      * @return {@code true} if and only if the future was completed within
@@ -162,7 +162,7 @@ public interface ChannelFuture {
     boolean await(long timeoutMillis) throws InterruptedException;
 
     /**
-     * Waits for this {@link ChannelFuture} to be completed within the
+     * Waits for this future to be completed within the
      * specified time limit without interruption.  This method catches an
      * {@link InterruptedException} and discards it silently.
      *
@@ -172,7 +172,7 @@ public interface ChannelFuture {
     boolean awaitUninterruptibly(long timeout, TimeUnit unit);
 
     /**
-     * Waits for this {@link ChannelFuture} to be completed within the
+     * Waits for this future to be completed within the
      * specified time limit without interruption.  This method catches an
      * {@link InterruptedException} and discards it silently.
      *
