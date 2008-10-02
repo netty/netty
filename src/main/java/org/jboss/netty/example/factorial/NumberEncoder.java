@@ -28,11 +28,10 @@ import java.math.BigInteger;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelDownstreamHandler;
-import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
  * Encodes a {@link Number} into the binary representation with a 32-bit length
@@ -45,19 +44,14 @@ import org.jboss.netty.channel.MessageEvent;
  *
  */
 @ChannelPipelineCoverage("all")
-public class NumberEncoder implements ChannelDownstreamHandler {
+public class NumberEncoder extends SimpleChannelHandler {
 
-    public void handleDownstream(
-            ChannelHandlerContext ctx, ChannelEvent evt) throws Exception {
-        if (!(evt instanceof MessageEvent)) {
-            ctx.sendDownstream(evt);
-            return;
-        }
-
-        MessageEvent e = (MessageEvent) evt;
+    @Override
+    public void writeRequested(
+            ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (!(e.getMessage() instanceof Number)) {
             // Ignore what this encoder can't encode.
-            ctx.sendDownstream(evt);
+            ctx.sendDownstream(e);
             return;
         }
 
