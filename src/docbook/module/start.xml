@@ -89,10 +89,11 @@ public class DiscardServerHandler extends &SimpleChannelHandler; {<co id="exampl
         <para>
           <classname>DiscardServerHandler</classname> extends
           &SimpleChannelHandler;, which is an implementation of
-          &ChannelUpstreamHandler;.  &SimpleChannelHandler; provides various
-          event handler methods that you can override.  For now, it's just
-          enough to extend &SimpleChannelHandler; rather than to implement
-          handler interfaces.
+          &ChannelUpstreamHandler; and &ChannelDownstreamHandler;.
+          &SimpleChannelHandler; provides various event handler methods that
+          you can override.  For now, it's just enough to extend
+          &SimpleChannelHandler; rather than to implement the handler
+          interfaces directly.
         </para>
       </callout>
       <callout arearefs="example.discard.co3">
@@ -917,20 +918,15 @@ public void channelConnected(&ChannelHandlerContext; ctx, &ChannelStateEvent; e)
 import static org.jboss.netty.buffer.&ChannelBuffers;.*;
 
 @&ChannelPipelineCoverage;("all")<co id="example.time6.co1"/>
-public class TimeEncoder implements &ChannelDownstreamHandler; {<co id="example.time6.co2"/>
+public class TimeEncoder implements &SimpleChannelHandler; {
 
-    public void handleDownstream(&ChannelHandlerContext; ctx, &ChannelEvent; e) {
-        if (!(e instanceof &MessageEvent;)) {
-            ctx.sendDownstream(e);<co id="example.time6.co3"/>
-            return;
-        }
-
-        UnixTime time = (UnixTime) ((&MessageEvent;) e).getMessage();
+    public void writeRequested(&ChannelHandlerContext; ctx, &MessageEvent;<co id="example.time6.co2"/> e) {
+        UnixTime time = (UnixTime) e.getMessage();
         
         &ChannelBuffer; buf = buffer(4);
         buf.writeInt(time.getValue());
         
-        &Channels;.write(ctx, e.getChannel(), e.getFuture(), buf);<co id="example.time6.co4"/>
+        &Channels;.write(ctx, e.getChannel(), e.getFuture(), buf);<co id="example.time6.co3"/>
     }
 }</programlisting>
     <calloutlist>
@@ -943,23 +939,21 @@ public class TimeEncoder implements &ChannelDownstreamHandler; {<co id="example.
       </callout>
       <callout arearefs="example.time6.co2">
         <para>
-          An encoder implements a &ChannelDownstreamHandler; to intercept a
-          write request.  &ChannelDownstreamHandler; is a sub-type of
-          &ChannelHandler; that is used to intercept the downstream events,
-          which flows in the opposite direction of the &ChannelEvent;s we have
-          been processing so far.  Please refer to the API reference to learn
-          more about the difference between a upstream event and a downstream
-          event.
+          An encoder overrides the <methodname>writeRequested</methodname>
+          method to intercept a write request.  Please note that the
+          &MessageEvent; parameter here is the same type which was specified
+          in <methodname>messageReceived</methodname> but they are interpreted
+          differently.  A &ChannelEvent; can be either an
+          <firstterm>upstream</firstterm> or <firstterm>downstream</firstterm>
+          event depending on the direction where the event flows.
+          For instance, a &MessageEvent; can be an upstream event when called
+          for <methodname>messageReceived</methodname> or a downstream event
+          when called for <methodname>writeRequested</methodname>.
+          Please refer to the API reference to learn more about the difference
+          between a upstream event and a downstream event.
         </para>
       </callout>
       <callout arearefs="example.time6.co3">
-        <para>
-          &MessageEvent; is not the only event that a &ChannelDownstreamHandler;
-          intercepts.  You need to forward the events of a unknown type so that
-          the other &ChannelDownstreamHandler;s or I/O thread processes them.
-        </para>
-      </callout>
-      <callout arearefs="example.time6.co4">
         <para>
           Once done with transforming a POJO into a &ChannelBuffer;, you should
           forward the new buffer to the previous &ChannelDownstreamHandler; in
@@ -980,41 +974,6 @@ fireChannelDisconnected(ctx, e.getChannel());</programlisting>
         </para>
       </callout>
     </calloutlist>
-    <para>
-      At this point, you might wonder why you didn't have to forward a
-      &ChannelEvent; to the next &ChannelUpstreamHandler; in the
-      &ChannelPipeline; when we write the decoders.  Actually, it had been
-      done behind the scene by &FrameDecoder; and &ReplayingDecoder;.
-      The <classname>TimeDecoder</classname> would look like the following if
-      it didn't extend neither &FrameDecoder; nor &SimpleChannelHandler;.   
-    </para>
-    <programlisting>package org.jboss.netty.example.time;
-
-import static org.jboss.netty.buffer.&ChannelBuffers;.*;
-import static org.jboss.netty.channel.&Channels;.*;
-
-@&ChannelPipelineCoverage;("one")
-public class TimeDecoder implements &ChannelUpstreamHandler; {
-
-    private final &ChannelBuffer; buf = dynamicBuffer();
-
-    public void handleUpstream(&ChannelHandlerContext; ctx, &ChannelEvent; e) {
-        if (!(e instanceof &MessageEvent;)) {
-            ctx.sendUpstream(e);
-            return;
-        }
-
-        &ChannelBuffer; m = (&ChannelBuffer;) ((&MessageEvent;) e).getMessage();
-        buf.writeBytes(m);
-        
-        while (buf.readableBytes() &gt;= 4) {
-            UnixTime time = new UnixTime(buf.readInt());
-            fireMessageReceived(ctx, time);
-        }
-        
-        buf.discardReadBytes();
-    }
-}</programlisting>
     <para>
       The last task left is to insert a <classname>TimeEncoder</classname>
       into the &ChannelPipeline; on the server side, and it's left as a
