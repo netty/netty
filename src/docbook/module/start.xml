@@ -89,11 +89,10 @@ public class DiscardServerHandler extends &SimpleChannelHandler; {<co id="exampl
         <para>
           <classname>DiscardServerHandler</classname> extends
           &SimpleChannelHandler;, which is an implementation of
-          &ChannelUpstreamHandler; and &ChannelDownstreamHandler;.
-          &SimpleChannelHandler; provides various event handler methods that
-          you can override.  For now, it's just enough to extend
-          &SimpleChannelHandler; rather than to implement the handler
-          interfaces directly.
+          &ChannelHandler;.  &SimpleChannelHandler; provides various event
+          handler methods that you can override.  For now, it's just enough
+          to extend &SimpleChannelHandler; rather than to implement
+          the handler interfaces by yourself.
         </para>
       </callout>
       <callout arearefs="example.discard.co3">
