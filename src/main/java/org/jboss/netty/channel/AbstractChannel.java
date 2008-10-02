@@ -150,6 +150,10 @@ public abstract class AbstractChannel implements Channel, Comparable<Channel> {
         return Channels.bind(this, localAddress);
     }
 
+    public ChannelFuture unbind() {
+        return Channels.unbind(this);
+    }
+
     public ChannelFuture close() {
         return Channels.close(this);
     }

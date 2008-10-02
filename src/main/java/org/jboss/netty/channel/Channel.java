@@ -221,6 +221,14 @@ public interface Channel {
     ChannelFuture disconnect();
 
     /**
+     * Unbinds this channel from the current local address asynchronously.
+     *
+     * @return the {@link ChannelFuture} which will be notified when the
+     *         unbind request succeeds or fails
+     */
+    ChannelFuture unbind();
+
+    /**
      * Closes this channel asynchronously.  If this channel is bound or
      * connected, it will be disconnected and unbound first.
      *

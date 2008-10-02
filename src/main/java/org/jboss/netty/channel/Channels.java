@@ -503,6 +503,39 @@ public class Channels {
     }
 
     /**
+     * Sends a {@code "unbind"} request to the previous
+     * {@link ChannelDownstreamHandler} in the {@link ChannelPipeline} where
+     * the specified {@link ChannelHandlerContext} belongs.
+     *
+     * @param ctx     the context
+     * @param channel the channel to unbind
+     * @param future  the future which will be notified when the unbind
+     *                operation is done
+     */
+    public static void unbind(
+            ChannelHandlerContext ctx, Channel channel, ChannelFuture future) {
+        ctx.sendDownstream(new DefaultChannelStateEvent(
+                channel, future, ChannelState.BOUND, null));
+    }
+
+    /**
+     * Sends a {@code "unbind"} request to the last
+     * {@link ChannelDownstreamHandler} in the {@link ChannelPipeline} of
+     * the specified {@link Channel}.
+     *
+     * @param channel  the channel to unbind
+     *
+     * @return the {@link ChannelFuture} which will be notified when the
+     *         unbind operation is done
+     */
+    public static ChannelFuture unbind(Channel channel) {
+        ChannelFuture future = future(channel);
+        channel.getPipeline().sendDownstream(new DefaultChannelStateEvent(
+                channel, future, ChannelState.BOUND, null));
+        return future;
+    }
+
+    /**
      * Sends a {@code "connect"} request to the last
      * {@link ChannelDownstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
