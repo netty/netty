@@ -290,14 +290,14 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
     /**
      * Invoked when {@link Channel#write(Object)} is called.
      */
-    public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) {
+    public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         ctx.sendDownstream(e);
     }
 
     /**
      * Invoked when {@link Channel#bind(SocketAddress)} was called.
      */
-    public void bindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) {
+    public void bindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         ctx.sendDownstream(e);
 
     }
@@ -305,7 +305,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
     /**
      * Invoked when {@link Channel#connect(SocketAddress)} was called.
      */
-    public void connectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) {
+    public void connectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         ctx.sendDownstream(e);
 
     }
@@ -313,14 +313,14 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
     /**
      * Invoked when {@link Channel#setInterestOps(int)} was called.
      */
-    public void setInterestOpsRequested(ChannelHandlerContext ctx, ChannelStateEvent e) {
+    public void setInterestOpsRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         ctx.sendDownstream(e);
     }
 
     /**
      * Invoked when {@link Channel#disconnect()} was called.
      */
-    public void disconnectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) {
+    public void disconnectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         ctx.sendDownstream(e);
 
     }
@@ -328,7 +328,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
     /**
      * Invoked when {@link Channel#unbind()} was called.
      */
-    public void unbindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) {
+    public void unbindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         ctx.sendDownstream(e);
 
     }
@@ -336,7 +336,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
     /**
      * Invoked when {@link Channel#close()} was called.
      */
-    public void closeRequested(ChannelHandlerContext ctx, ChannelStateEvent e) {
+    public void closeRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         ctx.sendDownstream(e);
     }
 }
