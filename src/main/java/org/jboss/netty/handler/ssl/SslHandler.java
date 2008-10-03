@@ -25,6 +25,7 @@ package org.jboss.netty.handler.ssl;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -339,6 +340,15 @@ public class SslHandler extends FrameDecoder {
     @Override
     public void channelDisconnected(ChannelHandlerContext ctx,
             ChannelStateEvent e) throws Exception {
+
+        // Make sure the handshake future is notified when a connection has
+        // been closed during handshake.
+        synchronized (handshakeLock) {
+            if (handshaking) {
+                handshakeFuture.setFailure(new ClosedChannelException());
+            }
+        }
+
         super.channelDisconnected(ctx, e);
         unwrap(ctx, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
         engine.closeOutbound();

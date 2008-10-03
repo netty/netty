@@ -124,7 +124,13 @@ public abstract class AbstractSocketSslEchoTest {
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
         Channel cc = ccf.getChannel();
-        assertTrue(cc.getPipeline().get(SslHandler.class).handshake(cc).awaitUninterruptibly().isSuccess());
+        ChannelFuture hf = cc.getPipeline().get(SslHandler.class).handshake(cc);
+        hf.awaitUninterruptibly();
+        if (!hf.isSuccess() && ch.exception.get() != null) {
+            ch.exception.get().printStackTrace();
+        }
+
+        assertTrue(hf.isSuccess());
 
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
