@@ -31,62 +31,50 @@ import java.net.URI;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpRequestImpl extends HttpMessageImpl implements HttpRequest
-{
-   private Map<String, String> params = new HashMap<String, String>();
+public class HttpRequestImpl extends HttpMessageImpl implements HttpRequest {
+    private Map<String, String> params = new HashMap<String, String>();
 
-   private final HttpMethod method;
+    private final HttpMethod method;
 
-   private final boolean keepAlive;
 
-   private final URI uri;
+    private final URI uri;
 
-   public HttpRequestImpl(HttpProtocol httpProtocol, boolean keepAlive, HttpMethod method, URI uri)
-   {
-      super(httpProtocol);
-      this.keepAlive = keepAlive;
-      this.method = method;
-      this.uri = uri;
-      addHeader(HttpHeaders.Connection.KEY, HttpHeaders.Connection.KEEP_ALIVE);
-   }
+    public HttpRequestImpl(HttpProtocol httpProtocol, HttpMethod method, URI uri) {
+        super(httpProtocol);
+        this.method = method;
+        this.uri = uri;
+    }
 
-   public void addParameter(final String name, final String val)
-   {
-      params.put(name, val);
-   }
+    public void addParameter(final String name, final String val) {
+        params.put(name, val);
+    }
 
-   public boolean removeParameter(final String name)
-   {
-      return params.remove(name) != null;
-   }
+    public boolean removeParameter(final String name) {
+        return params.remove(name) != null;
+    }
 
-   public HttpMethod getMethod()
-   {
-      return method;
-   }
+    public HttpMethod getMethod() {
+        return method;
+    }
 
-   public URI getURI()
-   {
-      return uri;
-   }
+    public URI getURI() {
+        return uri;
+    }
 
-   public String getParameter(final String name)
-   {
-      return params.get(name);
-   }
+    public String getParameter(final String name) {
+        return params.get(name);
+    }
 
-   public boolean containsParameter(final String name)
-   {
-      return params.containsKey(name);
-   }
+    public boolean containsParameter(final String name) {
+        return params.containsKey(name);
+    }
 
-   public Set<String> getParameterNames()
-   {
-      return params.keySet();
-   }
+    public Set<String> getParameterNames() {
+        return params.keySet();
+    }
 
-   public boolean isKeepAlive()
-   {
-      return keepAlive;
-   }
+    public boolean isKeepAlive() {
+        //todo
+        return true;
+    }
 }

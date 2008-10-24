@@ -44,12 +44,12 @@ import java.net.URI;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpClient {
+public class HttpWebserverClient {
     public static void main(String[] args) throws Exception {
 
         // Parse options.
-        String host = "localhost";
-        int port = 8080;
+        String host = "www.jboss.org";
+        int port = 80;
 
         // Configure the client.
         ChannelFactory factory =
@@ -60,8 +60,6 @@ public class HttpClient {
         ClientBootstrap bootstrap = new ClientBootstrap(factory);
         HttpPipelineFactory handler = new HttpPipelineFactory(new HttpResponseHandler());
         bootstrap.setPipelineFactory(handler);
-        bootstrap.setOption("tcpNoDelay", true);
-        bootstrap.setOption("keepAlive", true);
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
 
@@ -71,12 +69,8 @@ public class HttpClient {
             future.getCause().printStackTrace();
             System.exit(0);
         }
-        String message = "It's Hello From me";
-        ChannelBuffer buf = ChannelBuffers.wrappedBuffer(message.getBytes());
         HttpRequest request = new HttpRequestImpl(HttpProtocol.HTTP_1_0, HttpMethod.GET, new URI("/netty/"));
         request.addHeader(HttpHeaders.HOST, host);
-        request.addHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buf.writerIndex()));
-        request.setContent(buf);
         ChannelFuture lastWriteFuture = channel.write(request);
         lastWriteFuture.awaitUninterruptibly();
     }

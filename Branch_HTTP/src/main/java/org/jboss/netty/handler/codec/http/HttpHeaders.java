@@ -24,23 +24,24 @@ package org.jboss.netty.handler.codec.http;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpHeaders
-{
-   public static final String HOST = "Host";
-   public static final class Connection
-   {
-      public static final String KEY = "Connection";
-      public static final String CLOSE = "close";
-      public static final String KEEP_ALIVE = "keep_Alive";
-   }
+public class HttpHeaders {
+    public static final String HOST = "Host";
 
-   public static final class TRANSFER_ENCODING
-   {
-      public static final String KEY = "Transfer-Encoding";
-      public static final String CHUNKED = "Chunked";
-   }
+    public static final String CONTENT_LENGTH = "Content-Length";
 
-   public static final String CONTENT_LENGTH = "Content-Length";
+    public static final class CONNECTION {
+        public static final String KEY = "Connection";
 
-   
+        public static final String CLOSE = "close";
+
+        public static final String KEEP_ALIVE = "keep_Alive";
+    }
+
+    public static final class TRANSFER_ENCODING {
+        public static final String KEY = "Transfer-Encoding";
+
+        public static final String CHUNKED = "Chunked";
+    }
+
+
 }

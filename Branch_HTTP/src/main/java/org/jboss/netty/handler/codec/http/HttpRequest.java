@@ -30,21 +30,20 @@ import java.net.URI;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public interface HttpRequest extends HttpMessage
-{
-   String getParameter(String name);
+public interface HttpRequest extends HttpMessage {
+    String getParameter(String name);
 
-   boolean containsParameter(String name);
+    boolean containsParameter(String name);
 
-   Set<String> getParameterNames();
+    Set<String> getParameterNames();
 
-   boolean isKeepAlive();
+    boolean isKeepAlive();
 
-   void addParameter(String name, String val);
+    void addParameter(String name, String val);
 
-   boolean removeParameter(String name);
+    boolean removeParameter(String name);
 
-   HttpMethod getMethod();
+    HttpMethod getMethod();
 
-   URI getURI();
+    URI getURI();
 }

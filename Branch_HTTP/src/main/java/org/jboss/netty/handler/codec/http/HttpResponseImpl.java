@@ -26,18 +26,15 @@ import org.jboss.netty.buffer.ChannelBuffer;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpResponseImpl extends HttpMessageImpl implements HttpResponse
-{
-   private final HttpResponseStatusCode statusCode;
+public class HttpResponseImpl extends HttpMessageImpl implements HttpResponse {
+    private final HttpResponseStatusCode statusCode;
 
-   public HttpResponseImpl(HttpProtocol protocol, HttpResponseStatusCode statusCode)
-   {
-      super(protocol);
-      this.statusCode = statusCode;
-   }
+    public HttpResponseImpl(HttpProtocol protocol, HttpResponseStatusCode statusCode) {
+        super(protocol);
+        this.statusCode = statusCode;
+    }
 
-   public HttpResponseStatusCode getStatusCode()
-   {
-      return statusCode;
-   }
+    public HttpResponseStatusCode getStatusCode() {
+        return statusCode;
+    }
 }

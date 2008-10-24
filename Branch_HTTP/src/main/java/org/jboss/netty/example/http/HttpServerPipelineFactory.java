@@ -19,37 +19,33 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.example.http;
 
-import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import static org.jboss.netty.util.HttpCodecUtil.*;
-
-import java.util.Set;
+import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import static org.jboss.netty.channel.Channels.pipeline;
+import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
+import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
+import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
+import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpRequestEncoder extends HttpMessageEncoder {
+public class HttpServerPipelineFactory implements ChannelPipelineFactory {
+    private ChannelHandler handler;
 
-    /**
-     * writes the initial line i.e. 'GET /path/to/file/index.html HTTP/1.0'
-     *
-     * @param buf
-     * @param message
-     */
-    public void encodeInitialLine(ChannelBuffer buf, HttpMessage message) {
-        HttpRequest request = (HttpRequest) message;
-        buf.writeBytes(request.getMethod().getMethod().getBytes());
-        buf.writeByte(SPACE);
-        buf.writeBytes(request.getURI().toASCIIString().getBytes());
-        buf.writeByte(SPACE);
-        buf.writeBytes(request.getProtocol().getProtocol().getBytes());
-        buf.writeBytes(CRLF);
+    public HttpServerPipelineFactory(HttpRequestHandler handler) {
+        this.handler = handler;
     }
 
+    public ChannelPipeline getPipeline() throws Exception {
+        // Create a default pipeline implementation.
+        ChannelPipeline pipeline = pipeline();
+        pipeline.addLast("decoder", new HttpRequestDecoder());
+        pipeline.addLast("encoder", new HttpResponseEncoder());
+        pipeline.addLast("handler", handler);
+        return pipeline;
+    }
 }
