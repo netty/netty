@@ -75,6 +75,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 content = null;
                 currentLine = null;
                 nextState = null;
+                checkpoint(ResponseState.READ_INITIAL);
                 return response;
             }
             case READ_FIXED_LENGTH_CONTENT: {
@@ -83,6 +84,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 content = null;
                 currentLine = null;
                 nextState = null;
+                checkpoint(ResponseState.READ_INITIAL);
                 return response;
             }
             case READ_CHUNK_SIZE: {
@@ -109,6 +111,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 content = null;
                 currentLine = null;
                 nextState = null;
+                checkpoint(ResponseState.READ_INITIAL);
                 return response;
             }
             default: {

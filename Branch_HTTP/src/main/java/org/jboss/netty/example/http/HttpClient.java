@@ -78,6 +78,12 @@ public class HttpClient {
         request.addHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buf.writerIndex()));
         request.setContent(buf);
         ChannelFuture lastWriteFuture = channel.write(request);
+        buf = ChannelBuffers.wrappedBuffer(message.getBytes());
+        request = new HttpRequestImpl(HttpProtocol.HTTP_1_0, HttpMethod.GET, new URI("/netty/"));
+        request.addHeader(HttpHeaders.HOST, host);
+        request.addHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buf.writerIndex()));
+        request.setContent(buf);
+        lastWriteFuture = channel.write(request);
         lastWriteFuture.awaitUninterruptibly();
     }
 }
