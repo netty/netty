@@ -31,22 +31,19 @@ import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpPipelineFactory implements ChannelPipelineFactory
-{
-   private ChannelHandler handler;
+public class HttpPipelineFactory implements ChannelPipelineFactory {
+    private ChannelHandler handler;
 
-   public HttpPipelineFactory(HttpResponseHandler handler)
-   {
-      this.handler = handler;
-   }
+    public HttpPipelineFactory(HttpResponseHandler handler) {
+        this.handler = handler;
+    }
 
-   public ChannelPipeline getPipeline() throws Exception
-   {
-      // Create a default pipeline implementation.
-      ChannelPipeline pipeline = pipeline();
-      pipeline.addLast("decoder", new HttpResponseDecoder());
-      pipeline.addLast("encoder", new HttpRequestEncoder());
-      pipeline.addLast("handler", handler);
-      return pipeline;
-   }
+    public ChannelPipeline getPipeline() throws Exception {
+        // Create a default pipeline implementation.
+        ChannelPipeline pipeline = pipeline();
+        pipeline.addLast("decoder", new HttpResponseDecoder());
+        pipeline.addLast("encoder", new HttpRequestEncoder());
+        pipeline.addLast("handler", handler);
+        return pipeline;
+    }
 }

@@ -26,7 +26,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public interface HttpResponse extends HttpMessage
-{
-   HttpResponseStatusCode getStatusCode();
+public interface HttpResponse extends HttpMessage {
+    HttpResponseStatusCode getStatusCode();
 }

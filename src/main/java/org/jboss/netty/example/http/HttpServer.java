@@ -19,37 +19,33 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.example.http;
 
-import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import static org.jboss.netty.util.HttpCodecUtil.*;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.bootstrap.ServerBootstrap;
 
-import java.util.Set;
+import java.util.concurrent.Executors;
+import java.net.InetSocketAddress;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpRequestEncoder extends HttpMessageEncoder {
+public class HttpServer {
+    public static void main(String[] args) {
+        // Configure the server.
+        ChannelFactory factory =
+              new NioServerSocketChannelFactory(
+                    Executors.newCachedThreadPool(),
+                    Executors.newCachedThreadPool());
 
-    /**
-     * writes the initial line i.e. 'GET /path/to/file/index.html HTTP/1.0'
-     *
-     * @param buf
-     * @param message
-     */
-    public void encodeInitialLine(ChannelBuffer buf, HttpMessage message) {
-        HttpRequest request = (HttpRequest) message;
-        buf.writeBytes(request.getMethod().getMethod().getBytes());
-        buf.writeByte(SPACE);
-        buf.writeBytes(request.getURI().toASCIIString().getBytes());
-        buf.writeByte(SPACE);
-        buf.writeBytes(request.getProtocol().getProtocol().getBytes());
-        buf.writeBytes(CRLF);
+        ServerBootstrap bootstrap = new ServerBootstrap(factory);
+        HttpServerPipelineFactory pipeline = new HttpServerPipelineFactory(new HttpRequestHandler());
+        bootstrap.setPipelineFactory(pipeline);
+        bootstrap.setOption("child.tcpNoDelay", true);
+        bootstrap.setOption("child.keepAlive", true);
+
+        // Bind and start to accept incoming connections.
+        bootstrap.bind(new InetSocketAddress(8080));
     }
-
 }

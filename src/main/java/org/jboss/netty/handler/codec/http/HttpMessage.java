@@ -28,27 +28,27 @@ import java.util.Set;
 
 /**
  * Encapsulates an Http message. this will contain the protocol version, headers and the body of a message
+ *
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public interface HttpMessage
-{
-   String getHeader(String name);
+public interface HttpMessage {
+    String getHeader(String name);
 
-   boolean containsHeader(String name);
+    boolean containsHeader(String name);
 
-   Set<String> getHeaders();
+    Set<String> getHeaders();
 
-   HttpProtocol getProtocol();
+    HttpProtocol getProtocol();
 
-   ChannelBuffer getContent();
+    ChannelBuffer getContent();
 
-   void addHeader(String key, String value);
+    void addHeader(String key, String value);
 
-   boolean removeHeader(String key);
+    boolean removeHeader(String key);
 
-   int getContentLength();
+    int getContentLength();
 
-   void setContent(ChannelBuffer content);
+    void setContent(ChannelBuffer content);
 
-   boolean isChunked();
+    boolean isChunked();
 }

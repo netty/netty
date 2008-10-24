@@ -23,46 +23,38 @@ package org.jboss.netty.handler.codec.http;
 
 /**
  * The protocols we support;
- * 
+ *
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public enum HttpProtocol
-{
-   HTTP_1_1("HTTP/1.1"),
+public enum HttpProtocol {
+    HTTP_1_1("HTTP/1.1"),
 
-   HTTP_1_0("HTTP/1.0"),
+    HTTP_1_0("HTTP/1.0"),
 
-   UNKNOWN("UNKNOWN"),
-   ;
+    UNKNOWN("UNKNOWN"),;
 
-   private String protocol;
-   private HttpProtocol(String protocol)
-   {
-      this.protocol = protocol;
-   }
+    private String protocol;
 
-   public String getProtocol()
-   {
-      return protocol;
-   }
+    private HttpProtocol(String protocol) {
+        this.protocol = protocol;
+    }
 
-   public static HttpProtocol getProtocol(String protocol)
-   {
-      if(protocol == null)
-      {
-         return UNKNOWN;
-      }
-      else if(protocol.equals(HTTP_1_0.getProtocol()))
-      {
-         return HTTP_1_0;
-      }
-      else if(protocol.equals(HTTP_1_1.getProtocol()))
-      {
-         return HTTP_1_1;
-      }
-      else
-      {
-         return UNKNOWN;
-      }
-   }
+    public String getProtocol() {
+        return protocol;
+    }
+
+    public static HttpProtocol getProtocol(String protocol) {
+        if (protocol == null) {
+            return UNKNOWN;
+        }
+        else if (protocol.equals(HTTP_1_0.getProtocol())) {
+            return HTTP_1_0;
+        }
+        else if (protocol.equals(HTTP_1_1.getProtocol())) {
+            return HTTP_1_1;
+        }
+        else {
+            return UNKNOWN;
+        }
+    }
 }

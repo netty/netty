@@ -27,15 +27,14 @@ import static org.jboss.netty.util.HttpCodecUtil.*;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpResponseEncoder extends HttpMessageEncoder
-{
-   void encodeInitialLine(ChannelBuffer buf, HttpMessage message)
-   {
-      HttpResponse response = (HttpResponse) message;
-      buf.writeBytes(response.getProtocol().getProtocol().getBytes());
-      buf.writeByte(SPACE);
-      buf.writeBytes(String.valueOf(response.getStatusCode().getCode()).getBytes());
-      buf.writeByte(SPACE);
-      buf.writeBytes(CRLF);
-   }
+public class HttpResponseEncoder extends HttpMessageEncoder {
+    void encodeInitialLine(ChannelBuffer buf, HttpMessage message) {
+        HttpResponse response = (HttpResponse) message;
+        buf.writeBytes(response.getProtocol().getProtocol().getBytes());
+        buf.writeByte(SPACE);
+        buf.writeBytes(String.valueOf(response.getStatusCode().getCode()).getBytes());
+        buf.writeByte(SPACE);
+        buf.writeBytes(String.valueOf(response.getStatusCode().getDescription()).getBytes());
+        buf.writeBytes(CRLF);
+    }
 }

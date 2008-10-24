@@ -33,11 +33,9 @@ import java.nio.charset.Charset;
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 @ChannelPipelineCoverage("all")
-public class HttpResponseHandler extends SimpleChannelHandler
-{
-   public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception
-   {
-      HttpResponse response = (HttpResponse) e.getMessage();
-      System.out.println(response.getContent().toString(Charset.defaultCharset().name()));
-   }
+public class HttpResponseHandler extends SimpleChannelHandler {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+        HttpResponse response = (HttpResponse) e.getMessage();
+        System.out.println(response.getContent().toString(Charset.defaultCharset().name()));
+    }
 }

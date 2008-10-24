@@ -21,9 +21,27 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpRequestDecoder
-{
+public class HttpRequestDecoder extends HttpMessageDecoder {
+    void readInitial(ChannelBuffer buffer) {
+        readIntoCurrentLine(buffer);
+        checkpoint(ResponseState.READ_HEADER);
+        String[] split = splitInitial(currentLine);
+        currentLine = null;
+        URI uri;
+        try {
+            uri = new URI(split[1]);
+        }
+        catch (URISyntaxException e) {
+            throw new IllegalArgumentException("Illegal URI " + split[1]);
+        }
+        response = new HttpRequestImpl(HttpProtocol.getProtocol(split[2]), HttpMethod.valueOf(split[0]), uri);
+    }
 }

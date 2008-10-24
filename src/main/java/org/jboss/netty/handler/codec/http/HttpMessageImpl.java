@@ -29,72 +29,62 @@ import java.util.Set;
 
 /**
  * a default Http Message which holds the headers and body.
+ *
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpMessageImpl implements HttpMessage
-{
-   Map<String, String> headers = new HashMap<String, String>();
-   private ChannelBuffer content;
-   final HttpProtocol httpProtocol;
+public class HttpMessageImpl implements HttpMessage {
+    Map<String, String> headers = new HashMap<String, String>();
 
-   public HttpMessageImpl(HttpProtocol httpProtocol)
-   {
-      this.httpProtocol = httpProtocol;
-   }
+    private ChannelBuffer content;
 
-   public void addHeader(String key, String value)
-   {
-      headers.put(key, value);
-   }
+    final HttpProtocol httpProtocol;
 
-   public boolean removeHeader(String key)
-   {
-      return headers.remove(key) != null;
-   }
+    public HttpMessageImpl(HttpProtocol httpProtocol) {
+        this.httpProtocol = httpProtocol;
+    }
 
-   public int getContentLength()
-   {
-      String contentLength = headers.get(HttpHeaders.CONTENT_LENGTH);
-      if(contentLength != null)
-      {
-         return Integer.valueOf(contentLength);
-      }
-      return 0;
-   }
+    public void addHeader(String key, String value) {
+        headers.put(key, value);
+    }
 
-   public boolean isChunked()
-   {
-      String chunked = headers.get(HttpHeaders.TRANSFER_ENCODING.KEY);
-      return chunked != null && chunked.equalsIgnoreCase(HttpHeaders.TRANSFER_ENCODING.CHUNKED);
-   }
+    public boolean removeHeader(String key) {
+        return headers.remove(key) != null;
+    }
 
-   public void setContent(ChannelBuffer content)
-   {
-      this.content = content;
-   }
+    public int getContentLength() {
+        String contentLength = headers.get(HttpHeaders.CONTENT_LENGTH);
+        if (contentLength != null) {
+            return Integer.valueOf(contentLength);
+        }
+        return 0;
+    }
 
-   public String getHeader(String name)
-   {
-      return headers.get(name);
-   }
+    public boolean isChunked() {
+        String chunked = headers.get(HttpHeaders.TRANSFER_ENCODING.KEY);
+        return chunked != null && chunked.equalsIgnoreCase(HttpHeaders.TRANSFER_ENCODING.CHUNKED);
+    }
 
-   public boolean containsHeader(String name)
-   {
-      return headers.containsKey(name);
-   }
+    public void setContent(ChannelBuffer content) {
+        this.content = content;
+    }
 
-   public Set<String> getHeaders()
-   {
-      return headers.keySet();
-   }
+    public String getHeader(String name) {
+        return headers.get(name);
+    }
 
-   public HttpProtocol getProtocol()
-   {
-      return httpProtocol;
-   }
+    public boolean containsHeader(String name) {
+        return headers.containsKey(name);
+    }
 
-   public ChannelBuffer getContent()
-   {
-      return content;
-   }
+    public Set<String> getHeaders() {
+        return headers.keySet();
+    }
+
+    public HttpProtocol getProtocol() {
+        return httpProtocol;
+    }
+
+    public ChannelBuffer getContent() {
+        return content;
+    }
 }

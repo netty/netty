@@ -19,37 +19,36 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.example.http;
 
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseImpl;
+import org.jboss.netty.handler.codec.http.HttpProtocol;
+import org.jboss.netty.handler.codec.http.HttpResponseStatusCode;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import static org.jboss.netty.util.HttpCodecUtil.*;
 
-import java.util.Set;
+import java.nio.charset.Charset;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpRequestEncoder extends HttpMessageEncoder {
-
-    /**
-     * writes the initial line i.e. 'GET /path/to/file/index.html HTTP/1.0'
-     *
-     * @param buf
-     * @param message
-     */
-    public void encodeInitialLine(ChannelBuffer buf, HttpMessage message) {
-        HttpRequest request = (HttpRequest) message;
-        buf.writeBytes(request.getMethod().getMethod().getBytes());
-        buf.writeByte(SPACE);
-        buf.writeBytes(request.getURI().toASCIIString().getBytes());
-        buf.writeByte(SPACE);
-        buf.writeBytes(request.getProtocol().getProtocol().getBytes());
-        buf.writeBytes(CRLF);
+@ChannelPipelineCoverage("all")
+public class HttpRequestHandler extends SimpleChannelHandler {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+        HttpRequest request = (HttpRequest) e.getMessage();
+        System.out.println(request.getContent().toString(Charset.defaultCharset().name()));
+        HttpResponse response = new HttpResponseImpl(HttpProtocol.HTTP_1_1, HttpResponseStatusCode.OK);
+        String message = "and its hello from me";
+        ChannelBuffer buf = ChannelBuffers.wrappedBuffer(message.getBytes());
+        response.setContent(buf);
+        response.addHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buf.writerIndex()));
+        e.getChannel().write(response);
     }
-
 }

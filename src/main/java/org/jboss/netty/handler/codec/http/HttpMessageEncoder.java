@@ -24,6 +24,7 @@ package org.jboss.netty.handler.codec.http;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import static org.jboss.netty.channel.Channels.write;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -37,47 +38,41 @@ import java.nio.charset.Charset;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public abstract class HttpMessageEncoder extends SimpleChannelHandler
-{
-   public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception
-   {
-      if(!(e.getMessage() instanceof HttpRequest))
-      {
-         ctx.sendDownstream(e);
-      }
-      HttpMessage request = (HttpRequest) e.getMessage();
-      ChannelBuffer buf = ChannelBuffers.dynamicBuffer();
-      encodeInitialLine(buf, request);
-      encodeHeaders(buf, request);
-      buf.writeBytes(CRLF);
-      if(request.getContent() != null)
-      {
-         buf.writeBytes(request.getContent());
-      }
-      System.out.println(buf.toString(Charset.defaultCharset().name()));
-      System.out.println("ttt");
-      write(ctx, e.getChannel(), e.getFuture(), buf, e.getRemoteAddress());
-   }
+@ChannelPipelineCoverage("one")
+public abstract class HttpMessageEncoder extends SimpleChannelHandler {
+    public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+        if (!(e.getMessage() instanceof HttpMessage)) {
+            ctx.sendDownstream(e);
+        }
+        HttpMessage request = (HttpMessage) e.getMessage();
+        ChannelBuffer buf = ChannelBuffers.dynamicBuffer();
+        encodeInitialLine(buf, request);
+        encodeHeaders(buf, request);
+        buf.writeBytes(CRLF);
+        if (request.getContent() != null) {
+            buf.writeBytes(request.getContent());
+        }
+        write(ctx, e.getChannel(), e.getFuture(), buf, e.getRemoteAddress());
+    }
 
-   /**
-    * writes the headers
-    * Header1: value1
-    * Header2: value2
-    * @param buf
-    * @param message
-    */
-   public void encodeHeaders(ChannelBuffer buf, HttpMessage message)
-   {
-      Set<String> headers = message.getHeaders();
-      for (String header : headers)
-      {
-         buf.writeBytes(header.getBytes());
-         buf.writeByte(COLON);
-         buf.writeByte(SPACE);
-         buf.writeBytes(message.getHeader(header).getBytes());
-         buf.writeBytes(CRLF);
-      }
-   }
+    /**
+     * writes the headers
+     * Header1: value1
+     * Header2: value2
+     *
+     * @param buf
+     * @param message
+     */
+    public void encodeHeaders(ChannelBuffer buf, HttpMessage message) {
+        Set<String> headers = message.getHeaders();
+        for (String header : headers) {
+            buf.writeBytes(header.getBytes());
+            buf.writeByte(COLON);
+            buf.writeByte(SPACE);
+            buf.writeBytes(message.getHeader(header).getBytes());
+            buf.writeBytes(CRLF);
+        }
+    }
 
-   abstract void encodeInitialLine(ChannelBuffer buf, HttpMessage message);
+    abstract void encodeInitialLine(ChannelBuffer buf, HttpMessage message);
 }
