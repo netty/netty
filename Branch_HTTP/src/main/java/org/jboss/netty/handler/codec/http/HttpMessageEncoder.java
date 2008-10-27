@@ -44,6 +44,7 @@ public abstract class HttpMessageEncoder extends SimpleChannelHandler {
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (!(e.getMessage() instanceof HttpMessage)) {
             ctx.sendDownstream(e);
+            return;
         }
         HttpMessage request = (HttpMessage) e.getMessage();
         ChannelBuffer buf = ChannelBuffers.dynamicBuffer();

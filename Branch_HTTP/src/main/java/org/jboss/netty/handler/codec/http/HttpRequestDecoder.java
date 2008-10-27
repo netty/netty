@@ -32,10 +32,9 @@ import java.net.URISyntaxException;
  */
 public class HttpRequestDecoder extends HttpMessageDecoder {
     void readInitial(ChannelBuffer buffer) {
-        readIntoCurrentLine(buffer);
+        String line = readIntoCurrentLine(buffer);
         checkpoint(ResponseState.READ_HEADER);
-        String[] split = splitInitial(currentLine);
-        currentLine = null;
+        String[] split = splitInitial(line);
         URI uri;
         try {
             uri = new URI(split[1]);

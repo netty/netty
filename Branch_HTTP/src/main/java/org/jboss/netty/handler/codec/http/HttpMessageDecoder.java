@@ -30,6 +30,7 @@ import org.jboss.netty.util.HttpCodecUtil;
 
 /**
  * Decodes an Http type message.
+ *
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDecoder.ResponseState> {
@@ -46,11 +47,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         READ_FIXED_LENGTH_CONTENT,
         READ_CHUNK_SIZE,
         READ_CHUNKED_CONTENT,
-        READ_CRLF,
-        HANDLE,;
+        READ_CRLF,;
     }
-
-    protected StringBuffer currentLine;
 
     private ResponseState nextState;
 
@@ -65,32 +63,40 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             }
             case READ_HEADER: {
                 readHeaders(buffer);
+                //we return null here, this forces decode to be called again where we will decode the content
                 return null;
             }
             case READ_CONTENT: {
                 if (content == null) {
                     content = ChannelBuffers.dynamicBuffer();
                 }
+                //this will cause a replay error until the channel is closed where this will read whats left in the buffer
                 content.writeBytes(buffer.readBytes(buffer.readableBytes()));
-                message.setContent(content);
-                content = null;
-                currentLine = null;
-                nextState = null;
-                checkpoint(ResponseState.READ_INITIAL);
-                return message;
+                return reset();
             }
             case READ_FIXED_LENGTH_CONTENT: {
+                //we have a content-length so we just read the correct number of bytes
                 readFixedLengthContent(buffer);
-                message.setContent(content);
-                content = null;
-                currentLine = null;
-                nextState = null;
-                checkpoint(ResponseState.READ_INITIAL);
-                return message;
+                return reset();
             }
+            /**
+             * everything else after this point takes care of reading chunked content. basically, read cunk size,
+             * read chunk, read and ignore the CRLF and repeat until 0 
+             */
             case READ_CHUNK_SIZE: {
-                readChunkSize(buffer);
-                return null;
+                String line = readIntoCurrentLine(buffer);
+
+                chunkSize = getChunkSize(line);
+                if (chunkSize == 0) {
+                    byte next = buffer.readByte();
+                    if (next == HttpCodecUtil.CR) {
+                        buffer.readByte();
+                    }
+                    return reset();
+                }
+                else {
+                    checkpoint(ResponseState.READ_CHUNKED_CONTENT);
+                }
             }
             case READ_CHUNKED_CONTENT: {
                 readChunkedContent(buffer);
@@ -103,23 +109,19 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 checkpoint(nextState);
                 return null;
             }
-            case HANDLE: {
-                byte next = buffer.readByte();
-                if (next == HttpCodecUtil.CR) {
-                    buffer.readByte();
-                }
-                message.setContent(content);
-                content = null;
-                currentLine = null;
-                nextState = null;
-                checkpoint(ResponseState.READ_INITIAL);
-                return message;
-            }
             default: {
                 throw new Error("Shouldn't reach here.");
             }
 
         }
+    }
+
+    private Object reset() {
+        message.setContent(content);
+        content = null;
+        nextState = null;
+        checkpoint(ResponseState.READ_INITIAL);
+        return message;
     }
 
     private void readChunkedContent(ChannelBuffer buffer) {
@@ -131,37 +133,21 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         checkpoint(ResponseState.READ_CRLF);
     }
 
-    private void readChunkSize(ChannelBuffer buffer) {
-        readIntoCurrentLine(buffer);
-
-        chunkSize = getChunkSize(currentLine);
-        currentLine = null;
-        if (chunkSize == 0) {
-            checkpoint(ResponseState.HANDLE);
-        }
-        else {
-            checkpoint(ResponseState.READ_CHUNKED_CONTENT);
-        }
-    }
-
     private void readFixedLengthContent(ChannelBuffer buffer) {
         int length = message.getContentLength();
         if (content == null) {
             content = ChannelBuffers.buffer(length);
         }
         content.writeBytes(buffer.readBytes(length));
-        checkpoint(ResponseState.HANDLE);
     }
 
     private void readHeaders(ChannelBuffer buffer) {
-        readIntoCurrentLine(buffer);
-        while (!currentLine.toString().equals("")) {
-            String[] header = splitHeader(currentLine);
+        String line = readIntoCurrentLine(buffer);
+        while (!line.equals("")) {
+            String[] header = splitHeader(line);
             message.addHeader(header[0], header[1]);
-            currentLine = null;
-            readIntoCurrentLine(buffer);
+            line = readIntoCurrentLine(buffer);
         }
-        currentLine = null;
         ResponseState nextState;
         if (message.getContentLength() > 0) {
             nextState = ResponseState.READ_FIXED_LENGTH_CONTENT;
@@ -177,43 +163,40 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
 
     abstract void readInitial(ChannelBuffer buffer);
 
-    private int getChunkSize(StringBuffer buffer) {
-        String hex = buffer.toString();
+    private int getChunkSize(String hex) {
         return Integer.valueOf(hex, 16).intValue();
     }
 
-    protected boolean readIntoCurrentLine(ChannelBuffer channel) {
-        if (currentLine == null) {
-            currentLine = new StringBuffer();
-        }
+    protected String readIntoCurrentLine(ChannelBuffer channel) {
+        StringBuffer sb = new StringBuffer();
         while (true) {
             byte nextByte = channel.readByte();
             if (nextByte == HttpCodecUtil.CR) {
                 channel.readByte();
-                return true;
+                return sb.toString();
             }
             else if (nextByte == HttpCodecUtil.LF) {
-                return true;
+                return sb.toString();
             }
             else {
-                currentLine.append((char) nextByte);
+                sb.append((char) nextByte);
             }
         }
     }
 
 
-    protected String[] splitInitial(StringBuffer sb) {
-        String[] split = sb.toString().split(" ");
+    protected String[] splitInitial(String sb) {
+        String[] split = sb.split(" ");
         if (split.length != 3) {
-            throw new IllegalArgumentException(sb.toString() + "does not contain all 3 parts");
+            throw new IllegalArgumentException(sb + "does not contain all 3 parts");
         }
         return split;
     }
 
-    private String[] splitHeader(StringBuffer sb) {
-        String[] split = sb.toString().split(":", 2);
+    private String[] splitHeader(String sb) {
+        String[] split = sb.split(":", 2);
         if (split.length != 2) {
-            throw new IllegalArgumentException(sb.toString() + "does not contain all 2 parts");
+            throw new IllegalArgumentException(sb + "does not contain all 2 parts");
         }
         for (int i = 0; i < split.length; i++) {
             split[i] = split[i].trim();

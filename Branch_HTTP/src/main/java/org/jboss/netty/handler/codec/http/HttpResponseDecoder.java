@@ -29,10 +29,9 @@ import org.jboss.netty.buffer.ChannelBuffer;
  */
 public class HttpResponseDecoder extends HttpMessageDecoder {
     protected void readInitial(ChannelBuffer buffer) {
-        readIntoCurrentLine(buffer);
+        String line = readIntoCurrentLine(buffer);
         checkpoint(ResponseState.READ_HEADER);
-        String[] split = splitInitial(currentLine);
-        currentLine = null;
+        String[] split = splitInitial(line);
         message = new HttpResponseImpl(HttpProtocol.getProtocol(split[0]), HttpResponseStatusCode.getResponseStatusCode(Integer.valueOf(split[1])));
     }
 }
