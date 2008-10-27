@@ -29,10 +29,11 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.util.HttpCodecUtil;
 
 /**
+ * Decodes an Http type message.
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDecoder.ResponseState> {
-    protected HttpMessage response;
+    protected HttpMessage message;
 
     private ChannelBuffer content;
 
@@ -71,21 +72,21 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                     content = ChannelBuffers.dynamicBuffer();
                 }
                 content.writeBytes(buffer.readBytes(buffer.readableBytes()));
-                response.setContent(content);
+                message.setContent(content);
                 content = null;
                 currentLine = null;
                 nextState = null;
                 checkpoint(ResponseState.READ_INITIAL);
-                return response;
+                return message;
             }
             case READ_FIXED_LENGTH_CONTENT: {
                 readFixedLengthContent(buffer);
-                response.setContent(content);
+                message.setContent(content);
                 content = null;
                 currentLine = null;
                 nextState = null;
                 checkpoint(ResponseState.READ_INITIAL);
-                return response;
+                return message;
             }
             case READ_CHUNK_SIZE: {
                 readChunkSize(buffer);
@@ -107,12 +108,12 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 if (next == HttpCodecUtil.CR) {
                     buffer.readByte();
                 }
-                response.setContent(content);
+                message.setContent(content);
                 content = null;
                 currentLine = null;
                 nextState = null;
                 checkpoint(ResponseState.READ_INITIAL);
-                return response;
+                return message;
             }
             default: {
                 throw new Error("Shouldn't reach here.");
@@ -144,7 +145,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     private void readFixedLengthContent(ChannelBuffer buffer) {
-        int length = response.getContentLength();
+        int length = message.getContentLength();
         if (content == null) {
             content = ChannelBuffers.buffer(length);
         }
@@ -156,16 +157,16 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         readIntoCurrentLine(buffer);
         while (!currentLine.toString().equals("")) {
             String[] header = splitHeader(currentLine);
-            response.addHeader(header[0], header[1]);
+            message.addHeader(header[0], header[1]);
             currentLine = null;
             readIntoCurrentLine(buffer);
         }
         currentLine = null;
         ResponseState nextState;
-        if (response.getContentLength() > 0) {
+        if (message.getContentLength() > 0) {
             nextState = ResponseState.READ_FIXED_LENGTH_CONTENT;
         }
-        else if (response.isChunked()) {
+        else if (message.isChunked()) {
             nextState = ResponseState.READ_CHUNK_SIZE;
         }
         else {

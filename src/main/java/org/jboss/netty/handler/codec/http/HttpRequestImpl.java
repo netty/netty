@@ -29,6 +29,7 @@ import java.util.Set;
 import java.net.URI;
 
 /**
+ * An http request implementation
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public class HttpRequestImpl extends HttpMessageImpl implements HttpRequest {

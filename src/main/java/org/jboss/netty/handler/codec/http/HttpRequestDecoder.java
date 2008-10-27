@@ -27,6 +27,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 /**
+ * decodes an http request.
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public class HttpRequestDecoder extends HttpMessageDecoder {
@@ -42,6 +43,6 @@ public class HttpRequestDecoder extends HttpMessageDecoder {
         catch (URISyntaxException e) {
             throw new IllegalArgumentException("Illegal URI " + split[1]);
         }
-        response = new HttpRequestImpl(HttpProtocol.getProtocol(split[2]), HttpMethod.valueOf(split[0]), uri);
+        message = new HttpRequestImpl(HttpProtocol.getProtocol(split[2]), HttpMethod.valueOf(split[0]), uri);
     }
 }

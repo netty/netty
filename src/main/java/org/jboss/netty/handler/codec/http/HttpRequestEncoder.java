@@ -32,6 +32,7 @@ import static org.jboss.netty.util.HttpCodecUtil.*;
 import java.util.Set;
 
 /**
+ * encodes an http request
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public class HttpRequestEncoder extends HttpMessageEncoder {

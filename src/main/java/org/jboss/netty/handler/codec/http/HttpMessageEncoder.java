@@ -36,6 +36,7 @@ import java.util.Set;
 import java.nio.charset.Charset;
 
 /**
+ * encodes an http message
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 @ChannelPipelineCoverage("one")
@@ -73,6 +74,6 @@ public abstract class HttpMessageEncoder extends SimpleChannelHandler {
             buf.writeBytes(CRLF);
         }
     }
-
+     
     abstract void encodeInitialLine(ChannelBuffer buf, HttpMessage message);
 }
