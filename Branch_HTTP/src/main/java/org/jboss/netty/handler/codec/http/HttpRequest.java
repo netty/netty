@@ -28,6 +28,7 @@ import java.util.Set;
 import java.net.URI;
 
 /**
+ * An http request.
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public interface HttpRequest extends HttpMessage {

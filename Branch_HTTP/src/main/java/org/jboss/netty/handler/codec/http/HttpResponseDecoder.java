@@ -21,17 +21,10 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
-import org.jboss.netty.util.HttpCodecUtil;
-
-import java.nio.charset.Charset;
 
 /**
+ * an http response decoder
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public class HttpResponseDecoder extends HttpMessageDecoder {
@@ -40,6 +33,6 @@ public class HttpResponseDecoder extends HttpMessageDecoder {
         checkpoint(ResponseState.READ_HEADER);
         String[] split = splitInitial(currentLine);
         currentLine = null;
-        response = new HttpResponseImpl(HttpProtocol.getProtocol(split[0]), HttpResponseStatusCode.getResponseStatusCode(Integer.valueOf(split[1])));
+        message = new HttpResponseImpl(HttpProtocol.getProtocol(split[0]), HttpResponseStatusCode.getResponseStatusCode(Integer.valueOf(split[1])));
     }
 }

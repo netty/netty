@@ -25,6 +25,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import static org.jboss.netty.util.HttpCodecUtil.*;
 
 /**
+ * encodes an http response
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public class HttpResponseEncoder extends HttpMessageEncoder {

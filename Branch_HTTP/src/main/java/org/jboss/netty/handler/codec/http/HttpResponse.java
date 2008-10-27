@@ -21,9 +21,9 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
+ * an http response.
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public interface HttpResponse extends HttpMessage {
