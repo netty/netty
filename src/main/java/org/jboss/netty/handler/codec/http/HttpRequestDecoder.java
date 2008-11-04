@@ -42,6 +42,6 @@ public class HttpRequestDecoder extends HttpMessageDecoder {
         catch (URISyntaxException e) {
             throw new IllegalArgumentException("Illegal URI " + split[1]);
         }
-        message = new HttpRequestImpl(HttpProtocol.getProtocol(split[2]), HttpMethod.valueOf(split[0]), uri);
+        message = new HttpRequestImpl(HttpVersion.getProtocol(split[2]), HttpMethod.valueOf(split[0]), uri);
     }
 }

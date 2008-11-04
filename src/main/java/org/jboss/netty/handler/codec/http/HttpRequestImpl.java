@@ -21,8 +21,6 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
@@ -42,8 +40,8 @@ public class HttpRequestImpl extends HttpMessageImpl implements HttpRequest {
 
     private final URI uri;
 
-    public HttpRequestImpl(HttpProtocol httpProtocol, HttpMethod method, URI uri) {
-        super(httpProtocol);
+    public HttpRequestImpl(HttpVersion httpVersion, HttpMethod method, URI uri) {
+        super(httpVersion);
         this.method = method;
         this.uri = uri;
     }

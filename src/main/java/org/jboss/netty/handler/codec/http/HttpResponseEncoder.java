@@ -31,7 +31,7 @@ import static org.jboss.netty.util.HttpCodecUtil.*;
 public class HttpResponseEncoder extends HttpMessageEncoder {
     void encodeInitialLine(ChannelBuffer buf, HttpMessage message) {
         HttpResponse response = (HttpResponse) message;
-        buf.writeBytes(response.getProtocol().getProtocol().getBytes());
+        buf.writeBytes(response.getProtocolVersion().getProtocol().getBytes());
         buf.writeByte(SPACE);
         buf.writeBytes(String.valueOf(response.getStatusCode().getCode()).getBytes());
         buf.writeByte(SPACE);

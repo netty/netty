@@ -40,7 +40,7 @@ public interface HttpMessage {
 
     Set<String> getHeaders();
 
-    HttpProtocol getProtocol();
+    HttpVersion getProtocolVersion();
 
     ChannelBuffer getContent();
 
