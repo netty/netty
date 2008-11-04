@@ -39,10 +39,10 @@ public class HttpMessageImpl implements HttpMessage {
 
     private ChannelBuffer content;
 
-    final HttpProtocol httpProtocol;
+    final HttpVersion httpVersion;
 
-    public HttpMessageImpl(final HttpProtocol httpProtocol) {
-        this.httpProtocol = httpProtocol;
+    public HttpMessageImpl(final HttpVersion httpVersion) {
+        this.httpVersion = httpVersion;
     }
 
     public void addHeader(final String name, final String value) {
@@ -100,8 +100,8 @@ public class HttpMessageImpl implements HttpMessage {
         return headers.keySet();
     }
 
-    public HttpProtocol getProtocol() {
-        return httpProtocol;
+    public HttpVersion getProtocolVersion() {
+        return httpVersion;
     }
 
     public ChannelBuffer getContent() {

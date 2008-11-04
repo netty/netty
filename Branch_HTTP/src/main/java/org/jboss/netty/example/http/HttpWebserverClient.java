@@ -26,16 +26,11 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpRequestImpl;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
-import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
-import org.jboss.netty.handler.codec.http.HttpProtocol;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 
 import java.util.concurrent.Executors;
 import java.net.InetSocketAddress;
@@ -69,7 +64,7 @@ public class HttpWebserverClient {
             future.getCause().printStackTrace();
             System.exit(0);
         }
-        HttpRequest request = new HttpRequestImpl(HttpProtocol.HTTP_1_0, HttpMethod.GET, new URI("/netty/"));
+        HttpRequest request = new HttpRequestImpl(HttpVersion.HTTP_1_0, HttpMethod.GET, new URI("/netty/"));
         request.addHeader(HttpHeaders.HOST, host);
         ChannelFuture lastWriteFuture = channel.write(request);
         lastWriteFuture.awaitUninterruptibly();

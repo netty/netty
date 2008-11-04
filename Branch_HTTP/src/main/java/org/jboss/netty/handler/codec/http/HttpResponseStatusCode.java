@@ -163,6 +163,15 @@ public enum HttpResponseStatusCode {
         return code;
     }
 
+    public static HttpResponseStatusCode getResponseStatusCode(int id, String reason) {
+        HttpResponseStatusCode code = RESPONSE_MAP.get(id);
+        if (code == null) {
+            throw new IllegalArgumentException("Invalid Response Status");
+        }
+        code.description = reason;
+        return code;
+    }
+
     private int code;
 
     private String description;

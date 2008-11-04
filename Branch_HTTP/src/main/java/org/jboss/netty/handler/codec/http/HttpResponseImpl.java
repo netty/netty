@@ -21,8 +21,6 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-
 /**
  * an http response implementation
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
@@ -30,8 +28,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
 public class HttpResponseImpl extends HttpMessageImpl implements HttpResponse {
     private final HttpResponseStatusCode statusCode;
 
-    public HttpResponseImpl(HttpProtocol protocol, HttpResponseStatusCode statusCode) {
-        super(protocol);
+    public HttpResponseImpl(HttpVersion version, HttpResponseStatusCode statusCode) {
+        super(version);
         this.statusCode = statusCode;
     }
 

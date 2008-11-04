@@ -28,7 +28,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseImpl;
-import org.jboss.netty.handler.codec.http.HttpProtocol;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.http.HttpResponseStatusCode;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -44,7 +44,7 @@ public class HttpRequestHandler extends SimpleChannelHandler {
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         HttpRequest request = (HttpRequest) e.getMessage();
         System.out.println(request.getContent().toString(Charset.defaultCharset().name()));
-        HttpResponse response = new HttpResponseImpl(HttpProtocol.HTTP_1_1, HttpResponseStatusCode.OK);
+        HttpResponse response = new HttpResponseImpl(HttpVersion.HTTP_1_1, HttpResponseStatusCode.OK);
         String message = "and its hello from me";
         ChannelBuffer buf = ChannelBuffers.wrappedBuffer(message.getBytes());
         response.setContent(buf);

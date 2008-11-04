@@ -21,29 +21,40 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import static org.jboss.netty.util.HttpCodecUtil.*;
-
 /**
- * encodes an http request
+ * The protocols we support;
+ *
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpRequestEncoder extends HttpMessageEncoder {
+public enum HttpVersion {
+    HTTP_1_1("HTTP/1.1"),
 
-    /**
-     * writes the initial line i.e. 'GET /path/to/file/index.html HTTP/1.0'
-     *
-     * @param buf
-     * @param message
-     */
-    public void encodeInitialLine(ChannelBuffer buf, HttpMessage message) {
-        HttpRequest request = (HttpRequest) message;
-        buf.writeBytes(request.getMethod().getMethod().getBytes());
-        buf.writeByte(SPACE);
-        buf.writeBytes(request.getURI().toASCIIString().getBytes());
-        buf.writeByte(SPACE);
-        buf.writeBytes(request.getProtocolVersion().getProtocol().getBytes());
-        buf.writeBytes(CRLF);
+    HTTP_1_0("HTTP/1.0"),
+
+    UNKNOWN("UNKNOWN"),;
+
+    private String protocol;
+
+    private HttpVersion(String protocol) {
+        this.protocol = protocol;
     }
 
+    public String getProtocol() {
+        return protocol;
+    }
+
+    public static HttpVersion getProtocol(String protocol) {
+        if (protocol == null) {
+            return UNKNOWN;
+        }
+        else if (protocol.equals(HTTP_1_0.getProtocol())) {
+            return HTTP_1_0;
+        }
+        else if (protocol.equals(HTTP_1_1.getProtocol())) {
+            return HTTP_1_1;
+        }
+        else {
+            return UNKNOWN;
+        }
+    }
 }
