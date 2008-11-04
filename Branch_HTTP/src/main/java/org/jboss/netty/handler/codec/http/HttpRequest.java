@@ -34,6 +34,8 @@ import java.net.URI;
 public interface HttpRequest extends HttpMessage {
     String getParameter(String name);
 
+    List<String> getParameters(String name);
+
     boolean containsParameter(String name);
 
     Set<String> getParameterNames();
@@ -42,7 +44,9 @@ public interface HttpRequest extends HttpMessage {
 
     void addParameter(String name, String val);
 
-    boolean removeParameter(String name);
+    void setParameters(String name, List<String> values);
+
+    void clearParameters();
 
     HttpMethod getMethod();
 

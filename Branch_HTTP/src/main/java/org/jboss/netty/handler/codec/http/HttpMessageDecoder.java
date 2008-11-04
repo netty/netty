@@ -80,7 +80,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 return reset();
             }
             /**
-             * everything else after this point takes care of reading chunked content. basically, read cunk size,
+             * everything else after this point takes care of reading chunked content. basically, read chunk size,
              * read chunk, read and ignore the CRLF and repeat until 0 
              */
             case READ_CHUNK_SIZE: {

@@ -26,6 +26,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * a default Http Message which holds the headers and body.
@@ -33,46 +35,64 @@ import java.util.Set;
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public class HttpMessageImpl implements HttpMessage {
-    Map<String, String> headers = new HashMap<String, String>();
+    Map<String, List<String>> headers = new HashMap<String, List<String>>();
 
     private ChannelBuffer content;
 
     final HttpProtocol httpProtocol;
 
-    public HttpMessageImpl(HttpProtocol httpProtocol) {
+    public HttpMessageImpl(final HttpProtocol httpProtocol) {
         this.httpProtocol = httpProtocol;
     }
 
-    public void addHeader(String key, String value) {
-        headers.put(key, value);
+    public void addHeader(final String name, final String value) {
+        if (value == null) {
+            throw new NullPointerException("value is null");
+        }
+        if (headers.get(name) == null) {
+            headers.put(name, new ArrayList<String>());
+        }
+        headers.get(name).add(value);
     }
 
-    public boolean removeHeader(String key) {
-        return headers.remove(key) != null;
+    public void setHeader(final String name, final List<String> values) {
+        if(values == null || values.size() == 0) {
+            throw new NullPointerException("no values present");
+        }
+        headers.put(name, values);
     }
 
     public int getContentLength() {
-        String contentLength = headers.get(HttpHeaders.CONTENT_LENGTH);
-        if (contentLength != null) {
-            return Integer.valueOf(contentLength);
+        List<String> contentLength = headers.get(HttpHeaders.CONTENT_LENGTH);
+        if (contentLength != null && contentLength.size() > 0) {
+            return Integer.valueOf(contentLength.get(0));
         }
         return 0;
     }
 
     public boolean isChunked() {
-        String chunked = headers.get(HttpHeaders.TRANSFER_ENCODING.KEY);
-        return chunked != null && chunked.equalsIgnoreCase(HttpHeaders.TRANSFER_ENCODING.CHUNKED);
+        List<String> chunked = headers.get(HttpHeaders.TRANSFER_ENCODING.KEY);
+        return chunked != null && chunked.size() > 0 && chunked.get(0).equalsIgnoreCase(HttpHeaders.TRANSFER_ENCODING.CHUNKED);
     }
 
-    public void setContent(ChannelBuffer content) {
+    public void clearHeaders() {
+        headers.clear();
+    }
+
+    public void setContent(final ChannelBuffer content) {
         this.content = content;
     }
 
-    public String getHeader(String name) {
+    public String getHeader(final String name) {
+        List<String> header = headers.get(name);
+        return header != null && header.size() > 0 ? headers.get(name).get(0) : null;
+    }
+
+    public List<String> getHeaders(final String name) {
         return headers.get(name);
     }
 
-    public boolean containsHeader(String name) {
+    public boolean containsHeader(final String name) {
         return headers.containsKey(name);
     }
 

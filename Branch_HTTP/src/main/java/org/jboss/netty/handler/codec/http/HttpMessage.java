@@ -34,6 +34,8 @@ import java.util.Set;
 public interface HttpMessage {
     String getHeader(String name);
 
+    List<String> getHeaders(String name);
+
     boolean containsHeader(String name);
 
     Set<String> getHeaders();
@@ -42,13 +44,15 @@ public interface HttpMessage {
 
     ChannelBuffer getContent();
 
-    void addHeader(String key, String value);
+    void addHeader(String name, String value);
 
-    boolean removeHeader(String key);
+    void setHeader(String name, List<String> values);
 
     int getContentLength();
 
     void setContent(ChannelBuffer content);
 
     boolean isChunked();
+
+    void clearHeaders();
 }

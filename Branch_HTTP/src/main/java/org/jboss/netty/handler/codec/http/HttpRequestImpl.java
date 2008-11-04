@@ -26,6 +26,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 import java.net.URI;
 
 /**
@@ -33,7 +35,7 @@ import java.net.URI;
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public class HttpRequestImpl extends HttpMessageImpl implements HttpRequest {
-    private Map<String, String> params = new HashMap<String, String>();
+    private Map<String, List<String>> params = new HashMap<String, List<String>>();
 
     private final HttpMethod method;
 
@@ -47,11 +49,24 @@ public class HttpRequestImpl extends HttpMessageImpl implements HttpRequest {
     }
 
     public void addParameter(final String name, final String val) {
-        params.put(name, val);
+        if(val == null) {
+            throw new NullPointerException("value is null");
+        }
+        if(params.get(name) == null) {
+            params.put(name, new ArrayList<String>());
+        }
+        params.get(name).add(val);
     }
 
-    public boolean removeParameter(final String name) {
-        return params.remove(name) != null;
+    public void setParameters(final String name, final List<String> values) {
+        if(values == null || values.size() == 0) {
+            throw new NullPointerException("no values are present");
+        }
+        params.put(name, values);
+    }
+
+    public void clearParameters() {
+        params.clear();
     }
 
     public HttpMethod getMethod() {
@@ -63,6 +78,11 @@ public class HttpRequestImpl extends HttpMessageImpl implements HttpRequest {
     }
 
     public String getParameter(final String name) {
+        List<String> param = params.get(name);
+        return param != null && param.size() > 0?param.get(0):null;
+    }
+
+    public List<String> getParameters(final String name) {
         return params.get(name);
     }
 
