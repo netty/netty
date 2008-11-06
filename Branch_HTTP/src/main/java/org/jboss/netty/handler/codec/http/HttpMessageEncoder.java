@@ -81,5 +81,5 @@ public abstract class HttpMessageEncoder extends SimpleChannelHandler {
         }
     }
 
-    abstract void encodeInitialLine(ChannelBuffer buf, HttpMessage message);
+    abstract void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception;
 }

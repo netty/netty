@@ -50,5 +50,5 @@ public interface HttpRequest extends HttpMessage {
 
     HttpMethod getMethod();
 
-    URI getURI();
+    String getPath();
 }

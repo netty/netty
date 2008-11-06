@@ -108,60 +108,8 @@ public class HttpResponseStatusCode {
 
     public static final HttpResponseStatusCode GATEWAY_TIMEOUT = new HttpResponseStatusCode(504, "Gateway Timeout");
 
-    public static final HttpResponseStatusCode HTTP_VERSION_NOT_SUPPORTED = new HttpResponseStatusCode(505, "HTTP Version Not Supported");;
+    public static final HttpResponseStatusCode HTTP_VERSION_NOT_SUPPORTED = new HttpResponseStatusCode(505, "HTTP Version Not Supported");
 
-    private static Map<Integer, HttpResponseStatusCode> RESPONSE_MAP = new HashMap<Integer, HttpResponseStatusCode>();
-
-    static {
-        RESPONSE_MAP.put(CONTINUE.code, CONTINUE);
-        RESPONSE_MAP.put(SWITCHING_PROTOCOLS.code, SWITCHING_PROTOCOLS);
-        RESPONSE_MAP.put(OK.code, OK);
-        RESPONSE_MAP.put(CREATED.code, CREATED);
-        RESPONSE_MAP.put(ACCEPTED.code, ACCEPTED);
-        RESPONSE_MAP.put(NON_AUTHORITATIVE_INFORMATION.code, NON_AUTHORITATIVE_INFORMATION);
-        RESPONSE_MAP.put(NO_CONTENT.code, NO_CONTENT);
-        RESPONSE_MAP.put(RESET_CONTENT.code, RESET_CONTENT);
-        RESPONSE_MAP.put(PARTIAL_CONTENT.code, PARTIAL_CONTENT);
-        RESPONSE_MAP.put(MULTIPLE_CHOICES.code, MULTIPLE_CHOICES);
-        RESPONSE_MAP.put(MOVED_PERMANENTLY.code, MOVED_PERMANENTLY);
-        RESPONSE_MAP.put(FOUND.code, FOUND);
-        RESPONSE_MAP.put(SEE_OTHER.code, SEE_OTHER);
-        RESPONSE_MAP.put(NOT_MODIFIED.code, NOT_MODIFIED);
-        RESPONSE_MAP.put(USE_PROXY.code, USE_PROXY);
-        RESPONSE_MAP.put(TEMPORARY_REDIRECT.code, TEMPORARY_REDIRECT);
-        RESPONSE_MAP.put(BAD_REQUEST.code, BAD_REQUEST);
-        RESPONSE_MAP.put(UNUATHORIZED.code, UNUATHORIZED);
-        RESPONSE_MAP.put(PAYMENT_REQUIRED.code, PAYMENT_REQUIRED);
-        RESPONSE_MAP.put(FORBIDDEN.code, FORBIDDEN);
-        RESPONSE_MAP.put(NOT_FOUND.code, NOT_FOUND);
-        RESPONSE_MAP.put(METHOD_NOT_ALLOWED.code, METHOD_NOT_ALLOWED);
-        RESPONSE_MAP.put(NOT_ACCEPTABLE.code, NOT_ACCEPTABLE);
-        RESPONSE_MAP.put(PROXY_AUTHENTICATION_REQUIRED.code, PROXY_AUTHENTICATION_REQUIRED);
-        RESPONSE_MAP.put(REQUEST_TIMEOUT.code, REQUEST_TIMEOUT);
-        RESPONSE_MAP.put(CONFLICT.code, CONFLICT);
-        RESPONSE_MAP.put(GONE.code, GONE);
-        RESPONSE_MAP.put(LENGTH_REQUIRED.code, LENGTH_REQUIRED);
-        RESPONSE_MAP.put(PRECONDITION_FAILED.code, PRECONDITION_FAILED);
-        RESPONSE_MAP.put(REQUEST_ENTITY_TOO_LARGE.code, REQUEST_ENTITY_TOO_LARGE);
-        RESPONSE_MAP.put(REQUEST_URI_TOO_LONG.code, REQUEST_URI_TOO_LONG);
-        RESPONSE_MAP.put(UNSUPPORTED_MEDIA_TYPE.code, UNSUPPORTED_MEDIA_TYPE);
-        RESPONSE_MAP.put(REQUESTED_RANGE_NOT_SATISFIABLE.code, REQUESTED_RANGE_NOT_SATISFIABLE);
-        RESPONSE_MAP.put(EXPECTATION_FAILED.code, EXPECTATION_FAILED);
-        RESPONSE_MAP.put(INTERNAL_SERVER_ERROR.code, INTERNAL_SERVER_ERROR);
-        RESPONSE_MAP.put(NOT_IMPLEMENTED.code, NOT_IMPLEMENTED);
-        RESPONSE_MAP.put(BAD_GATEWAY.code, BAD_GATEWAY);
-        RESPONSE_MAP.put(SERVICE_UNAVAILABLE.code, SERVICE_UNAVAILABLE);
-        RESPONSE_MAP.put(GATEWAY_TIMEOUT.code, GATEWAY_TIMEOUT);
-        RESPONSE_MAP.put(HTTP_VERSION_NOT_SUPPORTED.code, HTTP_VERSION_NOT_SUPPORTED);
-    }
-
-    public static HttpResponseStatusCode getResponseStatusCode(int id) {
-        HttpResponseStatusCode code = RESPONSE_MAP.get(id);
-        if (code == null) {
-            throw new IllegalArgumentException("Invalid Response Status");
-        }
-        return code;
-    }
 
     private int code;
 

@@ -22,9 +22,10 @@
 package org.jboss.netty.handler.codec.http;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.util.UriQueryDecoder;
 
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.util.List;
+import java.util.Map;
 
 /**
  * decodes an http request.
@@ -35,13 +36,12 @@ public class HttpRequestDecoder extends HttpMessageDecoder {
         String line = readIntoCurrentLine(buffer);
         checkpoint(ResponseState.READ_HEADER);
         String[] split = splitInitial(line);
-        URI uri;
-        try {
-            uri = new URI(split[1]);
+        UriQueryDecoder uriQueryDecoder = new UriQueryDecoder(split[1]);
+        HttpRequestImpl httpRequest = new HttpRequestImpl(HttpVersion.getProtocol(split[2]), HttpMethod.valueOf(split[0]), uriQueryDecoder.getPath());
+        message = httpRequest;
+        Map<String, List<String>> params = uriQueryDecoder.getParameters();
+        for (String key : params.keySet()) {
+            httpRequest.setParameters(key, params.get(key));
         }
-        catch (URISyntaxException e) {
-            throw new IllegalArgumentException("Illegal URI " + split[1]);
-        }
-        message = new HttpRequestImpl(HttpVersion.getProtocol(split[2]), HttpMethod.valueOf(split[0]), uri);
     }
 }

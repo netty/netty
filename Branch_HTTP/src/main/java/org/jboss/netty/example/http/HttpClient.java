@@ -70,15 +70,17 @@ public class HttpClient {
         }
         String message = "It's Hello From me";
         ChannelBuffer buf = ChannelBuffers.wrappedBuffer(message.getBytes());
-        HttpRequest request = new HttpRequestImpl(HttpVersion.HTTP_1_0, HttpMethod.GET, new URI("/netty/"));
+        HttpRequest request = new HttpRequestImpl(HttpVersion.HTTP_1_0, HttpMethod.GET, "/netty/");
         request.addHeader(HttpHeaders.HOST, host);
         request.addHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buf.writerIndex()));
         request.setContent(buf);
         ChannelFuture lastWriteFuture = channel.write(request);
         buf = ChannelBuffers.wrappedBuffer(message.getBytes());
-        request = new HttpRequestImpl(HttpVersion.HTTP_1_0, HttpMethod.GET, new URI("/netty/"));
+        request = new HttpRequestImpl(HttpVersion.HTTP_1_0, HttpMethod.GET, "/netty/");
         request.addHeader(HttpHeaders.HOST, host);
         request.addHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buf.writerIndex()));
+        request.addParameter("testparam", "hey ho");
+        request.addParameter("testparam2", "hey ho again");
         request.setContent(buf);
         lastWriteFuture = channel.write(request);
         lastWriteFuture.awaitUninterruptibly();

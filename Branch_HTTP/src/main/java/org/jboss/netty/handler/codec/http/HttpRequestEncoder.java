@@ -23,6 +23,10 @@ package org.jboss.netty.handler.codec.http;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import static org.jboss.netty.util.HttpCodecUtil.*;
+import org.jboss.netty.util.UriBuilder;
+
+import java.util.Set;
+import java.util.List;
 
 /**
  * encodes an http request
@@ -36,11 +40,19 @@ public class HttpRequestEncoder extends HttpMessageEncoder {
      * @param buf
      * @param message
      */
-    public void encodeInitialLine(ChannelBuffer buf, HttpMessage message) {
+    public void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception {
         HttpRequest request = (HttpRequest) message;
         buf.writeBytes(request.getMethod().getMethod().getBytes());
         buf.writeByte(SP);
-        buf.writeBytes(request.getURI().toASCIIString().getBytes());
+        UriBuilder uriBuilder = new UriBuilder(request.getPath());
+        Set<String> paramNames = request.getParameterNames();
+        for (String paramName : paramNames) {
+            List<String> values = request.getParameters(paramName);
+            for (String value : values) {
+                uriBuilder.addParam(paramName, value);
+            }
+        }
+        buf.writeBytes(uriBuilder.toUri().toASCIIString().getBytes());
         buf.writeByte(SP);
         buf.writeBytes(request.getProtocolVersion().getVersion().getBytes());
         buf.writeBytes(CRLF);
