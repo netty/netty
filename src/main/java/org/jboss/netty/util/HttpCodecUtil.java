@@ -27,7 +27,10 @@ package org.jboss.netty.util;
 public class HttpCodecUtil
 {
    //space ' '
-   public static final byte SPACE = 32;
+   public static final byte SP = 32;
+
+    //tab ' '
+    public static final byte HT = 9;
 
    /**
     * Carriage return

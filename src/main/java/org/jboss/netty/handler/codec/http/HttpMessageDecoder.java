@@ -28,6 +28,8 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.util.HttpCodecUtil;
 
+import java.util.List;
+
 /**
  * Decodes an Http type message.
  *
@@ -142,10 +144,22 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     private void readHeaders(ChannelBuffer buffer) {
+        message.clearHeaders();
         String line = readIntoCurrentLine(buffer);
+        String lastHeader = null;
         while (!line.equals("")) {
-            String[] header = splitHeader(line);
-            message.addHeader(header[0], header[1]);
+            if (line.startsWith(" ") || line.startsWith("\t")) {
+                List<String> current = message.getHeaders(lastHeader);
+                int lastPos = current.size() - 1;
+                String newString = current.get(lastPos) + line.trim();
+                current.remove(lastPos);
+                current.add(newString);
+            }
+            else {
+                String[] header = splitHeader(line);
+                message.addHeader(header[0], header[1]);
+                lastHeader = header[0];
+            }
             line = readIntoCurrentLine(buffer);
         }
         ResponseState nextState;
@@ -164,7 +178,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     abstract void readInitial(ChannelBuffer buffer);
 
     private int getChunkSize(String hex) {
-        return Integer.valueOf(hex, 16).intValue();
+        return Integer.valueOf(hex, 16);
     }
 
     protected String readIntoCurrentLine(ChannelBuffer channel) {
@@ -198,6 +212,15 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         if (split.length != 2) {
             throw new IllegalArgumentException(sb + "does not contain all 2 parts");
         }
+        for (int i = 0; i < split.length; i++) {
+            split[i] = split[i].trim();
+        }
+        return split;
+    }
+
+
+    private String[] splitHeaderValues(String s) {
+        String[] split = s.split(",");
         for (int i = 0; i < split.length; i++) {
             split[i] = split[i].trim();
         }

@@ -30,13 +30,14 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import static org.jboss.netty.util.HttpCodecUtil.CRLF;
 import static org.jboss.netty.util.HttpCodecUtil.COLON;
-import static org.jboss.netty.util.HttpCodecUtil.SPACE;
+import static org.jboss.netty.util.HttpCodecUtil.SP;
 
 import java.util.Set;
-import java.nio.charset.Charset;
+import java.util.List;
 
 /**
  * encodes an http message
+ *
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 @ChannelPipelineCoverage("one")
@@ -68,13 +69,17 @@ public abstract class HttpMessageEncoder extends SimpleChannelHandler {
     public void encodeHeaders(ChannelBuffer buf, HttpMessage message) {
         Set<String> headers = message.getHeaders();
         for (String header : headers) {
-            buf.writeBytes(header.getBytes());
-            buf.writeByte(COLON);
-            buf.writeByte(SPACE);
-            buf.writeBytes(message.getHeader(header).getBytes());
-            buf.writeBytes(CRLF);
+            List<String> values = message.getHeaders(header);
+            for (String value : values) {
+
+                buf.writeBytes(header.getBytes());
+                buf.writeByte(COLON);
+                buf.writeByte(SP);
+                buf.writeBytes(value.getBytes());
+                buf.writeBytes(CRLF);
+            }
         }
     }
-     
+
     abstract void encodeInitialLine(ChannelBuffer buf, HttpMessage message);
 }
