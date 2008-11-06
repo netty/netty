@@ -50,6 +50,9 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
+import org.jboss.netty.handler.execution.ExecutionHandler;
+import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -92,8 +95,23 @@ public abstract class AbstractSocketSslEchoTest {
         }
     }
 
+    private ExecutorService extraExecutor = null;
+
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
+    
+    protected boolean isExecutorRequired() {
+        return false;
+    }
+    
+    @After
+    public void shutdownExtraExecutor() {
+        if (extraExecutor != null) {
+            extraExecutor.shutdownNow();
+            extraExecutor = null;
+        }
+
+    }
 
     @Test
     public void testSslEcho() throws Throwable {
@@ -116,6 +134,12 @@ public abstract class AbstractSocketSslEchoTest {
         sb.getPipeline().addLast("handler", sh);
         cb.getPipeline().addFirst("ssl", new SslHandler(cse));
         cb.getPipeline().addLast("handler", ch);
+        
+        if (isExecutorRequired()) {
+            extraExecutor = new OrderedMemoryAwareThreadPoolExecutor(16, 0, 0);
+            sb.getPipeline().addFirst("executor",new ExecutionHandler(extraExecutor));
+            cb.getPipeline().addFirst("executor",new ExecutionHandler(extraExecutor));
+        }
 
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();

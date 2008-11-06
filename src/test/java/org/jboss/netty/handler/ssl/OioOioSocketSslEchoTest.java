@@ -46,4 +46,9 @@ public class OioOioSocketSslEchoTest extends AbstractSocketSslEchoTest {
     protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
         return new OioServerSocketChannelFactory(executor, executor);
     }
+
+    @Override
+    protected boolean isExecutorRequired() {
+        return true;
+    }
 }
