@@ -33,24 +33,24 @@ public enum HttpVersion {
 
     UNKNOWN("UNKNOWN"),;
 
-    private String protocol;
+    private String version;
 
-    private HttpVersion(String protocol) {
-        this.protocol = protocol;
+    private HttpVersion(String version) {
+        this.version = version;
     }
 
-    public String getProtocol() {
-        return protocol;
+    public String getVersion() {
+        return version;
     }
 
     public static HttpVersion getProtocol(String protocol) {
         if (protocol == null) {
             return UNKNOWN;
         }
-        else if (protocol.equals(HTTP_1_0.getProtocol())) {
+        else if (protocol.equals(HTTP_1_0.getVersion())) {
             return HTTP_1_0;
         }
-        else if (protocol.equals(HTTP_1_1.getProtocol())) {
+        else if (protocol.equals(HTTP_1_1.getVersion())) {
             return HTTP_1_1;
         }
         else {

@@ -28,6 +28,8 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.TreeMap;
+import java.util.Comparator;
 
 /**
  * a default Http Message which holds the headers and body.
@@ -35,7 +37,9 @@ import java.util.ArrayList;
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public class HttpMessageImpl implements HttpMessage {
-    Map<String, List<String>> headers = new HashMap<String, List<String>>();
+    private final static Comparator<String> caseIgnoringComparator = new CaseIgnoringComparator();
+
+    Map<String, List<String>> headers = new TreeMap<String, List<String>>(caseIgnoringComparator);
 
     private ChannelBuffer content;
 
@@ -56,7 +60,7 @@ public class HttpMessageImpl implements HttpMessage {
     }
 
     public void setHeader(final String name, final List<String> values) {
-        if(values == null || values.size() == 0) {
+        if (values == null || values.size() == 0) {
             throw new NullPointerException("no values present");
         }
         headers.put(name, values);
@@ -106,5 +110,11 @@ public class HttpMessageImpl implements HttpMessage {
 
     public ChannelBuffer getContent() {
         return content;
+    }
+
+    static class CaseIgnoringComparator implements Comparator<String> {
+        public int compare(String o1, String o2) {
+            return o1.compareToIgnoreCase(o2);
+        }
     }
 }

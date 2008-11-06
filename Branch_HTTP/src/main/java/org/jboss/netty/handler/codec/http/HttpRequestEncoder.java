@@ -39,10 +39,10 @@ public class HttpRequestEncoder extends HttpMessageEncoder {
     public void encodeInitialLine(ChannelBuffer buf, HttpMessage message) {
         HttpRequest request = (HttpRequest) message;
         buf.writeBytes(request.getMethod().getMethod().getBytes());
-        buf.writeByte(SPACE);
+        buf.writeByte(SP);
         buf.writeBytes(request.getURI().toASCIIString().getBytes());
-        buf.writeByte(SPACE);
-        buf.writeBytes(request.getProtocolVersion().getProtocol().getBytes());
+        buf.writeByte(SP);
+        buf.writeBytes(request.getProtocolVersion().getVersion().getBytes());
         buf.writeBytes(CRLF);
     }
 

@@ -29,86 +29,86 @@ import java.util.HashMap;
  *
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public enum HttpResponseStatusCode {
-    CONTINUE(100, "Continue"),
+public class HttpResponseStatusCode {
+    public static final HttpResponseStatusCode CONTINUE = new HttpResponseStatusCode(100, "Continue");
 
-    SWITCHING_PROTOCOLS(101, "Switching Protocols"),
+    public static final HttpResponseStatusCode SWITCHING_PROTOCOLS = new HttpResponseStatusCode(101, "Switching Protocols");
 
-    OK(200, "OK"),
+    public static final HttpResponseStatusCode OK = new HttpResponseStatusCode(200, "OK");
 
-    CREATED(201, "Created"),
+    public static final HttpResponseStatusCode CREATED = new HttpResponseStatusCode(201, "Created");
 
-    ACCEPTED(202, "Accepted"),
+    public static final HttpResponseStatusCode ACCEPTED = new HttpResponseStatusCode(202, "Accepted");
 
-    NON_AUTHORITATIVE_INFORMATION(203, "Non-Authoritative Information"),
+    public static final HttpResponseStatusCode NON_AUTHORITATIVE_INFORMATION = new HttpResponseStatusCode(203, "Non-Authoritative Information");
 
-    NO_CONTENT(204, "No Content"),
+    public static final HttpResponseStatusCode NO_CONTENT = new HttpResponseStatusCode(204, "No Content");
 
-    RESET_CONTENT(205, "Reset Content"),
+    public static final HttpResponseStatusCode RESET_CONTENT = new HttpResponseStatusCode(205, "Reset Content");
 
-    PARTIAL_CONTENT(206, "Partial Content"),
+    public static final HttpResponseStatusCode PARTIAL_CONTENT = new HttpResponseStatusCode(206, "Partial Content");
 
-    MULTIPLE_CHOICES(300, "Multiple Choices"),
+    public static final HttpResponseStatusCode MULTIPLE_CHOICES = new HttpResponseStatusCode(300, "Multiple Choices");
 
-    MOVED_PERMANENTLY(301, "Moved Permanently"),
+    public static final HttpResponseStatusCode MOVED_PERMANENTLY = new HttpResponseStatusCode(301, "Moved Permanently");
 
-    FOUND(302, "Found"),
+    public static final HttpResponseStatusCode FOUND = new HttpResponseStatusCode(302, "Found");
 
-    SEE_OTHER(303, "See Other"),
+    public static final HttpResponseStatusCode SEE_OTHER = new HttpResponseStatusCode(303, "See Other");
 
-    NOT_MODIFIED(304, "Not Modified"),
+    public static final HttpResponseStatusCode NOT_MODIFIED = new HttpResponseStatusCode(304, "Not Modified");
 
-    USE_PROXY(305, "Use Proxy"),
+    public static final HttpResponseStatusCode USE_PROXY = new HttpResponseStatusCode(305, "Use Proxy");
 
-    TEMPORARY_REDIRECT(307, "Temporary Redirect"),
+    public static final HttpResponseStatusCode TEMPORARY_REDIRECT = new HttpResponseStatusCode(307, "Temporary Redirect");
 
-    BAD_REQUEST(400, "Bad Request"),
+    public static final HttpResponseStatusCode BAD_REQUEST = new HttpResponseStatusCode(400, "Bad Request");
 
-    UNUATHORIZED(401, "Unauthorized"),
+    public static final HttpResponseStatusCode UNUATHORIZED = new HttpResponseStatusCode(401, "Unauthorized");
 
-    PAYMENT_REQUIRED(402, "Payment Required"),
+    public static final HttpResponseStatusCode PAYMENT_REQUIRED = new HttpResponseStatusCode(402, "Payment Required");
 
-    FORBIDDEN(403, "Forbidden"),
+    public static final HttpResponseStatusCode FORBIDDEN = new HttpResponseStatusCode(403, "Forbidden");
 
-    NOT_FOUND(404, "Not Found"),
+    public static final HttpResponseStatusCode NOT_FOUND = new HttpResponseStatusCode(404, "Not Found");
 
-    METHOD_NOT_ALLOWED(405, "Method Not Allowed"),
+    public static final HttpResponseStatusCode METHOD_NOT_ALLOWED = new HttpResponseStatusCode(405, "Method Not Allowed");
 
-    NOT_ACCEPTABLE(406, "Not Acceptable"),
+    public static final HttpResponseStatusCode NOT_ACCEPTABLE = new HttpResponseStatusCode(406, "Not Acceptable");
 
-    PROXY_AUTHENTICATION_REQUIRED(407, "Proxy Authentication Required"),
+    public static final HttpResponseStatusCode PROXY_AUTHENTICATION_REQUIRED = new HttpResponseStatusCode(407, "Proxy Authentication Required");
 
-    REQUEST_TIMEOUT(408, "Request Timeout"),
+    public static final HttpResponseStatusCode REQUEST_TIMEOUT = new HttpResponseStatusCode(408, "Request Timeout");
 
-    CONFLICT(409, "Conflict"),
+    public static final HttpResponseStatusCode CONFLICT = new HttpResponseStatusCode(409, "Conflict");
 
-    GONE(410, "Gone"),
+    public static final HttpResponseStatusCode GONE = new HttpResponseStatusCode(410, "Gone");
 
-    LENGTH_REQUIRED(411, "Length Required"),
+    public static final HttpResponseStatusCode LENGTH_REQUIRED = new HttpResponseStatusCode(411, "Length Required");
 
-    PRECONDITION_FAILED(412, "Precondition Failed"),
+    public static final HttpResponseStatusCode PRECONDITION_FAILED = new HttpResponseStatusCode(412, "Precondition Failed");
 
-    REQUEST_ENTITY_TOO_LARGE(413, "Request Entity Too Large"),
+    public static final HttpResponseStatusCode REQUEST_ENTITY_TOO_LARGE = new HttpResponseStatusCode(413, "Request Entity Too Large");
 
-    REQUEST_URI_TOO_LONG(414, "Request-URI Too Long"),
+    public static final HttpResponseStatusCode REQUEST_URI_TOO_LONG = new HttpResponseStatusCode(414, "Request-URI Too Long");
 
-    UNSUPPORTED_MEDIA_TYPE(415, "Unsupported Media Type"),
+    public static final HttpResponseStatusCode UNSUPPORTED_MEDIA_TYPE = new HttpResponseStatusCode(415, "Unsupported Media Type");
 
-    REQUESTED_RANGE_NOT_SATISFIABLE(416, "Requested Range Not Satisfiable"),
+    public static final HttpResponseStatusCode REQUESTED_RANGE_NOT_SATISFIABLE = new HttpResponseStatusCode(416, "Requested Range Not Satisfiable");
 
-    EXPECTATION_FAILED(417, "Expectation Failed"),
+    public static final HttpResponseStatusCode EXPECTATION_FAILED = new HttpResponseStatusCode(417, "Expectation Failed");
 
-    INTERNAL_SERVER_ERROR(500, "Internal Server Error"),
+    public static final HttpResponseStatusCode INTERNAL_SERVER_ERROR = new HttpResponseStatusCode(500, "Internal Server Error");
 
-    NOT_IMPLEMENTED(501, "Not Implemented"),
+    public static final HttpResponseStatusCode NOT_IMPLEMENTED = new HttpResponseStatusCode(501, "Not Implemented");
 
-    BAD_GATEWAY(502, "Bad Gateway"),
+    public static final HttpResponseStatusCode BAD_GATEWAY = new HttpResponseStatusCode(502, "Bad Gateway");
 
-    SERVICE_UNAVAILABLE(503, "Service Unavailable"),
+    public static final HttpResponseStatusCode SERVICE_UNAVAILABLE = new HttpResponseStatusCode(503, "Service Unavailable");
 
-    GATEWAY_TIMEOUT(504, "Gateway Timeout"),
+    public static final HttpResponseStatusCode GATEWAY_TIMEOUT = new HttpResponseStatusCode(504, "Gateway Timeout");
 
-    HTTP_VERSION_NOT_SUPPORTED(505, "HTTP Version Not Supported"),;
+    public static final HttpResponseStatusCode HTTP_VERSION_NOT_SUPPORTED = new HttpResponseStatusCode(505, "HTTP Version Not Supported");;
 
     private static Map<Integer, HttpResponseStatusCode> RESPONSE_MAP = new HashMap<Integer, HttpResponseStatusCode>();
 
@@ -163,20 +163,11 @@ public enum HttpResponseStatusCode {
         return code;
     }
 
-    public static HttpResponseStatusCode getResponseStatusCode(int id, String reason) {
-        HttpResponseStatusCode code = RESPONSE_MAP.get(id);
-        if (code == null) {
-            throw new IllegalArgumentException("Invalid Response Status");
-        }
-        code.description = reason;
-        return code;
-    }
-
     private int code;
 
     private String description;
 
-    private HttpResponseStatusCode(int code, String description) {
+    public HttpResponseStatusCode(int code, String description) {
         this.code = code;
         this.description = description;
     }
