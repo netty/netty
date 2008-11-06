@@ -114,9 +114,11 @@ class NioWorker implements Runnable {
                         Thread.yield();
                         selector = this.selector;
                     } while (selector == null && started.get());
-                }
-                
-                if (selector != null) {
+                    
+                    if (selector != null) {
+                        break;
+                    }
+                } else {
                     break;
                 }
             }
