@@ -86,30 +86,39 @@ class NioWorker implements Runnable {
     }
 
     void register(NioSocketChannel channel, ChannelFuture future) {
-        boolean firstChannel = started.compareAndSet(false, true);
+        boolean firstChannel;
         Selector selector;
-        if (firstChannel) {
-            boolean success = false;
-            selectorGuard.writeLock().lock();
-            try {
-                this.selector = selector = Selector.open();
-                success = true;
-            } catch (IOException e) {
-                throw new ChannelException(
-                        "Failed to create a selector.", e);
-            } finally {
-                selectorGuard.writeLock().unlock();
-                if (!success) {
-                    started.compareAndSet(true, false);
+        for (;;) {
+            firstChannel = started.compareAndSet(false, true);
+            if (firstChannel) {
+                boolean success = false;
+                selectorGuard.writeLock().lock();
+                try {
+                    this.selector = selector = Selector.open();
+                    success = true;
+                } catch (IOException e) {
+                    throw new ChannelException(
+                            "Failed to create a selector.", e);
+                } finally {
+                    selectorGuard.writeLock().unlock();
+                    if (!success) {
+                        started.compareAndSet(true, false);
+                    }
                 }
-            }
-        } else {
-            selector = this.selector;
-            if (selector == null) {
-                do {
-                    Thread.yield();
-                    selector = this.selector;
-                } while (selector == null);
+                
+                break;
+            } else {
+                selector = this.selector;
+                if (selector == null) {
+                    do {
+                        Thread.yield();
+                        selector = this.selector;
+                    } while (selector == null && started.get());
+                }
+                
+                if (selector != null) {
+                    break;
+                }
             }
         }
 
