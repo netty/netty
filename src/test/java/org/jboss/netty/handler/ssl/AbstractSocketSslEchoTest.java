@@ -71,6 +71,7 @@ public abstract class AbstractSocketSslEchoTest {
     static final byte[] data = new byte[1048576];
 
     private static ExecutorService executor;
+    private static ExecutorService eventExecutor;
 
     static {
         random.nextBytes(data);
@@ -79,6 +80,7 @@ public abstract class AbstractSocketSslEchoTest {
     @BeforeClass
     public static void init() {
         executor = Executors.newCachedThreadPool();
+        eventExecutor = new OrderedMemoryAwareThreadPoolExecutor(16, 0, 0);
     }
 
     @AfterClass
@@ -93,9 +95,17 @@ public abstract class AbstractSocketSslEchoTest {
                 // Ignore.
             }
         }
+        eventExecutor.shutdownNow();
+        for (;;) {
+            try {
+                if (eventExecutor.awaitTermination(1, TimeUnit.MILLISECONDS)) {
+                    break;
+                }
+            } catch (InterruptedException e) {
+                // Ignore.
+            }
+        }
     }
-
-    private ExecutorService extraExecutor = null;
 
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
@@ -104,15 +114,6 @@ public abstract class AbstractSocketSslEchoTest {
         return false;
     }
     
-    @After
-    public void shutdownExtraExecutor() {
-        if (extraExecutor != null) {
-            extraExecutor.shutdownNow();
-            extraExecutor = null;
-        }
-
-    }
-
     @Test
     public void testSslEcho() throws Throwable {
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
@@ -136,9 +137,8 @@ public abstract class AbstractSocketSslEchoTest {
         cb.getPipeline().addLast("handler", ch);
         
         if (isExecutorRequired()) {
-            extraExecutor = new OrderedMemoryAwareThreadPoolExecutor(16, 0, 0);
-            sb.getPipeline().addFirst("executor",new ExecutionHandler(extraExecutor));
-            cb.getPipeline().addFirst("executor",new ExecutionHandler(extraExecutor));
+            sb.getPipeline().addFirst("executor",new ExecutionHandler(eventExecutor));
+            cb.getPipeline().addFirst("executor",new ExecutionHandler(eventExecutor));
         }
 
         Channel sc = sb.bind(new InetSocketAddress(0));
