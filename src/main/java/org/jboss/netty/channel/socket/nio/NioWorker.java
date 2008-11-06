@@ -828,7 +828,7 @@ class NioWorker implements Runnable {
         }
     }
 
-    private class RegisterTask implements Runnable {
+    private static class RegisterTask implements Runnable {
         private final Selector selector;
         private final NioSocketChannel channel;
         private final ChannelFuture future;
