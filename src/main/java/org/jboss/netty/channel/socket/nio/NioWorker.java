@@ -386,9 +386,9 @@ class NioWorker implements Runnable {
                     if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
                         worker.writeTaskQueue.offer(channel.writeTask);
                     }
-                    if (worker.wakenUp.compareAndSet(false, true)) {
-                        Selector workerSelector = worker.selector;
-                        if (workerSelector != null) {
+                    Selector workerSelector = worker.selector;
+                    if (workerSelector != null) {
+                        if (worker.wakenUp.compareAndSet(false, true)) {
                             workerSelector.wakeup();
                         }
                     }
