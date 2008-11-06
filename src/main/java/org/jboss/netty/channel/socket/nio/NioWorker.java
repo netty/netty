@@ -89,11 +89,14 @@ class NioWorker implements Runnable {
         boolean firstChannel = started.compareAndSet(false, true);
         Selector selector;
         if (firstChannel) {
+            selectorGuard.writeLock().lock();
             try {
                 this.selector = selector = Selector.open();
             } catch (IOException e) {
                 throw new ChannelException(
                         "Failed to create a selector.", e);
+            } finally {
+                selectorGuard.writeLock().unlock();
             }
         } else {
             selector = this.selector;
