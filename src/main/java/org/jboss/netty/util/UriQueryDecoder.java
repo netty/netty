@@ -63,7 +63,7 @@ public class UriQueryDecoder {
         path = split[0];
         decodeParams(split[1]);
     }
-
+    //todo - just replacing spaces at the minute, should we check for all characters or leave this to the user?
     private void decodeParams(String s) {
         String[] params = s.split("&");
         for (String param : params) {
