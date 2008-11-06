@@ -79,6 +79,8 @@ class NioWorker implements Runnable {
     private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
     private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
 
+    final Object registerLock = new Object();
+
     NioWorker(int bossId, int id, Executor executor) {
         this.bossId = bossId;
         this.id = id;
@@ -92,15 +94,15 @@ class NioWorker implements Runnable {
             firstChannel = started.compareAndSet(false, true);
             if (firstChannel) {
                 boolean success = false;
-                selectorGuard.writeLock().lock();
                 try {
-                    this.selector = selector = Selector.open();
+                    synchronized (registerLock) {
+                        this.selector = selector = Selector.open();
+                    }
                     success = true;
                 } catch (IOException e) {
                     throw new ChannelException(
                             "Failed to create a selector.", e);
                 } finally {
-                    selectorGuard.writeLock().unlock();
                     if (!success) {
                         started.compareAndSet(true, false);
                     }
@@ -847,7 +849,7 @@ class NioWorker implements Runnable {
         }
     }
 
-    private static class RegisterTask implements Runnable {
+    private class RegisterTask implements Runnable {
         private final Selector selector;
         private final NioSocketChannel channel;
         private final ChannelFuture future;
@@ -865,7 +867,9 @@ class NioWorker implements Runnable {
 
         public void run() {
             try {
-                channel.socket.register(selector, SelectionKey.OP_READ, channel);
+                synchronized (registerLock) {
+                    channel.socket.register(selector, SelectionKey.OP_READ, channel);
+                }
                 if (future != null) {
                     future.setSuccess();
                 }
