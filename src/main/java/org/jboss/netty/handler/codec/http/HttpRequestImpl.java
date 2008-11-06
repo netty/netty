@@ -37,13 +37,12 @@ public class HttpRequestImpl extends HttpMessageImpl implements HttpRequest {
 
     private final HttpMethod method;
 
+    private final String path;
 
-    private final URI uri;
-
-    public HttpRequestImpl(HttpVersion httpVersion, HttpMethod method, URI uri) {
+    public HttpRequestImpl(HttpVersion httpVersion, HttpMethod method, String path) {
         super(httpVersion);
         this.method = method;
-        this.uri = uri;
+        this.path = path;
     }
 
     public void addParameter(final String name, final String val) {
@@ -71,8 +70,8 @@ public class HttpRequestImpl extends HttpMessageImpl implements HttpRequest {
         return method;
     }
 
-    public URI getURI() {
-        return uri;
+    public String getPath() {
+        return path;
     }
 
     public String getParameter(final String name) {

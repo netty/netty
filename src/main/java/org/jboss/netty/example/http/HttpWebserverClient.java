@@ -64,7 +64,7 @@ public class HttpWebserverClient {
             future.getCause().printStackTrace();
             System.exit(0);
         }
-        HttpRequest request = new HttpRequestImpl(HttpVersion.HTTP_1_0, HttpMethod.GET, new URI("/netty/"));
+        HttpRequest request = new HttpRequestImpl(HttpVersion.HTTP_1_0, HttpMethod.GET, "/netty/");
         request.addHeader(HttpHeaders.HOST, host);
         ChannelFuture lastWriteFuture = channel.write(request);
         lastWriteFuture.awaitUninterruptibly();
