@@ -29,7 +29,6 @@ import java.net.InetAddress;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Generates a time-based {@link UUID}.  Please note that this generator
@@ -45,8 +44,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  */
 public class TimeBasedUuidGenerator {
-    private static final AtomicInteger SEQUENCE = new AtomicInteger((int) System.nanoTime());
+
     private static final long NODE;
+    private static final Object counterLock = new Object();
+    private static long timestamp = System.currentTimeMillis();
+    private static int  clockSeq = (int) System.nanoTime();
 
     static {
         // Generate nodeKey - we can't use MAC address to support Java 5.
@@ -123,12 +125,24 @@ public class TimeBasedUuidGenerator {
      * Returns a new time-based {@link UUID}.
      */
     public static UUID generate() {
-        long time = System.currentTimeMillis();
-        int clockSeq = TimeBasedUuidGenerator.SEQUENCE.getAndIncrement();
+        final long ts;
+        final int  cs;
+        synchronized (counterLock) {
+            cs = (clockSeq ++) & 0x3FFF; // 0~16383
+            if (cs == 0) {
+                // Not all platform has millisecond precision for
+                // System.currentTimeMillis() - Just focus on generating
+                // unique IDs instead of using correct timestamp.
+                ts = ++ timestamp;
+            } else {
+                ts = timestamp;
+            }
+        }
 
-        long msb = (time & 0xFFFFFFFFL) << 32 | (time >>> 32 & 0xFFFF) << 16 |
-                    time >>> 48 & 0xFFFF;
-        long lsb = (long) clockSeq << 48 | NODE;
+        long msb = (ts & 0xFFFFFFFFL) << 32 |
+                   (ts >>> 32 & 0xFFFF) << 16 |
+                    ts >>> 48 & 0xFFFF;
+        long lsb = (long) cs << 48 | NODE;
 
         // Set to version 1 (i.e. time-based UUID)
         msb = msb & 0xFFFFFFFFFFFF0FFFL | 0x0000000000001000L;
