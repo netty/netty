@@ -50,8 +50,8 @@ public class DefaultChannelFuture implements ChannelFuture {
     private final Channel channel;
     private final boolean cancellable;
 
-    private ChannelFutureListener firstListener;
-    private List<ChannelFutureListener> otherListeners;
+    private volatile ChannelFutureListener firstListener;
+    private volatile List<ChannelFutureListener> otherListeners;
     private boolean done;
     private Throwable cause;
     private int waiters;
