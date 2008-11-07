@@ -378,6 +378,11 @@ class NioWorker implements Runnable {
     }
 
     static void write(final NioSocketChannel channel, boolean mightNeedWakeup) {
+        if (!channel.isConnected()) {
+            cleanUpWriteBuffer(channel);
+            return;
+        }
+
         if (mightNeedWakeup) {
             NioWorker worker = channel.getWorker();
             if (worker != null) {
@@ -395,11 +400,6 @@ class NioWorker implements Runnable {
                     return;
                 }
             }
-        }
-
-        if (!channel.isConnected()) {
-            cleanUpWriteBuffer(channel);
-            return;
         }
 
         final NioSocketChannelConfig cfg = channel.getConfig();
