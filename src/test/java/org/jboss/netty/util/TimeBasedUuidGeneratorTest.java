@@ -59,7 +59,9 @@ public class TimeBasedUuidGeneratorTest {
         Collections.sort(uuids);
 
         for (int i = 1; i < COUNT; i ++) {
-            assertFalse(uuids.toString(), uuids.get(i - 1).equals(uuids.get(i)));
+            UUID a = uuids.get(i - 1);
+            UUID b = uuids.get(i);
+            assertFalse("Duplicate UUID: " + a.toString(), a.equals(b));
         }
     }
 }
