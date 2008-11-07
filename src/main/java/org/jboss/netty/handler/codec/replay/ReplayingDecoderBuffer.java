@@ -57,6 +57,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     public void clear() {
         reject();
     }
+    
+    @Override
+    public boolean equals(Object obj) {
+        return this == obj;
+    }
 
     public int compareTo(ChannelBuffer buffer) {
         reject();
