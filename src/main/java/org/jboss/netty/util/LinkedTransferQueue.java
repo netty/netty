@@ -128,7 +128,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
         private static final long serialVersionUID = 5925596372370723938L;
 
         volatile QNode next;
-        volatile Thread waiter;       // to control park/unpark
+        transient volatile Thread waiter;       // to control park/unpark
         final boolean isData;
 
         QNode(Object item, boolean isData) {

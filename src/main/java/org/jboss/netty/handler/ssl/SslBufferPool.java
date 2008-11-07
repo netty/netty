@@ -77,7 +77,6 @@ public class SslBufferPool {
         if (maxPoolSize % MAX_PACKET_SIZE != 0) {
             maxBufferCount ++;
         }
-        maxPoolSize = maxBufferCount * MAX_PACKET_SIZE;
 
         pool = new ByteBuffer[maxBufferCount];
         this.maxBufferCount = maxBufferCount;

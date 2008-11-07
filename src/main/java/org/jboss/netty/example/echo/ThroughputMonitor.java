@@ -53,7 +53,7 @@ public class ThroughputMonitor extends Thread {
             long newCounter = handler.getTransferredBytes();
             System.err.format(
                     "%4.3f MiB/s%n",
-                    (newCounter - oldCounter) * 1000 / (endTime - startTime) /
+                    (newCounter - oldCounter) * 1000.0 / (endTime - startTime) /
                     1048576.0);
             oldCounter = newCounter;
             startTime = endTime;

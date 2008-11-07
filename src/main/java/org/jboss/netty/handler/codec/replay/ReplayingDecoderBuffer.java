@@ -178,7 +178,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public int indexOf(int fromIndex, int toIndex, byte value) {
-        int endIndex = indexOf(buffer.readerIndex(), buffer.writerIndex(), value);
+        int endIndex = buffer.indexOf(buffer.readerIndex(), buffer.writerIndex(), value);
         if (endIndex < 0) {
             throw REPLAY;
         }
@@ -187,7 +187,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public int indexOf(int fromIndex, int toIndex,
             ChannelBufferIndexFinder indexFinder) {
-        int endIndex = indexOf(buffer.readerIndex(), buffer.writerIndex(), indexFinder);
+        int endIndex = buffer.indexOf(buffer.readerIndex(), buffer.writerIndex(), indexFinder);
         if (endIndex < 0) {
             throw REPLAY;
         }

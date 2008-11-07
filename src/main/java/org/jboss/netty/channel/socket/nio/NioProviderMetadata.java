@@ -184,6 +184,11 @@ class NioProviderMetadata {
                     if (provider.equals("sun.nio.ch.PollSelectorProvider")) {
                         return 1;
                     }
+                } else if (version.equals("1.6") || version.matches("^1\\.6\\D.*$")) {
+                    if (provider.equals("sun.nio.ch.EPollSelectorProvider") ||
+                        provider.equals("sun.nio.ch.PollSelectorProvider")) {
+                        return 2;
+                    }
                 }
             }
         // BEA

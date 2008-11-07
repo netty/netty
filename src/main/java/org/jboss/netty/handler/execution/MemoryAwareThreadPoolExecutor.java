@@ -37,6 +37,8 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.LinkedTransferQueue;
 
 /**
@@ -81,6 +83,9 @@ import org.jboss.netty.util.LinkedTransferQueue;
  */
 public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
+    private static final InternalLogger logger = 
+        InternalLoggerFactory.getInstance(MemoryAwareThreadPoolExecutor.class);
+    
     private volatile Settings settings = new Settings(0, 0);
 
     // XXX Can be changed in runtime now.  Make it mutable in 3.1.
@@ -174,8 +179,11 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         try {
             Method m = getClass().getMethod("allowCoreThreadTimeOut", new Class[] { boolean.class });
             m.invoke(this, Boolean.TRUE);
-        } catch (Exception e) {
+        } catch (Throwable t) {
             // Java 5
+            logger.debug(
+                    "ThreadPoolExecutor.allowCoreThreadTimeOut() is not " +
+                    "supported in this platform.");
         }
 
         setMaxChannelMemorySize(maxChannelMemorySize);

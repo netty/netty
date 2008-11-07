@@ -616,6 +616,8 @@ public class SslHandler extends FrameDecoder {
                     break;
                 case FINISHED:
                     setHandshakeSuccess(channel);
+                    wrap(ctx, channel);
+                    break loop;
                 case NOT_HANDSHAKING:
                     wrap(ctx, channel);
                     break loop;

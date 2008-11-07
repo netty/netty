@@ -412,6 +412,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 return;
             } catch (Throwable t) {
                 notifyHandlerException(e, t);
+                return;
             }
         }
 
