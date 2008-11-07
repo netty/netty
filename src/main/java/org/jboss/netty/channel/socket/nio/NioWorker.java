@@ -93,7 +93,9 @@ class NioWorker implements Runnable {
             if (firstChannel) {
                 boolean success = false;
                 try {
-                    this.selector = selector = Selector.open();
+                    synchronized (shutdownLock) {
+                        this.selector = selector = Selector.open();
+                    }
                     success = true;
                 } catch (IOException e) {
                     throw new ChannelException(
@@ -176,6 +178,7 @@ class NioWorker implements Runnable {
 
                         synchronized (shutdownLock) {
                             if (registerTaskQueue.isEmpty() && selector.keys().isEmpty()) {
+                                started.set(false);
                                 try {
                                     selector.close();
                                 } catch (IOException e) {
@@ -184,7 +187,6 @@ class NioWorker implements Runnable {
                                 } finally {
                                     this.selector = null;
                                 }
-                                started.set(false);
                                 break;
                             } else {
                                 shutdown = false;
