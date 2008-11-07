@@ -79,8 +79,6 @@ class NioWorker implements Runnable {
     private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
     private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
 
-    final Object registerLock = new Object();
-
     NioWorker(int bossId, int id, Executor executor) {
         this.bossId = bossId;
         this.id = id;
@@ -95,9 +93,7 @@ class NioWorker implements Runnable {
             if (firstChannel) {
                 boolean success = false;
                 try {
-                    synchronized (registerLock) {
-                        this.selector = selector = Selector.open();
-                    }
+                    this.selector = selector = Selector.open();
                     success = true;
                 } catch (IOException e) {
                     throw new ChannelException(
@@ -117,7 +113,7 @@ class NioWorker implements Runnable {
                         selector = this.selector;
                     } while (selector == null && started.get());
                     
-                    if (selector != null) {
+                    if (selector != null && selector.isOpen()) {
                         break;
                     }
                 } else {
@@ -128,20 +124,19 @@ class NioWorker implements Runnable {
 
         boolean server = !(channel instanceof NioClientSocketChannel);
         Runnable registerTask = new RegisterTask(selector, channel, future, server);
+        synchronized (shutdownLock) {
+            registerTaskQueue.offer(registerTask);
+        }
+        if (wakenUp.compareAndSet(false, true)) {
+            selector.wakeup();
+        }
+
         if (firstChannel) {
-            registerTask.run();
             String threadName =
                 (server ? "New I/O server worker #"
                         : "New I/O client worker #") + bossId + '-' + id;
 
             executor.execute(new ThreadRenamingRunnable(this, threadName));
-        } else {
-            synchronized (shutdownLock) {
-                registerTaskQueue.offer(registerTask);
-            }
-            if (wakenUp.compareAndSet(false, true)) {
-                selector.wakeup();
-            }
         }
     }
 
@@ -870,9 +865,7 @@ class NioWorker implements Runnable {
 
         public void run() {
             try {
-                synchronized (registerLock) {
-                    channel.socket.register(selector, SelectionKey.OP_READ, channel);
-                }
+                channel.socket.register(selector, SelectionKey.OP_READ, channel);
                 if (future != null) {
                     future.setSuccess();
                 }
