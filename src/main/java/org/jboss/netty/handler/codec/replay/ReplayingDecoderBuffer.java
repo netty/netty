@@ -82,12 +82,6 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return null;
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        reject();
-        return false;
-    }
-
     public byte getByte(int index) {
         checkIndex(index);
         return buffer.getByte(index);
