@@ -59,10 +59,7 @@ public class TimeBasedUuidGeneratorTest {
         Collections.sort(uuids);
 
         for (int i = 1; i < COUNT; i ++) {
-            //assertFalse(uuids.get(i - 1).equals(uuids.get(i)));
-            if (uuids.get(i - 1).equals(uuids.get(i))) {
-                System.out.println("DOH");
-            }
+            assertFalse(uuids.toString(), uuids.get(i - 1).equals(uuids.get(i)));
         }
     }
 }
