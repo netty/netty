@@ -79,11 +79,11 @@ abstract class OioSocketChannel extends AbstractChannel
     }
 
     public boolean isBound() {
-        return isOpen() & socket.isBound();
+        return isOpen() && socket.isBound();
     }
 
     public boolean isConnected() {
-        return isOpen() & socket.isConnected();
+        return isOpen() && socket.isConnected();
     }
 
     @Override

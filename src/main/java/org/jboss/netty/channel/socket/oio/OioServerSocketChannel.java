@@ -102,7 +102,7 @@ class OioServerSocketChannel extends AbstractServerChannel
     }
 
     public boolean isBound() {
-        return isOpen() & socket.isBound();
+        return isOpen() && socket.isBound();
     }
 
     public boolean isConnected() {
