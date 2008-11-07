@@ -72,7 +72,7 @@ class NioWorker implements Runnable {
     private final Executor executor;
     private final AtomicBoolean started = new AtomicBoolean();
     private volatile Thread thread;
-    private volatile Selector selector;
+    volatile Selector selector;
     private final AtomicBoolean wakenUp = new AtomicBoolean();
     private final ReadWriteLock selectorGuard = new ReentrantReadWriteLock();
     private final Object shutdownLock = new Object();
@@ -123,7 +123,7 @@ class NioWorker implements Runnable {
         }
 
         boolean server = !(channel instanceof NioClientSocketChannel);
-        Runnable registerTask = new RegisterTask(selector, channel, future, server);
+        Runnable registerTask = new RegisterTask(channel, future, server);
         synchronized (shutdownLock) {
             registerTaskQueue.offer(registerTask);
         }
@@ -848,16 +848,13 @@ class NioWorker implements Runnable {
     }
 
     private class RegisterTask implements Runnable {
-        private final Selector selector;
         private final NioSocketChannel channel;
         private final ChannelFuture future;
         private final boolean server;
 
         RegisterTask(
-                Selector selector,
                 NioSocketChannel channel, ChannelFuture future, boolean server) {
 
-            this.selector = selector;
             this.channel = channel;
             this.future = future;
             this.server = server;
