@@ -82,7 +82,7 @@ public abstract class AbstractSocketServerBootstrapTest {
 
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
 
-    @Test(timeout = 10000, expected = ChannelException.class)
+    @Test(timeout = 30000, expected = ChannelException.class)
     public void testFailedBindAttempt() throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap();
         bootstrap.setFactory(newServerSocketChannelFactory(executor));
@@ -90,7 +90,7 @@ public abstract class AbstractSocketServerBootstrapTest {
         bootstrap.bind();
     }
 
-    @Test(timeout = 10000)
+    @Test(timeout = 30000)
     public void testSuccessfulBindAttempt() throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap(
                 newServerSocketChannelFactory(executor));
