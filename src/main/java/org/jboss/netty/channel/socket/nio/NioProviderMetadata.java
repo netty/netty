@@ -276,11 +276,11 @@ class NioProviderMetadata {
                     }
                 } while (!loop.selecting);
 
-                startTime = System.currentTimeMillis();
+                startTime = System.nanoTime();
                 key.interestOps(key.interestOps() | SelectionKey.OP_ACCEPT);
                 key.interestOps(key.interestOps() & ~SelectionKey.OP_ACCEPT);
 
-                if (System.currentTimeMillis() - startTime >= 500) {
+                if (System.nanoTime() - startTime >= 500000000L) {
                     success = false;
                     break;
                 }
@@ -308,7 +308,7 @@ class NioProviderMetadata {
                         }
                     } while (!loop.selecting);
 
-                    startTime = System.currentTimeMillis();
+                    startTime = System.nanoTime();
                     interestOps = key.interestOps();
                     synchronized (loop) {
                         loop.selector.wakeup();
@@ -316,7 +316,7 @@ class NioProviderMetadata {
                         key.interestOps(interestOps & ~SelectionKey.OP_ACCEPT);
                     }
 
-                    if (System.currentTimeMillis() - startTime >= 500) {
+                    if (System.nanoTime() - startTime >= 500000000L) {
                         success = false;
                         break;
                     }

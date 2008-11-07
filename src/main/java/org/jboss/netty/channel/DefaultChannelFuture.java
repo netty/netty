@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.channel;
 
+import static java.util.concurrent.TimeUnit.*;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -155,11 +157,11 @@ public class DefaultChannelFuture implements ChannelFuture {
 
     public boolean await(long timeout, TimeUnit unit)
             throws InterruptedException {
-        return await(unit.toMillis(timeout));
+        return await0(unit.toNanos(timeout), true);
     }
 
     public boolean await(long timeoutMillis) throws InterruptedException {
-        return await0(timeoutMillis, true);
+        return await0(MILLISECONDS.toNanos(timeoutMillis), true);
     }
 
     public ChannelFuture awaitUninterruptibly() {
@@ -180,20 +182,24 @@ public class DefaultChannelFuture implements ChannelFuture {
     }
 
     public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
-        return awaitUninterruptibly(unit.toMillis(timeout));
-    }
-
-    public boolean awaitUninterruptibly(long timeoutMillis) {
         try {
-            return await0(timeoutMillis, false);
+            return await0(unit.toNanos(timeout), false);
         } catch (InterruptedException e) {
             throw new InternalError();
         }
     }
 
-    private boolean await0(long timeoutMillis, boolean interruptable) throws InterruptedException {
-        long startTime = timeoutMillis <= 0 ? 0 : System.currentTimeMillis();
-        long waitTime = timeoutMillis;
+    public boolean awaitUninterruptibly(long timeoutMillis) {
+        try {
+            return await0(MILLISECONDS.toNanos(timeoutMillis), false);
+        } catch (InterruptedException e) {
+            throw new InternalError();
+        }
+    }
+
+    private boolean await0(long timeoutNanos, boolean interruptable) throws InterruptedException {
+        long startTime = timeoutNanos <= 0 ? 0 : System.nanoTime();
+        long waitTime = timeoutNanos;
 
         synchronized (this) {
             if (done) {
@@ -206,7 +212,7 @@ public class DefaultChannelFuture implements ChannelFuture {
             try {
                 for (;;) {
                     try {
-                        this.wait(waitTime);
+                        this.wait(waitTime / 1000000, (int) (waitTime % 1000000));
                     } catch (InterruptedException e) {
                         if (interruptable) {
                             throw e;
@@ -216,8 +222,7 @@ public class DefaultChannelFuture implements ChannelFuture {
                     if (done) {
                         return true;
                     } else {
-                        waitTime = timeoutMillis
-                                - (System.currentTimeMillis() - startTime);
+                        waitTime = timeoutNanos - (System.nanoTime() - startTime);
                         if (waitTime <= 0) {
                             return done;
                         }
