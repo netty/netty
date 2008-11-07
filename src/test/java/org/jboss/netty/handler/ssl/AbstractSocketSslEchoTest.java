@@ -52,7 +52,6 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
