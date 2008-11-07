@@ -261,7 +261,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         if (index + 3 <= indices[sliceId + 1]) {
             slices[sliceId].setMedium(index - indices[sliceId], value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
-            setShort(index, (short) (value >>> 8));
+            setShort(index, (short) (value >> 8));
             setByte(index + 2, (byte) value);
         } else {
             setShort(index    , (short) value);
