@@ -68,7 +68,7 @@ public class CompleteChannelFutureTest {
         ChannelFutureListener l = new ChannelFutureListener() {
             public void operationComplete(ChannelFuture future)
                     throws Exception {
-                throw new Exception();
+                throw new ExpectedError();
             }
         };
 
@@ -110,6 +110,14 @@ public class CompleteChannelFutureTest {
 
         public boolean isSuccess() {
             throw new Error();
+        }
+    }
+    
+    private static class ExpectedError extends Error {
+        private static final long serialVersionUID = 7059276744882005047L;
+
+        ExpectedError() {
+            super();
         }
     }
 }
