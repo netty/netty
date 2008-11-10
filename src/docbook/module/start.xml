@@ -683,7 +683,7 @@ bootstrap.getPipeline().addLast("handler", handler);</programlisting>
       <para>
         with the following:
       </para>
-      <programlisting>bootstrap.getPipelineFactory(new TimeClientPipelineFactory());</programlisting>
+      <programlisting>bootstrap.setPipelineFactory(new TimeClientPipelineFactory());</programlisting>
       <para>
         It might look somewhat complicated at the first glance, and it is true
         that we don't need to introduce <classname>TimeClientPipelineFactory</classname>
