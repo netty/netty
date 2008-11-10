@@ -4,7 +4,7 @@
   <groupId>org.jboss.netty</groupId>
   <artifactId>netty</artifactId>
   <packaging>bundle</packaging>
-  <version>3.1.0.Alpha1-SNAPSHOT</version>
+  <version>3.0.1.GA-SNAPSHOT</version>
 
   <name>The Netty Project</name>
   <url>http://www.jboss.org/netty/</url>
