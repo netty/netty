@@ -112,7 +112,12 @@ public class DefaultHttpMessage implements HttpMessage {
         return content;
     }
 
-    static class CaseIgnoringComparator implements Comparator<String> {
+    private static class CaseIgnoringComparator implements Comparator<String> {
+
+        CaseIgnoringComparator() {
+            super();
+        }
+
         public int compare(String o1, String o2) {
             return o1.compareToIgnoreCase(o2);
         }
