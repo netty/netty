@@ -41,12 +41,12 @@ public class DefaultHttpMessage implements HttpMessage {
 
     Map<String, List<String>> headers = new TreeMap<String, List<String>>(caseIgnoringComparator);
 
+    private final HttpVersion version;
+
     private ChannelBuffer content;
 
-    final HttpVersion httpVersion;
-
-    protected DefaultHttpMessage(final HttpVersion httpVersion) {
-        this.httpVersion = httpVersion;
+    protected DefaultHttpMessage(final HttpVersion version) {
+        this.version = version;
     }
 
     public void addHeader(final String name, final String value) {
@@ -105,7 +105,7 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public HttpVersion getProtocolVersion() {
-        return httpVersion;
+        return version;
     }
 
     public ChannelBuffer getContent() {
