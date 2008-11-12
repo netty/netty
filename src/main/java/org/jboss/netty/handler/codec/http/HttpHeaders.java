@@ -32,9 +32,9 @@ public class HttpHeaders {
     public static final class CONNECTION {
         public static final String KEY = "Connection";
 
-        public static final String CLOSE = "close";
+        public static final String CLOSE = "Close";
 
-        public static final String KEEP_ALIVE = "keep_Alive";
+        public static final String KEEP_ALIVE = "Keep-alive";
     }
 
     public static final class TRANSFER_ENCODING {
