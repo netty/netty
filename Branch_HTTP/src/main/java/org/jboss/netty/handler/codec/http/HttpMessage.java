@@ -21,15 +21,16 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-
 import java.util.List;
 import java.util.Set;
+
+import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
  * Encapsulates an Http message. this will contain the protocol version, headers and the body of a message
  *
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
 public interface HttpMessage {
     String getHeader(String name);
@@ -38,7 +39,7 @@ public interface HttpMessage {
 
     boolean containsHeader(String name);
 
-    Set<String> getHeaders();
+    Set<String> getHeaderNames();
 
     HttpVersion getProtocolVersion();
 

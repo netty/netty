@@ -21,19 +21,20 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
+import java.util.List;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 import org.jboss.netty.util.HttpCodecUtil;
-
-import java.util.List;
 
 /**
  * Decodes an Http type message.
  *
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
 public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDecoder.ResponseState> {
     protected HttpMessage message;
@@ -54,66 +55,67 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
 
     private ResponseState nextState;
 
-    public HttpMessageDecoder() {
+    protected HttpMessageDecoder() {
         super(ResponseState.READ_INITIAL);
     }
 
+    @Override
     protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, ResponseState state) throws Exception {
         switch (state) {
-            case READ_INITIAL: {
-                readInitial(buffer);
+        case READ_INITIAL: {
+            readInitial(buffer);
+        }
+        case READ_HEADER: {
+            readHeaders(buffer);
+            //we return null here, this forces decode to be called again where we will decode the content
+            return null;
+        }
+        case READ_CONTENT: {
+            if (content == null) {
+                content = ChannelBuffers.dynamicBuffer();
             }
-            case READ_HEADER: {
-                readHeaders(buffer);
-                //we return null here, this forces decode to be called again where we will decode the content
-                return null;
-            }
-            case READ_CONTENT: {
-                if (content == null) {
-                    content = ChannelBuffers.dynamicBuffer();
-                }
-                //this will cause a replay error until the channel is closed where this will read whats left in the buffer
-                content.writeBytes(buffer.readBytes(buffer.readableBytes()));
-                return reset();
-            }
-            case READ_FIXED_LENGTH_CONTENT: {
-                //we have a content-length so we just read the correct number of bytes
-                readFixedLengthContent(buffer);
-                return reset();
-            }
-            /**
-             * everything else after this point takes care of reading chunked content. basically, read chunk size,
-             * read chunk, read and ignore the CRLF and repeat until 0 
-             */
-            case READ_CHUNK_SIZE: {
-                String line = readIntoCurrentLine(buffer);
+            //this will cause a replay error until the channel is closed where this will read whats left in the buffer
+            content.writeBytes(buffer.readBytes(buffer.readableBytes()));
+            return reset();
+        }
+        case READ_FIXED_LENGTH_CONTENT: {
+            //we have a content-length so we just read the correct number of bytes
+            readFixedLengthContent(buffer);
+            return reset();
+        }
+        /**
+         * everything else after this point takes care of reading chunked content. basically, read chunk size,
+         * read chunk, read and ignore the CRLF and repeat until 0
+         */
+        case READ_CHUNK_SIZE: {
+            String line = readIntoCurrentLine(buffer);
 
-                chunkSize = getChunkSize(line);
-                if (chunkSize == 0) {
-                    byte next = buffer.readByte();
-                    if (next == HttpCodecUtil.CR) {
-                        buffer.readByte();
-                    }
-                    return reset();
-                }
-                else {
-                    checkpoint(ResponseState.READ_CHUNKED_CONTENT);
-                }
-            }
-            case READ_CHUNKED_CONTENT: {
-                readChunkedContent(buffer);
-            }
-            case READ_CRLF: {
+            chunkSize = getChunkSize(line);
+            if (chunkSize == 0) {
                 byte next = buffer.readByte();
                 if (next == HttpCodecUtil.CR) {
                     buffer.readByte();
                 }
-                checkpoint(nextState);
-                return null;
+                return reset();
             }
-            default: {
-                throw new Error("Shouldn't reach here.");
+            else {
+                checkpoint(ResponseState.READ_CHUNKED_CONTENT);
             }
+        }
+        case READ_CHUNKED_CONTENT: {
+            readChunkedContent(buffer);
+        }
+        case READ_CRLF: {
+            byte next = buffer.readByte();
+            if (next == HttpCodecUtil.CR) {
+                buffer.readByte();
+            }
+            checkpoint(nextState);
+            return null;
+        }
+        default: {
+            throw new Error("Shouldn't reach here.");
+        }
 
         }
     }
@@ -175,7 +177,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         checkpoint(nextState);
     }
 
-    abstract void readInitial(ChannelBuffer buffer);
+    protected abstract void readInitial(ChannelBuffer buffer);
 
     private int getChunkSize(String hex) {
         return Integer.valueOf(hex, 16);
@@ -198,7 +200,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
     }
 
-
     protected String[] splitInitial(String sb) {
         String[] split = sb.split(" ");
         if (split.length != 3) {
@@ -212,15 +213,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         if (split.length != 2) {
             throw new IllegalArgumentException(sb + "does not contain all 2 parts");
         }
-        for (int i = 0; i < split.length; i++) {
-            split[i] = split[i].trim();
-        }
-        return split;
-    }
-
-
-    private String[] splitHeaderValues(String s) {
-        String[] split = s.split(",");
         for (int i = 0; i < split.length; i++) {
             split[i] = split[i].trim();
         }

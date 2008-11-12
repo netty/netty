@@ -24,16 +24,17 @@ package org.jboss.netty.handler.codec.http;
 /**
  * an http response implementation
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
-public class HttpResponseImpl extends HttpMessageImpl implements HttpResponse {
-    private final HttpResponseStatusCode statusCode;
+public class DefaultHttpResponse extends DefaultHttpMessage implements HttpResponse {
+    private final HttpResponseStatus status;
 
-    public HttpResponseImpl(HttpVersion version, HttpResponseStatusCode statusCode) {
+    public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status) {
         super(version);
-        this.statusCode = statusCode;
+        this.status = status;
     }
 
-    public HttpResponseStatusCode getStatusCode() {
-        return statusCode;
+    public HttpResponseStatus getStatus() {
+        return status;
     }
 }

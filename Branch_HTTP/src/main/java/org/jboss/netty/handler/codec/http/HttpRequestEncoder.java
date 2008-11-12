@@ -21,16 +21,18 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
 import static org.jboss.netty.util.HttpCodecUtil.*;
-import org.jboss.netty.util.UriBuilder;
 
-import java.util.Set;
 import java.util.List;
+import java.util.Set;
+
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.util.UriBuilder;
 
 /**
  * encodes an http request
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
 public class HttpRequestEncoder extends HttpMessageEncoder {
 
@@ -40,7 +42,8 @@ public class HttpRequestEncoder extends HttpMessageEncoder {
      * @param buf
      * @param message
      */
-    public void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception {
+    @Override
+    protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception {
         HttpRequest request = (HttpRequest) message;
         buf.writeBytes(request.getMethod().getMethod().getBytes());
         buf.writeByte(SP);
@@ -54,7 +57,7 @@ public class HttpRequestEncoder extends HttpMessageEncoder {
         }
         buf.writeBytes(uriBuilder.toUri().toASCIIString().getBytes());
         buf.writeByte(SP);
-        buf.writeBytes(request.getProtocolVersion().getVersion().getBytes());
+        buf.writeBytes(request.getProtocolVersion().value().getBytes());
         buf.writeBytes(CRLF);
     }
 

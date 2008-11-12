@@ -21,26 +21,29 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.util.UriQueryDecoder;
-
 import java.util.List;
 import java.util.Map;
+
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.util.UriQueryDecoder;
 
 /**
  * decodes an http request.
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
 public class HttpRequestDecoder extends HttpMessageDecoder {
-    void readInitial(ChannelBuffer buffer) {
+
+    @Override
+    protected void readInitial(ChannelBuffer buffer) {
         String line = readIntoCurrentLine(buffer);
         checkpoint(ResponseState.READ_HEADER);
         String[] split = splitInitial(line);
         UriQueryDecoder uriQueryDecoder = new UriQueryDecoder(split[1]);
-        HttpRequestImpl httpRequest = new HttpRequestImpl(HttpVersion.getProtocol(split[2]), HttpMethod.valueOf(split[0]), uriQueryDecoder.getPath());
+        DefaultHttpRequest httpRequest = new DefaultHttpRequest(HttpVersion.getProtocol(split[2]), HttpMethod.valueOf(split[0]), uriQueryDecoder.getPath());
         message = httpRequest;
         Map<String, List<String>> params = uriQueryDecoder.getParameters();
-        for (String key : params.keySet()) {
+        for (String key: params.keySet()) {
             httpRequest.setParameters(key, params.get(key));
         }
     }
