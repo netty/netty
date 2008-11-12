@@ -25,7 +25,8 @@ package org.jboss.netty.handler.codec.http;
 /**
  * an http response.
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
 public interface HttpResponse extends HttpMessage {
-    HttpResponseStatusCode getStatusCode();
+    HttpResponseStatus getStatus();
 }

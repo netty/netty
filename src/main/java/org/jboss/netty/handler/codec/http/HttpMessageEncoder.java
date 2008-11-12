@@ -21,27 +21,28 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import static org.jboss.netty.channel.Channels.write;
+import static org.jboss.netty.channel.Channels.*;
+import static org.jboss.netty.util.HttpCodecUtil.*;
+
+import java.util.List;
+import java.util.Set;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import static org.jboss.netty.util.HttpCodecUtil.CRLF;
-import static org.jboss.netty.util.HttpCodecUtil.COLON;
-import static org.jboss.netty.util.HttpCodecUtil.SP;
-
-import java.util.Set;
-import java.util.List;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
  * encodes an http message
  *
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
 @ChannelPipelineCoverage("one")
 public abstract class HttpMessageEncoder extends SimpleChannelHandler {
+    @Override
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (!(e.getMessage() instanceof HttpMessage)) {
             ctx.sendDownstream(e);
@@ -67,7 +68,7 @@ public abstract class HttpMessageEncoder extends SimpleChannelHandler {
      * @param message
      */
     public void encodeHeaders(ChannelBuffer buf, HttpMessage message) {
-        Set<String> headers = message.getHeaders();
+        Set<String> headers = message.getHeaderNames();
         for (String header : headers) {
             List<String> values = message.getHeaders(header);
             for (String value : values) {
@@ -81,5 +82,5 @@ public abstract class HttpMessageEncoder extends SimpleChannelHandler {
         }
     }
 
-    abstract void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception;
+    protected abstract void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception;
 }

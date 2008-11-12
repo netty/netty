@@ -21,11 +21,8 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-
 import java.util.List;
 import java.util.Set;
-import java.net.URI;
 
 /**
  * An http request.

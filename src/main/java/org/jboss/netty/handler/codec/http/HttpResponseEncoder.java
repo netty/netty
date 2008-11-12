@@ -21,21 +21,24 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
 import static org.jboss.netty.util.HttpCodecUtil.*;
+
+import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
  * encodes an http response
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
 public class HttpResponseEncoder extends HttpMessageEncoder {
-    void encodeInitialLine(ChannelBuffer buf, HttpMessage message) {
+    @Override
+    protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message) {
         HttpResponse response = (HttpResponse) message;
-        buf.writeBytes(response.getProtocolVersion().getVersion().getBytes());
+        buf.writeBytes(response.getProtocolVersion().value().getBytes());
         buf.writeByte(SP);
-        buf.writeBytes(String.valueOf(response.getStatusCode().getCode()).getBytes());
+        buf.writeBytes(String.valueOf(response.getStatus().getCode()).getBytes());
         buf.writeByte(SP);
-        buf.writeBytes(String.valueOf(response.getStatusCode().getDescription()).getBytes());
+        buf.writeBytes(String.valueOf(response.getStatus().getReasonPhrase()).getBytes());
         buf.writeBytes(CRLF);
     }
 }

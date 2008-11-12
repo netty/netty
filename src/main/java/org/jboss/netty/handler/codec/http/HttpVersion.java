@@ -25,32 +25,33 @@ package org.jboss.netty.handler.codec.http;
  * The protocols we support;
  *
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
 public enum HttpVersion {
-    HTTP_1_1("HTTP/1.1"),
-
     HTTP_1_0("HTTP/1.0"),
+
+    HTTP_1_1("HTTP/1.1"),
 
     UNKNOWN("UNKNOWN"),;
 
     private String version;
 
-    private HttpVersion(String version) {
-        this.version = version;
+    private HttpVersion(String value) {
+        version = value;
     }
 
-    public String getVersion() {
+    public String value() {
         return version;
     }
 
-    public static HttpVersion getProtocol(String protocol) {
-        if (protocol == null) {
+    public static HttpVersion getProtocol(String value) {
+        if (value == null) {
             return UNKNOWN;
         }
-        else if (protocol.equals(HTTP_1_0.getVersion())) {
+        else if (value.equals(HTTP_1_0.value())) {
             return HTTP_1_0;
         }
-        else if (protocol.equals(HTTP_1_1.getVersion())) {
+        else if (value.equals(HTTP_1_1.value())) {
             return HTTP_1_1;
         }
         else {

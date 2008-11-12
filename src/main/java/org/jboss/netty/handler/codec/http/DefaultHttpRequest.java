@@ -21,25 +21,25 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.List;
 import java.util.ArrayList;
-import java.net.URI;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * An http request implementation
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
-public class HttpRequestImpl extends HttpMessageImpl implements HttpRequest {
-    private Map<String, List<String>> params = new HashMap<String, List<String>>();
+public class DefaultHttpRequest extends DefaultHttpMessage implements HttpRequest {
+    private final Map<String, List<String>> params = new HashMap<String, List<String>>();
 
     private final HttpMethod method;
 
     private final String path;
 
-    public HttpRequestImpl(HttpVersion httpVersion, HttpMethod method, String path) {
+    public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String path) {
         super(httpVersion);
         this.method = method;
         this.path = path;

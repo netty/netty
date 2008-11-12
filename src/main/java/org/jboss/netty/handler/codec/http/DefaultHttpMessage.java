@@ -21,22 +21,22 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.List;
 import java.util.ArrayList;
-import java.util.TreeMap;
 import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
+import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
  * a default Http Message which holds the headers and body.
  *
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
-public class HttpMessageImpl implements HttpMessage {
+public class DefaultHttpMessage implements HttpMessage {
     private final static Comparator<String> caseIgnoringComparator = new CaseIgnoringComparator();
 
     Map<String, List<String>> headers = new TreeMap<String, List<String>>(caseIgnoringComparator);
@@ -45,7 +45,7 @@ public class HttpMessageImpl implements HttpMessage {
 
     final HttpVersion httpVersion;
 
-    public HttpMessageImpl(final HttpVersion httpVersion) {
+    protected DefaultHttpMessage(final HttpVersion httpVersion) {
         this.httpVersion = httpVersion;
     }
 
@@ -100,7 +100,7 @@ public class HttpMessageImpl implements HttpMessage {
         return headers.containsKey(name);
     }
 
-    public Set<String> getHeaders() {
+    public Set<String> getHeaderNames() {
         return headers.keySet();
     }
 

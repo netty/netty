@@ -26,12 +26,14 @@ import org.jboss.netty.buffer.ChannelBuffer;
 /**
  * an http response decoder
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
 public class HttpResponseDecoder extends HttpMessageDecoder {
+    @Override
     protected void readInitial(ChannelBuffer buffer) {
         String line = readIntoCurrentLine(buffer);
         checkpoint(ResponseState.READ_HEADER);
         String[] split = splitInitial(line);
-        message = new HttpResponseImpl(HttpVersion.getProtocol(split[0]), new HttpResponseStatusCode(Integer.valueOf(split[1]), split[2]));
+        message = new DefaultHttpResponse(HttpVersion.getProtocol(split[0]), new HttpResponseStatus(Integer.valueOf(split[1]), split[2]));
     }
 }
