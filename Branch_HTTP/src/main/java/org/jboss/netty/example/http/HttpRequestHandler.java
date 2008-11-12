@@ -21,30 +21,31 @@
  */
 package org.jboss.netty.example.http;
 
-import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseImpl;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.codec.http.HttpResponseStatusCode;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
+import java.nio.charset.Charset;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-
-import java.nio.charset.Charset;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 @ChannelPipelineCoverage("all")
 public class HttpRequestHandler extends SimpleChannelHandler {
+    @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         HttpRequest request = (HttpRequest) e.getMessage();
         System.out.println(request.getContent().toString(Charset.defaultCharset().name()));
-        HttpResponse response = new HttpResponseImpl(HttpVersion.HTTP_1_1, HttpResponseStatusCode.OK);
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         String message = "and its hello from me";
         ChannelBuffer buf = ChannelBuffers.wrappedBuffer(message.getBytes());
         response.setContent(buf);

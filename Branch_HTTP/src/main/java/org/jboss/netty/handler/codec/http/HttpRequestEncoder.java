@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.util.UriBuilder;
 
 /**
  * encodes an http request

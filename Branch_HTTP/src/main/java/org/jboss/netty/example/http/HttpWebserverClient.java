@@ -21,20 +21,19 @@
  */
 package org.jboss.netty.example.http;
 
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
+
+import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpRequestImpl;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
-
-import java.util.concurrent.Executors;
-import java.net.InetSocketAddress;
-import java.net.URI;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
@@ -48,7 +47,7 @@ public class HttpWebserverClient {
 
         // Configure the client.
         ChannelFactory factory =
-              new NioClientSocketChannelFactory(
+            new NioClientSocketChannelFactory(
                     Executors.newCachedThreadPool(),
                     Executors.newCachedThreadPool());
 
@@ -64,7 +63,7 @@ public class HttpWebserverClient {
             future.getCause().printStackTrace();
             System.exit(0);
         }
-        HttpRequest request = new HttpRequestImpl(HttpVersion.HTTP_1_0, HttpMethod.GET, "/netty/");
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/netty/");
         request.addHeader(HttpHeaders.HOST, host);
         ChannelFuture lastWriteFuture = channel.write(request);
         lastWriteFuture.awaitUninterruptibly();

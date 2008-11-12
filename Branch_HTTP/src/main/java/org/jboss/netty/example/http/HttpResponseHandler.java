@@ -21,19 +21,20 @@
  */
 package org.jboss.netty.example.http;
 
-import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-
 import java.nio.charset.Charset;
+
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 @ChannelPipelineCoverage("all")
 public class HttpResponseHandler extends SimpleChannelHandler {
+    @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         HttpResponse response = (HttpResponse) e.getMessage();
         System.out.println(response.getContent().toString(Charset.defaultCharset().name()));
