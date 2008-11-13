@@ -95,6 +95,8 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
     /** The number of CPUs, for spin control */
     private static final int NCPUS = Runtime.getRuntime().availableProcessors();
 
+    private static final QNode UNDEFINED = new QNode(null, false);
+
     /**
      * The number of times to spin before blocking in timed waits.
      * The value is empirically derived -- it works well across a
@@ -345,7 +347,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
      * Gets rid of cancelled node s with original predecessor pred.
      * @return null (to simplify use by callers)
      */
-    Object clean(QNode pred, QNode s) {
+    Object clean(final QNode pred, final QNode s) {
         Thread w = s.waiter;
         if (w != null) {             // Wake up thread
             s.waiter = null;
@@ -354,6 +356,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
             }
         }
 
+        QNode olddp = UNDEFINED;
         for (;;) {
             if (pred.next != s) {
                 return null;
@@ -382,6 +385,8 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
                     return null;
                 }
             }
+
+            boolean stateUnchanged = true;
             QNode dp = cleanMe.get();
             if (dp != null) {    // Try unlinking previous cancelled node
                 QNode d = dp.next;
@@ -389,14 +394,21 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
                 if (d == null ||               // d is gone or
                     d == dp ||                 // d is off list or
                     d.get() != d ||            // d not cancelled or
-                    d != t &&                 // d not tail and
-                     (dn = d.next) != null &&  //   has successor
+                    d != t &&                  // d not tail and
+                    (dn = d.next) != null &&   //   has successor
                      dn != d &&                //   that is on list
                      dp.casNext(d, dn)) {
                     cleanMe.compareAndSet(dp, null);
+                    stateUnchanged = false;
                 }
                 if (dp == pred) {
                     return null;      // s is already saved node
+                }
+
+                if (stateUnchanged && olddp == dp) {
+                    return null;      // infinite loop expected - bail out
+                } else {
+                    olddp = dp;
                 }
             }
             else if (cleanMe.compareAndSet(null, pred)) {
