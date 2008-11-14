@@ -27,9 +27,9 @@ import java.net.SocketAddress;
 /**
  * A {@link ChannelEvent} which represents the transmission or reception of a
  * message.  It can mean the notification of a received message or the request
- * for writing a message, depending on whether it is a upstream event or a
+ * for writing a message, depending on whether it is an upstream event or a
  * downstream event respectively.  Please refer to the {@link ChannelEvent}
- * documentation to find out what a upstream event and a downstream event are
+ * documentation to find out what an upstream event and a downstream event are
  * and what fundamental differences they have.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)

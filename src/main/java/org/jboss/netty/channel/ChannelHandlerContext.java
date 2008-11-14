@@ -26,7 +26,7 @@ package org.jboss.netty.channel;
  * Provides the properties and operations which are specific to the
  * {@link ChannelHandler} and the {@link ChannelPipeline} it belongs to.
  * Via a {@link ChannelHandlerContext}, a {@link ChannelHandler} can send
- * a upstream or downstream {@link ChannelEvent} to the next or previous
+ * an upstream or downstream {@link ChannelEvent} to the next or previous
  * {@link ChannelHandler} in the {@link ChannelPipeline}.
  *
  * <pre>

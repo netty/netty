@@ -62,7 +62,7 @@ import org.jboss.netty.channel.socket.SocketChannel;
  * <h3>Life cycle of threads and graceful shutdown</h3>
  * <p>
  * All threads are acquired from the {@link Executor}s which were specified
- * when a {@link NioClientSocketChannelFactory} is created.  A boss thread is
+ * when a {@link NioClientSocketChannelFactory} was created.  A boss thread is
  * acquired from the {@code bossExecutor}, and worker threads are acquired from
  * the {@code workerExecutor}.  Therefore, you should make sure the specified
  * {@link Executor}s are able to lend the sufficient number of threads.

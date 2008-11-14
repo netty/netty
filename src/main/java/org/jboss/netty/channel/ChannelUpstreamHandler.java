@@ -38,7 +38,7 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  *
  * <h3>Upstream events</h3>
  * <p>
- * A upstream event is an event which is supposed to be processed from the
+ * An upstream event is an event which is supposed to be processed from the
  * first handler to the last handler in the {@link ChannelPipeline}.
  * For example, all events initiated by an I/O thread are upstream events, and
  * they have the following meaning:
@@ -117,14 +117,14 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * <p>
  * You might want to refer to {@link ChannelDownstreamHandler} to see how a
  * {@link ChannelEvent} is interpreted when going downstream.  Also, please
- * refer to the {@link ChannelEvent} documentation to find out what a upstream
+ * refer to the {@link ChannelEvent} documentation to find out what an upstream
  * event and a downstream event are and what fundamental differences they have,
  * if you didn't read yet.
  *
  * <h3>{@link SimpleChannelHandler}</h3>
  * <p>
  * In most cases, you will get to use a {@link SimpleChannelHandler} to
- * implement a upstream handler because it provides an individual handler
+ * implement an upstream handler because it provides an individual handler
  * method for each event type.  You might want to implement this interface
  * directly though if you want to handle various types of events in more
  * generic way.

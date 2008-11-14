@@ -55,7 +55,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * or {@link ChannelHandlerContext#sendDownstream(ChannelEvent)}.  The meaning
  * of the event is interpreted somewhat differently depending on whether it is
  * going upstream or going downstream. Please refer to {@link ChannelEvent} for
- * more explanation.
+ * more information.
  *
  * <pre>
  *
@@ -94,7 +94,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
  *  |             I/O Threads (Transport Implementation)               |
  *  +------------------------------------------------------------------+
  * </pre>
- * Please note that a upstream event flows from the first upstream handler
+ * Please note that an upstream event flows from the first upstream handler
  * to the last upstream handler (i.e. to the next) and a downstream event
  * flows from the last downstream handler to the first downstream handler
  * (i.e. to the previous).
@@ -130,7 +130,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * <p>
  * A {@link ChannelHandler} can be added or removed at any time because a
  * {@link ChannelPipeline} is thread safe.  For example, you can insert a
- * {@link SslHandler} when a sensitive information is about to be exchanged,
+ * {@link SslHandler} when sensitive information is about to be exchanged,
  * and remove it after the exchange.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)

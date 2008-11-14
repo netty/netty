@@ -51,7 +51,7 @@ import org.jboss.netty.channel.socket.SocketChannel;
  * <h3>Life cycle of threads and graceful shutdown</h3>
  * <p>
  * Worker threads are acquired from the {@link Executor} which was specified
- * when a {@link OioClientSocketChannelFactory} is created (i.e. {@code workerExecutor}.)
+ * when a {@link OioClientSocketChannelFactory} was created (i.e. {@code workerExecutor}.)
  * Therefore, you should make sure the specified {@link Executor} is able to
  * lend the sufficient number of threads.
  * <p>

@@ -117,7 +117,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  *
  * {@linkplain #setPipelineFactory(ChannelPipelineFactory) The second approach}
  * is to specify a {@link ChannelPipelineFactory} by yourself and have full
- * control over how a new pipeline is created, at the cost of more complexity:
+ * control over how a new pipeline is created.  This approach is more complex:
  *
  * <pre>
  * ServerBootstrap b = ...;

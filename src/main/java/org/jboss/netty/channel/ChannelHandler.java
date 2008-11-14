@@ -29,16 +29,15 @@ package org.jboss.netty.channel;
  *
  * <h3>Sub-types</h3>
  * <p>
- * This is a tag interface.  There are two sub-interfaces which processes
- * a received event actually, one for upstream events and the other for
- * downstream events:
+ * This is a tag interface.  There are two sub-interfaces which process a
+ * received event, one for upstream events and the other for downstream events:
  * <ul>
- * <li>{@link ChannelUpstreamHandler} handles and intercepts a upstream {@link ChannelEvent}.</li>
+ * <li>{@link ChannelUpstreamHandler} handles and intercepts an upstream {@link ChannelEvent}.</li>
  * <li>{@link ChannelDownstreamHandler} handles and intercepts a downstream {@link ChannelEvent}.</li>
  * </ul>
  *
  * You will also find more detailed explanation from the documentation of
- * each sub-type about how an event is interpreted when it goes upstream and
+ * each sub-type on how an event is interpreted when it goes upstream and
  * downstream respectively.
  *
  * <h3>The context object</h3>

@@ -26,9 +26,9 @@ package org.jboss.netty.channel;
 /**
  * A {@link ChannelEvent} which represents the change of the {@link Channel}
  * state.  It can mean the notification of a change or the request for a
- * change, depending on whether it is a upstream event or a downstream event
+ * change, depending on whether it is an upstream event or a downstream event
  * respectively.  Please refer to the {@link ChannelEvent} documentation to
- * find out what a upstream event and a downstream event are and what
+ * find out what an upstream event and a downstream event are and what
  * fundamental differences they have.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)

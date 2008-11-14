@@ -31,7 +31,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 
 /**
- * Forwards a upstream {@link ChannelEvent} to an {@link Executor}.
+ * Forwards an upstream {@link ChannelEvent} to an {@link Executor}.
  * <p>
  * You can implement various thread model by adding this handler to a
  * {@link ChannelPipeline}.  The most common use case of this handler is to

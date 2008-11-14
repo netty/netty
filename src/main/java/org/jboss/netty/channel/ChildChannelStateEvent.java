@@ -25,7 +25,7 @@ package org.jboss.netty.channel;
 /**
  * A {@link ChannelEvent} which represents the notification of the state of
  * a child {@link Channel}.  This event is for going upstream only.  Please
- * refer to the {@link ChannelEvent} documentation to find out what a upstream
+ * refer to the {@link ChannelEvent} documentation to find out what an upstream
  * event and a downstream event are and what fundamental differences they have.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)

@@ -86,7 +86,7 @@ import java.net.SocketAddress;
  * <p>
  * You might want to refer to {@link ChannelUpstreamHandler} to see how a
  * {@link ChannelEvent} is interpreted when going upstream.  Also, please refer
- * to the {@link ChannelEvent} documentation to find out what a upstream event
+ * to the {@link ChannelEvent} documentation to find out what an upstream event
  * and a downstream event are and what fundamental differences they have, if
  * you didn't read yet.
  *
