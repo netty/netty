@@ -95,8 +95,6 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
     /** The number of CPUs, for spin control */
     private static final int NCPUS = Runtime.getRuntime().availableProcessors();
 
-    private static final QNode UNDEFINED = new QNode(null, false);
-
     /**
      * The number of times to spin before blocking in timed waits.
      * The value is empirically derived -- it works well across a
