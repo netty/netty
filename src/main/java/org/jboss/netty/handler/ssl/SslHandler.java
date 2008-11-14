@@ -118,7 +118,7 @@ public class SslHandler extends FrameDecoder {
     private final Executor delegatedTaskExecutor;
     private final boolean startTls;
 
-    private final Object handshakeLock = new Object();
+    final Object handshakeLock = new Object();
     private volatile boolean handshaking;
     private volatile boolean handshaken;
     private volatile ChannelFuture handshakeFuture;
@@ -550,7 +550,13 @@ public class SslHandler extends FrameDecoder {
         SSLEngineResult result;
         try {
             for (;;) {
-                result = engine.wrap(EMPTY_BUFFER, outNetBuf);
+                if (handshaking) {
+                    synchronized (handshakeLock) {
+                        result = engine.wrap(EMPTY_BUFFER, outNetBuf);
+                    }
+                } else {
+                    result = engine.wrap(EMPTY_BUFFER, outNetBuf);
+                }
 
                 if (result.bytesProduced() > 0) {
                     outNetBuf.flip();
@@ -648,7 +654,14 @@ public class SslHandler extends FrameDecoder {
     private void runDelegatedTasks() {
         Runnable task;
         while ((task = engine.getDelegatedTask()) != null) {
-            delegatedTaskExecutor.execute(task);
+            final Runnable t = task;
+            delegatedTaskExecutor.execute(new Runnable() {
+                public void run() {
+                    synchronized (handshakeLock) {
+                        t.run();
+                    }
+                }
+            });
         }
     }
 
