@@ -84,7 +84,7 @@ public class MapUtil {
         if (logger.isDebugEnabled()) {
             logger.debug(
                     mapType.getName() +
-                    " doesn't implement OrderedMap interface.");
+                    " does not implement OrderedMap interface.");
         }
 
         // Last resort: try to create a new instance and test if it maintains

@@ -81,7 +81,7 @@ public interface ChannelConfig {
 
     /**
      * Returns the {@link ChannelPipelineFactory} which will be used when
-     * a child channel is created.  If the {@link Channel} doesn't create
+     * a child channel is created.  If the {@link Channel} does not create
      * a child channel, this property is not used at all, and therefore will
      * be ignored.
      */
@@ -89,7 +89,7 @@ public interface ChannelConfig {
 
     /**
      * Sets the {@link ChannelPipelineFactory} which will be used when
-     * a child channel is created.  If the {@link Channel} doesn't create
+     * a child channel is created.  If the {@link Channel} does not create
      * a child channel, this property is not used at all, and therefore will
      * be ignored.
      */
@@ -97,7 +97,7 @@ public interface ChannelConfig {
 
     /**
      * Returns the connect timeout of the channel in milliseconds.  If the
-     * {@link Channel} doesn't support connect operation, this property is not
+     * {@link Channel} does not support connect operation, this property is not
      * used at all, and therefore will be ignored.
      *
      * @return the connect timeout in milliseconds.  {@code 0} if disabled.
@@ -106,7 +106,7 @@ public interface ChannelConfig {
 
     /**
      * Sets the connect timeout of the channel in milliseconds.  If the
-     * {@link Channel} doesn't support connect operation, this property is not
+     * {@link Channel} does not support connect operation, this property is not
      * used at all, and therefore will be ignored.
      *
      * @param connectTimeoutMillis the connect timeout in milliseconds.
@@ -117,7 +117,7 @@ public interface ChannelConfig {
     /**
      * Returns the write timeout of the channel in milliseconds.  If a write
      * operation is not completed within the write timeout, an
-     * {@link IOException} will be raised.  If the {@link Channel} doesn't
+     * {@link IOException} will be raised.  If the {@link Channel} does not
      * support write operation, this property is not used at all, and therefore
      * will be ignored.
      *
@@ -128,7 +128,7 @@ public interface ChannelConfig {
     /**
      * Sets the write timeout of the channel in milliseconds.  If a write
      * operation is not completed within the write timeout, an
-     * {@link IOException} will be raised.  If the {@link Channel} doesn't
+     * {@link IOException} will be raised.  If the {@link Channel} does not
      * support write operation, this property is not used at all, and therefore
      * will be ignored.
      *

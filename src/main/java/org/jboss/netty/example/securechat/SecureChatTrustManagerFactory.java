@@ -35,7 +35,7 @@ import javax.net.ssl.X509TrustManager;
 
 /**
  * Bogus {@link TrustManagerFactorySpi} which accepts any certificate
- * even if it's invalid.
+ * even if it is invalid.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -51,13 +51,13 @@ public class SecureChatTrustManagerFactory extends TrustManagerFactorySpi {
 
         public void checkClientTrusted(
                 X509Certificate[] arg0, String arg1) throws CertificateException {
-            // Always trust - it's an example.
+            // Always trust - it is an example.
             // You should do something in the real world.
         }
 
         public void checkServerTrusted(
                 X509Certificate[] arg0, String arg1) throws CertificateException {
-            // Always trust - it's an example.
+            // Always trust - it is an example.
             // You should do something in the real world.
         }
     };

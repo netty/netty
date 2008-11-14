@@ -87,7 +87,7 @@ import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
  * <h3>Limitation</h3>
  * <p>
  * A {@link ServerSocketChannel} created by this factory and its child channels
- * don't support asynchronous operations.  Any I/O requests such as
+ * do not support asynchronous operations.  Any I/O requests such as
  * {@code "write"} will be performed in a blocking manner.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)

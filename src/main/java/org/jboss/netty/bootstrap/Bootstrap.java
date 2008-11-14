@@ -248,7 +248,7 @@ public class Bootstrap {
 
     /**
      * Sets an option with the specified key and value.  If there's already
-     * an option with the same key, it's replaced with the new value.  If the
+     * an option with the same key, it is replaced with the new value.  If the
      * specified value is {@code null}, an existing option with the specified
      * key is removed.
      */

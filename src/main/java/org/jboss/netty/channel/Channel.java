@@ -105,7 +105,7 @@ public interface Channel {
      * Returns the parent of this channel.
      *
      * @return the parent channel.
-     *         {@code null} if this channel doesn't have a parent channel.
+     *         {@code null} if this channel does not have a parent channel.
      */
     Channel getParent();
 

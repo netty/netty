@@ -29,7 +29,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
  * a {@link Runnable} which sends the specified {@link ChannelEvent} upstream.
- * Most users will not see this type at all because it's used by
+ * Most users will not see this type at all because it is used by
  * {@link Executor} implementors only
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)

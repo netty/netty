@@ -45,6 +45,6 @@ class UnsafeDynamicChannelBuffer extends DynamicChannelBuffer {
 
     @Override
     protected void checkReadableBytes(int minReaderRemaining) {
-        // Don't check here - ReplayingDecoderBuffer will check.
+        // Do not check here - ReplayingDecoderBuffer will check.
     }
 }

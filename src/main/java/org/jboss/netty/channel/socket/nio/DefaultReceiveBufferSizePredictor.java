@@ -112,8 +112,8 @@ public class DefaultReceiveBufferSizePredictor implements
 
     /**
      * Creates a new predictor with the default parameters.  With the default
-     * parameters, the expected buffer size starts from {@code 1024}, doesn't
-     * go down below {@code 64}, and doesn't go up above {@code 65536}.
+     * parameters, the expected buffer size starts from {@code 1024}, does not
+     * go down below {@code 64}, and does not go up above {@code 65536}.
      */
     public DefaultReceiveBufferSizePredictor() {
         this(DEFAULT_MINIMUM, DEFAULT_INITIAL, DEFAULT_MAXIMUM);

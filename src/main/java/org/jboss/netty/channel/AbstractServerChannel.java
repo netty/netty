@@ -26,7 +26,7 @@ import java.net.SocketAddress;
 
 /**
  * A skeletal server-side {@link Channel} implementation.  A server-side
- * {@link Channel} doesn't allow the following operations:
+ * {@link Channel} does not allow the following operations:
  * <ul>
  * <li>{@link #connect(SocketAddress)}</li>
  * <li>{@link #disconnect()}</li>

@@ -79,7 +79,7 @@ import java.net.SocketAddress;
  * <p>
  * Other event types and conditions which were not addressed here will be
  * ignored and discarded.  Please note that there's no {@code "open"} in the
- * table.  It's because a {@link Channel} is always open when it's created
+ * table.  It is because a {@link Channel} is always open when it is created
  * by a {@link ChannelFactory}.
  *
  * <h4>Additional resources worth reading</h4>

@@ -72,7 +72,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * Copied buffer is a deep copy of one or more existing byte arrays, byte
  * buffers or a string.  Unlike a wrapped buffer, there's no shared data
  * between the original data and the copied buffer.  Various copy methods are
- * provided and their name is all {@code copiedBuffer()}.  It's also convenient
+ * provided and their name is all {@code copiedBuffer()}.  It is also convenient
  * to use this operation to merge multiple buffers into one buffer.
  *
  * <h3>Miscellaneous utility methods</h3>

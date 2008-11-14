@@ -132,7 +132,7 @@ public abstract class AbstractSocketServerBootstrapTest {
         }
 
         // Wait until the child connection is closed in the client side.
-        // We don't use Channel.close() to make sure it's closed automatically.
+        // We do not use Channel.close() to make sure it is closed automatically.
         while (pch.child.isOpen()) {
             try {
                 Thread.sleep(1);

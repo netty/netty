@@ -37,7 +37,7 @@ import java.lang.annotation.Target;
  * will be warned in runtime.  Only two values are allowed for this annotation:
  * {@code "all"} and {@code "one"}.
  * <p>
- * Please note that this annotation doesn't prevent a handler annotated with
+ * Please note that this annotation does not prevent a handler annotated with
  * the value {@code "one"} from being added to more than one pipeline.  This
  * annotation is used for documentation purpose only.
  *

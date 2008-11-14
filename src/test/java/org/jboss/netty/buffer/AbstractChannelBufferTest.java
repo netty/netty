@@ -1194,7 +1194,7 @@ public abstract class AbstractChannelBufferTest {
             ChannelBuffer actualValue = buffer.readBytes(BLOCK_SIZE);
             assertEquals(wrappedBuffer(expectedValue), actualValue);
 
-            // Make sure if it's a copied buffer.
+            // Make sure if it is a copied buffer.
             actualValue.setByte(0, (byte) (actualValue.getByte(0) + 1));
             assertFalse(buffer.getByte(i) == actualValue.getByte(0));
         }
@@ -1219,7 +1219,7 @@ public abstract class AbstractChannelBufferTest {
         ChannelBuffer copy = buffer.readBytes(ChannelBufferIndexFinder.NUL);
         assertEquals(wrappedBuffer(new byte[] { 1, 2, 3, 4 }), copy);
 
-        // Make sure if it's a copied buffer.
+        // Make sure if it is a copied buffer.
         copy.setByte(0, (byte) (copy.getByte(0) + 1));
         assertFalse(buffer.getByte(0) == copy.getByte(0));
     }
@@ -1244,7 +1244,7 @@ public abstract class AbstractChannelBufferTest {
             ChannelBuffer actualValue = buffer.readSlice(BLOCK_SIZE);
             assertEquals(wrappedBuffer(expectedValue), actualValue);
 
-            // Make sure if it's a sliced buffer.
+            // Make sure if it is a sliced buffer.
             actualValue.setByte(0, (byte) (actualValue.getByte(0) + 1));
             assertEquals(buffer.getByte(i), actualValue.getByte(0));
         }
@@ -1269,7 +1269,7 @@ public abstract class AbstractChannelBufferTest {
         ChannelBuffer slice = buffer.readSlice(ChannelBufferIndexFinder.NUL);
         assertEquals(wrappedBuffer(new byte[] { 1, 2, 3, 4 }), slice);
 
-        // Make sure if it's a sliced buffer.
+        // Make sure if it is a sliced buffer.
         slice.setByte(0, (byte) (slice.getByte(0) + 1));
         assertTrue(buffer.getByte(0) == slice.getByte(0));
     }

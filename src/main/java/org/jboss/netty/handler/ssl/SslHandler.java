@@ -60,7 +60,7 @@ import org.jboss.netty.util.ImmediateExecutor;
  * <h3>Beginning the handshake</h3>
  * <p>
  * A user should make sure not to write a message while the
- * {@linkplain #handshake(Channel) handshake} is in progress unless it's a
+ * {@linkplain #handshake(Channel) handshake} is in progress unless it is a
  * renegotiation.  You will be notified by the {@link ChannelFuture} which is
  * returned by the {@link #handshake(Channel)} method when the handshake
  * process succeeds or fails.
@@ -77,7 +77,7 @@ import org.jboss.netty.util.ImmediateExecutor;
  * exception is when you close the {@link Channel} - {@link SslHandler}
  * intercepts the close request and send the {@code close_notify} message
  * before the channel closure automatically.  Once the SSL session is closed,
- * it's not reusable, and consequently you should create a new
+ * it is not reusable, and consequently you should create a new
  * {@link SslHandler} with a new {@link SSLEngine} as explained in the
  * following section.
  *
@@ -319,7 +319,7 @@ public class SslHandler extends FrameDecoder {
             return;
         }
 
-        // Don't encrypt the first write request if this handler is
+        // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
         if (startTls && sentFirstMessage.compareAndSet(false, true)) {
             context.sendDownstream(evt);
@@ -498,7 +498,7 @@ public class SslHandler extends FrameDecoder {
             if (!success) {
                 // Mark all remaining pending writes as failure if anything
                 // wrong happened before the write requests are wrapped.
-                // Please note that we don't call setFailure while a lock is
+                // Please note that we do not call setFailure while a lock is
                 // acquired, to avoid a potential dead lock.
                 for (;;) {
                     PendingWrite pendingWrite;

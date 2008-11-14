@@ -287,7 +287,7 @@ class NioWorker implements Runnable {
             }
             failure = false;
         } catch (AsynchronousCloseException e) {
-            // Can happen, and doesn't need a user attention.
+            // Can happen, and does not need a user attention.
         } catch (Throwable t) {
             fireExceptionCaught(channel, t);
         }
@@ -334,7 +334,7 @@ class NioWorker implements Runnable {
             }
             failure = false;
         } catch (AsynchronousCloseException e) {
-            // Can happen, and doesn't need a user attention.
+            // Can happen, and does not need a user attention.
         } catch (Throwable t) {
             fireExceptionCaught(channel, t);
         }

@@ -162,7 +162,7 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * If there's no {@link ExecutionHandler} in the {@link ChannelPipeline},
  * {@link #handleUpstream(ChannelHandlerContext, ChannelEvent) handleUpstream}
  * will be invoked sequentially by the same thread (i.e. an I/O thread).
- * Please note that this doesn't necessarily mean that there's a dedicated
+ * Please note that this does not necessarily mean that there's a dedicated
  * thread per {@link Channel}; the I/O thread of some transport can serve more
  * than one {@link Channel} (e.g. NIO transport), while the I/O thread of
  * other transports can serve only one (e.g. OIO transport).

@@ -555,7 +555,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (coverage == null) {
                 logger.warn(
                         "Handler '" + handler.getClass().getName() +
-                        "' doesn't have a '" +
+                        "' does not have a '" +
                         ChannelPipelineCoverage.class.getSimpleName() +
                         "' annotation with its class declaration. " +
                         "It is recommended to add the annotation to tell if " +

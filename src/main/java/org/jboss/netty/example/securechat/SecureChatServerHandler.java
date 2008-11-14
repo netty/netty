@@ -103,7 +103,7 @@ public class SecureChatServerHandler extends SimpleChannelHandler {
     public void channelDisconnected(
             ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         // Unregister the channel from the global channel list
-        // so the channel doesn't receive messages anymore.
+        // so the channel does not receive messages anymore.
         channels.remove(e.getChannel());
     }
 

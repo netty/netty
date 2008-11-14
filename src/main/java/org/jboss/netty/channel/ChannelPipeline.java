@@ -53,7 +53,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * or a {@link ChannelDownstreamHandler} and be forwarded to the next or
  * previous handler by calling {@link ChannelHandlerContext#sendUpstream(ChannelEvent)}
  * or {@link ChannelHandlerContext#sendDownstream(ChannelEvent)}.  The meaning
- * of the event is interpreted somewhat differently depending on whether it's
+ * of the event is interpreted somewhat differently depending on whether it is
  * going upstream or going downstream. Please refer to {@link ChannelEvent} for
  * more explanation.
  *
@@ -269,7 +269,7 @@ public interface ChannelPipeline {
      * this pipeline.
      *
      * @throws NoSuchElementException
-     *         if the specified old handler doesn't exist in this pipeline
+     *         if the specified old handler does not exist in this pipeline
      * @throws IllegalArgumentException
      *         if a handler with the specified new name already exists in this
      *         pipeline, except for the handler to be replaced
@@ -286,7 +286,7 @@ public interface ChannelPipeline {
      * @return the removed handler
      *
      * @throws NoSuchElementException
-     *         if the handler with the specified old name doesn't exist in this pipeline
+     *         if the handler with the specified old name does not exist in this pipeline
      * @throws IllegalArgumentException
      *         if a handler with the specified new name already exists in this
      *         pipeline, except for the handler to be replaced
@@ -303,7 +303,7 @@ public interface ChannelPipeline {
      * @return the removed handler
      *
      * @throws NoSuchElementException
-     *         if the handler of the specified old handler type doesn't exist
+     *         if the handler of the specified old handler type does not exist
      *         in this pipeline
      * @throws IllegalArgumentException
      *         if a handler with the specified new name already exists in this

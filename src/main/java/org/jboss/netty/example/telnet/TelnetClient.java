@@ -102,7 +102,7 @@ public class TelnetClient {
         channel.close().awaitUninterruptibly();
 
         // We should shut down all thread pools here to exit normally.
-        // However, it's just fine to call System.exit(0) because we are
+        // However, it is just fine to call System.exit(0) because we are
         // finished with the business.
         System.exit(0);
     }

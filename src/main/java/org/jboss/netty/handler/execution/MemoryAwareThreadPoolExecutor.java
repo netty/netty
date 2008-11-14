@@ -175,7 +175,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         this.objectSizeEstimator = objectSizeEstimator;
 
         // Call allowCoreThreadTimeOut(true) using reflection
-        // because it's not supported in Java 5.
+        // because it is not supported in Java 5.
         try {
             Method m = getClass().getMethod("allowCoreThreadTimeOut", new Class[] { boolean.class });
             m.invoke(this, Boolean.TRUE);

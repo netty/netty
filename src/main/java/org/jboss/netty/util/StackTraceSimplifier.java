@@ -68,7 +68,7 @@ public class StackTraceSimplifier {
             return;
         }
 
-        // Perhaps Netty bug.  Let's not strip things out.
+        // Perhaps Netty bug.  Let us not strip things out.
         if (EXCLUDED_STACK_TRACE.matcher(trace[0].getClassName()).matches()) {
             return;
         }

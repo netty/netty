@@ -66,7 +66,7 @@ public class TelnetServerHandler extends SimpleChannelHandler {
         // Send greeting for a new connection.
         e.getChannel().write(
                 "Welcome to " + InetAddress.getLocalHost().getHostName() + "!\n");
-        e.getChannel().write("It's " + new Date() + " now.\n");
+        e.getChannel().write("It is " + new Date() + " now.\n");
     }
 
     @Override
@@ -74,7 +74,7 @@ public class TelnetServerHandler extends SimpleChannelHandler {
             ChannelHandlerContext ctx, MessageEvent e) {
 
         // Cast to a String first.
-        // We know it's a String because we put some codec in TelnetPipelineFactory.
+        // We know it is a String because we put some codec in TelnetPipelineFactory.
         String request = (String) e.getMessage();
 
         // Generate and write a response.
@@ -89,7 +89,7 @@ public class TelnetServerHandler extends SimpleChannelHandler {
             response = "Did you say '" + request + "'?\n";
         }
 
-        // We don't need to write a ChannelBuffer here.
+        // We do not need to write a ChannelBuffer here.
         // We know the encoder inserted at TelnetPipelineFactory will do the conversion.
         ChannelFuture future = e.getChannel().write(response);
 

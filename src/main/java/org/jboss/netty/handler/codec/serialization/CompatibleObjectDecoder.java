@@ -42,7 +42,7 @@ import org.jboss.netty.util.SwitchableInputStream;
  * streams such as {@link ObjectInputStream} and {@link ObjectOutputStream}.
  * <p>
  * However, this decoder might perform worse than {@link ObjectDecoder} if
- * the serialized object is big and complex.  Also, it doesn't limit the
+ * the serialized object is big and complex.  Also, it does not limit the
  * maximum size of the object, and consequently your application might face
  * the risk of <a href="http://en.wikipedia.org/wiki/DoS">DoS attack</a>.
  * Please use {@link ObjectEncoder} and {@link ObjectDecoder} if you are not

@@ -152,7 +152,7 @@ import java.util.NoSuchElementException;
  *
  * You can set both {@link #readerIndex() readerIndex} and
  * {@link #writerIndex() writerIndex} to {@code 0} by calling {@link #clear()}.
- * It doesn't clear the buffer content (e.g. filling with {@code 0}) but just
+ * It does not clear the buffer content (e.g. filling with {@code 0}) but just
  * clears the two pointers.  Please also note that the semantic of this
  * operation is different from {@link ByteBuffer#clear()}.
  *
@@ -505,7 +505,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * {@link #getBytes(int, ChannelBuffer, int, int)}, except that this
      * method increases the {@code writerIndex} of the destination by the
      * number of the transferred bytes while
-     * {@link #getBytes(int, ChannelBuffer, int, int)} doesn't.
+     * {@link #getBytes(int, ChannelBuffer, int, int)} does not.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -520,7 +520,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * with {@link #getBytes(int, ChannelBuffer, int, int)}, except that this
      * method increases the {@code writerIndex} of the destination by the
      * number of the transferred bytes while
-     * {@link #getBytes(int, ChannelBuffer, int, int)} doesn't.
+     * {@link #getBytes(int, ChannelBuffer, int, int)} does not.
      *
      * @param length the number of bytes to transfer
      *
@@ -679,7 +679,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * {@link #setBytes(int, ChannelBuffer, int, int)}, except that this
      * method increases the {@code readerIndex} of the source buffer by
      * the number of the transferred bytes while
-     * {@link #getBytes(int, ChannelBuffer, int, int)} doesn't.
+     * {@link #getBytes(int, ChannelBuffer, int, int)} does not.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -694,7 +694,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * with {@link #setBytes(int, ChannelBuffer, int, int)}, except that this
      * method increases the {@code readerIndex} of the source buffer by
      * the number of the transferred bytes while
-     * {@link #getBytes(int, ChannelBuffer, int, int)} doesn't.
+     * {@link #getBytes(int, ChannelBuffer, int, int)} does not.
      *
      * @param length the number of bytes to transfer
      *
@@ -955,7 +955,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * {@link #readBytes(ChannelBuffer, int, int)}, except that this method
      * increases the {@code writerIndex} of the destination by the number of
      * the transferred bytes while {@link #readBytes(ChannelBuffer, int, int)}
-     * doesn't.
+     * does not.
      *
      * @throws IndexOutOfBoundsException
      *         if {@code dst.writableBytes} is greater than
@@ -970,7 +970,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * is basically same with {@link #readBytes(ChannelBuffer, int, int)},
      * except that this method increases the {@code writerIndex} of the
      * destination by the number of the transferred bytes (= {@code length})
-     * while {@link #readBytes(ChannelBuffer, int, int)} doesn't.
+     * while {@link #readBytes(ChannelBuffer, int, int)} does not.
      *
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@code this.readableBytes} or
@@ -1135,7 +1135,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * {@link #writeBytes(ChannelBuffer, int, int)}, except that this method
      * increases the {@code readerIndex} of the source buffer by the number of
      * the transferred bytes while {@link #writeBytes(ChannelBuffer, int, int)}
-     * doesn't.
+     * does not.
      *
      * @throws IndexOutOfBoundsException
      *         if {@code src.readableBytes} is greater than
@@ -1151,7 +1151,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * is basically same with {@link #writeBytes(ChannelBuffer, int, int)},
      * except that this method increases the {@code readerIndex} of the source
      * buffer by the number of the transferred bytes (= {@code length}) while
-     * {@link #writeBytes(ChannelBuffer, int, int)} doesn't.
+     * {@link #writeBytes(ChannelBuffer, int, int)} does not.
      *
      * @param length the number of bytes to transfer
      *
@@ -1287,14 +1287,14 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 
     /**
      * Returns a copy of this buffer's readable bytes.  Modifying the content
-     * of the returned buffer or this buffer doesn't affect each other at all.
+     * of the returned buffer or this buffer does not affect each other at all.
      * This method is identical to {@code buf.copy(buf.readerIndex(), buf.readableBytes())}.
      */
     ChannelBuffer copy();
 
     /**
      * Returns a copy of this buffer's sub-region.  Modifying the content of
-     * the returned buffer or this buffer doesn't affect each other at all.
+     * the returned buffer or this buffer does not affect each other at all.
      */
     ChannelBuffer copy(int index, int length);
 
@@ -1414,7 +1414,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * <li>the size of the contents of the two buffers are same and</li>
      * <li>every single byte of the content of the two buffers are same.</li>
      * </ul>
-     * Please note that it doesn't compare {@link #readerIndex()} nor
+     * Please note that it does not compare {@link #readerIndex()} nor
      * {@link #writerIndex()}.  This method also returns {@code false} for
      * {@code null} and an object which is not an instance of
      * {@link ChannelBuffer} type.
@@ -1430,7 +1430,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     int compareTo(ChannelBuffer buffer);
 
     /**
-     * Returns the string representation of this buffer.  This method doesn't
+     * Returns the string representation of this buffer.  This method does not
      * necessarily return the whole content of the buffer but returns
      * the values of the key properties such as {@link #readerIndex()},
      * {@link #writerIndex()} and {@link #capacity()}.

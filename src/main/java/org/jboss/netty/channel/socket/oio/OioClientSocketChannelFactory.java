@@ -74,7 +74,7 @@ import org.jboss.netty.channel.socket.SocketChannel;
  *
  * <h3>Limitation</h3>
  * <p>
- * A {@link SocketChannel} created by this factory doesn't support asynchronous
+ * A {@link SocketChannel} created by this factory does not support asynchronous
  * operations.  Any I/O requests such as {@code "connect"} and {@code "write"}
  * will be performed in a blocking manner.
  *

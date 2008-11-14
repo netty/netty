@@ -196,7 +196,7 @@ public class Channels {
      * Sends a {@code "channelOpen"} event to the next
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
      * the specified {@link ChannelHandlerContext} belongs.  Please note that
-     * this method doesn't send a {@code "childChannelOpen"} event unlike
+     * this method does not send a {@code "childChannelOpen"} event unlike
      * {@link #fireChannelOpen(Channel)} method.
      */
     public static void fireChannelOpen(

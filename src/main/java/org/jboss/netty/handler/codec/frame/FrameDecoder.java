@@ -42,7 +42,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * <p>
  * In a stream-based transport such as TCP/IP, packets can be fragmented and
  * reassembled during transmission even in a LAN environment.  For example,
- * let's assume you have received three packets:
+ * let us assume you have received three packets:
  * <pre>
  * +-----+-----+-----+
  * | ABC | DEF | GHI |
@@ -233,11 +233,11 @@ public abstract class FrameDecoder extends SimpleChannelHandler {
             if (frame == null) {
                 if (oldReaderIndex == cumulation.readerIndex()) {
                     // Seems like more data is required.
-                    // Let's wait for the next notification.
+                    // Let us wait for the next notification.
                     break;
                 } else {
                     // Previous data has been discarded.
-                    // Probably it's reading on.
+                    // Probably it is reading on.
                     continue;
                 }
             } else if (oldReaderIndex == cumulation.readerIndex()) {

@@ -86,7 +86,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  *
  * <h3>Configuring a parent channel pipeline</h3>
  *
- * It is rare to configure the pipeline of a parent channel because what it's
+ * It is rare to configure the pipeline of a parent channel because what it is
  * supposed to do is very typical.  However, you might want to add a handler
  * to deal with some special needs such as degrading the process
  * <a href="http://en.wikipedia.org/wiki/User_identifier_(Unix)">UID</a> from

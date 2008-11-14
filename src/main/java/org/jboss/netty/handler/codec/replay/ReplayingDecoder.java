@@ -300,7 +300,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelH
                                 "null cannot be returned if no data is consumed.");
                     } else {
                         // Previous data has been discarded.
-                        // Probably it's reading on.
+                        // Probably it is reading on.
                         continue;
                     }
                 }
@@ -311,7 +311,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelH
 
             if (result == null) {
                 // Seems like more data is required.
-                // Let's wait for the next notification.
+                // Let us wait for the next notification.
                 break;
             }
 

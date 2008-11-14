@@ -82,7 +82,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
      *
      * The main extension is to provide different Wait modes
      * for the main "xfer" method that puts or takes items.
-     * These don't impact the basic dual-queue logic, but instead
+     * These do not impact the basic dual-queue logic, but instead
      * control whether or how threads block upon insertion
      * of request or data nodes into the dual queue.
      */
@@ -109,7 +109,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
     /**
      * The number of times to spin before blocking in untimed waits.
      * This is greater than timed value because untimed waits spin
-     * faster since they don't need to check times on each spin.
+     * faster since they do not need to check times on each spin.
      */
     private static final int maxUntimedSpins = maxTimedSpins * 16;
 
