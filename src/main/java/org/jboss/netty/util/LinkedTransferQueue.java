@@ -301,12 +301,9 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
                 advanceHead(pred, s);     // unlink if head
                 if (x == s) {
                     return clean(pred, s);
-                } else if (x != null) {
-                    s.set(s);             // avoid garbage retention
-                    return x;
-                } else {
-                    return e;
                 }
+                s.set(s);                 // mark as off-list
+                return x != null? x : e;
             }
 
             if (mode == TIMEOUT) {
@@ -356,7 +353,6 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
             }
         }
 
-        QNode olddp = UNDEFINED;
         for (;;) {
             if (pred.next != s) {
                 return null;
@@ -386,7 +382,6 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
                 }
             }
 
-            boolean stateUnchanged = true;
             QNode dp = cleanMe.get();
             if (dp != null) {    // Try unlinking previous cancelled node
                 QNode d = dp.next;
@@ -399,16 +394,9 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
                      dn != d &&                //   that is on list
                      dp.casNext(d, dn)) {
                     cleanMe.compareAndSet(dp, null);
-                    stateUnchanged = false;
                 }
                 if (dp == pred) {
                     return null;      // s is already saved node
-                }
-
-                if (stateUnchanged && olddp == dp) {
-                    return null;      // infinite loop expected - bail out
-                } else {
-                    olddp = dp;
                 }
             }
             else if (cleanMe.compareAndSet(null, pred)) {
