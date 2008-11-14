@@ -47,7 +47,7 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * {@link ChannelPipeline} pipeline = ...;
  *
  * // Decoders
- * pipeline.addLast("frameDecoder", new {@link DelimiterBasedFrameDecoder}({@link Delimiters#lineDelimiter()}));
+ * pipeline.addLast("frameDecoder", new {@link DelimiterBasedFrameDecoder}(80, {@link Delimiters#lineDelimiter()}));
  * pipeline.addLast("stringDecoder", new {@link StringDecoder}("UTF-8"));
  *
  * // Encoder
