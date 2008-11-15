@@ -22,6 +22,8 @@
 package org.jboss.netty.example.http;
 
 import java.nio.charset.Charset;
+import java.util.List;
+import java.util.Map;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -35,6 +37,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.codec.http.QueryStringDecoder;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
@@ -45,6 +48,14 @@ public class HttpRequestHandler extends SimpleChannelHandler {
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         HttpRequest request = (HttpRequest) e.getMessage();
         System.out.println(request.getContent().toString(Charset.defaultCharset().name()));
+        QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getURI());
+        Map<String, List<String>> params = queryStringDecoder.getParameters();
+        for (String key : params.keySet()) {
+            List<String> vals = params.get(key);
+            for (String val : vals) {
+                System.out.println("param: " + key + "=" + val);
+            }
+        }
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         String message = "and its hello from me";
         ChannelBuffer buf = ChannelBuffers.wrappedBuffer(message.getBytes());

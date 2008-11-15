@@ -22,6 +22,7 @@
 package org.jboss.netty.example.http;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
@@ -36,6 +37,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.codec.http.QueryStringEncoder;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
@@ -69,17 +71,18 @@ public class HttpClient {
         }
         String message = "It's Hello From me";
         ChannelBuffer buf = ChannelBuffers.wrappedBuffer(message.getBytes());
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/netty/");
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, new URI("/netty/"));
         request.addHeader(HttpHeaders.HOST, host);
         request.addHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buf.writerIndex()));
         request.setContent(buf);
         ChannelFuture lastWriteFuture = channel.write(request);
         buf = ChannelBuffers.wrappedBuffer(message.getBytes());
-        request = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/netty/");
+        QueryStringEncoder queryStringEncoder = new QueryStringEncoder("/netty/");
+        queryStringEncoder.addParam("testparam", "hey ho");
+        queryStringEncoder.addParam("testparam2", "hey ho again");
+        request = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, queryStringEncoder.toUri());
         request.addHeader(HttpHeaders.HOST, host);
         request.addHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buf.writerIndex()));
-        request.addParameter("testparam", "hey ho");
-        request.addParameter("testparam2", "hey ho again");
         request.setContent(buf);
         lastWriteFuture = channel.write(request);
         lastWriteFuture.awaitUninterruptibly();

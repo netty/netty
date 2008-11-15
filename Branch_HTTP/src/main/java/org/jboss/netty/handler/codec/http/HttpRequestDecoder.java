@@ -23,6 +23,7 @@ package org.jboss.netty.handler.codec.http;
 
 import java.util.List;
 import java.util.Map;
+import java.net.URI;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 
@@ -34,16 +35,11 @@ import org.jboss.netty.buffer.ChannelBuffer;
 public class HttpRequestDecoder extends HttpMessageDecoder {
 
     @Override
-    protected void readInitial(ChannelBuffer buffer) {
+    protected void readInitial(ChannelBuffer buffer) throws Exception{
         String line = readIntoCurrentLine(buffer);
         checkpoint(ResponseState.READ_HEADER);
         String[] split = splitInitial(line);
-        UriQueryDecoder uriQueryDecoder = new UriQueryDecoder(split[1]);
-        DefaultHttpRequest httpRequest = new DefaultHttpRequest(HttpVersion.getProtocol(split[2]), HttpMethod.valueOf(split[0]), uriQueryDecoder.getPath());
-        message = httpRequest;
-        Map<String, List<String>> params = uriQueryDecoder.getParameters();
-        for (String key: params.keySet()) {
-            httpRequest.setParameters(key, params.get(key));
-        }
+        message = new DefaultHttpRequest(HttpVersion.getProtocol(split[2]), HttpMethod.valueOf(split[0]), new URI(split[1]));
+
     }
 }
