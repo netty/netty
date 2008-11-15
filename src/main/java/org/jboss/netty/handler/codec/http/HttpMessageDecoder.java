@@ -177,7 +177,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         checkpoint(nextState);
     }
 
-    protected abstract void readInitial(ChannelBuffer buffer);
+    protected abstract void readInitial(ChannelBuffer buffer) throws Exception;
 
     private int getChunkSize(String hex) {
         return Integer.valueOf(hex, 16);

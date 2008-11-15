@@ -46,15 +46,7 @@ public class HttpRequestEncoder extends HttpMessageEncoder {
         HttpRequest request = (HttpRequest) message;
         buf.writeBytes(request.getMethod().getMethod().getBytes());
         buf.writeByte(SP);
-        UriBuilder uriBuilder = new UriBuilder(request.getPath());
-        Set<String> paramNames = request.getParameterNames();
-        for (String paramName : paramNames) {
-            List<String> values = request.getParameters(paramName);
-            for (String value : values) {
-                uriBuilder.addParam(paramName, value);
-            }
-        }
-        buf.writeBytes(uriBuilder.toUri().toASCIIString().getBytes());
+        buf.writeBytes(request.getURI().toASCIIString().getBytes());
         buf.writeByte(SP);
         buf.writeBytes(request.getProtocolVersion().value().getBytes());
         buf.writeBytes(CRLF);

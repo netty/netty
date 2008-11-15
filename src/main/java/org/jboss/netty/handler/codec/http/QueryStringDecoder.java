@@ -25,20 +25,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.net.URI;
+import java.nio.charset.Charset;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class UriQueryDecoder {
+public class QueryStringDecoder {
 
-    final String uri;
+    private final String uri;
 
     private String path;
 
     private Map<String, List<String>> params = new HashMap<String, List<String>>();
 
-    public UriQueryDecoder(String uri) {
+    public QueryStringDecoder(String uri) {
         this.uri = uri;
+    }
+
+    public QueryStringDecoder(URI uri){
+        this.uri = uri.toASCIIString(); 
     }
 
     public String getPath() {
@@ -55,6 +61,14 @@ public class UriQueryDecoder {
     }
 
     public Map<String, List<String>> getParameters() {
+        if(path == null){
+            if(uri.contains("?")) {
+                decode();
+            }
+            else {
+                path = uri;
+            }    
+        }
         return params;
     }
 

@@ -21,11 +21,7 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.net.URI;
 
 /**
  * An http request implementation
@@ -33,63 +29,25 @@ import java.util.Set;
  * @author Trustin Lee (tlee@redhat.com)
  */
 public class DefaultHttpRequest extends DefaultHttpMessage implements HttpRequest {
-    private final Map<String, List<String>> params = new HashMap<String, List<String>>();
 
     private final HttpMethod method;
 
-    private final String path;
+    private final URI uri;
 
-    public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String path) {
+    public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, URI uri) {
         super(httpVersion);
         this.method = method;
-        this.path = path;
-    }
-
-    public void addParameter(final String name, final String val) {
-        if(val == null) {
-            throw new NullPointerException("value is null");
-        }
-        if(params.get(name) == null) {
-            params.put(name, new ArrayList<String>());
-        }
-        params.get(name).add(val);
-    }
-
-    public void setParameters(final String name, final List<String> values) {
-        if(values == null || values.size() == 0) {
-            throw new NullPointerException("no values are present");
-        }
-        params.put(name, values);
-    }
-
-    public void clearParameters() {
-        params.clear();
+        this.uri = uri;
     }
 
     public HttpMethod getMethod() {
         return method;
     }
 
-    public String getPath() {
-        return path;
+    public URI getURI() {
+        return uri;
     }
 
-    public String getParameter(final String name) {
-        List<String> param = params.get(name);
-        return param != null && param.size() > 0?param.get(0):null;
-    }
-
-    public List<String> getParameters(final String name) {
-        return params.get(name);
-    }
-
-    public boolean containsParameter(final String name) {
-        return params.containsKey(name);
-    }
-
-    public Set<String> getParameterNames() {
-        return params.keySet();
-    }
 
     public boolean isKeepAlive() {
         //todo

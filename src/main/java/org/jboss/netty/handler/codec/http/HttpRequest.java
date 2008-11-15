@@ -23,29 +23,17 @@ package org.jboss.netty.handler.codec.http;
 
 import java.util.List;
 import java.util.Set;
+import java.net.URI;
 
 /**
  * An http request.
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public interface HttpRequest extends HttpMessage {
-    String getParameter(String name);
-
-    List<String> getParameters(String name);
-
-    boolean containsParameter(String name);
-
-    Set<String> getParameterNames();
 
     boolean isKeepAlive();
 
-    void addParameter(String name, String val);
-
-    void setParameters(String name, List<String> values);
-
-    void clearParameters();
-
     HttpMethod getMethod();
 
-    String getPath();
+    URI getURI();
 }

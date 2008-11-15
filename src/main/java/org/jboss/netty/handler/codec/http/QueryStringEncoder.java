@@ -29,13 +29,13 @@ import java.net.URISyntaxException;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class UriBuilder {
+public class QueryStringEncoder {
 
     final String url;
 
     final List<Param> params = new ArrayList<Param>();
 
-    public UriBuilder(String url) {
+    public QueryStringEncoder(String url) {
         this.url = url;
     }
 
