@@ -621,10 +621,8 @@ public class SslHandler extends FrameDecoder {
                     runDelegatedTasks();
                     break;
                 case FINISHED:
-                    setHandshakeSuccess(channel);
-                    wrap(ctx, channel);
-                    break loop;
                 case NOT_HANDSHAKING:
+                    setHandshakeSuccess(channel);
                     wrap(ctx, channel);
                     break loop;
                 default:
@@ -666,6 +664,10 @@ public class SslHandler extends FrameDecoder {
     }
 
     private void setHandshakeSuccess(Channel channel) {
+        if (!handshaking) {
+            return;
+        }
+
         synchronized (handshakeLock) {
             handshaking = false;
             handshaken = true;
@@ -674,6 +676,7 @@ public class SslHandler extends FrameDecoder {
                 handshakeFuture = newHandshakeFuture(channel);
             }
         }
+
         handshakeFuture.setSuccess();
     }
 
