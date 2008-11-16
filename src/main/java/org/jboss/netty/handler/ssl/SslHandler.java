@@ -438,7 +438,13 @@ public class SslHandler extends FrameDecoder {
 
                     SSLEngineResult result;
                     try {
-                        result = engine.wrap(outAppBuf, outNetBuf);
+                        if (handshaking || needsFirstHandshake) {
+                            synchronized (handshakeLock) {
+                                result = engine.wrap(outAppBuf, outNetBuf);
+                            }
+                        } else {
+                            result = engine.wrap(outAppBuf, outNetBuf);
+                        }
                     } finally {
                         if (!outAppBuf.hasRemaining()) {
                             pendingUnencryptedWrites.remove();
