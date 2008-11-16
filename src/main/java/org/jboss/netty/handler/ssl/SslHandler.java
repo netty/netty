@@ -624,7 +624,14 @@ public class SslHandler extends FrameDecoder {
         try {
             loop:
             for (;;) {
-                SSLEngineResult result = engine.unwrap(inNetBuf, outAppBuf);
+                SSLEngineResult result;
+                if (handshaking) {
+                    synchronized (handshakeLock) {
+                        result = engine.unwrap(inNetBuf, outAppBuf);
+                    }
+                } else {
+                    result = engine.unwrap(inNetBuf, outAppBuf);
+                }
 
                 switch (result.getHandshakeStatus()) {
                 case NEED_UNWRAP:
