@@ -150,12 +150,8 @@ public abstract class AbstractSocketSslEchoTest {
         ChannelFuture hf = cc.getPipeline().get(SslHandler.class).handshake(cc);
         hf.awaitUninterruptibly();
         if (!hf.isSuccess()) {
-            System.out.println("Handshake failed:");
-            hf.getCause().printStackTrace(System.out);
-            if (ch.exception.get() != null) {
-                System.out.println("Exception recorded by ChannelHandler:");
-                ch.exception.get().printStackTrace(System.out);
-            }
+            System.err.println("Handshake failed:");
+            hf.getCause().printStackTrace();
         }
 
         assertTrue(hf.isSuccess());
@@ -253,6 +249,7 @@ public abstract class AbstractSocketSslEchoTest {
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
             if (exception.compareAndSet(null, e.getCause())) {
+                e.getCause().printStackTrace();
                 e.getChannel().close();
             }
         }
