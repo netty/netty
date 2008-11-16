@@ -108,11 +108,11 @@ public abstract class AbstractSocketSslEchoTest {
 
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
-    
+
     protected boolean isExecutorRequired() {
         return false;
     }
-    
+
     @Test
     public void testSslEcho() throws Throwable {
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
@@ -134,7 +134,7 @@ public abstract class AbstractSocketSslEchoTest {
         sb.getPipeline().addLast("handler", sh);
         cb.getPipeline().addFirst("ssl", new SslHandler(cse));
         cb.getPipeline().addLast("handler", ch);
-        
+
         if (isExecutorRequired()) {
             sb.getPipeline().addFirst("executor",new ExecutionHandler(eventExecutor));
             cb.getPipeline().addFirst("executor",new ExecutionHandler(eventExecutor));
@@ -149,8 +149,13 @@ public abstract class AbstractSocketSslEchoTest {
         Channel cc = ccf.getChannel();
         ChannelFuture hf = cc.getPipeline().get(SslHandler.class).handshake(cc);
         hf.awaitUninterruptibly();
-        if (!hf.isSuccess() && ch.exception.get() != null) {
-            ch.exception.get().printStackTrace();
+        if (!hf.isSuccess()) {
+            System.out.println("Handshake failed:");
+            hf.getCause().printStackTrace(System.out);
+            if (ch.exception.get() != null) {
+                System.out.println("Exception recorded by ChannelHandler:");
+                ch.exception.get().printStackTrace(System.out);
+            }
         }
 
         assertTrue(hf.isSuccess());
