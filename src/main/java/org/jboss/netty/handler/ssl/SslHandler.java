@@ -421,6 +421,7 @@ public class SslHandler extends FrameDecoder {
         ByteBuffer outNetBuf = bufferPool.acquire();
         boolean success = true;
         boolean offered = false;
+        boolean needsUnwrap = false;
         try {
             loop:
             for (;;) {
@@ -475,6 +476,7 @@ public class SslHandler extends FrameDecoder {
                                 break loop;
                             }
                         case NEED_UNWRAP:
+                            needsUnwrap = true;
                             break loop;
                         case NEED_TASK:
                             runDelegatedTasks();
@@ -525,6 +527,10 @@ public class SslHandler extends FrameDecoder {
                             new IllegalStateException("SSLEngine already closed"));
                 }
             }
+        }
+
+        if (needsUnwrap) {
+            unwrap(context, channel, ChannelBuffers.EMPTY_BUFFER, 0, 0);
         }
 
         if (future == null) {
@@ -587,8 +593,10 @@ public class SslHandler extends FrameDecoder {
                 case NEED_TASK:
                     runDelegatedTasks();
                     break;
-                case NOT_HANDSHAKING:
                 case NEED_UNWRAP:
+                    unwrap(ctx, channel, ChannelBuffers.EMPTY_BUFFER, 0, 0);
+                    break;
+                case NOT_HANDSHAKING:
                 case NEED_WRAP:
                     break;
                 default:
