@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.UnsupportedCharsetException;
@@ -253,7 +254,12 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         int readBytes = 0;
 
         while (readBytes < length) {
-            int localReadBytes = in.read(slice);
+            int localReadBytes;
+            try {
+                localReadBytes = in.read(slice);
+            } catch (ClosedChannelException e) {
+                localReadBytes = -1;
+            }
             if (localReadBytes < 0) {
                 if (readBytes == 0) {
                     return -1;
