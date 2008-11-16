@@ -155,6 +155,9 @@ public abstract class AbstractSocketSslEchoTest {
         hf.awaitUninterruptibly();
         if (!hf.isSuccess()) {
             logger.error("Handshake failed", hf.getCause());
+            sh.channel.close().awaitUninterruptibly();
+            ch.channel.close().awaitUninterruptibly();
+            sc.close().awaitUninterruptibly();
         }
 
         assertTrue(hf.isSuccess());
