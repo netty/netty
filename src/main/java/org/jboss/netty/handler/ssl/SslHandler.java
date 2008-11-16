@@ -124,6 +124,7 @@ public class SslHandler extends FrameDecoder {
     private final boolean startTls;
 
     final Object handshakeLock = new Object();
+    private volatile boolean needsFirstHandshake = true;
     private volatile boolean handshaking;
     private volatile boolean handshaken;
     private volatile ChannelFuture handshakeFuture;
@@ -567,7 +568,7 @@ public class SslHandler extends FrameDecoder {
         SSLEngineResult result;
         try {
             for (;;) {
-                if (handshaking) {
+                if (handshaking || needsFirstHandshake) {
                     synchronized (handshakeLock) {
                         result = engine.wrap(EMPTY_BUFFER, outNetBuf);
                     }
@@ -632,7 +633,7 @@ public class SslHandler extends FrameDecoder {
             loop:
             for (;;) {
                 SSLEngineResult result;
-                if (handshaking) {
+                if (handshaking || needsFirstHandshake) {
                     synchronized (handshakeLock) {
                         result = engine.unwrap(inNetBuf, outAppBuf);
                     }
@@ -704,6 +705,7 @@ public class SslHandler extends FrameDecoder {
         synchronized (handshakeLock) {
             handshaking = false;
             handshaken = true;
+            needsFirstHandshake = false; // Will not set to true again
 
             if (handshakeFuture == null) {
                 handshakeFuture = newHandshakeFuture(channel);
