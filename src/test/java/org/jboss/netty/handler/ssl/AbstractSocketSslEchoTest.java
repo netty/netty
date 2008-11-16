@@ -52,6 +52,8 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -65,6 +67,8 @@ import org.junit.Test;
  *
  */
 public abstract class AbstractSocketSslEchoTest {
+    static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(AbstractSocketSslEchoTest.class);
 
     private static final Random random = new Random();
     static final byte[] data = new byte[1048576];
@@ -150,8 +154,7 @@ public abstract class AbstractSocketSslEchoTest {
         ChannelFuture hf = cc.getPipeline().get(SslHandler.class).handshake(cc);
         hf.awaitUninterruptibly();
         if (!hf.isSuccess()) {
-            System.err.println("Handshake failed:");
-            hf.getCause().printStackTrace();
+            logger.error("Handshake failed", hf.getCause());
         }
 
         assertTrue(hf.isSuccess());
@@ -248,8 +251,9 @@ public abstract class AbstractSocketSslEchoTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
+            logger.warn("Unexpected exception", e.getCause());
+
             exception.compareAndSet(null, e.getCause());
-            e.getCause().printStackTrace();
             e.getChannel().close();
         }
     }
