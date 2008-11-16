@@ -148,7 +148,12 @@ public abstract class AbstractSocketSslEchoTest {
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
 
         ChannelFuture ccf = cb.connect(new InetSocketAddress(InetAddress.getLocalHost(), port));
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
+        ccf.awaitUninterruptibly();
+        if (!ccf.isSuccess()) {
+            logger.error("Connection attempt failed", ccf.getCause());
+            sc.close().awaitUninterruptibly();
+        }
+        assertTrue(ccf.isSuccess());
 
         Channel cc = ccf.getChannel();
         ChannelFuture hf = cc.getPipeline().get(SslHandler.class).handshake(cc);
