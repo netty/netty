@@ -39,6 +39,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.util.TimeBasedUuidGenerator;
 import org.junit.Test;
 
 
@@ -51,10 +52,14 @@ import org.junit.Test;
  */
 public class NioServerSocketShutdownTimeTest {
 
+    static {
+        // Initialize the MD5 algorithm before testing - it takes too long
+        // on some JDK.
+        TimeBasedUuidGenerator.generate();
+    }
+
     @Test(timeout = 10000)
     public void testSuccessfulBindAttempt() throws Exception {
-        long startTime = System.currentTimeMillis();
-
         ExecutorService e1 = Executors.newCachedThreadPool();
         ExecutorService e2 = Executors.newCachedThreadPool();
 
@@ -67,6 +72,8 @@ public class NioServerSocketShutdownTimeTest {
 
         DummyHandler handler = new DummyHandler();
         bootstrap.getPipeline().addLast("dummy", handler);
+
+        long startTime = System.currentTimeMillis();
 
         Channel channel = bootstrap.bind();
 

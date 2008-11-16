@@ -36,6 +36,7 @@ import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.util.DummyHandler;
+import org.jboss.netty.util.TimeBasedUuidGenerator;
 import org.junit.Test;
 
 
@@ -48,17 +49,23 @@ import org.junit.Test;
  */
 public class NioClientSocketShutdownTimeTest {
 
+    static {
+        // Initialize the MD5 algorithm before testing - it takes too long
+        // on some JDK.
+        TimeBasedUuidGenerator.generate();
+    }
+
     @Test
     public void testShutdownTime() throws Throwable {
         ServerSocketChannel serverSocket = ServerSocketChannel.open();
         serverSocket.socket().bind(new InetSocketAddress(0));
 
-        long startTime = System.currentTimeMillis();
-
         ExecutorService e1 = Executors.newCachedThreadPool();
         ExecutorService e2 = Executors.newCachedThreadPool();
         ClientBootstrap b = new ClientBootstrap(new NioClientSocketChannelFactory(e1, e2));
         b.getPipeline().addLast("handler", new DummyHandler());
+
+        long startTime = System.currentTimeMillis();
 
         try {
             serverSocket.configureBlocking(false);
