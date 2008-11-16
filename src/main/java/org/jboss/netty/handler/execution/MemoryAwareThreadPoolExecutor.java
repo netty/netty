@@ -27,6 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -83,9 +85,9 @@ import org.jboss.netty.util.LinkedTransferQueue;
  */
 public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
-    private static final InternalLogger logger = 
+    private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(MemoryAwareThreadPoolExecutor.class);
-    
+
     private volatile Settings settings = new Settings(0, 0);
 
     // XXX Can be changed in runtime now.  Make it mutable in 3.1.
@@ -167,7 +169,8 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             long keepAliveTime, TimeUnit unit, ObjectSizeEstimator objectSizeEstimator,
             ThreadFactory threadFactory) {
 
-        super(corePoolSize, corePoolSize, keepAliveTime, unit, new LinkedTransferQueue<Runnable>(), threadFactory);
+        super(corePoolSize, corePoolSize, keepAliveTime, unit,
+              new LinkedTransferQueue<Runnable>(), threadFactory, new NewThreadRunsPolicy());
 
         if (objectSizeEstimator == null) {
             throw new NullPointerException("objectSizeEstimator");
@@ -401,6 +404,22 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         Settings(long maxChannelMemorySize, long maxTotalMemorySize) {
             this.maxChannelMemorySize = maxChannelMemorySize;
             this.maxTotalMemorySize = maxTotalMemorySize;
+        }
+    }
+
+    private static class NewThreadRunsPolicy implements RejectedExecutionHandler {
+        NewThreadRunsPolicy() {
+            super();
+        }
+
+        public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+            try {
+                final Thread t = new Thread(r, "Temporary task executor");
+                t.start();
+            } catch (Throwable e) {
+                throw new RejectedExecutionException(
+                        "Failed to start a new thread", e);
+            }
         }
     }
 }
