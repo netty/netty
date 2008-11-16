@@ -473,11 +473,15 @@ public class SslHandler extends FrameDecoder {
                             break;
                         case FINISHED:
                             setHandshakeSuccess(channel);
-                        default:
+                        case NOT_HANDSHAKING:
                             if (result.getStatus() == Status.CLOSED) {
                                 success = false;
                             }
                             break loop;
+                        default:
+                            throw new IllegalStateException(
+                                    "Unknown handshake status: " +
+                                    result.getHandshakeStatus());
                         }
                     }
                 }
@@ -572,10 +576,17 @@ public class SslHandler extends FrameDecoder {
                 switch (result.getHandshakeStatus()) {
                 case FINISHED:
                     setHandshakeSuccess(channel);
-                    break;
                 case NEED_TASK:
                     runDelegatedTasks();
                     break;
+                case NOT_HANDSHAKING:
+                case NEED_UNWRAP:
+                case NEED_WRAP:
+                    break;
+                default:
+                    throw new IllegalStateException(
+                            "Unexpected handshake status: " +
+                            result.getHandshakeStatus());
                 }
 
                 if (result.bytesProduced() == 0) {
@@ -621,12 +632,16 @@ public class SslHandler extends FrameDecoder {
                     runDelegatedTasks();
                     break;
                 case FINISHED:
-                case NOT_HANDSHAKING:
                     setHandshakeSuccess(channel);
                     wrap(ctx, channel);
                     break loop;
-                default:
+                case NOT_HANDSHAKING:
+                    wrap(ctx, channel);
                     break loop;
+                default:
+                    throw new IllegalStateException(
+                            "Unknown handshake status: " +
+                            result.getHandshakeStatus());
                 }
             }
 
@@ -664,10 +679,6 @@ public class SslHandler extends FrameDecoder {
     }
 
     private void setHandshakeSuccess(Channel channel) {
-        if (!handshaking) {
-            return;
-        }
-
         synchronized (handshakeLock) {
             handshaking = false;
             handshaken = true;
