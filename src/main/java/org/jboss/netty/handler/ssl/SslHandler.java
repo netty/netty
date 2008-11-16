@@ -273,14 +273,13 @@ public class SslHandler extends FrameDecoder {
             if (handshaking) {
                 return this.handshakeFuture;
             } else {
+                engine.beginHandshake();
                 handshakeFuture = this.handshakeFuture = newHandshakeFuture(channel);
                 handshaking = true;
             }
         }
 
-        ChannelHandlerContext ctx = context(channel);
-        engine.beginHandshake();
-        wrapNonAppData(ctx, channel);
+        wrapNonAppData(context(channel), channel);
         return handshakeFuture;
     }
 
