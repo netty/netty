@@ -49,6 +49,8 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ImmediateExecutor;
 
 /**
@@ -97,6 +99,9 @@ import org.jboss.netty.util.ImmediateExecutor;
  * @apiviz.uses org.jboss.netty.handler.ssl.SslBufferPool
  */
 public class SslHandler extends FrameDecoder {
+
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(SslHandler.class);
 
     private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
@@ -349,14 +354,17 @@ public class SslHandler extends FrameDecoder {
             }
         }
 
-        super.channelDisconnected(ctx, e);
-        unwrap(ctx, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
-        engine.closeOutbound();
-        if (!sentCloseNotify.get() && handshaken) {
-            try {
-                engine.closeInbound();
-            } catch (SSLException ex) {
-                ex.printStackTrace();
+        try {
+            super.channelDisconnected(ctx, e);
+        } finally {
+            unwrap(ctx, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
+            engine.closeOutbound();
+            if (!sentCloseNotify.get() && handshaken) {
+                try {
+                    engine.closeInbound();
+                } catch (SSLException ex) {
+                    logger.debug("Failed to clean up SSLEngine.", ex);
+                }
             }
         }
     }
