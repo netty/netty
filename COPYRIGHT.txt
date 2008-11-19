@@ -6,6 +6,7 @@ sent to Trustin Lee <tlee@redhat.com>.
 
 SVN Login(s)            Name
 -------------------------------------------------------------------------------
+ataylor                 Andy Taylor
 trustin                 Trustin Heuiseung Lee
 -------------------------------------------------------------------------------
 
