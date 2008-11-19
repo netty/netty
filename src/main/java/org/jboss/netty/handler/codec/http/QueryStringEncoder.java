@@ -71,12 +71,12 @@ public class QueryStringEncoder {
         return s.replaceAll(" ", "%20");
     }
 
-    class Param {
-        final String name;
+    private static class Param {
 
+        final String name;
         final String value;
 
-        public Param(String name, String value) {
+        Param(String name, String value) {
             this.value = value;
             this.name = name;
         }

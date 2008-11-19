@@ -24,6 +24,7 @@ package org.jboss.netty.example.http;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -51,8 +52,9 @@ public class HttpRequestHandler extends SimpleChannelHandler {
         System.out.println(request.getContent().toString(Charset.defaultCharset().name()));
         QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getURI());
         Map<String, List<String>> params = queryStringDecoder.getParameters();
-        for (String key : params.keySet()) {
-            List<String> vals = params.get(key);
+        for (Entry<String, List<String>> p: params.entrySet()) {
+            String key = p.getKey();
+            List<String> vals = p.getValue();
             for (String val : vals) {
                 System.out.println("param: " + key + "=" + val);
             }

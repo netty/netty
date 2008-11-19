@@ -25,35 +25,39 @@ package org.jboss.netty.handler.codec.http;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  */
-public class HttpCodecUtil {
+class HttpCodecUtil {
     //space ' '
-    public static final byte SP = 32;
+    static final byte SP = 32;
 
     //tab ' '
-    public static final byte HT = 9;
+    static final byte HT = 9;
 
     /**
      * Carriage return
      */
-    public static final byte CR = 13;
+    static final byte CR = 13;
 
     /**
      * Equals '='
      */
-    public static final byte EQUALS = 61;
+    static final byte EQUALS = 61;
 
     /**
      * Line feed character
      */
-    public static final byte LF = 10;
+    static final byte LF = 10;
 
     /**
      * carriage return line feed
      */
-    public static final byte[] CRLF = new byte[] { CR, LF };
+    static final byte[] CRLF = new byte[] { CR, LF };
 
     /**
     * Colon ':'
     */
-    public static final byte COLON = 58;
+    static final byte COLON = 58;
+
+    private HttpCodecUtil() {
+        super();
+    }
 }

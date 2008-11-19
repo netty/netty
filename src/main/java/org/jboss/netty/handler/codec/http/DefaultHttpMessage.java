@@ -21,6 +21,7 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -113,7 +114,10 @@ public class DefaultHttpMessage implements HttpMessage {
         return content;
     }
 
-    private static class CaseIgnoringComparator implements Comparator<String> {
+    private static class CaseIgnoringComparator
+            implements Comparator<String>, Serializable {
+
+        private static final long serialVersionUID = 4582133183775373862L;
 
         CaseIgnoringComparator() {
             super();
