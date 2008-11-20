@@ -265,7 +265,6 @@ class NioProviderMetadata {
         }
 
         int autodetectWithoutTimeout() {
-            // TODO Code cleanup - what a mess.
             final int constraintLevel;
             ExecutorService executor = Executors.newCachedThreadPool();
             boolean success;
