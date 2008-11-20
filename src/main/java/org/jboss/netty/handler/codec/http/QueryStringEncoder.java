@@ -55,7 +55,7 @@ public class QueryStringEncoder {
             return new URI(url);
         }
         else {
-            StringBuffer sb = new StringBuffer(url).append("?");
+            StringBuilder sb = new StringBuilder(url).append("?");
             for (int i = 0; i < params.size(); i++) {
                 Param param = params.get(i);
                 sb.append(replaceSpaces(param.name)).append("=").append(replaceSpaces(param.value));
