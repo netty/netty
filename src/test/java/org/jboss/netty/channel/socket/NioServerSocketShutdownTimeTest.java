@@ -73,9 +73,9 @@ public class NioServerSocketShutdownTimeTest {
         DummyHandler handler = new DummyHandler();
         bootstrap.getPipeline().addLast("dummy", handler);
 
-        long startTime = System.currentTimeMillis();
-
         Channel channel = bootstrap.bind();
+
+        long startTime = System.currentTimeMillis();
 
         Socket socket = null;
         try {
