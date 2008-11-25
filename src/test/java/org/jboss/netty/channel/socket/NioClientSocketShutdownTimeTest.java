@@ -65,7 +65,7 @@ public class NioClientSocketShutdownTimeTest {
         ClientBootstrap b = new ClientBootstrap(new NioClientSocketChannelFactory(e1, e2));
         b.getPipeline().addLast("handler", new DummyHandler());
 
-        long startTime = System.currentTimeMillis();
+        long startTime;
 
         try {
             serverSocket.configureBlocking(false);
@@ -81,6 +81,8 @@ public class NioClientSocketShutdownTimeTest {
                 throw f.getCause();
             }
             assertTrue(f.isSuccess());
+
+            startTime = System.currentTimeMillis();
 
             f.getChannel().close().awaitUninterruptibly();
         } finally {
