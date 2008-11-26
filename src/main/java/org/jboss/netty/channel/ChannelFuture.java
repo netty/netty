@@ -97,13 +97,13 @@ public interface ChannelFuture {
      * Marks this future as a success and notifies all
      * listeners.
      */
-    void setSuccess();
+    boolean setSuccess();
 
     /**
      * Marks this future as a failure and notifies all
      * listeners.
      */
-    void setFailure(Throwable cause);
+    boolean setFailure(Throwable cause);
 
     /**
      * Adds the specified listener to this future.  The

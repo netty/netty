@@ -234,37 +234,39 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
     }
 
-    public void setSuccess() {
+    public boolean setSuccess() {
         synchronized (this) {
             // Allow only once.
             if (done) {
-                return;
+                return false;
             }
 
             done = true;
             if (waiters > 0) {
-                this.notifyAll();
+                notifyAll();
             }
         }
 
         notifyListeners();
+        return true;
     }
 
-    public void setFailure(Throwable cause) {
+    public boolean setFailure(Throwable cause) {
         synchronized (this) {
             // Allow only once.
             if (done) {
-                return;
+                return false;
             }
 
             this.cause = cause;
             done = true;
             if (waiters > 0) {
-                this.notifyAll();
+                notifyAll();
             }
         }
 
         notifyListeners();
+        return true;
     }
 
     public boolean cancel() {
@@ -281,7 +283,7 @@ public class DefaultChannelFuture implements ChannelFuture {
             cause = CANCELLED;
             done = true;
             if (waiters > 0) {
-                this.notifyAll();
+                notifyAll();
             }
         }
 

@@ -230,12 +230,21 @@ public interface Channel {
 
     /**
      * Closes this channel asynchronously.  If this channel is bound or
-     * connected, it will be disconnected and unbound first.
+     * connected, it will be disconnected and unbound first.  Once a channel
+     * is closed, it can not be open again.  Calling this method on a closed
+     * channel has no effect.  Please note that this method always returns the
+     * same future instance.
      *
      * @return the {@link ChannelFuture} which will be notified when the
      *         close request succeeds or fails
      */
     ChannelFuture close();
+
+    /**
+     * Returns the {@link ChannelFuture} which will be notified when this
+     * channel is closed.  This method always returns the same future instance.
+     */
+    ChannelFuture getCloseFuture();
 
     /**
      * Returns the current {@code interestOps} of this channel.

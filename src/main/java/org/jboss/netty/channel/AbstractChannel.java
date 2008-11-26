@@ -24,7 +24,6 @@ package org.jboss.netty.channel;
 
 import java.net.SocketAddress;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jboss.netty.util.TimeBasedUuidGenerator;
 
@@ -44,8 +43,7 @@ public abstract class AbstractChannel implements Channel, Comparable<Channel> {
     private final ChannelFactory factory;
     private final ChannelPipeline pipeline;
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this);
-
-    private final AtomicBoolean closed = new AtomicBoolean();
+    private final ChannelFuture closeFuture = new UnfailingChannelFuture(this, false);
     private volatile int interestOps = OP_READ;
 
     /** Cache for the string representation of this channel */
@@ -131,7 +129,7 @@ public abstract class AbstractChannel implements Channel, Comparable<Channel> {
     }
 
     public boolean isOpen() {
-        return !closed.get();
+        return !closeFuture.isDone();
     }
 
     /**
@@ -143,7 +141,7 @@ public abstract class AbstractChannel implements Channel, Comparable<Channel> {
      *                      closed yet
      */
     protected boolean setClosed() {
-        return closed.compareAndSet(false, true);
+        return closeFuture.setSuccess();
     }
 
     public ChannelFuture bind(SocketAddress localAddress) {
@@ -155,7 +153,13 @@ public abstract class AbstractChannel implements Channel, Comparable<Channel> {
     }
 
     public ChannelFuture close() {
-        return Channels.close(this);
+        ChannelFuture returnedCloseFuture = Channels.close(this);
+        assert closeFuture == returnedCloseFuture;
+        return closeFuture;
+    }
+
+    public ChannelFuture getCloseFuture() {
+        return closeFuture;
     }
 
     public ChannelFuture connect(SocketAddress remoteAddress) {

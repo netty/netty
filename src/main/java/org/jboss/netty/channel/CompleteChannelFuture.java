@@ -101,12 +101,12 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
         return true;
     }
 
-    public void setFailure(Throwable cause) {
-        // Unused
+    public boolean setFailure(Throwable cause) {
+        return false;
     }
 
-    public void setSuccess() {
-        // Unused
+    public boolean setSuccess() {
+        return false;
     }
 
     public boolean cancel() {

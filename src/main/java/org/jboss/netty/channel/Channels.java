@@ -732,7 +732,7 @@ public class Channels {
      * @return the {@link ChannelFuture} which will be notified on closure
      */
     public static ChannelFuture close(Channel channel) {
-        ChannelFuture future = future(channel);
+        ChannelFuture future = channel.getCloseFuture();
         channel.getPipeline().sendDownstream(new DefaultChannelStateEvent(
                 channel, future, ChannelState.OPEN, Boolean.FALSE));
         return future;
