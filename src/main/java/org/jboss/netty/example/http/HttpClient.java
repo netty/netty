@@ -41,12 +41,12 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  */
-public class HttpWebserverClient {
+public class HttpClient {
 
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println(
-                    "Usage: " + HttpWebserverClient.class.getSimpleName() +
+                    "Usage: " + HttpClient.class.getSimpleName() +
                     " <URL>");
             return;
         }
