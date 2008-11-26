@@ -28,9 +28,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -60,11 +58,10 @@ public class NioServerSocketShutdownTimeTest {
 
     @Test(timeout = 10000)
     public void testSuccessfulBindAttempt() throws Exception {
-        ExecutorService e1 = Executors.newCachedThreadPool();
-        ExecutorService e2 = Executors.newCachedThreadPool();
-
         ServerBootstrap bootstrap = new ServerBootstrap(
-                new NioServerSocketChannelFactory(e1, e2));
+                new NioServerSocketChannelFactory(
+                        Executors.newCachedThreadPool(),
+                        Executors.newCachedThreadPool()));
 
         bootstrap.setOption("localAddress", new InetSocketAddress(0));
         bootstrap.setOption("child.receiveBufferSize", 9753);
@@ -109,29 +106,7 @@ public class NioServerSocketShutdownTimeTest {
                 }
             }
             channel.close().awaitUninterruptibly();
-
-            e1.shutdownNow();
-            e2.shutdownNow();
-
-            for (;;) {
-                try {
-                    if (e1.awaitTermination(1, TimeUnit.MILLISECONDS)) {
-                        break;
-                    }
-                } catch (InterruptedException e) {
-                    // Ignore.
-                }
-            }
-
-            for (;;) {
-                try {
-                    if (e2.awaitTermination(1, TimeUnit.MILLISECONDS)) {
-                        break;
-                    }
-                } catch (InterruptedException e) {
-                    // Ignore.
-                }
-            }
+            bootstrap.getFactory().getExternalResource().release();
         }
 
         long shutdownTime = System.currentTimeMillis() - startTime;

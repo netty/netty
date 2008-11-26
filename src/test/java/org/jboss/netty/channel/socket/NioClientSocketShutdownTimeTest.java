@@ -28,9 +28,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
@@ -60,9 +58,10 @@ public class NioClientSocketShutdownTimeTest {
         ServerSocketChannel serverSocket = ServerSocketChannel.open();
         serverSocket.socket().bind(new InetSocketAddress(0));
 
-        ExecutorService e1 = Executors.newCachedThreadPool();
-        ExecutorService e2 = Executors.newCachedThreadPool();
-        ClientBootstrap b = new ClientBootstrap(new NioClientSocketChannelFactory(e1, e2));
+        ClientBootstrap b = new ClientBootstrap(
+                new NioClientSocketChannelFactory(
+                        Executors.newCachedThreadPool(),
+                        Executors.newCachedThreadPool()));
         b.getPipeline().addLast("handler", new DummyHandler());
 
         long startTime;
@@ -86,26 +85,7 @@ public class NioClientSocketShutdownTimeTest {
 
             f.getChannel().close().awaitUninterruptibly();
         } finally {
-            assertEquals(0, e1.shutdownNow().size());
-            assertEquals(0, e2.shutdownNow().size());
-            for (;;) {
-                try {
-                    if (e1.awaitTermination(1, TimeUnit.SECONDS)) {
-                        break;
-                    }
-                } catch (InterruptedException ex) {
-                    // Ignore
-                }
-            }
-            for (;;) {
-                try {
-                    if (e2.awaitTermination(1, TimeUnit.SECONDS)) {
-                        break;
-                    }
-                } catch (InterruptedException ex) {
-                    // Ignore
-                }
-            }
+            b.getFactory().getExternalResource().release();
 
             try {
                 serverSocket.close();
