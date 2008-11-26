@@ -96,12 +96,20 @@ public interface ChannelFuture {
     /**
      * Marks this future as a success and notifies all
      * listeners.
+     *
+     * @return {@code true} if and only if successfully marked this future as
+     *         a success. Otherwise {@code false} because this future is
+     *         already marked as either a success or a failure.
      */
     boolean setSuccess();
 
     /**
      * Marks this future as a failure and notifies all
      * listeners.
+     *
+     * @return {@code true} if and only if successfully marked this future as
+     *         a failure. Otherwise {@code false} because this future is
+     *         already marked as either a success or a failure.
      */
     boolean setFailure(Throwable cause);
 
