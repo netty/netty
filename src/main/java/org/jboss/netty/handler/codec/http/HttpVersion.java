@@ -30,22 +30,20 @@ package org.jboss.netty.handler.codec.http;
  */
 public enum HttpVersion {
     HTTP_1_0("HTTP/1.0"),
-
     HTTP_1_1("HTTP/1.1"),
-
     UNKNOWN("UNKNOWN"),;
 
-    private String version;
+    private final String version;
 
-    private HttpVersion(String value) {
-        version = value;
+    private HttpVersion(String version) {
+        this.version = version;
     }
 
     public String value() {
         return version;
     }
 
-    public static HttpVersion getProtocol(String value) {
+    public static HttpVersion decode(String value) {
         if (value == null) {
             return UNKNOWN;
         }

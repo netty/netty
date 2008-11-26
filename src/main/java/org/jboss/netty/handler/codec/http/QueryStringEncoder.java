@@ -32,9 +32,8 @@ import java.util.List;
  */
 public class QueryStringEncoder {
 
-    final String url;
-
-    final List<Param> params = new ArrayList<Param>();
+    private final String url;
+    private final List<Param> params = new ArrayList<Param>();
 
     public QueryStringEncoder(String url) {
         this.url = url;

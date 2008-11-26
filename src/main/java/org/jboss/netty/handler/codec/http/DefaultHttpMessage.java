@@ -41,10 +41,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
 public class DefaultHttpMessage implements HttpMessage {
     private final static Comparator<String> caseIgnoringComparator = new CaseIgnoringComparator();
 
-    Map<String, List<String>> headers = new TreeMap<String, List<String>>(caseIgnoringComparator);
-
     private final HttpVersion version;
-
+    private final Map<String, List<String>> headers = new TreeMap<String, List<String>>(caseIgnoringComparator);
     private ChannelBuffer content;
 
     protected DefaultHttpMessage(final HttpVersion version) {

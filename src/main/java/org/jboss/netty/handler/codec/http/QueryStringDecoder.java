@@ -34,9 +34,7 @@ import java.util.Map;
 public class QueryStringDecoder {
 
     private final String uri;
-
     private String path;
-
     private final Map<String, List<String>> params = new HashMap<String, List<String>>();
 
     public QueryStringDecoder(String uri) {

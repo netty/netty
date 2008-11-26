@@ -39,7 +39,7 @@ public class HttpRequestDecoder extends HttpMessageDecoder {
         String line = readIntoCurrentLine(buffer);
         checkpoint(ResponseState.READ_HEADER);
         String[] split = splitInitial(line);
-        message = new DefaultHttpRequest(HttpVersion.getProtocol(split[2]), HttpMethod.valueOf(split[0]), new URI(split[1]));
+        message = new DefaultHttpRequest(HttpVersion.decode(split[2]), HttpMethod.valueOf(split[0]), new URI(split[1]));
 
     }
 }

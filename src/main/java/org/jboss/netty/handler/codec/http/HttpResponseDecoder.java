@@ -36,6 +36,6 @@ public class HttpResponseDecoder extends HttpMessageDecoder {
         String line = readIntoCurrentLine(buffer);
         checkpoint(ResponseState.READ_HEADER);
         String[] split = splitInitial(line);
-        message = new DefaultHttpResponse(HttpVersion.getProtocol(split[0]), new HttpResponseStatus(Integer.valueOf(split[1]), split[2]));
+        message = new DefaultHttpResponse(HttpVersion.decode(split[0]), new HttpResponseStatus(Integer.valueOf(split[1]), split[2]));
     }
 }
