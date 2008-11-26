@@ -22,6 +22,7 @@
 package org.jboss.netty.example.http;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
@@ -34,18 +35,33 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.codec.http.QueryStringEncoder;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
  */
 public class HttpWebserverClient {
-    public static void main(String[] args) throws Exception {
 
-        // Parse options.
-        String host = "www.jboss.org";
-        int port = 80;
+    public static void main(String[] args) throws Exception {
+        if (args.length != 1) {
+            System.err.println(
+                    "Usage: " + HttpWebserverClient.class.getSimpleName() +
+                    " <URL>");
+            return;
+        }
+
+        URI uri = new URI(args[0]);
+        String scheme = uri.getScheme() == null? "http" : uri.getScheme();
+        String host = uri.getHost() == null? "localhost" : uri.getHost();
+        int port = uri.getPort() == -1? 80 : uri.getPort();
+
+        if (!scheme.equals("http")) {
+            // We can actually support HTTPS fairly easily by inserting
+            // an SslHandler to the pipeline - left as an exercise.
+            System.err.println("Only HTTP is supported.");
+            return;
+        }
 
         // Configure the client.
         ChannelFactory factory =
@@ -54,8 +70,9 @@ public class HttpWebserverClient {
                     Executors.newCachedThreadPool());
 
         ClientBootstrap bootstrap = new ClientBootstrap(factory);
-        HttpPipelineFactory handler = new HttpPipelineFactory(new HttpResponseHandler());
+        HttpClientPipelineFactory handler = new HttpClientPipelineFactory(new HttpResponseHandler());
         bootstrap.setPipelineFactory(handler);
+
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
 
@@ -65,8 +82,9 @@ public class HttpWebserverClient {
             future.getCause().printStackTrace();
             System.exit(0);
         }
-        QueryStringEncoder uriBuilder = new QueryStringEncoder("/netty/");
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, uriBuilder.toUri());
+
+        // Send the HTTP request.
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, uri);
         request.addHeader(HttpHeaders.HOST, host);
         ChannelFuture lastWriteFuture = channel.write(request);
         lastWriteFuture.awaitUninterruptibly();

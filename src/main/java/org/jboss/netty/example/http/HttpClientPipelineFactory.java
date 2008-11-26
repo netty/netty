@@ -33,10 +33,10 @@ import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  */
-public class HttpPipelineFactory implements ChannelPipelineFactory {
+public class HttpClientPipelineFactory implements ChannelPipelineFactory {
     private final ChannelHandler handler;
 
-    public HttpPipelineFactory(HttpResponseHandler handler) {
+    public HttpClientPipelineFactory(HttpResponseHandler handler) {
         this.handler = handler;
     }
 
