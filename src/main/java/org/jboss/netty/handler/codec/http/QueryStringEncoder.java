@@ -67,6 +67,7 @@ public class QueryStringEncoder {
         }
     }
 
+    // FIXME Use URLEncoder or something equivalent
     private String replaceSpaces(String s) {
         return s.replaceAll(" ", "%20");
     }

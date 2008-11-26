@@ -77,7 +77,7 @@ public class QueryStringDecoder {
         path = split[0];
         decodeParams(split[1]);
     }
-    //todo - just replacing spaces at the minute, should we check for all characters or leave this to the user?
+
     private void decodeParams(String s) {
         String[] params = s.split("&");
         for (String param : params) {
@@ -92,6 +92,7 @@ public class QueryStringDecoder {
         }
     }
 
+    // FIXME Use URLDecoder or something equivalent
     private String removeSpaceDelimeters(String s) {
         return s.replaceAll("%20", " ");
     }
