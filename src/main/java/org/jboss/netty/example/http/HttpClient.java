@@ -80,7 +80,8 @@ public class HttpClient {
         Channel channel = future.awaitUninterruptibly().getChannel();
         if (!future.isSuccess()) {
             future.getCause().printStackTrace();
-            System.exit(0);
+            factory.getExternalResource().release();
+            return;
         }
 
         // Send the HTTP request.

@@ -28,7 +28,9 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFactoryResource;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelFactoryExecutorResource;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 
@@ -87,6 +89,7 @@ import org.jboss.netty.channel.socket.SocketChannel;
  */
 public class OioClientSocketChannelFactory implements ClientSocketChannelFactory {
 
+    private final ChannelFactoryResource externalResource;
     final OioClientSocketPipelineSink sink;
 
     /**
@@ -99,10 +102,15 @@ public class OioClientSocketChannelFactory implements ClientSocketChannelFactory
         if (workerExecutor == null) {
             throw new NullPointerException("workerExecutor");
         }
+        externalResource = new ChannelFactoryExecutorResource(workerExecutor);
         sink = new OioClientSocketPipelineSink(workerExecutor);
     }
 
     public SocketChannel newChannel(ChannelPipeline pipeline) {
         return new OioClientSocketChannel(this, pipeline, sink);
+    }
+
+    public ChannelFactoryResource getExternalResource() {
+        return externalResource;
     }
 }

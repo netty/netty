@@ -26,6 +26,7 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
@@ -75,17 +76,17 @@ public class FactorialClient {
             bootstrap.connect(new InetSocketAddress(host, port));
 
         // Wait until the connection is made successfully.
+        Channel channel = connectFuture.awaitUninterruptibly().getChannel();
+
         // Get the handler instance to retrieve the answer.
-        FactorialClientHandler handler = (FactorialClientHandler)
-            connectFuture.await().getChannel().getPipeline().getLast();
+        FactorialClientHandler handler =
+            (FactorialClientHandler) channel.getPipeline().getLast();
 
         // Print out the answer.
         System.out.format(
                 "Factorial of %,d is: %,d", count, handler.getFactorial());
 
-        // We should shut down all thread pools here to exit normally.
-        // However, it is just fine to call System.exit(0) because we are
-        // finished with the business.
-        System.exit(0);
+        // Shut down all thread pools to exit.
+        factory.getExternalResource().release();
     }
 }

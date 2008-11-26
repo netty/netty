@@ -58,4 +58,14 @@ public interface ChannelFactory {
      * @throws ChannelException if failed to create and open a new channel
      */
     Channel newChannel(ChannelPipeline pipeline);
+
+    /**
+     * Returns the external resources that this factory depends on to function.
+     * Please note that {@link ChannelFactoryResource#release()} can be called
+     * to release all external resources conveniently when the resources are not
+     * used by this factory or any other part of your application.
+     * An unexpected behavior will be resulted in if the returned resources are
+     * released when there's an open channel which is managed by this factory.
+     */
+    ChannelFactoryResource getExternalResource();
 }

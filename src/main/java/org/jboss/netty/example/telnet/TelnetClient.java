@@ -76,7 +76,8 @@ public class TelnetClient {
         Channel channel = future.awaitUninterruptibly().getChannel();
         if (!future.isSuccess()) {
             future.getCause().printStackTrace();
-            System.exit(0);
+            factory.getExternalResource();
+            return;
         }
 
         // Read commands from the stdin.
@@ -101,9 +102,7 @@ public class TelnetClient {
         // all I/O operations are asynchronous in Netty.
         channel.close().awaitUninterruptibly();
 
-        // We should shut down all thread pools here to exit normally.
-        // However, it is just fine to call System.exit(0) because we are
-        // finished with the business.
-        System.exit(0);
+        // Shut down all thread pools to exit.
+        factory.getExternalResource().release();
     }
 }

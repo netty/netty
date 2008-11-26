@@ -30,8 +30,10 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFactoryResource;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.ChannelFactoryExecutorResource;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 
@@ -95,6 +97,7 @@ import org.jboss.netty.channel.socket.SocketChannel;
  */
 public class NioClientSocketChannelFactory implements ClientSocketChannelFactory {
 
+    private final ChannelFactoryResource externalResource;
     private final ChannelSink sink;
 
     /**
@@ -137,10 +140,16 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
                     "workerCount (" + workerCount + ") " +
                     "must be a positive integer.");
         }
+
+        externalResource = new ChannelFactoryExecutorResource(bossExecutor, workerExecutor);
         sink = new NioClientSocketPipelineSink(bossExecutor, workerExecutor, workerCount);
     }
 
     public SocketChannel newChannel(ChannelPipeline pipeline) {
         return new NioClientSocketChannel(this, pipeline, sink);
+    }
+
+    public ChannelFactoryResource getExternalResource() {
+        return externalResource;
     }
 }
