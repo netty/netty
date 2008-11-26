@@ -49,10 +49,4 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
     public URI getURI() {
         return uri;
     }
-
-
-    public boolean isKeepAlive() {
-        //todo
-        return true;
-    }
 }

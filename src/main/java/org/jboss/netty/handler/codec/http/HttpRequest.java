@@ -31,8 +31,6 @@ import java.net.URI;
  */
 public interface HttpRequest extends HttpMessage {
 
-    boolean isKeepAlive();
-
     HttpMethod getMethod();
 
     URI getURI();
