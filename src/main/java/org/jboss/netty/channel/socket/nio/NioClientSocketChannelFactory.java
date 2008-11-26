@@ -30,10 +30,10 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFactoryExecutorResource;
 import org.jboss.netty.channel.ChannelFactoryResource;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.ChannelFactoryExecutorResource;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 
@@ -62,6 +62,7 @@ import org.jboss.netty.channel.socket.SocketChannel;
  * more {@link Channel}s in a non-blocking mode.
  *
  * <h3>Life cycle of threads and graceful shutdown</h3>
+ * TODO: Rewrite this section to recommend a user to call ChannelFactoryResource.release().
  * <p>
  * All threads are acquired from the {@link Executor}s which were specified
  * when a {@link NioClientSocketChannelFactory} was created.  A boss thread is

@@ -36,6 +36,8 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * is attached to the new {@link Channel}, and starts to handle all associated
  * {@link ChannelEvent}s.
  *
+ * TODO: Document how to shut down a service using ChannelFactoryResource.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
