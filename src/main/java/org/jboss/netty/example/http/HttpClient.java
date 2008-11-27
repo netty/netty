@@ -87,7 +87,12 @@ public class HttpClient {
         // Send the HTTP request.
         HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, uri);
         request.addHeader(HttpHeaders.HOST, host);
-        ChannelFuture lastWriteFuture = channel.write(request);
-        lastWriteFuture.awaitUninterruptibly();
+        channel.write(request);
+
+        // Wait for the server to close the connection.
+        channel.getCloseFuture().awaitUninterruptibly();
+
+        // Shut down executor threads to exit.
+        factory.getExternalResource().release();
     }
 }
