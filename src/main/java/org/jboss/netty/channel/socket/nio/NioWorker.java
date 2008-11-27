@@ -382,6 +382,12 @@ class NioWorker implements Runnable {
             if (worker != null) {
                 Thread workerThread = worker.thread;
                 if (workerThread != null && Thread.currentThread() != workerThread) {
+                    if (!channel.isWritable()) {
+                        // Will be written by the worker thread
+                        // when the channel is ready to write.
+                        return;
+                    }
+
                     if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
                         worker.writeTaskQueue.offer(channel.writeTask);
                     }
@@ -716,8 +722,8 @@ class NioWorker implements Runnable {
         boolean bound = channel.isBound();
         try {
             channel.socket.close();
-            assert future == channel.getCloseFuture();
             if (channel.setClosed()) {
+                future.setSuccess();
                 if (connected) {
                     if (channel.getInterestOps() != Channel.OP_WRITE) {
                         channel.setInterestOpsNow(Channel.OP_WRITE);
@@ -731,6 +737,8 @@ class NioWorker implements Runnable {
 
                 cleanUpWriteBuffer(channel);
                 fireChannelClosed(channel);
+            } else {
+                future.setSuccess();
             }
         } catch (Throwable t) {
             future.setFailure(t);
