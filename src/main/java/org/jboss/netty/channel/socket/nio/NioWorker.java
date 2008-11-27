@@ -86,7 +86,7 @@ class NioWorker implements Runnable {
     }
 
     void register(NioSocketChannel channel, ChannelFuture future) {
-        
+
         boolean server = !(channel instanceof NioClientSocketChannel);
         Runnable registerTask = new RegisterTask(channel, future, server);
         Selector selector;
@@ -100,7 +100,7 @@ class NioWorker implements Runnable {
                     throw new ChannelException(
                             "Failed to create a selector.", t);
                 }
-                
+
                 // Start the worker thread with the new Selector.
                 String threadName =
                     (server ? "New I/O server worker #"
@@ -126,7 +126,7 @@ class NioWorker implements Runnable {
                 // Use the existing selector if this worker has been started.
                 selector = this.selector;
             }
-            
+
             assert selector != null && selector.isOpen();
 
             started = true;
@@ -716,7 +716,7 @@ class NioWorker implements Runnable {
         boolean bound = channel.isBound();
         try {
             channel.socket.close();
-            future.setSuccess();
+            assert future == channel.getCloseFuture();
             if (channel.setClosed()) {
                 if (connected) {
                     if (channel.getInterestOps() != Channel.OP_WRITE) {
