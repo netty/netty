@@ -479,25 +479,35 @@ class NioWorker implements Runnable {
 
     private static void fireChannelInterestChangedIfNecessary(
             NioSocketChannel channel, boolean open) {
-        int interestOps = channel.getRawInterestOps();
-        boolean wasWritable = channel.wasWritable;
-        boolean writable = channel.wasWritable = open? channel.isWritable() : false;
-        if (wasWritable) {
-            if (writable) {
-                if (channel.mightNeedToNotifyUnwritability) {
-                    channel.mightNeedToNotifyUnwritability = false;
+        if (channel.firingEvent) {
+            // Prevent StackOverflowError.
+            return;
+        }
+
+        channel.firingEvent = true;
+        try {
+            int interestOps = channel.getRawInterestOps();
+            boolean wasWritable = channel.oldWritable;
+            boolean writable = channel.oldWritable = open? channel.isWritable() : false;
+            if (wasWritable) {
+                if (writable) {
+                    if (channel.exceededHighWaterMark) {
+                        channel.exceededHighWaterMark = false;
+                        fireChannelInterestChanged(channel, interestOps | Channel.OP_WRITE);
+                        fireChannelInterestChanged(channel, interestOps & ~Channel.OP_WRITE);
+                    }
+                } else {
                     fireChannelInterestChanged(channel, interestOps | Channel.OP_WRITE);
-                    fireChannelInterestChanged(channel, interestOps & ~Channel.OP_WRITE);
                 }
             } else {
-                fireChannelInterestChanged(channel, interestOps | Channel.OP_WRITE);
+                if (writable) {
+                    fireChannelInterestChanged(channel, interestOps & ~Channel.OP_WRITE);
+                } else {
+                    fireChannelInterestChanged(channel, interestOps | Channel.OP_WRITE);
+                }
             }
-        } else {
-            if (writable) {
-                fireChannelInterestChanged(channel, interestOps & ~Channel.OP_WRITE);
-            } else {
-                fireChannelInterestChanged(channel, interestOps | Channel.OP_WRITE);
-            }
+        } finally {
+            channel.firingEvent = false;
         }
     }
 

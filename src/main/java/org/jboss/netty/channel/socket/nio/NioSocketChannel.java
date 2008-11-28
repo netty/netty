@@ -59,8 +59,20 @@ abstract class NioSocketChannel extends AbstractChannel
     final Runnable writeTask = new WriteTask();
     final AtomicInteger writeBufferSize = new AtomicInteger();
     final Queue<MessageEvent> writeBuffer = new WriteBuffer();
-    boolean wasWritable;
-    boolean mightNeedToNotifyUnwritability;
+
+    /** Previous return value of isWritable() */
+    boolean oldWritable;
+    /**
+     * Set to true if the amount of data in the writeBuffer exceeds
+     * the high water mark, as specified in NioSocketChannelConfig.
+     */
+    boolean exceededHighWaterMark;
+    /**
+     * true if and only if NioWorker is firing an event which might cause
+     * infinite recursion.
+     */
+    boolean firingEvent;
+
     MessageEvent currentWriteEvent;
     int currentWriteIndex;
 
@@ -160,7 +172,7 @@ abstract class NioSocketChannel extends AbstractChannel
                 int newWriteBufferSize = writeBufferSize.addAndGet(
                         -((ChannelBuffer) e.getMessage()).readableBytes());
                 if (newWriteBufferSize <= getConfig().getWriteBufferLowWaterMark()) {
-                    mightNeedToNotifyUnwritability = true;
+                    exceededHighWaterMark = true;
                 }
             }
             return e;
