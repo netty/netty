@@ -85,6 +85,21 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * }
  * </pre>
  *
+ * <h3>How does this work?</h3>
+ * <p>
+ * {@link ReplayingDecoder} passes a specialized {@link ChannelBuffer}
+ * implementation which throws a {@link Error} of certain type when there's not
+ * enough data in the buffer.  In the {@code IntegerHeaderFrameDecoder} above,
+ * you just assumed that there will be more than 4 bytes in the buffer when
+ * you call {@code buf.readInt()}.  If there's really 4 bytes in the buffer,
+ * it will return the integer header as you expected.  Otherwise, the
+ * {@link Error} will be raised and the control will be returned to
+ * {@link ReplayingDecoder}.  If {@link ReplayingDecoder} catches the
+ * {@link Error}, then it will rewind the {@code readerIndex} of the buffer
+ * back to the 'initial' position (i.e. the beginning of the buffer) and call
+ * the {@code decode(..)} method again when more data is received into the
+ * buffer.
+ *
  * <h3>Limitations</h3>
  * <p>
  * At the cost of the simplicity, {@link ReplayingDecoder} enforces you a few
@@ -92,20 +107,27 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * <ul>
  * <li>Some buffer operations are prohibited.</li>
  * <li>Performance can be worse if the network is slow and the message
- *     format is complicated unlike the example above.</li>
+ *     format is complicated unlike the example above.  In this case, your
+ *     decoder might have to decode the same part of the message over and over
+ *     again.</li>
  * </ul>
  *
  * <h3>Improving the performance</h3>
  * <p>
- * Fortunately, the performance of a {@link ReplayingDecoder} implementation
- * can be improved significantly by using the {@code checkpoint()} method.
+ * Fortunately, the performance of a complex decoder implementation can be
+ * improved significantly with the {@code checkpoint()} method.  The
+ * {@code checkpoint()} method updates the 'initial' position of the buffer so
+ * that {@link ReplayingDecoder} rewinds the {@code readerIndex} of the buffer
+ * to the last position where you called the {@code checkpoint()} method.
  *
  * <h4>Calling {@code checkpoint(T)} with an {@link Enum}</h4>
  * <p>
- * The easiest way is to create an {@link Enum} type which represents the
- * current state of the decoder and to call {@code checkpoint(T)} method
- * whenever the state changes.  You can have as many states as you want
- * depending on the complexity of the message:
+ * Although you can just use {@code checkpoint()} method and manage the state
+ * of the decoder by yourself, the easiest way to manage the state of the
+ * decoder is to create an {@link Enum} type which represents the current state
+ * of the decoder and to call {@code checkpoint(T)} method whenever the state
+ * changes.  You can have as many states as you want depending on the
+ * complexity of the message you want to decode:
  *
  * <pre>
  * public enum MyDecoderState {
@@ -171,7 +193,6 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  *   }
  * }
  * </pre>
- *
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
