@@ -27,7 +27,9 @@ import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
@@ -55,7 +57,32 @@ abstract class NioSocketChannel extends AbstractChannel
 
     final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
     final Runnable writeTask = new WriteTask();
-    final Queue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>();
+    final AtomicInteger writeBufferSize = new AtomicInteger();
+    final Queue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>() {
+        @Override
+        public boolean offer(MessageEvent e) {
+            boolean success = super.offer(e);
+            assert success;
+            writeBufferSize.addAndGet(
+                    ((ChannelBuffer) e.getMessage()).readableBytes());
+            return true;
+        }
+
+        @Override
+        public MessageEvent poll() {
+            MessageEvent e = super.poll();
+            if (e != null) {
+                int newWriteBufferSize = writeBufferSize.addAndGet(
+                        -((ChannelBuffer) e.getMessage()).readableBytes());
+                if (newWriteBufferSize <= getConfig().getWriteBufferLowWaterMark()) {
+                    mightNeedToNotifyUnwritability = true;
+                }
+            }
+            return e;
+        }
+    };
+    boolean wasWritable;
+    boolean mightNeedToNotifyUnwritability;
     MessageEvent currentWriteEvent;
     int currentWriteIndex;
 
@@ -93,13 +120,31 @@ abstract class NioSocketChannel extends AbstractChannel
     }
 
     @Override
-    protected boolean setClosed() {
-        return super.setClosed();
+    public int getInterestOps() {
+        if (!isOpen()) {
+            return Channel.OP_WRITE;
+        }
+
+        int interestOps = getRawInterestOps();
+        if (writeBufferSize.get() >= getConfig().getWriteBufferHighWaterMark()) {
+            interestOps |= Channel.OP_WRITE;
+        } else {
+            interestOps &= ~Channel.OP_WRITE;
+        }
+        return interestOps;
+    }
+
+    int getRawInterestOps() {
+        return super.getInterestOps();
+    }
+
+    void setRawInterestOpsNow(int interestOps) {
+        super.setInterestOpsNow(interestOps);
     }
 
     @Override
-    protected void setInterestOpsNow(int interestOps) {
-        super.setInterestOpsNow(interestOps);
+    protected boolean setClosed() {
+        return super.setClosed();
     }
 
     @Override

@@ -25,6 +25,8 @@ package org.jboss.netty.channel.socket.nio;
 import java.net.Socket;
 
 import org.jboss.netty.channel.socket.DefaultSocketChannelConfig;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ConversionUtil;
 
 /**
@@ -39,10 +41,14 @@ import org.jboss.netty.util.ConversionUtil;
 class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
         implements NioSocketChannelConfig {
 
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(DefaultNioSocketChannelConfig.class);
+
+    private volatile int writeBufferHighWaterMark = 256 * 1024;
+    private volatile int writeBufferLowWaterMark  =  64 * 1024;
     private volatile ReceiveBufferSizePredictor predictor =
         new DefaultReceiveBufferSizePredictor();
     private volatile int writeSpinCount = 16;
-    private volatile boolean readWriteFair;
 
     DefaultNioSocketChannelConfig(Socket socket) {
         super(socket);
@@ -55,7 +61,13 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
         }
 
         if (key.equals("readWriteFair")) {
-            setReadWriteFair(ConversionUtil.toBoolean(value));
+            setReadWriteFair(true); // Deprecated
+        } else if (key.equals("writeBufferHighWaterMark")) {
+            // FIXME: low -> high
+            setWriteBufferHighWaterMark(ConversionUtil.toInt(value));
+        } else if (key.equals("writeBufferLowWaterMark")) {
+            // FIXME: high -> low
+            setWriteBufferLowWaterMark(ConversionUtil.toInt(value));
         } else if (key.equals("writeSpinCount")) {
             setWriteSpinCount(ConversionUtil.toInt(value));
         } else if (key.equals("receiveBufferSizePredictor")) {
@@ -64,6 +76,30 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
             return false;
         }
         return true;
+    }
+
+    public int getWriteBufferHighWaterMark() {
+        return writeBufferHighWaterMark;
+    }
+
+    public void setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        if (writeBufferHighWaterMark < 0) {
+            throw new IllegalArgumentException(
+                    "writeBufferHighWaterMark: " + writeBufferHighWaterMark);
+        }
+        this.writeBufferHighWaterMark = writeBufferHighWaterMark;
+    }
+
+    public int getWriteBufferLowWaterMark() {
+        return writeBufferLowWaterMark;
+    }
+
+    public void setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        if (writeBufferLowWaterMark < 0) {
+            throw new IllegalArgumentException(
+                    "writeBufferLowWaterMark: " + writeBufferLowWaterMark);
+        }
+        this.writeBufferLowWaterMark = writeBufferLowWaterMark;
     }
 
     public int getWriteSpinCount() {
@@ -91,10 +127,13 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
     }
 
     public boolean isReadWriteFair() {
-        return readWriteFair;
+        logger.warn(
+                "Detected an access to a deprecated configuration parameter: " +
+                "readWriteFair");
+        return true;
     }
 
     public void setReadWriteFair(boolean readWriteFair) {
-        this.readWriteFair = readWriteFair;
+        isReadWriteFair();
     }
 }

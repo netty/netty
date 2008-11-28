@@ -382,12 +382,6 @@ class NioWorker implements Runnable {
             if (worker != null) {
                 Thread workerThread = worker.thread;
                 if (workerThread != null && Thread.currentThread() != workerThread) {
-                    if (!channel.isWritable()) {
-                        // Will be written by the worker thread
-                        // when the channel is ready to write.
-                        return;
-                    }
-
                     if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
                         worker.writeTaskQueue.offer(channel.writeTask);
                     }
@@ -402,24 +396,10 @@ class NioWorker implements Runnable {
             }
         }
 
-        final NioSocketChannelConfig cfg = channel.getConfig();
-        final int writeSpinCount = cfg.getWriteSpinCount();
-        final int maxWrittenBytes;
-        if (cfg.isReadWriteFair()) {
-            // Set limitation for the number of written bytes for read-write
-            // fairness.  I used maxReadBufferSize * 3 / 2, which yields best
-            // performance in my experience while not breaking fairness much.
-            int previousReceiveBufferSize =
-                cfg.getReceiveBufferSizePredictor().nextReceiveBufferSize();
-            maxWrittenBytes = previousReceiveBufferSize + previousReceiveBufferSize >>> 1;
-            writeFair(channel, mightNeedWakeup, writeSpinCount, maxWrittenBytes);
-        } else {
-            writeUnfair(channel, mightNeedWakeup, writeSpinCount);
-        }
-
+        writeNow(channel, mightNeedWakeup, channel.getConfig().getWriteSpinCount());
     }
 
-    private static void writeUnfair(NioSocketChannel channel,
+    private static void writeNow(NioSocketChannel channel,
             boolean mightNeedWakeup, final int writeSpinCount) {
 
         boolean open = true;
@@ -492,86 +472,31 @@ class NioWorker implements Runnable {
             } else if (removeOpWrite) {
                 setOpWrite(channel, false, mightNeedWakeup);
             }
+
+            fireChannelInterestChangedIfNecessary(channel);
         }
     }
 
-    private static void writeFair(NioSocketChannel channel,
-            boolean mightNeedWakeup, final int writeSpinCount,
-            final int maxWrittenBytes) {
-
-        boolean open = true;
-        boolean addOpWrite = false;
-        boolean removeOpWrite = false;
-
-        MessageEvent evt;
-        ChannelBuffer buf;
-        int bufIdx;
-        int writtenBytes = 0;
-
-        synchronized (channel.writeLock) {
-            Queue<MessageEvent> writeBuffer = channel.writeBuffer;
-            evt = channel.currentWriteEvent;
-            for (;;) {
-                if (evt == null) {
-                    evt = writeBuffer.poll();
-                    if (evt == null) {
-                        channel.currentWriteEvent = null;
-                        removeOpWrite = true;
-                        break;
-                    }
-                    buf = (ChannelBuffer) evt.getMessage();
-                    bufIdx = buf.readerIndex();
-                } else {
-                    buf = (ChannelBuffer) evt.getMessage();
-                    bufIdx = channel.currentWriteIndex;
+    private static void fireChannelInterestChangedIfNecessary(
+            NioSocketChannel channel) {
+        int interestOps = channel.getRawInterestOps();
+        boolean wasWritable = channel.wasWritable;
+        boolean writable = channel.wasWritable = channel.isWritable();
+        if (wasWritable) {
+            if (writable) {
+                if (channel.mightNeedToNotifyUnwritability) {
+                    channel.mightNeedToNotifyUnwritability = false;
+                    fireChannelInterestChanged(channel, interestOps | Channel.OP_WRITE);
+                    fireChannelInterestChanged(channel, interestOps & ~Channel.OP_WRITE);
                 }
-
-                try {
-                    for (int i = writeSpinCount; i > 0; i --) {
-                        int localWrittenBytes = buf.getBytes(
-                            bufIdx,
-                            channel.socket,
-                            Math.min(
-                                    maxWrittenBytes - writtenBytes,
-                                    buf.writerIndex() - bufIdx));
-
-                        if (localWrittenBytes != 0) {
-                            writtenBytes += localWrittenBytes;
-                            bufIdx += localWrittenBytes;
-                            break;
-                        }
-                    }
-
-                    if (bufIdx == buf.writerIndex()) {
-                        // Successful write - proceed to the next message.
-                        evt.getFuture().setSuccess();
-                        evt = null;
-                    } else {
-                        // Not written fully - perhaps the kernel buffer is full.
-                        channel.currentWriteEvent = evt;
-                        channel.currentWriteIndex = bufIdx;
-                        addOpWrite = true;
-                        break;
-                    }
-                } catch (AsynchronousCloseException e) {
-                    // Doesn't need a user attention - ignore.
-                } catch (Throwable t) {
-                    evt.getFuture().setFailure(t);
-                    evt = null;
-                    fireExceptionCaught(channel, t);
-                    if (t instanceof IOException) {
-                        open = false;
-                        close(channel, channel.getSucceededFuture());
-                    }
-                }
+            } else {
+                fireChannelInterestChanged(channel, interestOps | Channel.OP_WRITE);
             }
-        }
-
-        if (open) {
-            if (addOpWrite) {
-                setOpWrite(channel, true, mightNeedWakeup);
-            } else if (removeOpWrite) {
-                setOpWrite(channel, false, mightNeedWakeup);
+        } else {
+            if (writable) {
+                fireChannelInterestChanged(channel, interestOps & ~Channel.OP_WRITE);
+            } else {
+                fireChannelInterestChanged(channel, interestOps | Channel.OP_WRITE);
             }
         }
     }
@@ -603,7 +528,7 @@ class NioWorker implements Runnable {
         synchronized (channel.interestOpsLock) {
             if (opWrite) {
                 if (!mightNeedWakeup) {
-                    interestOps = channel.getInterestOps();
+                    interestOps = channel.getRawInterestOps();
                     if ((interestOps & SelectionKey.OP_WRITE) == 0) {
                         interestOps |= SelectionKey.OP_WRITE;
                         key.interestOps(interestOps);
@@ -612,7 +537,7 @@ class NioWorker implements Runnable {
                 } else {
                     switch (CONSTRAINT_LEVEL) {
                     case 0:
-                        interestOps = channel.getInterestOps();
+                        interestOps = channel.getRawInterestOps();
                         if ((interestOps & SelectionKey.OP_WRITE) == 0) {
                             interestOps |= SelectionKey.OP_WRITE;
                             key.interestOps(interestOps);
@@ -625,7 +550,7 @@ class NioWorker implements Runnable {
                         break;
                     case 1:
                     case 2:
-                        interestOps = channel.getInterestOps();
+                        interestOps = channel.getRawInterestOps();
                         if ((interestOps & SelectionKey.OP_WRITE) == 0) {
                             if (Thread.currentThread() == worker.thread) {
                                 interestOps |= SelectionKey.OP_WRITE;
@@ -652,7 +577,7 @@ class NioWorker implements Runnable {
                 }
             } else {
                 if (!mightNeedWakeup) {
-                    interestOps = channel.getInterestOps();
+                    interestOps = channel.getRawInterestOps();
                     if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                         interestOps &= ~SelectionKey.OP_WRITE;
                         key.interestOps(interestOps);
@@ -661,7 +586,7 @@ class NioWorker implements Runnable {
                 } else {
                     switch (CONSTRAINT_LEVEL) {
                     case 0:
-                        interestOps = channel.getInterestOps();
+                        interestOps = channel.getRawInterestOps();
                         if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                             interestOps &= ~SelectionKey.OP_WRITE;
                             key.interestOps(interestOps);
@@ -674,7 +599,7 @@ class NioWorker implements Runnable {
                         break;
                     case 1:
                     case 2:
-                        interestOps = channel.getInterestOps();
+                        interestOps = channel.getRawInterestOps();
                         if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                             if (Thread.currentThread() == worker.thread) {
                                 interestOps &= ~SelectionKey.OP_WRITE;
@@ -703,8 +628,8 @@ class NioWorker implements Runnable {
         }
 
         if (changed) {
-            channel.setInterestOpsNow(interestOps);
-            fireChannelInterestChanged(channel, interestOps);
+            channel.setRawInterestOpsNow(interestOps);
+            //fireChannelInterestChanged(channel, interestOps);
         }
     }
 
@@ -725,8 +650,8 @@ class NioWorker implements Runnable {
             if (channel.setClosed()) {
                 future.setSuccess();
                 if (connected) {
-                    if (channel.getInterestOps() != Channel.OP_WRITE) {
-                        channel.setInterestOpsNow(Channel.OP_WRITE);
+                    if (channel.getRawInterestOps() != Channel.OP_WRITE) {
+                        channel.setRawInterestOpsNow(Channel.OP_WRITE);
                         fireChannelInterestChanged(channel, Channel.OP_WRITE);
                     }
                     fireChannelDisconnected(channel);
@@ -805,11 +730,11 @@ class NioWorker implements Runnable {
             synchronized (channel.interestOpsLock) {
                 // Override OP_WRITE flag - a user cannot change this flag.
                 interestOps &= ~Channel.OP_WRITE;
-                interestOps |= channel.getInterestOps() & Channel.OP_WRITE;
+                interestOps |= channel.getRawInterestOps() & Channel.OP_WRITE;
 
                 switch (CONSTRAINT_LEVEL) {
                 case 0:
-                    if (channel.getInterestOps() != interestOps) {
+                    if (channel.getRawInterestOps() != interestOps) {
                         key.interestOps(interestOps);
                         if (Thread.currentThread() != worker.thread &&
                             worker.wakenUp.compareAndSet(false, true)) {
@@ -820,7 +745,7 @@ class NioWorker implements Runnable {
                     break;
                 case 1:
                 case 2:
-                    if (channel.getInterestOps() != interestOps) {
+                    if (channel.getRawInterestOps() != interestOps) {
                         if (Thread.currentThread() == worker.thread) {
                             key.interestOps(interestOps);
                             changed = true;
@@ -845,7 +770,7 @@ class NioWorker implements Runnable {
 
             future.setSuccess();
             if (changed) {
-                channel.setInterestOpsNow(interestOps);
+                channel.setRawInterestOpsNow(interestOps);
                 fireChannelInterestChanged(channel, interestOps);
             }
         } catch (Throwable t) {

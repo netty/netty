@@ -59,6 +59,12 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  */
 public interface NioSocketChannelConfig extends SocketChannelConfig {
 
+    int getWriteBufferHighWaterMark();
+    void setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
+
+    int getWriteBufferLowWaterMark();
+    void setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
+
     /**
      * Returns the maximum loop count for a write operation until
      * {@link WritableByteChannel#write(ByteBuffer)} returns a non-zero value.
@@ -96,6 +102,9 @@ public interface NioSocketChannelConfig extends SocketChannelConfig {
     void setReceiveBufferSizePredictor(ReceiveBufferSizePredictor predictor);
 
     /**
+     * @deprecated This property has been replaced by the
+     * {@code writeBufferHighWaterMark} and {@code writeBufferLowWaterMark}.
+     *
      * Returns {@code true} if and only if an I/O thread should do its effort
      * to balance the ratio of read and write operations.  Assuring
      * the read-write fairness is sometimes necessary in a high speed network
@@ -103,9 +112,13 @@ public interface NioSocketChannelConfig extends SocketChannelConfig {
      * large number of write requests not giving enough time for other channels
      * to perform I/O.  The default value is {@code false}.
      */
+    @Deprecated
     boolean isReadWriteFair();
 
     /**
+     * @deprecated This property has been replaced by the
+     * {@code writeBufferHighWaterMark} and {@code writeBufferLowWaterMark}.
+     *
      * Sets if an I/O thread should balance the ratio of read and write
      * operations.  Assuring the read-write fairness is sometimes necessary
      * in a high speed network because a certain channel can spend too much
@@ -113,5 +126,6 @@ public interface NioSocketChannelConfig extends SocketChannelConfig {
      * time for other channels to perform I/O.  The default value is
      * {@code false}.
      */
+    @Deprecated
     void setReadWriteFair(boolean fair);
 }
