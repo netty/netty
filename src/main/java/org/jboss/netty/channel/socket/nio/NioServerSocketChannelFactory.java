@@ -24,18 +24,15 @@ package org.jboss.netty.channel.socket.nio;
 
 import java.nio.channels.Selector;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactoryExecutorResource;
-import org.jboss.netty.channel.ChannelFactoryResource;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
+import org.jboss.netty.util.ExecutorShutdownUtil;
 
 /**
  * A {@link ServerSocketChannelFactory} which creates a server-side NIO-based
@@ -64,7 +61,6 @@ import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
  * more {@link Channel}s in a non-blocking mode.
  *
  * <h3>Life cycle of threads and graceful shutdown</h3>
- * TODO: Rewrite this section to recommend a user to call ChannelFactoryResource.release().
  * <p>
  * All threads are acquired from the {@link Executor}s which were specified
  * when a {@link NioServerSocketChannelFactory} was created.  Boss threads are
@@ -81,11 +77,8 @@ import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
  *
  * <ol>
  * <li>unbind all channels created by the factory,
- * <li>close all child channels accepted by the unbound channels,</li>
- * <li>call {@link ExecutorService#shutdownNow()} or {@link ExecutorService#shutdown()}
- *     for all executors which were specified to create the factory, and</li>
- * <li>call {@link ExecutorService#awaitTermination(long, TimeUnit)}
- *     until it returns {@code true}.</li>
+ * <li>close all child channels accepted by the unbound channels, and</li>
+ * <li>call {@link #releaseExternalResources()}.</li>
  * </ol>
  *
  * Please make sure not to shut down the executor until all channels are
@@ -102,7 +95,7 @@ import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 public class NioServerSocketChannelFactory implements ServerSocketChannelFactory {
 
     final Executor bossExecutor;
-    private final ChannelFactoryResource externalResource;
+    private final Executor workerExecutor;
     private final ChannelSink sink;
 
     /**
@@ -146,7 +139,7 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
                     "must be a positive integer.");
         }
         this.bossExecutor = bossExecutor;
-        externalResource = new ChannelFactoryExecutorResource(bossExecutor, workerExecutor);
+        this.workerExecutor = workerExecutor;
         sink = new NioServerSocketPipelineSink(workerExecutor, workerCount);
     }
 
@@ -154,7 +147,7 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
         return new NioServerSocketChannel(this, pipeline, sink);
     }
 
-    public ChannelFactoryResource getExternalResource() {
-        return externalResource;
+    public void releaseExternalResources() {
+        ExecutorShutdownUtil.shutdown(bossExecutor, workerExecutor);
     }
 }

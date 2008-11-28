@@ -28,12 +28,11 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactoryExecutorResource;
-import org.jboss.netty.channel.ChannelFactoryResource;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
+import org.jboss.netty.util.ExecutorShutdownUtil;
 
 /**
  * A {@link ServerSocketChannelFactory} which creates a server-side blocking
@@ -61,7 +60,6 @@ import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
  * traditional blocking I/O thread model.
  *
  * <h3>Life cycle of threads and graceful shutdown</h3>
- * TODO: Rewrite this section to recommend a user to call ChannelFactoryResource.release().
  * <p>
  * All threads are acquired from the {@link Executor}s which were specified
  * when a {@link OioServerSocketChannelFactory} was created.  Boss threads are
@@ -103,7 +101,7 @@ import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 public class OioServerSocketChannelFactory implements ServerSocketChannelFactory {
 
     final Executor bossExecutor;
-    private final ChannelFactoryResource externalResource;
+    private final Executor workerExecutor;
     private final ChannelSink sink;
 
     /**
@@ -123,7 +121,7 @@ public class OioServerSocketChannelFactory implements ServerSocketChannelFactory
             throw new NullPointerException("workerExecutor");
         }
         this.bossExecutor = bossExecutor;
-        externalResource = new ChannelFactoryExecutorResource(bossExecutor, workerExecutor);
+        this.workerExecutor = workerExecutor;
         sink = new OioServerSocketPipelineSink(workerExecutor);
     }
 
@@ -131,7 +129,7 @@ public class OioServerSocketChannelFactory implements ServerSocketChannelFactory
         return new OioServerSocketChannel(this, pipeline, sink);
     }
 
-    public ChannelFactoryResource getExternalResource() {
-        return externalResource;
+    public void releaseExternalResources() {
+        ExecutorShutdownUtil.shutdown(bossExecutor, workerExecutor);
     }
 }

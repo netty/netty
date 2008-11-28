@@ -20,49 +20,37 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel;
+package org.jboss.netty.util;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A {@link ChannelFactoryResource} whose underlying resource is a list of
- * {@link Executor}s.  {@link #release()} will shut down all specified
- * {@link ExecutorService}s immediately and wait for their termination.
- * An {@link Executor} which is not an {@link ExecutorService} will be ignored.
+ * Shuts down a list of {@link Executor}s.  {@link #shutdown(Executor...)} will
+ * shut down all specified {@link ExecutorService}s immediately and wait for
+ * their termination.  An {@link Executor} which is not an {@link ExecutorService}
+ * will be ignored silently.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
- *
- * @apiviz.exclude
  */
-public class ChannelFactoryExecutorResource implements
-        ChannelFactoryResource {
-
-    private final Executor[] executors;
+public class ExecutorShutdownUtil {
 
     /**
-     * Creates a new instance with the specified executors.
-     *
-     * @param executors a list of {@link Executor}s
+     * Shuts down the specified executors.
      */
-    public ChannelFactoryExecutorResource(Executor... executors) {
-        if (executors == null) {
-            throw new NullPointerException("executors");
-        }
-        this.executors = new Executor[executors.length];
+    public static void shutdown(Executor... executors) {
+        Executor[] executorsCopy = new Executor[executors.length];
         for (int i = 0; i < executors.length; i ++) {
             if (executors[i] == null) {
                 throw new NullPointerException("executors[" + i + "]");
             }
-            this.executors[i] = executors[i];
+            executorsCopy[i] = executors[i];
         }
-    }
 
-    public void release() {
-        for (Executor e: executors) {
+        for (Executor e: executorsCopy) {
             if (!(e instanceof ExecutorService)) {
                 continue;
             }
@@ -79,5 +67,9 @@ public class ChannelFactoryExecutorResource implements
                 }
             }
         }
+    }
+
+    private ExecutorShutdownUtil() {
+        super();
     }
 }

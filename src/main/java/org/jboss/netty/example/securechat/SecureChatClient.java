@@ -78,7 +78,7 @@ public class SecureChatClient {
         Channel channel = future.awaitUninterruptibly().getChannel();
         if (!future.isSuccess()) {
             future.getCause().printStackTrace();
-            factory.getExternalResource().release();
+            factory.releaseExternalResources();
             return;
         }
 
@@ -103,6 +103,6 @@ public class SecureChatClient {
         channel.close().awaitUninterruptibly();
 
         // Shut down all thread pools to exit.
-        factory.getExternalResource().release();
+        factory.releaseExternalResources();
     }
 }

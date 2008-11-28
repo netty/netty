@@ -103,7 +103,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * {@link ClientBootstrap} instances as you want to apply different settings
  * for different {@link Channel}s.
  *
- * TODO: Show how to shut down a service using ChannelFactoryResource.release().
+ * TODO: Show how to shut down a service.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

@@ -23,16 +23,13 @@
 package org.jboss.netty.channel.socket.oio;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactoryExecutorResource;
-import org.jboss.netty.channel.ChannelFactoryResource;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
+import org.jboss.netty.util.ExecutorShutdownUtil;
 
 /**
  * A {@link ClientSocketChannelFactory} which creates a client-side blocking
@@ -51,7 +48,6 @@ import org.jboss.netty.channel.socket.SocketChannel;
  * traditional blocking I/O thread model.
  *
  * <h3>Life cycle of threads and graceful shutdown</h3>
- * TODO: Rewrite this section to recommend a user to call ChannelFactoryResource.release().
  * <p>
  * Worker threads are acquired from the {@link Executor} which was specified
  * when a {@link OioClientSocketChannelFactory} was created (i.e. {@code workerExecutor}.)
@@ -64,11 +60,8 @@ import org.jboss.netty.channel.socket.SocketChannel;
  * you should do the following:
  *
  * <ol>
- * <li>close all channels created by the factory,</li>
- * <li>call {@link ExecutorService#shutdownNow()} for the executor which was
- *     specified to create the factory, and</li>
- * <li>call {@link ExecutorService#awaitTermination(long, TimeUnit)}
- *     until it returns {@code true}.</li>
+ * <li>close all channels created by the factory, and</li>
+ * <li>call {@link #releaseExternalResources()}.</li>
  * </ol>
  *
  * Please make sure not to shut down the executor until all channels are
@@ -90,7 +83,7 @@ import org.jboss.netty.channel.socket.SocketChannel;
  */
 public class OioClientSocketChannelFactory implements ClientSocketChannelFactory {
 
-    private final ChannelFactoryResource externalResource;
+    private final Executor workerExecutor;
     final OioClientSocketPipelineSink sink;
 
     /**
@@ -103,7 +96,7 @@ public class OioClientSocketChannelFactory implements ClientSocketChannelFactory
         if (workerExecutor == null) {
             throw new NullPointerException("workerExecutor");
         }
-        externalResource = new ChannelFactoryExecutorResource(workerExecutor);
+        this.workerExecutor = workerExecutor;
         sink = new OioClientSocketPipelineSink(workerExecutor);
     }
 
@@ -111,7 +104,7 @@ public class OioClientSocketChannelFactory implements ClientSocketChannelFactory
         return new OioClientSocketChannel(this, pipeline, sink);
     }
 
-    public ChannelFactoryResource getExternalResource() {
-        return externalResource;
+    public void releaseExternalResources() {
+        ExecutorShutdownUtil.shutdown(workerExecutor);
     }
 }

@@ -106,7 +106,7 @@ public class NioServerSocketShutdownTimeTest {
                 }
             }
             channel.close().awaitUninterruptibly();
-            bootstrap.getFactory().getExternalResource().release();
+            bootstrap.getFactory().releaseExternalResources();
         }
 
         long shutdownTime = System.currentTimeMillis() - startTime;

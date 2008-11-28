@@ -85,7 +85,7 @@ public class NioClientSocketShutdownTimeTest {
 
             f.getChannel().close().awaitUninterruptibly();
         } finally {
-            b.getFactory().getExternalResource().release();
+            b.getFactory().releaseExternalResources();
 
             try {
                 serverSocket.close();

@@ -69,6 +69,7 @@ public class DiscardClient {
         ClientBootstrap bootstrap = new ClientBootstrap(factory);
         DiscardClientHandler handler = new DiscardClientHandler(firstMessageSize);
 
+        //bootstrap.getPipeline().addLast("executor", new ExecutionHandler(new MemoryAwareThreadPoolExecutor(16, 0, 0)));
         bootstrap.getPipeline().addLast("handler", handler);
         bootstrap.setOption("tcpNoDelay", true);
         bootstrap.setOption("keepAlive", true);
@@ -80,6 +81,6 @@ public class DiscardClient {
         future.getChannel().getCloseFuture().awaitUninterruptibly();
 
         // Shut down thread pools to exit.
-        factory.getExternalResource().release();
+        factory.releaseExternalResources();
     }
 }

@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.channel;
 
+import java.util.concurrent.Executor;
+
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 
@@ -36,7 +38,17 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * is attached to the new {@link Channel}, and starts to handle all associated
  * {@link ChannelEvent}s.
  *
- * TODO: Document how to shut down a service using ChannelFactoryResource.
+ * <h3>Graceful shutdown</h3>
+ * <p>
+ * To shut down a network application service which is managed by a factory.
+ * you should follow the following steps:
+ * <ol>
+ * <li>close all channels created by the factory and their child channels, and</li>
+ * <li>call {@link #releaseExternalResources()}.</li>
+ * </ol>
+ * <p>
+ * For detailed transport-specific information on shutting down a factory,
+ * please refer to the Javadoc of {@link ChannelFactory}'s subtypes.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -62,12 +74,14 @@ public interface ChannelFactory {
     Channel newChannel(ChannelPipeline pipeline);
 
     /**
-     * Returns the external resources that this factory depends on to function.
-     * Please note that {@link ChannelFactoryResource#release()} can be called
-     * to release all external resources conveniently when the resources are not
-     * used by this factory or any other part of your application.
-     * An unexpected behavior will be resulted in if the returned resources are
-     * released when there's an open channel which is managed by this factory.
+     * Releases the external resources that this factory depends on to function.
+     * An external resource is a resource that this factory didn't create by
+     * itself.  For example, {@link Executor}s that you specified in the factory
+     * constructor are external resources.  You can call this method to release
+     * all external resources conveniently when the resources are not used by
+     * this factory or any other part of your application.  An unexpected
+     * behavior will be resulted in if the resources are released when there's
+     * an open channel which is managed by this factory.
      */
-    ChannelFactoryResource getExternalResource();
+    void releaseExternalResources();
 }

@@ -82,7 +82,7 @@ public class HttpClient {
         Channel channel = future.awaitUninterruptibly().getChannel();
         if (!future.isSuccess()) {
             future.getCause().printStackTrace();
-            factory.getExternalResource().release();
+            factory.releaseExternalResources();
             return;
         }
 
@@ -95,6 +95,6 @@ public class HttpClient {
         channel.getCloseFuture().awaitUninterruptibly();
 
         // Shut down executor threads to exit.
-        factory.getExternalResource().release();
+        factory.releaseExternalResources();
     }
 }

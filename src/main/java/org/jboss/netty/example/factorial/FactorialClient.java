@@ -87,6 +87,6 @@ public class FactorialClient {
                 "Factorial of %,d is: %,d", count, handler.getFactorial());
 
         // Shut down all thread pools to exit.
-        factory.getExternalResource().release();
+        factory.releaseExternalResources();
     }
 }
