@@ -779,7 +779,7 @@ public class SslHandler extends FrameDecoder {
         return future;
     }
 
-    private static class PendingWrite {
+    private static final class PendingWrite {
         final ChannelFuture future;
         final ByteBuffer outAppBuf;
 

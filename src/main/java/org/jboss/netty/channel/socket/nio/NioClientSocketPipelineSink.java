@@ -165,7 +165,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                 workerIndex.getAndIncrement() % workers.length)];
     }
 
-    private class Boss implements Runnable {
+    private final class Boss implements Runnable {
 
         private final AtomicBoolean started = new AtomicBoolean();
         private volatile Selector selector;

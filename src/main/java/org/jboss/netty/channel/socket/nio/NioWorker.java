@@ -410,8 +410,8 @@ class NioWorker implements Runnable {
         ChannelBuffer buf;
         int bufIdx;
 
+        Queue<MessageEvent> writeBuffer = channel.writeBuffer;
         synchronized (channel.writeLock) {
-            Queue<MessageEvent> writeBuffer = channel.writeBuffer;
             evt = channel.currentWriteEvent;
             for (;;) {
                 if (evt == null) {
@@ -473,15 +473,15 @@ class NioWorker implements Runnable {
                 setOpWrite(channel, false, mightNeedWakeup);
             }
 
-            fireChannelInterestChangedIfNecessary(channel);
+            fireChannelInterestChangedIfNecessary(channel, open);
         }
     }
 
     private static void fireChannelInterestChangedIfNecessary(
-            NioSocketChannel channel) {
+            NioSocketChannel channel, boolean open) {
         int interestOps = channel.getRawInterestOps();
         boolean wasWritable = channel.wasWritable;
-        boolean writable = channel.wasWritable = channel.isWritable();
+        boolean writable = channel.wasWritable = open? channel.isWritable() : false;
         if (wasWritable) {
             if (writable) {
                 if (channel.mightNeedToNotifyUnwritability) {
@@ -779,7 +779,7 @@ class NioWorker implements Runnable {
         }
     }
 
-    private class RegisterTask implements Runnable {
+    private final class RegisterTask implements Runnable {
         private final NioSocketChannel channel;
         private final ChannelFuture future;
         private final boolean server;

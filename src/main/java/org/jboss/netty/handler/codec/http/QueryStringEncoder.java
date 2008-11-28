@@ -71,7 +71,7 @@ public class QueryStringEncoder {
         return s.replaceAll(" ", "%20");
     }
 
-    private static class Param {
+    private static final class Param {
 
         final String name;
         final String value;

@@ -58,29 +58,7 @@ abstract class NioSocketChannel extends AbstractChannel
     final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
     final Runnable writeTask = new WriteTask();
     final AtomicInteger writeBufferSize = new AtomicInteger();
-    final Queue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>() {
-        @Override
-        public boolean offer(MessageEvent e) {
-            boolean success = super.offer(e);
-            assert success;
-            writeBufferSize.addAndGet(
-                    ((ChannelBuffer) e.getMessage()).readableBytes());
-            return true;
-        }
-
-        @Override
-        public MessageEvent poll() {
-            MessageEvent e = super.poll();
-            if (e != null) {
-                int newWriteBufferSize = writeBufferSize.addAndGet(
-                        -((ChannelBuffer) e.getMessage()).readableBytes());
-                if (newWriteBufferSize <= getConfig().getWriteBufferLowWaterMark()) {
-                    mightNeedToNotifyUnwritability = true;
-                }
-            }
-            return e;
-        }
-    };
+    final Queue<MessageEvent> writeBuffer = new WriteBuffer();
     boolean wasWritable;
     boolean mightNeedToNotifyUnwritability;
     MessageEvent currentWriteEvent;
@@ -161,7 +139,35 @@ abstract class NioSocketChannel extends AbstractChannel
         }
     }
 
-    private class WriteTask implements Runnable {
+    private final class WriteBuffer extends LinkedTransferQueue<MessageEvent> {
+        WriteBuffer() {
+            super();
+        }
+
+        @Override
+        public boolean offer(MessageEvent e) {
+            boolean success = super.offer(e);
+            assert success;
+            writeBufferSize.addAndGet(
+                    ((ChannelBuffer) e.getMessage()).readableBytes());
+            return true;
+        }
+
+        @Override
+        public MessageEvent poll() {
+            MessageEvent e = super.poll();
+            if (e != null) {
+                int newWriteBufferSize = writeBufferSize.addAndGet(
+                        -((ChannelBuffer) e.getMessage()).readableBytes());
+                if (newWriteBufferSize <= getConfig().getWriteBufferLowWaterMark()) {
+                    mightNeedToNotifyUnwritability = true;
+                }
+            }
+            return e;
+        }
+    }
+
+    private final class WriteTask implements Runnable {
 
         WriteTask() {
             super();

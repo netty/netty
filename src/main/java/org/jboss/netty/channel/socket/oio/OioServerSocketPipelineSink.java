@@ -181,7 +181,7 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
         }
     }
 
-    private class Boss implements Runnable {
+    private final class Boss implements Runnable {
         private final OioServerSocketChannel channel;
 
         Boss(OioServerSocketChannel channel) {

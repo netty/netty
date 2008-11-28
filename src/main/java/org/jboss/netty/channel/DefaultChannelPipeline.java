@@ -521,7 +521,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private class DefaultChannelHandlerContext implements ChannelHandlerContext {
+    private final class DefaultChannelHandlerContext implements ChannelHandlerContext {
         volatile DefaultChannelHandlerContext next;
         volatile DefaultChannelHandlerContext prev;
         private final String name;

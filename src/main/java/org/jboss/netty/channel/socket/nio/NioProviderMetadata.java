@@ -57,7 +57,7 @@ class NioProviderMetadata {
 
     private static final String CONSTRAINT_LEVEL_PROPERTY =
         "java.nio.channels.spi.constraintLevel";
-    
+
     private static final long AUTODETECTION_TIMEOUT = 7000L;
 
     /**
@@ -93,7 +93,7 @@ class NioProviderMetadata {
                         "Couldn't get the NIO constraint level from the system properties.");
                 ConstraintLevelAutodetector autodetector =
                     new ConstraintLevelAutodetector();
-                
+
                 try {
                     constraintLevel = autodetector.autodetectWithTimeout();
                 } catch (Exception e) {
@@ -225,9 +225,9 @@ class NioProviderMetadata {
         // Others (untested)
         return -1;
     }
-    
 
-    private static class ConstraintLevelAutodetector {
+
+    private static final class ConstraintLevelAutodetector {
 
         ConstraintLevelAutodetector() {
             super();
@@ -245,7 +245,7 @@ class NioProviderMetadata {
                     }
                 }
             }, "NIO constraint level detector");
-            
+
             Thread detectorThread = new Thread(detector);
             detectorThread.start();
 
@@ -419,7 +419,7 @@ class NioProviderMetadata {
         }
     }
 
-    private static class SelectorLoop implements Runnable {
+    private static final class SelectorLoop implements Runnable {
         final Selector selector;
         volatile boolean done;
         volatile boolean selecting; // Just an approximation

@@ -191,7 +191,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                 workerIndex.getAndIncrement() % workers.length)];
     }
 
-    private class Boss implements Runnable {
+    private final class Boss implements Runnable {
         private final NioServerSocketChannel channel;
 
         Boss(NioServerSocketChannel channel) {

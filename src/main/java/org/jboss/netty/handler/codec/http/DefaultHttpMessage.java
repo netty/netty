@@ -112,7 +112,7 @@ public class DefaultHttpMessage implements HttpMessage {
         return content;
     }
 
-    private static class CaseIgnoringComparator
+    private static final class CaseIgnoringComparator
             implements Comparator<String>, Serializable {
 
         private static final long serialVersionUID = 4582133183775373862L;

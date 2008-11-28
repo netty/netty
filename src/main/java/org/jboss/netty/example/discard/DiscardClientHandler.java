@@ -55,6 +55,7 @@ public class DiscardClientHandler extends SimpleChannelHandler {
     private final Random random = new Random();
     private final int messageSize;
     private final AtomicLong transferredBytes = new AtomicLong();
+    private final byte[] content;
 
     public DiscardClientHandler(int messageSize) {
         if (messageSize <= 0) {
@@ -62,6 +63,7 @@ public class DiscardClientHandler extends SimpleChannelHandler {
                     "messageSize: " + messageSize);
         }
         this.messageSize = messageSize;
+        content = new byte[messageSize];
     }
 
     public long getTransferredBytes() {
@@ -71,7 +73,7 @@ public class DiscardClientHandler extends SimpleChannelHandler {
     @Override
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
+            //logger.info(e.toString());
         }
 
         // Let SimpleChannelHandler call actual event handler methods below.
@@ -112,18 +114,35 @@ public class DiscardClientHandler extends SimpleChannelHandler {
         // If you keep writing messages ignoring this property,
         // you will end up with an OutOfMemoryError.
         Channel channel = e.getChannel();
+        int cnt = 0;
         while (channel.isWritable()) {
             ChannelBuffer m = nextMessage();
             if (m == null) {
                 break;
             }
             channel.write(m);
+            cnt ++;
+            if (cnt % 100000 == 0) {
+                System.out.println(cnt);
+            }
         }
+
+//        System.out.println("* " + cnt);
+
+//        if (cnt > 0) {
+//            for (int i = 0; i < 10; i ++) {
+//                ChannelBuffer m = nextMessage();
+//                if (m == null) {
+//                    break;
+//                }
+//                channel.write(m);
+//            }
+//        }
     }
 
     private ChannelBuffer nextMessage() {
-        byte[] content = new byte[messageSize];
-        random.nextBytes(content);
+        //byte[] content = new byte[messageSize];
+        //random.nextBytes(content);
         return ChannelBuffers.wrappedBuffer(content);
     }
 }

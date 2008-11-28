@@ -425,7 +425,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         return true;
     }
 
-    private static class Settings {
+    private static final class Settings {
         final ObjectSizeEstimator objectSizeEstimator;
         final long maxChannelMemorySize;
         final long maxTotalMemorySize;
@@ -438,7 +438,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         }
     }
 
-    private static class NewThreadRunsPolicy implements RejectedExecutionHandler {
+    private static final class NewThreadRunsPolicy implements RejectedExecutionHandler {
         NewThreadRunsPolicy() {
             super();
         }
@@ -454,7 +454,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         }
     }
 
-    private static class MemoryAwareRunnable implements Runnable {
+    private static final class MemoryAwareRunnable implements Runnable {
         final Runnable task;
         volatile int estimatedSize;
 
