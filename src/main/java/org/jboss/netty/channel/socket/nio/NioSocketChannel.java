@@ -171,7 +171,8 @@ abstract class NioSocketChannel extends AbstractChannel
             if (e != null) {
                 int newWriteBufferSize = writeBufferSize.addAndGet(
                         -((ChannelBuffer) e.getMessage()).readableBytes());
-                if (newWriteBufferSize <= getConfig().getWriteBufferLowWaterMark()) {
+                if (newWriteBufferSize == 0 ||
+                    newWriteBufferSize < getConfig().getWriteBufferLowWaterMark()) {
                     exceededHighWaterMark = true;
                 }
             }

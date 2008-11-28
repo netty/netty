@@ -45,7 +45,7 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
         InternalLoggerFactory.getInstance(DefaultNioSocketChannelConfig.class);
 
     private volatile int writeBufferHighWaterMark = 256 * 1024;
-    private volatile int writeBufferLowWaterMark  =  64 * 1024;
+    private volatile int writeBufferLowWaterMark  = 128 * 1024;
     private volatile ReceiveBufferSizePredictor predictor =
         new DefaultReceiveBufferSizePredictor();
     private volatile int writeSpinCount = 16;
