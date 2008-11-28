@@ -88,9 +88,9 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * <h3>How does this work?</h3>
  * <p>
  * {@link ReplayingDecoder} passes a specialized {@link ChannelBuffer}
- * implementation which throws a {@link Error} of certain type when there's not
+ * implementation which throws an {@link Error} of certain type when there's not
  * enough data in the buffer.  In the {@code IntegerHeaderFrameDecoder} above,
- * you just assumed that there will be more than 4 bytes in the buffer when
+ * you just assumed that there will be 4 or more bytes in the buffer when
  * you call {@code buf.readInt()}.  If there's really 4 bytes in the buffer,
  * it will return the integer header as you expected.  Otherwise, the
  * {@link Error} will be raised and the control will be returned to
