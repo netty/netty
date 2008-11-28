@@ -27,6 +27,7 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 
 /**
@@ -75,9 +76,12 @@ public class EchoClient {
         bootstrap.setOption("keepAlive", true);
 
         // Start the connection attempt.
-        bootstrap.connect(new InetSocketAddress(host, port));
+        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
 
-        // Start performance monitor.
-        new ThroughputMonitor(handler).start();
+        // Wait until the connection is closed or the connection attempt fails.
+        future.getChannel().getCloseFuture().awaitUninterruptibly();
+
+        // Shut down thread pools to exit.
+        factory.releaseExternalResources();
     }
 }
