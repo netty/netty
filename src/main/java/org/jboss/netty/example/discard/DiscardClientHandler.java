@@ -22,7 +22,6 @@
  */
 package org.jboss.netty.example.discard;
 
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -33,6 +32,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -52,8 +52,6 @@ public class DiscardClientHandler extends SimpleChannelHandler {
     private static final Logger logger = Logger.getLogger(
             DiscardClientHandler.class.getName());
 
-    private final Random random = new Random();
-    private final int messageSize;
     private final AtomicLong transferredBytes = new AtomicLong();
     private final byte[] content;
 
@@ -62,7 +60,6 @@ public class DiscardClientHandler extends SimpleChannelHandler {
             throw new IllegalArgumentException(
                     "messageSize: " + messageSize);
         }
-        this.messageSize = messageSize;
         content = new byte[messageSize];
     }
 
@@ -73,7 +70,9 @@ public class DiscardClientHandler extends SimpleChannelHandler {
     @Override
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
-            //logger.info(e.toString());
+            if (((ChannelStateEvent) e).getState() != ChannelState.INTEREST_OPS) {
+                logger.info(e.toString());
+            }
         }
 
         // Let SimpleChannelHandler call actual event handler methods below.
@@ -114,35 +113,16 @@ public class DiscardClientHandler extends SimpleChannelHandler {
         // If you keep writing messages ignoring this property,
         // you will end up with an OutOfMemoryError.
         Channel channel = e.getChannel();
-        int cnt = 0;
         while (channel.isWritable()) {
             ChannelBuffer m = nextMessage();
             if (m == null) {
                 break;
             }
             channel.write(m);
-            cnt ++;
-            if (cnt % 100000 == 0) {
-                System.out.println(cnt);
-            }
         }
-
-//        System.out.println("* " + cnt);
-
-//        if (cnt > 0) {
-//            for (int i = 0; i < 10; i ++) {
-//                ChannelBuffer m = nextMessage();
-//                if (m == null) {
-//                    break;
-//                }
-//                channel.write(m);
-//            }
-//        }
     }
 
     private ChannelBuffer nextMessage() {
-        //byte[] content = new byte[messageSize];
-        //random.nextBytes(content);
         return ChannelBuffers.wrappedBuffer(content);
     }
 }
