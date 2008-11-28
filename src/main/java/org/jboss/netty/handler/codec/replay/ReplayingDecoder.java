@@ -99,6 +99,11 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * back to the 'initial' position (i.e. the beginning of the buffer) and call
  * the {@code decode(..)} method again when more data is received into the
  * buffer.
+ * <p>
+ * Please note that the overhead of throwing an {@link Error} is minimal unlike
+ * throwing a new {@link Exception} in an ordinary way. {@link ReplayingDecoder}
+ * reuses the same {@link Error} instance so that it does not need to fill its
+ * stack trace, which takes most of {@link Exception} initialization time.
  *
  * <h3>Limitations</h3>
  * <p>
