@@ -1,4 +1,3 @@
-
 The person or persons who have associated work with this document (the
 "Dedicator" or "Certifier") hereby either (a) certifies that, to the best of
 his knowledge, the work of authorship identified is in the public domain of
@@ -25,4 +24,3 @@ freely reproduced, distributed, transmitted, used, modified, built upon, or
 otherwise exploited by anyone for any purpose, commercial or non-commercial,
 and in any way, including by methods that have not yet been invented or
 conceived.
-
