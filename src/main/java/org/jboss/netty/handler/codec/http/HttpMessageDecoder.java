@@ -73,6 +73,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
         case READ_HEADER: {
             readHeaders(buffer);
+            if (message.getContentLength() == 0) {
+                content = ChannelBuffers.EMPTY_BUFFER;
+                return reset();
+            }
             //we return null here, this forces decode to be called again where we will decode the content
             return null;
         }
