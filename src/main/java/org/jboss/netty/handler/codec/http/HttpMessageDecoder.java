@@ -22,6 +22,8 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -37,10 +39,14 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  * @author Trustin Lee (tlee@redhat.com)
  */
 public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDecoder.ResponseState> {
+
+    private static final Pattern INITIAL_PATTERN = Pattern.compile(
+            "^\\s*(\\S+)\\s+(\\S+)\\s+(.*)\\s*$");
+    private static final Pattern HEADER_PATTERN = Pattern.compile(
+            "^\\s*(\\S+)\\s*:\\s*(.*)\\s*$");
+
     protected HttpMessage message;
-
     private ChannelBuffer content;
-
     private int chunkSize;
 
     public enum ResponseState {
@@ -79,8 +85,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             return reset();
         }
         case READ_FIXED_LENGTH_CONTENT: {
+            System.out.println("A");
             //we have a content-length so we just read the correct number of bytes
             readFixedLengthContent(buffer);
+            System.out.println("B");
             return reset();
         }
         /**
@@ -140,16 +148,17 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     private void readFixedLengthContent(ChannelBuffer buffer) {
         int length = message.getContentLength();
         if (content == null) {
-            content = ChannelBuffers.buffer(length);
+            content = buffer.readBytes(length);
+        } else {
+            content.writeBytes(buffer.readBytes(length));
         }
-        content.writeBytes(buffer.readBytes(length));
     }
 
     private void readHeaders(ChannelBuffer buffer) {
         message.clearHeaders();
         String line = readIntoCurrentLine(buffer);
         String lastHeader = null;
-        while (!line.equals("")) {
+        while (line.length() != 0) {
             if (line.startsWith(" ") || line.startsWith("\t")) {
                 List<String> current = message.getHeaders(lastHeader);
                 int lastPos = current.size() - 1;
@@ -164,8 +173,14 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             }
             line = readIntoCurrentLine(buffer);
         }
+
+        for (String n: message.getHeaderNames()) {
+            for (String v: message.getHeaders(n)) {
+                System.out.println(n + ": " + v);
+            }
+        }
         ResponseState nextState;
-        if (message.getContentLength() > 0) {
+        if (message.getContentLength() >= 0) {
             nextState = ResponseState.READ_FIXED_LENGTH_CONTENT;
         }
         else if (message.isChunked()) {
@@ -188,8 +203,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         while (true) {
             byte nextByte = channel.readByte();
             if (nextByte == HttpCodecUtil.CR) {
-                channel.readByte();
-                return sb.toString();
+                nextByte = channel.readByte();
+                if (nextByte == HttpCodecUtil.LF) {
+                    return sb.toString();
+                }
             }
             else if (nextByte == HttpCodecUtil.LF) {
                 return sb.toString();
@@ -201,21 +218,20 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     protected String[] splitInitial(String sb) {
-        String[] split = sb.split(" ");
-        if (split.length != 3) {
-            throw new IllegalArgumentException(sb + "does not contain all 3 parts");
+        Matcher m = INITIAL_PATTERN.matcher(sb);
+        if (m.matches()) {
+            return new String[] { m.group(1), m.group(2), m.group(3) };
+        } else {
+            throw new IllegalArgumentException("Invalid initial line: " + sb);
         }
-        return split;
     }
 
     private String[] splitHeader(String sb) {
-        String[] split = sb.split(":", 2);
-        if (split.length != 2) {
-            throw new IllegalArgumentException(sb + "does not contain all 2 parts");
+        Matcher m = HEADER_PATTERN.matcher(sb);
+        if (m.matches()) {
+            return new String[] { m.group(1), m.group(2) };
+        } else {
+            throw new IllegalArgumentException("Invalid header syntax: " + sb);
         }
-        for (int i = 0; i < split.length; i++) {
-            split[i] = split[i].trim();
-        }
-        return split;
     }
 }
