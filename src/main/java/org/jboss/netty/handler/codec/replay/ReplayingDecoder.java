@@ -318,6 +318,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelH
         while (cumulation.readable()) {
             int oldReaderIndex = checkpoint = cumulation.readerIndex();
             Object result = null;
+            T oldState = state;
             try {
                 result = decode(context, channel, replayable, state);
                 if (result == null) {
@@ -341,7 +342,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelH
                 break;
             }
 
-            if (oldReaderIndex == cumulation.readerIndex()) {
+            if (oldReaderIndex == cumulation.readerIndex() && oldState == state) {
                 throw new IllegalStateException(
                         "decode() method must consume at least one byte "
                                 + "if it returned a decoded message.");
