@@ -30,9 +30,9 @@ package org.jboss.netty.channel;
  * {@link ChannelHandler} in the {@link ChannelPipeline}.
  *
  * <pre>
- * +---------+ 1 .. 1 +----------------+ 1 .. n +----------+
- * | Handler |------->| HandlerContext |------->| Pipeline |
- * +---------+        +----------------+        +----------+
+ * +---------+ 1 .. 1 +----------------+ 1 .. n +----------+ 1 .. 1 +---------+
+ * | Handler |------->| HandlerContext |------->| Pipeline |------->| Channel |
+ * +---------+        +----------------+        +----------+        +---------+
  * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
