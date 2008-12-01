@@ -66,6 +66,10 @@ public class DefaultHttpMessage implements HttpMessage {
         headers.put(name, values);
     }
 
+    public void removeHeader(final String name) {
+        headers.remove(name);
+    }
+
     public int getContentLength() {
         List<String> contentLength = headers.get(HttpHeaders.CONTENT_LENGTH);
         if (contentLength != null && contentLength.size() > 0) {

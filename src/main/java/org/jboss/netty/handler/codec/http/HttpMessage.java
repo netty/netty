@@ -50,6 +50,8 @@ public interface HttpMessage {
 
     void setHeader(String name, List<String> values);
 
+    void removeHeader(String name);
+
     int getContentLength();
 
     void setContent(ChannelBuffer content);
