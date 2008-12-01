@@ -50,8 +50,13 @@ public class QueryStringEncoder {
     }
 
     public URI toUri() throws URISyntaxException {
+        return new URI(toString());
+    }
+
+    @Override
+    public String toString() {
         if (params.size() == 0) {
-            return new URI(url);
+            return url;
         }
         else {
             StringBuilder sb = new StringBuilder(url).append("?");
@@ -62,7 +67,7 @@ public class QueryStringEncoder {
                     sb.append("&");
                 }
             }
-            return new URI(sb.toString());
+            return sb.toString();
         }
     }
 
