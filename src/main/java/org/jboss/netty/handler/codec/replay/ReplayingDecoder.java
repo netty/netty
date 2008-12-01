@@ -248,6 +248,24 @@ public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelH
     }
 
     /**
+     * Returns the current state of this decoder.
+     * @return the current state of this decoder
+     */
+    protected T getState() {
+        return state;
+    }
+
+    /**
+     * Sets the current state of this decoder.
+     * @return the old state of this decoder
+     */
+    protected T setState(T newState) {
+        T oldState = state;
+        state = newState;
+        return oldState;
+    }
+
+    /**
      * Decodes the received packets so far into a frame.
      *
      * @param ctx      the context of this handler
