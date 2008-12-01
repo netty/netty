@@ -57,7 +57,7 @@ import java.util.UUID;
  * @apiviz.composedOf org.jboss.netty.channel.ChannelConfig
  * @apiviz.composedOf org.jboss.netty.channel.ChannelPipeline
  */
-public interface Channel {
+public interface Channel extends Comparable<Channel>{
 
     /**
      * The {@link #getInterestOps() interestOps} value which tells that the

@@ -36,7 +36,7 @@ import org.jboss.netty.util.TimeBasedUuidGenerator;
  * @version $Rev$, $Date$
  *
  */
-public abstract class AbstractChannel implements Channel, Comparable<Channel> {
+public abstract class AbstractChannel implements Channel {
 
     private final UUID id = TimeBasedUuidGenerator.generate();
     private final Channel parent;
