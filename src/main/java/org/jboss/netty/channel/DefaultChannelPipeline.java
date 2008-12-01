@@ -106,9 +106,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             checkDuplicateName(name);
             DefaultChannelHandlerContext oldHead = head;
             DefaultChannelHandlerContext newHead = new DefaultChannelHandlerContext(null, oldHead, name, handler);
+
+            callBeforeAdd(newHead);
+
             oldHead.prev = newHead;
             head = newHead;
             name2ctx.put(name, newHead);
+
+            callAfterAdd(newHead);
         }
     }
 
@@ -119,9 +124,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             checkDuplicateName(name);
             DefaultChannelHandlerContext oldTail = tail;
             DefaultChannelHandlerContext newTail = new DefaultChannelHandlerContext(oldTail, null, name, handler);
+
+            callBeforeAdd(newTail);
+
             oldTail.next = newTail;
             tail = newTail;
             name2ctx.put(name, newTail);
+
+            callAfterAdd(newTail);
         }
     }
 
@@ -132,9 +142,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             checkDuplicateName(name);
             DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(ctx.prev, ctx, name, handler);
+
+            callBeforeAdd(newCtx);
+
             ctx.prev.next = newCtx;
             ctx.prev = newCtx;
             name2ctx.put(name, newCtx);
+
+            callAfterAdd(newCtx);
         }
     }
 
@@ -145,9 +160,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             checkDuplicateName(name);
             DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(ctx, ctx.next, name, handler);
+
+            callBeforeAdd(newCtx);
+
             ctx.next.prev = newCtx;
             ctx.next = newCtx;
             name2ctx.put(name, newCtx);
+
+            callAfterAdd(newCtx);
         }
     }
 
@@ -173,11 +193,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else if (ctx == tail) {
             removeLast();
         } else {
+            callBeforeRemove(ctx);
+
             DefaultChannelHandlerContext prev = ctx.prev;
             DefaultChannelHandlerContext next = ctx.next;
             prev.next = next;
             next.prev = prev;
             name2ctx.remove(ctx.getName());
+
+            callAfterRemove(ctx);
         }
         return ctx;
     }
@@ -191,6 +215,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         if (oldHead == null) {
             throw new NoSuchElementException();
         }
+
+        callBeforeRemove(oldHead);
+
         if (oldHead.next == null) {
             head = tail = null;
             name2ctx.clear();
@@ -199,6 +226,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             head = oldHead.next;
             name2ctx.remove(oldHead.getName());
         }
+
+        callAfterRemove(oldHead);
+
         return oldHead.getHandler();
     }
 
@@ -211,6 +241,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         if (oldTail == null) {
             throw new NoSuchElementException();
         }
+
+        callBeforeRemove(oldTail);
+
         if (oldTail.prev == null) {
             head = tail = null;
             name2ctx.clear();
@@ -219,6 +252,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             tail = oldTail.prev;
             name2ctx.remove(oldTail.getName());
         }
+
+        callBeforeRemove(oldTail);
+
         return oldTail.getHandler();
     }
 
@@ -248,17 +284,137 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (!sameName) {
                 checkDuplicateName(newName);
             }
+
             DefaultChannelHandlerContext prev = ctx.prev;
             DefaultChannelHandlerContext next = ctx.next;
             DefaultChannelHandlerContext newCtx = new DefaultChannelHandlerContext(prev, next, newName, newHandler);
+
+            callBeforeRemove(ctx);
+            callBeforeAdd(newCtx);
+
             prev.next = newCtx;
             next.prev = newCtx;
+
             if (!sameName) {
                 name2ctx.remove(ctx.getName());
                 name2ctx.put(newName, newCtx);
             }
+
+            ChannelHandlerLifeCycleException removeException = null;
+            ChannelHandlerLifeCycleException addException = null;
+            boolean removed = false;
+            try {
+                callAfterRemove(ctx);
+                removed = true;
+            } catch (ChannelHandlerLifeCycleException e) {
+                removeException = e;
+            }
+
+            boolean added = false;
+            try {
+                callAfterAdd(newCtx);
+                added = true;
+            } catch (ChannelHandlerLifeCycleException e) {
+                addException = e;
+            }
+
+            if (!removed && !added) {
+                logger.warn(removeException.getMessage(), removeException);
+                logger.warn(addException.getMessage(), addException);
+                throw new ChannelHandlerLifeCycleException(
+                        "Both " + ctx.getHandler().getClass().getName() +
+                        ".afterRemove() and " + newCtx.getHandler().getClass().getName() +
+                        ".afterAdd() failed; see logs.");
+            } else if (!removed) {
+                throw removeException;
+            } else if (!added) {
+                throw addException;
+            }
         }
+
         return ctx.getHandler();
+    }
+
+    private void callBeforeAdd(ChannelHandlerContext ctx) {
+        if (!(ctx.getHandler() instanceof LifeCycleAwareChannelHandler)) {
+            return;
+        }
+
+        LifeCycleAwareChannelHandler h =
+            (LifeCycleAwareChannelHandler) ctx.getHandler();
+
+        try {
+            h.beforeAdd(ctx);
+        } catch (Throwable t) {
+            throw new ChannelHandlerLifeCycleException(
+                    h.getName() +
+                    ".beforeAdd() has thrown an exception; not adding.", t);
+        }
+    }
+
+    private void callAfterAdd(ChannelHandlerContext ctx) {
+        if (!(ctx.getHandler() instanceof LifeCycleAwareChannelHandler)) {
+            return;
+        }
+
+        LifeCycleAwareChannelHandler h =
+            (LifeCycleAwareChannelHandler) ctx.getHandler();
+
+        try {
+            h.afterAdd(ctx);
+        } catch (Throwable t) {
+            boolean removed = false;
+            try {
+                remove((DefaultChannelHandlerContext) ctx);
+                removed = true;
+            } catch (Throwable t2) {
+                logger.warn("Failed to remove a handler: " + ctx.getName(), t2);
+            }
+
+            if (removed) {
+                throw new ChannelHandlerLifeCycleException(
+                        h.getName() +
+                        ".afterAdd() has thrown an exception; removed.", t);
+            } else {
+                throw new ChannelHandlerLifeCycleException(
+                        h.getName() +
+                        ".afterAdd() has thrown an exception; also failed to remove.", t);
+            }
+        }
+    }
+
+    private void callBeforeRemove(ChannelHandlerContext ctx) {
+        if (!(ctx.getHandler() instanceof LifeCycleAwareChannelHandler)) {
+            return;
+        }
+
+        LifeCycleAwareChannelHandler h =
+            (LifeCycleAwareChannelHandler) ctx.getHandler();
+
+        try {
+            h.beforeRemove(ctx);
+        } catch (Throwable t) {
+            throw new ChannelHandlerLifeCycleException(
+                    h.getName() +
+                    ".beforeRemove() has thrown an exception; not removing.", t);
+        }
+    }
+
+    private void callAfterRemove(ChannelHandlerContext ctx) {
+        if (!(ctx.getHandler() instanceof LifeCycleAwareChannelHandler)) {
+            return;
+        }
+
+        LifeCycleAwareChannelHandler h =
+            (LifeCycleAwareChannelHandler) ctx.getHandler();
+
+        try {
+            h.afterRemove(ctx);
+        } catch (Throwable t) {
+            throw new ChannelHandlerLifeCycleException(
+                    h.getName() +
+                    ".afterRemove() has thrown an exception.", t);
+        }
     }
 
     public synchronized ChannelHandler getFirst() {
