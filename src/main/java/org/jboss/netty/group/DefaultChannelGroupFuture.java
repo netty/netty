@@ -132,7 +132,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     }
 
     public synchronized boolean isCompleteSuccess() {
-        return done && successCount >= futures.size();
+        return successCount >= futures.size();
     }
 
     public synchronized boolean isPartialSuccess() {
@@ -144,7 +144,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     }
 
     public synchronized boolean isCompleteFailure() {
-        return done && failureCount >= futures.size();
+        return failureCount >= futures.size();
     }
 
     public void addListener(ChannelGroupFutureListener listener) {
