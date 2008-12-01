@@ -21,7 +21,6 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.net.URI;
 
 /**
  * An http request implementation
@@ -33,10 +32,9 @@ import java.net.URI;
 public class DefaultHttpRequest extends DefaultHttpMessage implements HttpRequest {
 
     private final HttpMethod method;
+    private final String uri;
 
-    private final URI uri;
-
-    public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, URI uri) {
+    public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
         super(httpVersion);
         this.method = method;
         this.uri = uri;
@@ -46,7 +44,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
         return method;
     }
 
-    public URI getURI() {
+    public String getUri() {
         return uri;
     }
 }

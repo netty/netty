@@ -50,7 +50,7 @@ public class HttpRequestHandler extends SimpleChannelHandler {
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         HttpRequest request = (HttpRequest) e.getMessage();
         System.out.println(request.getContent().toString(Charset.defaultCharset().name()));
-        QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getURI());
+        QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getUri());
         Map<String, List<String>> params = queryStringDecoder.getParameters();
         for (Entry<String, List<String>> p: params.entrySet()) {
             String key = p.getKey();

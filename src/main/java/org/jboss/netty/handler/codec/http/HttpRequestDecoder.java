@@ -21,8 +21,6 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.net.URI;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
@@ -39,7 +37,8 @@ public class HttpRequestDecoder extends HttpMessageDecoder {
         String line = readIntoCurrentLine(buffer);
         checkpoint(ResponseState.READ_HEADER);
         String[] split = splitInitial(line);
-        message = new DefaultHttpRequest(HttpVersion.decode(split[2]), HttpMethod.valueOf(split[0]), new URI(split[1]));
+        message = new DefaultHttpRequest(
+                HttpVersion.decode(split[2]), HttpMethod.valueOf(split[0]), split[1]);
 
     }
 }

@@ -21,7 +21,6 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.net.URI;
 
 /**
  * An http request.
@@ -33,5 +32,5 @@ public interface HttpRequest extends HttpMessage {
 
     HttpMethod getMethod();
 
-    URI getURI();
+    String getUri();
 }
