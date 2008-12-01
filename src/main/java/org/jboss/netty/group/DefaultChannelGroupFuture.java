@@ -73,9 +73,11 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
                 }
             }
 
-            if (successCount + failureCount >= futures.size()) {
+            if (successCount + failureCount == futures.size()) {
                 setDone();
             }
+
+            assert successCount + failureCount <= futures.size();
         }
     };
 
@@ -132,19 +134,19 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     }
 
     public synchronized boolean isCompleteSuccess() {
-        return successCount >= futures.size();
+        return successCount == futures.size();
     }
 
     public synchronized boolean isPartialSuccess() {
-        return successCount > 0;
+        return successCount != 0;
     }
 
     public synchronized boolean isPartialFailure() {
-        return failureCount > 0;
+        return failureCount != 0;
     }
 
     public synchronized boolean isCompleteFailure() {
-        return failureCount >= futures.size();
+        return failureCount == futures.size();
     }
 
     public void addListener(ChannelGroupFutureListener listener) {
