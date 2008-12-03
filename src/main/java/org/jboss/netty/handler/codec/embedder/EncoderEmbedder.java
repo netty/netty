@@ -41,6 +41,6 @@ public class EncoderEmbedder<T> extends AbstractCodecEmbedder<T> {
     public boolean offer(Object input) {
         Channel channel = context.getChannel();
         write(context, channel, succeededFuture(channel), input);
-        return context.productQueue.isEmpty();
+        return !context.productQueue.isEmpty();
     }
 }

@@ -55,7 +55,7 @@ abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
         fireChannelDisconnected(context, channel);
         fireChannelUnbound(context, channel);
         fireChannelClosed(context, channel);
-        return context.productQueue.isEmpty();
+        return !context.productQueue.isEmpty();
     }
 
     @SuppressWarnings("unchecked")
