@@ -34,6 +34,13 @@ import org.jboss.netty.util.ConcurrentWeakHashMap;
 public class ChannelLocal<T> {
     private final ConcurrentMap<Channel, T> map = new ConcurrentWeakHashMap<Channel, T>();
 
+    /**
+     * Creates a {@link Channel} local variable.
+     */
+    public ChannelLocal() {
+        super();
+    }
+
     protected T initialValue(@SuppressWarnings("unused") Channel channel) {
         return null;
     }
