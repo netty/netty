@@ -47,7 +47,10 @@ public class ChannelGroupFactory {
         }
 
         g = new DefaultChannelGroup(groupName);
-        g = groups.putIfAbsent(groupName, g);
+        ChannelGroup oldGroup = groups.putIfAbsent(groupName, g);
+        if (oldGroup != null) {
+            g = oldGroup;
+        }
         return g;
     }
 
