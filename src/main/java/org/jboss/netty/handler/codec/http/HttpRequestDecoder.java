@@ -29,13 +29,14 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
+ * @version $Rev$, $Date$
  */
 public class HttpRequestDecoder extends HttpMessageDecoder {
 
     @Override
     protected void readInitial(ChannelBuffer buffer) throws Exception{
         String line = readIntoCurrentLine(buffer);
-        checkpoint(ResponseState.READ_HEADER);
+        checkpoint(State.READ_HEADER);
         String[] split = splitInitial(line);
         message = new DefaultHttpRequest(
                 HttpVersion.decode(split[2]), HttpMethod.valueOf(split[0]), split[1]);

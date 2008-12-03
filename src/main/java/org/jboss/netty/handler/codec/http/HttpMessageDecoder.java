@@ -37,8 +37,9 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
+ * @version $Rev$, $Date$
  */
-public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDecoder.ResponseState> {
+public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDecoder.State> {
 
     private static final Pattern INITIAL_PATTERN = Pattern.compile(
             "^\\s*(\\S+)\\s+(\\S+)\\s+(.*)\\s*$");
@@ -49,7 +50,14 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     private ChannelBuffer content;
     private int chunkSize;
 
-    public enum ResponseState {
+    /**
+     * @author The Netty Project (netty-dev@lists.jboss.org)
+     * @author Trustin Lee (tlee@redhat.com)
+     * @version $Rev$, $Date$
+     *
+     * @apiviz.exclude
+     */
+    protected enum State {
         READ_INITIAL,
         READ_HEADER,
         READ_CONTENT,
@@ -59,14 +67,14 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         READ_CRLF,;
     }
 
-    private ResponseState nextState;
+    private State nextState;
 
     protected HttpMessageDecoder() {
-        super(ResponseState.READ_INITIAL);
+        super(State.READ_INITIAL);
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, ResponseState state) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, State state) throws Exception {
         switch (state) {
         case READ_INITIAL: {
             readInitial(buffer);
@@ -111,7 +119,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 return reset();
             }
             else {
-                checkpoint(ResponseState.READ_CHUNKED_CONTENT);
+                checkpoint(State.READ_CHUNKED_CONTENT);
             }
         }
         case READ_CHUNKED_CONTENT: {
@@ -136,7 +144,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         message.setContent(content);
         content = null;
         nextState = null;
-        checkpoint(ResponseState.READ_INITIAL);
+        checkpoint(State.READ_INITIAL);
         return message;
     }
 
@@ -145,8 +153,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             content = ChannelBuffers.dynamicBuffer(chunkSize);
         }
         content.writeBytes(buffer, chunkSize);
-        nextState = ResponseState.READ_CHUNK_SIZE;
-        checkpoint(ResponseState.READ_CRLF);
+        nextState = State.READ_CHUNK_SIZE;
+        checkpoint(State.READ_CRLF);
     }
 
     private void readFixedLengthContent(ChannelBuffer buffer) {
@@ -183,15 +191,15 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 System.out.println(n + ": " + v);
             }
         }
-        ResponseState nextState;
+        State nextState;
         if (message.getContentLength() >= 0) {
-            nextState = ResponseState.READ_FIXED_LENGTH_CONTENT;
+            nextState = State.READ_FIXED_LENGTH_CONTENT;
         }
         else if (message.isChunked()) {
-            nextState = ResponseState.READ_CHUNK_SIZE;
+            nextState = State.READ_CHUNK_SIZE;
         }
         else {
-            nextState = ResponseState.READ_CONTENT;
+            nextState = State.READ_CONTENT;
         }
         checkpoint(nextState);
     }

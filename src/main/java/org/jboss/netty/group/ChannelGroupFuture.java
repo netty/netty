@@ -32,6 +32,8 @@ import org.jboss.netty.channel.ChannelFuture;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.owns org.jboss.netty.group.ChannelGroupFutureListener - - notifies
  */
 public interface ChannelGroupFuture extends Iterable<ChannelFuture>{
 

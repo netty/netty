@@ -24,5 +24,8 @@
 /**
  * A global channel registry which helps a user maintain the list of open
  * channels and perform bulk operations on them.
+ *
+ * @apiviz.exclude ^java
+ * @apiviz.exclude \.(Abstract|Default).*$
  */
 package org.jboss.netty.group;

@@ -26,6 +26,8 @@ package org.jboss.netty.handler.codec.embedder;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.exclude
  */
 public class CodecEmbedderException extends RuntimeException {
 

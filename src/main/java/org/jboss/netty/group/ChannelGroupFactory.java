@@ -30,6 +30,9 @@ import java.util.concurrent.ConcurrentMap;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
+ * @apiviz.has        org.jboss.netty.group.ChannelGroup oneway - - creates
  */
 public class ChannelGroupFactory {
 

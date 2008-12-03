@@ -32,6 +32,9 @@ import org.jboss.netty.channel.Channel;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
+ * @apiviz.has org.jboss.netty.group.ChannelGroupFuture oneway - - returns
  */
 public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     String getName();

@@ -24,6 +24,7 @@ package org.jboss.netty.handler.codec.http;
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
+ * @version $Rev$, $Date$
  */
 class HttpCodecUtil {
     //space ' '

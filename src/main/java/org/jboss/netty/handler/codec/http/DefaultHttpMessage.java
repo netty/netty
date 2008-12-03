@@ -37,6 +37,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
+ * @version $Rev$, $Date$
  */
 public class DefaultHttpMessage implements HttpMessage {
     private final static Comparator<String> caseIgnoringComparator = new CaseIgnoringComparator();
