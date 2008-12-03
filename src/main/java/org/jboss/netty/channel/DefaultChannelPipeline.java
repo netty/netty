@@ -100,7 +100,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     public boolean isAttached() {
-        return channel != null && sink != null;
+        return sink != null;
     }
 
     public synchronized void addFirst(String name, ChannelHandler handler) {
