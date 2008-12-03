@@ -30,6 +30,8 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 public class DecoderEmbedder<T> extends AbstractCodecEmbedder<T> {
 
