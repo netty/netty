@@ -27,6 +27,7 @@ import java.net.SocketAddress;
 import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelSink;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -38,9 +39,8 @@ class EmbeddedChannel extends AbstractChannel {
     private final SocketAddress localAddress = new EmbeddedSocketAddress();
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
 
-    EmbeddedChannel(
-            EmbeddedChannelHandlerContext context, ChannelPipeline pipeline) {
-        super(null, EmbeddedChannelFactory.INSTANCE, pipeline, context);
+    EmbeddedChannel(ChannelPipeline pipeline, ChannelSink sink) {
+        super(null, EmbeddedChannelFactory.INSTANCE, pipeline, sink);
     }
 
     public ChannelConfig getConfig() {

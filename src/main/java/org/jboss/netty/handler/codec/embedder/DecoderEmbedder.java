@@ -38,7 +38,7 @@ public class DecoderEmbedder<T> extends AbstractCodecEmbedder<T> {
     }
 
     public boolean offer(Object input) {
-        fireMessageReceived(context, context.getChannel(), input);
-        return !context.productQueue.isEmpty();
+        fireMessageReceived(getChannel(), input);
+        return !super.isEmpty();
     }
 }

@@ -24,8 +24,18 @@ package org.jboss.netty.handler.codec.embedder;
 
 import static org.jboss.netty.channel.Channels.*;
 
+import java.util.LinkedList;
+import java.util.Queue;
+
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineException;
+import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.MessageEvent;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -34,37 +44,76 @@ import org.jboss.netty.channel.ChannelHandler;
  */
 abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
 
-    final EmbeddedChannelHandlerContext context;
+    private static final String NAME = "__embedded__";
+
+    private final Channel channel;
+    private final ChannelPipeline pipeline;
+    final Queue<Object> productQueue = new LinkedList<Object>();
 
     AbstractCodecEmbedder(ChannelHandler handler) {
         if (handler == null) {
             throw new NullPointerException("handler");
         }
 
-        this.context = new EmbeddedChannelHandlerContext(handler);
+        pipeline = Channels.pipeline();
+        pipeline.addLast(NAME, handler);
+        channel = new EmbeddedChannel(pipeline, new EmbeddedChannelSink());
 
         // Fire the typical initial events.
-        Channel channel = context.getChannel();
-        fireChannelOpen(context, channel);
-        fireChannelBound(context, channel, channel.getLocalAddress());
-        fireChannelConnected(context, channel, channel.getRemoteAddress());
+        fireChannelOpen(channel);
+        fireChannelBound(channel, channel.getLocalAddress());
+        fireChannelConnected(channel, channel.getRemoteAddress());
     }
 
     public boolean finish() {
-        Channel channel = context.getChannel();
-        fireChannelDisconnected(context, channel);
-        fireChannelUnbound(context, channel);
-        fireChannelClosed(context, channel);
-        return !context.productQueue.isEmpty();
+        fireChannelDisconnected(channel);
+        fireChannelUnbound(channel);
+        fireChannelClosed(channel);
+        return !productQueue.isEmpty();
+    }
+
+    protected final Channel getChannel() {
+        return channel;
+    }
+
+    protected final boolean isEmpty() {
+        return productQueue.isEmpty();
     }
 
     @SuppressWarnings("unchecked")
-    public T poll() {
-        return (T) context.productQueue.poll();
+    public final T poll() {
+        return (T) productQueue.poll();
     }
 
     @SuppressWarnings("unchecked")
-    public T peek() {
-        return (T) context.productQueue.peek();
+    public final T peek() {
+        return (T) productQueue.peek();
+    }
+
+    private final class EmbeddedChannelSink implements ChannelSink {
+        EmbeddedChannelSink() {
+            super();
+        }
+
+        public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) {
+            if (e instanceof MessageEvent) {
+                productQueue.offer(((MessageEvent) e).getMessage());
+            } else if (e instanceof ExceptionEvent) {
+                throw new CodecEmbedderException(((ExceptionEvent) e).getCause());
+            }
+
+            // Swallow otherwise.
+        }
+
+        public void exceptionCaught(
+                ChannelPipeline pipeline, ChannelEvent e,
+                ChannelPipelineException cause) throws Exception {
+            Throwable actualCause = cause.getCause();
+            if (actualCause == null) {
+                actualCause = cause;
+            }
+
+            throw new CodecEmbedderException(actualCause);
+        }
     }
 }
