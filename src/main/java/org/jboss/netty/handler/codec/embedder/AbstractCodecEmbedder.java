@@ -45,7 +45,7 @@ import org.jboss.netty.channel.MessageEvent;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
+public abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
 
     private final Channel channel;
     private final ChannelPipeline pipeline;
@@ -53,7 +53,7 @@ abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
 
     final Queue<Object> productQueue = new LinkedList<Object>();
 
-    AbstractCodecEmbedder(ChannelHandler... handlers) {
+    protected AbstractCodecEmbedder(ChannelHandler... handlers) {
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
