@@ -23,8 +23,10 @@
 package org.jboss.netty.channel;
 
 /**
- * A {@link ChannelHandler} that is notified when it is added to or removed from
- * a {@link ChannelPipeline}.
+ * A {@link ChannelHandler} that is notified when it is added to or removed
+ * from a {@link ChannelPipeline}.  Please note that the methods of this
+ * handler is called only when the {@link ChannelPipeline} it belongs to is
+ * {@linkplain ChannelPipeline#attach(Channel, ChannelSink) attached}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
