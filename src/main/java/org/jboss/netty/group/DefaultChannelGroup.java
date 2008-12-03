@@ -24,6 +24,8 @@ package org.jboss.netty.group;
 
 import java.net.SocketAddress;
 import java.util.AbstractSet;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -34,6 +36,8 @@ import java.util.concurrent.ConcurrentMap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ServerChannel;
+import org.jboss.netty.util.CombinedIterator;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -43,7 +47,8 @@ import org.jboss.netty.channel.ChannelFutureListener;
 public class DefaultChannelGroup extends AbstractSet<Channel> implements ChannelGroup {
 
     private final String name;
-    private final ConcurrentMap<UUID, Channel> channels = new ConcurrentHashMap<UUID, Channel>();
+    private final ConcurrentMap<UUID, Channel> serverChannels = new ConcurrentHashMap<UUID, Channel>();
+    private final ConcurrentMap<UUID, Channel> nonServerChannels = new ConcurrentHashMap<UUID, Channel>();
     private final ChannelFutureListener remover = new ChannelFutureListener() {
         public void operationComplete(ChannelFuture future) throws Exception {
             remove(future.getChannel());
@@ -63,24 +68,34 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public boolean isEmpty() {
-        return channels.isEmpty();
+        return nonServerChannels.isEmpty() && serverChannels.isEmpty();
     }
 
     @Override
     public int size() {
-        return channels.size();
+        return nonServerChannels.size() + serverChannels.size();
     }
 
     public Channel find(UUID id) {
-        return channels.get(id);
+        Channel c = nonServerChannels.get(id);
+        if (c != null) {
+            return c;
+        } else {
+            return serverChannels.get(id);
+        }
     }
 
     @Override
     public boolean contains(Object o) {
         if (o instanceof UUID) {
-            return channels.containsKey(o);
+            return nonServerChannels.containsKey(o) || serverChannels.containsKey(o);
         } else if (o instanceof Channel) {
-            return channels.containsKey(((Channel) o).getId());
+            Channel c = (Channel) o;
+            if (o instanceof ServerChannel) {
+                return serverChannels.containsKey(c.getId());
+            } else {
+                return nonServerChannels.containsKey(c.getId());
+            }
         } else {
             return false;
         }
@@ -88,7 +103,10 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public boolean add(Channel channel) {
-        boolean added = channels.putIfAbsent(channel.getId(), channel) == null;
+        ConcurrentMap<UUID, Channel> map =
+            channel instanceof ServerChannel? serverChannels : nonServerChannels;
+
+        boolean added = map.putIfAbsent(channel.getId(), channel) == null;
         if (added) {
             channel.getCloseFuture().addListener(remover);
         }
@@ -99,9 +117,17 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     public boolean remove(Object o) {
         Channel c = null;
         if (o instanceof UUID) {
-            c = channels.remove(o);
+            c = nonServerChannels.remove(o);
+            if (c == null) {
+                c = serverChannels.remove(o);
+            }
         } else if (o instanceof Channel) {
-            c = channels.remove(((Channel) o).getId());
+            c = (Channel) o;
+            if (c instanceof ServerChannel) {
+                c = serverChannels.remove(c.getId());
+            } else {
+                c = nonServerChannels.remove(c.getId());
+            }
         }
 
         if (c == null) {
@@ -114,66 +140,100 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public void clear() {
-        channels.clear();
+        nonServerChannels.clear();
+        serverChannels.clear();
     }
 
     @Override
     public Iterator<Channel> iterator() {
-        return channels.values().iterator();
+        return new CombinedIterator<Channel>(
+                serverChannels.values().iterator(),
+                nonServerChannels.values().iterator());
     }
 
     @Override
     public Object[] toArray() {
-        return channels.values().toArray();
+        Collection<Channel> channels = new ArrayList<Channel>(size());
+        channels.addAll(serverChannels.values());
+        channels.addAll(nonServerChannels.values());
+        return channels.toArray();
     }
 
     @Override
     public <T> T[] toArray(T[] a) {
-        return channels.values().toArray(a);
+        Collection<Channel> channels = new ArrayList<Channel>(size());
+        channels.addAll(serverChannels.values());
+        channels.addAll(nonServerChannels.values());
+        return channels.toArray(a);
     }
 
     public ChannelGroupFuture close() {
         Map<UUID, ChannelFuture> futures =
             new HashMap<UUID, ChannelFuture>(size());
-        for (Channel c: this) {
+
+        for (Channel c: serverChannels.values()) {
+            futures.put(c.getId(), c.close().awaitUninterruptibly());
+        }
+        for (Channel c: nonServerChannels.values()) {
             futures.put(c.getId(), c.close());
         }
+
         return new DefaultChannelGroupFuture(this, futures);
     }
 
     public ChannelGroupFuture disconnect() {
         Map<UUID, ChannelFuture> futures =
             new HashMap<UUID, ChannelFuture>(size());
-        for (Channel c: this) {
+
+        for (Channel c: serverChannels.values()) {
+            futures.put(c.getId(), c.disconnect().awaitUninterruptibly());
+        }
+        for (Channel c: nonServerChannels.values()) {
             futures.put(c.getId(), c.disconnect());
         }
+
         return new DefaultChannelGroupFuture(this, futures);
     }
 
     public ChannelGroupFuture setInterestOps(int interestOps) {
         Map<UUID, ChannelFuture> futures =
             new HashMap<UUID, ChannelFuture>(size());
-        for (Channel c: this) {
+
+        for (Channel c: serverChannels.values()) {
+            futures.put(c.getId(), c.setInterestOps(interestOps).awaitUninterruptibly());
+        }
+        for (Channel c: nonServerChannels.values()) {
             futures.put(c.getId(), c.setInterestOps(interestOps));
         }
+
         return new DefaultChannelGroupFuture(this, futures);
     }
 
     public ChannelGroupFuture setReadable(boolean readable) {
         Map<UUID, ChannelFuture> futures =
             new HashMap<UUID, ChannelFuture>(size());
-        for (Channel c: this) {
+
+        for (Channel c: serverChannels.values()) {
+            futures.put(c.getId(), c.setReadable(readable).awaitUninterruptibly());
+        }
+        for (Channel c: nonServerChannels.values()) {
             futures.put(c.getId(), c.setReadable(readable));
         }
+
         return new DefaultChannelGroupFuture(this, futures);
     }
 
     public ChannelGroupFuture unbind() {
         Map<UUID, ChannelFuture> futures =
             new HashMap<UUID, ChannelFuture>(size());
-        for (Channel c: this) {
+
+        for (Channel c: serverChannels.values()) {
+            futures.put(c.getId(), c.unbind().awaitUninterruptibly());
+        }
+        for (Channel c: nonServerChannels.values()) {
             futures.put(c.getId(), c.unbind());
         }
+
         return new DefaultChannelGroupFuture(this, futures);
     }
 
