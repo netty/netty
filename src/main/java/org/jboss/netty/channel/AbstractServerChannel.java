@@ -43,7 +43,7 @@ import java.net.SocketAddress;
  * @version $Rev$, $Date$
  *
  */
-public abstract class AbstractServerChannel extends AbstractChannel {
+public abstract class AbstractServerChannel extends AbstractChannel implements ServerChannel {
 
     /**
      * Creates a new instance.

@@ -20,26 +20,13 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket;
-
-import java.net.InetSocketAddress;
-
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ServerChannel;
+package org.jboss.netty.channel;
 
 /**
- * A server-side TCP/IP socket {@link Channel} which accepts incoming TCP/IP
- * connections.
- *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
- *
  * @version $Rev$, $Date$
- *
- * @apiviz.composedOf org.jboss.netty.channel.socket.ServerSocketChannelConfig
  */
-public interface ServerSocketChannel extends ServerChannel {
-    ServerSocketChannelConfig getConfig();
-    InetSocketAddress getLocalAddress();
-    InetSocketAddress getRemoteAddress();
+public interface ServerChannel extends Channel{
+    // This is a tag interface.
 }
