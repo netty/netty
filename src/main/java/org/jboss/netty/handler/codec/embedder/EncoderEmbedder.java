@@ -33,8 +33,8 @@ import org.jboss.netty.channel.ChannelDownstreamHandler;
  */
 public class EncoderEmbedder<T> extends AbstractCodecEmbedder<T> {
 
-    public EncoderEmbedder(ChannelDownstreamHandler handler) {
-        super(handler);
+    public EncoderEmbedder(ChannelDownstreamHandler... handlers) {
+        super(handlers);
     }
 
     public boolean offer(Object input) {

@@ -47,22 +47,32 @@ import org.jboss.netty.channel.MessageEvent;
  */
 abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
 
-    private static final String NAME = "__embedded__";
-
     private final Channel channel;
     private final ChannelPipeline pipeline;
     private final EmbeddedChannelSink sink = new EmbeddedChannelSink();
 
     final Queue<Object> productQueue = new LinkedList<Object>();
 
-    AbstractCodecEmbedder(ChannelHandler handler) {
-        if (handler == null) {
-            throw new NullPointerException("handler");
+    AbstractCodecEmbedder(ChannelHandler... handlers) {
+        if (handlers == null) {
+            throw new NullPointerException("handlers");
+        }
+
+        if (handlers.length == 0) {
+            throw new IllegalArgumentException(
+                    "handlers should contain at least one " +
+                    ChannelHandler.class.getSimpleName() + '.');
         }
 
         pipeline = Channels.pipeline();
-        pipeline.addLast(NAME, handler);
-        pipeline.addLast("LAST", sink);
+        for (int i = 0; i < handlers.length; i ++) {
+            ChannelHandler h = handlers[i];
+            if (h == null) {
+                throw new NullPointerException("handlers[" + i + "]");
+            }
+            pipeline.addLast(String.valueOf(i), handlers[i]);
+        }
+        pipeline.addLast("SINK", sink);
         channel = new EmbeddedChannel(pipeline, sink);
 
         // Fire the typical initial events.
