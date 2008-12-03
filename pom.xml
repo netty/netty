@@ -242,7 +242,7 @@
           <docletArtifact>
             <groupId>org.jboss.apiviz</groupId>
             <artifactId>apiviz</artifactId>
-            <version>1.2.4.GA</version>
+            <version>1.2.5.GA</version>
           </docletArtifact>
           <aggregate>true</aggregate>
           <attach>false</attach>
@@ -250,6 +250,7 @@
             -d ${project.build.directory}/api
             -charset UTF-8
             -docencoding UTF-8
+            -overview ${basedir}/src/javadoc/overview.html
             -version
             -author
             -breakiterator
@@ -258,10 +259,11 @@
             -bottom "Copyright © ${project.inceptionYear}-Present ${project.organization.name}. All Rights Reserved."
             -link http://java.sun.com/javase/6/docs/api/
             -group "Low-level data representation" ${project.groupId}.buffer*
-            -group "Central interface for all I/O operations" ${project.groupId}.channel*
-            -group "Client &amp; Server bootstrapping utilities" ${project.groupId}.bootstrap*:${project.groupId}.group*
+            -group "Central interface for all I/O operations" ${project.groupId}.channel*:${project.groupId}.group*
+            -group "Client &amp; Server bootstrapping utilities" ${project.groupId}.bootstrap*
             -group "Reusable I/O event interceptors" ${project.groupId}.handler*
             -group "Miscellaneous" ${project.groupId}.logging*
+            -nopackagediagram
             -sourceclasspath ${project.build.outputDirectory}
           </additionalparam>
           <encoding>UTF-8</encoding>
