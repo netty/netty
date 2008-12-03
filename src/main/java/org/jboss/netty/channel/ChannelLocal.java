@@ -30,6 +30,8 @@ import org.jboss.netty.util.ConcurrentWeakHashMap;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.stereotype utility
  */
 public class ChannelLocal<T> {
     private final ConcurrentMap<Channel, T> map = new ConcurrentWeakHashMap<Channel, T>();

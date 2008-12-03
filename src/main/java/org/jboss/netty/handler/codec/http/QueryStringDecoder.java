@@ -31,6 +31,8 @@ import java.util.Map;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.stereotype utility
  */
 public class QueryStringDecoder {
 

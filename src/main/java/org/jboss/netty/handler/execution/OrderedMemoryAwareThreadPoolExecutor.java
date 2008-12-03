@@ -58,6 +58,7 @@ import org.jboss.netty.channel.ChannelEvent;
  *
  * @version $Rev$, $Date$
  *
+ * @apiviz.landmark
  */
 public class OrderedMemoryAwareThreadPoolExecutor extends
         MemoryAwareThreadPoolExecutor {

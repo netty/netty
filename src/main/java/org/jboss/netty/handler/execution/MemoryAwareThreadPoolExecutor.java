@@ -79,7 +79,6 @@ import org.jboss.netty.util.LinkedTransferQueue;
  *
  * @version $Rev$, $Date$
  *
- * @apiviz.landmark
  * @apiviz.uses org.jboss.netty.handler.execution.ObjectSizeEstimator
  * @apiviz.uses org.jboss.netty.handler.execution.ChannelEventRunnable
  */
