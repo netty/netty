@@ -45,6 +45,12 @@ package org.jboss.netty.channel;
 public interface ChannelHandlerContext {
 
     /**
+     * Returns the {@link Channel} that the {@link ChannelPipeline} belongs to.
+     * This method is a shortcut to <tt>getPipeline().getChannel()</tt>.
+     */
+    Channel getChannel();
+
+    /**
      * Returns the {@link ChannelPipeline} that the {@link ChannelHandler}
      * belongs to.
      */

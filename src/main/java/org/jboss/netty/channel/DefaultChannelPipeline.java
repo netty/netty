@@ -761,6 +761,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             this.handler = handler;
         }
 
+        public Channel getChannel() {
+            return getPipeline().getChannel();
+        }
+
         public ChannelPipeline getPipeline() {
             return DefaultChannelPipeline.this;
         }
