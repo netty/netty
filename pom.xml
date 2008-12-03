@@ -259,9 +259,9 @@
             -link http://java.sun.com/javase/6/docs/api/
             -group "Low-level data representation" ${project.groupId}.buffer*
             -group "Central interface for all I/O operations" ${project.groupId}.channel*
-            -group "Client &amp; Server bootstrapping utilities" ${project.groupId}.bootstrap*
+            -group "Client &amp; Server bootstrapping utilities" ${project.groupId}.bootstrap*:${project.groupId}.group*
             -group "Reusable I/O event interceptors" ${project.groupId}.handler*
-            -group "Miscellaneous" ${project.groupId}.logging*:${project.groupId}.group*
+            -group "Miscellaneous" ${project.groupId}.logging*
             -sourceclasspath ${project.build.outputDirectory}
           </additionalparam>
           <encoding>UTF-8</encoding>
