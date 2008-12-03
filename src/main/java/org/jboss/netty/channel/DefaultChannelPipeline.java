@@ -99,6 +99,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         this.sink = sink;
     }
 
+    public boolean isAttached() {
+        return channel != null && sink != null;
+    }
+
     public synchronized void addFirst(String name, ChannelHandler handler) {
         if (name2ctx.isEmpty()) {
             init(name, handler);

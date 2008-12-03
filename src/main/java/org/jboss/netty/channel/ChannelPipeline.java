@@ -416,6 +416,12 @@ public interface ChannelPipeline {
     void attach(Channel channel, ChannelSink sink);
 
     /**
+     * Returns {@code true} if and only if this pipeline is attached to
+     * a {@link Channel}.
+     */
+    boolean isAttached();
+
+    /**
      * Converts this pipeline into an ordered {@link Map} whose keys are
      * handler names and whose values are handlers.
      */
