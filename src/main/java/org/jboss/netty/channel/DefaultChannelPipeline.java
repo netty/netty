@@ -344,6 +344,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             return;
         }
 
+        if (!isAttached()) {
+            return;
+        }
+
         LifeCycleAwareChannelHandler h =
             (LifeCycleAwareChannelHandler) ctx.getHandler();
 
@@ -358,6 +362,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callAfterAdd(ChannelHandlerContext ctx) {
         if (!(ctx.getHandler() instanceof LifeCycleAwareChannelHandler)) {
+            return;
+        }
+
+        if (!isAttached()) {
             return;
         }
 
@@ -392,6 +400,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             return;
         }
 
+        if (!isAttached()) {
+            return;
+        }
+
         LifeCycleAwareChannelHandler h =
             (LifeCycleAwareChannelHandler) ctx.getHandler();
 
@@ -406,6 +418,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callAfterRemove(ChannelHandlerContext ctx) {
         if (!(ctx.getHandler() instanceof LifeCycleAwareChannelHandler)) {
+            return;
+        }
+
+        if (!isAttached()) {
             return;
         }
 
