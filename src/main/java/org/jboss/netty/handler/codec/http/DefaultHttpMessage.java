@@ -60,6 +60,16 @@ public class DefaultHttpMessage implements HttpMessage {
         headers.get(name).add(value);
     }
 
+    public void setHeader(final String name, final String value) {
+        if (value == null) {
+            throw new NullPointerException("value");
+        }
+
+        List<String> values = new ArrayList<String>(1);
+        values.add(value);
+        headers.put(name, values);
+    }
+
     public void setHeader(final String name, final List<String> values) {
         if (values == null || values.size() == 0) {
             throw new NullPointerException("no values present");
