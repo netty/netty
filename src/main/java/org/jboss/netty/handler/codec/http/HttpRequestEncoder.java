@@ -41,7 +41,7 @@ public class HttpRequestEncoder extends HttpMessageEncoder {
     @Override
     protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception {
         HttpRequest request = (HttpRequest) message;
-        buf.writeBytes(request.getMethod().getMethod().getBytes());
+        buf.writeBytes(request.getMethod().toString().getBytes());
         buf.writeByte(SP);
         buf.writeBytes(request.getUri().getBytes());
         buf.writeByte(SP);
