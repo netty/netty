@@ -37,9 +37,6 @@ public class HttpRequestEncoder extends HttpMessageEncoder {
 
     /**
      * writes the initial line i.e. 'GET /path/to/file/index.html HTTP/1.0'
-     *
-     * @param buf
-     * @param message
      */
     @Override
     protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception {
