@@ -37,7 +37,7 @@ public class HttpResponseEncoder extends HttpMessageEncoder {
     @Override
     protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message) {
         HttpResponse response = (HttpResponse) message;
-        buf.writeBytes(response.getProtocolVersion().value().getBytes());
+        buf.writeBytes(response.getProtocolVersion().toString().getBytes());
         buf.writeByte(SP);
         buf.writeBytes(String.valueOf(response.getStatus().getCode()).getBytes());
         buf.writeByte(SP);

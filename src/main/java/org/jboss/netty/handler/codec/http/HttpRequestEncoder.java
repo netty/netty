@@ -48,7 +48,7 @@ public class HttpRequestEncoder extends HttpMessageEncoder {
         buf.writeByte(SP);
         buf.writeBytes(request.getUri().getBytes());
         buf.writeByte(SP);
-        buf.writeBytes(request.getProtocolVersion().value().getBytes());
+        buf.writeBytes(request.getProtocolVersion().toString().getBytes());
         buf.writeBytes(CRLF);
     }
 
