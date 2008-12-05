@@ -21,6 +21,9 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * The protocols we support;
  *
@@ -36,8 +39,8 @@ public class HttpVersion implements Comparable<HttpVersion> {
     public static final HttpVersion HTTP_1_0 = new HttpVersion("HTTP", 1, 0);
     public static final HttpVersion HTTP_1_1 = new HttpVersion("HTTP", 1, 1);
 
-    private static final java.util.regex.Pattern VERSION_PATTERN =
-            java.util.regex.Pattern.compile("(\\S+)/(\\d+)\\.(\\d+)");
+    private static final Pattern VERSION_PATTERN =
+            Pattern.compile("(\\S+)/(\\d+)\\.(\\d+)");
 
     public static HttpVersion valueOf(String value) {
         value = value.toUpperCase();
@@ -60,7 +63,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
             throw new NullPointerException("value");
         }
 
-        java.util.regex.Matcher m = VERSION_PATTERN.matcher(value);
+        Matcher m = VERSION_PATTERN.matcher(value);
         if (!m.matches()) {
             throw new IllegalArgumentException("invalid version format: " + value);
         }
