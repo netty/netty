@@ -97,10 +97,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             return reset();
         }
         case READ_FIXED_LENGTH_CONTENT: {
-            System.out.println("A");
             //we have a content-length so we just read the correct number of bytes
             readFixedLengthContent(buffer);
-            System.out.println("B");
             return reset();
         }
         /**
@@ -186,11 +184,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             line = readIntoCurrentLine(buffer);
         }
 
-        for (String n: message.getHeaderNames()) {
-            for (String v: message.getHeaders(n)) {
-                System.out.println(n + ": " + v);
-            }
-        }
         State nextState;
         if (message.getContentLength() >= 0) {
             nextState = State.READ_FIXED_LENGTH_CONTENT;
