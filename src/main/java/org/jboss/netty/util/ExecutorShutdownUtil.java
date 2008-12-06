@@ -57,7 +57,12 @@ public class ExecutorShutdownUtil {
 
             ExecutorService es = (ExecutorService) e;
             for (;;) {
-                es.shutdownNow();
+                try {
+                    es.shutdownNow();
+                } catch (NullPointerException ex) {
+                    // Some JDK throws NPE here, but shouldn't.
+                }
+
                 try {
                     if (es.awaitTermination(1, TimeUnit.SECONDS)) {
                         break;
