@@ -57,7 +57,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     public void clear() {
         reject();
     }
-    
+
     @Override
     public boolean equals(Object obj) {
         return this == obj;
@@ -255,7 +255,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         if (endIndex < 0) {
             throw REPLAY;
         }
-        return readBytes(endIndex);
+        return buffer.readBytes(endIndex - buffer.readerIndex());
     }
 
     public int readBytes(GatheringByteChannel out, int length)
@@ -275,7 +275,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         if (endIndex < 0) {
             throw REPLAY;
         }
-        return readSlice(endIndex);
+        return buffer.readSlice(endIndex - buffer.readerIndex());
     }
 
     public ChannelBuffer readSlice(int length) {

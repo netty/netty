@@ -267,6 +267,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         if (length == 0) {
             return ChannelBuffers.EMPTY_BUFFER;
         }
+        // TODO: Allow a user to specify the buffer factory as an overloaded method.
         ChannelBuffer buf = ChannelBuffers.buffer(order(), length);
         buf.writeBytes(this, readerIndex, length);
         readerIndex += length;
@@ -278,7 +279,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         if (endIndex < 0) {
             throw new NoSuchElementException();
         }
-        return readBytes(endIndex);
+        return readBytes(endIndex - readerIndex);
     }
 
     public ChannelBuffer readSlice(int length) {
@@ -292,7 +293,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         if (endIndex < 0) {
             throw new NoSuchElementException();
         }
-        return readSlice(endIndex);
+        return readSlice(endIndex - readerIndex);
     }
 
     public void readBytes(byte[] dst, int dstIndex, int length) {
