@@ -267,7 +267,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         if (length == 0) {
             return ChannelBuffers.EMPTY_BUFFER;
         }
-        ChannelBuffer buf = ChannelBuffers.buffer(length);
+        ChannelBuffer buf = ChannelBuffers.buffer(order(), length);
         buf.writeBytes(this, readerIndex, length);
         readerIndex += length;
         return buf;
