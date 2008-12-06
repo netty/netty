@@ -22,8 +22,6 @@
  */
 package org.jboss.netty.channel.socket;
 
-import static org.junit.Assert.*;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -35,6 +33,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.util.DummyHandler;
 import org.jboss.netty.util.TimeBasedUuidGenerator;
+import static org.junit.Assert.*;
 import org.junit.Test;
 
 
@@ -65,6 +64,7 @@ public class NioClientSocketShutdownTimeTest {
         b.getPipeline().addLast("handler", new DummyHandler());
 
         long startTime;
+        long stopTime;
 
         try {
             serverSocket.configureBlocking(false);
@@ -87,6 +87,8 @@ public class NioClientSocketShutdownTimeTest {
         } finally {
             b.getFactory().releaseExternalResources();
 
+            stopTime = System.currentTimeMillis();
+
             try {
                 serverSocket.close();
             } catch (IOException ex) {
@@ -94,7 +96,7 @@ public class NioClientSocketShutdownTimeTest {
             }
         }
 
-        long shutdownTime = System.currentTimeMillis() - startTime;
+        long shutdownTime = stopTime - startTime;
         assertTrue("Shutdown takes too long: " + shutdownTime + " ms", shutdownTime < 500);
     }
 }
