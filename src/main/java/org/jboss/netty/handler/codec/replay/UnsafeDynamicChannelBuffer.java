@@ -22,8 +22,7 @@
  */
 package org.jboss.netty.handler.codec.replay;
 
-import java.nio.ByteOrder;
-
+import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.DynamicChannelBuffer;
 
 /**
@@ -35,12 +34,8 @@ import org.jboss.netty.buffer.DynamicChannelBuffer;
  */
 class UnsafeDynamicChannelBuffer extends DynamicChannelBuffer {
 
-    UnsafeDynamicChannelBuffer(int estimatedLength) {
-        super(estimatedLength);
-    }
-
-    UnsafeDynamicChannelBuffer(ByteOrder endianness, int estimatedLength) {
-        super(endianness, estimatedLength);
+    UnsafeDynamicChannelBuffer(ChannelBufferFactory factory) {
+        super(factory.getDefaultOrder(), 256, factory);
     }
 
     @Override

@@ -109,6 +109,7 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
         } else {
             slice = allocateLittleEndianBuffer(capacity);
         }
+        slice.clear();
         return slice;
     }
 

@@ -89,9 +89,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             return null;
         }
         case READ_CONTENT: {
-            // TODO Respect ChannelBufferFactory
             if (content == null) {
-                content = ChannelBuffers.dynamicBuffer();
+                content = ChannelBuffers.dynamicBuffer(channel.getConfig().getBufferFactory());
             }
             //this will cause a replay error until the channel is closed where this will read whats left in the buffer
             content.writeBytes(buffer.readBytes(buffer.readableBytes()));
@@ -122,7 +121,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             }
         }
         case READ_CHUNKED_CONTENT: {
-            readChunkedContent(buffer);
+            readChunkedContent(channel, buffer);
         }
         case READ_CRLF: {
             byte next = buffer.readByte();
@@ -147,10 +146,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return message;
     }
 
-    private void readChunkedContent(ChannelBuffer buffer) {
+    private void readChunkedContent(Channel channel, ChannelBuffer buffer) {
         if (content == null) {
-            // TODO Respect ChannelBufferFactory
-            content = ChannelBuffers.dynamicBuffer(chunkSize);
+            content = ChannelBuffers.dynamicBuffer(
+                    chunkSize, channel.getConfig().getBufferFactory());
         }
         content.writeBytes(buffer, chunkSize);
         nextState = State.READ_CHUNK_SIZE;

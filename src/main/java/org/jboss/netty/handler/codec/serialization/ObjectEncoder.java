@@ -96,9 +96,9 @@ public class ObjectEncoder implements ChannelDownstreamHandler {
         }
 
         MessageEvent e = (MessageEvent) evt;
-        // TODO Respect ChannelBufferFactory
         ChannelBufferOutputStream bout =
-            new ChannelBufferOutputStream(dynamicBuffer(estimatedLength));
+            new ChannelBufferOutputStream(dynamicBuffer(
+                    estimatedLength, e.getChannel().getConfig().getBufferFactory()));
         bout.write(LENGTH_PLACEHOLDER);
         ObjectOutputStream oout = new CompactObjectOutputStream(bout);
         oout.writeObject(e.getMessage());

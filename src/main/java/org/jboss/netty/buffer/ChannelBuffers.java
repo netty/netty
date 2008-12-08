@@ -185,6 +185,14 @@ public class ChannelBuffers {
         return dynamicBuffer(BIG_ENDIAN, 256);
     }
 
+    public static ChannelBuffer dynamicBuffer(ChannelBufferFactory factory) {
+        if (factory == null) {
+            throw new NullPointerException("factory");
+        }
+
+        return new DynamicChannelBuffer(factory.getDefaultOrder(), 256, factory);
+    }
+
     /**
      * Creates a new big-endian dynamic buffer with the specified estimated
      * data length.  More accurate estimation yields less unexpected

@@ -22,15 +22,17 @@
  */
 package org.jboss.netty.handler.codec.serialization;
 
-import static org.jboss.netty.buffer.ChannelBuffers.*;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.ChannelBufferOutputStream;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -49,11 +51,11 @@ import org.jboss.netty.channel.MessageEvent;
  *
  * @version $Rev:231 $, $Date:2008-06-12 16:44:50 +0900 (목, 12 6월 2008) $
  */
-@ChannelPipelineCoverage("all")
+@ChannelPipelineCoverage("one")
 public class CompatibleObjectEncoder implements ChannelDownstreamHandler {
 
-    // TODO Respect ChannelBufferFactory
-    private final ChannelBuffer buffer = dynamicBuffer();
+    private final AtomicReference<ChannelBuffer> buffer =
+        new AtomicReference<ChannelBuffer>();
     private final int resetInterval;
     private volatile ObjectOutputStream oout;
     private int writtenObjects;
@@ -99,12 +101,8 @@ public class CompatibleObjectEncoder implements ChannelDownstreamHandler {
         }
 
         MessageEvent e = (MessageEvent) evt;
-
-        buffer.clear();
-        if (oout == null) {
-            oout = newObjectOutputStream(new ChannelBufferOutputStream(buffer));
-        }
-
+        ChannelBuffer buffer = buffer(context);
+        ObjectOutputStream oout = this.oout;
         if (resetInterval != 0) {
             // Resetting will prevent OOM on the receiving side.
             writtenObjects ++;
@@ -116,6 +114,29 @@ public class CompatibleObjectEncoder implements ChannelDownstreamHandler {
         oout.flush();
 
         ChannelBuffer encoded = buffer.readBytes(buffer.readableBytes());
+        buffer.discardReadBytes();
         write(context, e.getChannel(), e.getFuture(), encoded, e.getRemoteAddress());
+    }
+
+    private ChannelBuffer buffer(ChannelHandlerContext ctx) throws Exception {
+        ChannelBuffer buf = buffer.get();
+        if (buf == null) {
+            ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
+            buf = ChannelBuffers.dynamicBuffer(factory);
+            if (buffer.compareAndSet(null, buf)) {
+                boolean success = false;
+                try {
+                    oout = newObjectOutputStream(new ChannelBufferOutputStream(buf));
+                    success = true;
+                } finally {
+                    if (!success) {
+                        oout = null;
+                    }
+                }
+            } else {
+                buf = buffer.get();
+            }
+        }
+        return buf;
     }
 }

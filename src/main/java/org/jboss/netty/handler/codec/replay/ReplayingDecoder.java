@@ -25,8 +25,10 @@ package org.jboss.netty.handler.codec.replay;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.net.SocketAddress;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -212,8 +214,9 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
 @ChannelPipelineCoverage("one")
 public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelHandler {
 
-    private final ChannelBuffer cumulation = new UnsafeDynamicChannelBuffer(256);
-    private final ReplayingDecoderBuffer replayable = new ReplayingDecoderBuffer(cumulation);
+    private final AtomicReference<ChannelBuffer> cumulation =
+        new AtomicReference<ChannelBuffer>();
+    private volatile ReplayingDecoderBuffer replayable;
     private volatile T state;
     private volatile int checkpoint;
 
@@ -235,7 +238,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelH
      * Stores the internal cumulative buffer's reader position.
      */
     protected void checkpoint() {
-        checkpoint = cumulation.readerIndex();
+        checkpoint = cumulation().readerIndex();
     }
 
     /**
@@ -243,8 +246,8 @@ public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelH
      * the current decoder state.
      */
     protected void checkpoint(T state) {
+        checkpoint = cumulation().readerIndex();
         this.state = state;
-        checkpoint = cumulation.readerIndex();
     }
 
     /**
@@ -309,9 +312,10 @@ public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelH
             return;
         }
 
+        ChannelBuffer cumulation = cumulation(ctx);
         cumulation.discardReadBytes();
         cumulation.writeBytes(input);
-        callDecode(ctx, e.getChannel(), e.getRemoteAddress());
+        callDecode(ctx, e.getChannel(), cumulation, e.getRemoteAddress());
     }
 
     @Override
@@ -332,7 +336,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelH
         ctx.sendUpstream(e);
     }
 
-    private void callDecode(ChannelHandlerContext context, Channel channel, SocketAddress remoteAddress) throws Exception {
+    private void callDecode(ChannelHandlerContext context, Channel channel, ChannelBuffer cumulation, SocketAddress remoteAddress) throws Exception {
         while (cumulation.readable()) {
             int oldReaderIndex = checkpoint = cumulation.readerIndex();
             Object result = null;
@@ -373,10 +377,11 @@ public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelH
 
     private void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
+        ChannelBuffer cumulation = cumulation(ctx);
         try {
             if (cumulation.readable()) {
                 // Make sure all data was read before notifying a closed channel.
-                callDecode(ctx, e.getChannel(), null);
+                callDecode(ctx, e.getChannel(), cumulation, null);
                 if (cumulation.readable()) {
                     // and send the remainders too if necessary.
                     Object partiallyDecoded = decodeLast(ctx, e.getChannel(), cumulation, state);
@@ -390,5 +395,28 @@ public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelH
         } finally {
             ctx.sendUpstream(e);
         }
+    }
+
+
+    private ChannelBuffer cumulation(ChannelHandlerContext ctx) {
+        ChannelBuffer buf = cumulation.get();
+        if (buf == null) {
+            ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
+            buf = new UnsafeDynamicChannelBuffer(factory);
+            if (cumulation.compareAndSet(null, buf)) {
+                replayable = new ReplayingDecoderBuffer(buf);
+            } else {
+                buf = cumulation.get();
+            }
+        }
+        return buf;
+    }
+
+    private ChannelBuffer cumulation() {
+        ChannelBuffer cumulation = this.cumulation.get();
+        if (cumulation == null) {
+            throw new IllegalStateException("Should be called in decode() only");
+        }
+        return cumulation;
     }
 }
