@@ -176,6 +176,8 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         }
 
         void register(NioSocketChannel channel) {
+            // FIXME: Infinite loop on selector creation failure.
+            // Apply the same fix with what's applied in NioWorker.register()
             boolean firstChannel = started.compareAndSet(false, true);
             Selector selector;
             if (firstChannel) {
@@ -312,6 +314,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         }
 
         private void close(SelectionKey k) {
+            k.cancel();
             NioSocketChannel ch = (NioSocketChannel) k.attachment();
             NioWorker.close(ch, ch.getSucceededFuture());
         }
