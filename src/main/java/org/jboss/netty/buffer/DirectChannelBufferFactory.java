@@ -52,13 +52,13 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
         return INSTANCE_BE;
     }
 
-    public static ChannelBufferFactory getInstance(ByteOrder endianness) {
-        if (endianness == ByteOrder.BIG_ENDIAN) {
+    public static ChannelBufferFactory getInstance(ByteOrder defaultEndianness) {
+        if (defaultEndianness == ByteOrder.BIG_ENDIAN) {
             return INSTANCE_BE;
-        } else if (endianness == ByteOrder.LITTLE_ENDIAN) {
+        } else if (defaultEndianness == ByteOrder.LITTLE_ENDIAN) {
             return INSTANCE_LE;
-        } else if (endianness == null) {
-            throw new NullPointerException("endianness");
+        } else if (defaultEndianness == null) {
+            throw new NullPointerException("defaultEndianness");
         } else {
             throw new IllegalStateException("Should not reach here");
         }
