@@ -62,6 +62,10 @@ public class TruncatedChannelBuffer extends AbstractChannelBuffer implements Wra
         return buffer;
     }
 
+    public ChannelBufferFactory factory() {
+        return buffer.factory();
+    }
+
     public ByteOrder order() {
         return buffer.order();
     }

@@ -89,6 +89,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             return null;
         }
         case READ_CONTENT: {
+            // TODO Respect ChannelBufferFactory
             if (content == null) {
                 content = ChannelBuffers.dynamicBuffer();
             }
@@ -148,6 +149,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
 
     private void readChunkedContent(ChannelBuffer buffer) {
         if (content == null) {
+            // TODO Respect ChannelBufferFactory
             content = ChannelBuffers.dynamicBuffer(chunkSize);
         }
         content.writeBytes(buffer, chunkSize);

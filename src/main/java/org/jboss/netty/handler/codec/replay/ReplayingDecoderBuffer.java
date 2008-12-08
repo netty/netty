@@ -31,6 +31,7 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.ChannelBufferIndexFinder;
 
 /**
@@ -199,6 +200,10 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public void markWriterIndex() {
         reject();
+    }
+
+    public ChannelBufferFactory factory() {
+        return buffer.factory();
     }
 
     public ByteOrder order() {

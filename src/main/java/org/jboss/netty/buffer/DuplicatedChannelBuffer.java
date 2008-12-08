@@ -63,6 +63,10 @@ public class DuplicatedChannelBuffer extends AbstractChannelBuffer implements Wr
         return buffer;
     }
 
+    public ChannelBufferFactory factory() {
+        return buffer.factory();
+    }
+
     public ByteOrder order() {
         return buffer.order();
     }

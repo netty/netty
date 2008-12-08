@@ -27,6 +27,8 @@ import java.net.SocketException;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.buffer.HeapChannelBufferFactory;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.util.ConversionUtil;
@@ -43,6 +45,7 @@ import org.jboss.netty.util.ConversionUtil;
 public class DefaultSocketChannelConfig implements SocketChannelConfig {
 
     private final Socket socket;
+    private volatile ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
     private volatile int connectTimeoutMillis = 10000; // 10 seconds
 
     /**
@@ -86,6 +89,8 @@ public class DefaultSocketChannelConfig implements SocketChannelConfig {
             setConnectTimeoutMillis(ConversionUtil.toInt(value));
         } else if (key.equals("pipelineFactory")) {
             setPipelineFactory((ChannelPipelineFactory) value);
+        } else if (key.equals("bufferFactory")) {
+            setBufferFactory((ChannelBufferFactory) value);
         } else {
             return false;
         }
@@ -215,6 +220,17 @@ public class DefaultSocketChannelConfig implements SocketChannelConfig {
 
     public int getConnectTimeoutMillis() {
         return connectTimeoutMillis;
+    }
+
+    public ChannelBufferFactory getBufferFactory() {
+        return bufferFactory;
+    }
+
+    public void setBufferFactory(ChannelBufferFactory bufferFactory) {
+        if (bufferFactory == null) {
+            throw new NullPointerException("bufferFactory");
+        }
+        this.bufferFactory = bufferFactory;
     }
 
     public ChannelPipelineFactory getPipelineFactory() {

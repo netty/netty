@@ -86,6 +86,7 @@ public interface NioSocketChannelConfig extends SocketChannelConfig {
      */
     void setWriteSpinCount(int writeSpinCount);
 
+    // TODO Deprecate receiveBufferSizePredictor
     /**
      * Returns the {@link ReceiveBufferSizePredictor} which predicts the
      * number of readable bytes in the socket receive buffer.  The default

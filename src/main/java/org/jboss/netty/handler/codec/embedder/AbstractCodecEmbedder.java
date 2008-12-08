@@ -27,6 +27,7 @@ import static org.jboss.netty.channel.Channels.*;
 import java.util.LinkedList;
 import java.util.Queue;
 
+import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
@@ -54,6 +55,27 @@ public abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
     final Queue<Object> productQueue = new LinkedList<Object>();
 
     protected AbstractCodecEmbedder(ChannelHandler... handlers) {
+        pipeline = Channels.pipeline();
+        configurePipeline(handlers);
+        channel = new EmbeddedChannel(pipeline, sink);
+        fireInitialEvents();
+    }
+
+    protected AbstractCodecEmbedder(ChannelBufferFactory bufferFactory, ChannelHandler... handlers) {
+        pipeline = Channels.pipeline();
+        configurePipeline(handlers);
+        channel = new EmbeddedChannel(bufferFactory, pipeline, sink);
+        fireInitialEvents();
+    }
+
+    private void fireInitialEvents() {
+        // Fire the typical initial events.
+        fireChannelOpen(channel);
+        fireChannelBound(channel, channel.getLocalAddress());
+        fireChannelConnected(channel, channel.getRemoteAddress());
+    }
+
+    private void configurePipeline(ChannelHandler... handlers) {
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
@@ -64,7 +86,6 @@ public abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
                     ChannelHandler.class.getSimpleName() + '.');
         }
 
-        pipeline = Channels.pipeline();
         for (int i = 0; i < handlers.length; i ++) {
             ChannelHandler h = handlers[i];
             if (h == null) {
@@ -73,12 +94,6 @@ public abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
             pipeline.addLast(String.valueOf(i), handlers[i]);
         }
         pipeline.addLast("SINK", sink);
-        channel = new EmbeddedChannel(pipeline, sink);
-
-        // Fire the typical initial events.
-        fireChannelOpen(channel);
-        fireChannelBound(channel, channel.getLocalAddress());
-        fireChannelConnected(channel, channel.getRemoteAddress());
     }
 
     public boolean finish() {

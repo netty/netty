@@ -68,6 +68,14 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
 
+    public ChannelBufferFactory factory() {
+        if (buffer.isDirect()) {
+            return DirectChannelBufferFactory.getInstance(order());
+        } else {
+            return HeapChannelBufferFactory.getInstance(order());
+        }
+    }
+
     public ByteOrder order() {
         return buffer.order();
     }

@@ -92,6 +92,7 @@ public class ObjectEncoderOutputStream extends OutputStream implements
     }
 
     public void writeObject(Object obj) throws IOException {
+        // TODO Respect ChannelBufferFactory
         ChannelBufferOutputStream bout = new ChannelBufferOutputStream(ChannelBuffers.dynamicBuffer(estimatedLength));
         ObjectOutputStream oout = new CompactObjectOutputStream(bout);
         oout.writeObject(obj);

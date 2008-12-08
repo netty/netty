@@ -20,32 +20,47 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.codec.embedder;
+package org.jboss.netty.buffer;
 
-import static org.jboss.netty.channel.Channels.*;
-
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
+import java.nio.ByteOrder;
 
 /**
+ * A skeletal implementation of {@link ChannelBufferFactory}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
- * @version $Rev$, $Date$
  *
- * @apiviz.landmark
+ * @version $Rev$, $Date$
  */
-public class DecoderEmbedder<T> extends AbstractCodecEmbedder<T> {
+public abstract class AbstractChannelBufferFactory implements ChannelBufferFactory {
 
-    public DecoderEmbedder(ChannelUpstreamHandler... handlers) {
-        super(handlers);
+    private final ByteOrder defaultOrder;
+
+    /**
+     * Creates a new factory whose default {@link ByteOrder} is
+     * {@link ByteOrder#BIG_ENDIAN}.
+     */
+    protected AbstractChannelBufferFactory() {
+        this(ByteOrder.BIG_ENDIAN);
     }
 
-    public DecoderEmbedder(ChannelBufferFactory bufferFactory, ChannelUpstreamHandler... handlers) {
-        super(bufferFactory, handlers);
+    /**
+     * Creates a new factory with the specified default {@link ByteOrder}.
+     *
+     * @param defaultOrder the default {@link ByteOrder} of this factory
+     */
+    protected AbstractChannelBufferFactory(ByteOrder defaultOrder) {
+        if (defaultOrder == null) {
+            throw new NullPointerException("defaultOrder");
+        }
+        this.defaultOrder = defaultOrder;
     }
 
-    public boolean offer(Object input) {
-        fireMessageReceived(getChannel(), input);
-        return !super.isEmpty();
+    public ChannelBuffer getBuffer(int capacity) {
+        return getBuffer(getDefaultOrder(), capacity);
+    }
+
+    public ByteOrder getDefaultOrder() {
+        return defaultOrder;
     }
 }

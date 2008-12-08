@@ -52,6 +52,7 @@ import org.jboss.netty.channel.MessageEvent;
 @ChannelPipelineCoverage("all")
 public class CompatibleObjectEncoder implements ChannelDownstreamHandler {
 
+    // TODO Respect ChannelBufferFactory
     private final ChannelBuffer buffer = dynamicBuffer();
     private final int resetInterval;
     private volatile ObjectOutputStream oout;

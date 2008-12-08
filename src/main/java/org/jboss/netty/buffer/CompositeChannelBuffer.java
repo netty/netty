@@ -92,6 +92,10 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
 
+    public ChannelBufferFactory factory() {
+        return HeapChannelBufferFactory.getInstance(order());
+    }
+
     public ByteOrder order() {
         return order;
     }
@@ -438,7 +442,12 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             throw new IndexOutOfBoundsException();
         }
 
-        ChannelBuffer dst = ChannelBuffers.buffer(order(), length);
+        ChannelBuffer dst = factory().getBuffer(order(), length);
+        copyTo(index, length, sliceId, dst);
+        return dst;
+    }
+
+    private void copyTo(int index, int length, int sliceId, ChannelBuffer dst) {
         int dstIndex = 0;
         int i = sliceId;
 
@@ -454,7 +463,6 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
 
         dst.writerIndex(dst.capacity());
-        return dst;
     }
 
     public ChannelBuffer slice(int index, int length) {

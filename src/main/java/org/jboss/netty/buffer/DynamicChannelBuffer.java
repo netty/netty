@@ -44,6 +44,7 @@ import java.nio.channels.ScatteringByteChannel;
  */
 public class DynamicChannelBuffer extends AbstractChannelBuffer {
 
+    private final ChannelBufferFactory factory;
     private final int initialCapacity;
     private final ByteOrder endianness;
     private ChannelBuffer buffer = ChannelBuffers.EMPTY_BUFFER;
@@ -53,15 +54,26 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
     }
 
     public DynamicChannelBuffer(ByteOrder endianness, int estimatedLength) {
+        this(endianness, estimatedLength, HeapChannelBufferFactory.getInstance(endianness));
+    }
+
+    public DynamicChannelBuffer(ByteOrder endianness, int estimatedLength, ChannelBufferFactory factory) {
         if (estimatedLength < 0) {
             throw new IllegalArgumentException("estimatedLength: " + estimatedLength);
         }
         if (endianness == null) {
             throw new NullPointerException("endianness");
         }
-
+        if (factory == null) {
+            throw new NullPointerException("factory");
+        }
+        this.factory = factory;
         initialCapacity = estimatedLength;
         this.endianness = endianness;
+    }
+
+    public ChannelBufferFactory factory() {
+        return factory;
     }
 
     public ByteOrder order() {
@@ -215,7 +227,7 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
     }
 
     public ChannelBuffer copy(int index, int length) {
-        DynamicChannelBuffer copiedBuffer = new DynamicChannelBuffer(endianness, Math.max(length, 64));
+        DynamicChannelBuffer copiedBuffer = new DynamicChannelBuffer(order(), Math.max(length, 64), factory());
         copiedBuffer.buffer = buffer.copy(index, length);
         copiedBuffer.setIndex(0, length);
         return copiedBuffer;
@@ -239,10 +251,10 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         return buffer.toByteBuffer(index, length);
     }
 
-
     public String toString(int index, int length, String charsetName) {
         return buffer.toString(index, length, charsetName);
     }
+
     private void ensureWritableBytes(int requestedBytes) {
         if (requestedBytes <= writableBytes()) {
             return;
@@ -262,7 +274,7 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
             newCapacity <<= 1;
         }
 
-        ChannelBuffer newBuffer = ChannelBuffers.buffer(endianness, newCapacity);
+        ChannelBuffer newBuffer = factory().getBuffer(order(), newCapacity);
         newBuffer.writeBytes(buffer, readerIndex(), readableBytes());
         buffer = newBuffer;
     }

@@ -267,8 +267,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         if (length == 0) {
             return ChannelBuffers.EMPTY_BUFFER;
         }
-        // TODO: Allow a user to specify the buffer factory as an overloaded method.
-        ChannelBuffer buf = ChannelBuffers.buffer(order(), length);
+        ChannelBuffer buf = factory().getBuffer(order(), length);
         buf.writeBytes(this, readerIndex, length);
         readerIndex += length;
         return buf;

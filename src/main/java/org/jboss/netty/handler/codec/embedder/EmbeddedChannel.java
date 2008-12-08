@@ -24,6 +24,7 @@ package org.jboss.netty.handler.codec.embedder;
 
 import java.net.SocketAddress;
 
+import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -36,15 +37,22 @@ import org.jboss.netty.channel.ChannelSink;
  */
 class EmbeddedChannel extends AbstractChannel {
 
+    private final ChannelConfig config;
     private final SocketAddress localAddress = new EmbeddedSocketAddress();
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
 
     EmbeddedChannel(ChannelPipeline pipeline, ChannelSink sink) {
         super(null, EmbeddedChannelFactory.INSTANCE, pipeline, sink);
+        config = EmbeddedChannelConfig.DEFAULT_INSTANCE;
+    }
+
+    EmbeddedChannel(ChannelBufferFactory bufferFactory, ChannelPipeline pipeline, ChannelSink sink) {
+        super(null, EmbeddedChannelFactory.INSTANCE, pipeline, sink);
+        config = new EmbeddedChannelConfig(bufferFactory);
     }
 
     public ChannelConfig getConfig() {
-        return EmbeddedChannelConfig.INSTANCE;
+        return config;
     }
 
     public SocketAddress getLocalAddress() {

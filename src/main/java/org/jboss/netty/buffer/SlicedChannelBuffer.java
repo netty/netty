@@ -68,6 +68,10 @@ public class SlicedChannelBuffer extends AbstractChannelBuffer implements Wrappe
         return buffer;
     }
 
+    public ChannelBufferFactory factory() {
+        return buffer.factory();
+    }
+
     public ByteOrder order() {
         return buffer.order();
     }

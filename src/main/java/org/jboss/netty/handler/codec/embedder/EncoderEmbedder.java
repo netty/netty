@@ -24,6 +24,7 @@ package org.jboss.netty.handler.codec.embedder;
 
 import static org.jboss.netty.channel.Channels.*;
 
+import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 
 /**
@@ -37,6 +38,10 @@ public class EncoderEmbedder<T> extends AbstractCodecEmbedder<T> {
 
     public EncoderEmbedder(ChannelDownstreamHandler... handlers) {
         super(handlers);
+    }
+
+    public EncoderEmbedder(ChannelBufferFactory bufferFactory, ChannelDownstreamHandler... handlers) {
+        super(bufferFactory, handlers);
     }
 
     public boolean offer(Object input) {

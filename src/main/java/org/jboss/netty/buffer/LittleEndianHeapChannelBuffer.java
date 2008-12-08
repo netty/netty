@@ -59,6 +59,10 @@ public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
         super(array, readerIndex, writerIndex);
     }
 
+    public ChannelBufferFactory factory() {
+        return HeapChannelBufferFactory.getInstance(ByteOrder.LITTLE_ENDIAN);
+    }
+
     public ByteOrder order() {
         return ByteOrder.LITTLE_ENDIAN;
     }

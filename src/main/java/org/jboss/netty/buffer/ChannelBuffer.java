@@ -233,6 +233,12 @@ import java.util.NoSuchElementException;
 public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 
     /**
+     * Returns the factory which creates a {@link ChannelBuffer} whose
+     * type and default {@link ByteOrder} are same with this buffer.
+     */
+    ChannelBufferFactory factory();
+
+    /**
      * Returns the number of bytes (octets) this buffer can contain.
      */
     int capacity();

@@ -205,6 +205,18 @@ public class ChannelBuffers {
         return new DynamicChannelBuffer(endianness, estimatedLength);
     }
 
+    public static ChannelBuffer dynamicBuffer(int estimatedLength, ChannelBufferFactory factory) {
+        if (factory == null) {
+            throw new NullPointerException("factory");
+        }
+
+        return new DynamicChannelBuffer(factory.getDefaultOrder(), estimatedLength, factory);
+    }
+
+    public static ChannelBuffer dynamicBuffer(ByteOrder endianness, int estimatedLength, ChannelBufferFactory factory) {
+        return new DynamicChannelBuffer(endianness, estimatedLength, factory);
+    }
+
     /**
      * Creates a new big-endian buffer which wraps the specified {@code array}.
      * A modification on the specified array's content will be visible to the

@@ -25,9 +25,9 @@ package org.jboss.netty.channel;
 import java.io.IOException;
 import java.util.Map;
 
+import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
-
 
 /**
  * A set of configuration properties of a {@link Channel}.
@@ -78,6 +78,10 @@ public interface ChannelConfig {
      * Sets the configuration properties from the specified {@link Map}.
      */
     void setOptions(Map<String, Object> options);
+
+    ChannelBufferFactory getBufferFactory();
+
+    void setBufferFactory(ChannelBufferFactory bufferFactory);
 
     /**
      * Returns the {@link ChannelPipelineFactory} which will be used when

@@ -51,6 +51,7 @@ public abstract class HttpMessageEncoder extends SimpleChannelHandler {
             return;
         }
         HttpMessage request = (HttpMessage) e.getMessage();
+        // TODO Respect ChannelBufferFactory
         ChannelBuffer buf = ChannelBuffers.dynamicBuffer();
         encodeInitialLine(buf, request);
         encodeHeaders(buf, request);

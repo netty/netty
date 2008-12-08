@@ -147,6 +147,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 @ChannelPipelineCoverage("one")
 public abstract class FrameDecoder extends SimpleChannelHandler {
 
+    // TODO Respect ChannelBufferFactory
     private final ChannelBuffer cumulation = ChannelBuffers.dynamicBuffer();
 
     @Override

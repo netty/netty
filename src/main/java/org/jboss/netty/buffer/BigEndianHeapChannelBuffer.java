@@ -59,6 +59,10 @@ public class BigEndianHeapChannelBuffer extends HeapChannelBuffer {
         super(array, readerIndex, writerIndex);
     }
 
+    public ChannelBufferFactory factory() {
+        return HeapChannelBufferFactory.getInstance(ByteOrder.BIG_ENDIAN);
+    }
+
     public ByteOrder order() {
         return ByteOrder.BIG_ENDIAN;
     }

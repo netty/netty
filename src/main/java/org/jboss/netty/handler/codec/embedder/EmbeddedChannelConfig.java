@@ -24,6 +24,8 @@ package org.jboss.netty.handler.codec.embedder;
 
 import java.util.Map;
 
+import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.buffer.HeapChannelBufferFactory;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 
@@ -34,10 +36,16 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
  */
 class EmbeddedChannelConfig implements ChannelConfig {
 
-    static final ChannelConfig INSTANCE = new EmbeddedChannelConfig();
+    static final ChannelConfig DEFAULT_INSTANCE =
+            new EmbeddedChannelConfig(HeapChannelBufferFactory.getInstance());
 
-    private EmbeddedChannelConfig() {
-        super();
+    private final ChannelBufferFactory bufferFactory;
+
+    EmbeddedChannelConfig(ChannelBufferFactory bufferFactory) {
+        if (bufferFactory == null) {
+            throw new NullPointerException("bufferFactory");
+        }
+        this.bufferFactory = bufferFactory;
     }
 
     public int getConnectTimeoutMillis() {
@@ -46,6 +54,10 @@ class EmbeddedChannelConfig implements ChannelConfig {
 
     public ChannelPipelineFactory getPipelineFactory() {
         return null;
+    }
+
+    public ChannelBufferFactory getBufferFactory() {
+        return bufferFactory;
     }
 
     public int getWriteTimeoutMillis() {
@@ -61,6 +73,10 @@ class EmbeddedChannelConfig implements ChannelConfig {
     }
 
     public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
+        // Unused
+    }
+
+    public void setBufferFactory(ChannelBufferFactory bufferFactory) {
         // Unused
     }
 
