@@ -108,13 +108,13 @@ public class CompatibleObjectEncoder implements ChannelDownstreamHandler {
             writtenObjects ++;
             if (writtenObjects % resetInterval == 0) {
                 oout.reset();
+                buffer.discardReadBytes();
             }
         }
         oout.writeObject(e.getMessage());
         oout.flush();
 
         ChannelBuffer encoded = buffer.readBytes(buffer.readableBytes());
-        buffer.discardReadBytes();
         write(context, e.getChannel(), e.getFuture(), encoded, e.getRemoteAddress());
     }
 
