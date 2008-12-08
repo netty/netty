@@ -128,7 +128,7 @@ public class TimeBasedUuidGenerator {
         final long ts;
         final int  cs;
         synchronized (counterLock) {
-            cs = (clockSeq ++) & 0x3FFF; // 0~16383
+            cs = clockSeq ++ & 0x3FFF; // 0~16383
             if (cs == 0) {
                 // Not all platform has millisecond precision for
                 // System.currentTimeMillis() - Just focus on generating

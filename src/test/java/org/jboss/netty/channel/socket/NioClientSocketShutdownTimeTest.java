@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.channel.socket;
 
+import static org.junit.Assert.*;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -33,7 +35,6 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.util.DummyHandler;
 import org.jboss.netty.util.TimeBasedUuidGenerator;
-import static org.junit.Assert.*;
 import org.junit.Test;
 
 

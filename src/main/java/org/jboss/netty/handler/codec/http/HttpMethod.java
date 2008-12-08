@@ -108,7 +108,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
         }
     }
 
-    private String method;
+    private final String method;
 
     public HttpMethod(String method) {
         if (method == null) {

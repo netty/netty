@@ -68,10 +68,10 @@ public class HttpVersion implements Comparable<HttpVersion> {
             throw new IllegalArgumentException("invalid version format: " + value);
         }
 
-        this.protocolName = m.group(1);
-        this.majorVersion = Integer.parseInt(m.group(2));
-        this.minorVersion = Integer.parseInt(m.group(3));
-        this.string = protocolName + '/' + majorVersion + '.' + minorVersion;
+        protocolName = m.group(1);
+        majorVersion = Integer.parseInt(m.group(2));
+        minorVersion = Integer.parseInt(m.group(3));
+        string = protocolName + '/' + majorVersion + '.' + minorVersion;
     }
 
     public HttpVersion(
@@ -101,7 +101,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
         this.protocolName = protocolName;
         this.majorVersion = majorVersion;
         this.minorVersion = minorVersion;
-        this.string = protocolName + '/' + majorVersion + '.' + minorVersion;
+        string = protocolName + '/' + majorVersion + '.' + minorVersion;
     }
 
     public String getProtocolName() {
