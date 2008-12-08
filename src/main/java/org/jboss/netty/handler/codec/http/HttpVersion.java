@@ -36,11 +36,11 @@ import java.util.regex.Pattern;
  */
 public class HttpVersion implements Comparable<HttpVersion> {
 
+    private static final Pattern VERSION_PATTERN =
+        Pattern.compile("(\\S+)/(\\d+)\\.(\\d+)");
+
     public static final HttpVersion HTTP_1_0 = new HttpVersion("HTTP", 1, 0);
     public static final HttpVersion HTTP_1_1 = new HttpVersion("HTTP", 1, 1);
-
-    private static final Pattern VERSION_PATTERN =
-            Pattern.compile("(\\S+)/(\\d+)\\.(\\d+)");
 
     public static HttpVersion valueOf(String value) {
         value = value.toUpperCase();
