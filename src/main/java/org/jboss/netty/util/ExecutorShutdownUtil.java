@@ -64,7 +64,7 @@ public class ExecutorShutdownUtil {
                 }
 
                 try {
-                    if (es.awaitTermination(1, TimeUnit.SECONDS)) {
+                    if (es.awaitTermination(100, TimeUnit.MILLISECONDS)) {
                         break;
                     }
                 } catch (InterruptedException ex) {
