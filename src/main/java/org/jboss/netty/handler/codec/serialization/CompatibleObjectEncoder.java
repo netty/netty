@@ -108,6 +108,8 @@ public class CompatibleObjectEncoder implements ChannelDownstreamHandler {
             writtenObjects ++;
             if (writtenObjects % resetInterval == 0) {
                 oout.reset();
+
+                // Also discard the byproduct to avoid OOM on the sending side.
                 buffer.discardReadBytes();
             }
         }
