@@ -306,7 +306,6 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                     worker.register(ch, ch.connectFuture);
                 }
             } catch (Throwable t) {
-                k.cancel();
                 ch.connectFuture.setFailure(t);
                 fireExceptionCaught(ch, t);
                 close(k);
