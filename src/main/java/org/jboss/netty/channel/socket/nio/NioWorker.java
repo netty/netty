@@ -605,10 +605,6 @@ class NioWorker implements Runnable {
             if (channel.setClosed()) {
                 future.setSuccess();
                 if (connected) {
-                    if (channel.getRawInterestOps() != Channel.OP_WRITE) {
-                        channel.setRawInterestOpsNow(Channel.OP_WRITE);
-                        fireChannelInterestChanged(channel, Channel.OP_WRITE);
-                    }
                     fireChannelDisconnected(channel);
                 }
                 if (bound) {

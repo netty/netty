@@ -173,11 +173,6 @@ class OioWorker implements Runnable {
                     if (workerThread != null && currentThread != workerThread) {
                         workerThread.interrupt();
                     }
-
-                    if (channel.getInterestOps() != Channel.OP_WRITE) {
-                        channel.setInterestOpsNow(Channel.OP_WRITE);
-                        fireChannelInterestChanged(channel, Channel.OP_WRITE);
-                    }
                     fireChannelDisconnected(channel);
                 }
                 if (bound) {
