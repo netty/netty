@@ -30,11 +30,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
@@ -212,7 +214,9 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * @apiviz.landmark
  */
 @ChannelPipelineCoverage("one")
-public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelHandler {
+public abstract class ReplayingDecoder<T extends Enum<T>>
+        extends SimpleChannelHandler implements LifeCycleAwareChannelHandler {
+
 
     private final AtomicReference<ChannelBuffer> cumulation =
         new AtomicReference<ChannelBuffer>();
@@ -295,6 +299,29 @@ public abstract class ReplayingDecoder<T extends Enum<T>> extends SimpleChannelH
     protected Object decodeLast(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, T state) throws Exception {
         return decode(ctx, channel, buffer, state);
+    }
+
+    @Override
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
+            throws Exception {
+        cumulation(ctx);
+        super.handleUpstream(ctx, e);
+    }
+
+    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+        cumulation(ctx);
+    }
+
+    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
+        // Unused
+    }
+
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        // Unused
+    }
+
+    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
+        // Unused
     }
 
     @Override

@@ -355,7 +355,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             h.beforeAdd(ctx);
         } catch (Throwable t) {
             throw new ChannelHandlerLifeCycleException(
-                    h.getName() +
+                    h.getClass().getName() +
                     ".beforeAdd() has thrown an exception; not adding.", t);
         }
     }
@@ -385,11 +385,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             if (removed) {
                 throw new ChannelHandlerLifeCycleException(
-                        h.getName() +
+                        h.getClass().getName() +
                         ".afterAdd() has thrown an exception; removed.", t);
             } else {
                 throw new ChannelHandlerLifeCycleException(
-                        h.getName() +
+                        h.getClass().getName() +
                         ".afterAdd() has thrown an exception; also failed to remove.", t);
             }
         }
@@ -411,7 +411,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             h.beforeRemove(ctx);
         } catch (Throwable t) {
             throw new ChannelHandlerLifeCycleException(
-                    h.getName() +
+                    h.getClass().getName() +
                     ".beforeRemove() has thrown an exception; not removing.", t);
         }
     }
@@ -432,7 +432,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             h.afterRemove(ctx);
         } catch (Throwable t) {
             throw new ChannelHandlerLifeCycleException(
-                    h.getName() +
+                    h.getClass().getName() +
                     ".afterRemove() has thrown an exception.", t);
         }
     }

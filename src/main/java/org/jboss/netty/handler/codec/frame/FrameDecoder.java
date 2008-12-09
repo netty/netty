@@ -36,6 +36,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
@@ -147,10 +148,35 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * @apiviz.landmark
  */
 @ChannelPipelineCoverage("one")
-public abstract class FrameDecoder extends SimpleChannelHandler {
+public abstract class FrameDecoder
+        extends SimpleChannelHandler implements LifeCycleAwareChannelHandler {
 
     private final AtomicReference<ChannelBuffer> cumulation =
         new AtomicReference<ChannelBuffer>();
+
+
+    @Override
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
+            throws Exception {
+        cumulation(ctx);
+        super.handleUpstream(ctx, e);
+    }
+
+    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+        cumulation(ctx);
+    }
+
+    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
+        // Unused
+    }
+
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        // Unused
+    }
+
+    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
+        // Unused
+    }
 
     @Override
     public void messageReceived(
@@ -167,7 +193,7 @@ public abstract class FrameDecoder extends SimpleChannelHandler {
             return;
         }
 
-        ChannelBuffer cumulation = cumulation(e);
+        ChannelBuffer cumulation = cumulation(ctx);
         if (cumulation.readable()) {
             cumulation.discardReadBytes();
             cumulation.writeBytes(input);
@@ -256,7 +282,7 @@ public abstract class FrameDecoder extends SimpleChannelHandler {
 
     private void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
-        ChannelBuffer cumulation = cumulation(e);
+        ChannelBuffer cumulation = cumulation(ctx);
         try {
             if (cumulation.readable()) {
                 // Make sure all frames are read before notifying a closed channel.
@@ -274,11 +300,11 @@ public abstract class FrameDecoder extends SimpleChannelHandler {
         }
     }
 
-    private ChannelBuffer cumulation(ChannelEvent e) {
+    private ChannelBuffer cumulation(ChannelHandlerContext ctx) {
         ChannelBuffer buf = cumulation.get();
         if (buf == null) {
             buf = ChannelBuffers.dynamicBuffer(
-                    e.getChannel().getConfig().getBufferFactory());
+                    ctx.getChannel().getConfig().getBufferFactory());
             if (!cumulation.compareAndSet(null, buf)) {
                 buf = cumulation.get();
             }
