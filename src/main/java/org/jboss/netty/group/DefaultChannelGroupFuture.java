@@ -65,19 +65,21 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     private final ChannelFutureListener childListener = new ChannelFutureListener() {
         public void operationComplete(ChannelFuture future) throws Exception {
             boolean success = future.isSuccess();
+            boolean callSetDone = false;
             synchronized (DefaultChannelGroupFuture.this) {
                 if (success) {
                     successCount ++;
                 } else {
                     failureCount ++;
                 }
+
+                callSetDone = successCount + failureCount == futures.size();
+                assert successCount + failureCount <= futures.size();
             }
 
-            if (successCount + failureCount == futures.size()) {
+            if (callSetDone) {
                 setDone();
             }
-
-            assert successCount + failureCount <= futures.size();
         }
     };
 

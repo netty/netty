@@ -338,7 +338,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         }
     }
 
-    private final class RegisterTask implements Runnable {
+    private static final class RegisterTask implements Runnable {
         private final Boss boss;
         private final NioSocketChannel channel;
 
