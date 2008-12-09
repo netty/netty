@@ -32,7 +32,7 @@ package org.jboss.netty.channel;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public interface LifeCycleAwareChannelHandler extends ChannelHandlerContext {
+public interface LifeCycleAwareChannelHandler extends ChannelHandler {
     void beforeAdd(ChannelHandlerContext ctx) throws Exception;
     void afterAdd(ChannelHandlerContext ctx) throws Exception;
     void beforeRemove(ChannelHandlerContext ctx) throws Exception;
