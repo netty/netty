@@ -102,8 +102,14 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         }
 
         this.futures = Collections.unmodifiableMap(futureMap);
+
         for (ChannelFuture f: this.futures.values()) {
             f.addListener(childListener);
+        }
+
+        // Done on arrival?
+        if (this.futures.isEmpty()) {
+            setDone();
         }
     }
 
@@ -112,6 +118,11 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         this.futures = Collections.unmodifiableMap(futures);
         for (ChannelFuture f: this.futures.values()) {
             f.addListener(childListener);
+        }
+
+        // Done on arrival?
+        if (this.futures.isEmpty()) {
+            setDone();
         }
     }
 
@@ -140,11 +151,11 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     }
 
     public synchronized boolean isPartialSuccess() {
-        return successCount != 0;
+        return !futures.isEmpty() && successCount != 0;
     }
 
     public synchronized boolean isPartialFailure() {
-        return failureCount != 0;
+        return !futures.isEmpty() && failureCount != 0;
     }
 
     public synchronized boolean isCompleteFailure() {
