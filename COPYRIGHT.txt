@@ -1,5 +1,7 @@
 The Netty Project - Copyright (C) 2008, Red Hat Middleware LLC, and individual
-contributors, and is licensed under the GNU LGPL.
+contributors, and is licensed under the GNU LGPL (Lesser General Public License)
+as published by the Free Software Foundation; either version 2.1 of the License,
+or (at your option) any later version.
 
 A summary of the individual contributors is given below. Any omission should be
 sent to Trustin Lee <tlee@redhat.com>.
@@ -11,4 +13,3 @@ trustin                 Trustin Heuiseung Lee
 -------------------------------------------------------------------------------
 
 * JBoss is a registered trademark of Red Hat Middleware LLC.
-
