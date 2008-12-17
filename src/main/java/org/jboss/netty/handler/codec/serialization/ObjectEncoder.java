@@ -23,18 +23,16 @@
 package org.jboss.netty.handler.codec.serialization;
 
 import static org.jboss.netty.buffer.ChannelBuffers.*;
-import static org.jboss.netty.channel.Channels.*;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferOutputStream;
-import org.jboss.netty.channel.ChannelDownstreamHandler;
-import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
  * An encoder which serializes a Java object into a {@link ChannelBuffer}.
@@ -57,7 +55,7 @@ import org.jboss.netty.channel.MessageEvent;
  * @apiviz.landmark
  */
 @ChannelPipelineCoverage("all")
-public class ObjectEncoder implements ChannelDownstreamHandler {
+public class ObjectEncoder extends OneToOneEncoder {
     private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
 
     private final int estimatedLength;
@@ -88,26 +86,19 @@ public class ObjectEncoder implements ChannelDownstreamHandler {
         this.estimatedLength = estimatedLength;
     }
 
-    public void handleDownstream(
-            ChannelHandlerContext context, ChannelEvent evt) throws Exception {
-        if (!(evt instanceof MessageEvent)) {
-            context.sendDownstream(evt);
-            return;
-        }
-
-        MessageEvent e = (MessageEvent) evt;
+    @Override
+    protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
         ChannelBufferOutputStream bout =
             new ChannelBufferOutputStream(dynamicBuffer(
-                    estimatedLength, e.getChannel().getConfig().getBufferFactory()));
+                    estimatedLength, ctx.getChannel().getConfig().getBufferFactory()));
         bout.write(LENGTH_PLACEHOLDER);
         ObjectOutputStream oout = new CompactObjectOutputStream(bout);
-        oout.writeObject(e.getMessage());
+        oout.writeObject(msg);
         oout.flush();
         oout.close();
 
-        ChannelBuffer msg = bout.buffer();
-        msg.setInt(0, msg.writerIndex() - 4);
-
-        write(context, e.getChannel(), e.getFuture(), msg, e.getRemoteAddress());
+        ChannelBuffer encoded = bout.buffer();
+        encoded.setInt(0, encoded.writerIndex() - 4);
+        return encoded;
     }
 }

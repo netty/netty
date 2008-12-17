@@ -22,20 +22,17 @@
  */
 package org.jboss.netty.handler.codec.string;
 
-import static org.jboss.netty.channel.Channels.*;
-
 import java.nio.charset.Charset;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
+import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 
 /**
  * Decodes a received {@link ChannelBuffer} into a {@link String}.  Please
@@ -70,7 +67,7 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * @apiviz.landmark
  */
 @ChannelPipelineCoverage("all")
-public class StringDecoder implements ChannelUpstreamHandler {
+public class StringDecoder extends OneToOneDecoder {
 
     private final String charsetName;
 
@@ -102,21 +99,12 @@ public class StringDecoder implements ChannelUpstreamHandler {
         charsetName = charset.name();
     }
 
-    public void handleUpstream(
-            ChannelHandlerContext context, ChannelEvent evt) throws Exception {
-        if (!(evt instanceof MessageEvent)) {
-            context.sendUpstream(evt);
-            return;
+    @Override
+    public Object decode(
+            ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
+        if (!(msg instanceof ChannelBuffer)) {
+            return msg;
         }
-
-        MessageEvent e = (MessageEvent) evt;
-        if (!(e.getMessage() instanceof ChannelBuffer)) {
-            context.sendUpstream(evt);
-            return;
-        }
-
-        fireMessageReceived(
-                context, e.getChannel(),
-                ((ChannelBuffer) e.getMessage()).toString(charsetName));
+        return ((ChannelBuffer) msg).toString(charsetName);
     }
 }

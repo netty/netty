@@ -21,7 +21,6 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import static org.jboss.netty.channel.Channels.*;
 import static org.jboss.netty.handler.codec.http.HttpCodecUtil.*;
 
 import java.util.List;
@@ -29,10 +28,10 @@ import java.util.Set;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
  * encodes an http message
@@ -43,23 +42,23 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("one")
-public abstract class HttpMessageEncoder extends SimpleChannelHandler {
+public abstract class HttpMessageEncoder extends OneToOneEncoder {
+
     @Override
-    public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        if (!(e.getMessage() instanceof HttpMessage)) {
-            ctx.sendDownstream(e);
-            return;
+    protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
+        if (!(msg instanceof HttpMessage)) {
+            return msg;
         }
-        HttpMessage request = (HttpMessage) e.getMessage();
+        HttpMessage request = (HttpMessage) msg;
         ChannelBuffer buf = ChannelBuffers.dynamicBuffer(
-                e.getChannel().getConfig().getBufferFactory());
+                channel.getConfig().getBufferFactory());
         encodeInitialLine(buf, request);
         encodeHeaders(buf, request);
         buf.writeBytes(CRLF);
         if (request.getContent() != null) {
             buf.writeBytes(request.getContent());
         }
-        write(ctx, e.getChannel(), e.getFuture(), buf, e.getRemoteAddress());
+        return buf;
     }
 
     /**

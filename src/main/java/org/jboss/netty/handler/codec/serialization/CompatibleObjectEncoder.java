@@ -22,8 +22,6 @@
  */
 package org.jboss.netty.handler.codec.serialization;
 
-import static org.jboss.netty.channel.Channels.*;
-
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
@@ -33,11 +31,10 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.ChannelBufferOutputStream;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelDownstreamHandler;
-import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
  * An encoder which serializes a Java object into a {@link ChannelBuffer}
@@ -52,7 +49,7 @@ import org.jboss.netty.channel.MessageEvent;
  * @version $Rev:231 $, $Date:2008-06-12 16:44:50 +0900 (목, 12 6월 2008) $
  */
 @ChannelPipelineCoverage("one")
-public class CompatibleObjectEncoder implements ChannelDownstreamHandler {
+public class CompatibleObjectEncoder extends OneToOneEncoder {
 
     private final AtomicReference<ChannelBuffer> buffer =
         new AtomicReference<ChannelBuffer>();
@@ -93,14 +90,8 @@ public class CompatibleObjectEncoder implements ChannelDownstreamHandler {
         return new ObjectOutputStream(out);
     }
 
-    public void handleDownstream(
-            ChannelHandlerContext context, ChannelEvent evt) throws Exception {
-        if (!(evt instanceof MessageEvent)) {
-            context.sendDownstream(evt);
-            return;
-        }
-
-        MessageEvent e = (MessageEvent) evt;
+    @Override
+    protected Object encode(ChannelHandlerContext context, Channel channel, Object msg) throws Exception {
         ChannelBuffer buffer = buffer(context);
         ObjectOutputStream oout = this.oout;
         if (resetInterval != 0) {
@@ -113,11 +104,11 @@ public class CompatibleObjectEncoder implements ChannelDownstreamHandler {
                 buffer.discardReadBytes();
             }
         }
-        oout.writeObject(e.getMessage());
+        oout.writeObject(msg);
         oout.flush();
 
         ChannelBuffer encoded = buffer.readBytes(buffer.readableBytes());
-        write(context, e.getChannel(), e.getFuture(), encoded, e.getRemoteAddress());
+        return encoded;
     }
 
     private ChannelBuffer buffer(ChannelHandlerContext ctx) throws Exception {
