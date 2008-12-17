@@ -100,7 +100,7 @@ public class StringDecoder extends OneToOneDecoder {
     }
 
     @Override
-    public Object decode(
+    protected Object decode(
             ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
         if (!(msg instanceof ChannelBuffer)) {
             return msg;
