@@ -39,6 +39,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Robert Harder (rob@iharder.net)
  * @author Trustin Lee (tlee@redhat.com)
+ * @version $Rev$, $Date$
  */
 public class Base64 {
 
