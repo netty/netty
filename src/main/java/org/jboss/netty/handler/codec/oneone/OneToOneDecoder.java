@@ -38,7 +38,7 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * Transforms a received message into another message.  Please note that this
  * decoder must be used with a proper {@link FrameDecoder} such as
  * {@link DelimiterBasedFrameDecoder} if you are using a stream-based transport
- * such as TCP/IP.  A typical decoder setup would be:
+ * such as TCP/IP.  A typical setup for TCP/IP would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
  *

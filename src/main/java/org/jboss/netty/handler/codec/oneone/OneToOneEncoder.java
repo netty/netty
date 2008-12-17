@@ -34,8 +34,8 @@ import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
 
 /**
- * Transforms a received message into another message.  A typical decoder setup
- * would be:
+ * Transforms a received message into another message.  A typical setup for
+ * TCP/IP would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
  *

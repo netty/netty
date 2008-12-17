@@ -38,8 +38,8 @@ import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
  * Decodes a received {@link ChannelBuffer} into a {@link String}.  Please
  * note that this decoder must be used with a proper {@link FrameDecoder}
  * such as {@link DelimiterBasedFrameDecoder} if you are using a stream-based
- * transport such as TCP/IP.  A typical decoder setup for a text-based line
- * protocol in a TCP/IP socket would be:
+ * transport such as TCP/IP.  A typical setup for a text-based line protocol
+ * in a TCP/IP socket would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
  *

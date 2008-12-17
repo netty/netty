@@ -37,8 +37,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
  * Encodes the requested {@link String} into a {@link ChannelBuffer}.
- * The typical decoder setup for a text-based line protocol in a TCP/IP socket
- * would be:
+ * The typical setup for a text-based line protocol in a TCP/IP socket would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
  *
@@ -70,6 +69,9 @@ public class StringEncoder extends OneToOneEncoder {
 
     private final String charsetName;
 
+    /**
+     * Creates a new instance with the current system character set.
+     */
     public StringEncoder() {
         this(Charset.defaultCharset());
     }
