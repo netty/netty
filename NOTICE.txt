@@ -33,8 +33,8 @@ been derived from the works by JSR-166 EG, Doug Lea, and Jason T. Greene:
   * http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/
   * http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/
 
-This product contains a modified version of Robert Harder Public Domain Base64
-Encoder and Decoder, which can be obtained at:
+This product contains a modified version of Robert Harder's Public Domain
+Base64 Encoder and Decoder, which can be obtained at:
 
   * http://iharder.sourceforge.net/current/java/base64/
 
