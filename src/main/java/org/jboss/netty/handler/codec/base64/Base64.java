@@ -27,7 +27,8 @@
 package org.jboss.netty.handler.codec.base64;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.buffer.HeapChannelBufferFactory;
 
 /**
  * Utility class for {@link ChannelBuffer} that encodes and decodes to and from
@@ -44,34 +45,55 @@ import org.jboss.netty.buffer.ChannelBuffers;
 public class Base64 {
 
     /** Maximum line length (76) of Base64 output. */
-    private final static int MAX_LINE_LENGTH = 76;
+    private static final int MAX_LINE_LENGTH = 76;
 
     /** The equals sign (=) as a byte. */
-    private final static byte EQUALS_SIGN = (byte) '=';
+    private static final byte EQUALS_SIGN = (byte) '=';
 
     /** The new line character (\n) as a byte. */
-    private final static byte NEW_LINE = (byte) '\n';
+    private static final byte NEW_LINE = (byte) '\n';
 
-    private final static byte WHITE_SPACE_ENC = -5; // Indicates white space in encoding
+    private static final byte WHITE_SPACE_ENC = -5; // Indicates white space in encoding
 
-    private final static byte EQUALS_SIGN_ENC = -1; // Indicates equals sign in encoding
+    private static final byte EQUALS_SIGN_ENC = -1; // Indicates equals sign in encoding
 
-    private final static byte[] getAlphabet(Base64Dialect dialect) {
+    private static final byte[] alphabet(Base64Dialect dialect) {
         if (dialect == null) {
             throw new NullPointerException("dialect");
         }
         return dialect.alphabet;
     }
 
-    private final static byte[] getDecodabet(Base64Dialect dialect) {
+    private static final byte[] decodabet(Base64Dialect dialect) {
         if (dialect == null) {
             throw new NullPointerException("dialect");
         }
         return dialect.decodabet;
     }
 
+    private static final boolean breakLines(Base64Dialect dialect) {
+        if (dialect == null) {
+            throw new NullPointerException("dialect");
+        }
+        return breakLines(dialect);
+    }
+
     public static ChannelBuffer encode(ChannelBuffer src) {
-        return encode(src, true);
+        return encode(src, Base64Dialect.STANDARD);
+    }
+
+    public static ChannelBuffer encode(ChannelBuffer src, Base64Dialect dialect) {
+        return encode(src, breakLines(dialect), dialect);
+    }
+
+    public static ChannelBuffer encode(
+            ChannelBuffer src, ChannelBufferFactory bufferFactory) {
+        return encode(src, Base64Dialect.STANDARD, bufferFactory);
+    }
+
+    public static ChannelBuffer encode(
+            ChannelBuffer src, Base64Dialect dialect, ChannelBufferFactory bufferFactory) {
+        return encode(src, breakLines(dialect), dialect, bufferFactory);
     }
 
     public static ChannelBuffer encode(ChannelBuffer src, boolean breakLines) {
@@ -80,14 +102,41 @@ public class Base64 {
 
     public static ChannelBuffer encode(
             ChannelBuffer src, boolean breakLines, Base64Dialect dialect) {
+        return encode(src, breakLines, dialect, HeapChannelBufferFactory.getInstance());
+    }
+
+    public static ChannelBuffer encode(
+            ChannelBuffer src, boolean breakLines, ChannelBufferFactory bufferFactory) {
+        return encode(src, breakLines, Base64Dialect.STANDARD, bufferFactory);
+    }
+
+    public static ChannelBuffer encode(
+            ChannelBuffer src, boolean breakLines, Base64Dialect dialect, ChannelBufferFactory bufferFactory) {
+
+        if (src == null) {
+            throw new NullPointerException("src");
+        }
+
         ChannelBuffer dest = encode(
-                src, src.readerIndex(), src.readableBytes(), breakLines, dialect);
+                src, src.readerIndex(), src.readableBytes(), breakLines, dialect, bufferFactory);
         src.readerIndex(src.writerIndex());
         return dest;
     }
 
     public static ChannelBuffer encode(ChannelBuffer src, int off, int len) {
-        return encode(src, off, len, true);
+        return encode(src, off, len, Base64Dialect.STANDARD);
+    }
+
+    public static ChannelBuffer encode(ChannelBuffer src, int off, int len, Base64Dialect dialect) {
+        return encode(src, off, len, breakLines(dialect), dialect);
+    }
+
+    public static ChannelBuffer encode(ChannelBuffer src, int off, int len, ChannelBufferFactory bufferFactory) {
+        return encode(src, off, len, Base64Dialect.STANDARD, bufferFactory);
+    }
+
+    public static ChannelBuffer encode(ChannelBuffer src, int off, int len, Base64Dialect dialect, ChannelBufferFactory bufferFactory) {
+        return encode(src, off, len, breakLines(dialect), dialect, bufferFactory);
     }
 
     public static ChannelBuffer encode(
@@ -98,10 +147,34 @@ public class Base64 {
     public static ChannelBuffer encode(
             ChannelBuffer src, int off, int len,
             boolean breakLines, Base64Dialect dialect) {
+        return encode(src, off, len, breakLines, dialect, HeapChannelBufferFactory.getInstance());
+    }
+
+    public static ChannelBuffer encode(
+            ChannelBuffer src, int off, int len,
+            boolean breakLines, ChannelBufferFactory bufferFactory) {
+        return encode(src, off, len, breakLines, Base64Dialect.STANDARD, bufferFactory);
+    }
+
+    public static ChannelBuffer encode(
+            ChannelBuffer src, int off, int len,
+            boolean breakLines, Base64Dialect dialect, ChannelBufferFactory bufferFactory) {
+
+        if (src == null) {
+            throw new NullPointerException("src");
+        }
+        if (dialect == null) {
+            throw new NullPointerException("dialect");
+        }
+        if (bufferFactory == null) {
+            throw new NullPointerException("bufferFactory");
+        }
 
         int len43 = len * 4 / 3;
-        byte[] dest = new byte[len43 + (len % 3 > 0? 4 : 0) + // Account for padding
-                (breakLines? len43 / MAX_LINE_LENGTH : 0)]; // New lines
+        ChannelBuffer dest = bufferFactory.getBuffer(
+                len43 +
+                (len % 3 > 0? 4 : 0) + // Account for padding
+                (breakLines? len43 / MAX_LINE_LENGTH : 0)); // New lines
         int d = 0;
         int e = 0;
         int len2 = len - 2;
@@ -111,7 +184,7 @@ public class Base64 {
 
             lineLength += 4;
             if (breakLines && lineLength == MAX_LINE_LENGTH) {
-                dest[e + 4] = NEW_LINE;
+                dest.setByte(e + 4, NEW_LINE);
                 e ++;
                 lineLength = 0;
             } // end if: end of line
@@ -122,14 +195,14 @@ public class Base64 {
             e += 4;
         } // end if: some padding needed
 
-        return ChannelBuffers.wrappedBuffer(dest, 0, e);
+        return dest.slice(0, e);
     }
 
-    private static byte[] encode3to4(
+    private static void encode3to4(
             ChannelBuffer src, int srcOffset, int numSigBytes,
-            byte[] dest, int destOffset, Base64Dialect dialect) {
+            ChannelBuffer dest, int destOffset, Base64Dialect dialect) {
 
-        byte[] ALPHABET = getAlphabet(dialect);
+        byte[] ALPHABET = alphabet(dialect);
 
         //           1         2         3
         // 01234567890123456789012345678901 Bit position
@@ -149,25 +222,24 @@ public class Base64 {
 
         switch (numSigBytes) {
         case 3:
-            dest[destOffset    ] = ALPHABET[inBuff >>> 18       ];
-            dest[destOffset + 1] = ALPHABET[inBuff >>> 12 & 0x3f];
-            dest[destOffset + 2] = ALPHABET[inBuff >>>  6 & 0x3f];
-            dest[destOffset + 3] = ALPHABET[inBuff        & 0x3f];
+            dest.setByte(destOffset    , ALPHABET[inBuff >>> 18       ]);
+            dest.setByte(destOffset + 1, ALPHABET[inBuff >>> 12 & 0x3f]);
+            dest.setByte(destOffset + 2, ALPHABET[inBuff >>>  6 & 0x3f]);
+            dest.setByte(destOffset + 3, ALPHABET[inBuff        & 0x3f]);
             break;
         case 2:
-            dest[destOffset    ] = ALPHABET[inBuff >>> 18       ];
-            dest[destOffset + 1] = ALPHABET[inBuff >>> 12 & 0x3f];
-            dest[destOffset + 2] = ALPHABET[inBuff >>> 6  & 0x3f];
-            dest[destOffset + 3] = EQUALS_SIGN;
+            dest.setByte(destOffset    , ALPHABET[inBuff >>> 18       ]);
+            dest.setByte(destOffset + 1, ALPHABET[inBuff >>> 12 & 0x3f]);
+            dest.setByte(destOffset + 2, ALPHABET[inBuff >>> 6  & 0x3f]);
+            dest.setByte(destOffset + 3, EQUALS_SIGN);
             break;
         case 1:
-            dest[destOffset    ] = ALPHABET[inBuff >>> 18       ];
-            dest[destOffset + 1] = ALPHABET[inBuff >>> 12 & 0x3f];
-            dest[destOffset + 2] = EQUALS_SIGN;
-            dest[destOffset + 3] = EQUALS_SIGN;
+            dest.setByte(destOffset    , ALPHABET[inBuff >>> 18       ]);
+            dest.setByte(destOffset + 1, ALPHABET[inBuff >>> 12 & 0x3f]);
+            dest.setByte(destOffset + 2, EQUALS_SIGN);
+            dest.setByte(destOffset + 3, EQUALS_SIGN);
             break;
         }
-        return dest;
     }
 
     public static ChannelBuffer decode(ChannelBuffer src) {
@@ -175,7 +247,20 @@ public class Base64 {
     }
 
     public static ChannelBuffer decode(ChannelBuffer src, Base64Dialect dialect) {
-        ChannelBuffer dest = decode(src, src.readerIndex(), src.readableBytes(), dialect);
+        return decode(src, dialect, HeapChannelBufferFactory.getInstance());
+    }
+
+    public static ChannelBuffer decode(ChannelBuffer src, ChannelBufferFactory bufferFactory) {
+        return decode(src, Base64Dialect.STANDARD, bufferFactory);
+    }
+
+    public static ChannelBuffer decode(ChannelBuffer src, Base64Dialect dialect, ChannelBufferFactory bufferFactory) {
+
+        if (src == null) {
+            throw new NullPointerException("src");
+        }
+
+        ChannelBuffer dest = decode(src, src.readerIndex(), src.readableBytes(), dialect, bufferFactory);
         src.readerIndex(src.writerIndex());
         return dest;
     }
@@ -187,11 +272,32 @@ public class Base64 {
 
     public static ChannelBuffer decode(
             ChannelBuffer src, int off, int len, Base64Dialect dialect) {
+        return decode(src, off, len, dialect, HeapChannelBufferFactory.getInstance());
+    }
 
-        byte[] DECODABET = getDecodabet(dialect);
+    public static ChannelBuffer decode(
+            ChannelBuffer src, int off, int len, ChannelBufferFactory bufferFactory) {
+        return decode(src, off, len, Base64Dialect.STANDARD, bufferFactory);
+    }
+
+    public static ChannelBuffer decode(
+            ChannelBuffer src, int off, int len, Base64Dialect dialect,
+            ChannelBufferFactory bufferFactory) {
+
+        if (src == null) {
+            throw new NullPointerException("src");
+        }
+        if (dialect == null) {
+            throw new NullPointerException("dialect");
+        }
+        if (bufferFactory == null) {
+            throw new NullPointerException("bufferFactory");
+        }
+
+        byte[] DECODABET = decodabet(dialect);
 
         int len34 = len * 3 / 4;
-        byte[] dest = new byte[len34]; // Upper limit on size of output
+        ChannelBuffer dest = bufferFactory.getBuffer(len34); // Upper limit on size of output
         int outBuffPosn = 0;
 
         byte[] b4 = new byte[4];
@@ -225,14 +331,14 @@ public class Base64 {
             }
         }
 
-        return ChannelBuffers.wrappedBuffer(dest, 0, outBuffPosn);
+        return dest.slice(0, outBuffPosn);
     }
 
     private static int decode4to3(
             byte[] src, int srcOffset,
-            byte[] dest, int destOffset, Base64Dialect dialect) {
+            ChannelBuffer dest, int destOffset, Base64Dialect dialect) {
 
-        byte[] DECODABET = getDecodabet(dialect);
+        byte[] DECODABET = decodabet(dialect);
 
         // Example: Dk==
         if (src[srcOffset + 2] == EQUALS_SIGN) {
@@ -240,7 +346,7 @@ public class Base64 {
                     (DECODABET[src[srcOffset    ]] & 0xFF) << 18 |
                     (DECODABET[src[srcOffset + 1]] & 0xFF) << 12;
 
-            dest[destOffset] = (byte) (outBuff >>> 16);
+            dest.setByte(destOffset, (byte) (outBuff >>> 16));
             return 1;
         }
 
@@ -251,8 +357,8 @@ public class Base64 {
                     (DECODABET[src[srcOffset + 1]] & 0xFF) << 12 |
                     (DECODABET[src[srcOffset + 2]] & 0xFF) <<  6;
 
-            dest[destOffset    ] = (byte) (outBuff >>> 16);
-            dest[destOffset + 1] = (byte) (outBuff >>>  8);
+            dest.setByte(destOffset    , (byte) (outBuff >>> 16));
+            dest.setByte(destOffset + 1, (byte) (outBuff >>>  8));
             return 2;
         }
 
@@ -265,9 +371,9 @@ public class Base64 {
                         (DECODABET[src[srcOffset + 2]] & 0xFF) <<  6 |
                          DECODABET[src[srcOffset + 3]] & 0xFF;
 
-                dest[destOffset    ] = (byte) (outBuff >> 16);
-                dest[destOffset + 1] = (byte) (outBuff >>  8);
-                dest[destOffset + 2] = (byte)  outBuff;
+                dest.setByte(destOffset    , (byte) (outBuff >> 16));
+                dest.setByte(destOffset + 1, (byte) (outBuff >>  8));
+                dest.setByte(destOffset + 2, (byte)  outBuff);
                 return 3;
             } catch (Exception e) {
                 throw new IllegalArgumentException("not encoded in Base64");

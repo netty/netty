@@ -89,7 +89,7 @@ public enum Base64Dialect {
             -9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,     // Decimal 218 - 230
             -9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,     // Decimal 231 - 243
             -9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9         // Decimal 244 - 255 */
-            }),
+            }, true),
     /**
      * Base64-like encoding that is URL-safe as described in the Section 4 of
      * <a href="http://www.faqs.org/rfcs/rfc3548.html">RFC3548</a>.  It is
@@ -148,7 +148,7 @@ public enum Base64Dialect {
             -9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,     // Decimal 218 - 230
             -9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,     // Decimal 231 - 243
             -9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9         // Decimal 244 - 255 */
-            }),
+            }, false),
     /**
      * Special "ordered" dialect of Base64 described in
      * <a href="http://www.faqs.org/qa/rfcc-1940.html">RFC1940</a>.
@@ -204,13 +204,15 @@ public enum Base64Dialect {
             -9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,     // Decimal 218 - 230
             -9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,     // Decimal 231 - 243
             -9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9         // Decimal 244 - 255 */
-            });
+            }, true);
 
     final byte[] alphabet;
     final byte[] decodabet;
+    final boolean breakLinesByDefault;
 
-    private Base64Dialect(byte[] alphabet, byte[] decodabet) {
+    private Base64Dialect(byte[] alphabet, byte[] decodabet, boolean breakLinesByDefault) {
         this.alphabet = alphabet;
         this.decodabet = decodabet;
+        this.breakLinesByDefault = breakLinesByDefault;
     }
 }
