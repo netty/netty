@@ -24,42 +24,65 @@ You should have received a copy of the GNU Lesser General Public License
 along with this library; if not, write to the Free Software Foundation,
 Inc., 51 Franklin Street, 5th Floor, Boston, MA 02110-1301 USA
 
-Also, please refer to each LICENSE.<component>.txt file for the license
-terms of the components that this product depends on.
+Also, please refer to each LICENSE.<component>.txt file, which is located in
+the 'license' directory of the distribution file, for the license terms of the
+components that this product depends on.
 
+-------------------------------------------------------------------------------
 This product contains the extensions to Java Collections Framework which has
 been derived from the works by JSR-166 EG, Doug Lea, and Jason T. Greene:
 
-  * http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/
-  * http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/
+  * LICENSE:
+    * license/LICENSE.jsr177y.txt (Public Domain)
+  * HOMEPAGE:
+    * http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/
+    * http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/
 
 This product contains a modified version of Robert Harder's Public Domain
 Base64 Encoder and Decoder, which can be obtained at:
 
-  * http://iharder.sourceforge.net/current/java/base64/
+  * LICENSE:
+    * license/LICENSE.base64.txt (Public Domain)
+  * HOMEPAGE:
+    * http://iharder.sourceforge.net/current/java/base64/
 
 This product optionally depends on 'Protocol Buffers', Google's data
 interchange format, which can be obtained at:
 
-  * http://code.google.com/p/protobuf/
+  * LICENSE:
+    * license/LICENSE.protobuf.txt (New BSD License)
+  * HOMEPAGE:
+    * http://code.google.com/p/protobuf/
 
 This product optionally depends on 'SLF4J', a simple logging facade for Java,
 which can be obtained at:
 
-  * http://www.slf4j.org/
+  * LICENSE:
+    * license/LICENSE.slf4j.txt (MIT License)
+  * HOMEPAGE:
+    * http://www.slf4j.org/
 
 This product optionally depends on 'Apache Commons Logging', a logging
 framework, which can be obtained at:
 
-  * http://commons.apache.org/logging/
+  * LICENSE:
+    * license/LICENSE.commons-logging.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * http://commons.apache.org/logging/
 
 This product optionally depends on 'Apache Log4J', a logging framework,
 which can be obtained at:
 
-  * http://logging.apache.org/log4j/
+  * LICENSE:
+    * license/LICENSE.log4j.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * http://logging.apache.org/log4j/
 
 This product optionally depends on 'JBoss Logging', a logging framework,
 which can be obtained at:
 
-  * http://anonsvn.jboss.org/repos/common/common-logging-spi/
+  * LICENSE:
+    * license/LICENSE.jboss-logging.txt (GNU LGPL 2.1)
+  * HOMEPAGE:
+    * http://anonsvn.jboss.org/repos/common/common-logging-spi/
 

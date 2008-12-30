@@ -205,6 +205,10 @@
                         <include name="NOTICE.*" />
                         <include name="COPYRIGHT.*" />
                       </zipfileset>
+                      <zipfileset dir="${basedir}/license" prefix="META-INF/license/">
+                        <exclude name="**/.*/**" />
+                        <include name="**" />
+                      </zipfileset>
                       <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}.orig.jar" dirmode="755">
                         <exclude name="*/*/*/example/**" />
                       </zipfileset>
@@ -216,6 +220,10 @@
                         <include name="LICENSE.*" />
                         <include name="NOTICE.*" />
                         <include name="COPYRIGHT.*" />
+                      </zipfileset>
+                      <zipfileset dir="${basedir}/license" prefix="META-INF/license/">
+                        <exclude name="**/.*/**" />
+                        <include name="**" />
                       </zipfileset>
                       <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}-sources.orig.jar" dirmode="755">
                         <exclude name="*/*/*/example/**" />

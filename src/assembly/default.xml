@@ -39,6 +39,7 @@
         <include>**/COPYRIGHT*</include>
         <include>**/*.txt</include>
         <include>**/*.xml</include>
+        <include>**/license/**</include>
         <include>**/src/**</include>
       </includes>
       <excludes>
