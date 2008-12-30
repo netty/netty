@@ -38,6 +38,11 @@ Base64 Encoder and Decoder, which can be obtained at:
 
   * http://iharder.sourceforge.net/current/java/base64/
 
+This product optionally depends on 'Protocol Buffers', Google's data
+interchange format, which can be obtained at:
+
+  * http://code.google.com/p/protobuf/
+
 This product optionally depends on 'SLF4J', a simple logging facade for Java,
 which can be obtained at:
 
