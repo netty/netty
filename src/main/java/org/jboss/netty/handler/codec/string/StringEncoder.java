@@ -37,7 +37,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
  * Encodes the requested {@link String} into a {@link ChannelBuffer}.
- * The typical setup for a text-based line protocol in a TCP/IP socket would be:
+ * A typical setup for a text-based line protocol in a TCP/IP socket would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
  *
@@ -48,7 +48,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * // Encoder
  * pipeline.addLast("stringEncoder", new {@link StringEncoder}("UTF-8"));
  * </pre>
- * and then you can use {@link String}s instead of {@link ChannelBuffer}s
+ * and then you can use a {@link String} instead of a {@link ChannelBuffer}
  * as a message:
  * <pre>
  * void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {

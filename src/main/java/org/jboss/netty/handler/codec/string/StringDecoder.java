@@ -50,7 +50,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
  * // Encoder
  * pipeline.addLast("stringEncoder", new {@link StringEncoder}("UTF-8"));
  * </pre>
- * and then you can use {@link String}s instead of {@link ChannelBuffer}s
+ * and then you can use a {@link String} instead of a {@link ChannelBuffer}
  * as a message:
  * <pre>
  * void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
