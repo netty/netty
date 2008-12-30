@@ -43,6 +43,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * // Encoder
  * pipeline.addLast("base64Encoder", new {@link Base64Encoder}());
  * </pre>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
