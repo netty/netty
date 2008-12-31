@@ -238,7 +238,7 @@ public class DiscardServer {
 public void messageReceived(&ChannelHandlerContext; ctx, &MessageEvent; e) {
     &ChannelBuffer;<co id="example.discard3.co1"/> buf = (ChannelBuffer) e.getMessage();
     while(buf.readable()) {
-        System.out.println((char) buf.readByte(i));
+        System.out.println((char) buf.readByte());
     }
 }</programlisting>
     <calloutlist>
