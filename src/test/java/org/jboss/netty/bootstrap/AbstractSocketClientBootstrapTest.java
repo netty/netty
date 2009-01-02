@@ -32,13 +32,13 @@ import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.util.DummyHandler;
+import org.jboss.netty.util.ExecutorShutdownUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -62,16 +62,7 @@ public abstract class AbstractSocketClientBootstrapTest {
 
     @AfterClass
     public static void destroy() {
-        executor.shutdownNow();
-        for (;;) {
-            try {
-                if (executor.awaitTermination(1, TimeUnit.MILLISECONDS)) {
-                    break;
-                }
-            } catch (InterruptedException e) {
-                // Ignore.
-            }
-        }
+        ExecutorShutdownUtil.shutdown(executor);
     }
 
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);

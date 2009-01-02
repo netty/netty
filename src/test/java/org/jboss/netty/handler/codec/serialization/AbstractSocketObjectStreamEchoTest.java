@@ -31,7 +31,6 @@ import java.util.Random;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
@@ -45,6 +44,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.util.ExecutorShutdownUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -83,16 +83,7 @@ public abstract class AbstractSocketObjectStreamEchoTest {
 
     @AfterClass
     public static void destroy() {
-        executor.shutdownNow();
-        for (;;) {
-            try {
-                if (executor.awaitTermination(1, TimeUnit.MILLISECONDS)) {
-                    break;
-                }
-            } catch (InterruptedException e) {
-                // Ignore.
-            }
-        }
+        ExecutorShutdownUtil.shutdown(executor);
     }
 
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);

@@ -391,7 +391,12 @@ class NioProviderMetadata {
 
                 if (loop != null) {
                     loop.done = true;
-                    executor.shutdownNow();
+                    try {
+                        executor.shutdownNow();
+                    } catch (NullPointerException ex) {
+                        // Some JDK throws NPE here, but shouldn't.
+                    }
+
                     try {
                         for (;;) {
                             loop.selector.wakeup();
