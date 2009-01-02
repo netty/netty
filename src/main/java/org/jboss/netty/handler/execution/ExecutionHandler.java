@@ -29,6 +29,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
+import org.jboss.netty.util.ExecutorShutdownUtil;
 
 /**
  * Forwards an upstream {@link ChannelEvent} to an {@link Executor}.
@@ -77,8 +78,16 @@ public class ExecutionHandler implements ChannelUpstreamHandler {
     /**
      * Returns the {@link Executor} which was specified with the constructor.
      */
-    public final Executor getExecutor() {
+    public Executor getExecutor() {
         return executor;
+    }
+
+    /**
+     * Shuts down the {@link Executor} which was specified with the constructor
+     * and wait for its termination.
+     */
+    public void terminateExecutor() {
+        ExecutorShutdownUtil.shutdown(getExecutor());
     }
 
     public void handleUpstream(
