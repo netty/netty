@@ -124,12 +124,14 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
         }
 
         if (frameLength < 0) {
+            buffer.skipBytes(actualLengthFieldOffset + lengthFieldLength);
             throw new CorruptedFrameException(
                     "negative pre-adjustment length field: " + frameLength);
         }
 
         frameLength += lengthAdjustment + lengthFieldEndOffset;
         if (frameLength < lengthFieldEndOffset) {
+            buffer.skipBytes(actualLengthFieldOffset + lengthFieldLength);
             throw new CorruptedFrameException(
                     "Adjusted length (" + frameLength + ") is less than " +
                     lengthFieldEndOffset);
