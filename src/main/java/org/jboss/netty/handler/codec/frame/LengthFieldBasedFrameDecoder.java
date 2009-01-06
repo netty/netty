@@ -160,7 +160,9 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             throw new CorruptedFrameException(
                     "Adjusted length (" + frameLength + ") is less than " +
                     lengthFieldEndOffset);
-        } else if (frameLength > maxFrameLength) {
+        }
+
+        if (frameLength > maxFrameLength) {
             // Enter the discard mode and discard everything received so far.
             discardingTooLongFrame = true;
             tooLongFrameLength = frameLength;
@@ -173,8 +175,8 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
         int frameLengthInt = (int) frameLength;
         if (buffer.readableBytes() < frameLengthInt) {
             return null;
-        } else {
-            return buffer.readBytes(frameLengthInt);
         }
+
+        return buffer.readBytes(frameLengthInt);
     }
 }
