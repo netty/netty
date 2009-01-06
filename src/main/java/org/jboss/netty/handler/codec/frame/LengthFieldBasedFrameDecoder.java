@@ -43,6 +43,9 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
     private final int lengthFieldLength;
     private final int lengthFieldEndOffset;
     private final int lengthAdjustment;
+    private volatile boolean discardingTooLongFrame;
+    private volatile long tooLongFrameLength;
+    private volatile long bytesToDiscard;
 
     /**
      * Creates a new instance.
@@ -97,6 +100,28 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
     @Override
     protected Object decode(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
+
+        if (discardingTooLongFrame) {
+            long bytesToDiscard = this.bytesToDiscard;
+            int localBytesToDiscard = (int) Math.min(bytesToDiscard, buffer.readableBytes());
+            buffer.skipBytes(localBytesToDiscard);
+            bytesToDiscard -= localBytesToDiscard;
+            this.bytesToDiscard = bytesToDiscard;
+            if (bytesToDiscard == 0) {
+                // Reset to the initial state and tell the handlers that
+                // the frame was too large.
+                discardingTooLongFrame = false;
+                long tooLongFrameLength = this.tooLongFrameLength;
+                this.tooLongFrameLength = 0;
+                throw new TooLongFrameException(
+                        "Adjusted frame length exceeds " + maxFrameLength +
+                        ": " + tooLongFrameLength);
+            } else {
+                // Keep discarding.
+                return null;
+            }
+        }
+
         if (buffer.readableBytes() < lengthFieldEndOffset) {
             return null;
         }
@@ -124,21 +149,24 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
         }
 
         if (frameLength < 0) {
-            buffer.skipBytes(actualLengthFieldOffset + lengthFieldLength);
+            buffer.skipBytes(lengthFieldEndOffset);
             throw new CorruptedFrameException(
                     "negative pre-adjustment length field: " + frameLength);
         }
 
         frameLength += lengthAdjustment + lengthFieldEndOffset;
         if (frameLength < lengthFieldEndOffset) {
-            buffer.skipBytes(actualLengthFieldOffset + lengthFieldLength);
+            buffer.skipBytes(lengthFieldEndOffset);
             throw new CorruptedFrameException(
                     "Adjusted length (" + frameLength + ") is less than " +
                     lengthFieldEndOffset);
         } else if (frameLength > maxFrameLength) {
-            throw new TooLongFrameException(
-                    "Adjusted length exceeds " + maxFrameLength + ": " +
-                    frameLength);
+            // Enter the discard mode and discard everything received so far.
+            discardingTooLongFrame = true;
+            tooLongFrameLength = frameLength;
+            bytesToDiscard = frameLength - buffer.readableBytes();
+            buffer.skipBytes(buffer.readableBytes());
+            return null;
         }
 
         // never overflows because it's less than maxFrameLength
