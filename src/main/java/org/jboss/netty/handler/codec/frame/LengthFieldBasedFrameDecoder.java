@@ -40,7 +40,7 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
 
     private final int maxFrameLength;
     private final int lengthFieldOffset;
-    private final int lengthFieldLength;
+    final int lengthFieldLength;
     private final int lengthFieldEndOffset;
     private final int lengthAdjustment;
     private volatile boolean discardingTooLongFrame;
