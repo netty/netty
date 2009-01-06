@@ -74,6 +74,9 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
 
     private final ChannelBuffer[] delimiters;
     private final int maxFrameLength;
+    private final boolean stripDelimiter;
+    private volatile boolean discardingTooLongFrame;
+    private volatile long tooLongFrameLength;
 
     /**
      * Creates a new instance.
@@ -84,6 +87,21 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
      * @param delimiter  the delimiter
      */
     public DelimiterBasedFrameDecoder(int maxFrameLength, ChannelBuffer delimiter) {
+        this(maxFrameLength, true, delimiter);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param maxFrameLength  the maximum length of the decoded frame.
+     *                        A {@link TooLongFrameException} is thrown if
+     *                        the length of the frame exceeds this value.
+     * @param stripDelimiter  whether the decoded frame should strip out the
+     *                        delimiter or not
+     * @param delimiter  the delimiter
+     */
+    public DelimiterBasedFrameDecoder(
+            int maxFrameLength, boolean stripDelimiter, ChannelBuffer delimiter) {
         validateMaxFrameLength(maxFrameLength);
         validateDelimiter(delimiter);
         delimiters = new ChannelBuffer[] {
@@ -91,6 +109,7 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
                         delimiter.readerIndex(), delimiter.readableBytes())
         };
         this.maxFrameLength = maxFrameLength;
+        this.stripDelimiter = stripDelimiter;
     }
 
     /**
@@ -102,6 +121,21 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
      * @param delimiters  the delimiters
      */
     public DelimiterBasedFrameDecoder(int maxFrameLength, ChannelBuffer... delimiters) {
+        this(maxFrameLength, true, delimiters);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param maxFrameLength  the maximum length of the decoded frame.
+     *                        A {@link TooLongFrameException} is thrown if
+     *                        the length of the frame exceeds this value.
+     * @param stripDelimiter  whether the decoded frame should strip out the
+     *                        delimiter or not
+     * @param delimiters  the delimiters
+     */
+    public DelimiterBasedFrameDecoder(
+            int maxFrameLength, boolean stripDelimiter, ChannelBuffer... delimiters) {
         validateMaxFrameLength(maxFrameLength);
         if (delimiters == null) {
             throw new NullPointerException("delimiters");
@@ -116,42 +150,73 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
             this.delimiters[i] = d.slice(d.readerIndex(), d.readableBytes());
         }
         this.maxFrameLength = maxFrameLength;
+        this.stripDelimiter = stripDelimiter;
     }
 
     @Override
     protected Object decode(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
         // Try all delimiters and choose the delimiter which yields the shortest frame.
-        int minDelimIndex = Integer.MAX_VALUE;
+        int minFrameLength = Integer.MAX_VALUE;
         ChannelBuffer minDelim = null;
         for (ChannelBuffer delim: delimiters) {
-            int delimIndex = indexOf(buffer, delim);
-            if (delimIndex >= 0 && delimIndex < minDelimIndex) {
-                minDelimIndex = delimIndex;
+            int frameLength = indexOf(buffer, delim);
+            if (frameLength >= 0 && frameLength < minFrameLength) {
+                minFrameLength = frameLength;
                 minDelim = delim;
             }
         }
 
         if (minDelim != null) {
-            ChannelBuffer frame = buffer.readBytes(minDelimIndex);
-            if (frame.readableBytes() > maxFrameLength) {
-                fail(frame.readableBytes());
-            }
-            buffer.skipBytes(minDelim.capacity());
-            return frame;
-        }
+            int minDelimLength = minDelim.capacity();
+            ChannelBuffer frame;
 
-        if (buffer.readableBytes() > maxFrameLength) {
-            fail(buffer.readableBytes());
+            if (discardingTooLongFrame) {
+                // We've just finished discarding a very large frame.
+                // Throw an exception and go back to the initial state.
+                long tooLongFrameLength = this.tooLongFrameLength;
+                this.tooLongFrameLength = 0L;
+                discardingTooLongFrame = false;
+                buffer.skipBytes(minFrameLength + minDelimLength);
+                fail(tooLongFrameLength + minFrameLength + minDelimLength);
+            }
+
+            if (minFrameLength > maxFrameLength) {
+                // Discard read frame.
+                buffer.skipBytes(minFrameLength + minDelimLength);
+                fail(minFrameLength);
+            }
+
+            if (stripDelimiter) {
+                frame = buffer.readBytes(minFrameLength);
+                buffer.skipBytes(minDelimLength);
+            } else {
+                frame = buffer.readBytes(minFrameLength + minDelimLength);
+            }
+
+            return frame;
+        } else {
+            if (buffer.readableBytes() > maxFrameLength) {
+                // Discard the content of the buffer until a delimiter is found.
+                tooLongFrameLength = buffer.readableBytes();
+                buffer.skipBytes(buffer.readableBytes());
+                discardingTooLongFrame = true;
+            }
+
+            return null;
         }
-        return null;
     }
 
-    private void fail(int frameLength) throws TooLongFrameException {
+    private void fail(long frameLength) throws TooLongFrameException {
         throw new TooLongFrameException(
                 "The frame length exceeds " + maxFrameLength + ": " + frameLength);
     }
 
+    /**
+     * Returns the number of bytes between the readerIndex of the haystack and
+     * the first needle found in the haystack.  -1 is returned if no needle is
+     * found in the haystack.
+     */
     private static int indexOf(ChannelBuffer haystack, ChannelBuffer needle) {
         for (int i = haystack.readerIndex(); i < haystack.writerIndex(); i ++) {
             int haystackIndex = i;
