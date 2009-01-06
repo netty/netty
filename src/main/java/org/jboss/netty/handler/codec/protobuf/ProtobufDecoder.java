@@ -47,7 +47,7 @@ import com.google.protobuf.Message;
  *
  * // Decoders
  * pipeline.addLast("frameDecoder",
- *                  new {@link LengthFieldBasedFrameDecoder}(1048576, 0, 4));
+ *                  new {@link LengthFieldBasedFrameDecoder}(1048576, 0, 4, 0, 4));
  * pipeline.addLast("protobufDecoder",
  *                  new {@link ProtobufDecoder}(MyMessage.getDefaultInstance()));
  *
