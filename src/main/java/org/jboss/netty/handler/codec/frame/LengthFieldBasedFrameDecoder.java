@@ -40,9 +40,10 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
 
     private final int maxFrameLength;
     private final int lengthFieldOffset;
-    final int lengthFieldLength;
+    private final int lengthFieldLength;
     private final int lengthFieldEndOffset;
     private final int lengthAdjustment;
+    private final int initialBytesToStrip;
     private volatile boolean discardingTooLongFrame;
     private volatile long tooLongFrameLength;
     private volatile long bytesToDiscard;
@@ -53,7 +54,7 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
     public LengthFieldBasedFrameDecoder(
             int maxFrameLength,
             int lengthFieldOffset, int lengthFieldLength) {
-        this(maxFrameLength, lengthFieldOffset, lengthFieldLength, 0);
+        this(maxFrameLength, lengthFieldOffset, lengthFieldLength, 0, 0);
     }
 
     /**
@@ -61,7 +62,8 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
      */
     public LengthFieldBasedFrameDecoder(
             int maxFrameLength,
-            int lengthFieldOffset, int lengthFieldLength, int lengthAdjustment) {
+            int lengthFieldOffset, int lengthFieldLength,
+            int lengthAdjustment, int initialBytesToStrip) {
         if (maxFrameLength <= 0) {
             throw new IllegalArgumentException(
                     "maxFrameLength must be a positive integer: " +
@@ -72,6 +74,12 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             throw new IllegalArgumentException(
                     "lengthFieldOffset must be a non-negative integer: " +
                     lengthFieldOffset);
+        }
+
+        if (initialBytesToStrip < 0) {
+            throw new IllegalArgumentException(
+                    "initialBytesToStrip must be a non-negative integer: " +
+                    initialBytesToStrip);
         }
 
         if (lengthFieldLength != 1 && lengthFieldLength != 2 &&
@@ -95,6 +103,7 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
         this.lengthFieldLength = lengthFieldLength;
         this.lengthAdjustment = lengthAdjustment;
         lengthFieldEndOffset = lengthFieldOffset + lengthFieldLength;
+        this.initialBytesToStrip = initialBytesToStrip;
     }
 
     @Override
@@ -158,8 +167,8 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
         if (frameLength < lengthFieldEndOffset) {
             buffer.skipBytes(lengthFieldEndOffset);
             throw new CorruptedFrameException(
-                    "Adjusted length (" + frameLength + ") is less than " +
-                    lengthFieldEndOffset);
+                    "Adjusted frame length (" + frameLength + ") is less " +
+                    "than lengthFieldEndOffset: " + lengthFieldEndOffset);
         }
 
         if (frameLength > maxFrameLength) {
@@ -177,6 +186,13 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             return null;
         }
 
-        return buffer.readBytes(frameLengthInt);
+        if (initialBytesToStrip > frameLengthInt) {
+            buffer.skipBytes(frameLengthInt);
+            throw new CorruptedFrameException(
+                    "Adjusted frame length (" + frameLength + ") is less " +
+                    "than initialBytesToStrip: " + initialBytesToStrip);
+        }
+        buffer.skipBytes(initialBytesToStrip);
+        return buffer.readBytes(frameLengthInt - initialBytesToStrip);
     }
 }
