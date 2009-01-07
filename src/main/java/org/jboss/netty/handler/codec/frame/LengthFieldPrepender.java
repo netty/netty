@@ -71,12 +71,24 @@ public class LengthFieldPrepender extends OneToOneEncoder {
                 body.readableBytes() + lengthFieldLength : body.readableBytes();
         switch (lengthFieldLength) {
         case 1:
+            if (length >= 256) {
+                throw new IllegalArgumentException(
+                        "length does not fit into a byte: " + length);
+            }
             header.writeByte((byte) length);
             break;
         case 2:
+            if (length >= 65536) {
+                throw new IllegalArgumentException(
+                        "length does not fit into a byte: " + length);
+            }
             header.writeShort((short) length);
             break;
         case 3:
+            if (length >= 16777216) {
+                throw new IllegalArgumentException(
+                        "length does not fit into a byte: " + length);
+            }
             header.writeMedium(length);
             break;
         case 4:
