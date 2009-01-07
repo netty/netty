@@ -31,6 +31,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelState;
+import org.jboss.netty.channel.ChannelStateEvent;
 
 /**
  * A {@link MemoryAwareThreadPoolExecutor} which maintains the
@@ -148,11 +150,12 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
             doUnorderedExecute(task);
         } else {
             ChannelEventRunnable r = (ChannelEventRunnable) task;
-            getOrderedExecutor(r.getEvent().getChannel()).execute(task);
+            getOrderedExecutor(r.getEvent()).execute(task);
         }
     }
 
-    private Executor getOrderedExecutor(Channel channel) {
+    private Executor getOrderedExecutor(ChannelEvent e) {
+        Channel channel = e.getChannel();
         Executor executor = childExecutors.get(channel);
         if (executor == null) {
             executor = new ChildExecutor();
@@ -163,8 +166,12 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
         }
 
         // Remove the entry when the channel closes.
-        if (!channel.isOpen()) {
-            childExecutors.remove(channel);
+        if (e instanceof ChannelStateEvent) {
+            ChannelStateEvent se = (ChannelStateEvent) e;
+            if (se.getState() == ChannelState.OPEN &&
+                !channel.isOpen()) {
+                childExecutors.remove(channel);
+            }
         }
         return executor;
     }
