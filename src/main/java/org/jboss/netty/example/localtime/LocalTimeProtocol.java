@@ -77,6 +77,68 @@ public final class LocalTimeProtocol {
     }
   }
   
+  public static enum DayOfWeek {
+    SUNDAY(0, 1),
+    MONDAY(1, 2),
+    TUESDAY(2, 3),
+    WEDNESDAY(3, 4),
+    THURSDAY(4, 5),
+    FRIDAY(5, 6),
+    SATURDAY(6, 7),
+    ;
+    
+    
+    public final int getNumber() { return value; }
+    
+    public static DayOfWeek valueOf(int value) {
+      switch (value) {
+        case 1: return SUNDAY;
+        case 2: return MONDAY;
+        case 3: return TUESDAY;
+        case 4: return WEDNESDAY;
+        case 5: return THURSDAY;
+        case 6: return FRIDAY;
+        case 7: return SATURDAY;
+        default: return null;
+      }
+    }
+    
+    public final com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(index);
+    }
+    public final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return org.jboss.netty.example.localtime.LocalTimeProtocol.getDescriptor().getEnumTypes().get(1);
+    }
+    
+    private static final DayOfWeek[] VALUES = {
+      SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, 
+    };
+    public static DayOfWeek valueOf(
+        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+    private final int index;
+    private final int value;
+    private DayOfWeek(int index, int value) {
+      this.index = index;
+      this.value = value;
+    }
+    
+    static {
+      org.jboss.netty.example.localtime.LocalTimeProtocol.getDescriptor();
+    }
+  }
+  
   public static final class Location extends
       com.google.protobuf.GeneratedMessage {
     // Use Location.newBuilder() to construct.
@@ -708,23 +770,17 @@ public final class LocalTimeProtocol {
     public boolean hasMonth() { return hasMonth; }
     public int getMonth() { return month_; }
     
-    // required uint32 week = 3;
-    private boolean hasWeek;
-    private int week_ = 0;
-    public boolean hasWeek() { return hasWeek; }
-    public int getWeek() { return week_; }
-    
     // required uint32 dayOfMonth = 4;
     private boolean hasDayOfMonth;
     private int dayOfMonth_ = 0;
     public boolean hasDayOfMonth() { return hasDayOfMonth; }
     public int getDayOfMonth() { return dayOfMonth_; }
     
-    // required uint32 dayOfWeek = 5;
+    // required .org.jboss.netty.example.localtime.DayOfWeek dayOfWeek = 5;
     private boolean hasDayOfWeek;
-    private int dayOfWeek_ = 0;
+    private org.jboss.netty.example.localtime.LocalTimeProtocol.DayOfWeek dayOfWeek_ = org.jboss.netty.example.localtime.LocalTimeProtocol.DayOfWeek.SUNDAY;
     public boolean hasDayOfWeek() { return hasDayOfWeek; }
-    public int getDayOfWeek() { return dayOfWeek_; }
+    public org.jboss.netty.example.localtime.LocalTimeProtocol.DayOfWeek getDayOfWeek() { return dayOfWeek_; }
     
     // required uint32 hour = 6;
     private boolean hasHour;
@@ -748,7 +804,6 @@ public final class LocalTimeProtocol {
     public final boolean isInitialized() {
       if (!hasYear) return false;
       if (!hasMonth) return false;
-      if (!hasWeek) return false;
       if (!hasDayOfMonth) return false;
       if (!hasDayOfWeek) return false;
       if (!hasHour) return false;
@@ -766,14 +821,11 @@ public final class LocalTimeProtocol {
       if (hasMonth()) {
         output.writeUInt32(2, getMonth());
       }
-      if (hasWeek()) {
-        output.writeUInt32(3, getWeek());
-      }
       if (hasDayOfMonth()) {
         output.writeUInt32(4, getDayOfMonth());
       }
       if (hasDayOfWeek()) {
-        output.writeUInt32(5, getDayOfWeek());
+        output.writeEnum(5, getDayOfWeek().getNumber());
       }
       if (hasHour()) {
         output.writeUInt32(6, getHour());
@@ -802,17 +854,13 @@ public final class LocalTimeProtocol {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(2, getMonth());
       }
-      if (hasWeek()) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(3, getWeek());
-      }
       if (hasDayOfMonth()) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(4, getDayOfMonth());
       }
       if (hasDayOfWeek()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(5, getDayOfWeek());
+          .computeEnumSize(5, getDayOfWeek().getNumber());
       }
       if (hasHour()) {
         size += com.google.protobuf.CodedOutputStream
@@ -958,9 +1006,6 @@ public final class LocalTimeProtocol {
         if (other.hasMonth()) {
           setMonth(other.getMonth());
         }
-        if (other.hasWeek()) {
-          setWeek(other.getWeek());
-        }
         if (other.hasDayOfMonth()) {
           setDayOfMonth(other.getDayOfMonth());
         }
@@ -1018,16 +1063,18 @@ public final class LocalTimeProtocol {
               setMonth(input.readUInt32());
               break;
             }
-            case 24: {
-              setWeek(input.readUInt32());
-              break;
-            }
             case 32: {
               setDayOfMonth(input.readUInt32());
               break;
             }
             case 40: {
-              setDayOfWeek(input.readUInt32());
+              int rawValue = input.readEnum();
+              org.jboss.netty.example.localtime.LocalTimeProtocol.DayOfWeek value = org.jboss.netty.example.localtime.LocalTimeProtocol.DayOfWeek.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(5, rawValue);
+              } else {
+                setDayOfWeek(value);
+              }
               break;
             }
             case 48: {
@@ -1083,24 +1130,6 @@ public final class LocalTimeProtocol {
         return this;
       }
       
-      // required uint32 week = 3;
-      public boolean hasWeek() {
-        return result.hasWeek();
-      }
-      public int getWeek() {
-        return result.getWeek();
-      }
-      public Builder setWeek(int value) {
-        result.hasWeek = true;
-        result.week_ = value;
-        return this;
-      }
-      public Builder clearWeek() {
-        result.hasWeek = false;
-        result.week_ = 0;
-        return this;
-      }
-      
       // required uint32 dayOfMonth = 4;
       public boolean hasDayOfMonth() {
         return result.hasDayOfMonth();
@@ -1119,21 +1148,21 @@ public final class LocalTimeProtocol {
         return this;
       }
       
-      // required uint32 dayOfWeek = 5;
+      // required .org.jboss.netty.example.localtime.DayOfWeek dayOfWeek = 5;
       public boolean hasDayOfWeek() {
         return result.hasDayOfWeek();
       }
-      public int getDayOfWeek() {
+      public org.jboss.netty.example.localtime.LocalTimeProtocol.DayOfWeek getDayOfWeek() {
         return result.getDayOfWeek();
       }
-      public Builder setDayOfWeek(int value) {
+      public Builder setDayOfWeek(org.jboss.netty.example.localtime.LocalTimeProtocol.DayOfWeek value) {
         result.hasDayOfWeek = true;
         result.dayOfWeek_ = value;
         return this;
       }
       public Builder clearDayOfWeek() {
         result.hasDayOfWeek = false;
-        result.dayOfWeek_ = 0;
+        result.dayOfWeek_ = org.jboss.netty.example.localtime.LocalTimeProtocol.DayOfWeek.SUNDAY;
         return this;
       }
       
@@ -1527,17 +1556,20 @@ public final class LocalTimeProtocol {
       "inent\030\001 \002(\0162,.org.jboss.netty.example.lo" +
       "caltime.Continent\022\014\n\004city\030\002 \002(\t\"J\n\tLocat" +
       "ions\022=\n\010location\030\001 \003(\0132+.org.jboss.netty" +
-      ".example.localtime.Location\"\213\001\n\tLocalTim" +
-      "e\022\014\n\004year\030\001 \002(\r\022\r\n\005month\030\002 \002(\r\022\014\n\004week\030\003" +
-      " \002(\r\022\022\n\ndayOfMonth\030\004 \002(\r\022\021\n\tdayOfWeek\030\005 " +
-      "\002(\r\022\014\n\004hour\030\006 \002(\r\022\016\n\006minute\030\007 \002(\r\022\016\n\006sec" +
-      "ond\030\010 \002(\r\"M\n\nLocalTimes\022?\n\tlocalTime\030\001 \003" +
-      "(\0132,.org.jboss.netty.example.localtime.L" +
-      "ocalTime*\231\001\n\tContinent\022\n\n\006AFRICA\020\000\022\013\n\007AM" +
-      "ERICA\020\001\022\016\n\nANTARCTICA\020\002\022\n\n\006ARCTIC\020\003\022\010\n\004A" +
-      "SIA\020\004\022\014\n\010ATLANTIC\020\005\022\r\n\tAUSTRALIA\020\006\022\n\n\006EU" +
-      "ROPE\020\007\022\n\n\006INDIAN\020\010\022\013\n\007MIDEAST\020\t\022\013\n\007PACIF" +
-      "IC\020\nB\002H\001";
+      ".example.localtime.Location\"\253\001\n\tLocalTim" +
+      "e\022\014\n\004year\030\001 \002(\r\022\r\n\005month\030\002 \002(\r\022\022\n\ndayOfM" +
+      "onth\030\004 \002(\r\022?\n\tdayOfWeek\030\005 \002(\0162,.org.jbos" +
+      "s.netty.example.localtime.DayOfWeek\022\014\n\004h" +
+      "our\030\006 \002(\r\022\016\n\006minute\030\007 \002(\r\022\016\n\006second\030\010 \002(" +
+      "\r\"M\n\nLocalTimes\022?\n\tlocalTime\030\001 \003(\0132,.org" +
+      ".jboss.netty.example.localtime.LocalTime" +
+      "*\231\001\n\tContinent\022\n\n\006AFRICA\020\000\022\013\n\007AMERICA\020\001\022" +
+      "\016\n\nANTARCTICA\020\002\022\n\n\006ARCTIC\020\003\022\010\n\004ASIA\020\004\022\014\n" +
+      "\010ATLANTIC\020\005\022\r\n\tAUSTRALIA\020\006\022\n\n\006EUROPE\020\007\022\n" +
+      "\n\006INDIAN\020\010\022\013\n\007MIDEAST\020\t\022\013\n\007PACIFIC\020\n*g\n\t" +
+      "DayOfWeek\022\n\n\006SUNDAY\020\001\022\n\n\006MONDAY\020\002\022\013\n\007TUE" +
+      "SDAY\020\003\022\r\n\tWEDNESDAY\020\004\022\014\n\010THURSDAY\020\005\022\n\n\006F" +
+      "RIDAY\020\006\022\014\n\010SATURDAY\020\007B\002H\001";
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
@@ -1564,7 +1596,7 @@ public final class LocalTimeProtocol {
           internal_static_org_jboss_netty_example_localtime_LocalTime_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_org_jboss_netty_example_localtime_LocalTime_descriptor,
-              new java.lang.String[] { "Year", "Month", "Week", "DayOfMonth", "DayOfWeek", "Hour", "Minute", "Second", },
+              new java.lang.String[] { "Year", "Month", "DayOfMonth", "DayOfWeek", "Hour", "Minute", "Second", },
               org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime.class,
               org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime.Builder.class);
           internal_static_org_jboss_netty_example_localtime_LocalTimes_descriptor =

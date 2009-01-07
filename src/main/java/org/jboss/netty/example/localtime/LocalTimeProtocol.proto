@@ -47,12 +47,21 @@ message Locations {
   repeated Location location = 1;
 }
 
+enum DayOfWeek {
+  SUNDAY = 1;
+  MONDAY = 2;
+  TUESDAY = 3;
+  WEDNESDAY = 4;
+  THURSDAY = 5;
+  FRIDAY = 6;
+  SATURDAY = 7;
+}
+
 message LocalTime {
   required uint32 year = 1;
   required uint32 month = 2;
-  required uint32 week = 3;
   required uint32 dayOfMonth = 4;
-  required uint32 dayOfWeek = 5;
+  required DayOfWeek dayOfWeek = 5;
   required uint32 hour = 6;
   required uint32 minute = 7;
   required uint32 second = 8;
