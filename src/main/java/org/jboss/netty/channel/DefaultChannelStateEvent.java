@@ -103,9 +103,9 @@ public class DefaultChannelStateEvent extends DefaultChannelEvent implements
                 buf.append("OP_READ_WRITE");
                 break;
             default:
-                buf.append("OP_");
+                buf.append("UNKNOWN(");
                 buf.append(getValue());
-                buf.append(" (?)");
+                buf.append(')');
             }
         }
         buf.append(')');
