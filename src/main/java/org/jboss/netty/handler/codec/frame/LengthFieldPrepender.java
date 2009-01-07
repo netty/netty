@@ -80,14 +80,14 @@ public class LengthFieldPrepender extends OneToOneEncoder {
         case 2:
             if (length >= 65536) {
                 throw new IllegalArgumentException(
-                        "length does not fit into a byte: " + length);
+                        "length does not fit into a short integer: " + length);
             }
             header.writeShort((short) length);
             break;
         case 3:
             if (length >= 16777216) {
                 throw new IllegalArgumentException(
-                        "length does not fit into a byte: " + length);
+                        "length does not fit into a medium integer: " + length);
             }
             header.writeMedium(length);
             break;
