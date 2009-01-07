@@ -41,8 +41,14 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 public class LengthFieldPrepender extends OneToOneEncoder {
 
     private final int lengthFieldLength;
+    private final boolean lengthIncludesLengthFieldLength;
 
     public LengthFieldPrepender(int lengthFieldLength) {
+        this(lengthFieldLength, false);
+    }
+
+    public LengthFieldPrepender(
+            int lengthFieldLength, boolean lengthIncludesLengthFieldLength) {
         if (lengthFieldLength != 1 && lengthFieldLength != 2 &&
             lengthFieldLength != 3 && lengthFieldLength != 4 &&
             lengthFieldLength != 8) {
@@ -52,6 +58,7 @@ public class LengthFieldPrepender extends OneToOneEncoder {
         }
 
         this.lengthFieldLength = lengthFieldLength;
+        this.lengthIncludesLengthFieldLength = lengthIncludesLengthFieldLength;
     }
 
     @Override
@@ -60,21 +67,23 @@ public class LengthFieldPrepender extends OneToOneEncoder {
         ChannelBuffer header = channel.getConfig().getBufferFactory().getBuffer(lengthFieldLength);
         ChannelBuffer body = (ChannelBuffer) msg;
 
+        int length = lengthIncludesLengthFieldLength?
+                body.readableBytes() : body.readableBytes() + lengthFieldLength;
         switch (lengthFieldLength) {
         case 1:
-            header.writeByte((byte) body.readableBytes());
+            header.writeByte((byte) length);
             break;
         case 2:
-            header.writeShort((short) body.readableBytes());
+            header.writeShort((short) length);
             break;
         case 3:
-            header.writeMedium(body.readableBytes());
+            header.writeMedium(length);
             break;
         case 4:
-            header.writeInt(body.readableBytes());
+            header.writeInt(length);
             break;
         case 8:
-            header.writeLong(body.readableBytes());
+            header.writeLong(length);
             break;
         default:
             throw new Error("should not reach here");
