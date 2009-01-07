@@ -1,0 +1,40 @@
+package org.jboss.netty.example.localtime;
+option optimize_for = SPEED;
+
+enum Continent {
+  AFRICA = 0;
+  AMERICA = 1;
+  ANTARCTICA = 2;
+  ARCTIC = 3;
+  ASIA = 4;
+  ATLANTIC = 5;
+  AUSTRALIA = 6;
+  EUROPE = 7;
+  INDIAN = 8;
+  MIDEAST = 9;
+  PACIFIC = 10;
+}
+
+message Location {
+  required Continent continent = 1;
+  required string city = 2;
+}
+
+message Locations {
+  repeated Location location = 1;
+}
+
+message LocalTime {
+  required uint32 year = 1;
+  required uint32 month = 2;
+  required uint32 week = 3;
+  required uint32 dayOfMonth = 4;
+  required uint32 dayOfWeek = 5;
+  required uint32 hour = 6;
+  required uint32 minute = 7;
+  required uint32 second = 8;
+}
+
+message LocalTimes {
+  repeated LocalTime localTime = 1;
+}
