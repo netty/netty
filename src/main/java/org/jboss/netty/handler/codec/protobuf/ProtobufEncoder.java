@@ -48,6 +48,15 @@ import com.google.protobuf.Message;
  *                  new {@link ProtobufDecoder}(MyMessage.getDefaultInstance()));
  *
  * // Encoder
+ * pipeline.addLast("frameEncoder",
+ *                  new {@link OneToOneEncoder}() {
+ *                      protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) {
+ *                          ChannelBuffer header = ChanelBuffers.buffer(4);
+ *                          ChannelBuffer body = (ChannelBuffer) msg;
+ *                          header.writeInt(body.readableBytes());
+ *                          return ChannelBuffers.wrappedBuffer(header, body);
+ *                      }
+ *                  });
  * pipeline.addLast("protobufEncoder", new {@link ProtobufEncoder}());
  * </pre>
  * and then you can use a {@code MyMessage} instead of a {@link ChannelBuffer}
