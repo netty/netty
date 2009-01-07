@@ -27,6 +27,7 @@ import static org.jboss.netty.buffer.ChannelBuffers.*;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
@@ -36,6 +37,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
+@ChannelPipelineCoverage("all")
 public class LengthFieldPrepender extends OneToOneEncoder {
 
     private final int lengthFieldLength;
