@@ -23,8 +23,7 @@
 package org.jboss.netty.util;
 
 import java.io.UnsupportedEncodingException;
-import java.lang.management.ManagementFactory;
-import java.lang.management.RuntimeMXBean;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -81,11 +80,25 @@ public class TimeBasedUuidGenerator {
 
         //// Finally, append the another distinguishable string (probably PID.)
         try {
-            RuntimeMXBean rtb = ManagementFactory.getRuntimeMXBean();
+            Class<?> mgmtFactoryType =
+                Class.forName("java.lang.management.ManagementFactory");
+            Method getRuntimeMXBean =
+                mgmtFactoryType.getMethod("getRuntimeMXBean", (Class[]) null);
+            Object runtimeMXBean =
+                getRuntimeMXBean.invoke(null, (Object[]) null);
+            Class<?> runtimeMXBeanType =
+                Class.forName("java.lang.management.RuntimeMXBean");
+            Method getName =
+                runtimeMXBeanType.getMethod("getName", (Class[]) null);
+            String vmId = String.valueOf(
+                    getName.invoke(runtimeMXBean, (Object[]) null));
+
             nodeKey.append(':');
-            nodeKey.append(rtb.getName());
+            nodeKey.append(vmId);
         } catch (Exception e) {
-            // Ignore.
+            // Perhaps running with a security manager (e.g. Applet) or on a
+            // platform without the java.lang.management package (e.g. Android.)
+            nodeKey.append(":?");
         }
 
         // Generate the digest of the nodeKey.
