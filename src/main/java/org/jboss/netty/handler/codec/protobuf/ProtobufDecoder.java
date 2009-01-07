@@ -30,8 +30,8 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
+import org.jboss.netty.handler.codec.frame.LengthFieldPrepender;
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
-import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.Message;
@@ -53,15 +53,7 @@ import com.google.protobuf.Message;
  *                  new {@link ProtobufDecoder}(MyMessage.getDefaultInstance()));
  *
  * // Encoder
- * pipeline.addLast("frameEncoder",
- *                  new {@link OneToOneEncoder}() {
- *                      protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) {
- *                          ChannelBuffer header = ChanelBuffers.buffer(4);
- *                          ChannelBuffer body = (ChannelBuffer) msg;
- *                          header.writeInt(body.readableBytes());
- *                          return ChannelBuffers.wrappedBuffer(header, body);
- *                      }
- *                  });
+ * pipeline.addLast("frameEncoder", new {@link LengthFieldPrepender}(4));
  * pipeline.addLast("protobufEncoder", new {@link ProtobufEncoder}());
  * </pre>
  * and then you can use a {@code MyMessage} instead of a {@link ChannelBuffer}
