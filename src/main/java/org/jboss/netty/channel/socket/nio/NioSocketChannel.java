@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
+import static org.jboss.netty.channel.Channels.*;
+
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
@@ -55,23 +57,12 @@ abstract class NioSocketChannel extends AbstractChannel
     final Object interestOpsLock = new Object();
     final Object writeLock = new Object();
 
-    final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
     final Runnable writeTask = new WriteTask();
-    final AtomicInteger writeBufferSize = new AtomicInteger();
-    final Queue<MessageEvent> writeBuffer = new WriteBuffer();
+    final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
 
-    /** Previous return value of isWritable() */
-    boolean oldWritable;
-    /**
-     * Set to true if the amount of data in the writeBuffer exceeds
-     * the high water mark, as specified in NioSocketChannelConfig.
-     */
-    boolean exceededHighWaterMark;
-    /**
-     * true if and only if NioWorker is firing an event which might cause
-     * infinite recursion.
-     */
-    boolean firingEvent;
+    final Queue<MessageEvent> writeBuffer = new WriteBuffer();
+    final AtomicInteger writeBufferSize = new AtomicInteger();
+    final AtomicInteger highWaterMarkCounter = new AtomicInteger();
 
     MessageEvent currentWriteEvent;
     int currentWriteIndex;
@@ -116,11 +107,27 @@ abstract class NioSocketChannel extends AbstractChannel
         }
 
         int interestOps = getRawInterestOps();
-        if (writeBufferSize.get() >= getConfig().getWriteBufferHighWaterMark()) {
-            interestOps |= Channel.OP_WRITE;
+        int writeBufferSize = this.writeBufferSize.get();
+        if (writeBufferSize != 0) {
+            if (highWaterMarkCounter.get() > 0) {
+                int lowWaterMark = getConfig().getWriteBufferLowWaterMark();
+                if (writeBufferSize >= lowWaterMark) {
+                    interestOps |= Channel.OP_WRITE;
+                } else {
+                    interestOps &= ~Channel.OP_WRITE;
+                }
+            } else {
+                int highWaterMark = getConfig().getWriteBufferHighWaterMark();
+                if (writeBufferSize >= highWaterMark) {
+                    interestOps |= Channel.OP_WRITE;
+                } else {
+                    interestOps &= ~Channel.OP_WRITE;
+                }
+            }
         } else {
             interestOps &= ~Channel.OP_WRITE;
         }
+
         return interestOps;
     }
 
@@ -152,6 +159,14 @@ abstract class NioSocketChannel extends AbstractChannel
     }
 
     private final class WriteBuffer extends LinkedTransferQueue<MessageEvent> {
+
+        private final ThreadLocal<Boolean> notifying = new ThreadLocal<Boolean>() {
+            @Override
+            protected Boolean initialValue() {
+                return Boolean.FALSE;
+            }
+        };
+
         WriteBuffer() {
             super();
         }
@@ -160,8 +175,22 @@ abstract class NioSocketChannel extends AbstractChannel
         public boolean offer(MessageEvent e) {
             boolean success = super.offer(e);
             assert success;
-            writeBufferSize.addAndGet(
-                    ((ChannelBuffer) e.getMessage()).readableBytes());
+
+            int messageSize = ((ChannelBuffer) e.getMessage()).readableBytes();
+            int newWriteBufferSize = writeBufferSize.addAndGet(messageSize);
+            int highWaterMark = getConfig().getWriteBufferHighWaterMark();
+
+            if (newWriteBufferSize >= highWaterMark) {
+                if (newWriteBufferSize - messageSize < highWaterMark) {
+                    highWaterMarkCounter.incrementAndGet();
+                    if (!notifying.get()) {
+                        notifying.set(Boolean.TRUE);
+                        fireChannelInterestChanged(
+                                NioSocketChannel.this, getRawInterestOps() | OP_WRITE);
+                        notifying.set(Boolean.FALSE);
+                    }
+                }
+            }
             return true;
         }
 
@@ -169,11 +198,20 @@ abstract class NioSocketChannel extends AbstractChannel
         public MessageEvent poll() {
             MessageEvent e = super.poll();
             if (e != null) {
-                int newWriteBufferSize = writeBufferSize.addAndGet(
-                        -((ChannelBuffer) e.getMessage()).readableBytes());
-                if (newWriteBufferSize == 0 ||
-                    newWriteBufferSize < getConfig().getWriteBufferLowWaterMark()) {
-                    exceededHighWaterMark = true;
+                int messageSize = ((ChannelBuffer) e.getMessage()).readableBytes();
+                int newWriteBufferSize = writeBufferSize.addAndGet(-messageSize);
+                int lowWaterMark = getConfig().getWriteBufferLowWaterMark();
+
+                if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
+                    if (newWriteBufferSize + messageSize >= lowWaterMark) {
+                        highWaterMarkCounter.decrementAndGet();
+                        if (!notifying.get()) {
+                            notifying.set(Boolean.TRUE);
+                            fireChannelInterestChanged(
+                                    NioSocketChannel.this, getRawInterestOps() & ~OP_WRITE);
+                            notifying.set(Boolean.FALSE);
+                        }
+                    }
                 }
             }
             return e;

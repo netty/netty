@@ -366,6 +366,7 @@ class NioWorker implements Runnable {
                         removeOpWrite = true;
                         break;
                     }
+
                     buf = (ChannelBuffer) evt.getMessage();
                     bufIdx = buf.readerIndex();
                 } else {
@@ -417,42 +418,6 @@ class NioWorker implements Runnable {
             } else if (removeOpWrite) {
                 setOpWrite(channel, false, mightNeedWakeup);
             }
-
-            fireChannelInterestChangedIfNecessary(channel, open);
-        }
-    }
-
-    private static void fireChannelInterestChangedIfNecessary(
-            NioSocketChannel channel, boolean open) {
-        if (channel.firingEvent) {
-            // Prevent StackOverflowError.
-            return;
-        }
-
-        channel.firingEvent = true;
-        try {
-            int interestOps = channel.getRawInterestOps();
-            boolean wasWritable = channel.oldWritable;
-            boolean writable = channel.oldWritable = open? channel.isWritable() : false;
-            if (wasWritable) {
-                if (writable) {
-                    if (channel.exceededHighWaterMark) {
-                        channel.exceededHighWaterMark = false;
-                        fireChannelInterestChanged(channel, interestOps | Channel.OP_WRITE);
-                        fireChannelInterestChanged(channel, interestOps & ~Channel.OP_WRITE);
-                    }
-                } else {
-                    fireChannelInterestChanged(channel, interestOps | Channel.OP_WRITE);
-                }
-            } else {
-                if (writable) {
-                    fireChannelInterestChanged(channel, interestOps & ~Channel.OP_WRITE);
-                } else {
-                    fireChannelInterestChanged(channel, interestOps | Channel.OP_WRITE);
-                }
-            }
-        } finally {
-            channel.firingEvent = false;
         }
     }
 
@@ -584,7 +549,6 @@ class NioWorker implements Runnable {
 
         if (changed) {
             channel.setRawInterestOpsNow(interestOps);
-            //fireChannelInterestChanged(channel, interestOps);
         }
     }
 
