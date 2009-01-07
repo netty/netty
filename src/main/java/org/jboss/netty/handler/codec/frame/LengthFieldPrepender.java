@@ -68,7 +68,7 @@ public class LengthFieldPrepender extends OneToOneEncoder {
         ChannelBuffer body = (ChannelBuffer) msg;
 
         int length = lengthIncludesLengthFieldLength?
-                body.readableBytes() : body.readableBytes() + lengthFieldLength;
+                body.readableBytes() + lengthFieldLength : body.readableBytes();
         switch (lengthFieldLength) {
         case 1:
             header.writeByte((byte) length);
