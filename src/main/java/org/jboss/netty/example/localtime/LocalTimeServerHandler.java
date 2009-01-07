@@ -83,7 +83,7 @@ public class LocalTimeServerHandler extends SimpleChannelHandler {
                     setMonth(calendar.get(MONTH) + 1).
                     setDayOfMonth(calendar.get(DAY_OF_MONTH)).
                     setDayOfWeek(DayOfWeek.valueOf(calendar.get(DAY_OF_WEEK))).
-                    setHour(calendar.get(HOUR)).
+                    setHour(calendar.get(HOUR_OF_DAY)).
                     setMinute(calendar.get(MINUTE)).
                     setSecond(calendar.get(SECOND)).build());
         }
