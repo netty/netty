@@ -177,9 +177,26 @@
           <instructions>
             <Bundle-SymbolicName>${project.groupId}</Bundle-SymbolicName>
             <Bundle-DocURL>${project.url}</Bundle-DocURL>
-            <Export-Package>!${project.groupId}.util.*,${project.groupId}.*</Export-Package>
-            <Private-Package>${project.groupId}.util.*</Private-Package>
-            <Import-Package>org.slf4j.*;resolution:=optional,org.apache.commons.logging.*;resolution:=optional,org.jboss.logging.*;resolution:=optional,org.apache.log4j.*;resolution:=optional,*</Import-Package>
+            <Bundle-Activator>
+              ${project.groupId}.container.osgi.BundleActivatorImpl
+            </Bundle-Activator>
+            <Export-Package>
+              !${project.groupId}.example.*,
+              !${project.groupId}.logging.*,
+              !${project.groupId}.util.*,
+              ${project.groupId}.*
+            </Export-Package>
+            <Private-Package>
+              ${project.groupId}.example.*,
+              ${project.groupId}.logging.*,
+              ${project.groupId}.util.*,
+            </Private-Package>
+            <Import-Package>
+              *;resolution:=optional
+            </Import-Package>
+            <!--
+            org.slf4j.*;resolution:=optional,org.apache.commons.logging.*;resolution:=optional,org.jboss.logging.*;resolution:=optional,org.apache.log4j.*;resolution:=optional,*</Import-Package> 
+             -->
           </instructions>
         </configuration>
       </plugin>
