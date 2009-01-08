@@ -307,7 +307,7 @@
             -bottom "Copyright © ${project.inceptionYear}-Present ${project.organization.name}. All Rights Reserved."
             -link http://java.sun.com/javase/6/docs/api/
             -group "Low-level data representation" ${project.groupId}.buffer*
-            -group "Central interface for all I/O operations" ${project.groupId}.channel*:${project.groupId}.group*
+            -group "Central interface for all I/O operations" ${project.groupId}.channel*
             -group "Client &amp; Server bootstrapping utilities" ${project.groupId}.bootstrap*
             -group "Reusable I/O event interceptors" ${project.groupId}.handler*
             -group "Miscellaneous" ${project.groupId}.logging*
