@@ -29,6 +29,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
@@ -52,8 +54,15 @@ public class NettyBundleActivator implements BundleActivator {
 
     public void start(BundleContext ctx) throws Exception {
         executor = Executors.newCachedThreadPool();
-        register(ctx, new NioClientSocketChannelFactory(executor, executor));
-        register(ctx, new NioServerSocketChannelFactory(executor, executor));
+
+        // The default transport is NIO.
+        register(ctx,
+                 new NioClientSocketChannelFactory(executor, executor),
+                 ClientSocketChannelFactory.class);
+        register(ctx,
+                 new NioServerSocketChannelFactory(executor, executor),
+                 ServerSocketChannelFactory.class);
+
         register(ctx, new OioClientSocketChannelFactory(executor));
         register(ctx, new OioServerSocketChannelFactory(executor, executor));
     }
@@ -63,16 +72,15 @@ public class NettyBundleActivator implements BundleActivator {
         ExecutorShutdownUtil.shutdown(executor);
     }
 
-    private void register(BundleContext ctx, ChannelFactory factory) {
-        register(ctx, factory, factory.getClass());
-    }
-
-    private void register(BundleContext ctx, ChannelFactory factory, Class<?> factoryType) {
+    private void register(BundleContext ctx, ChannelFactory factory, Class<?>... factoryTypes) {
         Properties props = new Properties();
         props.setProperty("category", "netty");
 
-        registrations.add(
-                ctx.registerService(factoryType.getName(), factory, props));
+        registrations.add(ctx.registerService(factory.getClass().getName(), factory, props));
+
+        for (Class<?> t: factoryTypes) {
+            registrations.add(ctx.registerService(t.getName(), factory, props));
+        }
     }
 
     private void unregisterAll() {
