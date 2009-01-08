@@ -178,7 +178,7 @@
             <Bundle-SymbolicName>${project.groupId}</Bundle-SymbolicName>
             <Bundle-DocURL>${project.url}</Bundle-DocURL>
             <Bundle-Activator>
-              ${project.groupId}.container.osgi.BundleActivatorImpl
+              ${project.groupId}.container.osgi.NettyBundleActivator
             </Bundle-Activator>
             <Export-Package>
               !${project.groupId}.example.*,

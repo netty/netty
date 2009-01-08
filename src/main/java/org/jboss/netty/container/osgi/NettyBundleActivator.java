@@ -43,7 +43,7 @@ import org.osgi.framework.ServiceRegistration;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class BundleActivatorImpl implements BundleActivator {
+public class NettyBundleActivator implements BundleActivator {
 
     private final List<ServiceRegistration> registrations =
         new ArrayList<ServiceRegistration>();
