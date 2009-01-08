@@ -686,7 +686,7 @@ class NioWorker implements Runnable {
             future.setSuccess();
             if (changed) {
                 channel.setRawInterestOpsNow(interestOps);
-                fireChannelInterestChanged(channel, interestOps);
+                fireChannelInterestChanged(channel);
             }
         } catch (Throwable t) {
             future.setFailure(t);

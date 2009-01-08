@@ -329,32 +329,58 @@ public class Channels {
      * Sends a {@code "channelInterestChanged"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
-     *
-     * @param interestOps the new interestOps
      */
-    public static void fireChannelInterestChanged(Channel channel, int interestOps) {
-        validateInterestOps(interestOps);
+    public static void fireChannelInterestChanged(Channel channel) {
         channel.getPipeline().sendUpstream(
                 new DefaultChannelStateEvent(
                         channel, succeededFuture(channel),
-                        ChannelState.INTEREST_OPS, Integer.valueOf(interestOps)));
+                        ChannelState.INTEREST_OPS, Channel.OP_READ));
+    }
+
+    /**
+     * @deprecated Use {@link #fireChannelInterestChanged(Channel)} instead.
+     *
+     * Sends a {@code "channelInterestChanged"} event to the first
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
+     * the specified {@link Channel}.
+     *
+     * @param interestOps the new interestOps
+     */
+    @Deprecated
+    public static void fireChannelInterestChanged(
+            Channel channel, @SuppressWarnings("unused") int interestOps) {
+        fireChannelInterestChanged(channel);
     }
 
     /**
      * Sends a {@code "channelInterestChanged"} event to the next
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
      * the specified {@link ChannelHandlerContext} belongs.
-     *
-     * @param interestOps the new interestOps
      */
     public static void fireChannelInterestChanged(
-            ChannelHandlerContext ctx, Channel channel, int interestOps) {
+            ChannelHandlerContext ctx, Channel channel) {
 
-        validateInterestOps(interestOps);
         ctx.sendUpstream(
                 new DefaultChannelStateEvent(
                         channel, succeededFuture(channel),
-                        ChannelState.INTEREST_OPS, Integer.valueOf(interestOps)));
+                        ChannelState.INTEREST_OPS, Channel.OP_READ));
+    }
+
+    /**
+     * @deprecated Use {@link #fireChannelInterestChanged(ChannelHandlerContext, Channel)} instead.
+     *
+     * Sends a {@code "channelInterestChanged"} event to the next
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
+     * the specified {@link ChannelHandlerContext} belongs.
+     *
+     * @param interestOps the new interestOps
+     */
+    @Deprecated
+    public static void fireChannelInterestChanged(
+            ChannelHandlerContext ctx, Channel channel,
+            @SuppressWarnings("unused") int interestOps) {
+
+        fireChannelInterestChanged(ctx, channel);
     }
 
     /**

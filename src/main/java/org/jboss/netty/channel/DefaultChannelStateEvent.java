@@ -89,24 +89,12 @@ public class DefaultChannelStateEvent extends DefaultChannelEvent implements
             }
             break;
         case INTEREST_OPS:
-            switch (((Integer) getValue()).intValue()) {
-            case Channel.OP_NONE:
-                buf.append("OP_NONE");
-                break;
-            case Channel.OP_READ:
-                buf.append("OP_READ");
-                break;
-            case Channel.OP_WRITE:
-                buf.append("OP_WRITE");
-                break;
-            case Channel.OP_READ_WRITE:
-                buf.append("OP_READ_WRITE");
-                break;
-            default:
-                buf.append("UNKNOWN(");
-                buf.append(getValue());
-                buf.append(')');
-            }
+            buf.append("INTEREST_CHANGED");
+            break;
+        default:
+            buf.append(getState().name());
+            buf.append(": ");
+            buf.append(getValue());
         }
         buf.append(')');
         return buf.toString();

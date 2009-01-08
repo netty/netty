@@ -151,7 +151,7 @@ class OioWorker implements Runnable {
                 }
 
                 channel.setInterestOpsNow(interestOps);
-                fireChannelInterestChanged(channel, interestOps);
+                fireChannelInterestChanged(channel);
             }
         } catch (Throwable t) {
             future.setFailure(t);

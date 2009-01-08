@@ -185,8 +185,7 @@ abstract class NioSocketChannel extends AbstractChannel
                     highWaterMarkCounter.incrementAndGet();
                     if (!notifying.get()) {
                         notifying.set(Boolean.TRUE);
-                        fireChannelInterestChanged(
-                                NioSocketChannel.this, getRawInterestOps() | OP_WRITE);
+                        fireChannelInterestChanged(NioSocketChannel.this);
                         notifying.set(Boolean.FALSE);
                     }
                 }
@@ -207,8 +206,7 @@ abstract class NioSocketChannel extends AbstractChannel
                         highWaterMarkCounter.decrementAndGet();
                         if (!notifying.get()) {
                             notifying.set(Boolean.TRUE);
-                            fireChannelInterestChanged(
-                                    NioSocketChannel.this, getRawInterestOps() & ~OP_WRITE);
+                            fireChannelInterestChanged(NioSocketChannel.this);
                             notifying.set(Boolean.FALSE);
                         }
                     }
