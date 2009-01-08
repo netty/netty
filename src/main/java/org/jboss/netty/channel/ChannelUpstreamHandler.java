@@ -89,7 +89,7 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * </tr>
  * <tr>
  * <td>{@code "channelInterestChanged"}</td>
- * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#INTEREST_OPS INTEREST_OPS}, value = {@code int}</td>
+ * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#INTEREST_OPS INTEREST_OPS}, no value)</td>
  * <td>a {@link Channel}'s {@link Channel#getInterestOps() interestOps} was changed</td>
  * </tr>
  * </table>
