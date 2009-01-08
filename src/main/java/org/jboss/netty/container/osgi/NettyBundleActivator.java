@@ -70,6 +70,7 @@ public class NettyBundleActivator implements BundleActivator {
     public void stop(BundleContext ctx) throws Exception {
         unregisterAll();
         ExecutorShutdownUtil.shutdown(executor);
+        executor = null;
     }
 
     private void register(BundleContext ctx, ChannelFactory factory, Class<?>... factoryTypes) {
