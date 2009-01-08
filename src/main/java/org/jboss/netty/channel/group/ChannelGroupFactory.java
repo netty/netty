@@ -20,13 +20,11 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.group;
+package org.jboss.netty.channel.group;
 
-import java.net.SocketAddress;
-import java.util.Set;
-import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
-import org.jboss.netty.channel.Channel;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -34,16 +32,32 @@ import org.jboss.netty.channel.Channel;
  * @version $Rev$, $Date$
  *
  * @apiviz.landmark
- * @apiviz.has org.jboss.netty.group.ChannelGroupFuture oneway - - returns
+ * @apiviz.has        org.jboss.netty.group.ChannelGroup oneway - - creates
  */
-public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
-    String getName();
-    Channel find(UUID id);
-    ChannelGroupFuture setInterestOps(int interestOps);
-    ChannelGroupFuture setReadable(boolean readable);
-    ChannelGroupFuture write(Object message);
-    ChannelGroupFuture write(Object message, SocketAddress remoteAddress);
-    ChannelGroupFuture disconnect();
-    ChannelGroupFuture unbind();
-    ChannelGroupFuture close();
+public class ChannelGroupFactory {
+
+    private static final ConcurrentMap<String, ChannelGroup> groups =
+        new ConcurrentHashMap<String, ChannelGroup>();
+
+    public static ChannelGroup getGroup(Class<?> groupType) {
+        return getGroup(groupType.getName());
+    }
+
+    public static ChannelGroup getGroup(String groupName) {
+        ChannelGroup g = groups.get(groupName);
+        if (g != null) {
+            return g;
+        }
+
+        g = new DefaultChannelGroup(groupName);
+        ChannelGroup oldGroup = groups.putIfAbsent(groupName, g);
+        if (oldGroup != null) {
+            g = oldGroup;
+        }
+        return g;
+    }
+
+    private ChannelGroupFactory() {
+        super();
+    }
 }

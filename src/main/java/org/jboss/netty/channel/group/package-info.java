@@ -28,4 +28,4 @@
  * @apiviz.exclude ^java
  * @apiviz.exclude \.(Abstract|Default).*$
  */
-package org.jboss.netty.group;
+package org.jboss.netty.channel.group;

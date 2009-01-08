@@ -20,28 +20,30 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.group;
+package org.jboss.netty.channel.group;
 
-import java.util.EventListener;
+import java.net.SocketAddress;
+import java.util.Set;
+import java.util.UUID;
+
+import org.jboss.netty.channel.Channel;
 
 /**
- * Listens to the result of a {@link ChannelGroupFuture}.  The result of the
- * asynchronous {@link ChannelGroup} I/O operation is notified once this
- * listener is added by calling {@link ChannelGroupFuture#addListener(ChannelGroupFutureListener)}.
- *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
- *
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
+ * @apiviz.has org.jboss.netty.group.ChannelGroupFuture oneway - - returns
  */
-public interface ChannelGroupFutureListener extends EventListener {
-
-    /**
-     * Invoked when the I/O operation associated with the
-     * {@link ChannelGroupFuture} has been completed.
-     *
-     * @param future  The source {@link ChannelGroupFuture} which called this
-     *                callback.
-     */
-    void operationComplete(ChannelGroupFuture future) throws Exception;
+public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
+    String getName();
+    Channel find(UUID id);
+    ChannelGroupFuture setInterestOps(int interestOps);
+    ChannelGroupFuture setReadable(boolean readable);
+    ChannelGroupFuture write(Object message);
+    ChannelGroupFuture write(Object message, SocketAddress remoteAddress);
+    ChannelGroupFuture disconnect();
+    ChannelGroupFuture unbind();
+    ChannelGroupFuture close();
 }
