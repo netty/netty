@@ -22,8 +22,6 @@
  */
 package org.jboss.netty.util;
 
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * Meta {@link Runnable} that changes the current thread name and reverts it
@@ -36,8 +34,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  *
  */
 public class ThreadRenamingRunnable implements Runnable {
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(ThreadRenamingRunnable.class);
 
     private final Runnable runnable;
     private final String threadName;
@@ -69,8 +65,6 @@ public class ThreadRenamingRunnable implements Runnable {
             renamed = true;
         } catch (Exception e) {
             // Probably SecurityException.
-            logger.warn(
-                    "Failed to set the current thread name.", e);
         }
 
         // Run the actual runnable and revert the name back when it ends.

@@ -28,9 +28,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-
 /**
  * A set of utility methods related with a {@link Map}.
  *
@@ -40,8 +37,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * @version $Rev$, $Date$
  */
 public class MapUtil {
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(MapUtil.class);
 
     /**
      * Returns {@code true} if and only if the specified {@code map} is an
@@ -51,81 +46,53 @@ public class MapUtil {
     public static boolean isOrderedMap(Map<?, ?> map) {
         Class<?> mapType = map.getClass();
         if (LinkedHashMap.class.isAssignableFrom(mapType)) {
-            if (logger.isDebugEnabled()) {
-                logger.debug(mapType.getSimpleName() + " is an ordered map.");
-            }
+            // LinkedHashMap is an ordered map.
             return true;
         }
 
-        if (logger.isDebugEnabled()) {
-            logger.debug(
-                    mapType.getName() + " is not a " +
-                    LinkedHashMap.class.getSimpleName());
-        }
+        // Not a LinkedHashMap - start autodetection.
 
         // Detect Apache Commons Collections OrderedMap implementations.
         Class<?> type = mapType;
         while (type != null) {
             for (Class<?> i: type.getInterfaces()) {
                 if (i.getName().endsWith("OrderedMap")) {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug(
-                                mapType.getSimpleName() +
-                                " is an ordered map (guessed from that it " +
-                                " implements OrderedMap interface.)");
-                    }
+                    // Seems like it's an ordered map - guessed from that
+                    // it implements OrderedMap interface.
                     return true;
                 }
             }
             type = type.getSuperclass();
         }
 
-        if (logger.isDebugEnabled()) {
-            logger.debug(
-                    mapType.getName() +
-                    " does not implement OrderedMap interface.");
-        }
-
-        // Last resort: try to create a new instance and test if it maintains
-        // the insertion order.
-        logger.debug(
-                "Last resort; trying to create a new map instance with a " +
-                "default constructor and test if insertion order is " +
-                "maintained.");
-
+        // Does not implement OrderedMap interface.  As a last resort, try to
+        // create a new instance and test if the insertion order is maintained.
         Map newMap;
         try {
             newMap = (Map) mapType.newInstance();
         } catch (Exception e) {
-            if (logger.isDebugEnabled()) {
-                logger.debug(
-                        "Failed to create a new map instance of '" +
-                        mapType.getName() +"'.", e);
-            }
+            // No default constructor - cannot proceed anymore.
             return false;
         }
 
+        // Run some tests.
         List<String> expectedKeys = new ArrayList<String>();
         String dummyValue = "dummyValue";
-        for (int i = 0; i < ORDER_TEST_SAMPLES.length; i ++) {
-            String key = String.valueOf(ORDER_TEST_SAMPLES[i]);
+        for (short element: ORDER_TEST_SAMPLES) {
+            String key = String.valueOf(element);
             newMap.put(key, dummyValue);
             expectedKeys.add(key);
 
             Iterator<String> it = expectedKeys.iterator();
             for (Object actualKey: newMap.keySet()) {
                 if (!it.next().equals(actualKey)) {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug(
-                                "The specified map didn't pass the insertion " +
-                                "order test after " + (i + 1) + " tries.");
-                    }
+                    // Did not pass the test.
                     return false;
                 }
             }
         }
 
-        logger.debug("The specified map passed the insertion order test.");
+        // The specified map passed the insertion order test.
         return true;
     }
 
