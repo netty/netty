@@ -34,7 +34,7 @@ import org.jboss.netty.channel.Channel;
  * @version $Rev$, $Date$
  *
  * @apiviz.landmark
- * @apiviz.has org.jboss.netty.group.ChannelGroupFuture oneway - - returns
+ * @apiviz.has org.jboss.netty.channel.group.ChannelGroupFuture oneway - - returns
  */
 public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     String getName();

@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentMap;
  * @version $Rev$, $Date$
  *
  * @apiviz.landmark
- * @apiviz.has        org.jboss.netty.group.ChannelGroup oneway - - creates
+ * @apiviz.has        org.jboss.netty.channel.group.ChannelGroup oneway - - creates
  */
 public class ChannelGroupFactory {
 
