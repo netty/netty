@@ -37,7 +37,8 @@ public class NioServerSocketChannelFactoryProvider extends
         AbstractChannelFactoryProvider<NioServerSocketChannelFactory> {
 
     @Inject
-    public NioServerSocketChannelFactoryProvider(@ChannelFactoryResource Executor executor) {
+    public NioServerSocketChannelFactoryProvider(
+            @ChannelFactoryResource Executor executor) {
         super(executor);
     }
 

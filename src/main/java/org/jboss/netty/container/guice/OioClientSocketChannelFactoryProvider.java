@@ -37,7 +37,8 @@ public class OioClientSocketChannelFactoryProvider extends
         AbstractChannelFactoryProvider<OioClientSocketChannelFactory> {
 
     @Inject
-    public OioClientSocketChannelFactoryProvider(@ChannelFactoryResource Executor executor) {
+    public OioClientSocketChannelFactoryProvider(
+            @ChannelFactoryResource Executor executor) {
         super(executor);
     }
 
