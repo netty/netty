@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
+
+  <bean id="org.jboss.netty.internal.ResourceFactory"
+        class="org.jboss.netty.container.spring.NettyResourceFactory"
+        scope="singleton" />
+
+  <bean id="org.jboss.netty.internal.ChannelFactoryExecutor"
+        factory-bean="org.jboss.netty.internal.ResourceFactory"
+        factory-method="getChannelFactoryExecutor"
+        scope="singleton" />
+
+  <bean lazy-init="true" scope="singleton"
+        name="org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory"
+        class="org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory">
+    <constructor-arg ref="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+    <constructor-arg ref="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+  </bean>
+
+  <bean lazy-init="true" scope="singleton"
+        name="org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory"
+        class="org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory">
+    <constructor-arg ref="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+    <constructor-arg ref="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+  </bean>
+  
+  <bean lazy-init="true" scope="singleton"
+        name="org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory"
+        class="org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory">
+    <constructor-arg ref="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+  </bean>
+
+  <bean lazy-init="true" scope="singleton"
+        name="org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory"
+        class="org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory">
+    <constructor-arg ref="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+    <constructor-arg ref="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+  </bean>
+  
+  <alias name="org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory"
+         alias="org.jboss.netty.channel.socket.ClientSocketChannelFactory" />
+  <alias name="org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory"
+         alias="org.jboss.netty.channel.socket.ServerSocketChannelFactory" />
+</beans>
