@@ -40,6 +40,10 @@ public class NettyResourceFactory {
     private Executor unterminatableExecutor;
 
     public synchronized void create() {
+        if (executor != null) {
+            return;
+        }
+
         executor = Executors.newCachedThreadPool();
         unterminatableExecutor = new UnterminatableExecutor(executor);
     }
