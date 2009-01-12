@@ -20,46 +20,29 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.container.microcontainer;
+package org.jboss.netty.util;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.logging.JBossLoggerFactory;
-import org.jboss.netty.util.ExecutorShutdownUtil;
-import org.jboss.netty.util.UnterminatableExecutor;
 
 /**
+ * Disables shutdown of an {@link Executor} by wrapping the {@link Executor}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class NettyResourceFactory {
-    private Executor executor;
-    private Executor unterminatableExecutor;
+public class UnterminatableExecutor implements Executor {
 
-    public synchronized void create() {
-        executor = Executors.newCachedThreadPool();
-        unterminatableExecutor = new UnterminatableExecutor(executor);
-    }
+    private final Executor executor;
 
-    public void start() {
-        InternalLoggerFactory.setDefaultFactory(new JBossLoggerFactory());
-    }
-
-    public synchronized void stop() {
-        if (executor != null) {
-            ExecutorShutdownUtil.shutdown(executor);
+    public UnterminatableExecutor(Executor executor) {
+        if (executor == null) {
+            throw new NullPointerException("executor");
         }
+        this.executor = executor;
     }
 
-    public synchronized void destroy() {
-        executor = null;
-        unterminatableExecutor = null;
-    }
-
-    public Executor getChannelFactoryExecutor() {
-        return unterminatableExecutor;
+    public void execute(Runnable command) {
+        executor.execute(command);
     }
 }

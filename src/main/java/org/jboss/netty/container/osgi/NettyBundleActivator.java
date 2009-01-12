@@ -59,9 +59,8 @@ public class NettyBundleActivator implements BundleActivator {
 
     public void start(BundleContext ctx) throws Exception {
         initLoggerFactory(ctx);
-        InternalLoggerFactory.getInstance(NettyBundleActivator.class).info("YAY");
 
-        executor = Executors.newCachedThreadPool();
+        Executor executor = this.executor = Executors.newCachedThreadPool();
 
         // The default transport is NIO.
         register(ctx,
@@ -77,8 +76,10 @@ public class NettyBundleActivator implements BundleActivator {
 
     public void stop(BundleContext ctx) throws Exception {
         unregisterAll();
-        ExecutorShutdownUtil.shutdown(executor);
-        executor = null;
+        if (executor != null) {
+            ExecutorShutdownUtil.shutdown(executor);
+            executor = null;
+        }
     }
 
     private void initLoggerFactory(BundleContext ctx) {

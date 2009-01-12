@@ -33,6 +33,7 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
 import org.jboss.netty.util.ExecutorShutdownUtil;
+import org.jboss.netty.util.UnterminatableExecutor;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Scopes;
@@ -56,6 +57,8 @@ public class NettyModule extends AbstractModule {
             throw new IllegalStateException(
                     "Executor has been shut down already.");
         }
+
+        Executor executor = new UnterminatableExecutor(this.executor);
 
         bind(Executor.class).
             annotatedWith(ChannelFactoryResource.class).
