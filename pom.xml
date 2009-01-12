@@ -201,9 +201,6 @@
             <Import-Package>
               *;resolution:=optional
             </Import-Package>
-            <!--
-            org.slf4j.*;resolution:=optional,org.apache.commons.logging.*;resolution:=optional,org.jboss.logging.*;resolution:=optional,org.apache.log4j.*;resolution:=optional,*</Import-Package> 
-             -->
           </instructions>
         </configuration>
       </plugin>

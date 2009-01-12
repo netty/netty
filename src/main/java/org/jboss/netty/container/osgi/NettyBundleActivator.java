@@ -59,6 +59,8 @@ public class NettyBundleActivator implements BundleActivator {
 
     public void start(BundleContext ctx) throws Exception {
         initLoggerFactory(ctx);
+        InternalLoggerFactory.getInstance(NettyBundleActivator.class).info("YAY");
+
         executor = Executors.newCachedThreadPool();
 
         // The default transport is NIO.
@@ -80,7 +82,8 @@ public class NettyBundleActivator implements BundleActivator {
     }
 
     private void initLoggerFactory(BundleContext ctx) {
-        ServiceReference logServiceRef = ctx.getServiceReference(LogService.class.getName());
+        ServiceReference logServiceRef =
+            ctx.getServiceReference("org.osgi.service.log.LogService");
         if (logServiceRef == null) {
             // LogService is not available.
             return;
