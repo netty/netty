@@ -24,14 +24,14 @@
             xsi:schemaLocation="urn:jboss:bean-deployer bean-deployer_2_0.xsd"
             xmlns="urn:jboss:bean-deployer:2.0">
 
-  <bean name="org.jboss.netty.internal.ChannelFactoryResources"
+  <bean name="org.jboss.netty.internal.ResourceFactory"
         class="org.jboss.netty.container.microcontainer.NettyResourceFactory" />
         
   <bean name="org.jboss.netty.internal.ChannelFactoryExecutor"
         class="java.util.concurrent.Executor">
-    <depends>org.jboss.netty.internal.ChannelFactoryResources</depends>
+    <depends>org.jboss.netty.internal.ResourceFactory</depends>
     <constructor factoryMethod="getChannelFactoryExecutor">
-      <factory bean="org.jboss.netty.internal.ChannelFactoryResources"/>
+      <factory bean="org.jboss.netty.internal.ResourceFactory"/>
     </constructor>
   </bean>
 
