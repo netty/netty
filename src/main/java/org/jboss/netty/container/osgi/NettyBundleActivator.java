@@ -35,10 +35,15 @@ import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.logging.OsgiLoggerFactory;
 import org.jboss.netty.util.ExecutorShutdownUtil;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.log.LogService;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -53,6 +58,7 @@ public class NettyBundleActivator implements BundleActivator {
     private Executor executor;
 
     public void start(BundleContext ctx) throws Exception {
+        initLoggerFactory(ctx);
         executor = Executors.newCachedThreadPool();
 
         // The default transport is NIO.
@@ -71,6 +77,32 @@ public class NettyBundleActivator implements BundleActivator {
         unregisterAll();
         ExecutorShutdownUtil.shutdown(executor);
         executor = null;
+    }
+
+    private void initLoggerFactory(BundleContext ctx) {
+        ServiceReference logServiceRef = ctx.getServiceReference(LogService.class.getName());
+        if (logServiceRef == null) {
+            // LogService is not available.
+            return;
+        }
+
+        LogService logService;
+        try {
+            logService = (LogService) ctx.getService(logServiceRef);
+        } catch (Exception e) {
+            // Same name, different service
+            return;
+        }
+
+        Properties props = new Properties();
+        props.setProperty("category", "netty");
+
+        ServiceRegistration reg = ctx.registerService(
+                InternalLogger.class.getName(), new Object(), props);
+        registrations.add(reg);
+
+        InternalLoggerFactory.setDefaultFactory(
+                new OsgiLoggerFactory(logService, reg.getReference()));
     }
 
     private void register(BundleContext ctx, ChannelFactory factory, Class<?>... factoryTypes) {

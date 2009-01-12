@@ -59,6 +59,13 @@
       <optional>true</optional>
     </dependency>
     <dependency>
+      <groupId>org.apache.felix</groupId>
+      <artifactId>org.osgi.compendium</artifactId>
+      <version>1.2.0</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>com.google.code.guice</groupId>
       <artifactId>guice</artifactId>
       <version>1.0</version>
