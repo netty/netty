@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * JBoss, Home of Professional Open Source
+ *
+ * Copyright 2009, Red Hat Middleware LLC, and individual contributors
+ * by the @author tags. See the COPYRIGHT.txt in the distribution for a
+ * full listing of individual contributors.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+-->
+<deployment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="urn:jboss:bean-deployer bean-deployer_2_0.xsd"
+            xmlns="urn:jboss:bean-deployer:2.0">
+
+  <bean name="org.jboss.netty.internal.ChannelFactoryResources"
+        class="org.jboss.netty.container.microcontainer.NettyResourceFactory" />
+        
+  <bean name="org.jboss.netty.internal.ChannelFactoryExecutor"
+        class="java.util.concurrent.Executor">
+    <depends>org.jboss.netty.internal.ChannelFactoryResources</depends>
+    <constructor factoryMethod="getChannelFactoryExecutor">
+      <factory bean="org.jboss.netty.internal.ChannelFactoryResources"/>
+    </constructor>
+  </bean>
+
+  <bean mode="On Demand"
+        name="org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory"
+        class="org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory">
+    <alias>org.jboss.netty.channel.socket.ClientSocketChannelFactory</alias>
+    <depends>org.jboss.netty.internal.ChannelFactoryExecutor</depends>
+    <constructor>
+      <parameter class="java.util.concurrent.Executor">
+        <inject bean="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+      </parameter>
+      <parameter class="java.util.concurrent.Executor">
+        <inject bean="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+      </parameter>
+    </constructor>
+  </bean>
+
+  <bean mode="On Demand"
+        name="org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory"
+        class="org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory">
+    <alias>org.jboss.netty.channel.socket.ServerSocketChannelFactory</alias>
+    <depends>org.jboss.netty.internal.ChannelFactoryExecutor</depends>
+    <constructor>
+      <parameter class="java.util.concurrent.Executor">
+        <inject bean="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+      </parameter>
+      <parameter class="java.util.concurrent.Executor">
+        <inject bean="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+      </parameter>
+    </constructor>
+  </bean>
+
+  <bean mode="On Demand"
+        name="org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory"
+        class="org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory">
+    <depends>org.jboss.netty.internal.ChannelFactoryExecutor</depends>
+    <constructor>
+      <parameter class="java.util.concurrent.Executor">
+        <inject bean="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+      </parameter>
+    </constructor>
+  </bean>
+
+  <bean mode="On Demand"
+        name="org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory"
+        class="org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory">
+    <depends>org.jboss.netty.internal.ChannelFactoryExecutor</depends>
+    <constructor>
+      <parameter class="java.util.concurrent.Executor">
+        <inject bean="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+      </parameter>
+      <parameter class="java.util.concurrent.Executor">
+        <inject bean="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+      </parameter>
+    </constructor>
+  </bean>
+</deployment>
