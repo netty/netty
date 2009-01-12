@@ -22,12 +22,17 @@
  */
 package org.jboss.netty.container.guice;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
+import org.jboss.netty.util.ExecutorShutdownUtil;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Scopes;
@@ -37,10 +42,25 @@ import com.google.inject.Scopes;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class ChannelFactoryModule extends AbstractModule {
+public class NettyModule extends AbstractModule {
+
+    private final ExecutorService executor = Executors.newCachedThreadPool();
+
+    public void destroy() {
+        ExecutorShutdownUtil.shutdown(executor);
+    }
 
     @Override
     protected void configure() {
+        if (executor.isShutdown()) {
+            throw new IllegalStateException(
+                    "Executor has been shut down already.");
+        }
+
+        bind(Executor.class).
+            annotatedWith(ChannelFactoryResources.getInstance()).
+            toInstance(executor);
+
         bind(ClientSocketChannelFactory.class).
             toProvider(NioClientSocketChannelFactoryProvider.class).
             in(Scopes.SINGLETON);
