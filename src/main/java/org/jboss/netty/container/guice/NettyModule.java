@@ -58,7 +58,7 @@ public class NettyModule extends AbstractModule {
         }
 
         bind(Executor.class).
-            annotatedWith(ChannelFactoryResources.getInstance()).
+            annotatedWith(ChannelFactoryResource.class).
             toInstance(executor);
 
         bind(ClientSocketChannelFactory.class).
