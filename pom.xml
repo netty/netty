@@ -355,6 +355,7 @@
             -group "Central interface for all I/O operations" ${project.groupId}.channel*
             -group "Client &amp; Server bootstrapping utilities" ${project.groupId}.bootstrap*
             -group "Reusable I/O event interceptors" ${project.groupId}.handler*
+            -group "IoC (Dependency Injection) container integration" ${project.groupId}.container*
             -group "Miscellaneous" ${project.groupId}.logging*
             -nopackagediagram
             -sourceclasspath ${project.build.outputDirectory}
