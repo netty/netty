@@ -20,15 +20,13 @@
  * License along with this software; if not, write to the Free
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.jboss.netty</groupId>
   <artifactId>netty</artifactId>
   <packaging>bundle</packaging>
-  <version>3.1.0.ALPHA3-SNAPSHOT</version>
+  <version>3.1.0.ALPHA3</version>
 
   <name>The Netty Project</name>
   <url>http://www.jboss.org/netty/</url>
@@ -52,8 +50,8 @@
   <inceptionYear>2008</inceptionYear>
 
   <scm>
-    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/trunk</connection>
-    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/trunk</developerConnection>
+    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/tags/netty-3.1.0.ALPHA3</connection>
+    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/tags/netty-3.1.0.ALPHA3</developerConnection>
   </scm>
 
   <dependencies>
