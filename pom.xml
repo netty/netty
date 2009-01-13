@@ -40,7 +40,7 @@
   </description>
 
   <organization>
-    <name>JBoss - a division of Red Hat</name>
+    <name>JBoss, a division of Red Hat</name>
     <url>http://www.jboss.org/</url>
   </organization>
   <licenses>
@@ -108,7 +108,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.5.2</version>
+      <version>1.5.6</version>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
@@ -156,7 +156,7 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.4</version>
+      <version>4.5</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -168,13 +168,13 @@
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymockclassextension</artifactId>
-      <version>2.3</version>
+      <version>2.4</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
-      <version>1.5.2</version>
+      <version>1.5.6</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -318,9 +318,25 @@
         </executions>
         <dependencies>
           <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant</artifactId>
+            <version>1.7.1</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant-launcher</artifactId>
+            <version>1.7.1</version>
+          </dependency>
+          <dependency>
             <groupId>ant-contrib</groupId>
             <artifactId>ant-contrib</artifactId>
             <version>1.0b2</version>
+            <exclusions>
+              <exclusion>
+                <groupId>ant</groupId>
+                <artifactId>ant</artifactId>
+              </exclusion>
+            </exclusions>
           </dependency>
         </dependencies>
       </plugin>
@@ -343,20 +359,21 @@
             <artifactId>apiviz</artifactId>
             <version>1.2.5.GA</version>
           </docletArtifact>
-          <aggregate>true</aggregate>
           <attach>false</attach>
+          <useStandardDocletOptions>true</useStandardDocletOptions>
+          <outputDirectory>${project.build.directory}/api</outputDirectory>
+          <reportOutputDirectory>${project.build.directory}/api</reportOutputDirectory>
+          <destDir>api</destDir>
+          <charset>UTF-8</charset>
+          <docencoding>UTF-8</docencoding>
+          <breakiterator>true</breakiterator>
+          <version>true</version>
+          <author>true</author>
+          <keywords>true</keywords>
+          <overview>${basedir}/src/javadoc/overview.html</overview>
+          <doctitle>${project.name} ${project.version} API Reference</doctitle>
+          <windowtitle>${project.name} ${project.version} API Reference</windowtitle>
           <additionalparam>
-            -d ${project.build.directory}/api
-            -charset UTF-8
-            -docencoding UTF-8
-            -overview ${basedir}/src/javadoc/overview.html
-            -version
-            -author
-            -breakiterator
-            -windowtitle "${project.name} ${project.version} API Reference"
-            -doctitle "${project.name} ${project.version} API Reference"
-            -bottom "Copyright © ${project.inceptionYear}-Present ${project.organization.name}. All Rights Reserved."
-
             -link http://java.sun.com/javase/6/docs/api/
             -link http://code.google.com/apis/protocolbuffers/docs/reference/java/
             -link http://www.osgi.org/javadoc/r4v41/
@@ -480,7 +497,7 @@
             <id>generate-distribution</id>
             <phase>package</phase>
             <goals>
-              <goal>attached</goal>
+              <goal>single</goal>
             </goals>
           </execution>
         </executions>
@@ -566,6 +583,7 @@
             <inherited>true</inherited>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-deploy-plugin</artifactId>
+            <version>2.4</version>
             <configuration>
               <updateReleaseInfo>true</updateReleaseInfo>
             </configuration>
