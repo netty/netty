@@ -4,8 +4,8 @@
 <!ENTITY Downloads  "&Home;downloads.html">
 <!ENTITY Community  "&Home;community.html">
 <!ENTITY DocHome    "http://www.jboss.org/file-access/default/members/netty/freezone/">
-<!ENTITY API        "&DocHome;api/3.0/org/jboss/netty/">
-<!ENTITY XRef       "&DocHome;xref/3.0/org/jboss/netty/">
+<!ENTITY API        "&DocHome;api/3.1/org/jboss/netty/">
+<!ENTITY XRef       "&DocHome;xref/3.1/org/jboss/netty/">
 
 <!-- Types in the bootstrap package -->
 
