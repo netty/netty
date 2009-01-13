@@ -22,10 +22,10 @@
  */
 package org.jboss.netty.logging;
 
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.log.LogService;
-
-
+import org.osgi.util.tracker.ServiceTracker;
 
 /**
  * Logger factory which creates an <a href="http://www.osgi.org/">OSGi</a>
@@ -39,23 +39,59 @@ import org.osgi.service.log.LogService;
  */
 public class OsgiLoggerFactory extends InternalLoggerFactory {
 
-    private final LogService logService;
-    private final ServiceReference serviceRef;
+    private final ServiceTracker logServiceTracker;
+    private final InternalLoggerFactory fallback;
+    volatile LogService logService;
 
-    public OsgiLoggerFactory(LogService logService, ServiceReference serviceRef) {
-        if (logService == null) {
-            throw new NullPointerException("logService");
-        }
-        if (serviceRef == null) {
-            throw new NullPointerException("serviceRef");
-        }
-        this.logService = logService;
-        this.serviceRef = serviceRef;
+    public OsgiLoggerFactory(BundleContext ctx) {
+        this(ctx, null);
+    }
 
+    public OsgiLoggerFactory(BundleContext ctx, InternalLoggerFactory fallback) {
+        if (ctx == null) {
+            throw new NullPointerException("ctx");
+        }
+        if (fallback == null) {
+            fallback = InternalLoggerFactory.getDefaultFactory();
+            if (fallback instanceof OsgiLoggerFactory) {
+                fallback = new JdkLoggerFactory();
+            }
+        }
+
+        this.fallback = fallback;
+        logServiceTracker = new ServiceTracker(
+                ctx, "org.osgi.service.log.LogService", null) {
+                    @Override
+                    public Object addingService(ServiceReference reference) {
+                        LogService service = (LogService) super.addingService(reference);
+                        logService = service;
+                        return service;
+                    }
+
+                    @Override
+                    public void removedService(ServiceReference reference,
+                            Object service) {
+                        logService = null;
+                    }
+        };
+        logServiceTracker.open();
+    }
+
+    public InternalLoggerFactory getFallback() {
+        return fallback;
+    }
+
+    public LogService getLogService() {
+        return logService;
+    }
+
+    public void destroy() {
+        logService = null;
+        logServiceTracker.close();
     }
 
     @Override
     public InternalLogger newInstance(String name) {
-        return new OsgiLogger(logService, serviceRef, name);
+        return new OsgiLogger(this, name, fallback.newInstance(name));
     }
 }

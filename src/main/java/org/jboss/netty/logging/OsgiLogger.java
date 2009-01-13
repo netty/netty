@@ -22,7 +22,6 @@
  */
 package org.jboss.netty.logging;
 
-import org.osgi.framework.ServiceReference;
 import org.osgi.service.log.LogService;
 
 /**
@@ -36,49 +35,70 @@ import org.osgi.service.log.LogService;
  */
 class OsgiLogger implements InternalLogger {
 
-    private final LogService logService;
-    private final ServiceReference serviceRef;
+    private final OsgiLoggerFactory parent;
+    private final InternalLogger fallback;
     private final String name;
     private final String prefix;
 
-    OsgiLogger(LogService logService, ServiceReference serviceRef, String name) {
-        if (logService == null) {
-            throw new NullPointerException("logService");
-        }
-        if (serviceRef == null) {
-            throw new NullPointerException("serviceRef");
-        }
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-        this.logService = logService;
-        this.serviceRef = serviceRef;
+    OsgiLogger(OsgiLoggerFactory parent, String name, InternalLogger fallback) {
+        this.parent = parent;
         this.name = name;
+        this.fallback = fallback;
         prefix = "[" + name + "] ";
     }
 
     public void debug(String msg) {
-        logService.log(serviceRef, LogService.LOG_DEBUG, prefix + msg);
+        LogService logService = parent.getLogService();
+        if (logService != null) {
+            logService.log(LogService.LOG_DEBUG, prefix + msg);
+        } else {
+            fallback.debug(msg);
+        }
     }
 
     public void debug(String msg, Throwable cause) {
-        logService.log(serviceRef, LogService.LOG_DEBUG, prefix + msg, cause);
+        LogService logService = parent.getLogService();
+        if (logService != null) {
+            logService.log(LogService.LOG_DEBUG, prefix + msg, cause);
+        } else {
+            fallback.debug(msg, cause);
+        }
     }
 
     public void error(String msg) {
-        logService.log(serviceRef, LogService.LOG_ERROR, prefix + msg);
+        LogService logService = parent.getLogService();
+        if (logService != null) {
+            logService.log(LogService.LOG_ERROR, prefix + msg);
+        } else {
+            fallback.error(msg);
+        }
     }
 
     public void error(String msg, Throwable cause) {
-        logService.log(serviceRef, LogService.LOG_ERROR, prefix + msg, cause);
+        LogService logService = parent.getLogService();
+        if (logService != null) {
+            logService.log(LogService.LOG_ERROR, prefix + msg, cause);
+        } else {
+            fallback.error(msg, cause);
+        }
     }
 
     public void info(String msg) {
-        logService.log(serviceRef, LogService.LOG_INFO, prefix + msg);
+        LogService logService = parent.getLogService();
+        if (logService != null) {
+            logService.log(LogService.LOG_INFO, prefix + msg);
+        } else {
+            fallback.info(msg);
+        }
     }
 
     public void info(String msg, Throwable cause) {
-        logService.log(serviceRef, LogService.LOG_INFO, prefix + msg, cause);
+        LogService logService = parent.getLogService();
+        if (logService != null) {
+            logService.log(LogService.LOG_INFO, prefix + msg, cause);
+        } else {
+            fallback.info(msg, cause);
+        }
     }
 
     public boolean isDebugEnabled() {
@@ -98,11 +118,21 @@ class OsgiLogger implements InternalLogger {
     }
 
     public void warn(String msg) {
-        logService.log(serviceRef, LogService.LOG_WARNING, prefix + msg);
+        LogService logService = parent.getLogService();
+        if (logService != null) {
+            logService.log(LogService.LOG_WARNING, prefix + msg);
+        } else {
+            fallback.warn(msg);
+        }
     }
 
     public void warn(String msg, Throwable cause) {
-        logService.log(serviceRef, LogService.LOG_WARNING, prefix + msg, cause);
+        LogService logService = parent.getLogService();
+        if (logService != null) {
+            logService.log(LogService.LOG_WARNING, prefix + msg, cause);
+        } else {
+            fallback.warn(msg, cause);
+        }
     }
 
     @Override

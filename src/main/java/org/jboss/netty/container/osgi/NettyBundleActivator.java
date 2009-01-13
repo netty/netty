@@ -35,15 +35,12 @@ import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
-import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.logging.OsgiLoggerFactory;
 import org.jboss.netty.util.ExecutorShutdownUtil;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
-import org.osgi.service.log.LogService;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -56,10 +53,14 @@ public class NettyBundleActivator implements BundleActivator {
         new ArrayList<ServiceRegistration>();
 
     private Executor executor;
+    private OsgiLoggerFactory loggerFactory;
 
     public void start(BundleContext ctx) throws Exception {
-        initLoggerFactory(ctx);
+        // Switch the internal logger to the OSGi LogService.
+        loggerFactory = new OsgiLoggerFactory(ctx);
+        InternalLoggerFactory.setDefaultFactory(loggerFactory);
 
+        // Prepare the resources required for creating ChannelFactories.
         Executor executor = this.executor = Executors.newCachedThreadPool();
 
         // The default transport is NIO.
@@ -80,33 +81,12 @@ public class NettyBundleActivator implements BundleActivator {
             ExecutorShutdownUtil.shutdown(executor);
             executor = null;
         }
-    }
 
-    private void initLoggerFactory(BundleContext ctx) {
-        ServiceReference logServiceRef =
-            ctx.getServiceReference("org.osgi.service.log.LogService");
-        if (logServiceRef == null) {
-            // LogService is not available.
-            return;
+        if (loggerFactory != null) {
+            InternalLoggerFactory.setDefaultFactory(loggerFactory.getFallback());
+            loggerFactory.destroy();
+            loggerFactory = null;
         }
-
-        LogService logService;
-        try {
-            logService = (LogService) ctx.getService(logServiceRef);
-        } catch (Exception e) {
-            // Same name, different service
-            return;
-        }
-
-        Properties props = new Properties();
-        props.setProperty("category", "netty");
-
-        ServiceRegistration reg = ctx.registerService(
-                InternalLogger.class.getName(), new Object(), props);
-        registrations.add(reg);
-
-        InternalLoggerFactory.setDefaultFactory(
-                new OsgiLoggerFactory(logService, reg.getReference()));
     }
 
     private void register(BundleContext ctx, ChannelFactory factory, Class<?>... factoryTypes) {

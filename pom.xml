@@ -530,12 +530,10 @@
       <snapshots>
         <enabled>false</enabled>
         <updatePolicy>never</updatePolicy>
-        <checksumPolicy>ignore</checksumPolicy>
       </snapshots>
       <releases>
         <enabled>true</enabled>
         <updatePolicy>interval:10080</updatePolicy>
-        <checksumPolicy>ignore</checksumPolicy>
       </releases>
       <id>jboss.release</id>
       <name>JBoss releases</name>
@@ -548,12 +546,10 @@
       <snapshots>
         <enabled>false</enabled>
         <updatePolicy>never</updatePolicy>
-        <checksumPolicy>ignore</checksumPolicy>
       </snapshots>
       <releases>
         <enabled>true</enabled>
         <updatePolicy>interval:10080</updatePolicy>
-        <checksumPolicy>ignore</checksumPolicy>
       </releases>
       <id>jboss.release</id>
       <name>JBoss releases</name>
