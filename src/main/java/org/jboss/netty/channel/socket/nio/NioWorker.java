@@ -267,6 +267,7 @@ class NioWorker implements Runnable {
 
         if (preallocatedBuffer == null) {
             // TODO Magic number
+            // FIXME: OOPS - the new buffer should not be shared by more than one connection
             preallocatedBuffer = channel.getConfig().getBufferFactory().getBuffer(1048576);
         }
 
