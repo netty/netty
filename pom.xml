@@ -183,6 +183,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.0.2</version>
         <configuration>
           <encoding>UTF-8</encoding>
           <source>1.5</source>
@@ -194,6 +195,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.4.3</version>
         <configuration>
           <excludes>
             <exclude>**/Abstract*</exclude>
@@ -203,6 +205,7 @@
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
+        <version>1.4.3</version>
         <extensions>true</extensions>
         <configuration>
           <instructions>
@@ -230,6 +233,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-source-plugin</artifactId>
+        <version>2.0.4</version>
         <executions>
           <execution>
             <id>attach-source</id>
@@ -245,6 +249,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.3</version>
         <executions>
           <execution>
             <id>write-version</id>
@@ -321,6 +326,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.5</version>
         <executions>
           <execution>
             <id>generate-javadoc</id>
@@ -377,6 +383,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-jxr-plugin</artifactId>
+        <version>2.1</version>
         <executions>
           <execution>
             <id>generate-xref</id>
@@ -397,6 +404,7 @@
       <plugin>
         <groupId>org.jboss.maven.plugins</groupId>
         <artifactId>maven-jdocbook-plugin</artifactId>
+        <version>2.1.2</version>
         <executions>
           <execution>
             <id>generate-docbook</id>
@@ -466,6 +474,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
+        <version>2.2-beta-3</version>
         <executions>
           <execution>
             <id>generate-distribution</id>
@@ -486,6 +495,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-release-plugin</artifactId>
+        <version>2.0-beta-8</version>
         <configuration>
           <tagBase>https://svn.jboss.org/repos/netty/tags</tagBase>
           <!-- We don't want to use the default release profile because it
@@ -502,7 +512,14 @@
     <repository>
       <snapshots>
         <enabled>false</enabled>
+        <updatePolicy>never</updatePolicy>
+        <checksumPolicy>ignore</checksumPolicy>
       </snapshots>
+      <releases>
+        <enabled>true</enabled>
+        <updatePolicy>interval:10080</updatePolicy>
+        <checksumPolicy>ignore</checksumPolicy>
+      </releases>
       <id>jboss.release</id>
       <name>JBoss releases</name>
       <url>http://repository.jboss.org/maven2</url>
@@ -513,9 +530,13 @@
     <pluginRepository>
       <snapshots>
         <enabled>false</enabled>
+        <updatePolicy>never</updatePolicy>
+        <checksumPolicy>ignore</checksumPolicy>
       </snapshots>
       <releases>
+        <enabled>true</enabled>
         <updatePolicy>interval:10080</updatePolicy>
+        <checksumPolicy>ignore</checksumPolicy>
       </releases>
       <id>jboss.release</id>
       <name>JBoss releases</name>
