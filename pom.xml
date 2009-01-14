@@ -31,10 +31,13 @@
   <name>The Netty Project</name>
   <url>http://www.jboss.org/netty/</url>
   <description>
-    The Netty project is an effort to provide an asynchronous / event-driven 
-    network application framework for rapid development of high-performance /
-    high-scalability protocol servers and clients, including its related
-    out-of-the-box protocol extensions and tool suite.
+    The Netty project is an effort to provide an asynchronous event-driven
+    network application framework and tools for rapid development of
+    maintainable high performance and high scalability protocol servers and
+    clients.  In other words, Netty is a NIO client server framework which
+    enables quick and easy development of network applications such as protocol
+    servers and clients. It greatly simplifies and streamlines network
+    programming such as TCP/IP socket server.
   </description>
 
   <organization>
