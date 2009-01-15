@@ -26,12 +26,10 @@ import java.net.SocketAddress;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class LocalAddress extends SocketAddress
-{
-   final String id;
+public class LocalAddress extends SocketAddress {
+    final String id;
 
-   public LocalAddress(String id)
-   {
-      this.id = id;
-   }
+    public LocalAddress(String id) {
+        this.id = id;
+    }
 }

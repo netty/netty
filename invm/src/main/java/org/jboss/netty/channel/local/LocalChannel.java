@@ -22,58 +22,50 @@
 package org.jboss.netty.channel.local;
 
 import org.jboss.netty.channel.AbstractChannel;
-import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.ChannelConfig;
 import static org.jboss.netty.channel.Channels.fireChannelOpen;
+import org.jboss.netty.channel.MessageEvent;
 
+import java.net.SocketAddress;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.net.SocketAddress;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public  class LocalChannel extends AbstractChannel
-{
-   final BlockingQueue<MessageEvent> writeBuffer = new LinkedBlockingQueue<MessageEvent>();
+public class LocalChannel extends AbstractChannel {
+    final BlockingQueue<MessageEvent> writeBuffer = new LinkedBlockingQueue<MessageEvent>();
 
-   LocalChannel pairedChannel = null;
+    LocalChannel pairedChannel = null;
 
-   private ChannelConfig config;
+    private ChannelConfig config;
 
-   protected LocalChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink)
-   {
-      super(null, factory, pipeline, sink);
-      config = new LocalChannelConfig();
-      fireChannelOpen(this);
-   }
+    protected LocalChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink) {
+        super(null, factory, pipeline, sink);
+        config = new LocalChannelConfig();
+        fireChannelOpen(this);
+    }
 
-   public ChannelConfig getConfig()
-   {
-      return config;
-   }
+    public ChannelConfig getConfig() {
+        return config;
+    }
 
-   public boolean isBound()
-   {
-      return true;
-   }
+    public boolean isBound() {
+        return true;
+    }
 
-   public boolean isConnected()
-   {
-      return true;
-   }
+    public boolean isConnected() {
+        return true;
+    }
 
-   public SocketAddress getLocalAddress()
-   {
-      return null;
-   }
+    public SocketAddress getLocalAddress() {
+        return null;
+    }
 
-   public SocketAddress getRemoteAddress()
-   {
-      return null;
-   }
+    public SocketAddress getRemoteAddress() {
+        return null;
+    }
 }

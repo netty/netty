@@ -21,58 +21,50 @@
  */
 package org.jboss.netty.channel.local;
 
+import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.buffer.ChannelBufferFactory;
 
 import java.util.Map;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class LocalChannelConfig implements ChannelConfig
-{
-   ChannelPipelineFactory pipelineFactory;
-   ChannelBufferFactory bufferFactory;
-   public void setOptions(Map<String, Object> options)
-   {
-   }
+public class LocalChannelConfig implements ChannelConfig {
+    ChannelPipelineFactory pipelineFactory;
 
-   public ChannelBufferFactory getBufferFactory()
-   {
-      return bufferFactory;
-   }
+    ChannelBufferFactory bufferFactory;
 
-   public void setBufferFactory(ChannelBufferFactory bufferFactory)
-   {
-      this.bufferFactory = bufferFactory;
-   }
+    public void setOptions(Map<String, Object> options) {
+    }
 
-   public ChannelPipelineFactory getPipelineFactory()
-   {
-      return pipelineFactory;
-   }
+    public ChannelBufferFactory getBufferFactory() {
+        return bufferFactory;
+    }
 
-   public void setPipelineFactory(ChannelPipelineFactory pipelineFactory)
-   {
-      this.pipelineFactory = pipelineFactory;
-   }
+    public void setBufferFactory(ChannelBufferFactory bufferFactory) {
+        this.bufferFactory = bufferFactory;
+    }
 
-   public int getConnectTimeoutMillis()
-   {
-      return 0;
-   }
+    public ChannelPipelineFactory getPipelineFactory() {
+        return pipelineFactory;
+    }
 
-   public void setConnectTimeoutMillis(int connectTimeoutMillis)
-   {
-   }
+    public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
+        this.pipelineFactory = pipelineFactory;
+    }
 
-   public int getWriteTimeoutMillis()
-   {
-      return 0;
-   }
+    public int getConnectTimeoutMillis() {
+        return 0;
+    }
 
-   public void setWriteTimeoutMillis(int writeTimeoutMillis)
-   {
-   }
+    public void setConnectTimeoutMillis(int connectTimeoutMillis) {
+    }
+
+    public int getWriteTimeoutMillis() {
+        return 0;
+    }
+
+    public void setWriteTimeoutMillis(int writeTimeoutMillis) {
+    }
 }

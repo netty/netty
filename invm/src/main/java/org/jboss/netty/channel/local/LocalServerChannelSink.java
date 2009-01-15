@@ -21,113 +21,94 @@
  */
 package org.jboss.netty.channel.local;
 
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelPipelineException;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelState;
-import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.AbstractChannelSink;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelState;
+import org.jboss.netty.channel.ChannelStateEvent;
 import static org.jboss.netty.channel.Channels.fireChannelBound;
-import static org.jboss.netty.channel.Channels.fireMessageReceived;
-import static org.jboss.netty.channel.Channels.fireChannelDisconnected;
 import static org.jboss.netty.channel.Channels.fireChannelClosed;
+import static org.jboss.netty.channel.Channels.fireChannelDisconnected;
+import static org.jboss.netty.channel.Channels.fireMessageReceived;
+import org.jboss.netty.channel.MessageEvent;
 
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executor;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class LocalServerChannelSink extends AbstractChannelSink
-{
-   private Executor executor;
+public class LocalServerChannelSink extends AbstractChannelSink {
+    private Executor executor;
 
-   public LocalServerChannelSink(Executor executor)
-   {
-      this.executor = executor;
-   }
+    public LocalServerChannelSink(Executor executor) {
+        this.executor = executor;
+    }
 
-   public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception
-   {
-      if (e instanceof ChannelStateEvent)
-      {
-         ChannelStateEvent event = (ChannelStateEvent) e;
-         if (e.getChannel() instanceof LocalServerChannel)
-         {
-            handleServerChannel(event);
-         }
-         else if (e.getChannel() instanceof LocalChannel)
-         {
-            handleLocalChannel(event);
-         }
-      }
-      else if (e instanceof MessageEvent)
-      {
-         final MessageEvent event = (MessageEvent) e;
-         final LocalChannel channel = (LocalChannel) event.getChannel();
-         executor.execute(new Runnable()
-         {
-            public void run()
-            {
-               fireMessageReceived(channel.pairedChannel, event.getMessage());
+    public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
+        if (e instanceof ChannelStateEvent) {
+            ChannelStateEvent event = (ChannelStateEvent) e;
+            if (e.getChannel() instanceof LocalServerChannel) {
+                handleServerChannel(event);
             }
-         });
-         event.getFuture().setSuccess();
-      }
-
-   }
-
-   private void handleLocalChannel(ChannelStateEvent event)
-   {
-      LocalChannel localChannel =
-            (LocalChannel) event.getChannel();
-      ChannelFuture future = event.getFuture();
-      ChannelState state = event.getState();
-      Object value = event.getValue();
-      switch (state)
-      {
-         case OPEN:
-            if (Boolean.FALSE.equals(value))
-            {
-               future.setSuccess();
-               fireChannelDisconnected(localChannel);
-               fireChannelClosed(localChannel);
-               fireChannelDisconnected(localChannel.pairedChannel);
-               fireChannelClosed(localChannel.pairedChannel);
+            else if (e.getChannel() instanceof LocalChannel) {
+                handleLocalChannel(event);
             }
-            break;
-         case BOUND:
-            break;
-      }
-   }
+        }
+        else if (e instanceof MessageEvent) {
+            final MessageEvent event = (MessageEvent) e;
+            final LocalChannel channel = (LocalChannel) event.getChannel();
+            executor.execute(new Runnable() {
+                public void run() {
+                    fireMessageReceived(channel.pairedChannel, event.getMessage());
+                }
+            });
+            event.getFuture().setSuccess();
+        }
 
-   private void handleServerChannel(ChannelStateEvent event)
-   {
-      LocalServerChannel serverChannel =
-            (LocalServerChannel) event.getChannel();
-      ChannelFuture future = event.getFuture();
-      ChannelState state = event.getState();
-      Object value = event.getValue();
-      switch (state)
-      {
-         case OPEN:
-            break;
-         case BOUND:
-            if (value != null)
-            {
-               bind(future, serverChannel);
-            }
-            break;
-      }
-   }
+    }
 
-   private void bind(ChannelFuture future, LocalServerChannel serverChannel)
-   {
-      future.setSuccess();
-      fireChannelBound(serverChannel, serverChannel.getLocalAddress());
-   }
+    private void handleLocalChannel(ChannelStateEvent event) {
+        LocalChannel localChannel =
+              (LocalChannel) event.getChannel();
+        ChannelFuture future = event.getFuture();
+        ChannelState state = event.getState();
+        Object value = event.getValue();
+        switch (state) {
+            case OPEN:
+                if (Boolean.FALSE.equals(value)) {
+                    future.setSuccess();
+                    fireChannelDisconnected(localChannel);
+                    fireChannelClosed(localChannel);
+                    fireChannelDisconnected(localChannel.pairedChannel);
+                    fireChannelClosed(localChannel.pairedChannel);
+                }
+                break;
+            case BOUND:
+                break;
+        }
+    }
+
+    private void handleServerChannel(ChannelStateEvent event) {
+        LocalServerChannel serverChannel =
+              (LocalServerChannel) event.getChannel();
+        ChannelFuture future = event.getFuture();
+        ChannelState state = event.getState();
+        Object value = event.getValue();
+        switch (state) {
+            case OPEN:
+                break;
+            case BOUND:
+                if (value != null) {
+                    bind(future, serverChannel);
+                }
+                break;
+        }
+    }
+
+    private void bind(ChannelFuture future, LocalServerChannel serverChannel) {
+        future.setSuccess();
+        fireChannelBound(serverChannel, serverChannel.getLocalAddress());
+    }
 
 }
