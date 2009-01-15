@@ -141,9 +141,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             SocketAddress remoteAddress) {
         try {
             if (channel.socket.connect(remoteAddress)) {
-                NioWorker worker = nextWorker();
-                channel.setWorker(worker);
-                worker.register(channel, future);
+                channel.worker.register(channel, future);
             } else {
                 future.addListener(new ChannelFutureListener() {
                     public void operationComplete(ChannelFuture future) {
@@ -320,9 +318,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             try {
                 if (ch.socket.finishConnect()) {
                     k.cancel();
-                    NioWorker worker = nextWorker();
-                    ch.setWorker(worker);
-                    worker.register(ch, ch.connectFuture);
+                    ch.worker.register(ch, ch.connectFuture);
                 }
             } catch (Throwable t) {
                 ch.connectFuture.setFailure(t);

@@ -39,35 +39,19 @@ import org.jboss.netty.channel.ChannelSink;
  * @version $Rev$, $Date$
  *
  */
-class NioAcceptedSocketChannel extends NioSocketChannel {
-
-    final NioWorker worker;
+final class NioAcceptedSocketChannel extends NioSocketChannel {
 
     NioAcceptedSocketChannel(
             ChannelFactory factory, ChannelPipeline pipeline,
             Channel parent, ChannelSink sink,
             SocketChannel socket, NioWorker worker) {
 
-        super(parent, factory, pipeline, sink, socket);
+        super(parent, factory, pipeline, sink, socket, worker);
 
-        this.worker = worker;
         try {
             socket.configureBlocking(false);
         } catch (IOException e) {
             throw new ChannelException("Failed to enter non-blocking mode.", e);
-        }
-    }
-
-    @Override
-    NioWorker getWorker() {
-        return worker;
-    }
-
-    @Override
-    void setWorker(NioWorker worker) {
-        // worker never changes.
-        if (this.worker != worker) {
-            throw new IllegalStateException("Should not reach here.");
         }
     }
 }

@@ -43,7 +43,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * @version $Rev$, $Date$
  *
  */
-class NioClientSocketChannel extends NioSocketChannel {
+final class NioClientSocketChannel extends NioSocketChannel {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioClientSocketChannel.class);
@@ -77,29 +77,14 @@ class NioClientSocketChannel extends NioSocketChannel {
         return socket;
     }
 
-    volatile NioWorker worker;
     volatile ChannelFuture connectFuture;
     volatile boolean boundManually;
 
     NioClientSocketChannel(
-            ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink) {
+            ChannelFactory factory, ChannelPipeline pipeline,
+            ChannelSink sink, NioWorker worker) {
 
-        super(null, factory, pipeline, sink, newSocket());
+        super(null, factory, pipeline, sink, newSocket(), worker);
         fireChannelOpen(this);
-    }
-
-    @Override
-    NioWorker getWorker() {
-        return worker;
-    }
-
-    @Override
-    void setWorker(NioWorker worker) {
-        if (this.worker == null) {
-            this.worker = worker;
-        } else if (this.worker != worker) {
-            // worker never changes.
-            throw new IllegalStateException("Should not reach here.");
-        }
     }
 }

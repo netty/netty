@@ -29,7 +29,6 @@ import java.util.concurrent.RejectedExecutionException;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.util.ExecutorShutdownUtil;
@@ -93,7 +92,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
 
     private final Executor bossExecutor;
     private final Executor workerExecutor;
-    private final ChannelSink sink;
+    private final NioClientSocketPipelineSink sink;
 
     /**
      * Creates a new instance.  Calling this constructor is same with calling
@@ -142,7 +141,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     }
 
     public SocketChannel newChannel(ChannelPipeline pipeline) {
-        return new NioClientSocketChannel(this, pipeline, sink);
+        return new NioClientSocketChannel(this, pipeline, sink, sink.nextWorker());
     }
 
     public void releaseExternalResources() {

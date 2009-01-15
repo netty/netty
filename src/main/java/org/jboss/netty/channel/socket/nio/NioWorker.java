@@ -315,21 +315,19 @@ class NioWorker implements Runnable {
         }
 
         if (mightNeedWakeup) {
-            NioWorker worker = channel.getWorker();
-            if (worker != null) {
-                Thread workerThread = worker.thread;
-                if (workerThread != null && Thread.currentThread() != workerThread) {
-                    if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
-                        worker.writeTaskQueue.offer(channel.writeTask);
-                    }
-                    Selector workerSelector = worker.selector;
-                    if (workerSelector != null) {
-                        if (worker.wakenUp.compareAndSet(false, true)) {
-                            workerSelector.wakeup();
-                        }
-                    }
-                    return;
+            NioWorker worker = channel.worker;
+            Thread workerThread = worker.thread;
+            if (workerThread == null || Thread.currentThread() != workerThread) {
+                if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
+                    worker.writeTaskQueue.offer(channel.writeTask);
                 }
+                Selector workerSelector = worker.selector;
+                if (workerSelector != null) {
+                    if (worker.wakenUp.compareAndSet(false, true)) {
+                        workerSelector.wakeup();
+                    }
+                }
+                return;
             }
         }
 
@@ -406,23 +404,15 @@ class NioWorker implements Runnable {
 
         if (open) {
             if (addOpWrite) {
-                setOpWrite(channel, true, mightNeedWakeup);
+                setOpWrite(channel, mightNeedWakeup);
             } else if (removeOpWrite) {
-                setOpWrite(channel, false, mightNeedWakeup);
+                clearOpWrite(channel, mightNeedWakeup);
             }
         }
     }
 
-    private static void setOpWrite(
-            NioSocketChannel channel, boolean opWrite, boolean mightNeedWakeup) {
-        NioWorker worker = channel.getWorker();
-        if (worker == null) {
-            IllegalStateException cause =
-                new IllegalStateException("Channel not connected yet (null worker)");
-            fireExceptionCaught(channel, cause);
-            return;
-        }
-
+    private static void setOpWrite(NioSocketChannel channel, boolean mightNeedWakeup) {
+        NioWorker worker = channel.worker;
         Selector selector = worker.selector;
         SelectionKey key = channel.socket.keyFor(selector);
         if (key == null) {
@@ -438,103 +428,124 @@ class NioWorker implements Runnable {
         // interestOps can change at any time and at any thread.
         // Acquire a lock to avoid possible race condition.
         synchronized (channel.interestOpsLock) {
-            if (opWrite) {
-                if (!mightNeedWakeup) {
+            if (!mightNeedWakeup) {
+                interestOps = channel.getRawInterestOps();
+                if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                    interestOps |= SelectionKey.OP_WRITE;
+                    key.interestOps(interestOps);
+                    changed = true;
+                }
+            } else {
+                switch (CONSTRAINT_LEVEL) {
+                case 0:
                     interestOps = channel.getRawInterestOps();
                     if ((interestOps & SelectionKey.OP_WRITE) == 0) {
                         interestOps |= SelectionKey.OP_WRITE;
                         key.interestOps(interestOps);
+                        if (Thread.currentThread() != worker.thread &&
+                            worker.wakenUp.compareAndSet(false, true)) {
+                            selector.wakeup();
+                        }
                         changed = true;
                     }
-                } else {
-                    switch (CONSTRAINT_LEVEL) {
-                    case 0:
-                        interestOps = channel.getRawInterestOps();
-                        if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                    break;
+                case 1:
+                case 2:
+                    interestOps = channel.getRawInterestOps();
+                    if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                        if (Thread.currentThread() == worker.thread) {
                             interestOps |= SelectionKey.OP_WRITE;
                             key.interestOps(interestOps);
-                            if (Thread.currentThread() != worker.thread &&
-                                worker.wakenUp.compareAndSet(false, true)) {
-                                selector.wakeup();
-                            }
                             changed = true;
-                        }
-                        break;
-                    case 1:
-                    case 2:
-                        interestOps = channel.getRawInterestOps();
-                        if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                            if (Thread.currentThread() == worker.thread) {
+                        } else {
+                            worker.selectorGuard.readLock().lock();
+                            try {
+                                if (worker.wakenUp.compareAndSet(false, true)) {
+                                    selector.wakeup();
+                                }
                                 interestOps |= SelectionKey.OP_WRITE;
                                 key.interestOps(interestOps);
                                 changed = true;
-                            } else {
-                                worker.selectorGuard.readLock().lock();
-                                try {
-                                    if (worker.wakenUp.compareAndSet(false, true)) {
-                                        selector.wakeup();
-                                    }
-                                    interestOps |= SelectionKey.OP_WRITE;
-                                    key.interestOps(interestOps);
-                                    changed = true;
-                                } finally {
-                                    worker.selectorGuard.readLock().unlock();
-                                }
+                            } finally {
+                                worker.selectorGuard.readLock().unlock();
                             }
                         }
-                        break;
-                    default:
-                        throw new Error();
                     }
+                    break;
+                default:
+                    throw new Error();
+                }
+            }
+        }
+
+        if (changed) {
+            channel.setRawInterestOpsNow(interestOps);
+        }
+    }
+
+    private static void clearOpWrite(NioSocketChannel channel, boolean mightNeedWakeup) {
+        NioWorker worker = channel.worker;
+        Selector selector = worker.selector;
+        SelectionKey key = channel.socket.keyFor(selector);
+        if (key == null) {
+            return;
+        }
+        if (!key.isValid()) {
+            close(key);
+            return;
+        }
+        int interestOps;
+        boolean changed = false;
+
+        // interestOps can change at any time and at any thread.
+        // Acquire a lock to avoid possible race condition.
+        synchronized (channel.interestOpsLock) {
+            if (!mightNeedWakeup) {
+                interestOps = channel.getRawInterestOps();
+                if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+                    interestOps &= ~SelectionKey.OP_WRITE;
+                    key.interestOps(interestOps);
+                    changed = true;
                 }
             } else {
-                if (!mightNeedWakeup) {
+                switch (CONSTRAINT_LEVEL) {
+                case 0:
                     interestOps = channel.getRawInterestOps();
                     if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                         interestOps &= ~SelectionKey.OP_WRITE;
                         key.interestOps(interestOps);
+                        if (Thread.currentThread() != worker.thread &&
+                            worker.wakenUp.compareAndSet(false, true)) {
+                            selector.wakeup();
+                        }
                         changed = true;
                     }
-                } else {
-                    switch (CONSTRAINT_LEVEL) {
-                    case 0:
-                        interestOps = channel.getRawInterestOps();
-                        if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+                    break;
+                case 1:
+                case 2:
+                    interestOps = channel.getRawInterestOps();
+                    if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+                        if (Thread.currentThread() == worker.thread) {
                             interestOps &= ~SelectionKey.OP_WRITE;
                             key.interestOps(interestOps);
-                            if (Thread.currentThread() != worker.thread &&
-                                worker.wakenUp.compareAndSet(false, true)) {
-                                selector.wakeup();
-                            }
                             changed = true;
-                        }
-                        break;
-                    case 1:
-                    case 2:
-                        interestOps = channel.getRawInterestOps();
-                        if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                            if (Thread.currentThread() == worker.thread) {
+                        } else {
+                            worker.selectorGuard.readLock().lock();
+                            try {
+                                if (worker.wakenUp.compareAndSet(false, true)) {
+                                    selector.wakeup();
+                                }
                                 interestOps &= ~SelectionKey.OP_WRITE;
                                 key.interestOps(interestOps);
                                 changed = true;
-                            } else {
-                                worker.selectorGuard.readLock().lock();
-                                try {
-                                    if (worker.wakenUp.compareAndSet(false, true)) {
-                                        selector.wakeup();
-                                    }
-                                    interestOps &= ~SelectionKey.OP_WRITE;
-                                    key.interestOps(interestOps);
-                                    changed = true;
-                                } finally {
-                                    worker.selectorGuard.readLock().unlock();
-                                }
+                            } finally {
+                                worker.selectorGuard.readLock().unlock();
                             }
                         }
-                        break;
-                    default:
-                        throw new Error();
                     }
+                    break;
+                default:
+                    throw new Error();
                 }
             }
         }
@@ -545,13 +556,11 @@ class NioWorker implements Runnable {
     }
 
     static void close(NioSocketChannel channel, ChannelFuture future) {
-        NioWorker worker = channel.getWorker();
-        if (worker != null) {
-            Selector selector = worker.selector;
-            SelectionKey key = channel.socket.keyFor(selector);
-            if (key != null) {
-                key.cancel();
-            }
+        NioWorker worker = channel.worker;
+        Selector selector = worker.selector;
+        SelectionKey key = channel.socket.keyFor(selector);
+        if (key != null) {
+            key.cancel();
         }
 
         boolean connected = channel.isConnected();
@@ -612,20 +621,11 @@ class NioWorker implements Runnable {
 
     static void setInterestOps(
             NioSocketChannel channel, ChannelFuture future, int interestOps) {
-        NioWorker worker = channel.getWorker();
-        if (worker == null) {
-            IllegalStateException cause =
-                new IllegalStateException("Channel not connected yet (null worker)");
-            future.setFailure(cause);
-            fireExceptionCaught(channel, cause);
-            return;
-        }
-
+        NioWorker worker = channel.worker;
         Selector selector = worker.selector;
         SelectionKey key = channel.socket.keyFor(selector);
         if (key == null || selector == null) {
-            IllegalStateException cause =
-                new IllegalStateException("Channel not connected yet (SelectionKey not found)");
+            Exception cause = new NotYetConnectedException();
             future.setFailure(cause);
             fireExceptionCaught(channel, cause);
         }

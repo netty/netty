@@ -48,10 +48,11 @@ import org.jboss.netty.util.LinkedTransferQueue;
  * @version $Rev$, $Date$
  *
  */
-abstract class NioSocketChannel extends AbstractChannel
+class NioSocketChannel extends AbstractChannel
                                 implements org.jboss.netty.channel.socket.SocketChannel {
 
     final SocketChannel socket;
+    final NioWorker worker;
     private final NioSocketChannelConfig config;
 
     final Object interestOpsLock = new Object();
@@ -70,15 +71,13 @@ abstract class NioSocketChannel extends AbstractChannel
     public NioSocketChannel(
             Channel parent, ChannelFactory factory,
             ChannelPipeline pipeline, ChannelSink sink,
-            SocketChannel socket) {
+            SocketChannel socket, NioWorker worker) {
         super(parent, factory, pipeline, sink);
 
         this.socket = socket;
+        this.worker = worker;
         config = new DefaultNioSocketChannelConfig(socket.socket());
     }
-
-    abstract NioWorker getWorker();
-    abstract void setWorker(NioWorker worker);
 
     public NioSocketChannelConfig getConfig() {
         return config;
