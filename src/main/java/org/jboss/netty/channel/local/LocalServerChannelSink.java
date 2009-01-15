@@ -31,19 +31,23 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.AbstractChannelSink;
 import static org.jboss.netty.channel.Channels.fireChannelBound;
+import static org.jboss.netty.channel.Channels.fireMessageReceived;
+import static org.jboss.netty.channel.Channels.fireChannelDisconnected;
+import static org.jboss.netty.channel.Channels.fireChannelClosed;
 
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public class LocalServerChannelSink extends AbstractChannelSink
 {
-   private ExecutorService executor;
+   private Executor executor;
 
-   public LocalServerChannelSink(ExecutorService executorService)
+   public LocalServerChannelSink(Executor executor)
    {
-      this.executor = executorService;
+      this.executor = executor;
    }
 
    public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception
@@ -61,7 +65,7 @@ public class LocalServerChannelSink extends AbstractChannelSink
             case OPEN:
                if (Boolean.FALSE.equals(value))
                {
-
+                  
                }
                break;
             case BOUND:
@@ -69,17 +73,21 @@ public class LocalServerChannelSink extends AbstractChannelSink
                {
                   bind(future, serverChannel);
                }
-               else
-               {
-               }
                break;
          }
       }
       else if(e instanceof MessageEvent)
       {
-         MessageEvent event = (MessageEvent) e;
-         LocalChannel channel = (LocalChannel) event.getChannel();
-         channel.writeBuffer.put(event);
+         final MessageEvent event = (MessageEvent) e;
+         final LocalChannel channel = (LocalChannel) event.getChannel();
+         executor.execute(new Runnable()
+         {
+            public void run()
+            {
+               fireMessageReceived(channel.pairedChannel, event.getMessage());
+            }
+         });
+         event.getFuture().setSuccess();
       }
 
    }

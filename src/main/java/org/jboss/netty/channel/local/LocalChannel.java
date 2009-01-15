@@ -41,6 +41,8 @@ public  class LocalChannel extends AbstractChannel
 {
    final BlockingQueue<MessageEvent> writeBuffer = new LinkedBlockingQueue<MessageEvent>();
 
+   LocalChannel pairedChannel = null;
+
    private ChannelConfig config;
 
    protected LocalChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink)
