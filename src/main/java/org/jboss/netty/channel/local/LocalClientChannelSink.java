@@ -77,6 +77,9 @@ public class LocalClientChannelSink extends AbstractChannelSink
                   fireChannelDisconnected(channel);
                   fireChannelUnbound(channel);
                   fireChannelClosed(channel);
+                  fireChannelDisconnected(serverChannel);
+                  fireChannelUnbound(serverChannel);
+                  fireChannelClosed(serverChannel);
                }
                break;
             case BOUND:
