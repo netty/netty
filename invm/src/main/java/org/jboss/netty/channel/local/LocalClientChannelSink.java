@@ -75,11 +75,9 @@ public class LocalClientChannelSink extends AbstractChannelSink
                {
                   future.setSuccess();
                   fireChannelDisconnected(channel);
-                  fireChannelUnbound(channel);
                   fireChannelClosed(channel);
-                  fireChannelDisconnected(serverChannel);
-                  fireChannelUnbound(serverChannel);
-                  fireChannelClosed(serverChannel);
+                  fireChannelDisconnected(channel.pairedChannel);
+                  fireChannelClosed(channel.pairedChannel);
                }
                break;
             case BOUND:
@@ -93,9 +91,16 @@ public class LocalClientChannelSink extends AbstractChannelSink
       }
       else if (e instanceof MessageEvent)
       {
-         MessageEvent event = (MessageEvent) e;
-         LocalChannel channel = (LocalChannel) event.getChannel();
-         channel.writeBuffer.put(event);
+         final MessageEvent event = (MessageEvent) e;
+         final LocalChannel channel = (LocalChannel) event.getChannel();
+         excecutor.execute(new Runnable()
+         {
+            public void run()
+            {
+               fireMessageReceived(channel.pairedChannel, event.getMessage());
+            }
+         });
+         event.getFuture().setSuccess();
       }
    }
 
@@ -104,8 +109,8 @@ public class LocalClientChannelSink extends AbstractChannelSink
       future.setSuccess();
       ChannelPipeline pipeline = serverChannel.getConfig().getPipelineFactory().getPipeline();
       LocalChannel acceptedChannel = new LocalChannel(serverChannel.getFactory(), pipeline, serverSink);
+      channel.pairedChannel = acceptedChannel;
+      acceptedChannel.pairedChannel = channel;
       Channels.fireChannelConnected(channel, localAddress);
-      excecutor.execute(new LocalChannelWorker(channel, acceptedChannel));
-      excecutor.execute(new LocalChannelWorker(acceptedChannel, channel));
    }
 }

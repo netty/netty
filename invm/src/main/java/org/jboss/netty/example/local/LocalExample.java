@@ -86,6 +86,7 @@ public class LocalExample
       channelFuture.getChannel().getCloseFuture().awaitUninterruptibly();
 
       // Shut down thread pools to exit.
+      channelFactory.releaseExternalResources();
       factory.releaseExternalResources();
    }
 
