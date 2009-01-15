@@ -19,19 +19,34 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.invm;
+package org.jboss.netty.channel.local;
 
-import java.net.SocketAddress;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelPipeline;
+
+import java.util.concurrent.Executor;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class InvmSocketAddress extends SocketAddress
+public class LocalClientChannelFactory implements ChannelFactory
 {
-   final String id;
+   private LocalServerChannelFactory serverFactory;
+   private final Executor executor;
 
-   public InvmSocketAddress(String id)
+   public LocalClientChannelFactory(LocalServerChannelFactory serverFactory, Executor executor)
    {
-      this.id = id;
+      this.serverFactory = serverFactory;
+      this.executor = executor;
+   }
+
+   public Channel newChannel(ChannelPipeline pipeline)
+   {
+      return new LocalChannel(this, pipeline, new LocalClientChannelSink(executor, serverFactory.channel, serverFactory.sink));
+   }
+
+   public void releaseExternalResources()
+   {
    }
 }

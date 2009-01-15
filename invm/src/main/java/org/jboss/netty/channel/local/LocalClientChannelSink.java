@@ -19,7 +19,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.invm;
+package org.jboss.netty.channel.local;
 
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -31,15 +31,18 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.AbstractChannelSink;
 import static org.jboss.netty.channel.Channels.fireMessageReceived;
+import static org.jboss.netty.channel.Channels.fireChannelDisconnected;
+import static org.jboss.netty.channel.Channels.fireChannelUnbound;
+import static org.jboss.netty.channel.Channels.fireChannelClosed;
 
-import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class InvmClientChannelSink implements ChannelSink
+public class LocalClientChannelSink extends AbstractChannelSink
 {
    private final Executor excecutor;
 
@@ -47,7 +50,7 @@ public class InvmClientChannelSink implements ChannelSink
 
    private ChannelSink serverSink;
 
-   public InvmClientChannelSink(Executor executor, Channel channel, ChannelSink sink)
+   public LocalClientChannelSink(Executor executor, Channel channel, ChannelSink sink)
    {
       this.excecutor = executor;
       this.serverChannel = channel;
@@ -60,8 +63,8 @@ public class InvmClientChannelSink implements ChannelSink
       {
          ChannelStateEvent event = (ChannelStateEvent) e;
 
-         InvmClientChannel channel =
-               (InvmClientChannel) event.getChannel();
+         LocalChannel channel =
+               (LocalChannel) event.getChannel();
          ChannelFuture future = event.getFuture();
          ChannelState state = event.getState();
          Object value = event.getValue();
@@ -70,18 +73,16 @@ public class InvmClientChannelSink implements ChannelSink
             case OPEN:
                if (Boolean.FALSE.equals(value))
                {
+                  future.setSuccess();
+                  fireChannelDisconnected(channel);
+                  fireChannelUnbound(channel);
+                  fireChannelClosed(channel);
                }
                break;
             case BOUND:
-               if (value != null)
-               {
-               }
-               else
-               {
-               }
                break;
             case CONNECTED:
-               connect(channel, future, (InvmSocketAddress) value);
+               connect(channel, future, (LocalAddress) value);
                break;
             case INTEREST_OPS:
                break;
@@ -90,81 +91,18 @@ public class InvmClientChannelSink implements ChannelSink
       else if (e instanceof MessageEvent)
       {
          MessageEvent event = (MessageEvent) e;
-         InvmClientChannel channel = (InvmClientChannel) event.getChannel();
+         LocalChannel channel = (LocalChannel) event.getChannel();
          channel.writeBuffer.put(event);
       }
    }
 
-   private void connect(InvmClientChannel channel, ChannelFuture future, InvmSocketAddress invmSocketAddress) throws Exception
+   private void connect(LocalChannel channel, ChannelFuture future, LocalAddress localAddress) throws Exception
    {
       future.setSuccess();
       ChannelPipeline pipeline = serverChannel.getConfig().getPipelineFactory().getPipeline();
-      InvmAcceptedChannel acceptedChannel = new InvmAcceptedChannel(serverChannel.getFactory(), pipeline, serverSink);
-      Channels.fireChannelConnected(channel, invmSocketAddress);
-      excecutor.execute(new ClientWorker(channel, acceptedChannel));
-      excecutor.execute(new ServerWorker(channel, acceptedChannel));
-   }
-
-   public void exceptionCaught(ChannelPipeline pipeline, ChannelEvent e, ChannelPipelineException cause) throws Exception
-   {
-   }
-
-   class ClientWorker implements Runnable
-   {
-      final InvmClientChannel channel;
-
-      private InvmAcceptedChannel acceptedChannel;
-
-      public ClientWorker(InvmClientChannel channel, InvmAcceptedChannel acceptedChannel)
-      {
-         this.channel = channel;
-         this.acceptedChannel = acceptedChannel;
-      }
-
-      public void run()
-      {
-         do
-         {
-            try
-            {
-               MessageEvent event = channel.writeBuffer.take();
-               fireMessageReceived(acceptedChannel, event.getMessage());
-            }
-            catch (InterruptedException e)
-            {
-               //todo
-            }
-         }
-         while (true);
-      }
-   }
-
-   class ServerWorker implements Runnable
-   {
-      final Channel clientChannel;
-      final InvmAcceptedChannel acceptedChannel;
-
-      public ServerWorker(Channel clientChannel, InvmAcceptedChannel acceptedChannel)
-      {
-         this.clientChannel = clientChannel;
-         this.acceptedChannel = acceptedChannel;
-      }
-
-      public void run()
-      {
-         do
-         {
-            try
-            {
-               MessageEvent event = acceptedChannel.writeBuffer.take();
-               fireMessageReceived(clientChannel, event.getMessage());
-            }
-            catch (InterruptedException e)
-            {
-               //todo
-            }
-         }
-         while (true);
-      }
+      LocalChannel acceptedChannel = new LocalChannel(serverChannel.getFactory(), pipeline, serverSink);
+      Channels.fireChannelConnected(channel, localAddress);
+      excecutor.execute(new LocalChannelWorker(channel, acceptedChannel));
+      excecutor.execute(new LocalChannelWorker(acceptedChannel, channel));
    }
 }
