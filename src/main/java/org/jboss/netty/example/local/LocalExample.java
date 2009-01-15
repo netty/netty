@@ -44,30 +44,28 @@ import java.io.InputStreamReader;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class LocalExample
-{
-   public static void main(String[] args) throws Exception
-   {
-      LocalServerChannelFactory factory = new LocalServerChannelFactory(Executors.newCachedThreadPool());
-      ServerBootstrap bootstrap = new ServerBootstrap(factory);
-      EchoHandler handler = new EchoHandler();
-      LocalAddress socketAddress = new LocalAddress("1");
-      bootstrap.getPipeline().addLast("handler", handler);
-      bootstrap.bind(socketAddress);
+public class LocalExample {
+    public static void main(String[] args) throws Exception {
+        LocalServerChannelFactory factory = new LocalServerChannelFactory(Executors.newCachedThreadPool());
+        ServerBootstrap bootstrap = new ServerBootstrap(factory);
+        EchoHandler handler = new EchoHandler();
+        LocalAddress socketAddress = new LocalAddress("1");
+        bootstrap.getPipeline().addLast("handler", handler);
+        bootstrap.bind(socketAddress);
 
-      ChannelFactory channelFactory = new LocalClientChannelFactory(factory, Executors.newCachedThreadPool());
-      ClientBootstrap clientBootstrap = new ClientBootstrap(channelFactory);
+        ChannelFactory channelFactory = new LocalClientChannelFactory(factory, Executors.newCachedThreadPool());
+        ClientBootstrap clientBootstrap = new ClientBootstrap(channelFactory);
 
-      clientBootstrap.getPipeline().addLast("decoder", new StringDecoder());
-      clientBootstrap.getPipeline().addLast("encoder", new StringEncoder());
-      clientBootstrap.getPipeline().addLast("handler", new PrintHandler());
-      ChannelFuture channelFuture = clientBootstrap.connect(socketAddress);
-      channelFuture.awaitUninterruptibly();
-      System.out.println("Enter text (quit to end)");
-       // Read commands from the stdin.
+        clientBootstrap.getPipeline().addLast("decoder", new StringDecoder());
+        clientBootstrap.getPipeline().addLast("encoder", new StringEncoder());
+        clientBootstrap.getPipeline().addLast("handler", new PrintHandler());
+        ChannelFuture channelFuture = clientBootstrap.connect(socketAddress);
+        channelFuture.awaitUninterruptibly();
+        System.out.println("Enter text (quit to end)");
+        // Read commands from the stdin.
         ChannelFuture lastWriteFuture = null;
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-        for (;;) {
+        for (; ;) {
             String line = in.readLine();
             if (line == null || "quit".equalsIgnoreCase(line)) {
                 break;
@@ -81,23 +79,21 @@ public class LocalExample
         if (lastWriteFuture != null) {
             lastWriteFuture.awaitUninterruptibly();
         }
-      channelFuture.getChannel().close();
-      // Wait until the connection is closed or the connection attempt fails.
-      channelFuture.getChannel().getCloseFuture().awaitUninterruptibly();
+        channelFuture.getChannel().close();
+        // Wait until the connection is closed or the connection attempt fails.
+        channelFuture.getChannel().getCloseFuture().awaitUninterruptibly();
 
-      // Shut down thread pools to exit.
-      channelFactory.releaseExternalResources();
-      factory.releaseExternalResources();
-   }
+        // Shut down thread pools to exit.
+        channelFactory.releaseExternalResources();
+        factory.releaseExternalResources();
+    }
 
-   @ChannelPipelineCoverage("all")
-   static class PrintHandler extends OneToOneDecoder
-   {
-      protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception
-      {
-         String message = (String) msg;
-         System.out.println("received message back '" + message + "'");
-         return null;
-      }
-   }
+    @ChannelPipelineCoverage("all")
+    static class PrintHandler extends OneToOneDecoder {
+        protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
+            String message = (String) msg;
+            System.out.println("received message back '" + message + "'");
+            return null;
+        }
+    }
 }

@@ -21,8 +21,8 @@
  */
 package org.jboss.netty.channel.local;
 
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.util.ExecutorShutdownUtil;
@@ -32,24 +32,21 @@ import java.util.concurrent.Executor;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class LocalClientChannelFactory implements ChannelFactory
-{
-   private final ChannelSink sink;
-   private final Executor executor;
+public class LocalClientChannelFactory implements ChannelFactory {
+    private final ChannelSink sink;
 
-   public LocalClientChannelFactory(LocalServerChannelFactory serverFactory, Executor executor)
-   {
-      this.executor = executor;
-      sink = new LocalClientChannelSink(executor, serverFactory.channel, serverFactory.sink);
-   }
+    private final Executor executor;
 
-   public Channel newChannel(ChannelPipeline pipeline)
-   {
-      return new LocalChannel(this, pipeline, sink);
-   }
+    public LocalClientChannelFactory(LocalServerChannelFactory serverFactory, Executor executor) {
+        this.executor = executor;
+        sink = new LocalClientChannelSink(executor, serverFactory.channel, serverFactory.sink);
+    }
 
-   public void releaseExternalResources()
-   {
-      ExecutorShutdownUtil.shutdown(executor);
-   }
+    public Channel newChannel(ChannelPipeline pipeline) {
+        return new LocalChannel(this, pipeline, sink);
+    }
+
+    public void releaseExternalResources() {
+        ExecutorShutdownUtil.shutdown(executor);
+    }
 }

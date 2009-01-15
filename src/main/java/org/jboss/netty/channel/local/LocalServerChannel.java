@@ -21,12 +21,11 @@
  */
 package org.jboss.netty.channel.local;
 
-import org.jboss.netty.channel.AbstractChannel;
+import org.jboss.netty.channel.AbstractServerChannel;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.AbstractServerChannel;
 import static org.jboss.netty.channel.Channels.fireChannelOpen;
 
 import java.net.SocketAddress;
@@ -34,38 +33,32 @@ import java.net.SocketAddress;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class LocalServerChannel extends AbstractServerChannel
-{
-   final ChannelConfig channelConfig;
-   protected LocalServerChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink)
-   {
-      super(factory, pipeline, sink);
-      channelConfig = new LocalChannelConfig();
-      fireChannelOpen(this);
-   }
+public class LocalServerChannel extends AbstractServerChannel {
+    final ChannelConfig channelConfig;
 
-   public ChannelConfig getConfig()
-   {
-      return channelConfig;
-   }
+    protected LocalServerChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink) {
+        super(factory, pipeline, sink);
+        channelConfig = new LocalChannelConfig();
+        fireChannelOpen(this);
+    }
 
-   public boolean isBound()
-   {
-      return true;
-   }
+    public ChannelConfig getConfig() {
+        return channelConfig;
+    }
 
-   public boolean isConnected()
-   {
-      return true;
-   }
+    public boolean isBound() {
+        return true;
+    }
 
-   public SocketAddress getLocalAddress()
-   {
-      return null;
-   }
+    public boolean isConnected() {
+        return true;
+    }
 
-   public SocketAddress getRemoteAddress()
-   {
-      return null;
-   }
+    public SocketAddress getLocalAddress() {
+        return null;
+    }
+
+    public SocketAddress getRemoteAddress() {
+        return null;
+    }
 }
