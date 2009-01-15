@@ -19,7 +19,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.invm;
+package org.jboss.netty.channel.local;
 
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -29,6 +29,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.AbstractChannelSink;
 import static org.jboss.netty.channel.Channels.fireChannelBound;
 
 import java.util.concurrent.ExecutorService;
@@ -36,11 +37,11 @@ import java.util.concurrent.ExecutorService;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class InvmServerChannelSink implements ChannelSink
+public class LocalServerChannelSink extends AbstractChannelSink
 {
    private ExecutorService executor;
 
-   public InvmServerChannelSink(ExecutorService executorService)
+   public LocalServerChannelSink(ExecutorService executorService)
    {
       this.executor = executorService;
    }
@@ -50,8 +51,8 @@ public class InvmServerChannelSink implements ChannelSink
       if (e instanceof ChannelStateEvent)
       {
          ChannelStateEvent event = (ChannelStateEvent) e;
-         InvmServerChannel serverChannel =
-               (InvmServerChannel) event.getChannel();
+         LocalServerChannel serverChannel =
+               (LocalServerChannel) event.getChannel();
          ChannelFuture future = event.getFuture();
          ChannelState state = event.getState();
          Object value = event.getValue();
@@ -77,19 +78,16 @@ public class InvmServerChannelSink implements ChannelSink
       else if(e instanceof MessageEvent)
       {
          MessageEvent event = (MessageEvent) e;
-         InvmAcceptedChannel channel = (InvmAcceptedChannel) event.getChannel();
+         LocalChannel channel = (LocalChannel) event.getChannel();
          channel.writeBuffer.put(event);
       }
 
    }
 
-   private void bind(ChannelFuture future, InvmServerChannel serverChannel)
+   private void bind(ChannelFuture future, LocalServerChannel serverChannel)
    {
       future.setSuccess();
       fireChannelBound(serverChannel, serverChannel.getLocalAddress());
    }
 
-   public void exceptionCaught(ChannelPipeline pipeline, ChannelEvent e, ChannelPipelineException cause) throws Exception
-   {
-   }
 }

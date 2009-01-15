@@ -19,60 +19,53 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.invm;
+package org.jboss.netty.channel.local;
 
+import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.AbstractServerChannel;
+import static org.jboss.netty.channel.Channels.fireChannelOpen;
 
-import java.util.Map;
+import java.net.SocketAddress;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class InvmChannelConfig implements ChannelConfig
+public class LocalServerChannel extends AbstractServerChannel
 {
-   ChannelPipelineFactory pipelineFactory;
-   ChannelBufferFactory bufferFactory;
-   public void setOptions(Map<String, Object> options)
+   final ChannelConfig channelConfig;
+   protected LocalServerChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink)
    {
+      super(factory, pipeline, sink);
+      channelConfig = new LocalChannelConfig();
+      fireChannelOpen(this);
    }
 
-   public ChannelBufferFactory getBufferFactory()
+   public ChannelConfig getConfig()
    {
-      return bufferFactory;
+      return channelConfig;
    }
 
-   public void setBufferFactory(ChannelBufferFactory bufferFactory)
+   public boolean isBound()
    {
-      this.bufferFactory = bufferFactory;
+      return true;
    }
 
-   public ChannelPipelineFactory getPipelineFactory()
+   public boolean isConnected()
    {
-      return pipelineFactory;
+      return true;
    }
 
-   public void setPipelineFactory(ChannelPipelineFactory pipelineFactory)
+   public SocketAddress getLocalAddress()
    {
-      this.pipelineFactory = pipelineFactory;
+      return null;
    }
 
-   public int getConnectTimeoutMillis()
+   public SocketAddress getRemoteAddress()
    {
-      return 0;
-   }
-
-   public void setConnectTimeoutMillis(int connectTimeoutMillis)
-   {
-   }
-
-   public int getWriteTimeoutMillis()
-   {
-      return 0;
-   }
-
-   public void setWriteTimeoutMillis(int writeTimeoutMillis)
-   {
+      return null;
    }
 }

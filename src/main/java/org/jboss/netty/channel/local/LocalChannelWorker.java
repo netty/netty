@@ -19,36 +19,40 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.invm;
+package org.jboss.netty.channel.local;
 
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.bootstrap.ServerBootstrap;
-
-import java.util.concurrent.Executor;
+import org.jboss.netty.channel.MessageEvent;
+import static org.jboss.netty.channel.Channels.fireMessageReceived;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class InvmClientChannelFactory implements ChannelFactory
+public class LocalChannelWorker implements Runnable
 {
-   private InvmServerChannelFactory serverFactory;
-   private final Executor executor;
+   private final LocalChannel source;
+   private final LocalChannel destination;
 
-   public InvmClientChannelFactory(InvmServerChannelFactory serverFactory, Executor executor)
+   public LocalChannelWorker(LocalChannel source, LocalChannel destination)
    {
-      this.serverFactory = serverFactory;
-      this.executor = executor;
+      this.source = source;
+      this.destination = destination;
    }
 
-   public Channel newChannel(ChannelPipeline pipeline)
-   {
-      //InvmServerChannel serverChannel = serverFactory.channels.get()
-      return new InvmClientChannel(this, pipeline, new InvmClientChannelSink(executor, serverFactory.channel, serverFactory.sink));
-   }
-
-   public void releaseExternalResources()
-   {
-   }
+   public void run()
+      {
+         do
+         {
+            try
+            {
+               MessageEvent event = source.writeBuffer.take();
+               event.getFuture().setSuccess();
+               fireMessageReceived(destination, event.getMessage());
+            }
+            catch (InterruptedException e)
+            {
+               //todo
+            }
+         }
+         while (true);
+      }
 }

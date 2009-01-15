@@ -19,53 +19,19 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.invm;
-
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.AbstractChannel;
-import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import static org.jboss.netty.channel.Channels.fireChannelOpen;
+package org.jboss.netty.channel.local;
 
 import java.net.SocketAddress;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class InvmServerChannel extends AbstractChannel
+public class LocalAddress extends SocketAddress
 {
-   final ChannelConfig channelConfig;
-   protected InvmServerChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink)
-   {
-      super(null, factory, pipeline, sink);
-      channelConfig = new InvmChannelConfig();
-      fireChannelOpen(this);
-   }
+   final String id;
 
-   public ChannelConfig getConfig()
+   public LocalAddress(String id)
    {
-      return channelConfig;
-   }
-
-   public boolean isBound()
-   {
-      return false;
-   }
-
-   public boolean isConnected()
-   {
-      return false;
-   }
-
-   public SocketAddress getLocalAddress()
-   {
-      return null;
-   }
-
-   public SocketAddress getRemoteAddress()
-   {
-      return null;
+      this.id = id;
    }
 }

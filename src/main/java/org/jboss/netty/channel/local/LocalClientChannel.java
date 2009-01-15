@@ -19,42 +19,59 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.invm;
+package org.jboss.netty.channel.local;
 
+import org.jboss.netty.channel.AbstractChannel;
+import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.MessageEvent;
+import static org.jboss.netty.channel.Channels.fireChannelOpen;
 
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.concurrent.ExecutorService;
+import java.net.SocketAddress;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class InvmServerChannelFactory implements ChannelFactory
+public class LocalClientChannel extends AbstractChannel
 {
-   ChannelSink sink;
+   final BlockingQueue<MessageEvent> writeBuffer = new LinkedBlockingQueue<MessageEvent>();
 
-   Channel channel;
+   private ChannelConfig config;
 
-   public InvmServerChannelFactory(ExecutorService executorService)
+   protected LocalClientChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink)
    {
-      sink = new InvmServerChannelSink(executorService);
+      super(null, factory, pipeline, sink);
+      config = new LocalChannelConfig();
+      fireChannelOpen(this);
    }
 
-   public Channel newChannel(ChannelPipeline pipeline)
+   public ChannelConfig getConfig()
    {
-      if(channel == null)
-      {
-         channel = new InvmServerChannel(this, pipeline, sink);
-      }
-      return channel;
+      return config;
    }
 
-   public void releaseExternalResources()
+   public boolean isBound()
    {
+      return true;
+   }
+
+   public boolean isConnected()
+   {
+      return true;
+   }
+
+   public SocketAddress getLocalAddress()
+   {
+      return null;
+   }
+
+   public SocketAddress getRemoteAddress()
+   {
+      return null;
    }
 }

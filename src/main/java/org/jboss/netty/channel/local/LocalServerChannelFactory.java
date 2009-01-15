@@ -19,53 +19,39 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.invm;
+package org.jboss.netty.channel.local;
 
-import org.jboss.netty.channel.AbstractChannel;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.MessageEvent;
 
-import java.net.SocketAddress;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutorService;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class InvmAcceptedChannel extends AbstractChannel
+public class LocalServerChannelFactory implements ChannelFactory
 {
-   final BlockingQueue<MessageEvent> writeBuffer = new ArrayBlockingQueue<MessageEvent>(100);
-   protected InvmAcceptedChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink)
+   ChannelSink sink;
+
+   Channel channel;
+
+   public LocalServerChannelFactory(ExecutorService executorService)
    {
-      super(null, factory, pipeline, sink);
+      sink = new LocalServerChannelSink(executorService);
    }
 
-   public ChannelConfig getConfig()
+   public Channel newChannel(ChannelPipeline pipeline)
    {
-      return null;
+      if(channel == null)
+      {
+         channel = new LocalServerChannel(this, pipeline, sink);
+      }
+      return channel;
    }
 
-   public boolean isBound()
+   public void releaseExternalResources()
    {
-      return false;
-   }
-
-   public boolean isConnected()
-   {
-      return false;
-   }
-
-   public SocketAddress getLocalAddress()
-   {
-      return null;
-   }
-
-   public SocketAddress getRemoteAddress()
-   {
-      return null;
    }
 }

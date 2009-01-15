@@ -19,60 +19,60 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.invm;
+package org.jboss.netty.channel.local;
 
-import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.MessageEvent;
-import static org.jboss.netty.channel.Channels.fireChannelOpen;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.buffer.ChannelBufferFactory;
 
-import java.net.SocketAddress;
-import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.util.Map;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class InvmClientChannel extends AbstractChannel
+public class LocalChannelConfig implements ChannelConfig
 {
-   final BlockingQueue<MessageEvent> writeBuffer = new ArrayBlockingQueue<MessageEvent>(100);
-
-   private ChannelConfig config;
-
-   protected InvmClientChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink)
+   ChannelPipelineFactory pipelineFactory;
+   ChannelBufferFactory bufferFactory;
+   public void setOptions(Map<String, Object> options)
    {
-      super(null, factory, pipeline, sink);
-      config = new InvmChannelConfig();
-      fireChannelOpen(this);
    }
 
-   public ChannelConfig getConfig()
+   public ChannelBufferFactory getBufferFactory()
    {
-      return config;
+      return bufferFactory;
    }
 
-   public boolean isBound()
+   public void setBufferFactory(ChannelBufferFactory bufferFactory)
    {
-      return true;
+      this.bufferFactory = bufferFactory;
    }
 
-   public boolean isConnected()
+   public ChannelPipelineFactory getPipelineFactory()
    {
-      return true;
+      return pipelineFactory;
    }
 
-   public SocketAddress getLocalAddress()
+   public void setPipelineFactory(ChannelPipelineFactory pipelineFactory)
    {
-      return null;
+      this.pipelineFactory = pipelineFactory;
    }
 
-   public SocketAddress getRemoteAddress()
+   public int getConnectTimeoutMillis()
    {
-      return null;
+      return 0;
+   }
+
+   public void setConnectTimeoutMillis(int connectTimeoutMillis)
+   {
+   }
+
+   public int getWriteTimeoutMillis()
+   {
+      return 0;
+   }
+
+   public void setWriteTimeoutMillis(int writeTimeoutMillis)
+   {
    }
 }
