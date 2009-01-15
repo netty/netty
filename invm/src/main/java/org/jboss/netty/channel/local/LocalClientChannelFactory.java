@@ -24,6 +24,7 @@ package org.jboss.netty.channel.local;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelSink;
 
 import java.util.concurrent.Executor;
 
@@ -32,18 +33,16 @@ import java.util.concurrent.Executor;
  */
 public class LocalClientChannelFactory implements ChannelFactory
 {
-   private LocalServerChannelFactory serverFactory;
-   private final Executor executor;
+   private final ChannelSink sink;
 
    public LocalClientChannelFactory(LocalServerChannelFactory serverFactory, Executor executor)
    {
-      this.serverFactory = serverFactory;
-      this.executor = executor;
+      sink = new LocalClientChannelSink(executor, serverFactory.channel, serverFactory.sink);
    }
 
    public Channel newChannel(ChannelPipeline pipeline)
    {
-      return new LocalChannel(this, pipeline, new LocalClientChannelSink(executor, serverFactory.channel, serverFactory.sink));
+      return new LocalChannel(this, pipeline, sink);
    }
 
    public void releaseExternalResources()
