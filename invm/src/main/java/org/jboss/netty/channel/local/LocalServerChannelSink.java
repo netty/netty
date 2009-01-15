@@ -55,28 +55,16 @@ public class LocalServerChannelSink extends AbstractChannelSink
       if (e instanceof ChannelStateEvent)
       {
          ChannelStateEvent event = (ChannelStateEvent) e;
-         LocalServerChannel serverChannel =
-               (LocalServerChannel) event.getChannel();
-         ChannelFuture future = event.getFuture();
-         ChannelState state = event.getState();
-         Object value = event.getValue();
-         switch (state)
+         if (e.getChannel() instanceof LocalServerChannel)
          {
-            case OPEN:
-               if (Boolean.FALSE.equals(value))
-               {
-                  
-               }
-               break;
-            case BOUND:
-               if (value != null)
-               {
-                  bind(future, serverChannel);
-               }
-               break;
+            handleServerChannel(event);
+         }
+         else if (e.getChannel() instanceof LocalChannel)
+         {
+            handleLocalChannel(event);
          }
       }
-      else if(e instanceof MessageEvent)
+      else if (e instanceof MessageEvent)
       {
          final MessageEvent event = (MessageEvent) e;
          final LocalChannel channel = (LocalChannel) event.getChannel();
@@ -90,6 +78,50 @@ public class LocalServerChannelSink extends AbstractChannelSink
          event.getFuture().setSuccess();
       }
 
+   }
+
+   private void handleLocalChannel(ChannelStateEvent event)
+   {
+      LocalChannel localChannel =
+            (LocalChannel) event.getChannel();
+      ChannelFuture future = event.getFuture();
+      ChannelState state = event.getState();
+      Object value = event.getValue();
+      switch (state)
+      {
+         case OPEN:
+            if (Boolean.FALSE.equals(value))
+            {
+               future.setSuccess();
+               fireChannelDisconnected(localChannel);
+               fireChannelClosed(localChannel);
+               fireChannelDisconnected(localChannel.pairedChannel);
+               fireChannelClosed(localChannel.pairedChannel);
+            }
+            break;
+         case BOUND:
+            break;
+      }
+   }
+
+   private void handleServerChannel(ChannelStateEvent event)
+   {
+      LocalServerChannel serverChannel =
+            (LocalServerChannel) event.getChannel();
+      ChannelFuture future = event.getFuture();
+      ChannelState state = event.getState();
+      Object value = event.getValue();
+      switch (state)
+      {
+         case OPEN:
+            break;
+         case BOUND:
+            if (value != null)
+            {
+               bind(future, serverChannel);
+            }
+            break;
+      }
    }
 
    private void bind(ChannelFuture future, LocalServerChannel serverChannel)
