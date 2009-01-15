@@ -44,11 +44,10 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(DefaultNioSocketChannelConfig.class);
 
-    private static final ReceiveBufferSizePredictor UNUSED_PREDICTOR =
-        new DefaultReceiveBufferSizePredictor();
-
     private volatile int writeBufferHighWaterMark = 64 * 1024;
     private volatile int writeBufferLowWaterMark  = 32 * 1024;
+    private volatile ReceiveBufferSizePredictor predictor =
+        new DefaultReceiveBufferSizePredictor();
     private volatile int writeSpinCount = 16;
 
     DefaultNioSocketChannelConfig(Socket socket) {
@@ -116,15 +115,15 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
     }
 
     public ReceiveBufferSizePredictor getReceiveBufferSizePredictor() {
-        logger.warn(
-                "Detected an access to a deprecated configuration parameter: " +
-                "receiveBufferSizePredictor");
-        return UNUSED_PREDICTOR;
+        return predictor;
     }
 
     public void setReceiveBufferSizePredictor(
             ReceiveBufferSizePredictor predictor) {
-        getReceiveBufferSizePredictor();
+        if (predictor == null) {
+            throw new NullPointerException("predictor");
+        }
+        this.predictor = predictor;
     }
 
     public boolean isReadWriteFair() {

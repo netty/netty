@@ -41,6 +41,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
@@ -255,29 +256,25 @@ class NioWorker implements Runnable {
         }
     }
 
-    private ChannelBuffer preallocatedBuffer;
-
     private static void read(SelectionKey k) {
         ScatteringByteChannel ch = (ScatteringByteChannel) k.channel();
         NioSocketChannel channel = (NioSocketChannel) k.attachment();
 
-        ChannelBuffer preallocatedBuffer = channel.getWorker().preallocatedBuffer;
-        NioWorker worker = channel.getWorker();
-        worker.preallocatedBuffer = null;
+        ReceiveBufferSizePredictor predictor =
+            channel.getConfig().getReceiveBufferSizePredictor();
+        ChannelBufferFactory bufferFactory =
+            channel.getConfig().getBufferFactory();
 
-        if (preallocatedBuffer == null) {
-            // TODO Magic number
-            // FIXME: OOPS - the new buffer should not be shared by more than one connection
-            preallocatedBuffer = channel.getConfig().getBufferFactory().getBuffer(1048576);
-        }
+        ChannelBuffer buffer =
+            bufferFactory.getBuffer(predictor.nextReceiveBufferSize());
 
         int ret = 0;
         int readBytes = 0;
         boolean failure = true;
         try {
-            while ((ret = preallocatedBuffer.writeBytes(ch, preallocatedBuffer.writableBytes())) > 0) {
+            while ((ret = buffer.writeBytes(ch, buffer.writableBytes())) > 0) {
                 readBytes += ret;
-                if (!preallocatedBuffer.writable()) {
+                if (!buffer.writable()) {
                     break;
                 }
             }
@@ -289,17 +286,11 @@ class NioWorker implements Runnable {
         }
 
         if (readBytes > 0) {
+            // Update the predictor.
+            predictor.previousReceiveBufferSize(readBytes);
+
             // Fire the event.
-            ChannelBuffer slice = preallocatedBuffer.slice(
-                    preallocatedBuffer.readerIndex(),
-                    preallocatedBuffer.readableBytes());
-            preallocatedBuffer.readerIndex(preallocatedBuffer.writerIndex());
-            if (preallocatedBuffer.writable()) {
-                worker.preallocatedBuffer = preallocatedBuffer;
-            }
-            fireMessageReceived(channel, slice);
-        } else if (readBytes == 0) {
-            worker.preallocatedBuffer = preallocatedBuffer;
+            fireMessageReceived(channel, buffer);
         }
 
         if (ret < 0 || failure) {
