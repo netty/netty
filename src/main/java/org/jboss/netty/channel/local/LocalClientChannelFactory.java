@@ -35,11 +35,9 @@ import java.util.concurrent.Executor;
 public class LocalClientChannelFactory implements ChannelFactory {
     private final ChannelSink sink;
 
-    private final Executor executor;
 
-    public LocalClientChannelFactory(LocalServerChannelFactory serverFactory, Executor executor) {
-        this.executor = executor;
-        sink = new LocalClientChannelSink(executor, serverFactory.channel, serverFactory.sink);
+    public LocalClientChannelFactory(LocalServerChannelFactory serverFactory) {
+        sink = new LocalClientChannelSink(serverFactory.channel, serverFactory.sink);
     }
 
     public Channel newChannel(ChannelPipeline pipeline) {
@@ -47,6 +45,5 @@ public class LocalClientChannelFactory implements ChannelFactory {
     }
 
     public void releaseExternalResources() {
-        ExecutorShutdownUtil.shutdown(executor);
     }
 }

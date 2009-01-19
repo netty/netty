@@ -46,14 +46,14 @@ import java.io.InputStreamReader;
  */
 public class LocalExample {
     public static void main(String[] args) throws Exception {
-        LocalServerChannelFactory factory = new LocalServerChannelFactory(Executors.newCachedThreadPool());
+        LocalServerChannelFactory factory = new LocalServerChannelFactory();
         ServerBootstrap bootstrap = new ServerBootstrap(factory);
         EchoHandler handler = new EchoHandler();
         LocalAddress socketAddress = new LocalAddress("1");
         bootstrap.getPipeline().addLast("handler", handler);
         bootstrap.bind(socketAddress);
 
-        ChannelFactory channelFactory = new LocalClientChannelFactory(factory, Executors.newCachedThreadPool());
+        ChannelFactory channelFactory = new LocalClientChannelFactory(factory);
         ClientBootstrap clientBootstrap = new ClientBootstrap(channelFactory);
 
         clientBootstrap.getPipeline().addLast("decoder", new StringDecoder());

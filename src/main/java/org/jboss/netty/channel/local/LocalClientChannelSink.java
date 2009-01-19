@@ -41,14 +41,12 @@ import java.util.concurrent.Executor;
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public class LocalClientChannelSink extends AbstractChannelSink {
-    private final Executor excecutor;
 
     private final Channel serverChannel;
 
     private ChannelSink serverSink;
 
-    public LocalClientChannelSink(Executor executor, Channel channel, ChannelSink sink) {
-        this.excecutor = executor;
+    public LocalClientChannelSink(Channel channel, ChannelSink sink) {
         this.serverChannel = channel;
         this.serverSink = sink;
     }
@@ -82,14 +80,10 @@ public class LocalClientChannelSink extends AbstractChannelSink {
             }
         }
         else if (e instanceof MessageEvent) {
-            final MessageEvent event = (MessageEvent) e;
-            final LocalChannel channel = (LocalChannel) event.getChannel();
-            excecutor.execute(new Runnable() {
-                public void run() {
-                    fireMessageReceived(channel.pairedChannel, event.getMessage());
-                }
-            });
-            event.getFuture().setSuccess();
+            MessageEvent event = (MessageEvent) e;
+            LocalChannel channel = (LocalChannel) event.getChannel();
+            channel.pairedChannel.writeBuffer.offer(event);
+            channel.pairedChannel.writeNow(channel.pairedChannel);
         }
     }
 
