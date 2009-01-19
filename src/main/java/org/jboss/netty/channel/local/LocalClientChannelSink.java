@@ -94,5 +94,6 @@ public class LocalClientChannelSink extends AbstractChannelSink {
         channel.pairedChannel = acceptedChannel;
         acceptedChannel.pairedChannel = channel;
         Channels.fireChannelConnected(channel, localAddress);
+        Channels.fireChannelConnected(acceptedChannel, localAddress);
     }
 }
