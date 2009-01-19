@@ -37,11 +37,8 @@ public class LocalServerChannelFactory implements ChannelFactory {
 
     Channel channel;
 
-    private Executor executor;
-
-    public LocalServerChannelFactory(Executor executor) {
-        this.executor = executor;
-        sink = new LocalServerChannelSink(executor);
+    public LocalServerChannelFactory() {
+        sink = new LocalServerChannelSink();
     }
 
     public Channel newChannel(ChannelPipeline pipeline) {
@@ -52,6 +49,5 @@ public class LocalServerChannelFactory implements ChannelFactory {
     }
 
     public void releaseExternalResources() {
-        ExecutorShutdownUtil.shutdown(executor);
     }
 }

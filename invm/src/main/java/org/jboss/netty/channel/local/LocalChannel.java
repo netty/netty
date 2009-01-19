@@ -27,21 +27,33 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import static org.jboss.netty.channel.Channels.fireChannelOpen;
+import static org.jboss.netty.channel.Channels.fireMessageReceived;
+import static org.jboss.netty.channel.Channels.fireExceptionCaught;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.util.LinkedTransferQueue;
 
 import java.net.SocketAddress;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.Queue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public class LocalChannel extends AbstractChannel {
-    final BlockingQueue<MessageEvent> writeBuffer = new LinkedBlockingQueue<MessageEvent>();
-
+    //final BlockingQueue<MessageEvent> writeBuffer = new LinkedBlockingQueue<MessageEvent>();
+    private final ThreadLocal<Boolean> delivering = new ThreadLocal<Boolean>() {
+            @Override
+            protected Boolean initialValue() {
+                return false;
+            }
+        };
     LocalChannel pairedChannel = null;
 
     private ChannelConfig config;
+
+    final Queue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>();
+
+    final Object writeLock = new Object();
 
     protected LocalChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink) {
         super(null, factory, pipeline, sink);
@@ -67,5 +79,26 @@ public class LocalChannel extends AbstractChannel {
 
     public SocketAddress getRemoteAddress() {
         return null;
+    }
+
+    public void writeNow(LocalChannel pairedChannel) {
+        if (!delivering.get()) {
+            delivering.set(true);
+            do {
+                MessageEvent e = writeBuffer.poll();
+                if(e == null) {
+                    break;
+                }
+                try {
+                    fireMessageReceived(pairedChannel, e.getMessage());
+                    e.getFuture().setSuccess();
+                }
+                catch (Exception t) {
+                    fireExceptionCaught(pairedChannel, t);
+                }
+            }
+            while (true);
+            delivering.set(false);
+        }
     }
 }
