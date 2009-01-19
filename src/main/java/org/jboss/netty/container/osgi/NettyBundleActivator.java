@@ -37,7 +37,7 @@ import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.logging.OsgiLoggerFactory;
-import org.jboss.netty.util.ExecutorShutdownUtil;
+import org.jboss.netty.util.ExecutorUtil;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
@@ -78,7 +78,7 @@ public class NettyBundleActivator implements BundleActivator {
     public void stop(BundleContext ctx) throws Exception {
         unregisterAll();
         if (executor != null) {
-            ExecutorShutdownUtil.shutdown(executor);
+            ExecutorUtil.terminate(executor);
             executor = null;
         }
 

@@ -29,7 +29,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.util.ExecutorShutdownUtil;
+import org.jboss.netty.util.ExecutorUtil;
 import org.jboss.netty.util.ExternalResourceReleasable;
 
 /**
@@ -88,7 +88,7 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ExternalResourc
      * and wait for its termination.
      */
     public void releaseExternalResources() {
-        ExecutorShutdownUtil.shutdown(getExecutor());
+        ExecutorUtil.terminate(getExecutor());
     }
 
     public void handleUpstream(

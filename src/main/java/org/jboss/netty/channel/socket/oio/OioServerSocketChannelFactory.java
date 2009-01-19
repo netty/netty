@@ -32,7 +32,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
-import org.jboss.netty.util.ExecutorShutdownUtil;
+import org.jboss.netty.util.ExecutorUtil;
 
 /**
  * A {@link ServerSocketChannelFactory} which creates a server-side blocking
@@ -130,6 +130,6 @@ public class OioServerSocketChannelFactory implements ServerSocketChannelFactory
     }
 
     public void releaseExternalResources() {
-        ExecutorShutdownUtil.shutdown(bossExecutor, workerExecutor);
+        ExecutorUtil.terminate(bossExecutor, workerExecutor);
     }
 }

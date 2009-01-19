@@ -27,7 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Shuts down a list of {@link Executor}s.  {@link #shutdown(Executor...)} will
+ * Shuts down a list of {@link Executor}s.  {@link #terminate(Executor...)} will
  * shut down all specified {@link ExecutorService}s immediately and wait for
  * their termination.  An {@link Executor} which is not an {@link ExecutorService}
  * will be ignored silently.
@@ -36,12 +36,12 @@ import java.util.concurrent.TimeUnit;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class ExecutorShutdownUtil {
+public class ExecutorUtil {
 
     /**
      * Shuts down the specified executors.
      */
-    public static void shutdown(Executor... executors) {
+    public static void terminate(Executor... executors) {
         Executor[] executorsCopy = new Executor[executors.length];
         for (int i = 0; i < executors.length; i ++) {
             if (executors[i] == null) {
@@ -74,7 +74,7 @@ public class ExecutorShutdownUtil {
         }
     }
 
-    private ExecutorShutdownUtil() {
+    private ExecutorUtil() {
         super();
     }
 }

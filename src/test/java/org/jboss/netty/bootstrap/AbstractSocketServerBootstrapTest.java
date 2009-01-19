@@ -44,7 +44,7 @@ import org.jboss.netty.channel.ChildChannelStateEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.util.DummyHandler;
-import org.jboss.netty.util.ExecutorShutdownUtil;
+import org.jboss.netty.util.ExecutorUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -68,7 +68,7 @@ public abstract class AbstractSocketServerBootstrapTest {
 
     @AfterClass
     public static void destroy() {
-        ExecutorShutdownUtil.shutdown(executor);
+        ExecutorUtil.terminate(executor);
     }
 
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);

@@ -32,7 +32,7 @@ import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
-import org.jboss.netty.util.ExecutorShutdownUtil;
+import org.jboss.netty.util.ExecutorUtil;
 import org.jboss.netty.util.UnterminatableExecutor;
 
 import com.google.inject.AbstractModule;
@@ -48,7 +48,7 @@ public class NettyModule extends AbstractModule {
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
     public void destroy() {
-        ExecutorShutdownUtil.shutdown(executor);
+        ExecutorUtil.terminate(executor);
     }
 
     @Override

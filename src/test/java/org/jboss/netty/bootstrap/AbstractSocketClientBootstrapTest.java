@@ -38,7 +38,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.util.DummyHandler;
-import org.jboss.netty.util.ExecutorShutdownUtil;
+import org.jboss.netty.util.ExecutorUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -62,7 +62,7 @@ public abstract class AbstractSocketClientBootstrapTest {
 
     @AfterClass
     public static void destroy() {
-        ExecutorShutdownUtil.shutdown(executor);
+        ExecutorUtil.terminate(executor);
     }
 
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);

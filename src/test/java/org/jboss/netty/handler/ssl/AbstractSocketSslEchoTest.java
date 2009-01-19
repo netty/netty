@@ -53,7 +53,7 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ExecutorShutdownUtil;
+import org.jboss.netty.util.ExecutorUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -88,7 +88,7 @@ public abstract class AbstractSocketSslEchoTest {
 
     @AfterClass
     public static void destroy() {
-        ExecutorShutdownUtil.shutdown(executor, eventExecutor);
+        ExecutorUtil.terminate(executor, eventExecutor);
     }
 
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);

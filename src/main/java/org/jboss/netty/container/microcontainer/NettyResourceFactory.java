@@ -27,7 +27,7 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.logging.JBossLoggerFactory;
-import org.jboss.netty.util.ExecutorShutdownUtil;
+import org.jboss.netty.util.ExecutorUtil;
 import org.jboss.netty.util.UnterminatableExecutor;
 
 /**
@@ -54,7 +54,7 @@ public class NettyResourceFactory {
 
     public synchronized void stop() {
         if (executor != null) {
-            ExecutorShutdownUtil.shutdown(executor);
+            ExecutorUtil.terminate(executor);
         }
     }
 
