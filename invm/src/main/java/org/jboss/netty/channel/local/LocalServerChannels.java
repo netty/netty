@@ -21,51 +21,30 @@
  */
 package org.jboss.netty.channel.local;
 
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.HeapChannelBufferFactory;
-import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-
 import java.util.Map;
+import java.util.HashMap;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class LocalChannelConfig implements ChannelConfig {
-    private volatile ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
+public class LocalServerChannels {
+    private static final Map<String, LocalServerChannelFactory> factoryMap = new HashMap<String, LocalServerChannelFactory>();
 
-    ChannelPipelineFactory pipelineFactory;
-
-    public void setOptions(Map<String, Object> options) {
+    public static LocalServerChannelFactory registerServerChannel(String channelName) {
+        if (factoryMap.keySet().contains(channelName)) {
+            throw new IllegalArgumentException("server channel already registered: " + channelName);
+        }
+        LocalServerChannelFactory factory = new LocalServerChannelFactory(channelName);
+        factoryMap.put(channelName, factory);
+        return factory;
     }
 
-    public ChannelBufferFactory getBufferFactory() {
-        return bufferFactory;
+    public static LocalClientChannelFactory getClientChannelFactory(String channelName) {
+       LocalServerChannelFactory localServerChannelFactory = factoryMap.get(channelName);
+       return localServerChannelFactory == null?null:new LocalClientChannelFactory(localServerChannelFactory);
     }
 
-    public void setBufferFactory(ChannelBufferFactory bufferFactory) {
-        this.bufferFactory = bufferFactory;
-    }
-
-    public ChannelPipelineFactory getPipelineFactory() {
-        return pipelineFactory;
-    }
-
-    public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
-        this.pipelineFactory = pipelineFactory;
-    }
-
-    public int getConnectTimeoutMillis() {
-        return 0;
-    }
-
-    public void setConnectTimeoutMillis(int connectTimeoutMillis) {
-    }
-
-    public int getWriteTimeoutMillis() {
-        return 0;
-    }
-
-    public void setWriteTimeoutMillis(int writeTimeoutMillis) {
+    public static void unregisterServerChannel(String channelName) {
+        factoryMap.remove(channelName);
     }
 }

@@ -19,37 +19,41 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.local;
+package org.jboss.netty.servlet;
 
-import org.jboss.netty.channel.Channel;
+import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.local.LocalServerChannels;
+
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class LocalServerChannelFactory implements ChannelFactory {
+public class NettyServletContextListener implements ServletContextListener {
 
-    private final String channelName;
+    public void contextInitialized(ServletContextEvent context) {
 
-    ChannelSink sink;
+        String channelName = context.getServletContext().getInitParameter("serverChannelName");
 
-    Channel channel;
+        if (channelName != null) {
 
-    public LocalServerChannelFactory(String channelName) {
-        this.channelName = channelName;
-        sink = new LocalServerChannelSink();
-    }
+            String name = channelName.trim();
+            ChannelFactory channelFactory = LocalServerChannels.getClientChannelFactory(name);
+            if (channelFactory != null) {
 
-    public Channel newChannel(ChannelPipeline pipeline) {
-        if (channel == null) {
-            channel = new LocalServerChannel(this, pipeline, sink);
+                context.getServletContext().setAttribute("bootstrap", new ClientBootstrap(channelFactory));
+            }
+            else {
+                //todo warning
+            }
+
+
         }
-        return channel;
     }
 
-    public void releaseExternalResources() {
-        LocalServerChannels.unregisterServerChannel(channelName);
+    public void contextDestroyed(ServletContextEvent context) {
     }
+
 }

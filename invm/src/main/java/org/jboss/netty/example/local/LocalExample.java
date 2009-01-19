@@ -29,6 +29,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.local.LocalServerChannelFactory;
 import org.jboss.netty.channel.local.LocalClientChannelFactory;
 import org.jboss.netty.channel.local.LocalAddress;
+import org.jboss.netty.channel.local.LocalServerChannels;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.example.echo.EchoHandler;
@@ -46,14 +47,14 @@ import java.io.InputStreamReader;
  */
 public class LocalExample {
     public static void main(String[] args) throws Exception {
-        LocalServerChannelFactory factory = new LocalServerChannelFactory();
+        LocalServerChannelFactory factory = LocalServerChannels.registerServerChannel("localChannel");
         ServerBootstrap bootstrap = new ServerBootstrap(factory);
         EchoHandler handler = new EchoHandler();
         LocalAddress socketAddress = new LocalAddress("1");
         bootstrap.getPipeline().addLast("handler", handler);
         bootstrap.bind(socketAddress);
 
-        ChannelFactory channelFactory = new LocalClientChannelFactory(factory);
+        ChannelFactory channelFactory = LocalServerChannels.getClientChannelFactory("localChannel");
         ClientBootstrap clientBootstrap = new ClientBootstrap(channelFactory);
 
         clientBootstrap.getPipeline().addLast("decoder", new StringDecoder());
