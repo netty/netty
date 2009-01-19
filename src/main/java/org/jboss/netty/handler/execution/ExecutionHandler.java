@@ -30,6 +30,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.util.ExecutorShutdownUtil;
+import org.jboss.netty.util.ExternalResourceReleasable;
 
 /**
  * Forwards an upstream {@link ChannelEvent} to an {@link Executor}.
@@ -61,7 +62,7 @@ import org.jboss.netty.util.ExecutorShutdownUtil;
  * @apiviz.has java.util.concurrent.ThreadPoolExecutor
  */
 @ChannelPipelineCoverage("all")
-public class ExecutionHandler implements ChannelUpstreamHandler {
+public class ExecutionHandler implements ChannelUpstreamHandler, ExternalResourceReleasable {
 
     private final Executor executor;
 
@@ -86,7 +87,7 @@ public class ExecutionHandler implements ChannelUpstreamHandler {
      * Shuts down the {@link Executor} which was specified with the constructor
      * and wait for its termination.
      */
-    public void terminateExecutor() {
+    public void releaseExternalResources() {
         ExecutorShutdownUtil.shutdown(getExecutor());
     }
 

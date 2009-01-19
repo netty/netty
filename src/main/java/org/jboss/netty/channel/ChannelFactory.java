@@ -25,6 +25,7 @@ package org.jboss.netty.channel;
 import java.util.concurrent.Executor;
 
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.util.ExternalResourceReleasable;
 
 
 /**
@@ -58,7 +59,7 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * @apiviz.landmark
  * @apiviz.has        org.jboss.netty.channel.Channel oneway - - creates
  */
-public interface ChannelFactory {
+public interface ChannelFactory extends ExternalResourceReleasable {
 
     /**
      * Creates and opens a new {@link Channel} and attaches the specified

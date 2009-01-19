@@ -1,7 +1,7 @@
 /*
  * JBoss, Home of Professional Open Source
  *
- * Copyright 2008, Red Hat Middleware LLC, and individual contributors
+ * Copyright 2009, Red Hat Middleware LLC, and individual contributors
  * by the @author tags. See the COPYRIGHT.txt in the distribution for a
  * full listing of individual contributors.
  *
@@ -20,30 +20,13 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.codec.embedder;
-
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
+package org.jboss.netty.util;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-class EmbeddedChannelFactory implements ChannelFactory {
-
-    static final ChannelFactory INSTANCE = new EmbeddedChannelFactory();
-
-    private EmbeddedChannelFactory() {
-        super();
-    }
-
-    public Channel newChannel(ChannelPipeline pipeline) {
-        throw new UnsupportedOperationException();
-    }
-
-    public void releaseExternalResources() {
-        // No external resources
-    }
+public interface ExternalResourceReleasable {
+    void releaseExternalResources();
 }
