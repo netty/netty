@@ -54,7 +54,7 @@ public class HashedWheelTimer implements Timer {
     private static final AtomicInteger id = new AtomicInteger();
 
     private final Worker worker = new Worker();
-    private final Thread workerThread;
+    final Thread workerThread;
     final AtomicBoolean shutdown = new AtomicBoolean();
 
     private final long roundDuration;
@@ -423,10 +423,22 @@ public class HashedWheelTimer implements Timer {
             lock.readLock().lock();
             try {
                 // Reinsert the timeout to the appropriate bucket.
+                int oldStopIndex;
                 int newStopIndex;
                 synchronized (this) {
-                    newStopIndex = stopIndex = schedule(this, additionalDelay);
+                    oldStopIndex = stopIndex;
+                    stopIndex = newStopIndex = schedule(this, additionalDelay);
                 }
+
+                // Remove the timeout from the old bucket if necessary.
+                // If this method is called from the worker thread, it means
+                // this timeout has been removed from the bucket already.
+                if (oldStopIndex != newStopIndex &&
+                    Thread.currentThread() != workerThread) {
+                    wheel[oldStopIndex].remove(this);
+                }
+
+                // And add to the new bucket.  If added already, that's fine.
                 wheel[newStopIndex].add(this);
             } finally {
                 extensionCount ++;
@@ -512,6 +524,18 @@ public class HashedWheelTimer implements Timer {
             }
 
             return buf.append(')').toString();
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        Timer timer = new HashedWheelTimer();
+        for (int i = 0; i < 100000; i ++) {
+            timer.newTimeout(new TimerTask() {
+                public void run(Timeout timeout) throws Exception {
+                    // Extend another second.
+                    timeout.extend();
+                }
+            }, 1000, TimeUnit.MILLISECONDS);
         }
     }
 }
