@@ -255,7 +255,13 @@ public class HashedWheelTimer implements Timer {
                 fetchExpiredTimeouts(expiredTimeouts, i);
 
                 if (activeTimeouts.get() == 0) {
-                    // Exit the loop.
+                    // Exit the loop - the worker will be executed again if
+                    // there are more timeouts to expire.  Please note that
+                    // this block is protected by a write lock where all
+                    // scheduling operations are protected by a read lock,
+                    // which means they are mutually exclusive and there's
+                    // no risk of race conditions (i.e. no stalled timeouts,
+                    // no two running workers.)
                     return false;
                 }
             } finally {
