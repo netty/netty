@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -36,6 +37,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ConcurrentIdentityHashMap;
 import org.jboss.netty.util.MapBackedSet;
 import org.jboss.netty.util.ReusableIterator;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -46,6 +48,7 @@ public class HashedWheelTimer implements Timer {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(HashedWheelTimer.class);
+    private static final AtomicInteger id = new AtomicInteger();
 
     private final Worker worker = new Worker();
     private final Thread workerThread;
@@ -96,7 +99,8 @@ public class HashedWheelTimer implements Timer {
 
         roundDuration = tickDuration * wheel.length;
 
-        workerThread = threadFactory.newThread(worker);
+        workerThread = threadFactory.newThread(new ThreadRenamingRunnable(
+                        worker, "Hashed wheel timer #" + id.incrementAndGet()));
     }
 
     @SuppressWarnings("unchecked")
