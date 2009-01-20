@@ -24,13 +24,13 @@ package org.jboss.netty.handler.timeout;
 
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.netty.util.ExternalResourceReleasable;
-
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public interface Timer extends ExternalResourceReleasable {
+public interface Timer {
     Timeout newTimeout(TimerTask task, long timeout, TimeUnit unit);
+    // XXX Should we make stop() return the list of unfinished Timeouts?
+    void stop();
 }
