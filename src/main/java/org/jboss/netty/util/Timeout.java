@@ -30,15 +30,13 @@ import java.util.concurrent.TimeUnit;
  * @version $Rev$, $Date$
  */
 public interface Timeout {
+    TimerTask getTask();
+
     boolean isExpired();
     boolean isCancelled();
-    boolean isExtended();
     int getExtensionCount();
 
     void extend();
     void extend(long extensionTime, TimeUnit unit);
     void cancel();
-
-    void addListener(TimeoutListener listener);
-    void removeListener(TimeoutListener listener);
 }

@@ -27,8 +27,6 @@ package org.jboss.netty.util;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public interface TimeoutListener {
-    void timeoutExpired(Timeout timeout);
-    void timeoutExtended(Timeout timeout);
-    void timeoutCancelled(Timeout timeout);
+public interface TimerTask {
+    void run(Timeout timeout) throws Exception;
 }

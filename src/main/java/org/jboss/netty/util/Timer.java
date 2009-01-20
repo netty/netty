@@ -30,5 +30,5 @@ import java.util.concurrent.TimeUnit;
  * @version $Rev$, $Date$
  */
 public interface Timer extends ExternalResourceReleasable {
-    Timeout newTimeout(long timeout, TimeUnit unit);
+    Timeout newTimeout(TimerTask task, long timeout, TimeUnit unit);
 }
