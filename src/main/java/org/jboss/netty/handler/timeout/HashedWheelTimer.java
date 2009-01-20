@@ -26,16 +26,18 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.ConcurrentIdentityHashMap;
 import org.jboss.netty.util.ExecutorUtil;
 import org.jboss.netty.util.MapBackedSet;
+import org.jboss.netty.util.ReusableIterator;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -47,18 +49,20 @@ public class HashedWheelTimer implements Timer {
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(HashedWheelTimer.class);
 
-    private final Executor executor;
-    private final Worker worker = new Worker();
+    final Executor executor;
+    final Worker worker = new Worker();
+    final AtomicInteger activeTimeouts = new AtomicInteger();
 
     final long tickDuration;
-    final long wheelDuration;
+    final long roundDuration;
     final Set<HashedWheelTimeout>[] wheel;
+    final ReusableIterator<HashedWheelTimeout>[] iterators;
     final int mask;
     final ReadWriteLock lock = new ReentrantReadWriteLock();
     volatile int wheelCursor;
 
     public HashedWheelTimer(Executor executor) {
-        this(executor, 1, TimeUnit.SECONDS, 64);
+        this(executor, 100, TimeUnit.MILLISECONDS, 512); // about 50 sec
     }
 
     public HashedWheelTimer(
@@ -80,6 +84,7 @@ public class HashedWheelTimer implements Timer {
 
         // Normalize ticksPerWheel to power of two and initialize the wheel.
         wheel = createWheel(ticksPerWheel);
+        iterators = createIterators(wheel);
         mask = wheel.length - 1;
 
         // Convert checkInterval to nanoseconds.
@@ -93,8 +98,7 @@ public class HashedWheelTimer implements Timer {
                     tickDuration +  ' ' + unit);
         }
 
-        wheelDuration = tickDuration * wheel.length;
-        executor.execute(worker);
+        roundDuration = tickDuration * wheel.length;
     }
 
     @SuppressWarnings("unchecked")
@@ -109,11 +113,20 @@ public class HashedWheelTimer implements Timer {
         }
 
         ticksPerWheel = normalizeTicksPerWheel(ticksPerWheel);
-        Set<HashedWheelTimeout>[] buckets = new Set[ticksPerWheel];
-        for (int i = 0; i < buckets.length; i ++) {
-            buckets[i] = new MapBackedSet<HashedWheelTimeout>(new ConcurrentHashMap<HashedWheelTimeout, Boolean>());
+        Set<HashedWheelTimeout>[] wheel = new Set[ticksPerWheel];
+        for (int i = 0; i < wheel.length; i ++) {
+            wheel[i] = new MapBackedSet<HashedWheelTimeout>(new ConcurrentIdentityHashMap<HashedWheelTimeout, Boolean>());
         }
-        return buckets;
+        return wheel;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static ReusableIterator<HashedWheelTimeout>[] createIterators(Set<HashedWheelTimeout>[] wheel) {
+        ReusableIterator<HashedWheelTimeout>[] iterators = new ReusableIterator[wheel.length];
+        for (int i = 0; i < wheel.length; i ++) {
+            iterators[i] = (ReusableIterator<HashedWheelTimeout>) wheel[i].iterator();
+        }
+        return iterators;
     }
 
     private static int normalizeTicksPerWheel(int ticksPerWheel) {
@@ -139,14 +152,19 @@ public class HashedWheelTimer implements Timer {
         initialDelay = unit.toNanos(initialDelay);
         checkDelay(initialDelay);
 
+        // Add the timeout to the wheel.
         HashedWheelTimeout timeout;
-
         lock.readLock().lock();
         try {
             timeout = new HashedWheelTimeout(
                     task, wheelCursor, System.nanoTime(), initialDelay);
 
             wheel[schedule(timeout)].add(timeout);
+
+            // Start the worker if necessary.
+            if (activeTimeouts.getAndIncrement() == 0) {
+                executor.execute(worker);
+            }
         } finally {
             lock.readLock().unlock();
         }
@@ -163,33 +181,41 @@ public class HashedWheelTimer implements Timer {
             final long oldCumulativeDelay = timeout.cumulativeDelay;
             final long newCumulativeDelay = oldCumulativeDelay + additionalDelay;
 
-            final long lastWheelDelay = newCumulativeDelay % wheelDuration;
+            final long lastRoundDelay = newCumulativeDelay % roundDuration;
             final long lastTickDelay = newCumulativeDelay % tickDuration;
-            final int relativeIndex =
-                (int) (lastWheelDelay / tickDuration) + (lastTickDelay != 0? 1 : 0);
+            final long relativeIndex =
+                lastRoundDelay / tickDuration + (lastTickDelay != 0? 1 : 0);
 
             timeout.deadline = timeout.startTime + newCumulativeDelay;
             timeout.cumulativeDelay = newCumulativeDelay;
             timeout.remainingRounds =
-                additionalDelay / wheelDuration -
-                (additionalDelay % wheelDuration == 0? 1:0) - timeout.slippedRounds;
+                additionalDelay / roundDuration -
+                (additionalDelay % roundDuration == 0? 1:0) - timeout.slippedRounds;
             timeout.slippedRounds = 0;
 
-            return timeout.stopIndex = timeout.startIndex + relativeIndex & mask;
+            return timeout.stopIndex = (int) (timeout.startIndex + relativeIndex & mask);
         }
+    }
+
+    boolean isWheelEmpty() {
+        for (Set<HashedWheelTimeout> bucket: wheel) {
+            if (!bucket.isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     void checkDelay(long delay) {
         if (delay < tickDuration) {
             throw new IllegalArgumentException(
-                    "delay must be greater than " +
-                    tickDuration + " nanoseconds");
+                    "delay must be greater than " + tickDuration + " nanoseconds");
         }
     }
 
     private final class Worker implements Runnable {
 
-        private long startTime;
+        private volatile long threadSafeStartTime;
         private long tick;
 
         Worker() {
@@ -200,17 +226,18 @@ public class HashedWheelTimer implements Timer {
             List<HashedWheelTimeout> expiredTimeouts =
                 new ArrayList<HashedWheelTimeout>();
 
-            startTime = System.nanoTime();
+            long startTime = threadSafeStartTime;
             tick = 1;
 
-            for (;;) {
-                waitForNextTick();
-                fetchExpiredTimeouts(expiredTimeouts);
+            boolean continueTheLoop;
+            do {
+                startTime = waitForNextTick(startTime);
+                continueTheLoop = fetchExpiredTimeouts(expiredTimeouts);
                 notifyExpiredTimeouts(expiredTimeouts);
-            }
+            } while (continueTheLoop && !ExecutorUtil.isShutdown(executor));
         }
 
-        private void fetchExpiredTimeouts(
+        private boolean fetchExpiredTimeouts(
                 List<HashedWheelTimeout> expiredTimeouts) {
 
             // Find the expired timeouts and decrease the round counter
@@ -219,29 +246,48 @@ public class HashedWheelTimer implements Timer {
             // an exclusive lock.
             lock.writeLock().lock();
             try {
-                long currentTime = System.nanoTime();
-                int newBucketHead = wheelCursor + 1 & mask;
-                Set<HashedWheelTimeout> bucket = wheel[wheelCursor];
+                int oldBucketHead = wheelCursor;
+                int newBucketHead = oldBucketHead + 1 & mask;
                 wheelCursor = newBucketHead;
-                for (Iterator<HashedWheelTimeout> i = bucket.iterator(); i.hasNext();) {
-                    HashedWheelTimeout timeout = i.next();
-                    synchronized (timeout) {
-                        if (timeout.remainingRounds <= 0) {
-                            if (timeout.deadline <= currentTime) {
-                                i.remove();
-                                expiredTimeouts.add(timeout);
-                            } else {
-                                // A rare case where a timeout is put for the next
-                                // round: just wait for the next round.
-                                timeout.slippedRounds ++;
-                            }
-                        } else {
-                            timeout.remainingRounds --;
-                        }
-                    }
+
+                ReusableIterator<HashedWheelTimeout> i = iterators[oldBucketHead];
+                i.rewind();
+                fetchExpiredTimeouts(expiredTimeouts, i);
+
+                if (activeTimeouts.get() == 0) {
+                    // Exit the loop.
+                    return false;
                 }
             } finally {
                 lock.writeLock().unlock();
+            }
+
+            // Continue the loop.
+            return true;
+        }
+
+        private void fetchExpiredTimeouts(
+                List<HashedWheelTimeout> expiredTimeouts,
+                Iterator<HashedWheelTimeout> i) {
+
+            long currentTime = System.nanoTime();
+            while (i.hasNext()) {
+                HashedWheelTimeout timeout = i.next();
+                synchronized (timeout) {
+                    if (timeout.remainingRounds <= 0) {
+                        if (timeout.deadline <= currentTime) {
+                            i.remove();
+                            expiredTimeouts.add(timeout);
+                            activeTimeouts.getAndDecrement();
+                        } else {
+                            // A rare case where a timeout is put for the next
+                            // round: just wait for the next round.
+                            timeout.slippedRounds ++;
+                        }
+                    } else {
+                        timeout.remainingRounds --;
+                    }
+                }
             }
         }
 
@@ -256,7 +302,7 @@ public class HashedWheelTimer implements Timer {
             expiredTimeouts.clear();
         }
 
-        private void waitForNextTick() {
+        private long waitForNextTick(long startTime) {
             for (;;) {
                 final long currentTime = System.nanoTime();
                 final long sleepTime = tickDuration * tick - (currentTime - startTime);
@@ -268,7 +314,9 @@ public class HashedWheelTimer implements Timer {
                 try {
                     Thread.sleep(sleepTime / 1000000, (int) (sleepTime % 1000000));
                 } catch (InterruptedException e) {
-                    // FIXME: must exit the loop if necessary
+                    if (ExecutorUtil.isShutdown(executor) || isWheelEmpty()) {
+                        return startTime;
+                    }
                 }
             }
 
@@ -280,6 +328,8 @@ public class HashedWheelTimer implements Timer {
                 // Increase the tick if overflow is not likely to happen.
                 tick ++;
             }
+
+            return startTime;
         }
     }
 
@@ -318,10 +368,13 @@ public class HashedWheelTimer implements Timer {
                 return;
             }
 
+            boolean removed;
             synchronized (this) {
-                if (!wheel[stopIndex].remove(this)) {
-                    return;
-                }
+                removed = wheel[stopIndex].remove(this);
+            }
+
+            if (removed) {
+                activeTimeouts.getAndDecrement();
             }
         }
 
@@ -341,11 +394,19 @@ public class HashedWheelTimer implements Timer {
 
             lock.readLock().lock();
             try {
+                // Reinsert the timeout to the appropriate bucket.
                 int newStopIndex;
                 synchronized (this) {
                     newStopIndex = stopIndex = schedule(this, additionalDelay);
                 }
-                wheel[newStopIndex].add(this);
+
+                if (wheel[newStopIndex].add(this)) {
+
+                    // Start the worker if necessary.
+                    if (activeTimeouts.getAndIncrement() == 0) {
+                        executor.execute(worker);
+                    }
+                }
             } finally {
                 extensionCount ++;
                 lock.readLock().unlock();

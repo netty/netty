@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.jboss.netty.channel.Channel;
@@ -38,6 +37,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ServerChannel;
 import org.jboss.netty.util.CombinedIterator;
+import org.jboss.netty.util.ConcurrentHashMap;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)

@@ -23,7 +23,6 @@
 package org.jboss.netty.handler.execution;
 
 import java.util.LinkedList;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -33,6 +32,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.util.ConcurrentHashMap;
 
 /**
  * A {@link MemoryAwareThreadPoolExecutor} which maintains the

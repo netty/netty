@@ -27,11 +27,11 @@ import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.util.ConcurrentHashMap;
 
 /**
  * The default {@link ObjectSizeEstimator} implementation for general purpose.

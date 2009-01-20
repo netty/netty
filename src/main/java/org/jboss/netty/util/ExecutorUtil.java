@@ -39,6 +39,21 @@ import java.util.concurrent.TimeUnit;
 public class ExecutorUtil {
 
     /**
+     * Returns {@code true} if and only if the specified {@code executor}
+     * is an {@link ExecutorService} and is shut down.  Please note that this
+     * method returns {@code false} if the specified {@code executor} is not an
+     * {@link ExecutorService}.
+     */
+    public static boolean isShutdown(Executor executor) {
+        if (executor instanceof ExecutorService) {
+            if (((ExecutorService) executor).isShutdown()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Shuts down the specified executors.
      */
     public static void terminate(Executor... executors) {
