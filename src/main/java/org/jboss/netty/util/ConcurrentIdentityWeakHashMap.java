@@ -1213,6 +1213,7 @@ public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V>
             currentTable = null;
             nextEntry = null;
             lastReturned = null;
+            currentKey = null;
             advance();
         }
 

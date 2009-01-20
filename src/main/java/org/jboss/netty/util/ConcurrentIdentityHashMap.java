@@ -1131,6 +1131,7 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
             currentTable = null;
             nextEntry = null;
             lastReturned = null;
+            currentKey = null;
             advance();
         }
 
