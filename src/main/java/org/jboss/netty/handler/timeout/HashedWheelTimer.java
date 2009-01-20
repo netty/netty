@@ -23,10 +23,11 @@
 package org.jboss.netty.handler.timeout;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -251,7 +252,6 @@ public class HashedWheelTimer implements Timer {
                 wheelCursor = newBucketHead;
 
                 ReusableIterator<HashedWheelTimeout> i = iterators[oldBucketHead];
-                i.rewind();
                 fetchExpiredTimeouts(expiredTimeouts, i);
 
                 if (activeTimeouts.get() == 0) {
@@ -274,26 +274,30 @@ public class HashedWheelTimer implements Timer {
 
         private void fetchExpiredTimeouts(
                 List<HashedWheelTimeout> expiredTimeouts,
-                Iterator<HashedWheelTimeout> i) {
+                ReusableIterator<HashedWheelTimeout> i) {
 
             long currentTime = System.nanoTime();
-            while (i.hasNext()) {
-                HashedWheelTimeout timeout = i.next();
-                synchronized (timeout) {
-                    if (timeout.remainingRounds <= 0) {
-                        if (timeout.deadline <= currentTime) {
-                            i.remove();
-                            expiredTimeouts.add(timeout);
-                            activeTimeouts.getAndDecrement();
+            boolean notEmpty = i.hasNext();
+            if (notEmpty) {
+                do {
+                    HashedWheelTimeout timeout = i.next();
+                    synchronized (timeout) {
+                        if (timeout.remainingRounds <= 0) {
+                            if (timeout.deadline <= currentTime) {
+                                i.remove();
+                                expiredTimeouts.add(timeout);
+                                activeTimeouts.getAndDecrement();
+                            } else {
+                                // A rare case where a timeout is put for the next
+                                // round: just wait for the next round.
+                                timeout.slippedRounds ++;
+                            }
                         } else {
-                            // A rare case where a timeout is put for the next
-                            // round: just wait for the next round.
-                            timeout.slippedRounds ++;
+                            timeout.remainingRounds --;
                         }
-                    } else {
-                        timeout.remainingRounds --;
                     }
-                }
+                } while (i.hasNext());
+                i.rewind();
             }
         }
 
@@ -497,6 +501,27 @@ public class HashedWheelTimer implements Timer {
             }
 
             return buf.append(')').toString();
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        final ThreadPoolExecutor e = (ThreadPoolExecutor) Executors.newCachedThreadPool();
+        Timer timer = new HashedWheelTimer(
+                e,
+                100, TimeUnit.MILLISECONDS, 4);
+
+        //Timeout timeout = timer.newTimeout(1200, TimeUnit.MILLISECONDS);
+        for (int i = 0; i < 1; i ++) {
+        timer.newTimeout(new TimerTask() {
+            public void run(Timeout timeout) throws Exception {
+                //System.out.println(Thread.currentThread().getName() + ": " + timeout.getExtensionCount() + ": " + timeout);
+                timeout.extend();
+                int c = e.getActiveCount();
+                if (c > 1) {
+                    System.out.println(System.currentTimeMillis() + ": " + c);
+                }
+            }
+        }, 100, TimeUnit.MILLISECONDS);
         }
     }
 }
