@@ -32,6 +32,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ExecutorUtil;
 import org.jboss.netty.util.MapBackedSet;
 
@@ -41,6 +43,9 @@ import org.jboss.netty.util.MapBackedSet;
  * @version $Rev$, $Date$
  */
 public class HashedWheelTimer implements Timer {
+
+    static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(HashedWheelTimer.class);
 
     private final Executor executor;
     private final Worker worker = new Worker();
@@ -367,7 +372,9 @@ public class HashedWheelTimer implements Timer {
             try {
                 task.run(this);
             } catch (Throwable t) {
-                // FIXME log the exception
+                logger.warn(
+                        "An exception was thrown by " +
+                        TimerTask.class.getSimpleName() + ".", t);
             }
         }
 
