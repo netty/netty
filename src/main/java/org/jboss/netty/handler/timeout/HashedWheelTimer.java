@@ -526,16 +526,4 @@ public class HashedWheelTimer implements Timer {
             return buf.append(')').toString();
         }
     }
-
-    public static void main(String[] args) throws Exception {
-        Timer timer = new HashedWheelTimer();
-        for (int i = 0; i < 100000; i ++) {
-            timer.newTimeout(new TimerTask() {
-                public void run(Timeout timeout) throws Exception {
-                    // Extend another second.
-                    timeout.extend();
-                }
-            }, 1000, TimeUnit.MILLISECONDS);
-        }
-    }
 }
