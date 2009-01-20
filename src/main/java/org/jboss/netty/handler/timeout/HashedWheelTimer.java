@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -64,7 +65,16 @@ public class HashedWheelTimer implements Timer {
     final ReadWriteLock lock = new ReentrantReadWriteLock();
     volatile int wheelCursor;
 
-    public HashedWheelTimer(ThreadFactory threadFactory) {
+    public HashedWheelTimer() {
+        this(Executors.defaultThreadFactory());
+    }
+
+    public HashedWheelTimer(
+            long tickDuration, TimeUnit unit, int ticksPerWheel) {
+        this(Executors.defaultThreadFactory(), tickDuration, unit, ticksPerWheel);
+    }
+
+        public HashedWheelTimer(ThreadFactory threadFactory) {
         this(threadFactory, 100, TimeUnit.MILLISECONDS, 512); // about 50 sec
     }
 
@@ -81,6 +91,10 @@ public class HashedWheelTimer implements Timer {
         if (tickDuration <= 0) {
             throw new IllegalArgumentException(
                     "tickDuration must be greater than 0: " + tickDuration);
+        }
+        if (ticksPerWheel <= 0) {
+            throw new IllegalArgumentException(
+                    "ticksPerWheel must be greated than 0: " + ticksPerWheel);
         }
 
         // Normalize ticksPerWheel to power of two and initialize the wheel.
