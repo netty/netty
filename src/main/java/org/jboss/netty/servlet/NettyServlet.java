@@ -26,6 +26,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 
 import javax.servlet.ServletException;
+import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -41,6 +42,44 @@ public class NettyServlet extends HttpServlet {
         HttpSession session = request.getSession();
         System.out.println("session.getId() = " + session.getId());
         Channel channel = (Channel) session.getAttribute("channel");
+        ServletChannelHandler handler = (ServletChannelHandler) session.getAttribute("handler");
+        if (handler.isStreaming()) {
+            streamResponse(request, response, session, handler, channel);
+        }
+        else {
+            pollResponse(channel, request, response, session, handler);
+        }
+    }
+
+    private void streamResponse(final HttpServletRequest request, final HttpServletResponse response, HttpSession session, ServletChannelHandler handler, Channel channel) throws IOException {
+        if (handler.getOutputStream() == null) {
+            handler.setOutputStream(response.getOutputStream());
+            response.setHeader("jsessionid", session.getId());
+            response.setContentLength(-1);
+            response.setStatus(HttpServletResponse.SC_OK);
+            //todo make this configurable
+            byte[] content = new byte[1024];
+            int read;
+            try {
+                ServletInputStream is = request.getInputStream();
+                while ((read = is.read(content)) != -1) {
+                    if (read > 0) {
+                        ChannelBuffer buffer = ChannelBuffers.buffer(read);
+                        buffer.writeBytes(content, 0, read);
+                        channel.write(buffer);
+                    }
+                }
+                System.out.println("NettyServlet.streamResponse");
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+    }
+
+    private void pollResponse(Channel channel, HttpServletRequest request, HttpServletResponse response, HttpSession session, ServletChannelHandler handler) throws IOException {
         int length = request.getContentLength();
         if (length > 0) {
             byte[] bytes = new byte[length];
@@ -48,27 +87,6 @@ public class NettyServlet extends HttpServlet {
             ChannelBuffer cb = ChannelBuffers.copiedBuffer(bytes);
             channel.write(cb);
         }
-        ServletChannelHandler handler = (ServletChannelHandler) session.getAttribute("handler");
-        if (handler.isStreaming()) {
-            streamResponse(response, session, handler, channel);
-        }
-        else {
-            pollResponse(response, session, handler);
-        }
-    }
-
-    private void streamResponse(HttpServletResponse response, HttpSession session, ServletChannelHandler handler, Channel channel) throws IOException {
-        if (handler.getOutputStream() == null) {
-            handler.setOutputStream(response.getOutputStream());
-            response.setHeader("jsessionid", session.getId());
-            response.setStatus(HttpServletResponse.SC_OK);
-        }
-
-
-    }
-
-    private void pollResponse(HttpServletResponse response, HttpSession session, ServletChannelHandler handler) throws IOException {
-        int length;
         handler.setOutputStream(response.getOutputStream());
         List<ChannelBuffer> buffers = handler.getBuffers();
         length = 0;
