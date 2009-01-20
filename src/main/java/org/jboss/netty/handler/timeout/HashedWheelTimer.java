@@ -398,6 +398,9 @@ public class HashedWheelTimer implements Timer {
                 return;
             }
 
+            cancelled = true;
+
+            // Might be called more than once, but doesn't matter.
             synchronized (this) {
                 wheel[stopIndex].remove(this);
             }
