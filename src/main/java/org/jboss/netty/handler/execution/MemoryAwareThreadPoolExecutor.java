@@ -40,7 +40,7 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ConcurrentHashMap;
+import org.jboss.netty.util.ConcurrentIdentityHashMap;
 import org.jboss.netty.util.LinkedTransferQueue;
 
 /**
@@ -90,7 +90,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
     private volatile Settings settings;
 
     private final ConcurrentMap<Channel, AtomicLong> channelCounters =
-        new ConcurrentHashMap<Channel, AtomicLong>();
+        new ConcurrentIdentityHashMap<Channel, AtomicLong>();
     private final AtomicLong totalCounter = new AtomicLong();
 
     private final Semaphore semaphore = new Semaphore(0);

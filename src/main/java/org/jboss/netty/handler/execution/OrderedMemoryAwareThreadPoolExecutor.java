@@ -32,7 +32,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.util.ConcurrentHashMap;
+import org.jboss.netty.util.ConcurrentIdentityHashMap;
 
 /**
  * A {@link MemoryAwareThreadPoolExecutor} which maintains the
@@ -66,7 +66,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
         MemoryAwareThreadPoolExecutor {
 
     private final ConcurrentMap<Channel, Executor> childExecutors =
-        new ConcurrentHashMap<Channel, Executor>();
+        new ConcurrentIdentityHashMap<Channel, Executor>();
 
     /**
      * Creates a new instance.
