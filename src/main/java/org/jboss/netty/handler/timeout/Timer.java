@@ -22,6 +22,7 @@
  */
 package org.jboss.netty.handler.timeout;
 
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -31,6 +32,5 @@ import java.util.concurrent.TimeUnit;
  */
 public interface Timer {
     Timeout newTimeout(TimerTask task, long timeout, TimeUnit unit);
-    // XXX Should we make stop() return the list of unfinished Timeouts?
-    void stop();
+    Set<Timeout> stop();
 }

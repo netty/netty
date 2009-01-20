@@ -23,6 +23,8 @@
 package org.jboss.netty.handler.timeout;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
@@ -144,10 +146,11 @@ public class HashedWheelTimer implements Timer {
         workerThread.start();
     }
 
-    public void stop() {
+    public Set<Timeout> stop() {
         if (!shutdown.compareAndSet(false, true)) {
-            return;
+            return Collections.emptySet();
         }
+
         while (workerThread.isAlive()) {
             workerThread.interrupt();
             try {
@@ -156,6 +159,14 @@ public class HashedWheelTimer implements Timer {
                 // Ignore
             }
         }
+
+        Set<Timeout> unprocessedTimeouts = new HashSet<Timeout>();
+        for (Set<HashedWheelTimeout> bucket: wheel) {
+            unprocessedTimeouts.addAll(bucket);
+            bucket.clear();
+        }
+
+        return Collections.unmodifiableSet(unprocessedTimeouts);
     }
 
     public Timeout newTimeout(TimerTask task, long initialDelay, TimeUnit unit) {
