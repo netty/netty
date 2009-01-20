@@ -35,57 +35,48 @@ import java.util.ArrayList;
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 @ChannelPipelineCoverage("one")
-class ServletChannelHandler extends SimpleChannelHandler
-{
-   List<ChannelBuffer> buffers = new ArrayList<ChannelBuffer>();
+class ServletChannelHandler extends SimpleChannelHandler {
+    List<ChannelBuffer> buffers = new ArrayList<ChannelBuffer>();
 
-   private ServletOutputStream outputStream;
+    private ServletOutputStream outputStream;
 
-   final boolean stream;
+    final boolean stream;
 
-   public ServletChannelHandler(boolean stream)
-   {
-      this.stream = stream;
-   }
+    public ServletChannelHandler(boolean stream) {
+        this.stream = stream;
+    }
 
-   public synchronized void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception
-   {
+    public synchronized void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
 
-      ChannelBuffer buffer = (ChannelBuffer) e.getMessage();
-      if (stream)
-      {
-         byte[] b = new byte[buffer.readableBytes()];
-         buffer.readBytes(b);
-         outputStream.write(b);
-      }
-      else
-      {
-         buffers.add(buffer);
-      }
+        ChannelBuffer buffer = (ChannelBuffer) e.getMessage();
+        if (stream) {
+            byte[] b = new byte[buffer.readableBytes()];
+            buffer.readBytes(b);
+            outputStream.write(b);
+        }
+        else {
+            buffers.add(buffer);
+        }
 
-   }
+    }
 
-   public synchronized List<ChannelBuffer> getBuffers()
-   {
-      List<ChannelBuffer> list = new ArrayList<ChannelBuffer>();
-      list.addAll(buffers);
-      buffers.clear();
-      return list;
-   }
+    public synchronized List<ChannelBuffer> getBuffers() {
+        List<ChannelBuffer> list = new ArrayList<ChannelBuffer>();
+        list.addAll(buffers);
+        buffers.clear();
+        return list;
+    }
 
-   public void setOutputStream(ServletOutputStream outputStream)
-   {
-      this.outputStream = outputStream;
-   }
+    public void setOutputStream(ServletOutputStream outputStream) {
+        this.outputStream = outputStream;
+    }
 
-   public boolean isStreaming()
-   {
-      return stream;
-   }
+    public boolean isStreaming() {
+        return stream;
+    }
 
-   public ServletOutputStream getOutputStream()
-   {
-      return outputStream;
-   }
+    public ServletOutputStream getOutputStream() {
+        return outputStream;
+    }
 }
 

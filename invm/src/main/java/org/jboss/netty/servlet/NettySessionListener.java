@@ -21,56 +21,51 @@
  */
 package org.jboss.netty.servlet;
 
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.local.LocalAddress;
-import static org.jboss.netty.channel.Channels.pipeline;
 import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import static org.jboss.netty.channel.Channels.pipeline;
+import org.jboss.netty.channel.local.LocalAddress;
 
-import javax.servlet.http.HttpSessionListener;
-import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSession;
-import java.util.Map;
+import javax.servlet.http.HttpSessionEvent;
+import javax.servlet.http.HttpSessionListener;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class NettySessionListener implements HttpSessionListener, ChannelHandler
-{
-   public void sessionCreated(HttpSessionEvent event)
-   {
-      HttpSession session = event.getSession();
-       System.out.println("NettySessionListener.sessionCreated");
-      ClientBootstrap bootstrap = (ClientBootstrap) session.getServletContext().getAttribute("bootstrap");
-      System.out.println("created session  = " + session.getId());
+public class NettySessionListener implements HttpSessionListener, ChannelHandler {
+    
+    public void sessionCreated(HttpSessionEvent event) {
+        HttpSession session = event.getSession();
+        System.out.println("NettySessionListener.sessionCreated");
+        ClientBootstrap bootstrap = (ClientBootstrap) session.getServletContext().getAttribute("bootstrap");
+        System.out.println("created session  = " + session.getId());
 
-      session.setMaxInactiveInterval(5);
-      final ServletChannelHandler handler = new ServletChannelHandler(false);
-      session.setAttribute("handler", handler);
-      bootstrap.setPipelineFactory(new ChannelPipelineFactory()
-      {
-         public ChannelPipeline getPipeline() throws Exception
-         {
-            ChannelPipeline pipeline = pipeline();
-            pipeline.addLast(NettySessionListener.class.getName(), handler);
-            return pipeline;
-         }
-      });
-      ChannelFuture future = bootstrap.connect(new LocalAddress("netty"));
-      future.awaitUninterruptibly();
-      final Channel ch = future.getChannel();
-      session.setAttribute("channel", ch);
-   }
+        session.setMaxInactiveInterval(Integer.MAX_VALUE);
+        final ServletChannelHandler handler = new ServletChannelHandler(true);
+        session.setAttribute("handler", handler);
+        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+            public ChannelPipeline getPipeline() throws Exception {
+                ChannelPipeline pipeline = pipeline();
+                pipeline.addLast(NettySessionListener.class.getName(), handler);
+                return pipeline;
+            }
+        });
+        ChannelFuture future = bootstrap.connect(new LocalAddress("netty"));
+        future.awaitUninterruptibly();
+        final Channel ch = future.getChannel();
+        session.setAttribute("channel", ch);
+    }
 
-   public void sessionDestroyed(HttpSessionEvent event)
-   {
-      System.out.println("JBMSessionListener.sessionDestroyed");
-      Channel channel = (Channel) event.getSession().getAttribute("channel");
-      if(channel != null) {
-         channel.close();
-      }
-   }
+    public void sessionDestroyed(HttpSessionEvent event) {
+        System.out.println("JBMSessionListener.sessionDestroyed");
+        Channel channel = (Channel) event.getSession().getAttribute("channel");
+        if (channel != null) {
+            channel.close();
+        }
+    }
 }
