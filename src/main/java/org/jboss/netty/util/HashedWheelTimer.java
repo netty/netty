@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -284,7 +283,7 @@ public class HashedWheelTimer implements Timer {
         int stopIndex;
 
         final long startTime;
-        long deadline;
+        volatile long deadline;
 
         final long initialDelay;
         long cumulativeDelay;
@@ -354,14 +353,7 @@ public class HashedWheelTimer implements Timer {
         }
 
         public boolean isExpired() {
-            if (cancelled) {
-                return false;
-            }
-
-            long currentTime = System.nanoTime();
-            synchronized (this) {
-                return currentTime > deadline;
-            }
+            return cancelled || System.nanoTime() > deadline;
         }
 
         public void expire() {
@@ -378,13 +370,13 @@ public class HashedWheelTimer implements Timer {
 
         @Override
         public String toString() {
-            long remaining;
-            synchronized (this) {
-                remaining = deadline - System.nanoTime();
-            }
+            long currentTime = System.nanoTime();
+            long age = currentTime - startTime;
+            long remaining = deadline - currentTime;
 
-            StringBuilder buf = new StringBuilder();
-            buf.append("TimingWheelTimeout(");
+            StringBuilder buf = new StringBuilder(192);
+            buf.append(getClass().getSimpleName());
+            buf.append('(');
 
             buf.append("initialDelay: ");
             buf.append(initialDelay / 1000000);
@@ -393,6 +385,10 @@ public class HashedWheelTimer implements Timer {
             buf.append("cumulativeDelay: ");
             buf.append(cumulativeDelay / 1000000);
             buf.append(" ms, ");
+
+            buf.append("started: ");
+            buf.append(age / 1000000);
+            buf.append(" ms ago, ");
 
             buf.append("deadline: ");
             if (remaining > 0) {
@@ -425,19 +421,5 @@ public class HashedWheelTimer implements Timer {
 
             return buf.append(')').toString();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        Timer timer = new HashedWheelTimer(
-                Executors.newCachedThreadPool(),
-                100, TimeUnit.MILLISECONDS, 4);
-
-        //Timeout timeout = timer.newTimeout(1200, TimeUnit.MILLISECONDS);
-        timer.newTimeout(new TimerTask() {
-            public void run(Timeout timeout) throws Exception {
-                System.out.println(timeout.getExtensionCount() + ": " + timeout);
-                timeout.extend();
-            }
-        }, 1200, TimeUnit.MILLISECONDS);
     }
 }
