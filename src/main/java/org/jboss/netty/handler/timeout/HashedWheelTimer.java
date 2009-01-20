@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -509,27 +507,6 @@ public class HashedWheelTimer implements Timer {
             }
 
             return buf.append(')').toString();
-        }
-    }
-
-    public static void main(String[] args) throws Exception {
-        final ThreadPoolExecutor e = (ThreadPoolExecutor) Executors.newCachedThreadPool();
-        Timer timer = new HashedWheelTimer(
-                e,
-                100, TimeUnit.MILLISECONDS, 4);
-
-        //Timeout timeout = timer.newTimeout(1200, TimeUnit.MILLISECONDS);
-        for (int i = 0; i < 1; i ++) {
-        timer.newTimeout(new TimerTask() {
-            public void run(Timeout timeout) throws Exception {
-                System.out.println(Thread.currentThread().getName() + ": " + timeout.getExtensionCount() + ": " + timeout);
-                timeout.extend();
-                int c = e.getActiveCount();
-//                if (c > 1) {
-//                    System.out.println(System.currentTimeMillis() + ": " + c);
-//                }
-            }
-        }, 100, TimeUnit.MILLISECONDS);
         }
     }
 }
