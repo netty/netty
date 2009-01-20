@@ -95,7 +95,7 @@ public class TimeBasedUuidGenerator {
 
             nodeKey.append(':');
             nodeKey.append(vmId);
-        } catch (Exception e) {
+        } catch (Throwable t) {
             // Perhaps running with a security manager (e.g. Applet) or on a
             // platform without the java.lang.management package (e.g. Android.)
             nodeKey.append(":?");
