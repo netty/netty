@@ -94,7 +94,7 @@ public class HashedWheelTimer implements Timer {
         }
         if (ticksPerWheel <= 0) {
             throw new IllegalArgumentException(
-                    "ticksPerWheel must be greated than 0: " + ticksPerWheel);
+                    "ticksPerWheel must be greater than 0: " + ticksPerWheel);
         }
 
         // Normalize ticksPerWheel to power of two and initialize the wheel.
