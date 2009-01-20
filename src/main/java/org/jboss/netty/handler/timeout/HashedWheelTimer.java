@@ -155,22 +155,26 @@ public class HashedWheelTimer implements Timer {
 
         // Add the timeout to the wheel.
         HashedWheelTimeout timeout;
+        long currentTime = System.nanoTime();
         lock.readLock().lock();
         try {
             timeout = new HashedWheelTimeout(
-                    task, wheelCursor, System.nanoTime(), initialDelay);
+                    task, wheelCursor, currentTime, initialDelay);
 
             wheel[schedule(timeout)].add(timeout);
-
-            // Start the worker if necessary.
-            if (activeTimeouts.getAndIncrement() == 0) {
-                executor.execute(worker);
-            }
+            increaseActiveTimeouts();
         } finally {
             lock.readLock().unlock();
         }
 
         return timeout;
+    }
+
+    void increaseActiveTimeouts() {
+        // Start the worker if necessary.
+        if (activeTimeouts.getAndIncrement() == 0) {
+            executor.execute(worker);
+        }
     }
 
     private int schedule(HashedWheelTimeout timeout) {
@@ -217,6 +221,8 @@ public class HashedWheelTimer implements Timer {
     private final class Worker implements Runnable {
 
         private volatile long threadSafeStartTime;
+        private volatile long threadSafeTick;
+        private long startTime;
         private long tick;
 
         Worker() {
@@ -227,15 +233,24 @@ public class HashedWheelTimer implements Timer {
             List<HashedWheelTimeout> expiredTimeouts =
                 new ArrayList<HashedWheelTimeout>();
 
-            long startTime = threadSafeStartTime;
-            tick = 1;
+            startTime = threadSafeStartTime;
+            tick = threadSafeTick;
+            if (startTime == 0) {
+                startTime = System.nanoTime();
+                tick = 1;
+            }
 
-            boolean continueTheLoop;
-            do {
-                startTime = waitForNextTick(startTime);
-                continueTheLoop = fetchExpiredTimeouts(expiredTimeouts);
-                notifyExpiredTimeouts(expiredTimeouts);
-            } while (continueTheLoop && !ExecutorUtil.isShutdown(executor));
+            try {
+                boolean continueTheLoop;
+                do {
+                    startTime = waitForNextTick();
+                    continueTheLoop = fetchExpiredTimeouts(expiredTimeouts);
+                    notifyExpiredTimeouts(expiredTimeouts);
+                } while (continueTheLoop && !ExecutorUtil.isShutdown(executor));
+            } finally{
+                threadSafeStartTime = startTime;
+                threadSafeTick = tick;
+            }
         }
 
         private boolean fetchExpiredTimeouts(
@@ -277,27 +292,24 @@ public class HashedWheelTimer implements Timer {
                 ReusableIterator<HashedWheelTimeout> i) {
 
             long currentTime = System.nanoTime();
-            boolean notEmpty = i.hasNext();
-            if (notEmpty) {
-                do {
-                    HashedWheelTimeout timeout = i.next();
-                    synchronized (timeout) {
-                        if (timeout.remainingRounds <= 0) {
-                            if (timeout.deadline <= currentTime) {
-                                i.remove();
-                                expiredTimeouts.add(timeout);
-                                activeTimeouts.getAndDecrement();
-                            } else {
-                                // A rare case where a timeout is put for the next
-                                // round: just wait for the next round.
-                                timeout.slippedRounds ++;
-                            }
+            i.rewind();
+            while (i.hasNext()) {
+                HashedWheelTimeout timeout = i.next();
+                synchronized (timeout) {
+                    if (timeout.remainingRounds <= 0) {
+                        if (timeout.deadline <= currentTime) {
+                            i.remove();
+                            expiredTimeouts.add(timeout);
+                            activeTimeouts.getAndDecrement();
                         } else {
-                            timeout.remainingRounds --;
+                            // A rare case where a timeout is put for the next
+                            // round: just wait for the next round.
+                            timeout.slippedRounds ++;
                         }
+                    } else {
+                        timeout.remainingRounds --;
                     }
-                } while (i.hasNext());
-                i.rewind();
+                }
             }
         }
 
@@ -312,7 +324,7 @@ public class HashedWheelTimer implements Timer {
             expiredTimeouts.clear();
         }
 
-        private long waitForNextTick(long startTime) {
+        private long waitForNextTick() {
             for (;;) {
                 final long currentTime = System.nanoTime();
                 final long sleepTime = tickDuration * tick - (currentTime - startTime);
@@ -411,11 +423,7 @@ public class HashedWheelTimer implements Timer {
                 }
 
                 if (wheel[newStopIndex].add(this)) {
-
-                    // Start the worker if necessary.
-                    if (activeTimeouts.getAndIncrement() == 0) {
-                        executor.execute(worker);
-                    }
+                    increaseActiveTimeouts();
                 }
             } finally {
                 extensionCount ++;
@@ -514,12 +522,12 @@ public class HashedWheelTimer implements Timer {
         for (int i = 0; i < 1; i ++) {
         timer.newTimeout(new TimerTask() {
             public void run(Timeout timeout) throws Exception {
-                //System.out.println(Thread.currentThread().getName() + ": " + timeout.getExtensionCount() + ": " + timeout);
+                System.out.println(Thread.currentThread().getName() + ": " + timeout.getExtensionCount() + ": " + timeout);
                 timeout.extend();
                 int c = e.getActiveCount();
-                if (c > 1) {
-                    System.out.println(System.currentTimeMillis() + ": " + c);
-                }
+//                if (c > 1) {
+//                    System.out.println(System.currentTimeMillis() + ": " + c);
+//                }
             }
         }, 100, TimeUnit.MILLISECONDS);
         }
