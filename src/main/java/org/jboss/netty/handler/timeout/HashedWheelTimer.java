@@ -235,7 +235,7 @@ public class HashedWheelTimer implements Timer {
             super();
         }
 
-        public synchronized void run() {
+        public void run() {
             List<HashedWheelTimeout> expiredTimeouts =
                 new ArrayList<HashedWheelTimeout>();
 
