@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.util;
+package org.jboss.netty.handler.timeout;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)

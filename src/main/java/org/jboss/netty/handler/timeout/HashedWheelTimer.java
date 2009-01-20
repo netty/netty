@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.util;
+package org.jboss.netty.handler.timeout;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -31,6 +31,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import org.jboss.netty.util.ExecutorUtil;
+import org.jboss.netty.util.MapBackedSet;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
