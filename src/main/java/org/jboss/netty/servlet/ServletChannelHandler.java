@@ -53,6 +53,7 @@ class ServletChannelHandler extends SimpleChannelHandler {
             byte[] b = new byte[buffer.readableBytes()];
             buffer.readBytes(b);
             outputStream.write(b);
+            outputStream.flush();
         }
         else {
             buffers.add(buffer);

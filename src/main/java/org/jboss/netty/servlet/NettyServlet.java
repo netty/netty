@@ -57,6 +57,7 @@ public class NettyServlet extends HttpServlet {
             response.setHeader("jsessionid", session.getId());
             response.setContentLength(-1);
             response.setStatus(HttpServletResponse.SC_OK);
+            response.getOutputStream().flush();
             //todo make this configurable
             byte[] content = new byte[1024];
             int read;
