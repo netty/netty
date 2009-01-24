@@ -32,9 +32,7 @@ import static org.jboss.netty.channel.Channels.fireChannelInterestChanged;
 import static org.jboss.netty.channel.Channels.fireChannelUnbound;
 import static org.jboss.netty.channel.Channels.fireExceptionCaught;
 import static org.jboss.netty.channel.Channels.fireMessageReceived;
-import static org.jboss.netty.channel.socket.servlet.ServletClientSocketPipelineSink.LINE_TERMINATOR;
 
-import java.io.OutputStream;
 import java.io.PushbackInputStream;
 
 /**
@@ -43,9 +41,9 @@ import java.io.PushbackInputStream;
  * @version $Rev$, $Date$
  */
 class ServletWorker implements Runnable {
-    private final ServletSocketChannel channel;
+    private final ServletClientSocketChannel channel;
 
-    ServletWorker(ServletSocketChannel channel) {
+    ServletWorker(ServletClientSocketChannel channel) {
         this.channel = channel;
     }
 
@@ -63,58 +61,27 @@ class ServletWorker implements Runnable {
                     }
                     catch (InterruptedException e) {
                         if (!channel.isOpen()) {
+                            System.out.println("leave loop 1");
                             break;
                         }
                     }
                 }
             }
+
             byte[] buf;
-            int readBytes = 0;
             try {
-                //first get the hex string
-                StringBuffer hex = new StringBuffer();
-                int b;
-                while ((b = in.read()) != -1) {
-                    if (b == 13) {
-                       int end = in.read();
-                        if(end != 10) {
-                            in.unread(end);
-                        }
-                        break;
-                    }
-                    hex.append((char) b);
-                }
-                int bytesToRead = Integer.parseInt(hex.toString(), 16);
-                buf = new byte[bytesToRead];
-                do {
-                   readBytes = in.read(buf, readBytes, bytesToRead - readBytes);
-                } while (bytesToRead != readBytes);
-                int end = in.read();
-                if(end != 13) {
-                    in.unread(end);
-                }
-                else {
-                    end = in.read();
-                    if(end != 10)  {
-                        in.unread(end);
-                    }
-                }
+                buf = channel.receiveChunk();
             }
             catch (Throwable t) {
-                if (!channel.socket.isClosed()) {
+                if (!channel.isOpen()) {
                     fireExceptionCaught(channel, t);
                 }
+                System.out.println("leave loop 2");
                 break;
             }
 
-            ChannelBuffer buffer;
-            if (readBytes == buf.length) {
-                buffer = ChannelBuffers.wrappedBuffer(buf);
-            }
-            else {
-                // A rare case, but it sometimes happen.
-                buffer = ChannelBuffers.wrappedBuffer(buf, 0, readBytes);
-            }
+            ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(buf);
+
             fireMessageReceived(channel, buffer);
         }
 
@@ -127,18 +94,11 @@ class ServletWorker implements Runnable {
     }
 
     static void write(
-          ServletSocketChannel channel, ChannelFuture future,
+          ServletClientSocketChannel channel, ChannelFuture future,
           Object message) {
-        OutputStream out = channel.getOutputStream();
+
         try {
-            ChannelBuffer a = (ChannelBuffer) message;
-            int size = a.readableBytes();
-            String hex = Integer.toHexString(size) + LINE_TERMINATOR;
-            synchronized (out) {
-                out.write(hex.getBytes());
-                a.getBytes(a.readerIndex(), out, a.readableBytes());
-                out.write(LINE_TERMINATOR.getBytes());
-            }
+            channel.sendChunk((ChannelBuffer) message);
             future.setSuccess();
         }
         catch (Throwable t) {
@@ -148,7 +108,7 @@ class ServletWorker implements Runnable {
     }
 
     static void setInterestOps(
-          ServletSocketChannel channel, ChannelFuture future, int interestOps) {
+          ServletClientSocketChannel channel, ChannelFuture future, int interestOps) {
 
         // Override OP_WRITE flag - a user cannot change this flag.
         interestOps &= ~Channel.OP_WRITE;
@@ -185,11 +145,12 @@ class ServletWorker implements Runnable {
         }
     }
 
-    static void close(ServletSocketChannel channel, ChannelFuture future) {
+    static void close(ServletClientSocketChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         try {
-            channel.socket.close();
+            System.out.println("closing socket");
+            channel.closeSocket();
             future.setSuccess();
             if (channel.setClosed()) {
                 if (connected) {
@@ -212,4 +173,5 @@ class ServletWorker implements Runnable {
             fireExceptionCaught(channel, t);
         }
     }
+
 }
