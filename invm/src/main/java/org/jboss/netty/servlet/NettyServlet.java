@@ -32,6 +32,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.io.PushbackInputStream;
 import java.util.List;
 
 /**
@@ -55,29 +56,114 @@ public class NettyServlet extends HttpServlet {
         if (handler.getOutputStream() == null) {
             handler.setOutputStream(response.getOutputStream());
             response.setHeader("jsessionid", session.getId());
+            response.setHeader("Content-Type", "application/octet-stream");
             response.setContentLength(-1);
             response.setStatus(HttpServletResponse.SC_OK);
             response.getOutputStream().flush();
             //todo make this configurable
-            byte[] content = new byte[1024];
-            int read;
-            try {
-                ServletInputStream is = request.getInputStream();
-                while ((read = is.read(content)) != -1) {
-                    if (read > 0) {
-                        ChannelBuffer buffer = ChannelBuffers.buffer(read);
-                        buffer.writeBytes(content, 0, read);
-                        channel.write(buffer);
-                    }
+            // byte[] content = new byte[1024];
+            // int read;
+            /*ServletInputStream is = request.getInputStream();
+            while ((read = is.read(content)) != -1) {
+                if (read > 0) {
+                    ChannelBuffer buffer = ChannelBuffers.buffer(read);
+                    buffer.writeBytes(content, 0, read);
+                    channel.write(buffer);
                 }
-                System.out.println("NettyServlet.streamResponse");
+            }*/
+            PushbackInputStream in = new PushbackInputStream(request.getInputStream());
+
+            do {
+                try {
+                    ChannelBuffer buffer = read(in);
+                    if (buffer == null) {
+                        break;
+                    }
+                    channel.write(buffer);
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                    break;
+                }
             }
-            catch (IOException e) {
-                e.printStackTrace();
-            }
+            while (true);
+            System.out.println("NettyServlet.streamResponse");
+
         }
 
 
+    }
+
+    private ChannelBuffer read(PushbackInputStream in) throws IOException {
+        byte[] buf;
+        int readBytes;
+
+        do {
+            int bytesToRead = in.available();
+            if (bytesToRead > 0) {
+                buf = new byte[bytesToRead];
+                readBytes = in.read(buf);
+                break;
+            }
+            else if (bytesToRead == 0){
+                int b = in.read();
+                if (b < 0) {
+                    return null;
+                }
+                if (b == 13) {
+                    in.read();
+                }
+                else {
+                    in.unread(b);
+                }
+
+            }
+           else {
+               return null;
+            }
+        }
+        while (true);
+        if(readBytes == 21)
+            System.out.println("proxying " + readBytes);
+        ChannelBuffer buffer;
+        if (readBytes == buf.length) {
+            buffer = ChannelBuffers.wrappedBuffer(buf);
+        }
+        else {
+            // A rare case, but it sometimes happen.
+            buffer = ChannelBuffers.wrappedBuffer(buf, 0, readBytes);
+        }
+        return buffer;
+    }
+
+    private ChannelBuffer read2(ServletInputStream in) throws IOException {
+        int available = in.available();
+        if (available < 0) {
+            return null;
+        }
+        byte[] bytes = new byte[available];
+        int read = in.readLine(bytes, 0, available);
+        if (read == -1) {
+            return null;
+        }
+        return ChannelBuffers.wrappedBuffer(bytes, 0, read);
+    }
+
+    private ChannelBuffer read3(ServletInputStream in, byte[] bytes) throws IOException {
+        int read = 0;
+        int index = 0;
+
+        // Continue writing bytes until there are no more
+        while (read >= 0) {
+            if (index == read) {
+                read = in.read(bytes);
+                index = 0;
+            }
+        }
+        if (read == -1) {
+            return null;
+        }
+        return ChannelBuffers.wrappedBuffer(bytes, 0, read);
     }
 
     private void pollResponse(Channel channel, HttpServletRequest request, HttpServletResponse response, HttpSession session, ServletChannelHandler handler) throws IOException {

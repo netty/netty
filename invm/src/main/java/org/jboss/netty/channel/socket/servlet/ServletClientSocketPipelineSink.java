@@ -34,10 +34,12 @@ import static org.jboss.netty.channel.Channels.fireChannelConnected;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.util.ThreadRenamingRunnable;
+import org.jboss.logging.Logger;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PushbackInputStream;
+import java.io.IOException;
 import java.net.SocketAddress;
 import java.net.URL;
 import java.util.concurrent.Executor;
@@ -50,7 +52,7 @@ import java.util.concurrent.Executor;
 class ServletClientSocketPipelineSink  extends AbstractChannelSink {
 
     static String LINE_TERMINATOR = "\r\n";
-
+    private static      Logger log = Logger.getLogger(ServletClientSocketPipelineSink.class);
     private final Executor workerExecutor;
 
     ServletClientSocketPipelineSink(Executor workerExecutor) {
@@ -100,7 +102,7 @@ class ServletClientSocketPipelineSink  extends AbstractChannelSink {
             ServletClientSocketChannel channel, ChannelFuture future,
             SocketAddress localAddress) {
         try {
-            channel.socket.bind(localAddress);
+            channel.bindSocket(localAddress);
             future.setSuccess();
             fireChannelBound(channel, channel.getLocalAddress());
         } catch (Throwable t) {
@@ -126,29 +128,7 @@ class ServletClientSocketPipelineSink  extends AbstractChannelSink {
         });
 
         try {
-            channel.socket.connect(
-                    remoteAddress, channel.getConfig().getConnectTimeoutMillis());
-            connected = true;
-
-            // Obtain I/O stream.
-            channel.in = new PushbackInputStream(channel.socket.getInputStream(), 1);
-            channel.out = channel.socket.getOutputStream();
-            //write and read headers
-            URL url = new URL("http://localhost:8080/messaging/JBMServlet");
-            String msg = "POST " + url.toExternalForm() + " HTTP/1.1" + LINE_TERMINATOR
-                         + "HOST: " + url.getHost() + ":" + url.getPort() + LINE_TERMINATOR
-                         + "Content-Type: text/plain" + LINE_TERMINATOR
-                         + "Transfer-Encoding: chunked" + LINE_TERMINATOR
-                         + "Connection: Keep-Alive" + LINE_TERMINATOR + LINE_TERMINATOR;
-            channel.socket.getOutputStream().write(msg.getBytes("ASCII7"));
-            BufferedReader br = new BufferedReader(new InputStreamReader(channel.socket.getInputStream()));
-            String line;
-            while ((line = br.readLine()) != null ) {
-                //todo get the sessionid
-               if(line.equals(LINE_TERMINATOR) || line.equals("")) {
-                  break;
-               }
-            }
+            channel.connectAndSendHeaders(false, remoteAddress);
             // Fire events.
             future.setSuccess();
             if (!bound) {
@@ -173,4 +153,5 @@ class ServletClientSocketPipelineSink  extends AbstractChannelSink {
             }
         }
     }
+
 }

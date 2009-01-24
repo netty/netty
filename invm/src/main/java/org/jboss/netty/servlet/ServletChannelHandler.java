@@ -25,35 +25,83 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.util.LinkedTransferQueue;
 
 import javax.servlet.ServletOutputStream;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.io.IOException;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 @ChannelPipelineCoverage("one")
-class ServletChannelHandler extends SimpleChannelHandler {
+class ServletChannelHandler extends SimpleChannelHandler  implements Runnable {
     List<ChannelBuffer> buffers = new ArrayList<ChannelBuffer>();
+
+    private final BlockingQueue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>();
+
+    private final Object writeLock = new Object();
 
     private ServletOutputStream outputStream;
 
     final boolean stream;
 
+    private boolean open = true;
+
     public ServletChannelHandler(boolean stream) {
         this.stream = stream;
+    }
+
+    public void run() {
+        do {
+            MessageEvent event;
+            try {
+                event = writeBuffer.take();
+            }
+            catch (InterruptedException e) {
+                continue;
+            }
+            ChannelBuffer buffer = (ChannelBuffer) event.getMessage();
+            byte[] b = new byte[buffer.readableBytes()];
+            buffer.readBytes(b);
+            try {
+                synchronized (writeLock) {
+                    outputStream.write(b);
+                    outputStream.flush();
+                }
+            }
+            catch (IOException e1) {
+                //if we get an exception, wait for timeout or reconnection
+            }
+        }   while (open);
+
     }
 
     public synchronized void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
 
         ChannelBuffer buffer = (ChannelBuffer) e.getMessage();
+       if(!e.getChannel().isOpen()) {
+          
+       }
         if (stream) {
             byte[] b = new byte[buffer.readableBytes()];
             buffer.readBytes(b);
-            outputStream.write(b);
-            outputStream.flush();
+            try {
+                synchronized (writeLock) {
+                    outputStream.write(b);
+                    outputStream.flush();
+                }
+            }
+            catch (IOException e1) {
+                e1.printStackTrace();
+                e.getChannel().close();
+            }
         }
         else {
             buffers.add(buffer);
@@ -61,7 +109,11 @@ class ServletChannelHandler extends SimpleChannelHandler {
 
     }
 
-    public synchronized List<ChannelBuffer> getBuffers() {
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+        e.getChannel().close();
+    }
+
+   public synchronized List<ChannelBuffer> getBuffers() {
         List<ChannelBuffer> list = new ArrayList<ChannelBuffer>();
         list.addAll(buffers);
         buffers.clear();

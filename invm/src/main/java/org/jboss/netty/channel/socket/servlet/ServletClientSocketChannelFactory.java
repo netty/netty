@@ -23,6 +23,7 @@
 package org.jboss.netty.channel.socket.servlet;
 
 import java.util.concurrent.Executor;
+import java.net.URL;
 
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
@@ -89,42 +90,34 @@ import org.jboss.netty.util.ExecutorShutdownUtil;
  */
 public class ServletClientSocketChannelFactory implements ClientSocketChannelFactory {
 
-    private final Executor bossExecutor;
     private final Executor workerExecutor;
     private final ChannelSink sink;
+    private final URL url;
 
     /**
-     * Creates a new instance.  Calling this constructor is same with calling
-     * {@link #ServletClientSocketChannelFactory(java.util.concurrent.Executor, java.util.concurrent.Executor, int)} with
-     * the number of available processors in the machine.  The number of
-     * available processors is obtained by {@link Runtime#availableProcessors()}.
      *
-     * @param bossExecutor
-     *        the {@link java.util.concurrent.Executor} which will execute the boss thread
      * @param workerExecutor
-     *        the {@link java.util.concurrent.Executor} which will execute the I/O worker threads
      */
-    public ServletClientSocketChannelFactory(
-            Executor bossExecutor, Executor workerExecutor) {
-        this(bossExecutor, workerExecutor, Runtime.getRuntime().availableProcessors());
+    public ServletClientSocketChannelFactory(Executor workerExecutor, URL url) {
+        this(url, workerExecutor, Runtime.getRuntime().availableProcessors());
     }
 
     /**
      * Creates a new instance.
      *
-     * @param bossExecutor
      *        the {@link java.util.concurrent.Executor} which will execute the boss thread
+     * @param url
      * @param workerExecutor
      *        the {@link java.util.concurrent.Executor} which will execute the I/O worker threads
      * @param workerCount
-     *        the maximum number of I/O worker threads
      */
     public ServletClientSocketChannelFactory(
-            Executor bossExecutor, Executor workerExecutor,
-            int workerCount) {
-        if (bossExecutor == null) {
-            throw new NullPointerException("bossExecutor");
+          URL url, Executor workerExecutor,
+          int workerCount) {
+        if (url == null) {
+            throw new NullPointerException("Url is null");
         }
+        this.url = url;
         if (workerExecutor == null) {
             throw new NullPointerException("workerExecutor");
         }
@@ -134,16 +127,15 @@ public class ServletClientSocketChannelFactory implements ClientSocketChannelFac
                     "must be a positive integer.");
         }
 
-        this.bossExecutor = bossExecutor;
         this.workerExecutor = workerExecutor;
         sink = new ServletClientSocketPipelineSink(workerExecutor);
     }
 
     public SocketChannel newChannel(ChannelPipeline pipeline) {
-        return new ServletClientSocketChannel(this, pipeline, sink);
+        return new ServletClientSocketChannel(this, pipeline, sink, url);
     }
 
     public void releaseExternalResources() {
-        ExecutorShutdownUtil.shutdown(bossExecutor, workerExecutor);
+        ExecutorShutdownUtil.shutdown( workerExecutor);
     }
 }
