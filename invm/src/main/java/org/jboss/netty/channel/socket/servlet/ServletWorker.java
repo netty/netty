@@ -36,9 +36,7 @@ import static org.jboss.netty.channel.Channels.fireMessageReceived;
 import java.io.PushbackInputStream;
 
 /**
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
- * @version $Rev$, $Date$
+ * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 class ServletWorker implements Runnable {
     private final ServletClientSocketChannel channel;
@@ -61,7 +59,6 @@ class ServletWorker implements Runnable {
                     }
                     catch (InterruptedException e) {
                         if (!channel.isOpen()) {
-                            System.out.println("leave loop 1");
                             break;
                         }
                     }
@@ -76,7 +73,6 @@ class ServletWorker implements Runnable {
                 if (!channel.isOpen()) {
                     fireExceptionCaught(channel, t);
                 }
-                System.out.println("leave loop 2");
                 break;
             }
 
@@ -149,7 +145,6 @@ class ServletWorker implements Runnable {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         try {
-            System.out.println("closing socket");
             channel.closeSocket();
             future.setSuccess();
             if (channel.setClosed()) {

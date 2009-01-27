@@ -26,7 +26,6 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 
 import javax.servlet.ServletException;
-import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -36,169 +35,157 @@ import java.io.PushbackInputStream;
 import java.util.List;
 
 /**
+ * A servlet that acts as a proxy for a netty channel
+ *
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class NettyServlet extends HttpServlet {
-    protected void doRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        HttpSession session = request.getSession();
-        System.out.println("session.getId() = " + session.getId());
-        Channel channel = (Channel) session.getAttribute("channel");
-        ServletChannelHandler handler = (ServletChannelHandler) session.getAttribute("handler");
-        if (handler.isStreaming()) {
-            streamResponse(request, response, session, handler, channel);
-        }
-        else {
-            pollResponse(channel, request, response, session, handler);
-        }
-    }
+public class NettyServlet extends HttpServlet
+{
 
-    private void streamResponse(final HttpServletRequest request, final HttpServletResponse response, HttpSession session, ServletChannelHandler handler, Channel channel) throws IOException {
-        if (handler.getOutputStream() == null) {
-            handler.setOutputStream(response.getOutputStream());
-            response.setHeader("jsessionid", session.getId());
-            response.setHeader("Content-Type", "application/octet-stream");
-            response.setContentLength(-1);
-            response.setStatus(HttpServletResponse.SC_OK);
-            response.getOutputStream().flush();
-            //todo make this configurable
-            // byte[] content = new byte[1024];
-            // int read;
-            /*ServletInputStream is = request.getInputStream();
-            while ((read = is.read(content)) != -1) {
-                if (read > 0) {
-                    ChannelBuffer buffer = ChannelBuffers.buffer(read);
-                    buffer.writeBytes(content, 0, read);
-                    channel.write(buffer);
-                }
-            }*/
-            PushbackInputStream in = new PushbackInputStream(request.getInputStream());
+   final static String CHANNEL_PROP = "channel";
 
-            do {
-                try {
-                    ChannelBuffer buffer = read(in);
-                    if (buffer == null) {
-                        break;
-                    }
-                    channel.write(buffer);
-                }
-                catch (IOException e) {
-                    e.printStackTrace();
-                    break;
-                }
+   final static String HANDLER_PROP = "handler";
+
+   protected void doRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+   {
+      HttpSession session = request.getSession();
+      Channel channel = (Channel) session.getAttribute(CHANNEL_PROP);
+      ServletChannelHandler handler = (ServletChannelHandler) session.getAttribute(HANDLER_PROP);
+      if (handler.isStreaming())
+      {
+         streamResponse(request, response, session, handler, channel);
+      }
+      else
+      {
+         pollResponse(channel, request, response, session, handler);
+      }
+   }
+
+   private void streamResponse(final HttpServletRequest request, final HttpServletResponse response, HttpSession session, ServletChannelHandler handler, Channel channel) throws IOException
+   {
+
+      response.setHeader("jsessionid", session.getId());
+      response.setHeader("Content-Type", "application/octet-stream");
+      response.setContentLength(-1);
+      response.setStatus(HttpServletResponse.SC_OK);
+      response.getOutputStream().flush();
+      handler.setOutputStream(response.getOutputStream());
+      
+      PushbackInputStream in = new PushbackInputStream(request.getInputStream());
+      do
+      {
+         try
+         {
+            ChannelBuffer buffer = read(in);
+            if (buffer == null)
+            {
+               break;
             }
-            while (true);
-            System.out.println("NettyServlet.streamResponse");
+            channel.write(buffer);
+         }
+         catch (IOException e)
+         {
+            // this is ok, the client can reconnect.
+            break;
+         }
+      }
+      while (true);
 
-        }
+      if (!handler.awaitReconnect())
+      {
+         channel.close();
+      }
+   }
 
+   private ChannelBuffer read(PushbackInputStream in) throws IOException
+   {
+      byte[] buf;
+      int readBytes;
 
-    }
-
-    private ChannelBuffer read(PushbackInputStream in) throws IOException {
-        byte[] buf;
-        int readBytes;
-
-        do {
-            int bytesToRead = in.available();
-            if (bytesToRead > 0) {
-                buf = new byte[bytesToRead];
-                readBytes = in.read(buf);
-                break;
-            }
-            else if (bytesToRead == 0){
-                int b = in.read();
-                if (b < 0) {
-                    return null;
-                }
-                if (b == 13) {
-                    in.read();
-                }
-                else {
-                    in.unread(b);
-                }
-
-            }
-           else {
+      do
+      {
+         int bytesToRead = in.available();
+         if (bytesToRead > 0)
+         {
+            buf = new byte[bytesToRead];
+            readBytes = in.read(buf);
+            break;
+         }
+         else if (bytesToRead == 0)
+         {
+            int b = in.read();
+            if (b < 0 || in.available() < 0)
+            {
                return null;
             }
-        }
-        while (true);
-        if(readBytes == 21)
-            System.out.println("proxying " + readBytes);
-        ChannelBuffer buffer;
-        if (readBytes == buf.length) {
-            buffer = ChannelBuffers.wrappedBuffer(buf);
-        }
-        else {
-            // A rare case, but it sometimes happen.
-            buffer = ChannelBuffers.wrappedBuffer(buf, 0, readBytes);
-        }
-        return buffer;
-    }
-
-    private ChannelBuffer read2(ServletInputStream in) throws IOException {
-        int available = in.available();
-        if (available < 0) {
-            return null;
-        }
-        byte[] bytes = new byte[available];
-        int read = in.readLine(bytes, 0, available);
-        if (read == -1) {
-            return null;
-        }
-        return ChannelBuffers.wrappedBuffer(bytes, 0, read);
-    }
-
-    private ChannelBuffer read3(ServletInputStream in, byte[] bytes) throws IOException {
-        int read = 0;
-        int index = 0;
-
-        // Continue writing bytes until there are no more
-        while (read >= 0) {
-            if (index == read) {
-                read = in.read(bytes);
-                index = 0;
+            if (b == 13)
+            {
+               in.read();
             }
-        }
-        if (read == -1) {
-            return null;
-        }
-        return ChannelBuffers.wrappedBuffer(bytes, 0, read);
-    }
-
-    private void pollResponse(Channel channel, HttpServletRequest request, HttpServletResponse response, HttpSession session, ServletChannelHandler handler) throws IOException {
-        int length = request.getContentLength();
-        if (length > 0) {
-            byte[] bytes = new byte[length];
-            int read = request.getInputStream().read(bytes);
-            ChannelBuffer cb = ChannelBuffers.copiedBuffer(bytes);
-            channel.write(cb);
-        }
-        handler.setOutputStream(response.getOutputStream());
-        List<ChannelBuffer> buffers = handler.getBuffers();
-        length = 0;
-        if (buffers.size() > 0) {
-            for (ChannelBuffer buffer : buffers) {
-                length += buffer.readableBytes();
+            else
+            {
+               in.unread(b);
             }
-        }
-        response.setHeader("jsessionid", session.getId());
-        response.setContentLength(length);
-        response.setStatus(HttpServletResponse.SC_OK);
-        System.out.println("response = " + response.getOutputStream());
-        for (ChannelBuffer buffer : buffers) {
-            byte[] b = new byte[buffer.readableBytes()];
-            buffer.readBytes(b);
-            response.getOutputStream().write(b);
-        }
-    }
 
-    protected void doGet(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws ServletException, IOException {
-        doRequest(httpServletRequest, httpServletResponse);
-    }
+         }
+         else
+         {
+            return null;
+         }
+      }
+      while (true);
+      ChannelBuffer buffer;
+      if (readBytes == buf.length)
+      {
+         buffer = ChannelBuffers.wrappedBuffer(buf);
+      }
+      else
+      {
+         // A rare case, but it sometimes happen.
+         buffer = ChannelBuffers.wrappedBuffer(buf, 0, readBytes);
+      }
+      return buffer;
+   }
 
-    protected void doPost(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws ServletException, IOException {
-        doRequest(httpServletRequest, httpServletResponse);
-    }
+   private void pollResponse(Channel channel, HttpServletRequest request, HttpServletResponse response, HttpSession session, ServletChannelHandler handler) throws IOException
+   {
+      int length = request.getContentLength();
+      if (length > 0)
+      {
+         byte[] bytes = new byte[length];
+         request.getInputStream().read(bytes);
+         ChannelBuffer cb = ChannelBuffers.copiedBuffer(bytes);
+         channel.write(cb);
+      }
+      handler.setOutputStream(response.getOutputStream());
+      List<ChannelBuffer> buffers = handler.getBuffers();
+      length = 0;
+      if (buffers.size() > 0)
+      {
+         for (ChannelBuffer buffer : buffers)
+         {
+            length += buffer.readableBytes();
+         }
+      }
+      response.setHeader("jsessionid", session.getId());
+      response.setContentLength(length);
+      response.setStatus(HttpServletResponse.SC_OK);
+      for (ChannelBuffer buffer : buffers)
+      {
+         byte[] b = new byte[buffer.readableBytes()];
+         buffer.readBytes(b);
+         response.getOutputStream().write(b);
+      }
+   }
+
+   protected void doGet(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws ServletException, IOException
+   {
+      doRequest(httpServletRequest, httpServletResponse);
+   }
+
+   protected void doPost(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws ServletException, IOException
+   {
+      doRequest(httpServletRequest, httpServletResponse);
+   }
 }
 

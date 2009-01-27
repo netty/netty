@@ -25,6 +25,7 @@ import static org.jboss.netty.handler.codec.http.HttpCodecUtil.*;
 
 import java.util.List;
 import java.util.Set;
+import java.util.Collection;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -54,6 +55,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
                 channel.getConfig().getBufferFactory());
         encodeInitialLine(buf, request);
         encodeHeaders(buf, request);
+        encodeCookies(buf, request);
         buf.writeBytes(CRLF);
         if (request.getContent() != null) {
             buf.writeBytes(request.getContent());
@@ -83,6 +85,25 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
             }
         }
     }
+
+    public void encodeCookies(ChannelBuffer buf, HttpMessage message) {
+        Collection<String> cookieNames = message.getCookieNames();
+        if(cookieNames.isEmpty()) {
+            return;
+        }
+        buf.writeBytes(getCookieHeaderName());
+        buf.writeByte(COLON);
+        buf.writeByte(SP);
+        for (String cookieName : cookieNames) {
+            buf.writeBytes(cookieName.getBytes());
+            buf.writeByte(EQUALS);
+            buf.writeBytes(message.getCookie(cookieName).getValue().getBytes());
+            buf.writeByte(SEMICOLON);
+        }
+        buf.writeBytes(CRLF);
+    }
+
+    public abstract byte[] getCookieHeaderName();
 
     protected abstract void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception;
 }

@@ -29,25 +29,32 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import static org.jboss.netty.channel.Channels.pipeline;
 import org.jboss.netty.channel.local.LocalAddress;
+import static org.jboss.netty.servlet.NettyServletContextListener.BOOTSTRAP_PROP;
+import static org.jboss.netty.servlet.NettyServletContextListener.STREAMING_PROP;
+import static org.jboss.netty.servlet.NettyServletContextListener.RECONNECT_PROP;
+import static org.jboss.netty.servlet.NettyServlet.CHANNEL_PROP;
+import static org.jboss.netty.servlet.NettyServlet.HANDLER_PROP;
 
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSessionListener;
 
 /**
+ * A session listenor that uses the client bootstrap to create a channel.
+ * 
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public class NettySessionListener implements HttpSessionListener, ChannelHandler {
     
     public void sessionCreated(HttpSessionEvent event) {
         HttpSession session = event.getSession();
-        System.out.println("NettySessionListener.sessionCreated");
-        ClientBootstrap bootstrap = (ClientBootstrap) session.getServletContext().getAttribute("bootstrap");
-        System.out.println("created session  = " + session.getId());
-
-        session.setMaxInactiveInterval(Integer.MAX_VALUE);
-        final ServletChannelHandler handler = new ServletChannelHandler(true);
-        session.setAttribute("handler", handler);
+        ClientBootstrap bootstrap = (ClientBootstrap) session.getServletContext().getAttribute(BOOTSTRAP_PROP);
+        Boolean streaming = (Boolean) session.getServletContext().getAttribute(STREAMING_PROP);
+        if(streaming) {
+            session.setMaxInactiveInterval(-1);
+        }
+        final ServletChannelHandler handler = new ServletChannelHandler(streaming, session,  (Long) session.getServletContext().getAttribute(RECONNECT_PROP));
+        session.setAttribute(HANDLER_PROP, handler);
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline pipeline = pipeline();
@@ -58,12 +65,11 @@ public class NettySessionListener implements HttpSessionListener, ChannelHandler
         ChannelFuture future = bootstrap.connect(new LocalAddress("netty"));
         future.awaitUninterruptibly();
         final Channel ch = future.getChannel();
-        session.setAttribute("channel", ch);
+        session.setAttribute(CHANNEL_PROP, ch);
     }
 
     public void sessionDestroyed(HttpSessionEvent event) {
-        System.out.println("JBMSessionListener.sessionDestroyed");
-        Channel channel = (Channel) event.getSession().getAttribute("channel");
+        Channel channel = (Channel) event.getSession().getAttribute(CHANNEL_PROP);
         if (channel != null) {
             channel.close();
         }
