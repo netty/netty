@@ -48,9 +48,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
- * @version $Rev$, $Date$
+ * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 class ServletClientSocketChannel extends AbstractChannel
       implements org.jboss.netty.channel.socket.SocketChannel {
@@ -60,8 +58,6 @@ class ServletClientSocketChannel extends AbstractChannel
     private Lock lock = new ReentrantLock();
 
     private final Object writeLock = new Object();
-
-    private Condition reconnectCondition = lock.newCondition();
 
     private Socket socket;
 
@@ -297,7 +293,8 @@ class ServletClientSocketChannel extends AbstractChannel
     }
 
     public void closeSocket() throws IOException {
-        closed = true;
+       setClosed(); 
+       closed = true;
         socket.close();
     }
 

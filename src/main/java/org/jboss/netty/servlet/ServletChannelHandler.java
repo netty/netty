@@ -21,88 +21,86 @@
  */
 package org.jboss.netty.servlet;
 
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.util.LinkedTransferQueue;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.ChannelStateEvent;
 
 import javax.servlet.ServletOutputStream;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
+ * A channel handler taht proxies messages to the servlet output stream
+ *
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 @ChannelPipelineCoverage("one")
-class ServletChannelHandler extends SimpleChannelHandler  implements Runnable {
+class ServletChannelHandler extends SimpleChannelHandler {
     List<ChannelBuffer> buffers = new ArrayList<ChannelBuffer>();
 
-    private final BlockingQueue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>();
+    private Lock reconnectLock = new ReentrantLock();
 
-    private final Object writeLock = new Object();
+    private Condition reconnectCondition = reconnectLock.newCondition();
+
+    private long reconnectTimeout;
+
+    boolean connected = false;
+
+    AtomicBoolean invalidated = new AtomicBoolean(false);
 
     private ServletOutputStream outputStream;
 
     final boolean stream;
 
-    private boolean open = true;
+    private final HttpSession session;
 
-    public ServletChannelHandler(boolean stream) {
+    public ServletChannelHandler(boolean stream, HttpSession session, long reconnectTimeout) {
         this.stream = stream;
-    }
-
-    public void run() {
-        do {
-            MessageEvent event;
-            try {
-                event = writeBuffer.take();
-            }
-            catch (InterruptedException e) {
-                continue;
-            }
-            ChannelBuffer buffer = (ChannelBuffer) event.getMessage();
-            byte[] b = new byte[buffer.readableBytes()];
-            buffer.readBytes(b);
-            try {
-                synchronized (writeLock) {
-                    outputStream.write(b);
-                    outputStream.flush();
-                }
-            }
-            catch (IOException e1) {
-                //if we get an exception, wait for timeout or reconnection
-            }
-        }   while (open);
-
+        this.session = session;
+        this.reconnectTimeout = reconnectTimeout;
     }
 
     public synchronized void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
 
         ChannelBuffer buffer = (ChannelBuffer) e.getMessage();
-       if(!e.getChannel().isOpen()) {
-          
-       }
         if (stream) {
             byte[] b = new byte[buffer.readableBytes()];
             buffer.readBytes(b);
+            reconnectLock.lock();
             try {
-                synchronized (writeLock) {
+               outputStream.write(b);
+                outputStream.flush();
+            }
+            catch (IOException e1) {
+                connected = false;
+                reconnectCondition.await(reconnectTimeout, TimeUnit.MILLISECONDS);
+                if (connected) {
                     outputStream.write(b);
                     outputStream.flush();
                 }
+                else {
+                    if (invalidated.compareAndSet(false, true)) {
+                        session.invalidate();
+                    }
+                    e.getChannel().close();
+                }
             }
-            catch (IOException e1) {
-                e1.printStackTrace();
-                e.getChannel().close();
+            finally {
+                reconnectLock.unlock();
             }
         }
+
         else {
             buffers.add(buffer);
         }
@@ -110,10 +108,19 @@ class ServletChannelHandler extends SimpleChannelHandler  implements Runnable {
     }
 
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+        if (invalidated.compareAndSet(false, true)) {
+            session.invalidate();
+        }
         e.getChannel().close();
     }
 
-   public synchronized List<ChannelBuffer> getBuffers() {
+    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        if (invalidated.compareAndSet(false, true)) {
+            session.invalidate();
+        }
+    }
+
+    public synchronized List<ChannelBuffer> getBuffers() {
         List<ChannelBuffer> list = new ArrayList<ChannelBuffer>();
         list.addAll(buffers);
         buffers.clear();
@@ -121,7 +128,15 @@ class ServletChannelHandler extends SimpleChannelHandler  implements Runnable {
     }
 
     public void setOutputStream(ServletOutputStream outputStream) {
-        this.outputStream = outputStream;
+        reconnectLock.lock();
+        try {
+            this.outputStream = outputStream;
+            connected = true;
+            reconnectCondition.signalAll();
+        }
+        finally {
+            reconnectLock.unlock();
+        }
     }
 
     public boolean isStreaming() {
@@ -130,6 +145,21 @@ class ServletChannelHandler extends SimpleChannelHandler  implements Runnable {
 
     public ServletOutputStream getOutputStream() {
         return outputStream;
+    }
+
+    public boolean awaitReconnect() {
+        reconnectLock.lock();
+        connected = false;
+        try {
+            reconnectCondition.await(reconnectTimeout, TimeUnit.MILLISECONDS);
+        }
+        catch (InterruptedException e) {
+            return connected;
+        }
+        finally {
+            reconnectLock.unlock();
+        }
+        return connected;
     }
 }
 

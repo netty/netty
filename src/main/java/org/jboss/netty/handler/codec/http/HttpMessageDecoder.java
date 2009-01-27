@@ -22,6 +22,7 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -143,8 +144,20 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         content = null;
         nextState = null;
         checkpoint(State.READ_INITIAL);
+        String cookieVal = message.getHeader(getCookieHeaderName());
+        if(cookieVal != null) {
+            String[] cookies = cookieVal.split(";");
+            for (String cooky : cookies) {
+                String[] pair = cooky.split("=", 2);
+                if(pair.length == 2) {
+                    message.addCookie(new HttpCookie(pair[0], pair[1]));
+                }
+            }
+        }
         return message;
     }
+
+
 
     private void readChunkedContent(Channel channel, ChannelBuffer buffer) {
         if (content == null) {
@@ -197,6 +210,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
         checkpoint(nextState);
     }
+
+    protected abstract String getCookieHeaderName();
 
     protected abstract void readInitial(ChannelBuffer buffer) throws Exception;
 

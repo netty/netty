@@ -35,11 +35,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 /**
- * The default {@link org.jboss.netty.channel.socket.SocketChannelConfig} implementation.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
- * @version $Rev$, $Date$
+ * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public class ServletSocketChannelConfig implements SocketChannelConfig {
 

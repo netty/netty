@@ -42,4 +42,8 @@ public class HttpRequestDecoder extends HttpMessageDecoder {
                 HttpVersion.valueOf(split[2]), HttpMethod.valueOf(split[0]), split[1]);
 
     }
+
+    protected String getCookieHeaderName() {
+        return "Cookie";
+    }
 }

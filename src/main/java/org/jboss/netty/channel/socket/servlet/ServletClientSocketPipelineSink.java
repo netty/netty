@@ -45,9 +45,7 @@ import java.net.URL;
 import java.util.concurrent.Executor;
 
 /**
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
- * @version $Rev$, $Date$
+ * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 class ServletClientSocketPipelineSink  extends AbstractChannelSink {
 
