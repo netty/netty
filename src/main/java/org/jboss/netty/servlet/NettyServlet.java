@@ -24,6 +24,7 @@ package org.jboss.netty.servlet;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.MessageEvent;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -158,23 +159,30 @@ public class NettyServlet extends HttpServlet
          channel.write(cb);
       }
       handler.setOutputStream(response.getOutputStream());
-      List<ChannelBuffer> buffers = handler.getBuffers();
+      List<MessageEvent> buffers = handler.getAwaitingEvents();
       length = 0;
       if (buffers.size() > 0)
       {
-         for (ChannelBuffer buffer : buffers)
+         for (MessageEvent buffer : buffers)
          {
-            length += buffer.readableBytes();
+            length += ((ChannelBuffer)buffer.getMessage()).readableBytes();
          }
       }
       response.setHeader("jsessionid", session.getId());
       response.setContentLength(length);
       response.setStatus(HttpServletResponse.SC_OK);
-      for (ChannelBuffer buffer : buffers)
+      for (MessageEvent event : buffers)
       {
-         byte[] b = new byte[buffer.readableBytes()];
+          ChannelBuffer buffer = (ChannelBuffer) event.getMessage();
+          byte[] b = new byte[buffer.readableBytes()];
          buffer.readBytes(b);
-         response.getOutputStream().write(b);
+          try {
+              response.getOutputStream().write(b);
+              event.getFuture().setSuccess();
+          }
+          catch (IOException e) {
+              event.getFuture().setFailure(e);
+          }
       }
    }
 

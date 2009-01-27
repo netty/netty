@@ -24,10 +24,10 @@ package org.jboss.netty.servlet;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.channel.ChannelStateEvent;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpSession;
@@ -47,7 +47,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @ChannelPipelineCoverage("one")
 class ServletChannelHandler extends SimpleChannelHandler {
-    List<ChannelBuffer> buffers = new ArrayList<ChannelBuffer>();
+    List<MessageEvent> awaitingEvents = new ArrayList<MessageEvent>();
 
     private Lock reconnectLock = new ReentrantLock();
 
@@ -75,12 +75,17 @@ class ServletChannelHandler extends SimpleChannelHandler {
 
         ChannelBuffer buffer = (ChannelBuffer) e.getMessage();
         if (stream) {
+            reconnectLock.lock();
+            if (outputStream == null) {
+                awaitingEvents.add(e);
+                return;
+            }
             byte[] b = new byte[buffer.readableBytes()];
             buffer.readBytes(b);
-            reconnectLock.lock();
             try {
-               outputStream.write(b);
+                outputStream.write(b);
                 outputStream.flush();
+                e.getFuture().setSuccess();
             }
             catch (IOException e1) {
                 connected = false;
@@ -88,8 +93,10 @@ class ServletChannelHandler extends SimpleChannelHandler {
                 if (connected) {
                     outputStream.write(b);
                     outputStream.flush();
+                    e.getFuture().setSuccess();
                 }
                 else {
+                    e.getFuture().setFailure(e1);
                     if (invalidated.compareAndSet(false, true)) {
                         session.invalidate();
                     }
@@ -102,7 +109,7 @@ class ServletChannelHandler extends SimpleChannelHandler {
         }
 
         else {
-            buffers.add(buffer);
+            awaitingEvents.add(e);
         }
 
     }
@@ -120,10 +127,10 @@ class ServletChannelHandler extends SimpleChannelHandler {
         }
     }
 
-    public synchronized List<ChannelBuffer> getBuffers() {
-        List<ChannelBuffer> list = new ArrayList<ChannelBuffer>();
-        list.addAll(buffers);
-        buffers.clear();
+    public synchronized List<MessageEvent> getAwaitingEvents() {
+        List<MessageEvent> list = new ArrayList<MessageEvent>();
+        list.addAll(awaitingEvents);
+        awaitingEvents.clear();
         return list;
     }
 
@@ -132,6 +139,19 @@ class ServletChannelHandler extends SimpleChannelHandler {
         try {
             this.outputStream = outputStream;
             connected = true;
+            for (MessageEvent awaitingEvent : awaitingEvents) {
+                ChannelBuffer buffer = (ChannelBuffer) awaitingEvent.getMessage();
+                byte[] b = new byte[buffer.readableBytes()];
+                buffer.readBytes(b);
+                try {
+                    outputStream.write(b);
+                    outputStream.flush();
+                    awaitingEvent.getFuture().setSuccess();
+                }
+                catch (IOException e) {
+                    awaitingEvent.getFuture().setFailure(e);
+                }
+            }
             reconnectCondition.signalAll();
         }
         finally {

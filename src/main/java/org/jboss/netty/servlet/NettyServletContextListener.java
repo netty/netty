@@ -62,7 +62,7 @@ public class NettyServletContextListener implements ServletContextListener {
                 context.getServletContext().setAttribute(BOOTSTRAP_PROP, new ClientBootstrap(channelFactory));
             }
             else {
-                throw new IllegalArgumentException("channel factory " + channelFactory + " not registered");
+                throw new IllegalArgumentException("channel factory " + name + " not registered");
             }
             String timeoutParam =  context.getServletContext().getInitParameter(RECONNECT_PROP);
             context.getServletContext().setAttribute(RECONNECT_PROP, timeoutParam == null?DEFAULT_RECONNECT_TIMEOUT:Long.decode(timeoutParam.trim()));
