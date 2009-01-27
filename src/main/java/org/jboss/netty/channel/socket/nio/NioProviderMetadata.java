@@ -24,7 +24,6 @@ package org.jboss.netty.channel.socket.nio;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -282,7 +281,7 @@ class NioProviderMetadata {
                 try {
                     ch.socket().bind(new InetSocketAddress(0));
                     ch.configureBlocking(false);
-                } catch (IOException e) {
+                } catch (Throwable e) {
                     logger.warn("Failed to configure a temporary socket.", e);
                     return -1;
                 }
@@ -290,7 +289,7 @@ class NioProviderMetadata {
                 // Prepare the selector loop.
                 try {
                     loop = new SelectorLoop();
-                } catch (IOException e) {
+                } catch (Throwable e) {
                     logger.warn("Failed to open a temporary selector.", e);
                     return -1;
                 }
@@ -298,7 +297,7 @@ class NioProviderMetadata {
                 // Register the channel
                 try {
                     ch.register(loop.selector, 0);
-                } catch (ClosedChannelException e) {
+                } catch (Throwable e) {
                     logger.warn("Failed to register a temporary selector.", e);
                     return -1;
                 }
@@ -378,13 +377,13 @@ class NioProviderMetadata {
                         constraintLevel = 2;
                     }
                 }
-            } catch (IOException e) {
+            } catch (Throwable e) {
                 return -1;
             } finally {
                 if (ch != null) {
                     try {
                         ch.close();
-                    } catch (IOException e) {
+                    } catch (Throwable e) {
                         logger.warn("Failed to close a temporary socket.", e);
                     }
                 }
@@ -408,13 +407,13 @@ class NioProviderMetadata {
                                 // Ignore
                             }
                         }
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         // Perhaps security exception.
                     }
 
                     try {
                         loop.selector.close();
-                    } catch (IOException e) {
+                    } catch (Throwable e) {
                         logger.warn("Failed to close a temporary selector.", e);
                     }
                 }
