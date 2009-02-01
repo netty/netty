@@ -234,6 +234,13 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                 try {
                     int selectedKeyCount = selector.select(500);
 
+                    // Wake up immediately in the next turn if someone might
+                    // have waken up the selector between 'wakenUp.set(false)'
+                    // and 'selector.select(...)'.
+                    if (wakenUp.get()) {
+                        selector.wakeup();
+                    }
+
                     processRegisterTaskQueue();
 
                     if (selectedKeyCount > 0) {
