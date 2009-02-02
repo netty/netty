@@ -73,6 +73,6 @@ public class NumberEncoder extends SimpleChannelHandler {
         buf.writeBytes(data);
 
         // Send the constructed message.
-        write(ctx, e.getChannel(), e.getFuture(), buf, e.getRemoteAddress());
+        write(ctx, e.getFuture(), buf, e.getRemoteAddress());
     }
 }

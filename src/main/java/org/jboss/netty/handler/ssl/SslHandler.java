@@ -407,7 +407,7 @@ public class SslHandler extends FrameDecoder {
                     if (future == null) {
                         break;
                     }
-                    Channels.close(ctx, channel, future);
+                    Channels.close(ctx, future);
                 }
             }
         }
@@ -580,7 +580,7 @@ public class SslHandler extends FrameDecoder {
                     outNetBuf.clear();
                     if (channel.isConnected()) {
                         future = future(channel);
-                        write(ctx, channel, future, msg);
+                        write(ctx, future, msg);
                     }
                 }
 

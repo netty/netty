@@ -276,7 +276,7 @@ public abstract class FrameDecoder
                         "if it returned a frame.");
             }
 
-            fireMessageReceived(context, channel, frame, remoteAddress);
+            fireMessageReceived(context, frame, remoteAddress);
         }
     }
 
@@ -286,12 +286,12 @@ public abstract class FrameDecoder
         try {
             if (cumulation.readable()) {
                 // Make sure all frames are read before notifying a closed channel.
-                callDecode(ctx, e.getChannel(), cumulation, null);
+                callDecode(ctx, ctx.getChannel(), cumulation, null);
                 if (cumulation.readable()) {
                     // and send the remainders too if necessary.
-                    Object partialFrame = decodeLast(ctx, e.getChannel(), cumulation);
+                    Object partialFrame = decodeLast(ctx, ctx.getChannel(), cumulation);
                     if (partialFrame != null) {
-                        fireMessageReceived(ctx, e.getChannel(), partialFrame, null);
+                        fireMessageReceived(ctx, partialFrame, null);
                     }
                 }
             }
