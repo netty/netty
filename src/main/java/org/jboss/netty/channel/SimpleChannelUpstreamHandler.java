@@ -22,38 +22,30 @@
  */
 package org.jboss.netty.channel;
 
-import java.net.SocketAddress;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
 
 /**
- * A {@link ChannelHandler} which provides an individual handler method
- * for each event type.  This handler down-casts the received upstream or
- * or downstream event into more meaningful sub-type event and calls an
- * appropriate handler method with the down-cast event.  For an upstream
- * event, the names of the methods are identical to the upstream event names,
- * as introduced in the {@link ChannelUpstreamHandler} documentation.  For a
- * downstream event, the names of the methods starts with the name of the
- * operation and ends with {@code "Requested"}
- * (e.g. {@link #writeRequested(ChannelHandlerContext, MessageEvent) writeRequested}.)
+ * A {@link ChannelUpstreamHandler} which provides an individual handler method
+ * for each event type.  This handler down-casts the received upstream event
+ * into more meaningful sub-type event and calls an appropriate handler method
+ * with the down-cast event.  The names of the methods are identical to the
+ * upstream event names, as introduced in the {@link ChannelUpstreamHandler}
+ * documentation.
  * <p>
- * Please use {@link SimpleChannelUpstreamHandler} or
- * {@link SimpleChannelDownstreamHandler} if you want to intercept only
- * upstream or downstream events.
+ * Please use {@link SimpleChannelHandler} if you need to implement both
+ * {@link ChannelUpstreamHandler} and {@link ChannelDownstreamHandler}.
  *
- * <h3>Overriding the {@link #handleUpstream(ChannelHandlerContext, ChannelEvent) handleUpstream}
- *     and {@link #handleDownstream(ChannelHandlerContext, ChannelEvent) handleDownstream} method</h3>
+ * <h3>Overriding the {@link #handleUpstream(ChannelHandlerContext, ChannelEvent) handleUpstream} method</h3>
  * <p>
  * You can override the {@link #handleUpstream(ChannelHandlerContext, ChannelEvent) handleUpstream}
- * and {@link #handleDownstream(ChannelHandlerContext, ChannelEvent) handleDownstream}
  * method just like overriding an ordinary Java method.  Please make sure to
- * call {@code super.handleUpstream()} or {@code super.handleDownstream()} so
- * that other handler methods are invoked properly:
+ * call {@code super.handleUpstream()} so that other handler methods are invoked
+ * properly:
  * </p>
- * <pre>public class MyChannelHandler extends SimpleChannelHandler {
+ * <pre>public class MyChannelHandler extends SimpleChannelUpstreamHandler {
  *
  *     public void handleUpstream({@link ChannelHandlerContext} ctx, {@link ChannelEvent} e) throws Exception {
  *
@@ -64,16 +56,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  *
  *         <strong>super.handleUpstream(ctx, e);</strong>
  *     }
- *
- *     public void handleDownstream({@link ChannelHandlerContext} ctx, {@link ChannelEvent} e) throws Exception {
- *
- *         // Log all channel state changes.
- *         if (e instanceof MessageEvent) {
- *             logger.info("Writing:: " + e);
- *         }
- *
- *         <strong>super.handleDownstream(ctx, e);</strong>
- *     }
  * }</pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -81,15 +63,15 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  *
  * @version $Rev$, $Date$
  */
-public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
+public class SimpleChannelUpstreamHandler implements ChannelUpstreamHandler {
 
     private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(SimpleChannelHandler.class.getName());
+        InternalLoggerFactory.getInstance(SimpleChannelUpstreamHandler.class.getName());
 
     /**
      * Creates a new instance.
      */
-    public SimpleChannelHandler() {
+    public SimpleChannelUpstreamHandler() {
         super();
     }
 
@@ -246,101 +228,5 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
     public void childChannelClosed(
             ChannelHandlerContext ctx, ChildChannelStateEvent e) throws Exception {
         ctx.sendUpstream(e);
-    }
-
-    /**
-     * {@inheritDoc}  Down-casts the received downstream event into more
-     * meaningful sub-type event and calls an appropriate handler method with
-     * the down-casted event.
-     */
-    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-
-        if (e instanceof MessageEvent) {
-            writeRequested(ctx, (MessageEvent) e);
-        } else if (e instanceof ChannelStateEvent) {
-            ChannelStateEvent evt = (ChannelStateEvent) e;
-            switch (evt.getState()) {
-            case OPEN:
-                if (!Boolean.TRUE.equals(evt.getValue())) {
-                    closeRequested(ctx, evt);
-                }
-                break;
-            case BOUND:
-                if (evt.getValue() != null) {
-                    bindRequested(ctx, evt);
-                } else {
-                    unbindRequested(ctx, evt);
-                }
-                break;
-            case CONNECTED:
-                if (evt.getValue() != null) {
-                    connectRequested(ctx, evt);
-                } else {
-                    disconnectRequested(ctx, evt);
-                }
-                break;
-            case INTEREST_OPS:
-                setInterestOpsRequested(ctx, evt);
-                break;
-            default:
-                ctx.sendDownstream(e);
-            }
-        } else {
-            ctx.sendDownstream(e);
-        }
-    }
-
-    /**
-     * Invoked when {@link Channel#write(Object)} is called.
-     */
-    public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        ctx.sendDownstream(e);
-    }
-
-    /**
-     * Invoked when {@link Channel#bind(SocketAddress)} was called.
-     */
-    public void bindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        ctx.sendDownstream(e);
-
-    }
-
-    /**
-     * Invoked when {@link Channel#connect(SocketAddress)} was called.
-     */
-    public void connectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        ctx.sendDownstream(e);
-
-    }
-
-    /**
-     * Invoked when {@link Channel#setInterestOps(int)} was called.
-     */
-    public void setInterestOpsRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        ctx.sendDownstream(e);
-    }
-
-    /**
-     * Invoked when {@link Channel#disconnect()} was called.
-     */
-    public void disconnectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        ctx.sendDownstream(e);
-
-    }
-
-    /**
-     * Invoked when {@link Channel#unbind()} was called.
-     */
-    public void unbindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        ctx.sendDownstream(e);
-
-    }
-
-    /**
-     * Invoked when {@link Channel#close()} was called.
-     */
-    public void closeRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        ctx.sendDownstream(e);
     }
 }
