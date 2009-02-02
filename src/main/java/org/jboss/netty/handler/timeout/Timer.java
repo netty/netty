@@ -31,6 +31,6 @@ import java.util.concurrent.TimeUnit;
  * @version $Rev$, $Date$
  */
 public interface Timer {
-    Timeout newTimeout(TimerTask task, long timeout, TimeUnit unit);
+    Timeout newTimeout(TimerTask task, long delay, TimeUnit unit);
     Set<Timeout> stop();
 }

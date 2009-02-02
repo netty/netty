@@ -22,8 +22,6 @@
  */
 package org.jboss.netty.handler.timeout;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -34,9 +32,5 @@ public interface Timeout {
 
     boolean isExpired();
     boolean isCancelled();
-    int getExtensionCount();
-
-    void extend();
-    void extend(long extensionTime, TimeUnit unit);
     void cancel();
 }

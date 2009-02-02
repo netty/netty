@@ -183,7 +183,9 @@ public class HashedWheelTimer implements Timer {
         return Collections.unmodifiableSet(unprocessedTimeouts);
     }
 
-    public Timeout newTimeout(TimerTask task, long initialDelay, TimeUnit unit) {
+    public Timeout newTimeout(TimerTask task, long delay, TimeUnit unit) {
+        final long currentTime = System.nanoTime();
+
         if (task == null) {
             throw new NullPointerException("task");
         }
@@ -191,52 +193,39 @@ public class HashedWheelTimer implements Timer {
             throw new NullPointerException("unit");
         }
 
-        initialDelay = unit.toNanos(initialDelay);
-        checkDelay(initialDelay);
+        delay = unit.toNanos(delay);
+        checkDelay(delay);
 
         if (!workerThread.isAlive()) {
             start();
         }
 
-        // Add the timeout to the wheel.
+        // Prepare the required parameters to create the timeout object.
         HashedWheelTimeout timeout;
-        long currentTime = System.nanoTime();
+        final long lastRoundDelay = delay % roundDuration;
+        final long lastTickDelay = delay % tickDuration;
+        final long relativeIndex =
+            lastRoundDelay / tickDuration + (lastTickDelay != 0? 1 : 0);
+        final long deadline = currentTime + delay;
+
+        final long remainingRounds =
+            delay / roundDuration - (delay % roundDuration == 0? 1 : 0);
+
+        // Add the timeout to the wheel.
         lock.readLock().lock();
         try {
-            timeout = new HashedWheelTimeout(
-                    task, wheelCursor, currentTime, initialDelay);
+            timeout =
+                new HashedWheelTimeout(
+                        task, deadline,
+                        (int) (wheelCursor + relativeIndex & mask),
+                        remainingRounds);
 
-            wheel[schedule(timeout)].add(timeout);
+            wheel[timeout.stopIndex].add(timeout);
         } finally {
             lock.readLock().unlock();
         }
 
         return timeout;
-    }
-
-    private int schedule(HashedWheelTimeout timeout) {
-        return schedule(timeout, timeout.initialDelay);
-    }
-
-    int schedule(HashedWheelTimeout timeout, final long additionalDelay) {
-        synchronized (timeout) {
-            final long oldCumulativeDelay = timeout.cumulativeDelay;
-            final long newCumulativeDelay = oldCumulativeDelay + additionalDelay;
-
-            final long lastRoundDelay = newCumulativeDelay % roundDuration;
-            final long lastTickDelay = newCumulativeDelay % tickDuration;
-            final long relativeIndex =
-                lastRoundDelay / tickDuration + (lastTickDelay != 0? 1 : 0);
-
-            timeout.deadline = timeout.startTime + newCumulativeDelay;
-            timeout.cumulativeDelay = newCumulativeDelay;
-            timeout.remainingRounds =
-                additionalDelay / roundDuration -
-                (additionalDelay % roundDuration == 0? 1:0) - timeout.slippedRounds;
-            timeout.slippedRounds = 0;
-
-            return timeout.stopIndex = (int) (timeout.startIndex + relativeIndex & mask);
-        }
     }
 
     boolean isWheelEmpty() {
@@ -314,7 +303,6 @@ public class HashedWheelTimer implements Timer {
                         } else {
                             // A rare case where a timeout is put for the next
                             // round: just wait for the next round.
-                            timeout.slippedRounds ++;
                         }
                     } else {
                         timeout.remainingRounds --;
@@ -366,27 +354,17 @@ public class HashedWheelTimer implements Timer {
     private final class HashedWheelTimeout implements Timeout {
 
         private final TimerTask task;
-
-        final int startIndex;
-        int stopIndex;
-
-        final long startTime;
-        volatile long deadline;
-
-        final long initialDelay;
-        long cumulativeDelay;
-
-        long remainingRounds;
-        long slippedRounds;
-
-        private volatile int extensionCount;
+        final int stopIndex;
+        final long deadline;
+        volatile long remainingRounds;
         private volatile boolean cancelled;
 
-        HashedWheelTimeout(TimerTask task, int startIndex, long startTime, long initialDelay) {
+        HashedWheelTimeout(
+                TimerTask task, long deadline, int stopIndex, long remainingRounds) {
             this.task = task;
-            this.startIndex = startIndex;
-            this.startTime = startTime;
-            this.initialDelay = initialDelay;
+            this.deadline = deadline;
+            this.stopIndex = stopIndex;
+            this.remainingRounds = remainingRounds;
         }
 
         public TimerTask getTask() {
@@ -401,53 +379,7 @@ public class HashedWheelTimer implements Timer {
             cancelled = true;
 
             // Might be called more than once, but doesn't matter.
-            synchronized (this) {
-                wheel[stopIndex].remove(this);
-            }
-        }
-
-        public void extend() {
-            extend(initialDelay);
-        }
-
-        public void extend(long additionalDelay, TimeUnit unit) {
-            extend(unit.toNanos(additionalDelay));
-        }
-
-        private void extend(long additionalDelay) {
-            checkDelay(additionalDelay);
-            if (cancelled) {
-                throw new IllegalStateException("cancelled");
-            }
-
-            lock.readLock().lock();
-            try {
-                // Reinsert the timeout to the appropriate bucket.
-                int oldStopIndex;
-                int newStopIndex;
-                synchronized (this) {
-                    oldStopIndex = stopIndex;
-                    stopIndex = newStopIndex = schedule(this, additionalDelay);
-                }
-
-                // Remove the timeout from the old bucket if necessary.
-                // If this method is called from the worker thread, it means
-                // this timeout has been removed from the bucket already.
-                if (oldStopIndex != newStopIndex &&
-                    Thread.currentThread() != workerThread) {
-                    wheel[oldStopIndex].remove(this);
-                }
-
-                // And add to the new bucket.  If added already, that's fine.
-                wheel[newStopIndex].add(this);
-            } finally {
-                extensionCount ++;
-                lock.readLock().unlock();
-            }
-        }
-
-        public int getExtensionCount() {
-            return extensionCount;
+            wheel[stopIndex].remove(this);
         }
 
         public boolean isCancelled() {
@@ -475,24 +407,11 @@ public class HashedWheelTimer implements Timer {
         @Override
         public String toString() {
             long currentTime = System.nanoTime();
-            long age = currentTime - startTime;
             long remaining = deadline - currentTime;
 
             StringBuilder buf = new StringBuilder(192);
             buf.append(getClass().getSimpleName());
             buf.append('(');
-
-            buf.append("initialDelay: ");
-            buf.append(initialDelay / 1000000);
-            buf.append(" ms, ");
-
-            buf.append("cumulativeDelay: ");
-            buf.append(cumulativeDelay / 1000000);
-            buf.append(" ms, ");
-
-            buf.append("started: ");
-            buf.append(age / 1000000);
-            buf.append(" ms ago, ");
 
             buf.append("deadline: ");
             if (remaining > 0) {
@@ -503,20 +422,6 @@ public class HashedWheelTimer implements Timer {
                 buf.append(" ms ago, ");
             } else {
                 buf.append("now, ");
-            }
-
-            buf.append("extended: ");
-            switch (getExtensionCount()) {
-            case 0:
-                buf.append("never");
-                break;
-            case 1:
-                buf.append("once");
-                break;
-            default:
-                buf.append(getExtensionCount());
-                buf.append(" times");
-                break;
             }
 
             if (isCancelled()) {
