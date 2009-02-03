@@ -128,7 +128,8 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
     private static final class QNode extends AtomicReference<Object> {
         private static final long serialVersionUID = 5925596372370723938L;
 
-        transient volatile QNode next;
+        // Must be public to run in a restricted environment with a security manager.
+        public transient volatile QNode next;
         transient volatile Thread waiter;       // to control park/unpark
         final boolean isData;
         QNode(Object item, boolean isData) {
