@@ -136,12 +136,41 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
             this.isData = isData;
         }
 
-        private static final AtomicReferenceFieldUpdater<QNode, QNode>
-            nextUpdater = AtomicReferenceFieldUpdater.newUpdater
-            (QNode.class, QNode.class, "next");
+        private static final AtomicReferenceFieldUpdater<QNode, QNode> nextUpdater;
+        static {
+            AtomicReferenceFieldUpdater<QNode, QNode> tmp = null;
+            try {
+                tmp = AtomicReferenceFieldUpdater.newUpdater(
+                        QNode.class, QNode.class, "next");
+
+                // Test if AtomicReferenceFieldUpdater is really working.
+                QNode testNode = new QNode(null, false);
+                tmp.set(testNode, testNode);
+                if (testNode.next != testNode) {
+                    // Not set as expected - fall back to the safe mode.
+                    throw new Exception();
+                }
+            } catch (Throwable t) {
+                // Running in a restricted environment with a security manager.
+                tmp = null;
+            }
+            nextUpdater = tmp;
+        }
 
         boolean casNext(QNode cmp, QNode val) {
-            return nextUpdater.compareAndSet(this, cmp, val);
+            if (nextUpdater == null) {
+                // Safe mode.
+                synchronized (this) {
+                    if (next == cmp) {
+                        next = val;
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            } else {
+                return nextUpdater.compareAndSet(this, cmp, val);
+            }
         }
     }
 
