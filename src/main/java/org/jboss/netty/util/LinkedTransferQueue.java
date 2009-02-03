@@ -158,18 +158,19 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E> implements Blocking
         }
 
         boolean casNext(QNode cmp, QNode val) {
-            if (nextUpdater == null) {
-                // Safe mode.
-                synchronized (this) {
-                    if (next == cmp) {
-                        next = val;
-                        return true;
-                    } else {
-                        return false;
-                    }
-                }
-            } else {
+            if (nextUpdater != null) {
                 return nextUpdater.compareAndSet(this, cmp, val);
+            } else {
+                return alternativeCasNext(cmp, val);
+            }
+        }
+
+        private synchronized boolean alternativeCasNext(QNode cmp, QNode val) {
+            if (next == cmp) {
+                next = val;
+                return true;
+            } else {
+                return false;
             }
         }
     }
