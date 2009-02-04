@@ -36,6 +36,12 @@ package org.jboss.netty.channel;
 public interface ChildChannelStateEvent extends ChannelEvent {
 
     /**
+     * Returns the <strong>parent</strong> {@link Channel} which is associated
+     * with this event.
+     */
+    Channel getChannel();
+
+    /**
      * Returns the child {@link Channel} whose state has been changed.
      */
     Channel getChildChannel();
