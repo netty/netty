@@ -84,11 +84,21 @@ class NioSocketChannel extends AbstractChannel
     }
 
     public InetSocketAddress getLocalAddress() {
-        return (InetSocketAddress) socket.socket().getLocalSocketAddress();
+        try {
+            return (InetSocketAddress) socket.socket().getLocalSocketAddress();
+        } catch (Throwable t) {
+            // Sometimes fails on a closed socket in Windows.
+            return null;
+        }
     }
 
     public InetSocketAddress getRemoteAddress() {
-        return (InetSocketAddress) socket.socket().getRemoteSocketAddress();
+        try {
+            return (InetSocketAddress) socket.socket().getRemoteSocketAddress();
+        } catch (Throwable t) {
+            // Sometimes fails on a closed socket in Windows.
+            return null;
+        }
     }
 
     public boolean isBound() {

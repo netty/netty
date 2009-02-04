@@ -25,6 +25,7 @@ package org.jboss.netty.channel.socket.nio;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
@@ -628,6 +629,15 @@ class NioWorker implements Runnable {
         }
 
         public void run() {
+            SocketAddress localAddress = channel.getLocalAddress();
+            SocketAddress remoteAddress = channel.getRemoteAddress();
+            if (localAddress == null || remoteAddress == null) {
+                if (future != null) {
+                    future.setFailure(new ClosedChannelException());
+                }
+                return;
+            }
+
             try {
                 channel.socket.register(selector, SelectionKey.OP_READ, channel);
                 if (future != null) {
@@ -641,11 +651,11 @@ class NioWorker implements Runnable {
 
             if (server) {
                 fireChannelOpen(channel);
-                fireChannelBound(channel, channel.getLocalAddress());
+                fireChannelBound(channel, localAddress);
             } else if (!((NioClientSocketChannel) channel).boundManually) {
-                fireChannelBound(channel, channel.getLocalAddress());
+                fireChannelBound(channel, localAddress);
             }
-            fireChannelConnected(channel, channel.getRemoteAddress());
+            fireChannelConnected(channel, remoteAddress);
         }
     }
 }
