@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.channel;
 
+import static org.jboss.netty.channel.Channels.*;
+
 /**
  * The default {@link ChildChannelStateEvent} implementation.
  *
@@ -31,22 +33,31 @@ package org.jboss.netty.channel;
  * @version $Rev$, $Date$
  *
  */
-public class DefaultChildChannelStateEvent extends DefaultChannelEvent implements
-        ChildChannelStateEvent {
+public final class DefaultChildChannelStateEvent implements ChildChannelStateEvent {
 
+    private final Channel parentChannel;
     private final Channel childChannel;
 
     /**
      * Creates a new instance.
      */
-    public DefaultChildChannelStateEvent(
-            Channel channel, ChannelFuture future, Channel childChannel) {
-
-        super(channel, future);
+    public DefaultChildChannelStateEvent(Channel parentChannel, Channel childChannel) {
+        if (parentChannel == null) {
+            throw new NullPointerException("parentChannel");
+        }
         if (childChannel == null) {
             throw new NullPointerException("childChannel");
         }
+        this.parentChannel = parentChannel;
         this.childChannel = childChannel;
+    }
+
+    public Channel getChannel() {
+        return parentChannel;
+    }
+
+    public ChannelFuture getFuture() {
+        return succeededFuture(getChannel());
     }
 
     public Channel getChildChannel() {
@@ -55,13 +66,13 @@ public class DefaultChildChannelStateEvent extends DefaultChannelEvent implement
 
     @Override
     public String toString() {
-        String parentString = super.toString();
-        StringBuilder buf = new StringBuilder(parentString.length() + 32);
-        buf.append(parentString);
+        String channelString = getChannel().toString();
+        StringBuilder buf = new StringBuilder(channelString.length() + 32);
+        buf.append(channelString);
         buf.append(" - (childId: ");
         buf.append(getChildChannel().getId().toString());
         buf.append(", childState: ");
-        buf.append(getChildChannel().isOpen()? "OPEN" : "CLOSE");
+        buf.append(getChildChannel().isOpen()? "OPEN" : "CLOSED");
         buf.append(')');
         return buf.toString();
     }

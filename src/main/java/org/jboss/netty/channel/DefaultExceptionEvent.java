@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.channel;
 
+import static org.jboss.netty.channel.Channels.*;
+
 import org.jboss.netty.util.StackTraceSimplifier;
 
 /**
@@ -33,21 +35,32 @@ import org.jboss.netty.util.StackTraceSimplifier;
  * @version $Rev$, $Date$
  *
  */
-public class DefaultExceptionEvent extends DefaultChannelEvent implements
-        ExceptionEvent {
+public final class DefaultExceptionEvent implements ExceptionEvent {
 
+    private final Channel channel;
     private final Throwable cause;
 
     /**
      * Creates a new instance.
      */
-    public DefaultExceptionEvent(Channel channel, ChannelFuture future, Throwable cause) {
-        super(channel, future);
+    public DefaultExceptionEvent(Channel channel, Throwable cause) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
         if (cause == null) {
             throw new NullPointerException("cause");
         }
+        this.channel = channel;
         this.cause = cause;
         StackTraceSimplifier.simplify(cause);
+    }
+
+    public Channel getChannel() {
+        return channel;
+    }
+
+    public ChannelFuture getFuture() {
+        return succeededFuture(getChannel());
     }
 
     public Throwable getCause() {
@@ -56,6 +69,6 @@ public class DefaultExceptionEvent extends DefaultChannelEvent implements
 
     @Override
     public String toString() {
-        return super.toString() + " - (cause: " + cause.getClass().getSimpleName() + ')';
+        return getChannel().toString() + " - (cause: " + cause.getClass().getSimpleName() + ')';
     }
 }

@@ -37,25 +37,41 @@ import java.net.SocketAddress;
  * @version $Rev$, $Date$
  *
  */
-public class DefaultMessageEvent extends DefaultChannelEvent implements
-        MessageEvent {
+public final class DownstreamMessageEvent implements MessageEvent {
 
+    private final Channel channel;
+    private final ChannelFuture future;
     private final Object message;
     private final SocketAddress remoteAddress;
 
     /**
      * Creates a new instance.
      */
-    public DefaultMessageEvent(
+    public DownstreamMessageEvent(
             Channel channel, ChannelFuture future,
             Object message, SocketAddress remoteAddress) {
 
-        super(channel, future);
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        if (future == null) {
+            throw new NullPointerException("future");
+        }
         if (message == null) {
             throw new NullPointerException("message");
         }
+        this.channel = channel;
+        this.future = future;
         this.message = message;
         this.remoteAddress = remoteAddress;
+    }
+
+    public Channel getChannel() {
+        return channel;
+    }
+
+    public ChannelFuture getFuture() {
+        return future;
     }
 
     public Object getMessage() {
@@ -69,9 +85,9 @@ public class DefaultMessageEvent extends DefaultChannelEvent implements
     @Override
     public String toString() {
         if (remoteAddress == null) {
-            return super.toString() + " - (message: " + message + ')';
+            return super.toString() + " - (write: " + message + ')';
         } else {
-            return super.toString() + " - (message: " + message + ", " + remoteAddress + ')';
+            return super.toString() + " - (write: " + message + ", " + remoteAddress + ')';
         }
     }
 }

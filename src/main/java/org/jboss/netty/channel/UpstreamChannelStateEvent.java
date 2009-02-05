@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.channel;
 
+import static org.jboss.netty.channel.Channels.*;
+
 /**
  * The default {@link ChannelStateEvent} implementation.
  *
@@ -31,25 +33,36 @@ package org.jboss.netty.channel;
  * @version $Rev$, $Date$
  *
  */
-public class DefaultChannelStateEvent extends DefaultChannelEvent implements
-        ChannelStateEvent {
+public final class UpstreamChannelStateEvent implements ChannelStateEvent {
 
+    private final Channel channel;
     private final ChannelState state;
     private final Object value;
 
     /**
      * Creates a new instance.
      */
-    public DefaultChannelStateEvent(
-            Channel channel, ChannelFuture future,
-            ChannelState state, Object value) {
+    public UpstreamChannelStateEvent(
+            Channel channel, ChannelState state, Object value) {
 
-        super(channel, future);
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
         if (state == null) {
             throw new NullPointerException("state");
         }
+
+        this.channel = channel;
         this.state = state;
         this.value = value;
+    }
+
+    public Channel getChannel() {
+        return channel;
+    }
+
+    public ChannelFuture getFuture() {
+        return succeededFuture(getChannel());
     }
 
     public ChannelState getState() {
@@ -62,9 +75,9 @@ public class DefaultChannelStateEvent extends DefaultChannelEvent implements
 
     @Override
     public String toString() {
-        String parentString = super.toString();
-        StringBuilder buf = new StringBuilder(parentString.length() + 64);
-        buf.append(parentString);
+        String channelString = getChannel().toString();
+        StringBuilder buf = new StringBuilder(channelString.length() + 64);
+        buf.append(channelString);
         buf.append(" - (state: ");
         switch (getState()) {
         case OPEN:

@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.channel;
 
+import static org.jboss.netty.channel.Channels.*;
+
 /**
  * The default {@link WriteCompletionEvent} implementation.
  *
@@ -30,24 +32,33 @@ package org.jboss.netty.channel;
  *
  * @version $Rev$, $Date$
  */
-public class DefaultWriteCompletionEvent extends DefaultChannelEvent implements
-        WriteCompletionEvent {
+public final class DefaultWriteCompletionEvent implements WriteCompletionEvent {
 
+    private final Channel channel;
     private final int writtenAmount;
 
     /**
      * Creates a new instance.
      */
-    public DefaultWriteCompletionEvent(
-            Channel channel, ChannelFuture future, int writtenAmount) {
-
-        super(channel, future);
+    public DefaultWriteCompletionEvent(Channel channel, int writtenAmount) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
         if (writtenAmount <= 0) {
             throw new IllegalArgumentException(
                     "writtenAmount must be a positive integer: " + writtenAmount);
         }
 
+        this.channel = channel;
         this.writtenAmount = writtenAmount;
+    }
+
+    public Channel getChannel() {
+        return channel;
+    }
+
+    public ChannelFuture getFuture() {
+        return succeededFuture(getChannel());
     }
 
     public int getWrittenAmount() {

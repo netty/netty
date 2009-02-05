@@ -22,8 +22,16 @@
  */
 package org.jboss.netty.channel;
 
+import static org.jboss.netty.channel.Channels.*;
+
+import java.net.SocketAddress;
+
 /**
- * The default {@link ChannelEvent} implementation.
+ * The default {@link MessageEvent} implementation.  It is recommended to
+ * use {@link Channels#messageEvent(Channel, ChannelFuture, Object)} and
+ * {@link Channels#messageEvent(Channel, ChannelFuture, Object, SocketAddress)}
+ * to create a new {@link MessageEvent} instance rather than calling the
+ * constructor explicitly.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -31,38 +39,51 @@ package org.jboss.netty.channel;
  * @version $Rev$, $Date$
  *
  */
-public class DefaultChannelEvent implements ChannelEvent {
+public final class UpstreamMessageEvent implements MessageEvent {
 
     private final Channel channel;
-    private final ChannelFuture future;
+    private final Object message;
+    private final SocketAddress remoteAddress;
 
     /**
      * Creates a new instance.
      */
-    public DefaultChannelEvent(Channel channel, ChannelFuture future) {
+    public UpstreamMessageEvent(
+            Channel channel, Object message, SocketAddress remoteAddress) {
+
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-        if (future == null) {
-            throw new NullPointerException("future");
+        if (message == null) {
+            throw new NullPointerException("message");
         }
         this.channel = channel;
-        this.future = future;
+        this.message = message;
+        this.remoteAddress = remoteAddress;
     }
 
-    public final Channel getChannel() {
+    public Channel getChannel() {
         return channel;
     }
 
-    public final ChannelFuture getFuture() {
-        return future;
+    public ChannelFuture getFuture() {
+        return succeededFuture(getChannel());
     }
 
-    /**
-     * Returns the {@link String} representation of this event.
-     */
+    public Object getMessage() {
+        return message;
+    }
+
+    public SocketAddress getRemoteAddress() {
+        return remoteAddress;
+    }
+
     @Override
     public String toString() {
-        return channel.toString();
+        if (remoteAddress == null) {
+            return super.toString() + " - (received: " + message + ')';
+        } else {
+            return super.toString() + " - (received: " + message + ", " + remoteAddress + ')';
+        }
     }
 }
