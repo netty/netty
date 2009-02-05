@@ -22,6 +22,7 @@
  */
 package org.jboss.netty.handler.codec.embedder;
 
+import org.jboss.netty.channel.AbstractChannelFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -31,7 +32,7 @@ import org.jboss.netty.channel.ChannelPipeline;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-class EmbeddedChannelFactory implements ChannelFactory {
+class EmbeddedChannelFactory extends AbstractChannelFactory {
 
     static final ChannelFactory INSTANCE = new EmbeddedChannelFactory();
 
