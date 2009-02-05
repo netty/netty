@@ -67,20 +67,28 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler implemen
         timer.stop();
     }
 
+    protected long getTimeoutNanos(@SuppressWarnings("unused") MessageEvent e) {
+        return timeoutNanos;
+    }
+
     @Override
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e)
             throws Exception {
 
-        ChannelFuture future = e.getFuture();
-        final Timeout timeout = timer.newTimeout(
-                new WriteTimeoutTask(ctx, future),
-                timeoutNanos, TimeUnit.NANOSECONDS);
+        long timeoutNanos = getTimeoutNanos(e);
+        if (timeoutNanos > 0) {
+            // Set timeout only when getTimeoutNanos() returns a positive value.
+            ChannelFuture future = e.getFuture();
+            final Timeout timeout = timer.newTimeout(
+                    new WriteTimeoutTask(ctx, future),
+                    timeoutNanos, TimeUnit.NANOSECONDS);
 
-        future.addListener(new ChannelFutureListener() {
-            public void operationComplete(ChannelFuture future) throws Exception {
-                timeout.cancel();
-            }
-        });
+            future.addListener(new ChannelFutureListener() {
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    timeout.cancel();
+                }
+            });
+        }
 
         super.writeRequested(ctx, e);
     }
