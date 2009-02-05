@@ -83,6 +83,11 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * <td>a {@link Channel} is open, bound to a local address, and connected to a remote address</td>
  * </tr>
  * <tr>
+ * <td>{@code "writeComplete"}</td>
+ * <td>{@link WriteCompletionEvent}</td>
+ * <td>something has been written to a remote peer</td>
+ * </tr>
+ * <tr>
  * <td>{@code "channelDisconnected"}</td>
  * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#CONNECTED CONNECTED}, value = {@code null})</td>
  * <td>a {@link Channel} was disconnected from its remote peer</td>
