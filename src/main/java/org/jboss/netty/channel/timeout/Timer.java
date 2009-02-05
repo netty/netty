@@ -20,17 +20,17 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.timeout;
+package org.jboss.netty.channel.timeout;
+
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public interface Timeout {
-    TimerTask getTask();
-
-    boolean isExpired();
-    boolean isCancelled();
-    void cancel();
+public interface Timer {
+    Timeout newTimeout(TimerTask task, long delay, TimeUnit unit);
+    Set<Timeout> stop();
 }
