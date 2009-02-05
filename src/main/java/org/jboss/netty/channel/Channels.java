@@ -409,6 +409,31 @@ public class Channels {
     }
 
     /**
+     * Sends a {@code "writeComplete"} event to the first
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
+     * the specified {@link Channel}.
+     */
+    public static void fireWriteComplete(Channel channel, int amount) {
+        if (amount == 0) {
+            return;
+        }
+
+        channel.getPipeline().sendUpstream(
+                new DefaultWriteCompletionEvent(
+                        channel, succeededFuture(channel), amount));
+    }
+
+    /**
+     * Sends a {@code "writeComplete"} event to the next
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
+     * the specified {@link ChannelHandlerContext} belongs.
+     */
+    public static void fireWriteCompleted(ChannelHandlerContext ctx, int amount) {
+        ctx.sendUpstream(new DefaultWriteCompletionEvent(
+                ctx.getChannel(), succeededFuture(ctx.getChannel()), amount));
+    }
+
+    /**
      * Sends a {@code "channelInterestChanged"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.

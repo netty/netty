@@ -103,6 +103,9 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
 
         if (e instanceof MessageEvent) {
             messageReceived(ctx, (MessageEvent) e);
+        } else if (e instanceof WriteCompletionEvent) {
+            WriteCompletionEvent evt = (WriteCompletionEvent) e;
+            writeComplete(ctx, evt);
         } else if (e instanceof ChildChannelStateEvent) {
             ChildChannelStateEvent evt = (ChildChannelStateEvent) e;
             if (evt.getChildChannel().isOpen()) {
@@ -227,6 +230,14 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
      */
     public void channelClosed(
             ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        ctx.sendUpstream(e);
+    }
+
+    /**
+     * Invoked when something was written into a {@link Channel}.
+     */
+    public void writeComplete(
+            ChannelHandlerContext ctx, WriteCompletionEvent e) throws Exception {
         ctx.sendUpstream(e);
     }
 

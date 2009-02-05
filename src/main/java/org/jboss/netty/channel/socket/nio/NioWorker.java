@@ -417,7 +417,7 @@ class NioWorker implements Runnable {
             }
         }
 
-        //fireChannelWritten(channel, writtenBytes);
+        fireWriteComplete(channel, writtenBytes);
 
         if (open) {
             if (addOpWrite) {

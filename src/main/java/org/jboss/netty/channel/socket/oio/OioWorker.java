@@ -118,7 +118,7 @@ class OioWorker implements Runnable {
             synchronized (out) {
                 a.getBytes(a.readerIndex(), out, bytes);
             }
-            //fireChannelWritten(channel, bytes);
+            fireWriteComplete(channel, bytes);
             future.setSuccess();
         } catch (Throwable t) {
             future.setFailure(t);
