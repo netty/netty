@@ -94,6 +94,20 @@ public abstract class AbstractChannelFactory implements ChannelFactory {
         }
     }
 
+    void notifyState(Channel channel) {
+        TrafficMonitor[] trafficMonitors = this.trafficMonitors;
+        for (TrafficMonitor m: trafficMonitors) {
+            try {
+                m.onState(channel);
+            } catch (Exception e) {
+                logger.warn(
+                        "An exception was thrown by " +
+                        TrafficMonitor.class.getSimpleName() +
+                        ".onState().", e);
+            }
+        }
+    }
+
     void notifyInflow(Channel channel, int amount) {
         TrafficMonitor[] trafficMonitors = this.trafficMonitors;
         for (TrafficMonitor m: trafficMonitors) {

@@ -28,6 +28,7 @@ package org.jboss.netty.channel;
  * @version $Rev$, $Date$
  */
 public interface TrafficMonitor {
+    void onState(Channel channel) throws Exception;
     void onInflow(Channel channel, int amount) throws Exception;
     void onOutflow(Channel channel, int amount) throws Exception;
 }

@@ -186,6 +186,7 @@ public class Channels {
         if (channel.getParent() != null) {
             fireChildChannelStateChanged(channel.getParent(), channel);
         }
+        notifyState(channel);
         channel.getPipeline().sendUpstream(
                 new DefaultChannelStateEvent(
                         channel, succeededFuture(channel),
@@ -547,6 +548,7 @@ public class Channels {
                 new DefaultChannelStateEvent(
                         channel, succeededFuture(channel),
                         ChannelState.OPEN, Boolean.FALSE));
+        notifyState(channel);
         if (channel.getParent() != null) {
             fireChildChannelStateChanged(channel.getParent(), channel);
         }
@@ -1060,6 +1062,13 @@ public class Channels {
             ChannelHandlerContext ctx,
             @SuppressWarnings("unused") Channel channel, ChannelFuture future) {
         close(ctx, future);
+    }
+
+    private static void notifyState(Channel channel) {
+        ChannelFactory factory = channel.getFactory();
+        if (factory instanceof AbstractChannelFactory) {
+            ((AbstractChannelFactory) factory).notifyState(channel);
+        }
     }
 
     public static void notifyInflow(Channel channel, int amount) {
