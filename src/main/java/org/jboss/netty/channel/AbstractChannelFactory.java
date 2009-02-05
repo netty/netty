@@ -94,44 +94,72 @@ public abstract class AbstractChannelFactory implements ChannelFactory {
         }
     }
 
-    void notifyState(Channel channel) {
+    void fireChannelOpen(Channel channel) {
         TrafficMonitor[] trafficMonitors = this.trafficMonitors;
         for (TrafficMonitor m: trafficMonitors) {
             try {
-                m.onState(channel);
+                m.channelOpen(channel);
             } catch (Exception e) {
                 logger.warn(
                         "An exception was thrown by " +
                         TrafficMonitor.class.getSimpleName() +
-                        ".onState().", e);
+                        ".channelOpen().", e);
             }
         }
     }
 
-    void notifyInflow(Channel channel, int amount) {
+    void fireChannelClosed(Channel channel) {
         TrafficMonitor[] trafficMonitors = this.trafficMonitors;
         for (TrafficMonitor m: trafficMonitors) {
             try {
-                m.onInflow(channel, amount);
+                m.channelClosed(channel);
             } catch (Exception e) {
                 logger.warn(
                         "An exception was thrown by " +
                         TrafficMonitor.class.getSimpleName() +
-                        ".onInflow().", e);
+                        ".channelClosed().", e);
             }
         }
     }
 
-    void notifyOutflow(Channel channel, int amount) {
+    void fireChannelRead(Channel channel, int amount) {
         TrafficMonitor[] trafficMonitors = this.trafficMonitors;
         for (TrafficMonitor m: trafficMonitors) {
             try {
-                m.onOutflow(channel, amount);
+                m.channelRead(channel, amount);
             } catch (Exception e) {
                 logger.warn(
                         "An exception was thrown by " +
                         TrafficMonitor.class.getSimpleName() +
-                        ".onOutflow().", e);
+                        ".channelRead().", e);
+            }
+        }
+    }
+
+    void fireChannelWriteScheduled(Channel channel, int amount) {
+        TrafficMonitor[] trafficMonitors = this.trafficMonitors;
+        for (TrafficMonitor m: trafficMonitors) {
+            try {
+                m.channelWriteScheduled(channel, amount);
+            } catch (Exception e) {
+                logger.warn(
+                        "An exception was thrown by " +
+                        TrafficMonitor.class.getSimpleName() +
+                        ".channelWriteScheduled().", e);
+            }
+        }
+    }
+
+    void fireChannelWritten(Channel channel, int amount) {
+        TrafficMonitor[] trafficMonitors = this.trafficMonitors;
+        for (TrafficMonitor m: trafficMonitors) {
+            try {
+                m.channelWritten(channel, amount);
+            } catch (Exception e) {
+                logger.warn(
+                        "An exception was thrown by " +
+                        TrafficMonitor.class.getSimpleName() +
+                        ".channelWritten().", e);
             }
         }
     }

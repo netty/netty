@@ -183,10 +183,17 @@ public class Channels {
      * a {@code "childChannelOpen"} event will be sent, too.
      */
     public static void fireChannelOpen(Channel channel) {
+        // Notify the parent handler.
         if (channel.getParent() != null) {
             fireChildChannelStateChanged(channel.getParent(), channel);
         }
-        notifyState(channel);
+
+        // Notify traffic monitors
+        ChannelFactory factory = channel.getFactory();
+        if (factory instanceof AbstractChannelFactory) {
+            ((AbstractChannelFactory) factory).fireChannelOpen(channel);
+        }
+
         channel.getPipeline().sendUpstream(
                 new DefaultChannelStateEvent(
                         channel, succeededFuture(channel),
@@ -548,7 +555,14 @@ public class Channels {
                 new DefaultChannelStateEvent(
                         channel, succeededFuture(channel),
                         ChannelState.OPEN, Boolean.FALSE));
-        notifyState(channel);
+
+        // Notify traffic monitors
+        ChannelFactory factory = channel.getFactory();
+        if (factory instanceof AbstractChannelFactory) {
+            ((AbstractChannelFactory) factory).fireChannelOpen(channel);
+        }
+
+        // Notify the parent handler.
         if (channel.getParent() != null) {
             fireChildChannelStateChanged(channel.getParent(), channel);
         }
@@ -1064,33 +1078,35 @@ public class Channels {
         close(ctx, future);
     }
 
-    private static void notifyState(Channel channel) {
-        ChannelFactory factory = channel.getFactory();
-        if (factory instanceof AbstractChannelFactory) {
-            ((AbstractChannelFactory) factory).notifyState(channel);
-        }
-    }
-
-    public static void notifyInflow(Channel channel, int amount) {
+    public static void fireChannelRead(Channel channel, int amount) {
         if (amount <= 0) {
             return;
         }
         ChannelFactory factory = channel.getFactory();
         if (factory instanceof AbstractChannelFactory) {
-            ((AbstractChannelFactory) factory).notifyInflow(channel, amount);
+            ((AbstractChannelFactory) factory).fireChannelRead(channel, amount);
         }
     }
 
-    public static void notifyOutflow(Channel channel, int amount) {
+    public static void fireChannelWriteScheduled(Channel channel, int amount) {
         if (amount <= 0) {
             return;
         }
         ChannelFactory factory = channel.getFactory();
         if (factory instanceof AbstractChannelFactory) {
-            ((AbstractChannelFactory) factory).notifyOutflow(channel, amount);
+            ((AbstractChannelFactory) factory).fireChannelWriteScheduled(channel, amount);
         }
     }
 
+    public static void fireChannelWritten(Channel channel, int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        ChannelFactory factory = channel.getFactory();
+        if (factory instanceof AbstractChannelFactory) {
+            ((AbstractChannelFactory) factory).fireChannelWritten(channel, amount);
+        }
+    }
 
     private static void validateInterestOps(int interestOps) {
         switch (interestOps) {
