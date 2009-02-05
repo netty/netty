@@ -20,13 +20,44 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.timeout;
+package org.jboss.netty.handler.timeout;
+
+import org.jboss.netty.channel.ChannelException;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public interface TimerTask {
-    void run(Timeout timeout) throws Exception;
+public class ChannelWriteTimeoutException extends ChannelException {
+
+    private static final long serialVersionUID = -7746685254523245218L;
+
+    /**
+     * Creates a new instance.
+     */
+    public ChannelWriteTimeoutException() {
+        super();
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public ChannelWriteTimeoutException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public ChannelWriteTimeoutException(String message) {
+        super(message);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public ChannelWriteTimeoutException(Throwable cause) {
+        super(cause);
+    }
 }
