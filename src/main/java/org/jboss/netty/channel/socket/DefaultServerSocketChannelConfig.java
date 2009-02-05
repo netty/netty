@@ -163,10 +163,12 @@ public class DefaultServerSocketChannelConfig implements ServerSocketChannelConf
         // Unused
     }
 
+    @Deprecated
     public int getWriteTimeoutMillis() {
         return 0;
     }
 
+    @Deprecated
     public void setWriteTimeoutMillis(int writeTimeoutMillis) {
         // Unused
     }

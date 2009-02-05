@@ -28,6 +28,7 @@ import java.util.Map;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
+import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 
 /**
  * A set of configuration properties of a {@link Channel}.
@@ -54,8 +55,6 @@ import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
  * <td>{@code "connectTimeoutMillis"}</td><td>{@link #setConnectTimeoutMillis(int)}</td>
- * </tr><tr>
- * <td>{@code "writeTimeoutMillis"}</td><td>{@link #setWriteTimeoutMillis(int)}</td>
  * </tr><tr>
  * <td>{@code "pipelineFactory"}</td><td>{@link #setPipelineFactory(ChannelPipelineFactory)}</td>
  * </tr>
@@ -119,6 +118,8 @@ public interface ChannelConfig {
     void setConnectTimeoutMillis(int connectTimeoutMillis);
 
     /**
+     * @deprecated Use {@link WriteTimeoutHandler} instead if necessary.
+     *
      * Returns the write timeout of the channel in milliseconds.  If a write
      * operation is not completed within the write timeout, an
      * {@link IOException} will be raised.  If the {@link Channel} does not
@@ -127,9 +128,12 @@ public interface ChannelConfig {
      *
      * @return the write timeout in milliseconds.  {@code 0} if disabled.
      */
+    @Deprecated
     int getWriteTimeoutMillis();
 
     /**
+     * @deprecated Use {@link WriteTimeoutHandler} instead if necessary.
+     *
      * Sets the write timeout of the channel in milliseconds.  If a write
      * operation is not completed within the write timeout, an
      * {@link IOException} will be raised.  If the {@link Channel} does not
@@ -139,5 +143,6 @@ public interface ChannelConfig {
      * @param writeTimeoutMillis the write timeout in milliseconds.
      *                           {@code 0} to disable.
      */
+    @Deprecated
     void setWriteTimeoutMillis(int writeTimeoutMillis);
 }

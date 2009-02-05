@@ -83,8 +83,6 @@ public class DefaultSocketChannelConfig implements SocketChannelConfig {
             setSoLinger(ConversionUtil.toInt(value));
         } else if (key.equals("trafficClass")) {
             setTrafficClass(ConversionUtil.toInt(value));
-        } else if (key.equals("writeTimeoutMillis")) {
-            setWriteTimeoutMillis(ConversionUtil.toInt(value));
         } else if (key.equals("connectTimeoutMillis")) {
             setConnectTimeoutMillis(ConversionUtil.toInt(value));
         } else if (key.equals("pipelineFactory")) {
@@ -237,6 +235,7 @@ public class DefaultSocketChannelConfig implements SocketChannelConfig {
         return null;
     }
 
+    @Deprecated
     public int getWriteTimeoutMillis() {
         return 0;
     }
@@ -252,6 +251,7 @@ public class DefaultSocketChannelConfig implements SocketChannelConfig {
         // Unused
     }
 
+    @Deprecated
     public void setWriteTimeoutMillis(int writeTimeoutMillis) {
         // Unused
     }

@@ -60,6 +60,7 @@ class EmbeddedChannelConfig implements ChannelConfig {
         return bufferFactory;
     }
 
+    @Deprecated
     public int getWriteTimeoutMillis() {
         return 0;
     }
@@ -80,6 +81,7 @@ class EmbeddedChannelConfig implements ChannelConfig {
         // Unused
     }
 
+    @Deprecated
     public void setWriteTimeoutMillis(int writeTimeoutMillis) {
         // Unused
     }
