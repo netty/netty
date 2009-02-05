@@ -372,7 +372,7 @@ public class HashedWheelTimer implements Timer {
         }
 
         public void cancel() {
-            if (cancelled) {
+            if (isExpired()) {
                 return;
             }
 
