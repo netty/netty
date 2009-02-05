@@ -25,6 +25,7 @@ package org.jboss.netty.channel.socket.oio;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
+import org.jboss.netty.channel.AbstractChannelFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
@@ -81,7 +82,7 @@ import org.jboss.netty.util.ExecutorUtil;
  *
  * @apiviz.landmark
  */
-public class OioClientSocketChannelFactory implements ClientSocketChannelFactory {
+public class OioClientSocketChannelFactory extends AbstractChannelFactory implements ClientSocketChannelFactory {
 
     private final Executor workerExecutor;
     final OioClientSocketPipelineSink sink;

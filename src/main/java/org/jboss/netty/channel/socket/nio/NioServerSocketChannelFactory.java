@@ -27,6 +27,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
+import org.jboss.netty.channel.AbstractChannelFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
@@ -92,7 +93,7 @@ import org.jboss.netty.util.ExecutorUtil;
  *
  * @apiviz.landmark
  */
-public class NioServerSocketChannelFactory implements ServerSocketChannelFactory {
+public class NioServerSocketChannelFactory extends AbstractChannelFactory implements ServerSocketChannelFactory {
 
     final Executor bossExecutor;
     private final Executor workerExecutor;

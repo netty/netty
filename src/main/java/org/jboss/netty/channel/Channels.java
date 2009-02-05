@@ -1062,6 +1062,27 @@ public class Channels {
         close(ctx, future);
     }
 
+    public static void notifyInflow(Channel channel, int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        ChannelFactory factory = channel.getFactory();
+        if (factory instanceof AbstractChannelFactory) {
+            ((AbstractChannelFactory) factory).notifyInflow(channel, amount);
+        }
+    }
+
+    public static void notifyOutflow(Channel channel, int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        ChannelFactory factory = channel.getFactory();
+        if (factory instanceof AbstractChannelFactory) {
+            ((AbstractChannelFactory) factory).notifyOutflow(channel, amount);
+        }
+    }
+
+
     private static void validateInterestOps(int interestOps) {
         switch (interestOps) {
         case Channel.OP_NONE:

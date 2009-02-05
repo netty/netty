@@ -297,6 +297,9 @@ class NioWorker implements Runnable {
             // Update the predictor.
             predictor.previousReceiveBufferSize(readBytes);
 
+            // Notify the traffic monitors.
+            notifyInflow(channel, readBytes);
+
             // Fire the event.
             fireMessageReceived(channel, buffer);
         }
@@ -357,6 +360,7 @@ class NioWorker implements Runnable {
         MessageEvent evt;
         ChannelBuffer buf;
         int bufIdx;
+        int writtenBytes = 0;
 
         Queue<MessageEvent> writeBuffer = channel.writeBuffer;
         synchronized (channel.writeLock) {
@@ -386,12 +390,18 @@ class NioWorker implements Runnable {
 
                         if (localWrittenBytes != 0) {
                             bufIdx += localWrittenBytes;
+                            writtenBytes += localWrittenBytes;
                             break;
                         }
                     }
 
                     if (bufIdx == buf.writerIndex()) {
-                        // Successful write - proceed to the next message.
+                        // Successful write:
+                        // Notify the traffic monitors.
+                        notifyOutflow(channel, writtenBytes);
+                        writtenBytes = 0;
+
+                        // Proceed to the next message.
                         evt.getFuture().setSuccess();
                         evt = null;
                     } else {
@@ -414,6 +424,8 @@ class NioWorker implements Runnable {
                 }
             }
         }
+
+        notifyOutflow(channel, writtenBytes);
 
         if (open) {
             if (addOpWrite) {
