@@ -186,8 +186,6 @@ class NioSocketChannel extends AbstractChannel
             assert success;
 
             int messageSize = ((ChannelBuffer) e.getMessage()).readableBytes();
-            fireChannelWriteScheduled(NioSocketChannel.this, messageSize);
-
             int newWriteBufferSize = writeBufferSize.addAndGet(messageSize);
             int highWaterMark = getConfig().getWriteBufferHighWaterMark();
 

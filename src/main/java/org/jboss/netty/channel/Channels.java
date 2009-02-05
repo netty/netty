@@ -188,12 +188,6 @@ public class Channels {
             fireChildChannelStateChanged(channel.getParent(), channel);
         }
 
-        // Notify traffic monitors
-        ChannelFactory factory = channel.getFactory();
-        if (factory instanceof AbstractChannelFactory) {
-            ((AbstractChannelFactory) factory).fireChannelOpen(channel);
-        }
-
         channel.getPipeline().sendUpstream(
                 new DefaultChannelStateEvent(
                         channel, succeededFuture(channel),
@@ -555,12 +549,6 @@ public class Channels {
                 new DefaultChannelStateEvent(
                         channel, succeededFuture(channel),
                         ChannelState.OPEN, Boolean.FALSE));
-
-        // Notify traffic monitors
-        ChannelFactory factory = channel.getFactory();
-        if (factory instanceof AbstractChannelFactory) {
-            ((AbstractChannelFactory) factory).fireChannelOpen(channel);
-        }
 
         // Notify the parent handler.
         if (channel.getParent() != null) {
@@ -1076,36 +1064,6 @@ public class Channels {
             ChannelHandlerContext ctx,
             @SuppressWarnings("unused") Channel channel, ChannelFuture future) {
         close(ctx, future);
-    }
-
-    public static void fireChannelRead(Channel channel, int amount) {
-        if (amount <= 0) {
-            return;
-        }
-        ChannelFactory factory = channel.getFactory();
-        if (factory instanceof AbstractChannelFactory) {
-            ((AbstractChannelFactory) factory).fireChannelRead(channel, amount);
-        }
-    }
-
-    public static void fireChannelWriteScheduled(Channel channel, int amount) {
-        if (amount <= 0) {
-            return;
-        }
-        ChannelFactory factory = channel.getFactory();
-        if (factory instanceof AbstractChannelFactory) {
-            ((AbstractChannelFactory) factory).fireChannelWriteScheduled(channel, amount);
-        }
-    }
-
-    public static void fireChannelWritten(Channel channel, int amount) {
-        if (amount <= 0) {
-            return;
-        }
-        ChannelFactory factory = channel.getFactory();
-        if (factory instanceof AbstractChannelFactory) {
-            ((AbstractChannelFactory) factory).fireChannelWritten(channel, amount);
-        }
     }
 
     private static void validateInterestOps(int interestOps) {

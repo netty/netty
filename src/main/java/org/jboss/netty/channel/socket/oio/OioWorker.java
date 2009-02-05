@@ -97,7 +97,6 @@ class OioWorker implements Runnable {
                 buffer = ChannelBuffers.wrappedBuffer(buf, 0, readBytes);
             }
 
-            fireChannelRead(channel, readBytes);
             fireMessageReceived(channel, buffer);
         }
 
@@ -116,11 +115,10 @@ class OioWorker implements Runnable {
         try {
             ChannelBuffer a = (ChannelBuffer) message;
             int bytes = a.readableBytes();
-            fireChannelWriteScheduled(channel, bytes);
             synchronized (out) {
                 a.getBytes(a.readerIndex(), out, bytes);
             }
-            fireChannelWritten(channel, bytes);
+            //fireChannelWritten(channel, bytes);
             future.setSuccess();
         } catch (Throwable t) {
             future.setFailure(t);

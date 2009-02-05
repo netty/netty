@@ -27,7 +27,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.netty.channel.AbstractChannelFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
@@ -99,7 +98,7 @@ import org.jboss.netty.util.ExecutorUtil;
  *
  * @apiviz.landmark
  */
-public class OioServerSocketChannelFactory extends AbstractChannelFactory implements ServerSocketChannelFactory {
+public class OioServerSocketChannelFactory implements ServerSocketChannelFactory {
 
     final Executor bossExecutor;
     private final Executor workerExecutor;

@@ -74,10 +74,6 @@ public interface ChannelFactory extends ExternalResourceReleasable {
      */
     Channel newChannel(ChannelPipeline pipeline);
 
-    void addTrafficMonitor(TrafficMonitor monitor);
-
-    void removeTrafficMonitor(TrafficMonitor monitor);
-
     /**
      * Releases the external resources that this factory depends on to function.
      * An external resource is a resource that this factory didn't create by
