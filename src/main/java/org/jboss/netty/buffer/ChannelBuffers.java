@@ -106,15 +106,13 @@ public class ChannelBuffers {
      */
     public static final ChannelBuffer EMPTY_BUFFER = new BigEndianHeapChannelBuffer(0);
 
-    private static final char[] HEXDUMP_TABLE = new char[65536 * 4];
+    private static final char[] HEXDUMP_TABLE = new char[256 * 4];
 
     static {
         final char[] DIGITS = "0123456789abcdef".toCharArray();
-        for (int i = 0; i <  65536; i ++) {
-            HEXDUMP_TABLE[(i << 2) + 0] = DIGITS[i >>> 12 & 0x0F];
-            HEXDUMP_TABLE[(i << 2) + 1] = DIGITS[i >>>  8 & 0x0F];
-            HEXDUMP_TABLE[(i << 2) + 2] = DIGITS[i >>>  4 & 0x0F];
-            HEXDUMP_TABLE[(i << 2) + 3] = DIGITS[i >>>  0 & 0x0F];
+        for (int i = 0; i < 256; i ++) {
+            HEXDUMP_TABLE[(i << 1) + 0] = DIGITS[i >>> 4 & 0x0F];
+            HEXDUMP_TABLE[(i << 1) + 1] = DIGITS[i >>> 0 & 0x0F];
         }
     }
 
@@ -668,21 +666,14 @@ public class ChannelBuffers {
             return "";
         }
 
-        int endIndex = fromIndex + (length >>> 1 << 1);
-        boolean oddLength = length % 2 != 0;
+        int endIndex = fromIndex + length;
         char[] buf = new char[length << 1];
 
         int srcIdx = fromIndex;
         int dstIdx = 0;
-        for (; srcIdx < endIndex; srcIdx += 2, dstIdx += 4) {
+        for (; srcIdx < endIndex; srcIdx ++, dstIdx += 2) {
             System.arraycopy(
-                    HEXDUMP_TABLE, buffer.getUnsignedShort(srcIdx) << 2,
-                    buf, dstIdx, 4);
-        }
-
-        if (oddLength) {
-            System.arraycopy(
-                    HEXDUMP_TABLE, (buffer.getUnsignedByte(srcIdx) << 2) + 2,
+                    HEXDUMP_TABLE, buffer.getUnsignedByte(srcIdx) << 1,
                     buf, dstIdx, 2);
         }
 
