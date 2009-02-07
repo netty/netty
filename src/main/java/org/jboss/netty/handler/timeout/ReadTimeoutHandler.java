@@ -90,21 +90,21 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler implements 
     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         initialize(ctx);
-        super.channelOpen(ctx, e);
+        ctx.sendUpstream(e);
     }
 
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         destroy();
-        super.channelOpen(ctx, e);
+        ctx.sendUpstream(e);
     }
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
             throws Exception {
         lastReadTime = System.nanoTime();
-        super.messageReceived(ctx, e);
+        ctx.sendUpstream(e);
     }
 
     private void initialize(ChannelHandlerContext ctx) {
