@@ -26,6 +26,7 @@ import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.logging.InternalLogger;
@@ -40,6 +41,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
+@ChannelPipelineCoverage("all")
 public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
 
     private final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
