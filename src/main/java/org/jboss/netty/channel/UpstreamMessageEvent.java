@@ -26,6 +26,8 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.net.SocketAddress;
 
+import org.jboss.netty.util.StringUtil;
+
 /**
  * The default {@link MessageEvent} implementation.  It is recommended to
  * use {@link Channels#messageEvent(Channel, ChannelFuture, Object)} and
@@ -80,10 +82,13 @@ public final class UpstreamMessageEvent implements MessageEvent {
 
     @Override
     public String toString() {
-        if (remoteAddress == null) {
-            return getChannel().toString() + " - (RECEIVED: " + message + ')';
+        if (getRemoteAddress() == null) {
+            return getChannel().toString() + " - (RECEIVED: " +
+                   StringUtil.stripControlCharacters(getMessage()) + ')';
         } else {
-            return getChannel().toString() + " - (RECEIVED: " + message + ", " + remoteAddress + ')';
+            return getChannel().toString() + " - (RECEIVED: " +
+                   StringUtil.stripControlCharacters(getMessage()) + ", " +
+                   getRemoteAddress() + ')';
         }
     }
 }
