@@ -78,7 +78,7 @@ public final class UpstreamChannelStateEvent implements ChannelStateEvent {
         String channelString = getChannel().toString();
         StringBuilder buf = new StringBuilder(channelString.length() + 64);
         buf.append(channelString);
-        buf.append(" - (state: ");
+        buf.append(" - (");
         switch (getState()) {
         case OPEN:
             if (Boolean.TRUE.equals(getValue())) {
@@ -89,14 +89,16 @@ public final class UpstreamChannelStateEvent implements ChannelStateEvent {
             break;
         case BOUND:
             if (getValue() != null) {
-                buf.append("BOUND");
+                buf.append("BOUND: ");
+                buf.append(getValue());
             } else {
                 buf.append("UNBOUND");
             }
             break;
         case CONNECTED:
             if (getValue() != null) {
-                buf.append("CONNECTED");
+                buf.append("CONNECTED: ");
+                buf.append(getValue());
             } else {
                 buf.append("DISCONNECTED");
             }

@@ -81,7 +81,7 @@ public final class DownstreamChannelStateEvent implements ChannelStateEvent {
         String channelString = getChannel().toString();
         StringBuilder buf = new StringBuilder(channelString.length() + 64);
         buf.append(channelString);
-        buf.append(" - (request: ");
+        buf.append(" - (");
         switch (getState()) {
         case OPEN:
             if (Boolean.TRUE.equals(getValue())) {
@@ -92,20 +92,23 @@ public final class DownstreamChannelStateEvent implements ChannelStateEvent {
             break;
         case BOUND:
             if (getValue() != null) {
-                buf.append("BIND");
+                buf.append("BIND: ");
+                buf.append(getValue());
             } else {
                 buf.append("UNBIND");
             }
             break;
         case CONNECTED:
             if (getValue() != null) {
-                buf.append("CONNECT");
+                buf.append("CONNECT: ");
+                buf.append(getValue());
             } else {
                 buf.append("DISCONNECT");
             }
             break;
         case INTEREST_OPS:
-            buf.append("CHANGE_INTEREST");
+            buf.append("CHANGE_INTEREST: ");
+            buf.append(getValue());
             break;
         default:
             buf.append(getState().name());

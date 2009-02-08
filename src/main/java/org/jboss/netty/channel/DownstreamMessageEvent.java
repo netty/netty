@@ -85,9 +85,9 @@ public final class DownstreamMessageEvent implements MessageEvent {
     @Override
     public String toString() {
         if (remoteAddress == null) {
-            return super.toString() + " - (write: " + message + ')';
+            return getChannel().toString() + " - (WRITE: " + message + ')';
         } else {
-            return super.toString() + " - (write: " + message + ", " + remoteAddress + ')';
+            return getChannel().toString() + " - (WRITE: " + message + ", " + remoteAddress + ')';
         }
     }
 }

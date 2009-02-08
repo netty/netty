@@ -69,6 +69,6 @@ public final class DefaultExceptionEvent implements ExceptionEvent {
 
     @Override
     public String toString() {
-        return getChannel().toString() + " - (cause: " + cause.getClass().getSimpleName() + ')';
+        return getChannel().toString() + " - (EXCEPTION: " + cause + ')';
     }
 }
