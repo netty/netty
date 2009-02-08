@@ -194,7 +194,9 @@ public class HashedWheelTimer implements Timer {
         }
 
         delay = unit.toNanos(delay);
-        checkDelay(delay);
+        if (delay < tickDuration) {
+            delay = tickDuration;
+        }
 
         if (!workerThread.isAlive()) {
             start();
@@ -235,13 +237,6 @@ public class HashedWheelTimer implements Timer {
             }
         }
         return true;
-    }
-
-    void checkDelay(long delay) {
-        if (delay < tickDuration) {
-            throw new IllegalArgumentException(
-                    "delay must be greater than " + tickDuration + " nanoseconds");
-        }
     }
 
     private final class Worker implements Runnable {
