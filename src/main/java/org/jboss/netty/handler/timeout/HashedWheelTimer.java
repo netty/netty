@@ -230,15 +230,6 @@ public class HashedWheelTimer implements Timer {
         return timeout;
     }
 
-    boolean isWheelEmpty() {
-        for (Set<HashedWheelTimeout> bucket: wheel) {
-            if (!bucket.isEmpty()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     private final class Worker implements Runnable {
 
         private long startTime;
