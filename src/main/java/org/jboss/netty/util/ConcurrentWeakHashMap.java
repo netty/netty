@@ -46,8 +46,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * An alternative weak-key identity-comparing {@link ConcurrentMap} which is
- * similar to {@link java.util.concurrent.ConcurrentHashMap}.
+ * An alternative weak-key {@link ConcurrentMap} which is similar to
+ * {@link java.util.concurrent.ConcurrentHashMap}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Doug Lea
