@@ -25,11 +25,44 @@ import java.net.SocketAddress;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
-public class LocalAddress extends SocketAddress {
-    final String id;
+public class LocalAddress extends SocketAddress implements Comparable<LocalAddress> {
+    private static final long serialVersionUID = -3601961747680808645L;
+
+    private final String id;
 
     public LocalAddress(String id) {
+        if (id == null) {
+            throw new NullPointerException("id");
+        }
         this.id = id;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof LocalAddress)) {
+            return false;
+        }
+
+        return getId().equals(((LocalAddress) o).getId());
+    }
+
+    public int compareTo(LocalAddress o) {
+        return getId().compareTo(o.getId());
+    }
+
+    @Override
+    public String toString() {
+        return getId();
     }
 }
