@@ -26,6 +26,7 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.NotYetConnectedException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -289,9 +290,11 @@ public class ClientBootstrap extends Bootstrap {
                 ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
             ctx.sendUpstream(e);
-            if (!finished) {
+
+            Throwable cause = e.getCause();
+            if (!(cause instanceof NotYetConnectedException) && !finished) {
                 e.getChannel().close();
-                futureQueue.offer(failedFuture(e.getChannel(), e.getCause()));
+                futureQueue.offer(failedFuture(e.getChannel(), cause));
                 finished = true;
             }
         }
