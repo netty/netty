@@ -41,7 +41,7 @@ import org.jboss.netty.util.LinkedTransferQueue;
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  * @author Trustin Lee (tlee@redhat.com)
  */
-public class LocalChannel extends AbstractChannel {
+class LocalChannel extends AbstractChannel {
     private final ThreadLocal<Boolean> delivering = new ThreadLocal<Boolean>() {
         @Override
         protected Boolean initialValue() {

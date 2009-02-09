@@ -1,7 +1,8 @@
 /*
  * JBoss, Home of Professional Open Source
- * Copyright 2005-2008, Red Hat Middleware LLC, and individual contributors
- * by the @authors tag. See the copyright.txt in the distribution for a
+ *
+ * Copyright 2009, Red Hat Middleware LLC, and individual contributors
+ * by the @author tags. See the COPYRIGHT.txt in the distribution for a
  * full listing of individual contributors.
  *
  * This is free software; you can redistribute it and/or modify it
@@ -21,28 +22,19 @@
  */
 package org.jboss.netty.channel.local;
 
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 
 /**
- * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
+ * @version $Rev$, $Date$
  */
-public class LocalClientChannelFactory implements ChannelFactory {
-
-    private final ChannelSink sink;
-
-    public LocalClientChannelFactory() {
-        sink = new LocalClientChannelSink();
-    }
-
-    public Channel newChannel(ChannelPipeline pipeline) {
-        return new LocalClientChannel(this, pipeline, sink, null);
-    }
-
-    public void releaseExternalResources() {
-        // No external resources.
+class LocalAcceptedChannel extends LocalChannel {
+    LocalAcceptedChannel(LocalServerChannel parent, ChannelFactory factory,
+            ChannelPipeline pipeline, ChannelSink sink,
+            LocalChannel pairedChannel) {
+        super(parent, factory, pipeline, sink, pairedChannel);
     }
 }
