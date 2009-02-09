@@ -318,7 +318,7 @@ public class HashedWheelTimer implements Timer {
                 }
 
                 try {
-                    Thread.sleep(sleepTime / 1000000, (int) (sleepTime % 1000000));
+                    Thread.sleep(sleepTime);
                 } catch (InterruptedException e) {
                     if (shutdown.get()) {
                         return;
@@ -401,10 +401,10 @@ public class HashedWheelTimer implements Timer {
 
             buf.append("deadline: ");
             if (remaining > 0) {
-                buf.append(remaining / 1000000);
+                buf.append(remaining);
                 buf.append(" ms later, ");
             } else if (remaining < 0) {
-                buf.append(-remaining / 1000000);
+                buf.append(-remaining);
                 buf.append(" ms ago, ");
             } else {
                 buf.append("now, ");
