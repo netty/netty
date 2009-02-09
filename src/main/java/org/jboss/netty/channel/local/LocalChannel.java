@@ -38,8 +38,10 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.util.LinkedTransferQueue;
 
 /**
- * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
+ * @version $Rev$, $Date$
  */
 class LocalChannel extends AbstractChannel {
     private final ThreadLocal<Boolean> delivering = new ThreadLocal<Boolean>() {

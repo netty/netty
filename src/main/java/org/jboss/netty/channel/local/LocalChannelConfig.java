@@ -30,8 +30,10 @@ import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 
 /**
- * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
+ * @version $Rev$, $Date$
  */
 class LocalChannelConfig implements ChannelConfig {
 

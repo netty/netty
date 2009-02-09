@@ -26,16 +26,17 @@ import java.io.InputStreamReader;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelDownstreamHandler;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.local.LocalAddress;
 import org.jboss.netty.channel.local.LocalClientChannelFactory;
 import org.jboss.netty.channel.local.LocalServerChannelFactory;
 import org.jboss.netty.example.echo.EchoHandler;
-import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 
@@ -84,12 +85,17 @@ public class LocalExample {
     }
 
     @ChannelPipelineCoverage("all")
-    static class PrintHandler extends OneToOneDecoder {
-        @Override
-        protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-            String message = (String) msg;
-            System.out.println("received message back '" + message + "'");
-            return message;
+    static class PrintHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
+        public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
+                throws Exception {
+            System.err.println(e);
+            ctx.sendUpstream(e);
+        }
+
+        public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
+                throws Exception {
+            System.err.println(e);
+            ctx.sendDownstream(e);
         }
     }
 }

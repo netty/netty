@@ -53,7 +53,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author Doug Lea
  * @author Jason T. Greene
  * @author Trustin Lee (tlee@redhat.com)
- * @version $Rev: 557 $, $Date: 2008-12-03 09:39:33 +0900 (Wed, 03 Dec 2008) $
+ * @version $Rev$, $Date$
  *
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values

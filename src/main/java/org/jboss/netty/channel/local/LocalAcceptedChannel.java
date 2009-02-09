@@ -31,7 +31,7 @@ import org.jboss.netty.channel.ChannelSink;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-class LocalAcceptedChannel extends LocalChannel {
+final class LocalAcceptedChannel extends LocalChannel {
     LocalAcceptedChannel(LocalServerChannel parent, ChannelFactory factory,
             ChannelPipeline pipeline, ChannelSink sink,
             LocalChannel pairedChannel) {
