@@ -137,11 +137,17 @@ final class LocalClientChannelSink extends AbstractChannelSink {
         channel.pairedChannel = acceptedChannel;
 
         bind(channel, succeededFuture(channel), LocalAddress.newEphemeralInstance());
+        channel.remoteAddress = serverChannel.getLocalAddress();
         fireChannelConnected(channel, serverChannel.getLocalAddress());
 
         acceptedChannel.localAddress = serverChannel.getLocalAddress();
         acceptedChannel.bound.set(true);
         fireChannelBound(acceptedChannel, channel.getRemoteAddress());
+        acceptedChannel.remoteAddress = channel.getLocalAddress();
         fireChannelConnected(acceptedChannel, channel.getLocalAddress());
+
+        // Flush something that was written in channelBound / channelConnected
+        channel.flushWriteBuffer();
+        acceptedChannel.flushWriteBuffer();
     }
 }
