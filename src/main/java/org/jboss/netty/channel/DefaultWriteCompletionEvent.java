@@ -70,21 +70,9 @@ public final class DefaultWriteCompletionEvent implements WriteCompletionEvent {
         String channelString = getChannel().toString();
         StringBuilder buf = new StringBuilder(channelString.length() + 32);
         buf.append(channelString);
-        buf.append(" - (WROTE: ");
-
-        int amount = getWrittenAmount();
-        switch (amount) {
-        case 0:
-            buf.append("0 byte");
-            break;
-        case 1:
-            buf.append("1 byte");
-            break;
-        default:
-            buf.append(amount);
-            buf.append(" bytes");
-        }
-        buf.append(")");
+        buf.append(" - (WRITTEN_AMOUNT: ");
+        buf.append(getWrittenAmount());
+        buf.append(')');
         return buf.toString();
     }
 }
