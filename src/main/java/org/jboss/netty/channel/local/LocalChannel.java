@@ -26,6 +26,7 @@ import static org.jboss.netty.channel.Channels.*;
 import java.util.Queue;
 
 import org.jboss.netty.channel.AbstractChannel;
+import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
@@ -55,7 +56,7 @@ public class LocalChannel extends AbstractChannel {
         fireChannelOpen(this);
     }
 
-    public LocalChannelConfig getConfig() {
+    public ChannelConfig getConfig() {
         return config;
     }
 
