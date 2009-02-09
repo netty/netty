@@ -21,6 +21,8 @@
  */
 package org.jboss.netty.channel.local;
 
+import static org.jboss.netty.channel.Channels.*;
+
 import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
@@ -30,25 +32,20 @@ import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
-import static org.jboss.netty.channel.Channels.fireChannelClosed;
-import static org.jboss.netty.channel.Channels.fireChannelDisconnected;
-import static org.jboss.netty.channel.Channels.fireMessageReceived;
 import org.jboss.netty.channel.MessageEvent;
-
-import java.util.concurrent.Executor;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class LocalClientChannelSink extends AbstractChannelSink {
+final class LocalClientChannelSink extends AbstractChannelSink {
 
     private final Channel serverChannel;
 
-    private ChannelSink serverSink;
+    private final ChannelSink serverSink;
 
-    public LocalClientChannelSink(Channel channel, ChannelSink sink) {
-        this.serverChannel = channel;
-        this.serverSink = sink;
+    LocalClientChannelSink(Channel channel, ChannelSink sink) {
+        serverChannel = channel;
+        serverSink = sink;
     }
 
     public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception {

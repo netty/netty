@@ -32,9 +32,7 @@ import org.jboss.netty.channel.ChannelSink;
 public class LocalServerChannelFactory implements ChannelFactory {
 
     private final String channelName;
-
     ChannelSink sink;
-
     Channel channel;
 
     public LocalServerChannelFactory(String channelName) {

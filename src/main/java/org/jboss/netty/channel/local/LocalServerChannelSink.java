@@ -21,24 +21,20 @@
  */
 package org.jboss.netty.channel.local;
 
+import static org.jboss.netty.channel.Channels.*;
+
 import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
-import static org.jboss.netty.channel.Channels.fireChannelBound;
-import static org.jboss.netty.channel.Channels.fireChannelClosed;
-import static org.jboss.netty.channel.Channels.fireChannelDisconnected;
-import static org.jboss.netty.channel.Channels.fireMessageReceived;
 import org.jboss.netty.channel.MessageEvent;
-
-import java.util.concurrent.Executor;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class LocalServerChannelSink extends AbstractChannelSink {
+final class LocalServerChannelSink extends AbstractChannelSink {
 
     public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
@@ -66,17 +62,20 @@ public class LocalServerChannelSink extends AbstractChannelSink {
         ChannelState state = event.getState();
         Object value = event.getValue();
         switch (state) {
-            case OPEN:
-                if (Boolean.FALSE.equals(value)) {
-                    future.setSuccess();
-                    fireChannelDisconnected(localChannel);
-                    fireChannelClosed(localChannel);
-                    fireChannelDisconnected(localChannel.pairedChannel);
-                    fireChannelClosed(localChannel.pairedChannel);
-                }
-                break;
-            case BOUND:
-                break;
+        // FIXME: Proper event emission.
+        case OPEN:
+            if (Boolean.FALSE.equals(value)) {
+                future.setSuccess();
+                fireChannelDisconnected(localChannel);
+                fireChannelUnbound(localChannel);
+                fireChannelClosed(localChannel);
+                fireChannelDisconnected(localChannel.pairedChannel);
+                fireChannelUnbound(localChannel.pairedChannel);
+                fireChannelClosed(localChannel.pairedChannel);
+            }
+            break;
+        case BOUND:
+            break;
         }
     }
 
@@ -101,5 +100,4 @@ public class LocalServerChannelSink extends AbstractChannelSink {
         future.setSuccess();
         fireChannelBound(serverChannel, serverChannel.getLocalAddress());
     }
-
 }
