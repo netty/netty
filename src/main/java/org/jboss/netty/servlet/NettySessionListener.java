@@ -60,7 +60,7 @@ public class NettySessionListener implements HttpSessionListener, ChannelHandler
                 return pipeline;
             }
         });
-        ChannelFuture future = bootstrap.connect(new LocalAddress("netty"));
+        ChannelFuture future = bootstrap.connect(LocalAddress.getInstance("netty"));
         future.awaitUninterruptibly();
         final Channel ch = future.getChannel();
         session.setAttribute(CHANNEL_PROP, ch);

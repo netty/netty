@@ -22,6 +22,10 @@
 package org.jboss.netty.channel.local;
 
 import java.net.SocketAddress;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.jboss.netty.util.ConcurrentWeakHashMap;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
@@ -30,17 +34,49 @@ import java.net.SocketAddress;
 public class LocalAddress extends SocketAddress implements Comparable<LocalAddress> {
     private static final long serialVersionUID = -3601961747680808645L;
 
-    private final String id;
+    private static final ConcurrentMap<String, LocalAddress> addresses =
+        new ConcurrentWeakHashMap<String, LocalAddress>();
 
-    public LocalAddress(String id) {
+    private static final AtomicLong nextEphemeralPort = new AtomicLong();
+
+    public static LocalAddress getInstance(String id) {
+        if (id == null) {
+            throw new NullPointerException("id");
+        }
+        LocalAddress a = addresses.get(id);
+        if (a == null) {
+            a = new LocalAddress(id);
+            LocalAddress oldA = addresses.putIfAbsent(id, a);
+            if (oldA != null) {
+                a = oldA;
+            }
+        }
+
+        return a;
+    }
+
+    public static LocalAddress newEphemeralInstance() {
+        return getInstance("ephemeral-" + nextEphemeralPort.incrementAndGet());
+    }
+
+    private final String id;
+    private final boolean ephemeral;
+
+    private LocalAddress(String id) {
         if (id == null) {
             throw new NullPointerException("id");
         }
         this.id = id;
+
+        ephemeral = id.startsWith("ephemeral-");
     }
 
     public String getId() {
         return id;
+    }
+
+    public boolean isEphemeral() {
+        return ephemeral;
     }
 
     @Override

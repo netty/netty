@@ -43,7 +43,7 @@ public class LocalTransportRegister {
         ServerBootstrap serverBootstrap = new ServerBootstrap(serverChannelFactory);
         EchoHandler handler = new EchoHandler();
         serverBootstrap.getPipeline().addLast("handler", handler);
-        Channel channel = serverBootstrap.bind(new LocalAddress("localAddress"));
+        Channel channel = serverBootstrap.bind(LocalAddress.getInstance("localAddress"));
     }
 
     public void stop() {
