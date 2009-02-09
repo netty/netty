@@ -21,39 +21,33 @@
  */
 package org.jboss.netty.channel.local;
 
+import static org.jboss.netty.channel.Channels.*;
+
+import java.util.Queue;
+
 import org.jboss.netty.channel.AbstractChannel;
-import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
-import static org.jboss.netty.channel.Channels.fireChannelOpen;
-import static org.jboss.netty.channel.Channels.fireMessageReceived;
-import static org.jboss.netty.channel.Channels.fireExceptionCaught;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.util.LinkedTransferQueue;
 
-import java.net.SocketAddress;
-import java.util.Queue;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
 public class LocalChannel extends AbstractChannel {
     //final BlockingQueue<MessageEvent> writeBuffer = new LinkedBlockingQueue<MessageEvent>();
     private final ThreadLocal<Boolean> delivering = new ThreadLocal<Boolean>() {
-            @Override
-            protected Boolean initialValue() {
-                return false;
-            }
-        };
-    LocalChannel pairedChannel = null;
+        @Override
+        protected Boolean initialValue() {
+            return false;
+        }
+    };
 
-    private ChannelConfig config;
-
+    volatile LocalChannel pairedChannel = null;
+    private final LocalChannelConfig config;
     final Queue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>();
-
-    final Object writeLock = new Object();
 
     protected LocalChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink) {
         super(null, factory, pipeline, sink);
@@ -61,7 +55,7 @@ public class LocalChannel extends AbstractChannel {
         fireChannelOpen(this);
     }
 
-    public ChannelConfig getConfig() {
+    public LocalChannelConfig getConfig() {
         return config;
     }
 
@@ -73,32 +67,32 @@ public class LocalChannel extends AbstractChannel {
         return true;
     }
 
-    public SocketAddress getLocalAddress() {
+    public LocalAddress getLocalAddress() {
+        // FIXME: should return LocalAddress
         return null;
     }
 
-    public SocketAddress getRemoteAddress() {
+    public LocalAddress getRemoteAddress() {
+        // FIXME: should return LocalAddress
         return null;
     }
 
-    public void writeNow(LocalChannel pairedChannel) {
+    void writeNow(LocalChannel pairedChannel) {
         if (!delivering.get()) {
             delivering.set(true);
-            do {
-                MessageEvent e = writeBuffer.poll();
-                if(e == null) {
-                    break;
-                }
-                try {
-                    fireMessageReceived(pairedChannel, e.getMessage());
+            try {
+                for (;;) {
+                    MessageEvent e = writeBuffer.poll();
+                    if(e == null) {
+                        break;
+                    }
+
                     e.getFuture().setSuccess();
+                    fireMessageReceived(pairedChannel, e.getMessage());
                 }
-                catch (Exception t) {
-                    fireExceptionCaught(pairedChannel, t);
-                }
+            } finally {
+                delivering.set(false);
             }
-            while (true);
-            delivering.set(false);
         }
     }
 }
