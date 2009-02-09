@@ -35,7 +35,9 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.util.ConversionUtil;
 
 /**
- * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Andy Taylor (andy.taylor@jboss.org)
+ * @version $Rev$, $Date$
  */
 public class ServletSocketChannelConfig implements SocketChannelConfig {
 

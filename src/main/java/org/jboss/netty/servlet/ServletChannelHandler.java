@@ -42,9 +42,11 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
- * A channel handler taht proxies messages to the servlet output stream
+ * A channel handler that proxies messages to the servlet output stream
  *
- * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Andy Taylor (andy.taylor@jboss.org)
+ * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("one")
 class ServletChannelHandler extends SimpleChannelHandler {

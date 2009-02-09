@@ -33,7 +33,8 @@ import org.jboss.netty.channel.local.LocalClientChannelFactory;
  * already be registered before the contect is loaded.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Andy Taylor (andy.taylor@jboss.org)
+ * @version $Rev$, $Date$
  */
 public class NettyServletContextListener implements ServletContextListener {
 

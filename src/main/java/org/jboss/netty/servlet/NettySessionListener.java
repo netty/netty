@@ -38,9 +38,11 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.local.LocalAddress;
 
 /**
- * A session listenor that uses the client bootstrap to create a channel.
+ * A session listener that uses the client bootstrap to create a channel.
  *
- * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Andy Taylor (andy.taylor@jboss.org)
+ * @version $Rev$, $Date$
  */
 public class NettySessionListener implements HttpSessionListener, ChannelHandler {
 

@@ -39,7 +39,9 @@ import org.jboss.netty.channel.MessageEvent;
 /**
  * A servlet that acts as a proxy for a netty channel
  *
- * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Andy Taylor (andy.taylor@jboss.org)
+ * @version $Rev$, $Date$
  */
 public class NettyServlet extends HttpServlet {
 

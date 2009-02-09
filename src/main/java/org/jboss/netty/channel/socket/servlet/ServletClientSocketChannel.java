@@ -47,7 +47,9 @@ import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 
 /**
- * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Andy Taylor (andy.taylor@jboss.org)
+ * @version $Rev$, $Date$
  */
 class ServletClientSocketChannel extends AbstractChannel
       implements org.jboss.netty.channel.socket.SocketChannel {
