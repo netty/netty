@@ -129,7 +129,7 @@ final class LocalClientChannelSink extends AbstractChannelSink {
         }
 
         future.setSuccess();
-        LocalChannel acceptedChannel = new LocalChannel(serverChannel.getFactory(), pipeline, this, channel);
+        LocalChannel acceptedChannel = new LocalChannel(serverChannel, serverChannel.getFactory(), pipeline, this, channel);
         channel.pairedChannel = acceptedChannel;
 
         bind(channel, succeededFuture(channel), LocalAddress.newEphemeralInstance());
