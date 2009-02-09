@@ -21,13 +21,14 @@
  */
 package org.jboss.netty.channel.local;
 
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
-public class LocalServerChannels {
+final class LocalServerChannels {
     private static final Map<String, LocalServerChannelFactory> factoryMap = new HashMap<String, LocalServerChannelFactory>();
 
     public static LocalServerChannelFactory registerServerChannel(String channelName) {

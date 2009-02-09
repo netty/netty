@@ -25,16 +25,14 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.util.ExecutorShutdownUtil;
-
-import java.util.concurrent.Executor;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
 public class LocalClientChannelFactory implements ChannelFactory {
-    private final ChannelSink sink;
 
+    private final ChannelSink sink;
 
     public LocalClientChannelFactory(LocalServerChannelFactory serverFactory) {
         sink = new LocalClientChannelSink(serverFactory.channel, serverFactory.sink);
@@ -45,5 +43,6 @@ public class LocalClientChannelFactory implements ChannelFactory {
     }
 
     public void releaseExternalResources() {
+        // No external resources.
     }
 }
