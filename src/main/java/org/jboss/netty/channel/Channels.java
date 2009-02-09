@@ -418,7 +418,7 @@ public class Channels {
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
      * the specified {@link ChannelHandlerContext} belongs.
      */
-    public static void fireWriteCompleted(ChannelHandlerContext ctx, int amount) {
+    public static void fireWriteComplete(ChannelHandlerContext ctx, int amount) {
         ctx.sendUpstream(new DefaultWriteCompletionEvent(ctx.getChannel(), amount));
     }
 
