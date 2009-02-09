@@ -55,7 +55,7 @@ public class LocalChannel extends AbstractChannel {
     private final LocalChannelConfig config;
     final Queue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>();
 
-    protected LocalChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, LocalChannel pairedChannel) {
+    LocalChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, LocalChannel pairedChannel) {
         super(null, factory, pipeline, sink);
         this.pairedChannel = pairedChannel;
         config = new LocalChannelConfig();

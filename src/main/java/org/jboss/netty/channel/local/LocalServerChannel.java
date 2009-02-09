@@ -41,7 +41,7 @@ final class LocalServerChannel extends AbstractServerChannel {
     volatile LocalAddress localAddress;
     final AtomicBoolean bound = new AtomicBoolean();
 
-    protected LocalServerChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink) {
+    LocalServerChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink) {
         super(factory, pipeline, sink);
         channelConfig = new LocalChannelConfig();
         fireChannelOpen(this);
