@@ -67,7 +67,16 @@
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
-    
+
+    <!-- Servlet API - completely optional -->
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>servlet-api</artifactId>
+      <version>2.5</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+
     <!-- IoC/DI containers - completely optional -->
     <dependency>
       <groupId>org.jboss.microcontainer</groupId>
