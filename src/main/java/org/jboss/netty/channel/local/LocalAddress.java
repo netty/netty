@@ -23,8 +23,9 @@ package org.jboss.netty.channel.local;
 
 import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.util.ConcurrentWeakHashMap;
 
 /**
@@ -37,7 +38,7 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
     private static final ConcurrentMap<String, LocalAddress> addresses =
         new ConcurrentWeakHashMap<String, LocalAddress>();
 
-    private static final AtomicLong nextEphemeralPort = new AtomicLong();
+    private static final AtomicInteger nextEphemeralPort = new AtomicInteger();
 
     public static LocalAddress getInstance(String id) {
         if (id == null) {
@@ -56,13 +57,17 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
     }
 
     public static LocalAddress newEphemeralInstance() {
-        for (;;) {
-            String id = "ephemeral-" + nextEphemeralPort.incrementAndGet();
+        for (long i = (long) Integer.MAX_VALUE - Integer.MIN_VALUE; i >= 0; i --) {
+            String id = "ephemeral-" +
+                        Integer.toHexString(nextEphemeralPort.incrementAndGet());
             LocalAddress a = new LocalAddress(id);
             if (addresses.putIfAbsent(id, a) == null) {
                 return a;
             }
         }
+
+        // Not likely to reach here but let's be a paranoid.
+        throw new ChannelException("failed to allocate a local ephemeral port");
     }
 
     private final String id;
