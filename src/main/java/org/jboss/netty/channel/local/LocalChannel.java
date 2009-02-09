@@ -160,24 +160,22 @@ class LocalChannel extends AbstractChannel {
             return;
         }
 
-        if (pairedChannel == null || !isOpen()) {
-            // Channel is closed or not connected yet - notify as failures.
-            Exception cause;
-            if (isOpen()) {
-                cause = new NotYetConnectedException();
-            } else {
-                cause = new ClosedChannelException();
+        // Channel is closed or not connected yet - notify as failures.
+        Exception cause;
+        if (isOpen()) {
+            cause = new NotYetConnectedException();
+        } else {
+            cause = new ClosedChannelException();
+        }
+
+        for (;;) {
+            MessageEvent e = writeBuffer.poll();
+            if(e == null) {
+                break;
             }
 
-            for (;;) {
-                MessageEvent e = writeBuffer.poll();
-                if(e == null) {
-                    break;
-                }
-
-                e.getFuture().setFailure(cause);
-                fireExceptionCaught(this, cause);
-            }
+            e.getFuture().setFailure(cause);
+            fireExceptionCaught(this, cause);
         }
     }
 }
