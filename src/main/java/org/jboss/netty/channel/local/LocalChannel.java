@@ -38,7 +38,6 @@ import org.jboss.netty.util.LinkedTransferQueue;
  * @author Trustin Lee (tlee@redhat.com)
  */
 public class LocalChannel extends AbstractChannel {
-    //final BlockingQueue<MessageEvent> writeBuffer = new LinkedBlockingQueue<MessageEvent>();
     private final ThreadLocal<Boolean> delivering = new ThreadLocal<Boolean>() {
         @Override
         protected Boolean initialValue() {
