@@ -31,7 +31,7 @@ import org.jboss.netty.util.ConcurrentWeakHashMap;
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  * @author Trustin Lee (tlee@redhat.com)
  */
-public class LocalAddress extends SocketAddress implements Comparable<LocalAddress> {
+public final class LocalAddress extends SocketAddress implements Comparable<LocalAddress> {
     private static final long serialVersionUID = -3601961747680808645L;
 
     private static final ConcurrentMap<String, LocalAddress> addresses =
