@@ -219,7 +219,8 @@ public abstract class AbstractChannel implements Channel {
      */
     @Override
     public String toString() {
-        if (strVal != null) {
+        boolean connected = isConnected();
+        if (connected && strVal != null) {
             return strVal;
         }
 
@@ -246,6 +247,12 @@ public abstract class AbstractChannel implements Channel {
 
         buf.append(')');
 
-        return strVal = buf.toString();
+        String strVal = buf.toString();
+        if (connected) {
+            this.strVal = strVal;
+        } else {
+            this.strVal = null;
+        }
+        return strVal;
     }
 }
