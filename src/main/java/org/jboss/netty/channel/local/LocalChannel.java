@@ -159,6 +159,7 @@ public class LocalChannel extends AbstractChannel {
 
                         e.getFuture().setSuccess();
                         fireMessageReceived(pairedChannel, e.getMessage());
+                        fireWriteComplete(this, 1);
                     }
                 } finally {
                     delivering.set(false);
