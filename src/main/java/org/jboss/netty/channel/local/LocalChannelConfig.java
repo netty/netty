@@ -33,10 +33,14 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  * @author Trustin Lee (tlee@redhat.com)
  */
-public class LocalChannelConfig implements ChannelConfig {
+class LocalChannelConfig implements ChannelConfig {
 
     private volatile ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
     private volatile ChannelPipelineFactory pipelineFactory;
+
+    LocalChannelConfig() {
+        super();
+    }
 
     public void setOptions(Map<String, Object> options) {
         for (Entry<String, Object> e: options.entrySet()) {
