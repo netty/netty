@@ -21,22 +21,42 @@
  */
 package org.jboss.netty.channel.local;
 
+import java.util.Map;
+import java.util.Map.Entry;
+
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.HeapChannelBufferFactory;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 
-import java.util.Map;
-
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
 public class LocalChannelConfig implements ChannelConfig {
-    private volatile ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
 
-    ChannelPipelineFactory pipelineFactory;
+    private volatile ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
+    private volatile ChannelPipelineFactory pipelineFactory;
 
     public void setOptions(Map<String, Object> options) {
+        for (Entry<String, Object> e: options.entrySet()) {
+            setOption(e.getKey(), e.getValue());
+        }
+    }
+
+    /**
+     * Sets an individual option.  You can override this method to support
+     * additional configuration parameters.
+     */
+    protected boolean setOption(String key, Object value) {
+        if (key.equals("pipelineFactory")) {
+            setPipelineFactory((ChannelPipelineFactory) value);
+        } else if (key.equals("bufferFactory")) {
+            setBufferFactory((ChannelBufferFactory) value);
+        } else {
+            return false;
+        }
+        return true;
     }
 
     public ChannelBufferFactory getBufferFactory() {
@@ -60,12 +80,16 @@ public class LocalChannelConfig implements ChannelConfig {
     }
 
     public void setConnectTimeoutMillis(int connectTimeoutMillis) {
+        // Unused
     }
 
+    @Deprecated
     public int getWriteTimeoutMillis() {
         return 0;
     }
 
+    @Deprecated
     public void setWriteTimeoutMillis(int writeTimeoutMillis) {
+        // Unused
     }
 }
