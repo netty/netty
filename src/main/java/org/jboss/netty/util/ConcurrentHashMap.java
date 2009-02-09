@@ -240,7 +240,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
          * are marked in code comments.
          */
 
-        private static final long serialVersionUID = 2249069246763182397L;
+        private static final long serialVersionUID = -2001752926705396395L;
 
         /**
          * The number of elements in this segment's region.
@@ -1226,7 +1226,8 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
      * This class is needed for JDK5 compatibility.
      */
     static class SimpleEntry<K, V> implements Entry<K, V>, Serializable {
-        private static final long serialVersionUID = -8499721149061103585L;
+
+        private static final long serialVersionUID = -7482812091037709145L;
 
         private final K key;
 
@@ -1288,7 +1289,8 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
      * changes to the underlying map.
      */
     final class WriteThroughEntry extends SimpleEntry<K, V> {
-        private static final long serialVersionUID = -7900634345345313646L;
+
+        private static final long serialVersionUID = 7779181742399903646L;
 
         WriteThroughEntry(K k, V v) {
             super(k, v);

@@ -60,8 +60,6 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> {
 
-    private static final long serialVersionUID = 1332231209347394089L;
-
     /*
      * The basic strategy is to subdivide the table among Segments,
      * each of which itself is a concurrently readable hash table.
@@ -281,7 +279,7 @@ public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V>
          * are marked in code comments.
          */
 
-        private static final long serialVersionUID = -5443833583955251591L;
+        private static final long serialVersionUID = 5571906852696599096L;
 
         /**
          * The number of elements in this segment's region.
@@ -1308,7 +1306,8 @@ public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V>
      * This class is needed for JDK5 compatibility.
      */
     static class SimpleEntry<K, V> implements Entry<K, V>, Serializable {
-        private static final long serialVersionUID = -8499721149061103585L;
+
+        private static final long serialVersionUID = 8931408205638274090L;
 
         private final K key;
 
@@ -1370,7 +1369,8 @@ public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V>
      * changes to the underlying map.
      */
     final class WriteThroughEntry extends SimpleEntry<K, V> {
-        private static final long serialVersionUID = -7900634345345313646L;
+
+        private static final long serialVersionUID = 4475636861021292972L;
 
         WriteThroughEntry(K k, V v) {
             super(k, v);
