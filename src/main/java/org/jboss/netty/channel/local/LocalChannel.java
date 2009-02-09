@@ -71,7 +71,8 @@ public class LocalChannel extends AbstractChannel {
     }
 
     public boolean isConnected() {
-        return pairedChannel != null;
+        return localAddress != null &&
+               pairedChannel != null && pairedChannel.localAddress != null;
     }
 
     public LocalAddress getLocalAddress() {
