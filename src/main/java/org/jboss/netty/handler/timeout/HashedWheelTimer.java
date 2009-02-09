@@ -103,7 +103,7 @@ public class HashedWheelTimer implements Timer {
         mask = wheel.length - 1;
 
         // Convert checkInterval to nanoseconds.
-        this.tickDuration = tickDuration = unit.toNanos(tickDuration);
+        this.tickDuration = tickDuration = unit.toMillis(tickDuration);
 
         // Prevent overflow.
         if (tickDuration == Long.MAX_VALUE ||
@@ -184,7 +184,7 @@ public class HashedWheelTimer implements Timer {
     }
 
     public Timeout newTimeout(TimerTask task, long delay, TimeUnit unit) {
-        final long currentTime = System.nanoTime();
+        final long currentTime = System.currentTimeMillis();
 
         if (task == null) {
             throw new NullPointerException("task");
@@ -193,7 +193,7 @@ public class HashedWheelTimer implements Timer {
             throw new NullPointerException("unit");
         }
 
-        delay = unit.toNanos(delay);
+        delay = unit.toMillis(delay);
         if (delay < tickDuration) {
             delay = tickDuration;
         }
@@ -243,7 +243,7 @@ public class HashedWheelTimer implements Timer {
             List<HashedWheelTimeout> expiredTimeouts =
                 new ArrayList<HashedWheelTimeout>();
 
-            startTime = System.nanoTime();
+            startTime = System.currentTimeMillis();
             tick = 1;
 
             while (!shutdown.get()) {
@@ -277,7 +277,7 @@ public class HashedWheelTimer implements Timer {
                 List<HashedWheelTimeout> expiredTimeouts,
                 ReusableIterator<HashedWheelTimeout> i) {
 
-            long currentTime = System.nanoTime();
+            long currentTime = System.currentTimeMillis();
             i.rewind();
             while (i.hasNext()) {
                 HashedWheelTimeout timeout = i.next();
@@ -310,7 +310,7 @@ public class HashedWheelTimer implements Timer {
 
         private void waitForNextTick() {
             for (;;) {
-                final long currentTime = System.nanoTime();
+                final long currentTime = System.currentTimeMillis();
                 final long sleepTime = tickDuration * tick - (currentTime - startTime);
 
                 if (sleepTime <= 0) {
@@ -328,7 +328,7 @@ public class HashedWheelTimer implements Timer {
 
             // Reset the tick if overflow is expected.
             if (tickDuration * tick > Long.MAX_VALUE - tickDuration) {
-                startTime = System.nanoTime();
+                startTime = System.currentTimeMillis();
                 tick = 1;
             } else {
                 // Increase the tick if overflow is not likely to happen.
@@ -373,7 +373,7 @@ public class HashedWheelTimer implements Timer {
         }
 
         public boolean isExpired() {
-            return cancelled || System.nanoTime() > deadline;
+            return cancelled || System.currentTimeMillis() > deadline;
         }
 
         public void expire() {
@@ -392,7 +392,7 @@ public class HashedWheelTimer implements Timer {
 
         @Override
         public String toString() {
-            long currentTime = System.nanoTime();
+            long currentTime = System.currentTimeMillis();
             long remaining = deadline - currentTime;
 
             StringBuilder buf = new StringBuilder(192);
