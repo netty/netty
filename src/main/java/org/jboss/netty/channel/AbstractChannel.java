@@ -229,7 +229,7 @@ public abstract class AbstractChannel implements Channel {
         buf.append("(id: ");
         buf.append(id.toString());
 
-        if (isConnected()) {
+        if (connected) {
             buf.append(", ");
             if (getParent() == null) {
                 buf.append(getLocalAddress());
