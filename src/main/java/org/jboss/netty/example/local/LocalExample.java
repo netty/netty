@@ -21,26 +21,23 @@
  */
 package org.jboss.netty.example.local;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
+import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.local.LocalServerChannelFactory;
-import org.jboss.netty.channel.local.LocalClientChannelFactory;
 import org.jboss.netty.channel.local.LocalAddress;
+import org.jboss.netty.channel.local.LocalServerChannelFactory;
 import org.jboss.netty.channel.local.LocalServerChannels;
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.example.echo.EchoHandler;
-import org.jboss.netty.example.echo.ThroughputMonitor;
+import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
-import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
-
-import java.util.concurrent.Executors;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
@@ -91,6 +88,7 @@ public class LocalExample {
 
     @ChannelPipelineCoverage("all")
     static class PrintHandler extends OneToOneDecoder {
+        @Override
         protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
             String message = (String) msg;
             System.out.println("received message back '" + message + "'");

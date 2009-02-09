@@ -21,16 +21,6 @@
  */
 package org.jboss.netty.servlet;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
-
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +29,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpSession;
+
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
  * A channel handler taht proxies messages to the servlet output stream
@@ -49,11 +50,11 @@ import java.util.concurrent.locks.ReentrantLock;
 class ServletChannelHandler extends SimpleChannelHandler {
     List<MessageEvent> awaitingEvents = new ArrayList<MessageEvent>();
 
-    private Lock reconnectLock = new ReentrantLock();
+    private final Lock reconnectLock = new ReentrantLock();
 
-    private Condition reconnectCondition = reconnectLock.newCondition();
+    private final Condition reconnectCondition = reconnectLock.newCondition();
 
-    private long reconnectTimeout;
+    private final long reconnectTimeout;
 
     boolean connected = false;
 
@@ -71,6 +72,7 @@ class ServletChannelHandler extends SimpleChannelHandler {
         this.reconnectTimeout = reconnectTimeout;
     }
 
+    @Override
     public synchronized void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
 
         ChannelBuffer buffer = (ChannelBuffer) e.getMessage();
@@ -114,6 +116,7 @@ class ServletChannelHandler extends SimpleChannelHandler {
 
     }
 
+    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
         if (invalidated.compareAndSet(false, true)) {
             session.invalidate();
@@ -121,6 +124,7 @@ class ServletChannelHandler extends SimpleChannelHandler {
         e.getChannel().close();
     }
 
+    @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         if (invalidated.compareAndSet(false, true)) {
             session.invalidate();

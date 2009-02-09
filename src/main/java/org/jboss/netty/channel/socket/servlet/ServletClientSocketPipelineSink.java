@@ -22,27 +22,20 @@
  */
 package org.jboss.netty.channel.socket.servlet;
 
+import static org.jboss.netty.channel.Channels.*;
+
+import java.net.SocketAddress;
+import java.util.concurrent.Executor;
+
 import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
-import static org.jboss.netty.channel.Channels.fireChannelBound;
-import static org.jboss.netty.channel.Channels.fireExceptionCaught;
-import static org.jboss.netty.channel.Channels.fireChannelConnected;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.logging.Logger;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PushbackInputStream;
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.net.URL;
-import java.util.concurrent.Executor;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
@@ -50,7 +43,6 @@ import java.util.concurrent.Executor;
 class ServletClientSocketPipelineSink  extends AbstractChannelSink {
 
     static String LINE_TERMINATOR = "\r\n";
-    private static      Logger log = Logger.getLogger(ServletClientSocketPipelineSink.class);
     private final Executor workerExecutor;
 
     ServletClientSocketPipelineSink(Executor workerExecutor) {

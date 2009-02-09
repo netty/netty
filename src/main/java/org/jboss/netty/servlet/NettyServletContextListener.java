@@ -21,12 +21,12 @@
  */
 package org.jboss.netty.servlet;
 
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
+
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.local.LocalServerChannels;
-
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
 
 /**
  * A context listener that creates a client bootstrap that uses a local channel factory. The local channel factory should

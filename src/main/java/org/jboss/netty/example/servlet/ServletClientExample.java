@@ -21,22 +21,21 @@
  */
 package org.jboss.netty.example.servlet;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
+import java.net.URL;
+import java.util.concurrent.Executors;
+
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.local.LocalAddress;
 import org.jboss.netty.channel.socket.servlet.ServletClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
 
 /**
  * make sure that the LocalTransportRegister bean is deployed along with the NettyServlet with the following web.xml
@@ -121,6 +120,7 @@ public class ServletClientExample {
 
     @ChannelPipelineCoverage("all")
     static class PrintHandler extends OneToOneDecoder {
+        @Override
         protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
             String message = (String) msg;
             System.out.println("received message back '" + message + "'");

@@ -21,31 +21,29 @@
  */
 package org.jboss.netty.servlet;
 
+import static org.jboss.netty.channel.Channels.*;
+import static org.jboss.netty.servlet.NettyServlet.*;
+import static org.jboss.netty.servlet.NettyServletContextListener.*;
+
+import javax.servlet.http.HttpSession;
+import javax.servlet.http.HttpSessionEvent;
+import javax.servlet.http.HttpSessionListener;
+
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import static org.jboss.netty.channel.Channels.pipeline;
 import org.jboss.netty.channel.local.LocalAddress;
-import static org.jboss.netty.servlet.NettyServletContextListener.BOOTSTRAP_PROP;
-import static org.jboss.netty.servlet.NettyServletContextListener.STREAMING_PROP;
-import static org.jboss.netty.servlet.NettyServletContextListener.RECONNECT_PROP;
-import static org.jboss.netty.servlet.NettyServlet.CHANNEL_PROP;
-import static org.jboss.netty.servlet.NettyServlet.HANDLER_PROP;
-
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpSessionEvent;
-import javax.servlet.http.HttpSessionListener;
 
 /**
  * A session listenor that uses the client bootstrap to create a channel.
- * 
+ *
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public class NettySessionListener implements HttpSessionListener, ChannelHandler {
-    
+
     public void sessionCreated(HttpSessionEvent event) {
         HttpSession session = event.getSession();
         ClientBootstrap bootstrap = (ClientBootstrap) session.getServletContext().getAttribute(BOOTSTRAP_PROP);

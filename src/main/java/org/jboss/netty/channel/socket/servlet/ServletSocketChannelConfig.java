@@ -22,17 +22,17 @@
  */
 package org.jboss.netty.channel.socket.servlet;
 
+import java.net.Socket;
+import java.net.SocketException;
+import java.util.Map;
+import java.util.Map.Entry;
+
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.HeapChannelBufferFactory;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.util.ConversionUtil;
-
-import java.net.Socket;
-import java.net.SocketException;
-import java.util.Map;
-import java.util.Map.Entry;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>

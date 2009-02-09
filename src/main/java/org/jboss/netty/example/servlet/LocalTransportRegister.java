@@ -21,11 +21,11 @@
  */
 package org.jboss.netty.example.servlet;
 
-import org.jboss.netty.channel.local.LocalServerChannelFactory;
-import org.jboss.netty.channel.local.LocalAddress;
-import org.jboss.netty.channel.local.LocalServerChannels;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.local.LocalAddress;
+import org.jboss.netty.channel.local.LocalServerChannelFactory;
+import org.jboss.netty.channel.local.LocalServerChannels;
 import org.jboss.netty.example.echo.EchoHandler;
 
 /**
@@ -38,7 +38,7 @@ import org.jboss.netty.example.echo.EchoHandler;
  */
 public class LocalTransportRegister {
 
-    public  void start() {
+    public void start() {
         LocalServerChannelFactory serverChannelFactory = LocalServerChannels.registerServerChannel("org.jboss.netty.exampleChannel");
         ServerBootstrap serverBootstrap = new ServerBootstrap(serverChannelFactory);
         EchoHandler handler = new EchoHandler();

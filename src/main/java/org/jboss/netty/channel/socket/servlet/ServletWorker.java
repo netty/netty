@@ -22,18 +22,12 @@
  */
 package org.jboss.netty.channel.socket.servlet;
 
+import static org.jboss.netty.channel.Channels.*;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
-import static org.jboss.netty.channel.Channels.fireChannelClosed;
-import static org.jboss.netty.channel.Channels.fireChannelDisconnected;
-import static org.jboss.netty.channel.Channels.fireChannelInterestChanged;
-import static org.jboss.netty.channel.Channels.fireChannelUnbound;
-import static org.jboss.netty.channel.Channels.fireExceptionCaught;
-import static org.jboss.netty.channel.Channels.fireMessageReceived;
-
-import java.io.PushbackInputStream;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
@@ -47,7 +41,6 @@ class ServletWorker implements Runnable {
 
     public void run() {
         channel.workerThread = Thread.currentThread();
-        final PushbackInputStream in = channel.getInputStream();
 
         while (channel.isOpen()) {
             synchronized (this) {

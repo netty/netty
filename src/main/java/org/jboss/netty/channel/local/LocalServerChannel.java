@@ -21,14 +21,15 @@
  */
 package org.jboss.netty.channel.local;
 
+import static org.jboss.netty.channel.Channels.*;
+
+import java.net.SocketAddress;
+
 import org.jboss.netty.channel.AbstractServerChannel;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
-import static org.jboss.netty.channel.Channels.fireChannelOpen;
-
-import java.net.SocketAddress;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>

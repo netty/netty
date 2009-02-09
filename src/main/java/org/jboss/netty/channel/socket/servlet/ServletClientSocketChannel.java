@@ -22,16 +22,8 @@
  */
 package org.jboss.netty.channel.socket.servlet;
 
-import org.jboss.logging.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.AbstractChannel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import static org.jboss.netty.channel.Channels.fireChannelOpen;
-import org.jboss.netty.channel.socket.SocketChannelConfig;
-import static org.jboss.netty.channel.socket.servlet.ServletClientSocketPipelineSink.LINE_TERMINATOR;
+import static org.jboss.netty.channel.Channels.*;
+import static org.jboss.netty.channel.socket.servlet.ServletClientSocketPipelineSink.*;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -43,9 +35,16 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.URL;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.AbstractChannel;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.socket.SocketChannelConfig;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
@@ -53,9 +52,7 @@ import java.util.concurrent.locks.ReentrantLock;
 class ServletClientSocketChannel extends AbstractChannel
       implements org.jboss.netty.channel.socket.SocketChannel {
 
-    private static Logger log = Logger.getLogger(ServletClientSocketChannel.class);
-
-    private Lock lock = new ReentrantLock();
+    private final Lock lock = new ReentrantLock();
 
     private final Object writeLock = new Object();
 
@@ -293,7 +290,7 @@ class ServletClientSocketChannel extends AbstractChannel
     }
 
     public void closeSocket() throws IOException {
-       setClosed(); 
+       setClosed();
        closed = true;
         socket.close();
     }
