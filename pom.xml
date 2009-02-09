@@ -396,6 +396,7 @@
           <additionalparam>
             -link http://java.sun.com/javase/6/docs/api/
             -link http://code.google.com/apis/protocolbuffers/docs/reference/java/
+            -link http://java.sun.com/products/servlet/2.5/docs/servlet-2_5-mr2/
             -link http://www.osgi.org/javadoc/r4v41/
             -link http://google-guice.googlecode.com/svn/trunk/javadoc/
             -link http://static.springframework.org/spring/docs/2.5.x/api/
