@@ -109,7 +109,7 @@ class LocalChannel extends AbstractChannel {
             fireChannelClosed(this);
 
             // Close the peer.
-            if (!pairedChannel.setClosed()) {
+            if (pairedChannel == null || !pairedChannel.setClosed()) {
                 return;
             }
 
@@ -130,26 +130,9 @@ class LocalChannel extends AbstractChannel {
 
     void flushWriteBuffer() {
         LocalChannel pairedChannel = this.pairedChannel;
-        if (pairedChannel == null || !pairedChannel.isConnected()) {
-            // Channel is closed or not connected yet - notify as failures.
-            Exception cause;
-            if (isOpen()) {
-                cause = new NotYetConnectedException();
-            } else {
-                cause = new ClosedChannelException();
-            }
-
-            for (;;) {
-                MessageEvent e = writeBuffer.poll();
-                if(e == null) {
-                    break;
-                }
-
-                e.getFuture().setFailure(cause);
-                fireExceptionCaught(this, cause);
-            }
-        } else {
-            // Channel is open and connected - trigger events.
+        if (isConnected()){
+            // Channel is open and connected and channelConnected event has
+            // been fired.
             if (!delivering.get()) {
                 delivering.set(true);
                 try {
@@ -166,6 +149,34 @@ class LocalChannel extends AbstractChannel {
                 } finally {
                     delivering.set(false);
                 }
+            }
+
+            return;
+        }
+
+        if (pairedChannel != null) {
+            // Channel is open and connected but channelConnected event has
+            // not been fired yet.
+            return;
+        }
+
+        if (pairedChannel == null || !isOpen()) {
+            // Channel is closed or not connected yet - notify as failures.
+            Exception cause;
+            if (isOpen()) {
+                cause = new NotYetConnectedException();
+            } else {
+                cause = new ClosedChannelException();
+            }
+
+            for (;;) {
+                MessageEvent e = writeBuffer.poll();
+                if(e == null) {
+                    break;
+                }
+
+                e.getFuture().setFailure(cause);
+                fireExceptionCaught(this, cause);
             }
         }
     }
