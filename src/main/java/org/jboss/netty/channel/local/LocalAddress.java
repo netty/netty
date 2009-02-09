@@ -101,4 +101,9 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
     public String toString() {
         return getId();
     }
+
+    // Just in case someone serializes this class ..
+    private Object readResolve() {
+        return getInstance(getId());
+    }
 }
