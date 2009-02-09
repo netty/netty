@@ -56,7 +56,13 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
     }
 
     public static LocalAddress newEphemeralInstance() {
-        return getInstance("ephemeral-" + nextEphemeralPort.incrementAndGet());
+        for (;;) {
+            String id = "ephemeral-" + nextEphemeralPort.incrementAndGet();
+            LocalAddress a = new LocalAddress(id);
+            if (addresses.putIfAbsent(id, a) == null) {
+                return a;
+            }
+        }
     }
 
     private final String id;
