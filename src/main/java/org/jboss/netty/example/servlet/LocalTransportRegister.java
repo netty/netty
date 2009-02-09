@@ -23,9 +23,9 @@ package org.jboss.netty.example.servlet;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.local.LocalAddress;
 import org.jboss.netty.channel.local.LocalServerChannelFactory;
-import org.jboss.netty.channel.local.LocalServerChannels;
 import org.jboss.netty.example.echo.EchoHandler;
 
 /**
@@ -38,15 +38,17 @@ import org.jboss.netty.example.echo.EchoHandler;
  */
 public class LocalTransportRegister {
 
+    private final ChannelFactory factory = new LocalServerChannelFactory();
+    private volatile Channel serverChannel;
+
     public void start() {
-        LocalServerChannelFactory serverChannelFactory = LocalServerChannels.registerServerChannel("org.jboss.netty.exampleChannel");
-        ServerBootstrap serverBootstrap = new ServerBootstrap(serverChannelFactory);
+        ServerBootstrap serverBootstrap = new ServerBootstrap(factory);
         EchoHandler handler = new EchoHandler();
         serverBootstrap.getPipeline().addLast("handler", handler);
-        Channel channel = serverBootstrap.bind(LocalAddress.getInstance("localAddress"));
+        serverChannel = serverBootstrap.bind(LocalAddress.getInstance("localAddress"));
     }
 
     public void stop() {
-        LocalServerChannels.unregisterServerChannel("org.jboss.netty.exampleChannel");
+        serverChannel.close();
     }
 }

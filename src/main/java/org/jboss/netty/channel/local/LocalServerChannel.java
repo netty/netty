@@ -23,7 +23,7 @@ package org.jboss.netty.channel.local;
 
 import static org.jboss.netty.channel.Channels.*;
 
-import java.net.SocketAddress;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jboss.netty.channel.AbstractServerChannel;
 import org.jboss.netty.channel.ChannelConfig;
@@ -33,9 +33,13 @@ import org.jboss.netty.channel.ChannelSink;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
-public class LocalServerChannel extends AbstractServerChannel {
+final class LocalServerChannel extends AbstractServerChannel {
     final ChannelConfig channelConfig;
+
+    volatile LocalAddress localAddress;
+    final AtomicBoolean bound = new AtomicBoolean();
 
     protected LocalServerChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink) {
         super(factory, pipeline, sink);
@@ -48,18 +52,23 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     public boolean isBound() {
-        return true;
+        return isOpen() && bound.get();
     }
 
     public boolean isConnected() {
-        return true;
+        return false;
     }
 
-    public SocketAddress getLocalAddress() {
+    public LocalAddress getLocalAddress() {
+        return isBound()? localAddress : null;
+    }
+
+    public LocalAddress getRemoteAddress() {
         return null;
     }
 
-    public SocketAddress getRemoteAddress() {
-        return null;
+    @Override
+    protected boolean setClosed() {
+        return super.setClosed();
     }
 }

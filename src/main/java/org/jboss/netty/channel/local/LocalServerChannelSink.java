@@ -24,7 +24,9 @@ package org.jboss.netty.channel.local;
 import static org.jboss.netty.channel.Channels.*;
 
 import org.jboss.netty.channel.AbstractChannelSink;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
@@ -37,67 +39,103 @@ import org.jboss.netty.channel.MessageEvent;
 final class LocalServerChannelSink extends AbstractChannelSink {
 
     public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
-        if (e instanceof ChannelStateEvent) {
-            ChannelStateEvent event = (ChannelStateEvent) e;
-            if (e.getChannel() instanceof LocalServerChannel) {
-                handleServerChannel(event);
-            }
-            else if (e.getChannel() instanceof LocalChannel) {
-                handleLocalChannel(event);
-            }
+        Channel channel = e.getChannel();
+        if (channel instanceof LocalServerChannel) {
+            handleServerChannel(e);
         }
-        else if (e instanceof MessageEvent) {
-            MessageEvent event = (MessageEvent) e;
-            LocalChannel channel = (LocalChannel) event.getChannel();
-            channel.pairedChannel.writeBuffer.offer(event);
-            channel.pairedChannel.writeNow(channel.pairedChannel);
-        }
-
-    }
-
-    private void handleLocalChannel(ChannelStateEvent event) {
-        LocalChannel localChannel =
-              (LocalChannel) event.getChannel();
-        ChannelFuture future = event.getFuture();
-        ChannelState state = event.getState();
-        Object value = event.getValue();
-        switch (state) {
-        // FIXME: Proper event emission.
-        case OPEN:
-            if (Boolean.FALSE.equals(value)) {
-                future.setSuccess();
-                fireChannelDisconnected(localChannel);
-                fireChannelUnbound(localChannel);
-                fireChannelClosed(localChannel);
-                fireChannelDisconnected(localChannel.pairedChannel);
-                fireChannelUnbound(localChannel.pairedChannel);
-                fireChannelClosed(localChannel.pairedChannel);
-            }
-            break;
-        case BOUND:
-            break;
+        else if (channel instanceof LocalChannel) {
+            handleAcceptedChannel(e);
         }
     }
 
-    private void handleServerChannel(ChannelStateEvent event) {
-        LocalServerChannel serverChannel =
+    private void handleServerChannel(ChannelEvent e) {
+        if (!(e instanceof ChannelStateEvent)) {
+            return;
+        }
+
+        ChannelStateEvent event = (ChannelStateEvent) e;
+        LocalServerChannel channel =
               (LocalServerChannel) event.getChannel();
         ChannelFuture future = event.getFuture();
         ChannelState state = event.getState();
         Object value = event.getValue();
         switch (state) {
-            case OPEN:
-                break;
-            case BOUND:
-                if (value != null) {
-                    bind(future, serverChannel);
-                }
-                break;
+        case OPEN:
+            if (Boolean.FALSE.equals(value)) {
+                close(channel, future);
+            }
+            break;
+        case BOUND:
+            if (value != null) {
+                bind(channel, future, (LocalAddress) value);
+            } else {
+                close(channel, future);
+            }
+            break;
         }
     }
 
-    private void bind(ChannelFuture future, LocalServerChannel serverChannel) {
+    private void handleAcceptedChannel(ChannelEvent e) {
+        if (e instanceof ChannelStateEvent) {
+            ChannelStateEvent event = (ChannelStateEvent) e;
+            LocalChannel channel = (LocalChannel) event.getChannel();
+            ChannelFuture future = event.getFuture();
+            ChannelState state = event.getState();
+            Object value = event.getValue();
+
+            switch (state) {
+            case OPEN:
+                if (Boolean.FALSE.equals(value)) {
+                    channel.closeNow(future);
+                }
+                break;
+            case BOUND:
+            case CONNECTED:
+                if (value == null) {
+                    channel.closeNow(future);
+                }
+                break;
+            case INTEREST_OPS:
+                // TODO: Implement traffic control
+                break;
+            }
+        } else if (e instanceof MessageEvent) {
+            MessageEvent event = (MessageEvent) e;
+            LocalChannel channel = (LocalChannel) event.getChannel();
+            channel.writeBuffer.offer(event);
+            channel.flushWriteBuffer();
+        }
+    }
+
+    private void bind(LocalServerChannel channel, ChannelFuture future, LocalAddress localAddress) {
+        try {
+            if (!LocalChannelRegistry.register(localAddress, channel)) {
+                throw new ChannelException("address already in use: " + localAddress);
+            }
+            if (!channel.bound.compareAndSet(false, true)) {
+                throw new ChannelException("already bound");
+            }
+
+            channel.localAddress = localAddress;
+            future.setSuccess();
+            fireChannelBound(channel, localAddress);
+        } catch (Throwable t) {
+            LocalChannelRegistry.unregister(localAddress);
+            future.setFailure(t);
+            fireExceptionCaught(channel, t);
+        }
+    }
+
+    private void close(LocalServerChannel channel, ChannelFuture future) {
         future.setSuccess();
-        fireChannelBound(serverChannel, serverChannel.getLocalAddress());
+        if (channel.setClosed()) {
+            LocalAddress localAddress = channel.localAddress;
+            if (channel.bound.compareAndSet(true, false)) {
+                channel.localAddress = null;
+                LocalChannelRegistry.unregister(localAddress);
+                fireChannelUnbound(channel);
+            }
+            fireChannelClosed(channel);
+        }
     }
 }

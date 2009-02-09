@@ -105,7 +105,7 @@ class OioWorker implements Runnable {
         channel.workerThread = null;
 
         // Clean up.
-        close(channel, channel.getSucceededFuture());
+        close(channel, succeededFuture(channel));
     }
 
     static void write(

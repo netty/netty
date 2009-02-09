@@ -34,12 +34,12 @@ public class LocalClientChannelFactory implements ChannelFactory {
 
     private final ChannelSink sink;
 
-    public LocalClientChannelFactory(LocalServerChannelFactory serverFactory) {
-        sink = new LocalClientChannelSink(serverFactory.channel, serverFactory.sink);
+    public LocalClientChannelFactory() {
+        sink = new LocalClientChannelSink();
     }
 
     public Channel newChannel(ChannelPipeline pipeline) {
-        return new LocalChannel(this, pipeline, sink);
+        return new LocalChannel(this, pipeline, sink, null);
     }
 
     public void releaseExternalResources() {

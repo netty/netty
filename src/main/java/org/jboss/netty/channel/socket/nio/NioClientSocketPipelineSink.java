@@ -337,7 +337,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         private void close(SelectionKey k) {
             k.cancel();
             NioSocketChannel ch = (NioSocketChannel) k.attachment();
-            NioWorker.close(ch, ch.getSucceededFuture());
+            NioWorker.close(ch, succeededFuture(ch));
         }
     }
 

@@ -44,7 +44,7 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
 <web-app xmlns="http://java.sun.com/xml/ns/j2ee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd"
          version="2.4">
-    <!--the name of the channel, this should be a registered local channel. see LocalTransportRegister-->
+   <!--the name of the channel, this should be a registered local channel. see LocalTransportRegister-->
    <context-param>
       <param-name>serverChannelName</param-name>
       <param-value>org.jboss.netty.exampleChannel</param-value>
@@ -124,7 +124,7 @@ public class ServletClientExample {
         protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
             String message = (String) msg;
             System.out.println("received message back '" + message + "'");
-            return null;
+            return message;
         }
     }
 }

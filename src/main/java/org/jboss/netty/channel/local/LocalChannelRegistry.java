@@ -1,7 +1,8 @@
 /*
  * JBoss, Home of Professional Open Source
- * Copyright 2005-2008, Red Hat Middleware LLC, and individual contributors
- * by the @authors tag. See the copyright.txt in the distribution for a
+ *
+ * Copyright 2009, Red Hat Middleware LLC, and individual contributors
+ * by the @author tags. See the COPYRIGHT.txt in the distribution for a
  * full listing of individual contributors.
  *
  * This is free software; you can redistribute it and/or modify it
@@ -21,27 +22,38 @@
  */
 package org.jboss.netty.channel.local;
 
+import java.util.concurrent.ConcurrentMap;
+
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.util.ConcurrentIdentityHashMap;
 
 /**
- * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ * @version $Rev$, $Date$
  */
-public class LocalServerChannelFactory implements ChannelFactory {
+final class LocalChannelRegistry {
 
-    private final ChannelSink sink = new LocalServerChannelSink();
+    private static final ConcurrentMap<LocalAddress, Channel> map =
+        new ConcurrentIdentityHashMap<LocalAddress, Channel>();
 
-    public LocalServerChannelFactory() {
-        super();
+    static boolean isRegistered(LocalAddress address) {
+        return map.containsKey(address);
     }
 
-    public Channel newChannel(ChannelPipeline pipeline) {
-        return new LocalServerChannel(this, pipeline, sink);
+    static Channel getChannel(LocalAddress address) {
+        return map.get(address);
     }
 
-    public void releaseExternalResources() {
+    static boolean register(LocalAddress address, Channel channel) {
+        return map.putIfAbsent(address, channel) == null;
+    }
+
+    static boolean unregister(LocalAddress address) {
+        return map.remove(address) != null;
+    }
+
+    private LocalChannelRegistry() {
         // Unused
     }
 }

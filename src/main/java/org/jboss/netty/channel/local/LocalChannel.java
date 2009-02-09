@@ -23,11 +23,15 @@ package org.jboss.netty.channel.local;
 
 import static org.jboss.netty.channel.Channels.*;
 
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.NotYetConnectedException;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.MessageEvent;
@@ -45,12 +49,15 @@ public class LocalChannel extends AbstractChannel {
         }
     };
 
-    volatile LocalChannel pairedChannel = null;
+    volatile LocalChannel pairedChannel;
+    volatile LocalAddress localAddress;
+    final AtomicBoolean bound = new AtomicBoolean();
     private final LocalChannelConfig config;
     final Queue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>();
 
-    protected LocalChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink) {
+    protected LocalChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, LocalChannel pairedChannel) {
         super(null, factory, pipeline, sink);
+        this.pairedChannel = pairedChannel;
         config = new LocalChannelConfig();
         fireChannelOpen(this);
     }
@@ -60,38 +67,101 @@ public class LocalChannel extends AbstractChannel {
     }
 
     public boolean isBound() {
-        return true;
+        return isOpen() && bound.get();
     }
 
     public boolean isConnected() {
-        return true;
+        return pairedChannel != null;
     }
 
     public LocalAddress getLocalAddress() {
-        // FIXME: should return LocalAddress
-        return null;
+        return isBound()? localAddress : null;
     }
 
     public LocalAddress getRemoteAddress() {
-        // FIXME: should return LocalAddress
-        return null;
+        LocalChannel pairedChannel = this.pairedChannel;
+        if (pairedChannel == null) {
+            return null;
+        } else {
+            return pairedChannel.getLocalAddress();
+        }
     }
 
-    void writeNow(LocalChannel pairedChannel) {
-        if (!delivering.get()) {
-            delivering.set(true);
-            try {
-                for (;;) {
-                    MessageEvent e = writeBuffer.poll();
-                    if(e == null) {
-                        break;
-                    }
+    void closeNow(ChannelFuture future) {
+        LocalAddress localAddress = this.localAddress;
+        try {
+            // Close the self.
+            if (!setClosed()) {
+                future.setSuccess();
+                return;
+            }
 
-                    e.getFuture().setSuccess();
-                    fireMessageReceived(pairedChannel, e.getMessage());
+            LocalChannel pairedChannel = this.pairedChannel;
+            if (pairedChannel != null) {
+                this.pairedChannel = null;
+                this.localAddress = null;
+                fireChannelDisconnected(this);
+                fireChannelUnbound(this);
+            }
+            fireChannelClosed(this);
+
+            // Close the peer.
+            if (!pairedChannel.setClosed()) {
+                return;
+            }
+
+            LocalChannel me = pairedChannel.pairedChannel;
+            if (me != null) {
+                pairedChannel.pairedChannel = null;
+                pairedChannel.localAddress = null;
+                fireChannelDisconnected(pairedChannel);
+                fireChannelUnbound(pairedChannel);
+            }
+            fireChannelClosed(pairedChannel);
+        } finally {
+            if (localAddress != null) {
+                LocalChannelRegistry.unregister(localAddress);
+            }
+        }
+    }
+
+    void flushWriteBuffer() {
+        LocalChannel pairedChannel = this.pairedChannel;
+        if (pairedChannel == null || !pairedChannel.isConnected()) {
+            // Channel is closed or not connected yet - notify as failures.
+            Exception cause;
+            if (isOpen()) {
+                cause = new NotYetConnectedException();
+            } else {
+                cause = new ClosedChannelException();
+            }
+
+            for (;;) {
+                MessageEvent e = writeBuffer.poll();
+                if(e == null) {
+                    break;
                 }
-            } finally {
-                delivering.set(false);
+
+                e.getFuture().setFailure(cause);
+                fireExceptionCaught(this, cause);
+            }
+        } else {
+            // Channel is open and connected - trigger events.
+            if (!delivering.get()) {
+                delivering.set(true);
+                try {
+                    for (;;) {
+                        MessageEvent e = writeBuffer.poll();
+                        if(e == null) {
+                            break;
+                        }
+
+                        e.getFuture().setSuccess();
+                        fireMessageReceived(pairedChannel, e.getMessage());
+                    }
+                } finally {
+                    delivering.set(false);
+                }
             }
         }
     }

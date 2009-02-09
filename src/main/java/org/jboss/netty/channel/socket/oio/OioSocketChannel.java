@@ -96,11 +96,6 @@ abstract class OioSocketChannel extends AbstractChannel
         super.setInterestOpsNow(interestOps);
     }
 
-    @Override
-    protected ChannelFuture getSucceededFuture() {
-        return super.getSucceededFuture();
-    }
-
     abstract PushbackInputStream getInputStream();
     abstract OutputStream getOutputStream();
 

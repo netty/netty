@@ -313,7 +313,7 @@ class NioWorker implements Runnable {
 
     private static void close(SelectionKey k) {
         NioSocketChannel ch = (NioSocketChannel) k.attachment();
-        close(ch, ch.getSucceededFuture());
+        close(ch, succeededFuture(ch));
     }
 
     static void write(final NioSocketChannel channel, boolean mightNeedWakeup) {
@@ -411,7 +411,7 @@ class NioWorker implements Runnable {
                     fireExceptionCaught(channel, t);
                     if (t instanceof IOException) {
                         open = false;
-                        close(channel, channel.getSucceededFuture());
+                        close(channel, succeededFuture(channel));
                     }
                 }
             }
@@ -639,7 +639,7 @@ class NioWorker implements Runnable {
                 if (future != null) {
                     future.setFailure(new ClosedChannelException());
                 }
-                close(channel, channel.getSucceededFuture());
+                close(channel, succeededFuture(channel));
                 return;
             }
 
@@ -652,7 +652,7 @@ class NioWorker implements Runnable {
                 if (future != null) {
                     future.setFailure(e);
                 }
-                close(channel, channel.getSucceededFuture());
+                close(channel, succeededFuture(channel));
                 throw new ChannelException(
                         "Failed to register a socket to the selector.", e);
             }

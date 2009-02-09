@@ -115,11 +115,6 @@ class ServletClientSocketChannel extends AbstractChannel
     }
 
     @Override
-    protected ChannelFuture getSucceededFuture() {
-        return super.getSucceededFuture();
-    }
-
-    @Override
     public ChannelFuture write(Object message, SocketAddress remoteAddress) {
         if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
             return super.write(message, null);

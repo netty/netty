@@ -31,7 +31,6 @@ import java.net.ServerSocket;
 import org.jboss.netty.channel.AbstractServerChannel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.socket.DefaultServerSocketChannelConfig;
@@ -112,10 +111,5 @@ class OioServerSocketChannel extends AbstractServerChannel
     @Override
     protected boolean setClosed() {
         return super.setClosed();
-    }
-
-    @Override
-    protected ChannelFuture getSucceededFuture() {
-        return super.getSucceededFuture();
     }
 }

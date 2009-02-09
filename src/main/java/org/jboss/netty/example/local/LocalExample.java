@@ -32,8 +32,8 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.local.LocalAddress;
+import org.jboss.netty.channel.local.LocalClientChannelFactory;
 import org.jboss.netty.channel.local.LocalServerChannelFactory;
-import org.jboss.netty.channel.local.LocalServerChannels;
 import org.jboss.netty.example.echo.EchoHandler;
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 import org.jboss.netty.handler.codec.string.StringDecoder;
@@ -44,22 +44,23 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
  */
 public class LocalExample {
     public static void main(String[] args) throws Exception {
-        LocalServerChannelFactory factory = LocalServerChannels.registerServerChannel("localChannel");
+        ChannelFactory factory = new LocalServerChannelFactory();
         ServerBootstrap bootstrap = new ServerBootstrap(factory);
         EchoHandler handler = new EchoHandler();
         LocalAddress socketAddress = LocalAddress.getInstance("1");
         bootstrap.getPipeline().addLast("handler", handler);
         bootstrap.bind(socketAddress);
 
-        ChannelFactory channelFactory = LocalServerChannels.getClientChannelFactory("localChannel");
+        ChannelFactory channelFactory = new LocalClientChannelFactory();
         ClientBootstrap clientBootstrap = new ClientBootstrap(channelFactory);
-
         clientBootstrap.getPipeline().addLast("decoder", new StringDecoder());
         clientBootstrap.getPipeline().addLast("encoder", new StringEncoder());
         clientBootstrap.getPipeline().addLast("handler", new PrintHandler());
         ChannelFuture channelFuture = clientBootstrap.connect(socketAddress);
         channelFuture.awaitUninterruptibly();
+
         System.out.println("Enter text (quit to end)");
+
         // Read commands from the stdin.
         ChannelFuture lastWriteFuture = null;
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
@@ -80,10 +81,6 @@ public class LocalExample {
         channelFuture.getChannel().close();
         // Wait until the connection is closed or the connection attempt fails.
         channelFuture.getChannel().getCloseFuture().awaitUninterruptibly();
-
-        // Shut down thread pools to exit.
-        channelFactory.releaseExternalResources();
-        factory.releaseExternalResources();
     }
 
     @ChannelPipelineCoverage("all")
@@ -92,7 +89,7 @@ public class LocalExample {
         protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
             String message = (String) msg;
             System.out.println("received message back '" + message + "'");
-            return null;
+            return message;
         }
     }
 }

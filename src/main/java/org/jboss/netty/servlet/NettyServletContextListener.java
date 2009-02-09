@@ -26,7 +26,7 @@ import javax.servlet.ServletContextListener;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.local.LocalServerChannels;
+import org.jboss.netty.channel.local.LocalClientChannelFactory;
 
 /**
  * A context listener that creates a client bootstrap that uses a local channel factory. The local channel factory should
@@ -49,29 +49,18 @@ public class NettyServletContextListener implements ServletContextListener {
 
     static final String BOOTSTRAP_PROP = "bootstrap";
 
+    private final ChannelFactory factory = new LocalClientChannelFactory();
+
     public void contextInitialized(ServletContextEvent context) {
-
-        String channelName = context.getServletContext().getInitParameter(SERVER_CHANNEL_PROP);
-
-        if (channelName != null) {
-
-            String name = channelName.trim();
-            ChannelFactory channelFactory = LocalServerChannels.getClientChannelFactory(name);
-            if (channelFactory != null) {
-
-                context.getServletContext().setAttribute(BOOTSTRAP_PROP, new ClientBootstrap(channelFactory));
-            }
-            else {
-                throw new IllegalArgumentException("channel factory " + name + " not registered");
-            }
-            String timeoutParam =  context.getServletContext().getInitParameter(RECONNECT_PROP);
-            context.getServletContext().setAttribute(RECONNECT_PROP, timeoutParam == null?DEFAULT_RECONNECT_TIMEOUT:Long.decode(timeoutParam.trim()));
-            String streaming = context.getServletContext().getInitParameter(STREAMING_PROP);
-            context.getServletContext().setAttribute(STREAMING_PROP, streaming == null?DEFAULT_IS_STREAMING: Boolean.valueOf(streaming.trim()));
-        }
+        context.getServletContext().setAttribute(BOOTSTRAP_PROP, new ClientBootstrap(factory));
+        String timeoutParam =  context.getServletContext().getInitParameter(RECONNECT_PROP);
+        context.getServletContext().setAttribute(RECONNECT_PROP, timeoutParam == null?DEFAULT_RECONNECT_TIMEOUT:Long.decode(timeoutParam.trim()));
+        String streaming = context.getServletContext().getInitParameter(STREAMING_PROP);
+        context.getServletContext().setAttribute(STREAMING_PROP, streaming == null?DEFAULT_IS_STREAMING: Boolean.valueOf(streaming.trim()));
     }
 
     public void contextDestroyed(ServletContextEvent context) {
+        // Unused
     }
 
 }
