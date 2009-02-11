@@ -66,14 +66,6 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
         if (unit == null) {
             throw new NullPointerException("unit");
         }
-        if (readerIdleTime < 0) {
-            throw new IllegalArgumentException(
-                    "readerIdleTime must not be less than 0: " + readerIdleTime);
-        }
-        if (writerIdleTime < 0) {
-            throw new IllegalArgumentException(
-                    "writerIdleTime must not be less than 0: " + writerIdleTime);
-        }
 
         this.timer = timer;
         readerIdleTimeMillis = unit.toMillis(readerIdleTime);
@@ -134,8 +126,14 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
         lastReadTime = lastWriteTime = System.currentTimeMillis();
         readerIdleTimeoutTask = new ReaderIdleTimeoutTask(ctx);
         writerIdleTimeoutTask = new WriterIdleTimeoutTask(ctx);
-        readerIdleTimeout = timer.newTimeout(readerIdleTimeoutTask, readerIdleTimeMillis, TimeUnit.MILLISECONDS);
-        writerIdleTimeout = timer.newTimeout(writerIdleTimeoutTask, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
+        if (readerIdleTimeMillis > 0) {
+            readerIdleTimeout = timer.newTimeout(
+                    readerIdleTimeoutTask, readerIdleTimeMillis, TimeUnit.MILLISECONDS);
+        }
+        if (writerIdleTimeMillis > 0) {
+            writerIdleTimeout = timer.newTimeout(
+                    writerIdleTimeoutTask, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
+        }
     }
 
     private void destroy() {

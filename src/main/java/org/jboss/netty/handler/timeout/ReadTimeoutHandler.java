@@ -60,10 +60,6 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler implements 
         if (unit == null) {
             throw new NullPointerException("unit");
         }
-        if (timeout <= 0) {
-            throw new IllegalArgumentException(
-                    "timeout must be greater than 0: " + timeout);
-        }
 
         this.timer = timer;
         timeoutMillis = unit.toMillis(timeout);
@@ -113,7 +109,9 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler implements 
     private void initialize(ChannelHandlerContext ctx) {
         lastReadTime = System.currentTimeMillis();
         task = new ReadTimeoutTask(ctx);
-        timeout = timer.newTimeout(task, timeoutMillis, TimeUnit.MILLISECONDS);
+        if (timeoutMillis > 0) {
+            timeout = timer.newTimeout(task, timeoutMillis, TimeUnit.MILLISECONDS);
+        }
     }
 
     private void destroy() {
