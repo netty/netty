@@ -44,7 +44,7 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler implemen
     static final ChannelWriteTimeoutException EXCEPTION = new ChannelWriteTimeoutException();
 
     private final Timer timer;
-    private final long timeoutNanos;
+    private final long timeoutMillis;
 
     public WriteTimeoutHandler(
             Timer timer, long timeout, TimeUnit unit) {
@@ -54,34 +54,34 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler implemen
         if (unit == null) {
             throw new NullPointerException("unit");
         }
-        if (timeout <= 0) {
+        if (timeout < 0) {
             throw new IllegalArgumentException(
-                    "timeout must be greater than 0: " + timeout);
+                    "timeout must not be less than 0: " + timeout);
         }
 
         this.timer = timer;
-        timeoutNanos = unit.toNanos(timeout);
+        timeoutMillis = unit.toMillis(timeout);
     }
 
     public void releaseExternalResources() {
         timer.stop();
     }
 
-    protected long getTimeoutNanos(@SuppressWarnings("unused") MessageEvent e) {
-        return timeoutNanos;
+    protected long getTimeoutMillis(@SuppressWarnings("unused") MessageEvent e) {
+        return timeoutMillis;
     }
 
     @Override
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e)
             throws Exception {
 
-        long timeoutNanos = getTimeoutNanos(e);
-        if (timeoutNanos > 0) {
-            // Set timeout only when getTimeoutNanos() returns a positive value.
+        long timeoutMillis = getTimeoutMillis(e);
+        if (timeoutMillis > 0) {
+            // Set timeout only when getTimeoutMillis() returns a positive value.
             ChannelFuture future = e.getFuture();
             final Timeout timeout = timer.newTimeout(
                     new WriteTimeoutTask(ctx, future),
-                    timeoutNanos, TimeUnit.NANOSECONDS);
+                    timeoutMillis, TimeUnit.MILLISECONDS);
 
             future.addListener(new ChannelFutureListener() {
                 public void operationComplete(ChannelFuture future) throws Exception {
