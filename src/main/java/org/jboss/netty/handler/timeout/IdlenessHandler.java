@@ -41,8 +41,6 @@ import org.jboss.netty.util.ExternalResourceReleasable;
 @ChannelPipelineCoverage("one")
 public class IdlenessHandler extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler, ExternalResourceReleasable {
 
-    static final ReadTimeoutException EXCEPTION = new ReadTimeoutException();
-
     final Timer timer;
 
     final long readerIdleTimeMillis;
