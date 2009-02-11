@@ -27,6 +27,7 @@ package org.jboss.netty.handler.codec.http;
  * @version $Rev$, $Date$
  */
 public class HttpHeaders {
+    // TODO: Needs cleanup
     public static final String HOST = "Host";
 
     public static final String CONTENT_LENGTH = "Content-Length";
