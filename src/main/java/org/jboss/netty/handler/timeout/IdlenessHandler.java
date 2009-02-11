@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -181,7 +180,6 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
                 ctx.sendUpstream(new DefaultIdlenessEvent(
                         ctx.getChannel(), lastReadTime, lastWriteTime,
                         readerIdleTimeMillis, writerIdleTimeMillis));
-                Channels.fireExceptionCaught(ctx, EXCEPTION);
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
                 readerIdleTimeout =
