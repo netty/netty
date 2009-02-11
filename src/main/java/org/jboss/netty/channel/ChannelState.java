@@ -110,4 +110,11 @@ public enum ChannelState {
      * property
      */
     INTEREST_OPS,
+
+    /**
+     * Represents a custom extension property which was not defined by the core
+     * channel state, whose detailed information should be retrieved by the
+     * return value of {@link ChannelStateEvent#getValue()}.
+     */
+    EXTENDED;
 }
