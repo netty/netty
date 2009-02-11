@@ -33,7 +33,7 @@ import static org.jboss.netty.channel.Channels.*;
  * @version $Rev$, $Date$
  *
  */
-final class UpstreamChannelStateEvent implements ChannelStateEvent {
+public class UpstreamChannelStateEvent implements ChannelStateEvent {
 
     private final Channel channel;
     private final ChannelState state;
@@ -42,7 +42,7 @@ final class UpstreamChannelStateEvent implements ChannelStateEvent {
     /**
      * Creates a new instance.
      */
-    UpstreamChannelStateEvent(
+    public UpstreamChannelStateEvent(
             Channel channel, ChannelState state, Object value) {
 
         if (channel == null) {

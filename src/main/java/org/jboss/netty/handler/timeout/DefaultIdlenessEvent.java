@@ -32,7 +32,7 @@ import org.jboss.netty.channel.ChannelFuture;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-final class DefaultIdlenessEvent implements IdlenessEvent {
+public class DefaultIdlenessEvent implements IdlenessEvent {
 
     private final Channel channel;
     private final long lastReadTime;
@@ -40,7 +40,7 @@ final class DefaultIdlenessEvent implements IdlenessEvent {
     private final long readerIdleTime;
     private final long writerIdleTime;
 
-    DefaultIdlenessEvent(
+    public DefaultIdlenessEvent(
             Channel channel,
             long lastReadTime, long lastWriteTime,
             long readerIdleTime, long writerIdleTime) {

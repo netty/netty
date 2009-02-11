@@ -35,7 +35,7 @@ import org.jboss.netty.util.StackTraceSimplifier;
  * @version $Rev$, $Date$
  *
  */
-final class DefaultExceptionEvent implements ExceptionEvent {
+public class DefaultExceptionEvent implements ExceptionEvent {
 
     private final Channel channel;
     private final Throwable cause;
@@ -43,7 +43,7 @@ final class DefaultExceptionEvent implements ExceptionEvent {
     /**
      * Creates a new instance.
      */
-    DefaultExceptionEvent(Channel channel, Throwable cause) {
+    public DefaultExceptionEvent(Channel channel, Throwable cause) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
