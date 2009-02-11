@@ -41,7 +41,7 @@ import org.jboss.netty.util.StringUtil;
  * @version $Rev$, $Date$
  *
  */
-public final class UpstreamMessageEvent implements MessageEvent {
+final class UpstreamMessageEvent implements MessageEvent {
 
     private final Channel channel;
     private final Object message;
@@ -50,7 +50,7 @@ public final class UpstreamMessageEvent implements MessageEvent {
     /**
      * Creates a new instance.
      */
-    public UpstreamMessageEvent(
+    UpstreamMessageEvent(
             Channel channel, Object message, SocketAddress remoteAddress) {
 
         if (channel == null) {

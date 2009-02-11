@@ -31,7 +31,7 @@ package org.jboss.netty.channel;
  * @version $Rev$, $Date$
  *
  */
-public final class DownstreamChannelStateEvent implements ChannelStateEvent {
+final class DownstreamChannelStateEvent implements ChannelStateEvent {
 
     private final Channel channel;
     private final ChannelFuture future;
@@ -41,7 +41,7 @@ public final class DownstreamChannelStateEvent implements ChannelStateEvent {
     /**
      * Creates a new instance.
      */
-    public DownstreamChannelStateEvent(
+    DownstreamChannelStateEvent(
             Channel channel, ChannelFuture future,
             ChannelState state, Object value) {
 

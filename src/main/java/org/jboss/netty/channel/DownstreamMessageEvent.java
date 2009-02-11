@@ -39,7 +39,7 @@ import org.jboss.netty.util.StringUtil;
  * @version $Rev$, $Date$
  *
  */
-public final class DownstreamMessageEvent implements MessageEvent {
+final class DownstreamMessageEvent implements MessageEvent {
 
     private final Channel channel;
     private final ChannelFuture future;
@@ -49,7 +49,7 @@ public final class DownstreamMessageEvent implements MessageEvent {
     /**
      * Creates a new instance.
      */
-    public DownstreamMessageEvent(
+    DownstreamMessageEvent(
             Channel channel, ChannelFuture future,
             Object message, SocketAddress remoteAddress) {
 

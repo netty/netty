@@ -33,7 +33,7 @@ import static org.jboss.netty.channel.Channels.*;
  * @version $Rev$, $Date$
  *
  */
-public final class DefaultChildChannelStateEvent implements ChildChannelStateEvent {
+final class DefaultChildChannelStateEvent implements ChildChannelStateEvent {
 
     private final Channel parentChannel;
     private final Channel childChannel;
@@ -41,7 +41,7 @@ public final class DefaultChildChannelStateEvent implements ChildChannelStateEve
     /**
      * Creates a new instance.
      */
-    public DefaultChildChannelStateEvent(Channel parentChannel, Channel childChannel) {
+    DefaultChildChannelStateEvent(Channel parentChannel, Channel childChannel) {
         if (parentChannel == null) {
             throw new NullPointerException("parentChannel");
         }

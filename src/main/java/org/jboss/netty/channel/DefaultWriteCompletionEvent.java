@@ -32,7 +32,7 @@ import static org.jboss.netty.channel.Channels.*;
  *
  * @version $Rev$, $Date$
  */
-public final class DefaultWriteCompletionEvent implements WriteCompletionEvent {
+final class DefaultWriteCompletionEvent implements WriteCompletionEvent {
 
     private final Channel channel;
     private final int writtenAmount;
@@ -40,7 +40,7 @@ public final class DefaultWriteCompletionEvent implements WriteCompletionEvent {
     /**
      * Creates a new instance.
      */
-    public DefaultWriteCompletionEvent(Channel channel, int writtenAmount) {
+    DefaultWriteCompletionEvent(Channel channel, int writtenAmount) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
