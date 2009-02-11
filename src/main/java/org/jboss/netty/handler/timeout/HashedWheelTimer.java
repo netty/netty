@@ -156,11 +156,17 @@ public class HashedWheelTimer implements Timer {
         return normalizedTicksPerWheel;
     }
 
-    public void start() {
-        workerThread.start();
+    public synchronized void start() {
+        if (shutdown.get()) {
+            throw new IllegalStateException("cannot be started once stopped");
+        }
+
+        if (!workerThread.isAlive()) {
+            workerThread.start();
+        }
     }
 
-    public Set<Timeout> stop() {
+    public synchronized Set<Timeout> stop() {
         if (!shutdown.compareAndSet(false, true)) {
             return Collections.emptySet();
         }
@@ -281,18 +287,16 @@ public class HashedWheelTimer implements Timer {
             i.rewind();
             while (i.hasNext()) {
                 HashedWheelTimeout timeout = i.next();
-                synchronized (timeout) {
-                    if (timeout.remainingRounds <= 0) {
-                        if (timeout.deadline <= currentTime) {
-                            i.remove();
-                            expiredTimeouts.add(timeout);
-                        } else {
-                            // A rare case where a timeout is put for the next
-                            // round: just wait for the next round.
-                        }
+                if (timeout.remainingRounds <= 0) {
+                    if (timeout.deadline <= currentTime) {
+                        i.remove();
+                        expiredTimeouts.add(timeout);
                     } else {
-                        timeout.remainingRounds --;
+                        // A rare case where a timeout is put for the next
+                        // round: just wait for the next round.
                     }
+                } else {
+                    timeout.remainingRounds --;
                 }
             }
         }
