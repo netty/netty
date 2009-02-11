@@ -24,7 +24,6 @@ package org.jboss.netty.handler.ssl;
 
 import static org.jboss.netty.channel.Channels.*;
 
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.LinkedList;
@@ -790,20 +789,5 @@ public class SslHandler extends FrameDecoder {
             this.future = future;
             this.outAppBuf = outAppBuf;
         }
-    }
-
-    private static final class EncryptedMessageEvent extends DownstreamMessageEvent {
-
-        /**
-         * @param channel
-         * @param future
-         * @param message
-         * @param remoteAddress
-         */
-        public EncryptedMessageEvent(Channel channel, ChannelFuture future,
-                Object message, SocketAddress remoteAddress) {
-            super(channel, future, message, remoteAddress);
-        }
-
     }
 }
