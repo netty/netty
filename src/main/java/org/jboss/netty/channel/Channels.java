@@ -144,6 +144,8 @@ public class Channels {
     // event factory methods
 
     /**
+     * @deprecated Instantiate {@link UpstreamMessageEvent} or {@link DownstreamMessageEvent} directly instead.
+     *
      * Creates a new {@link MessageEvent}
      *
      * @param channel the channel which is associated with the event
@@ -153,11 +155,14 @@ public class Channels {
      *                ('received' when the event is sent upstream, and
      *                 'sent' when the event is sent downstream)
      */
+    @Deprecated
     public static MessageEvent messageEvent(Channel channel, ChannelFuture future, Object message) {
         return messageEvent(channel, future, message, null);
     }
 
     /**
+     * @deprecated Instantiate {@link UpstreamMessageEvent} or {@link DownstreamMessageEvent} directly instead.
+     *
      * Creates a new {@link MessageEvent}
      *
      * @param channel the channel which is associated with the event
@@ -170,6 +175,7 @@ public class Channels {
      *                      ('source' when the event is sent upstream, and
      *                       'destination' when the event is sent downstream)
      */
+    @Deprecated
     public static MessageEvent messageEvent(Channel channel, ChannelFuture future, Object message, SocketAddress remoteAddress) {
         return new DownstreamMessageEvent(channel, future, message, remoteAddress);
     }

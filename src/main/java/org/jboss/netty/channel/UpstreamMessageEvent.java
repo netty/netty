@@ -29,11 +29,7 @@ import java.net.SocketAddress;
 import org.jboss.netty.util.StringUtil;
 
 /**
- * The default {@link MessageEvent} implementation.  It is recommended to
- * use {@link Channels#messageEvent(Channel, ChannelFuture, Object)} and
- * {@link Channels#messageEvent(Channel, ChannelFuture, Object, SocketAddress)}
- * to create a new {@link MessageEvent} instance rather than calling the
- * constructor explicitly.
+ * The default {@link MessageEvent} implementation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
