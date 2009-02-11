@@ -29,35 +29,35 @@ import org.jboss.netty.channel.ChannelException;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class ChannelTimeoutException extends ChannelException {
+public class WriteTimeoutException extends ChannelException {
 
-    private static final long serialVersionUID = 4673641882869672533L;
+    private static final long serialVersionUID = -7746685254523245218L;
 
     /**
      * Creates a new instance.
      */
-    public ChannelTimeoutException() {
+    public WriteTimeoutException() {
         super();
     }
 
     /**
      * Creates a new instance.
      */
-    public ChannelTimeoutException(String message, Throwable cause) {
+    public WriteTimeoutException(String message, Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance.
      */
-    public ChannelTimeoutException(String message) {
+    public WriteTimeoutException(String message) {
         super(message);
     }
 
     /**
      * Creates a new instance.
      */
-    public ChannelTimeoutException(Throwable cause) {
+    public WriteTimeoutException(Throwable cause) {
         super(cause);
     }
 }
