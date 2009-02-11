@@ -94,39 +94,52 @@ public class HttpMethod implements Comparable<HttpMethod> {
         methodMap.put(CONNECT.toString(), CONNECT);
     }
 
-    public static HttpMethod valueOf(String method) {
-        if (method == null) {
-            throw new NullPointerException("method");
+    public static HttpMethod valueOf(String name) {
+        if (name == null) {
+            throw new NullPointerException("name");
         }
-        method = method.trim().toUpperCase();
 
-        HttpMethod result = methodMap.get(method);
+        name = name.trim().toUpperCase();
+        if (name.length() == 0) {
+            throw new IllegalArgumentException("empty name");
+        }
+
+        HttpMethod result = methodMap.get(name);
         if (result != null) {
             return result;
         } else {
-            return new HttpMethod(method);
+            return new HttpMethod(name);
         }
     }
 
-    private final String method;
+    private final String name;
 
-    public HttpMethod(String method) {
-        if (method == null) {
-            throw new NullPointerException("method");
+    public HttpMethod(String name) {
+        if (name == null) {
+            throw new NullPointerException("name");
         }
 
-        method = method.trim().toUpperCase();
-
-        if (method.length() == 0) {
-            throw new IllegalArgumentException("empty method");
+        name = name.trim().toUpperCase();
+        if (name.length() == 0) {
+            throw new IllegalArgumentException("empty name");
         }
 
-        this.method = method;
+        for (int i = 0; i < name.length(); i ++) {
+            if (Character.isISOControl(name.charAt(i))) {
+                throw new IllegalArgumentException("control character in name");
+            }
+        }
+
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
     }
 
     @Override
     public int hashCode() {
-        return method.hashCode();
+        return getName().hashCode();
     }
 
     @Override
@@ -136,15 +149,15 @@ public class HttpMethod implements Comparable<HttpMethod> {
         }
 
         HttpMethod that = (HttpMethod) o;
-        return method.equals(that.method);
+        return getName().equals(that.getName());
     }
 
     @Override
     public String toString() {
-        return method;
+        return getName();
     }
 
     public int compareTo(HttpMethod o) {
-        return method.compareTo(o.method);
+        return getName().compareTo(o.getName());
     }
 }

@@ -42,36 +42,45 @@ public class HttpVersion implements Comparable<HttpVersion> {
     public static final HttpVersion HTTP_1_0 = new HttpVersion("HTTP", 1, 0);
     public static final HttpVersion HTTP_1_1 = new HttpVersion("HTTP", 1, 1);
 
-    public static HttpVersion valueOf(String value) {
-        value = value.toUpperCase();
-        if (value.equals("HTTP/1.1")) {
+    public static HttpVersion valueOf(String text) {
+        if (text == null) {
+            throw new NullPointerException("text");
+        }
+
+        text = text.trim().toUpperCase();
+        if (text.equals("HTTP/1.1")) {
             return HTTP_1_1;
         }
-        if (value.equals("HTTP/1.0")) {
+        if (text.equals("HTTP/1.0")) {
             return HTTP_1_0;
         }
-        return new HttpVersion(value);
+        return new HttpVersion(text);
     }
 
     private final String protocolName;
     private final int majorVersion;
     private final int minorVersion;
-    private final String string;
+    private final String text;
 
-    public HttpVersion(String value) {
-        if (value == null) {
-            throw new NullPointerException("value");
+    public HttpVersion(String text) {
+        if (text == null) {
+            throw new NullPointerException("text");
         }
 
-        Matcher m = VERSION_PATTERN.matcher(value);
+        text = text.trim().toUpperCase();
+        if (text.length() == 0) {
+            throw new IllegalArgumentException("empty text");
+        }
+
+        Matcher m = VERSION_PATTERN.matcher(text);
         if (!m.matches()) {
-            throw new IllegalArgumentException("invalid version format: " + value);
+            throw new IllegalArgumentException("invalid version format: " + text);
         }
 
         protocolName = m.group(1);
         majorVersion = Integer.parseInt(m.group(2));
         minorVersion = Integer.parseInt(m.group(3));
-        string = protocolName + '/' + majorVersion + '.' + minorVersion;
+        this.text = protocolName + '/' + majorVersion + '.' + minorVersion;
     }
 
     public HttpVersion(
@@ -86,8 +95,8 @@ public class HttpVersion implements Comparable<HttpVersion> {
         }
 
         for (int i = 0; i < protocolName.length(); i ++) {
-            if (Character.isWhitespace(protocolName.charAt(i))) {
-                throw new IllegalArgumentException("whitespace in protocolName");
+            if (Character.isISOControl(protocolName.charAt(i))) {
+                throw new IllegalArgumentException("control character in protocolName");
             }
         }
 
@@ -101,7 +110,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
         this.protocolName = protocolName;
         this.majorVersion = majorVersion;
         this.minorVersion = minorVersion;
-        string = protocolName + '/' + majorVersion + '.' + minorVersion;
+        text = protocolName + '/' + majorVersion + '.' + minorVersion;
     }
 
     public String getProtocolName() {
@@ -116,9 +125,13 @@ public class HttpVersion implements Comparable<HttpVersion> {
         return minorVersion;
     }
 
+    public String getText() {
+        return text;
+    }
+
     @Override
     public String toString() {
-        return string;
+        return getText();
     }
 
     @Override
