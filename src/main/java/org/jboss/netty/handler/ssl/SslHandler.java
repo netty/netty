@@ -24,6 +24,7 @@ package org.jboss.netty.handler.ssl;
 
 import static org.jboss.netty.channel.Channels.*;
 
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.LinkedList;
@@ -47,6 +48,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.logging.InternalLogger;
@@ -461,7 +463,8 @@ public class SslHandler extends FrameDecoder {
                             future = pendingWrite.future;
                         }
 
-                        MessageEvent encryptedWrite = messageEvent(channel, future, msg);
+                        MessageEvent encryptedWrite = new DownstreamMessageEvent(
+                                channel, future, msg, channel.getRemoteAddress());
                         if (Thread.holdsLock(pendingEncryptedWrites)) {
                             pendingEncryptedWrites.offer(encryptedWrite);
                         } else {
@@ -787,5 +790,20 @@ public class SslHandler extends FrameDecoder {
             this.future = future;
             this.outAppBuf = outAppBuf;
         }
+    }
+
+    private static final class EncryptedMessageEvent extends DownstreamMessageEvent {
+
+        /**
+         * @param channel
+         * @param future
+         * @param message
+         * @param remoteAddress
+         */
+        public EncryptedMessageEvent(Channel channel, ChannelFuture future,
+                Object message, SocketAddress remoteAddress) {
+            super(channel, future, message, remoteAddress);
+        }
+
     }
 }
