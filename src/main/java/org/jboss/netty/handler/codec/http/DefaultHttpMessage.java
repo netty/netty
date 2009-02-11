@@ -82,7 +82,7 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public int getContentLength() {
-        List<String> contentLength = headers.get(HttpHeaders.CONTENT_LENGTH);
+        List<String> contentLength = headers.get(HttpHeaders.Names.CONTENT_LENGTH);
         if (contentLength != null && contentLength.size() > 0) {
             return Integer.valueOf(contentLength.get(0));
         }
@@ -90,8 +90,8 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public boolean isChunked() {
-        List<String> chunked = headers.get(HttpHeaders.TRANSFER_ENCODING.KEY);
-        return chunked != null && chunked.size() > 0 && chunked.get(0).equalsIgnoreCase(HttpHeaders.TRANSFER_ENCODING.CHUNKED);
+        List<String> chunked = headers.get(HttpHeaders.Names.TRANSFER_ENCODING);
+        return chunked != null && chunked.size() > 0 && chunked.get(0).equalsIgnoreCase(HttpHeaders.Values.CHUNKED);
     }
 
     public void clearHeaders() {

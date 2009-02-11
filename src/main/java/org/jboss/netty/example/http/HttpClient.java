@@ -89,7 +89,7 @@ public class HttpClient {
         // Send the HTTP request.
         HttpRequest request = new DefaultHttpRequest(
                 HttpVersion.HTTP_1_0, HttpMethod.GET, uri.toASCIIString());
-        request.addHeader(HttpHeaders.HOST, host);
+        request.addHeader(HttpHeaders.Names.HOST, host);
 
         channel.write(request);
 

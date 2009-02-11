@@ -63,7 +63,7 @@ public class HttpRequestHandler extends SimpleChannelHandler {
         String message = "and its hello from me";
         ChannelBuffer buf = ChannelBuffers.wrappedBuffer(message.getBytes());
         response.setContent(buf);
-        response.addHeader(HttpHeaders.CONTENT_LENGTH, String.valueOf(buf.writerIndex()));
+        response.addHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf.writerIndex()));
         e.getChannel().write(response);
     }
 }
