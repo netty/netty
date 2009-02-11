@@ -96,7 +96,7 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler implemen
         super.writeRequested(ctx, e);
     }
 
-    private class WriteTimeoutTask implements TimerTask {
+    private final class WriteTimeoutTask implements TimerTask {
 
         private final ChannelHandlerContext ctx;
         private final ChannelFuture future;

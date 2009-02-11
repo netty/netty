@@ -124,7 +124,7 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler implements 
         task = null;
     }
 
-    private class ReadTimeoutTask implements TimerTask {
+    private final class ReadTimeoutTask implements TimerTask {
 
         private final ChannelHandlerContext ctx;
 
