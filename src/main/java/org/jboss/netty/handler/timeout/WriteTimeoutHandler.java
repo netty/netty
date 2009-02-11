@@ -108,6 +108,10 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler implemen
                 return;
             }
 
+            if (!ctx.getChannel().isOpen()) {
+                return;
+            }
+
             // Mark the future as failure
             if (future.setFailure(EXCEPTION)) {
                 // If succeeded to mark as failure, notify the pipeline, too.

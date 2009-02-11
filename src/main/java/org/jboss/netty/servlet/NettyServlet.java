@@ -37,7 +37,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.MessageEvent;
 
 /**
- * A servlet that acts as a proxy for a netty channel
+ * A Servlet that acts as a proxy for a netty channel
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)

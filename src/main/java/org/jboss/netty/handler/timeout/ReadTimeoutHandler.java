@@ -44,8 +44,8 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler implements 
     static final ChannelReadTimeoutException EXCEPTION = new ChannelReadTimeoutException();
 
     final Timer timer;
-    final long timeoutNanos;
-    private volatile Timeout timeout;
+    final long timeoutMillis;
+    volatile Timeout timeout;
     private volatile ReadTimeoutTask task;
     volatile long lastReadTime;
 
@@ -63,7 +63,7 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler implements 
         }
 
         this.timer = timer;
-        timeoutNanos = unit.toNanos(timeout);
+        timeoutMillis = unit.toMillis(timeout);
     }
 
     public void releaseExternalResources() {
@@ -103,14 +103,14 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler implements 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
             throws Exception {
-        lastReadTime = System.nanoTime();
+        lastReadTime = System.currentTimeMillis();
         ctx.sendUpstream(e);
     }
 
     private void initialize(ChannelHandlerContext ctx) {
-        lastReadTime = System.nanoTime();
+        lastReadTime = System.currentTimeMillis();
         task = new ReadTimeoutTask(ctx);
-        timeout = timer.newTimeout(task, timeoutNanos, TimeUnit.NANOSECONDS);
+        timeout = timer.newTimeout(task, timeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     private void destroy() {
@@ -134,15 +134,21 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler implements 
                 return;
             }
 
-            long currentTime = System.nanoTime();
-            long nextDelay = timeoutNanos - (currentTime - lastReadTime);
+            if (!ctx.getChannel().isOpen()) {
+                return;
+            }
+
+            long currentTime = System.currentTimeMillis();
+            long nextDelay = timeoutMillis - (currentTime - lastReadTime);
             if (nextDelay <= 0) {
                 // Read timed out - set a new timeout and notify the callback.
-                timeout = timer.newTimeout(this, timeoutNanos, TimeUnit.NANOSECONDS);
+                ReadTimeoutHandler.this.timeout =
+                    timer.newTimeout(this, timeoutMillis, TimeUnit.MILLISECONDS);
                 Channels.fireExceptionCaught(ctx, EXCEPTION);
             } else {
                 // Read occurred before the timer - set a new timeout with shorter delay.
-                timeout = timer.newTimeout(this, nextDelay, TimeUnit.NANOSECONDS);
+                ReadTimeoutHandler.this.timeout =
+                    timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
     }
