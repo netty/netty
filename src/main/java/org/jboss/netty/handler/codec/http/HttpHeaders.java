@@ -69,7 +69,7 @@ public final class HttpHeaders {
         public static final String SERVER = "Server";
         public static final String TE = "TE";
         public static final String TRAILER = "Trailer";
-        public static final String TRANSFER_ENCODING = "Transfer-Coding";
+        public static final String TRANSFER_ENCODING = "Transfer-Encoding";
         public static final String UPGRADE = "Upgrade";
         public static final String USER_AGENT = "User-Agent";
         public static final String VARY = "Vary";
