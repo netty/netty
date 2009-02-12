@@ -65,10 +65,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         READ_FIXED_LENGTH_CONTENT,
         READ_CHUNK_SIZE,
         READ_CHUNKED_CONTENT,
-        READ_CRLF;
+        READ_END_OF_CHUNK;
     }
-
-    private State nextState;
 
     protected HttpMessageDecoder() {
         super(State.SKIP_CONTROL_CHARS);
@@ -135,12 +133,12 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         case READ_CHUNKED_CONTENT: {
             readChunkedContent(channel, buffer);
         }
-        case READ_CRLF: {
+        case READ_END_OF_CHUNK: {
             byte next = buffer.readByte();
             if (next == HttpCodecUtil.CR) {
                 buffer.readByte();
             }
-            checkpoint(nextState);
+            checkpoint(State.READ_CHUNK_SIZE);
             return null;
         }
         default: {
@@ -153,7 +151,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     private Object reset() {
         message.setContent(content);
         content = null;
-        nextState = null;
         checkpoint(State.SKIP_CONTROL_CHARS);
         return message;
     }
@@ -175,8 +172,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                     chunkSize, channel.getConfig().getBufferFactory());
         }
         content.writeBytes(buffer, chunkSize);
-        nextState = State.READ_CHUNK_SIZE;
-        checkpoint(State.READ_CRLF);
+        checkpoint(State.READ_END_OF_CHUNK);
     }
 
     private void readFixedLengthContent(ChannelBuffer buffer) {
