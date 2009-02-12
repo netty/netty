@@ -132,12 +132,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             chunkSize = getChunkSize(line);
             if (chunkSize == 0) {
                 checkpoint(State.READ_CHUNK_FOOTER);
-                if (mergeChunks) {
-                    return null;
-                } else {
-                    HttpChunk lastChunk = new DefaultHttpChunk(EMPTY_BUFFER);
-                    return lastChunk;
-                }
+                return null;
             } else {
                 checkpoint(State.READ_CHUNKED_CONTENT);
             }
@@ -177,6 +172,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                     return reset();
                 } else {
                     reset();
+                    // The last chunk, which is empty
+                    return new DefaultHttpChunk(EMPTY_BUFFER);
                 }
             } else {
                 checkpoint(State.READ_CHUNK_FOOTER);
