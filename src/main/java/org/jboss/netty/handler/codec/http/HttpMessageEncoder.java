@@ -21,6 +21,7 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import static org.jboss.netty.buffer.ChannelBuffers.*;
 import static org.jboss.netty.handler.codec.http.HttpCodecUtil.*;
 
 import java.util.List;
@@ -46,19 +47,36 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
     @Override
     protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof HttpMessage)) {
-            return msg;
+        if (msg instanceof HttpMessage) {
+            HttpMessage request = (HttpMessage) msg;
+            ChannelBuffer header = ChannelBuffers.dynamicBuffer(
+                    channel.getConfig().getBufferFactory());
+            encodeInitialLine(header, request);
+            encodeHeaders(header, request);
+            header.writeBytes(CRLF);
+
+            ChannelBuffer content = request.getContent();
+            if (content == null) {
+                return header; // no content
+            } else {
+                return wrappedBuffer(header, content);
+            }
         }
-        HttpMessage request = (HttpMessage) msg;
-        ChannelBuffer buf = ChannelBuffers.dynamicBuffer(
-                channel.getConfig().getBufferFactory());
-        encodeInitialLine(buf, request);
-        encodeHeaders(buf, request);
-        buf.writeBytes(CRLF);
-        if (request.getContent() != null) {
-            buf.writeBytes(request.getContent());
+
+        if (msg instanceof HttpChunk) {
+            HttpChunk chunk = (HttpChunk) msg;
+            ChannelBuffer content = chunk.getContent();
+            int contentLength = content.readableBytes();
+
+            return wrappedBuffer(
+                    copiedBuffer(Integer.toHexString(contentLength), "USASCII"),
+                    wrappedBuffer(CRLF),
+                    content.slice(content.readerIndex(), contentLength),
+                    wrappedBuffer(CRLF));
         }
-        return buf;
+
+        // Unknown message type.
+        return msg;
     }
 
     /**
