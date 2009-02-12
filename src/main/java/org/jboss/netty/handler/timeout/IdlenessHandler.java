@@ -149,6 +149,18 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
         writerIdleTimeoutTask = null;
     }
 
+    protected void onReaderIdleness(ChannelHandlerContext ctx) {
+        ctx.sendUpstream(new DefaultReaderIdlenessEvent(ctx.getChannel()));
+    }
+
+    protected void onWriterIdleness(ChannelHandlerContext ctx) {
+        ctx.sendUpstream(new DefaultWriterIdlenessEvent(ctx.getChannel()));
+    }
+
+    protected void onReaderAndWriterIdleness(ChannelHandlerContext ctx) {
+        ctx.sendUpstream(new DefaultReaderAndWriterIdlenessEvent(ctx.getChannel()));
+    }
+
     private final class ReaderIdleTimeoutTask implements TimerTask {
 
         private final ChannelHandlerContext ctx;
@@ -174,6 +186,10 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
                 readerIdleTimeout =
                     timer.newTimeout(this, readerIdleTimeMillis, TimeUnit.MILLISECONDS);
                 onReaderIdleness(ctx);
+                if (currentTime - lastWriteTime >= writerIdleTimeMillis) {
+                    // FIXME: Suppress double fire
+                    onReaderAndWriterIdleness(ctx);
+                }
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
                 readerIdleTimeout =
@@ -181,10 +197,6 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
             }
         }
 
-    }
-
-    protected void onReaderIdleness(ChannelHandlerContext ctx) {
-        ctx.sendUpstream(new DefaultReaderIdlenessEvent(ctx.getChannel()));
     }
 
     private final class WriterIdleTimeoutTask implements TimerTask {
@@ -212,15 +224,15 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
                 writerIdleTimeout =
                     timer.newTimeout(this, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
                 onWriterIdleness(ctx);
+                if (currentTime - lastReadTime >= readerIdleTimeMillis) {
+                    // FIXME: Suppress double fire
+                    onReaderAndWriterIdleness(ctx);
+                }
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
                 writerIdleTimeout =
                     timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
-    }
-
-    protected void onWriterIdleness(ChannelHandlerContext ctx) {
-        ctx.sendUpstream(new DefaultWriterIdlenessEvent(ctx.getChannel()));
     }
 }
