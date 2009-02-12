@@ -103,9 +103,12 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 if (!mergeChunks) {
                     return message;
                 }
-            } else if (message.getContentLength(-1) == 0) {
-                content = ChannelBuffers.EMPTY_BUFFER;
-                return reset();
+            } else {
+                int contentLength = message.getContentLength(-1);
+                if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
+                    content = ChannelBuffers.EMPTY_BUFFER;
+                    return reset();
+                }
             }
             //we return null here, this forces decode to be called again where we will decode the content
             return null;
@@ -246,6 +249,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         checkpoint(nextState);
     }
 
+    protected abstract boolean isDecodingRequest();
     protected abstract void readInitial(ChannelBuffer buffer) throws Exception;
 
     private int getChunkSize(String hex) {

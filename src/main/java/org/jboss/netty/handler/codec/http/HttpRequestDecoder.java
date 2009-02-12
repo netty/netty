@@ -49,4 +49,9 @@ public class HttpRequestDecoder extends HttpMessageDecoder {
                 HttpVersion.valueOf(split[2]), HttpMethod.valueOf(split[0]), split[1]);
         checkpoint(State.READ_HEADER);
     }
+
+    @Override
+    protected boolean isDecodingRequest() {
+        return true;
+    }
 }
