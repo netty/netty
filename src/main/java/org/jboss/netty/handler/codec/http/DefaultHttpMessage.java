@@ -84,7 +84,7 @@ public class DefaultHttpMessage implements HttpMessage {
     public int getContentLength() {
         List<String> contentLength = headers.get(HttpHeaders.Names.CONTENT_LENGTH);
         if (contentLength != null && contentLength.size() > 0) {
-            return Integer.valueOf(contentLength.get(0));
+            return Integer.parseInt(contentLength.get(0));
         }
         return 0;
     }
