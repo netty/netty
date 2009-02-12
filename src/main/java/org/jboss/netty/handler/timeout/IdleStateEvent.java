@@ -22,22 +22,16 @@
  */
 package org.jboss.netty.handler.timeout;
 
-import org.jboss.netty.channel.Channel;
+import java.util.Set;
+
+import org.jboss.netty.channel.ChannelEvent;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class DefaultWriterIdlenessEvent extends DefaultIdlenessEvent
-                                        implements ReaderIdlenessEvent {
-
-    public DefaultWriterIdlenessEvent(Channel channel) {
-        super(channel);
-    }
-
-    @Override
-    public String toString() {
-        return getChannel().toString() + " - (IDLE: WRITER)";
-    }
+public interface IdleStateEvent extends ChannelEvent {
+    Set<IdleState> getState();
+    long getLastActivityTimeMillis();
 }

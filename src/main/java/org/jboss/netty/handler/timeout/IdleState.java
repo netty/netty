@@ -27,6 +27,7 @@ package org.jboss.netty.handler.timeout;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public interface ReaderIdlenessEvent extends IdlenessEvent {
-    // This is a tag interface to determine which (reader or write) is idle.
+public enum IdleState {
+    READER_IDLE,
+    WRITER_IDLE;
 }

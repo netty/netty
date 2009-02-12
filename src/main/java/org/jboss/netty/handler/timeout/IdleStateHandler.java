@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.handler.timeout;
 
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -39,7 +41,9 @@ import org.jboss.netty.util.ExternalResourceReleasable;
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("one")
-public class IdlenessHandler extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler, ExternalResourceReleasable {
+public class IdleStateHandler extends SimpleChannelUpstreamHandler
+                             implements LifeCycleAwareChannelHandler,
+                                        ExternalResourceReleasable {
 
     final Timer timer;
 
@@ -53,13 +57,27 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
     private volatile WriterIdleTimeoutTask writerIdleTimeoutTask;
     volatile long lastWriteTime;
 
-    public IdlenessHandler(
-            Timer timer, long readerIdleTimeMillis, long writerIdleTimeMillis) {
-        this(timer, readerIdleTimeMillis, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
+    final long bothIdleTimeMillis;
+    volatile Timeout bothIdleTimeout;
+    private volatile BothIdleTimeoutTask bothIdleTimeoutTask;
+    volatile long lastIoTime;
+
+    public IdleStateHandler(
+            Timer timer,
+            long readerIdleTimeMillis,
+            long writerIdleTimeMillis,
+            long bothIdleTimeMillis) {
+
+        this(timer,
+             readerIdleTimeMillis, writerIdleTimeMillis, bothIdleTimeMillis,
+             TimeUnit.MILLISECONDS);
     }
 
-    public IdlenessHandler(
-            Timer timer, long readerIdleTime, long writerIdleTime, TimeUnit unit) {
+    public IdleStateHandler(
+            Timer timer,
+            long readerIdleTime, long writerIdleTime, long bothIdleTime,
+            TimeUnit unit) {
+
         if (timer == null) {
             throw new NullPointerException("timer");
         }
@@ -70,6 +88,7 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
         this.timer = timer;
         readerIdleTimeMillis = unit.toMillis(readerIdleTime);
         writerIdleTimeMillis = unit.toMillis(writerIdleTime);
+        bothIdleTimeMillis = unit.toMillis(bothIdleTime);
     }
 
     public void releaseExternalResources() {
@@ -109,7 +128,7 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
             throws Exception {
-        lastReadTime = System.currentTimeMillis();
+        lastReadTime = lastIoTime = System.currentTimeMillis();
         ctx.sendUpstream(e);
     }
 
@@ -117,13 +136,13 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
     public void writeComplete(ChannelHandlerContext ctx, WriteCompletionEvent e)
             throws Exception {
         if (e.getWrittenAmount() > 0) {
-            lastWriteTime = System.currentTimeMillis();
+            lastWriteTime = lastIoTime = System.currentTimeMillis();
         }
         ctx.sendUpstream(e);
     }
 
     private void initialize(ChannelHandlerContext ctx) {
-        lastReadTime = lastWriteTime = System.currentTimeMillis();
+        lastReadTime = lastWriteTime = lastIoTime = System.currentTimeMillis();
         readerIdleTimeoutTask = new ReaderIdleTimeoutTask(ctx);
         writerIdleTimeoutTask = new WriterIdleTimeoutTask(ctx);
         if (readerIdleTimeMillis > 0) {
@@ -134,6 +153,10 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
             writerIdleTimeout = timer.newTimeout(
                     writerIdleTimeoutTask, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
         }
+        if (bothIdleTimeMillis > 0) {
+            bothIdleTimeout = timer.newTimeout(
+                    bothIdleTimeoutTask, bothIdleTimeMillis, TimeUnit.MILLISECONDS);
+        }
     }
 
     private void destroy() {
@@ -143,22 +166,19 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
         if (writerIdleTimeout != null) {
             writerIdleTimeout.cancel();
         }
+        if (bothIdleTimeout != null) {
+            bothIdleTimeout.cancel();
+        }
         readerIdleTimeout = null;
         readerIdleTimeoutTask = null;
         writerIdleTimeout = null;
         writerIdleTimeoutTask = null;
+        bothIdleTimeout = null;
+        bothIdleTimeoutTask = null;
     }
 
-    protected void onReaderIdleness(ChannelHandlerContext ctx) {
-        ctx.sendUpstream(new DefaultReaderIdlenessEvent(ctx.getChannel()));
-    }
-
-    protected void onWriterIdleness(ChannelHandlerContext ctx) {
-        ctx.sendUpstream(new DefaultWriterIdlenessEvent(ctx.getChannel()));
-    }
-
-    protected void onReaderAndWriterIdleness(ChannelHandlerContext ctx) {
-        ctx.sendUpstream(new DefaultReaderAndWriterIdlenessEvent(ctx.getChannel()));
+    protected void channelIdle(ChannelHandlerContext ctx, Set<IdleState> state, long lastActivityTimeMillis) {
+        ctx.sendUpstream(new DefaultIdleStateEvent(ctx.getChannel(), state, lastActivityTimeMillis));
     }
 
     private final class ReaderIdleTimeoutTask implements TimerTask {
@@ -170,26 +190,18 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
         }
 
         public void run(Timeout timeout) throws Exception {
-            if (timeout.isCancelled()) {
-                return;
-            }
-
-            if (!ctx.getChannel().isOpen()) {
+            if (timeout.isCancelled() || !ctx.getChannel().isOpen()) {
                 return;
             }
 
             long currentTime = System.currentTimeMillis();
-            long lastReadTime = IdlenessHandler.this.lastReadTime;
+            long lastReadTime = IdleStateHandler.this.lastReadTime;
             long nextDelay = readerIdleTimeMillis - (currentTime - lastReadTime);
             if (nextDelay <= 0) {
                 // Reader is idle - set a new timeout and notify the callback.
                 readerIdleTimeout =
                     timer.newTimeout(this, readerIdleTimeMillis, TimeUnit.MILLISECONDS);
-                onReaderIdleness(ctx);
-                if (currentTime - lastWriteTime >= writerIdleTimeMillis) {
-                    // FIXME: Suppress double fire
-                    onReaderAndWriterIdleness(ctx);
-                }
+                channelIdle(ctx, EnumSet.of(IdleState.READER_IDLE), lastReadTime);
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
                 readerIdleTimeout =
@@ -208,29 +220,52 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
         }
 
         public void run(Timeout timeout) throws Exception {
-            if (timeout.isCancelled()) {
-                return;
-            }
-
-            if (!ctx.getChannel().isOpen()) {
+            if (timeout.isCancelled() || !ctx.getChannel().isOpen()) {
                 return;
             }
 
             long currentTime = System.currentTimeMillis();
-            long lastWriteTime = IdlenessHandler.this.lastWriteTime;
+            long lastWriteTime = IdleStateHandler.this.lastWriteTime;
             long nextDelay = writerIdleTimeMillis - (currentTime - lastWriteTime);
             if (nextDelay <= 0) {
                 // Writer is idle - set a new timeout and notify the callback.
                 writerIdleTimeout =
                     timer.newTimeout(this, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
-                onWriterIdleness(ctx);
-                if (currentTime - lastReadTime >= readerIdleTimeMillis) {
-                    // FIXME: Suppress double fire
-                    onReaderAndWriterIdleness(ctx);
-                }
+                channelIdle(ctx, EnumSet.of(IdleState.WRITER_IDLE), lastWriteTime);
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
                 writerIdleTimeout =
+                    timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
+            }
+        }
+    }
+
+    private final class BothIdleTimeoutTask implements TimerTask {
+
+        private final ChannelHandlerContext ctx;
+
+        BothIdleTimeoutTask(ChannelHandlerContext ctx) {
+            this.ctx = ctx;
+        }
+
+        public void run(Timeout timeout) throws Exception {
+            if (timeout.isCancelled() || !ctx.getChannel().isOpen()) {
+                return;
+            }
+
+            long currentTime = System.currentTimeMillis();
+            long lastIoTime = IdleStateHandler.this.lastIoTime;
+            long nextDelay = bothIdleTimeMillis - (currentTime - lastIoTime);
+            if (nextDelay <= 0) {
+                // Both reader and writer are idle - set a new timeout and
+                // notify the callback.
+                bothIdleTimeout =
+                    timer.newTimeout(this, bothIdleTimeMillis, TimeUnit.MILLISECONDS);
+                channelIdle(ctx, EnumSet.allOf(IdleState.class), lastIoTime);
+            } else {
+                // Either read or write occurred before the timeout - set a new
+                // timeout with shorter delay.
+                bothIdleTimeout =
                     timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }

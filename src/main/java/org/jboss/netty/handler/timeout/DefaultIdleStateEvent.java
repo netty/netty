@@ -24,6 +24,12 @@ package org.jboss.netty.handler.timeout;
 
 import static org.jboss.netty.channel.Channels.*;
 
+import java.text.DateFormat;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Locale;
+import java.util.Set;
+
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 
@@ -32,16 +38,23 @@ import org.jboss.netty.channel.ChannelFuture;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class DefaultIdlenessEvent implements IdlenessEvent {
+public class DefaultIdleStateEvent implements IdleStateEvent {
 
     private final Channel channel;
+    private final Set<IdleState> state;
+    private final long lastActivityTimeMillis;
 
-    protected DefaultIdlenessEvent(Channel channel) {
+    public DefaultIdleStateEvent(
+            Channel channel, Set<IdleState> state, long lastActivityTimeMillis) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-
+        if (state.isEmpty()) {
+            throw new IllegalArgumentException("state is empty.");
+        }
         this.channel = channel;
+        this.state = Collections.unmodifiableSet(state);
+        this.lastActivityTimeMillis = lastActivityTimeMillis;
     }
 
     public Channel getChannel() {
@@ -52,8 +65,20 @@ public class DefaultIdlenessEvent implements IdlenessEvent {
         return succeededFuture(getChannel());
     }
 
+    public Set<IdleState> getState() {
+        return state;
+    }
+
+    public long getLastActivityTimeMillis() {
+        return lastActivityTimeMillis;
+    }
+
     @Override
     public String toString() {
-        return getChannel().toString() + " - (IDLE)";
+        return getChannel().toString() +
+               " - (IDLE_STATE: " + getState() + ", LAST_ACTIVITY: " +
+               DateFormat.getDateTimeInstance(
+                       DateFormat.SHORT, DateFormat.SHORT, Locale.US).format(
+                               new Date(getLastActivityTimeMillis())) + ')';
     }
 }
