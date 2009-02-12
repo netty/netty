@@ -1,7 +1,8 @@
 /*
  * JBoss, Home of Professional Open Source
- * Copyright 2005-2008, Red Hat Middleware LLC, and individual contributors
- * by the @authors tag. See the copyright.txt in the distribution for a
+ *
+ * Copyright 2009, Red Hat Middleware LLC, and individual contributors
+ * by the @author tags. See the COPYRIGHT.txt in the distribution for a
  * full listing of individual contributors.
  *
  * This is free software; you can redistribute it and/or modify it
@@ -24,28 +25,11 @@ package org.jboss.netty.handler.codec.http;
 import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
- * an http response decoder
- *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class HttpResponseDecoder extends HttpMessageDecoder {
-
-    public HttpResponseDecoder() {
-        super();
-    }
-
-    public HttpResponseDecoder(boolean mergeChunks) {
-        super(mergeChunks);
-    }
-
-    @Override
-    protected void readInitial(ChannelBuffer buffer) {
-        String line = readIntoCurrentLine(buffer);
-        String[] split = splitInitial(line);
-        message = new DefaultHttpResponse(HttpVersion.valueOf(split[0]), new HttpResponseStatus(Integer.valueOf(split[1]), split[2]));
-        checkpoint(State.READ_HEADER);
-    }
+public interface HttpChunk {
+    boolean isLast();
+    ChannelBuffer getContent();
 }

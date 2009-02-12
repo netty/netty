@@ -33,6 +33,14 @@ import org.jboss.netty.buffer.ChannelBuffer;
  */
 public class HttpRequestDecoder extends HttpMessageDecoder {
 
+    public HttpRequestDecoder() {
+        super();
+    }
+
+    public HttpRequestDecoder(boolean mergeChunks) {
+        super(mergeChunks);
+    }
+
     @Override
     protected void readInitial(ChannelBuffer buffer) throws Exception{
         String line = readIntoCurrentLine(buffer);

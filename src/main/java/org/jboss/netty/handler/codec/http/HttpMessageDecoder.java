@@ -21,6 +21,8 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import static org.jboss.netty.buffer.ChannelBuffers.*;
+
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -46,9 +48,11 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     private static final Pattern HEADER_PATTERN = Pattern.compile(
             "^\\s*(\\S+)\\s*:\\s*(.*)\\s*$");
 
-    protected HttpMessage message;
-    private ChannelBuffer content;
-    private int chunkSize;
+    private final boolean mergeChunks;
+    protected volatile HttpMessage message;
+    private volatile ChannelBuffer content;
+    private volatile int chunkSize;
+
 
     /**
      * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -70,7 +74,12 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     protected HttpMessageDecoder() {
+        this(true);
+    }
+
+    protected HttpMessageDecoder(boolean mergeChunks) {
         super(State.SKIP_CONTROL_CHARS);
+        this.mergeChunks = mergeChunks;
     }
 
     @Override
@@ -91,6 +100,9 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             readHeaders(buffer);
             if (message.isChunked()) {
                 checkpoint(State.READ_CHUNK_SIZE);
+                if (!mergeChunks) {
+                    return message;
+                }
             } else if (message.getContentLength() == 0) {
                 content = ChannelBuffers.EMPTY_BUFFER;
                 return reset();
@@ -120,13 +132,29 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             chunkSize = getChunkSize(line);
             if (chunkSize == 0) {
                 checkpoint(State.READ_CHUNK_FOOTER);
-                return null;
+                if (mergeChunks) {
+                    return null;
+                } else {
+                    HttpChunk lastChunk = new DefaultHttpChunk(EMPTY_BUFFER);
+                    return lastChunk;
+                }
             } else {
                 checkpoint(State.READ_CHUNKED_CONTENT);
             }
         }
         case READ_CHUNKED_CONTENT: {
-            readChunkedContent(channel, buffer);
+            if (mergeChunks) {
+                if (content == null) {
+                    content = ChannelBuffers.dynamicBuffer(
+                            chunkSize, channel.getConfig().getBufferFactory());
+                }
+                content.writeBytes(buffer, chunkSize);
+                checkpoint(State.READ_CHUNK_DELIMITER);
+            } else {
+                HttpChunk chunk = new DefaultHttpChunk(buffer.readBytes(chunkSize));
+                checkpoint(State.READ_CHUNK_DELIMITER);
+                return chunk;
+            }
         }
         case READ_CHUNK_DELIMITER: {
             for (;;) {
@@ -159,6 +187,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     private Object reset() {
+        // TODO: Do we need to set message to null here?
         message.setContent(content);
         content = null;
         checkpoint(State.SKIP_CONTROL_CHARS);
@@ -174,15 +203,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 break;
             }
         }
-    }
-
-    private void readChunkedContent(Channel channel, ChannelBuffer buffer) {
-        if (content == null) {
-            content = ChannelBuffers.dynamicBuffer(
-                    chunkSize, channel.getConfig().getBufferFactory());
-        }
-        content.writeBytes(buffer, chunkSize);
-        checkpoint(State.READ_CHUNK_DELIMITER);
     }
 
     private void readFixedLengthContent(ChannelBuffer buffer) {
