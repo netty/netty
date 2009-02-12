@@ -222,10 +222,15 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     protected abstract void readInitial(ChannelBuffer buffer) throws Exception;
 
     private int getChunkSize(String hex) {
-        int delimPos = hex.indexOf(';');
-        if (delimPos >= 0) {
-            hex = hex.substring(0, delimPos).trim();
+        hex = hex.trim();
+        for (int i = 0; i < hex.length(); i ++) {
+            char c = hex.charAt(i);
+            if (c == ';' || Character.isWhitespace(c) || Character.isISOControl(c)) {
+                hex = hex.substring(0, i);
+                break;
+            }
         }
+
         return Integer.parseInt(hex, 16);
     }
 
