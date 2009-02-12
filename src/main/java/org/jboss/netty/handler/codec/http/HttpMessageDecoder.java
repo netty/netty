@@ -129,13 +129,18 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             readChunkedContent(channel, buffer);
         }
         case READ_CHUNK_DELIMITER: {
-            // FIXME: LF should be skipped, too. (check the whole codec)
-            byte next = buffer.readByte();
-            if (next == HttpCodecUtil.CR) {
-                buffer.readByte();
+            for (;;) {
+                byte next = buffer.readByte();
+                if (next == HttpCodecUtil.CR) {
+                    if (buffer.readByte() == HttpCodecUtil.LF) {
+                        checkpoint(State.READ_CHUNK_SIZE);
+                        return null;
+                    }
+                } else if (next == HttpCodecUtil.LF) {
+                    checkpoint(State.READ_CHUNK_SIZE);
+                    return null;
+                }
             }
-            checkpoint(State.READ_CHUNK_SIZE);
-            return null;
         }
         case READ_CHUNK_FOOTER: {
             String line = readIntoCurrentLine(buffer);
@@ -235,12 +240,12 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return Integer.parseInt(hex, 16);
     }
 
-    protected String readIntoCurrentLine(ChannelBuffer channel) {
+    protected String readIntoCurrentLine(ChannelBuffer buffer) {
         StringBuilder sb = new StringBuilder();
         while (true) {
-            byte nextByte = channel.readByte();
+            byte nextByte = buffer.readByte();
             if (nextByte == HttpCodecUtil.CR) {
-                nextByte = channel.readByte();
+                nextByte = buffer.readByte();
                 if (nextByte == HttpCodecUtil.LF) {
                     return sb.toString();
                 }
