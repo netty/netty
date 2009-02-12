@@ -241,7 +241,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     protected String readIntoCurrentLine(ChannelBuffer buffer) {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(64);
         while (true) {
             byte nextByte = buffer.readByte();
             if (nextByte == HttpCodecUtil.CR) {
