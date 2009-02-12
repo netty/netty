@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.handler.timeout;
 
+import static org.jboss.netty.channel.Channels.*;
+
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.ChannelFuture;
@@ -92,6 +94,10 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler implemen
         super.writeRequested(ctx, e);
     }
 
+    protected void writeTimedOut(ChannelHandlerContext ctx) throws Exception {
+        Channels.fireExceptionCaught(ctx, EXCEPTION);
+    }
+
     private final class WriteTimeoutTask implements TimerTask {
 
         private final ChannelHandlerContext ctx;
@@ -114,12 +120,12 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler implemen
             // Mark the future as failure
             if (future.setFailure(EXCEPTION)) {
                 // If succeeded to mark as failure, notify the pipeline, too.
-                onWriteTimeout(ctx);
+                try {
+                    writeTimedOut(ctx);
+                } catch (Throwable t) {
+                    fireExceptionCaught(ctx, t);
+                }
             }
         }
-    }
-
-    protected void onWriteTimeout(ChannelHandlerContext ctx) {
-        Channels.fireExceptionCaught(ctx, EXCEPTION);
     }
 }

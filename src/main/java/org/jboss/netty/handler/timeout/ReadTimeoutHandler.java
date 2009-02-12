@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.handler.timeout;
 
+import static org.jboss.netty.channel.Channels.*;
+
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -122,6 +124,10 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler implements 
         task = null;
     }
 
+    protected void readTimedOut(ChannelHandlerContext ctx) throws Exception {
+        Channels.fireExceptionCaught(ctx, EXCEPTION);
+    }
+
     private final class ReadTimeoutTask implements TimerTask {
 
         private final ChannelHandlerContext ctx;
@@ -145,16 +151,16 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler implements 
                 // Read timed out - set a new timeout and notify the callback.
                 ReadTimeoutHandler.this.timeout =
                     timer.newTimeout(this, timeoutMillis, TimeUnit.MILLISECONDS);
-                onReadTimeout(ctx);
+                try {
+                    readTimedOut(ctx);
+                } catch (Throwable t) {
+                    fireExceptionCaught(ctx, t);
+                }
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
                 ReadTimeoutHandler.this.timeout =
                     timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
-    }
-
-    protected void onReadTimeout(ChannelHandlerContext ctx) {
-        Channels.fireExceptionCaught(ctx, EXCEPTION);
     }
 }
