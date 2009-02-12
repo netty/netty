@@ -180,8 +180,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 }
             } else {
                 checkpoint(State.READ_CHUNK_FOOTER);
-                return null;
             }
+            return null;
         }
         default: {
             throw new Error("Shouldn't reach here.");
