@@ -91,7 +91,16 @@ public class DefaultHttpMessage implements HttpMessage {
 
     public boolean isChunked() {
         List<String> chunked = headers.get(HttpHeaders.Names.TRANSFER_ENCODING);
-        return chunked != null && chunked.size() > 0 && chunked.get(0).equalsIgnoreCase(HttpHeaders.Values.CHUNKED);
+        if (chunked == null || chunked.isEmpty()) {
+            return false;
+        }
+
+        for (String v: chunked) {
+            if (v.equalsIgnoreCase(HttpHeaders.Values.CHUNKED)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void clearHeaders() {

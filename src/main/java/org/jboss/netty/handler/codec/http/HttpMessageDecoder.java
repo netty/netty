@@ -224,7 +224,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     private int getChunkSize(String hex) {
         int delimPos = hex.indexOf(';');
         if (delimPos >= 0) {
-            hex = hex.substring(delimPos).trim();
+            hex = hex.substring(0, delimPos).trim();
         }
         return Integer.parseInt(hex, 16);
     }
