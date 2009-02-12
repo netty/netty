@@ -57,38 +57,52 @@ public class HttpRequestHandler extends SimpleChannelHandler {
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (!readingChunks) {
             HttpRequest request = this.request = (HttpRequest) e.getMessage();
+            responseContent.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
+            responseContent.append("===================================\r\n");
 
-            responseContent.append("HOST: " + request.getHeader(HttpHeaders.Names.HOST) + "\r\n");
-            responseContent.append("REQUEST_URI: " + request.getUri() + "\r\n");
+            if (request.containsHeader(HttpHeaders.Names.HOST)) {
+                responseContent.append("HOST: " + request.getHeader(HttpHeaders.Names.HOST) + "\r\n");
+            }
 
-            for (String name: request.getHeaderNames()) {
-                for (String value: request.getHeaders(name)) {
-                    responseContent.append("HEADER: " + name + " = " + value + "\r\n");
+            responseContent.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
+
+            if (!request.getHeaderNames().isEmpty()) {
+                for (String name: request.getHeaderNames()) {
+                    for (String value: request.getHeaders(name)) {
+                        responseContent.append("HEADER: " + name + " = " + value + "\r\n");
+                    }
                 }
+                responseContent.append("\r\n");
             }
 
             QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getUri());
             Map<String, List<String>> params = queryStringDecoder.getParameters();
-            for (Entry<String, List<String>> p: params.entrySet()) {
-                String key = p.getKey();
-                List<String> vals = p.getValue();
-                for (String val : vals) {
-                    responseContent.append("PARAM: " + key + " = " + val + "\r\n");
+            if (!params.isEmpty()) {
+                for (Entry<String, List<String>> p: params.entrySet()) {
+                    String key = p.getKey();
+                    List<String> vals = p.getValue();
+                    for (String val : vals) {
+                        responseContent.append("PARAM: " + key + " = " + val + "\r\n");
+                    }
                 }
+                responseContent.append("\r\n");
             }
 
             if (request.isChunked()) {
                 readingChunks = true;
                 return;
             } else {
-                responseContent.append("CONTENT: " + request.getContent().toString("UTF-8") + "\r\n");
+                ChannelBuffer content = request.getContent();
+                if (content.readable()) {
+                    responseContent.append("CONTENT: " + content.toString("UTF-8") + "\r\n");
+                }
                 writeResponse(e);
             }
         } else {
             HttpChunk chunk = (HttpChunk) e.getMessage();
             if (chunk.isLast()) {
                 readingChunks = false;
-                responseContent.append("END OF CHUNK\r\n");
+                responseContent.append("END OF CONTENT\r\n");
                 writeResponse(e);
                 return;
             } else {
