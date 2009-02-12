@@ -27,6 +27,8 @@ import java.util.Map.Entry;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
@@ -47,13 +49,14 @@ import org.jboss.netty.handler.codec.http.QueryStringDecoder;
 @ChannelPipelineCoverage("one")
 public class HttpRequestHandler extends SimpleChannelHandler {
 
+    private volatile HttpRequest request;
     private volatile boolean readingChunks;
     private final StringBuilder responseContent = new StringBuilder();
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (!readingChunks) {
-            HttpRequest request = (HttpRequest) e.getMessage();
+            HttpRequest request = this.request = (HttpRequest) e.getMessage();
 
             responseContent.append("HOST: " + request.getHeader(HttpHeaders.Names.HOST) + "\r\n");
             responseContent.append("REQUEST_URI: " + request.getUri() + "\r\n");
@@ -95,12 +98,28 @@ public class HttpRequestHandler extends SimpleChannelHandler {
     }
 
     private void writeResponse(MessageEvent e) {
-        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        // Convert the response content to a ChannelBuffer.
         ChannelBuffer buf = ChannelBuffers.copiedBuffer(responseContent.toString(), "UTF-8");
+        responseContent.setLength(0);
+
+        // Decide whether to close the connection or not.
+        boolean close =
+            HttpHeaders.Values.CLOSE.equalsIgnoreCase(request.getHeader(HttpHeaders.Names.CONNECTION)) ||
+            request.getProtocolVersion().equals(HttpVersion.HTTP_1_0) &&
+            !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(request.getHeader(HttpHeaders.Names.CONNECTION));
+
+        // Build the response object.
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         response.setContent(buf);
         response.setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8");
-        response.addHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf.writerIndex()));
-        e.getChannel().write(response);
-        responseContent.setLength(0);
+        response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+
+        // Write the response.
+        ChannelFuture future = e.getChannel().write(response);
+
+        // Close the connection after the write operation is done if necessary.
+        if (close) {
+            future.addListener(ChannelFutureListener.CLOSE);
+        }
     }
 }
