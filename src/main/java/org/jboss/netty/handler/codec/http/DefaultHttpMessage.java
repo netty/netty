@@ -82,11 +82,15 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public int getContentLength() {
+        return getContentLength(0);
+    }
+
+    public int getContentLength(int defaultValue) {
         List<String> contentLength = headers.get(HttpHeaders.Names.CONTENT_LENGTH);
         if (contentLength != null && contentLength.size() > 0) {
             return Integer.parseInt(contentLength.get(0));
         }
-        return 0;
+        return defaultValue;
     }
 
     public boolean isChunked() {

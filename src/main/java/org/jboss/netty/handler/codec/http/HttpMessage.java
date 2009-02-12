@@ -57,6 +57,8 @@ public interface HttpMessage {
 
     int getContentLength();
 
+    int getContentLength(int defaultValue);
+
     void setContent(ChannelBuffer content);
 
     boolean isChunked();

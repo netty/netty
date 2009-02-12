@@ -65,7 +65,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         SKIP_CONTROL_CHARS,
         READ_INITIAL,
         READ_HEADER,
-        READ_CONTENT,
+        READ_VARIABLE_LENGTH_CONTENT,
         READ_FIXED_LENGTH_CONTENT,
         READ_CHUNK_SIZE,
         READ_CHUNKED_CONTENT,
@@ -103,18 +103,18 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 if (!mergeChunks) {
                     return message;
                 }
-            } else if (message.getContentLength() == 0) {
+            } else if (message.getContentLength(-1) == 0) {
                 content = ChannelBuffers.EMPTY_BUFFER;
                 return reset();
             }
             //we return null here, this forces decode to be called again where we will decode the content
             return null;
         }
-        case READ_CONTENT: {
+        case READ_VARIABLE_LENGTH_CONTENT: {
             if (content == null) {
                 content = ChannelBuffers.dynamicBuffer(channel.getConfig().getBufferFactory());
             }
-            //this will cause a replay error until the channel is closed where this will read whats left in the buffer
+            //this will cause a replay error until the channel is closed where this will read what's left in the buffer
             content.writeBytes(buffer.readBytes(buffer.readableBytes()));
             return reset();
         }
@@ -207,7 +207,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     private void readFixedLengthContent(ChannelBuffer buffer) {
-        int length = message.getContentLength();
+        int length = message.getContentLength(-1);
         if (content == null) {
             content = buffer.readBytes(length);
         } else {
@@ -238,10 +238,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         State nextState;
         if (message.isChunked()) {
             nextState = State.READ_CHUNK_SIZE;
-        } else if (message.getContentLength() >= 0) {
+        } else if (message.getContentLength(-1) >= 0) {
             nextState = State.READ_FIXED_LENGTH_CONTENT;
         } else {
-            nextState = State.READ_CONTENT;
+            nextState = State.READ_VARIABLE_LENGTH_CONTENT;
         }
         checkpoint(nextState);
     }
