@@ -25,10 +25,8 @@ package org.jboss.netty.handler.timeout;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.text.DateFormat;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Locale;
-import java.util.Set;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -41,19 +39,19 @@ import org.jboss.netty.channel.ChannelFuture;
 public class DefaultIdleStateEvent implements IdleStateEvent {
 
     private final Channel channel;
-    private final Set<IdleState> state;
+    private final IdleState state;
     private final long lastActivityTimeMillis;
 
     public DefaultIdleStateEvent(
-            Channel channel, Set<IdleState> state, long lastActivityTimeMillis) {
+            Channel channel, IdleState state, long lastActivityTimeMillis) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-        if (state.isEmpty()) {
-            throw new IllegalArgumentException("state is empty.");
+        if (state == null) {
+            throw new NullPointerException("state");
         }
         this.channel = channel;
-        this.state = Collections.unmodifiableSet(state);
+        this.state = state;
         this.lastActivityTimeMillis = lastActivityTimeMillis;
     }
 
@@ -65,7 +63,7 @@ public class DefaultIdleStateEvent implements IdleStateEvent {
         return succeededFuture(getChannel());
     }
 
-    public Set<IdleState> getState() {
+    public IdleState getState() {
         return state;
     }
 
@@ -75,8 +73,7 @@ public class DefaultIdleStateEvent implements IdleStateEvent {
 
     @Override
     public String toString() {
-        return getChannel().toString() +
-               " - (IDLE_STATE: " + getState() + ", LAST_ACTIVITY: " +
+        return getChannel().toString() + " - (" + getState() + " since " +
                DateFormat.getDateTimeInstance(
                        DateFormat.SHORT, DateFormat.SHORT, Locale.US).format(
                                new Date(getLastActivityTimeMillis())) + ')';

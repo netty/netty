@@ -22,6 +22,7 @@
  */
 package org.jboss.netty.handler.timeout;
 
+
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -29,5 +30,6 @@ package org.jboss.netty.handler.timeout;
  */
 public enum IdleState {
     READER_IDLE,
-    WRITER_IDLE;
+    WRITER_IDLE,
+    ALL_IDLE;
 }

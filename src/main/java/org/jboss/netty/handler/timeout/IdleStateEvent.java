@@ -22,8 +22,6 @@
  */
 package org.jboss.netty.handler.timeout;
 
-import java.util.Set;
-
 import org.jboss.netty.channel.ChannelEvent;
 
 /**
@@ -32,6 +30,6 @@ import org.jboss.netty.channel.ChannelEvent;
  * @version $Rev$, $Date$
  */
 public interface IdleStateEvent extends ChannelEvent {
-    Set<IdleState> getState();
+    IdleState getState();
     long getLastActivityTimeMillis();
 }

@@ -22,8 +22,8 @@
  */
 package org.jboss.netty.handler.timeout;
 
-import java.util.EnumSet;
-import java.util.Set;
+import static org.jboss.netty.channel.Channels.*;
+
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -177,7 +177,8 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
         bothIdleTimeoutTask = null;
     }
 
-    protected void channelIdle(ChannelHandlerContext ctx, Set<IdleState> state, long lastActivityTimeMillis) {
+    protected void channelIdle(
+            ChannelHandlerContext ctx, IdleState state, long lastActivityTimeMillis) throws Exception {
         ctx.sendUpstream(new DefaultIdleStateEvent(ctx.getChannel(), state, lastActivityTimeMillis));
     }
 
@@ -201,7 +202,11 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
                 // Reader is idle - set a new timeout and notify the callback.
                 readerIdleTimeout =
                     timer.newTimeout(this, readerIdleTimeMillis, TimeUnit.MILLISECONDS);
-                channelIdle(ctx, EnumSet.of(IdleState.READER_IDLE), lastReadTime);
+                try {
+                    channelIdle(ctx, IdleState.READER_IDLE, lastReadTime);
+                } catch (Throwable t) {
+                    fireExceptionCaught(ctx, t);
+                }
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
                 readerIdleTimeout =
@@ -231,7 +236,11 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
                 // Writer is idle - set a new timeout and notify the callback.
                 writerIdleTimeout =
                     timer.newTimeout(this, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
-                channelIdle(ctx, EnumSet.of(IdleState.WRITER_IDLE), lastWriteTime);
+                try {
+                    channelIdle(ctx, IdleState.WRITER_IDLE, lastReadTime);
+                } catch (Throwable t) {
+                    fireExceptionCaught(ctx, t);
+                }
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
                 writerIdleTimeout =
@@ -261,7 +270,11 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
                 // notify the callback.
                 bothIdleTimeout =
                     timer.newTimeout(this, bothIdleTimeMillis, TimeUnit.MILLISECONDS);
-                channelIdle(ctx, EnumSet.allOf(IdleState.class), lastIoTime);
+                try {
+                    channelIdle(ctx, IdleState.ALL_IDLE, lastReadTime);
+                } catch (Throwable t) {
+                    fireExceptionCaught(ctx, t);
+                }
             } else {
                 // Either read or write occurred before the timeout - set a new
                 // timeout with shorter delay.
