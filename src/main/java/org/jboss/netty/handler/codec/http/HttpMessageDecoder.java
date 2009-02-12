@@ -65,7 +65,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         READ_FIXED_LENGTH_CONTENT,
         READ_CHUNK_SIZE,
         READ_CHUNKED_CONTENT,
-        READ_END_OF_CHUNK;
+        READ_CHUNK_DELIMITER,
+        READ_CHUNK_FOOTER;
     }
 
     protected HttpMessageDecoder() {
@@ -89,7 +90,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         case READ_HEADER: {
             readHeaders(buffer);
             if (message.isChunked()) {
-                System.err.println("CHUNKED!");
                 checkpoint(State.READ_CHUNK_SIZE);
             } else if (message.getContentLength() == 0) {
                 content = ChannelBuffers.EMPTY_BUFFER;
@@ -117,29 +117,34 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
          */
         case READ_CHUNK_SIZE: {
             String line = readIntoCurrentLine(buffer);
-
             chunkSize = getChunkSize(line);
             if (chunkSize == 0) {
-                byte next = buffer.readByte();
-                if (next == HttpCodecUtil.CR) {
-                    buffer.readByte();
-                }
-                return reset();
-            }
-            else {
+                checkpoint(State.READ_CHUNK_FOOTER);
+                return null;
+            } else {
                 checkpoint(State.READ_CHUNKED_CONTENT);
             }
         }
         case READ_CHUNKED_CONTENT: {
             readChunkedContent(channel, buffer);
         }
-        case READ_END_OF_CHUNK: {
+        case READ_CHUNK_DELIMITER: {
+            // FIXME: LF should be skipped, too. (check the whole codec)
             byte next = buffer.readByte();
             if (next == HttpCodecUtil.CR) {
                 buffer.readByte();
             }
             checkpoint(State.READ_CHUNK_SIZE);
             return null;
+        }
+        case READ_CHUNK_FOOTER: {
+            String line = readIntoCurrentLine(buffer);
+            if (line.trim().length() == 0) {
+                return reset();
+            } else {
+                checkpoint(State.READ_CHUNK_FOOTER);
+                return null;
+            }
         }
         default: {
             throw new Error("Shouldn't reach here.");
@@ -172,7 +177,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                     chunkSize, channel.getConfig().getBufferFactory());
         }
         content.writeBytes(buffer, chunkSize);
-        checkpoint(State.READ_END_OF_CHUNK);
+        checkpoint(State.READ_CHUNK_DELIMITER);
     }
 
     private void readFixedLengthContent(ChannelBuffer buffer) {
