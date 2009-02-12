@@ -57,25 +57,24 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     private volatile WriterIdleTimeoutTask writerIdleTimeoutTask;
     volatile long lastWriteTime;
 
-    final long bothIdleTimeMillis;
-    volatile Timeout bothIdleTimeout;
-    private volatile BothIdleTimeoutTask bothIdleTimeoutTask;
-    volatile long lastIoTime;
+    final long allIdleTimeMillis;
+    volatile Timeout allIdleTimeout;
+    private volatile AllIdleTimeoutTask allIdleTimeoutTask;
 
     public IdleStateHandler(
             Timer timer,
             long readerIdleTimeMillis,
             long writerIdleTimeMillis,
-            long bothIdleTimeMillis) {
+            long allIdleTimeMillis) {
 
         this(timer,
-             readerIdleTimeMillis, writerIdleTimeMillis, bothIdleTimeMillis,
+             readerIdleTimeMillis, writerIdleTimeMillis, allIdleTimeMillis,
              TimeUnit.MILLISECONDS);
     }
 
     public IdleStateHandler(
             Timer timer,
-            long readerIdleTime, long writerIdleTime, long bothIdleTime,
+            long readerIdleTime, long writerIdleTime, long allIdleTime,
             TimeUnit unit) {
 
         if (timer == null) {
@@ -88,7 +87,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
         this.timer = timer;
         readerIdleTimeMillis = unit.toMillis(readerIdleTime);
         writerIdleTimeMillis = unit.toMillis(writerIdleTime);
-        bothIdleTimeMillis = unit.toMillis(bothIdleTime);
+        allIdleTimeMillis = unit.toMillis(allIdleTime);
     }
 
     public void releaseExternalResources() {
@@ -128,7 +127,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
             throws Exception {
-        lastReadTime = lastIoTime = System.currentTimeMillis();
+        lastReadTime = System.currentTimeMillis();
         ctx.sendUpstream(e);
     }
 
@@ -136,13 +135,13 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     public void writeComplete(ChannelHandlerContext ctx, WriteCompletionEvent e)
             throws Exception {
         if (e.getWrittenAmount() > 0) {
-            lastWriteTime = lastIoTime = System.currentTimeMillis();
+            lastWriteTime = System.currentTimeMillis();
         }
         ctx.sendUpstream(e);
     }
 
     private void initialize(ChannelHandlerContext ctx) {
-        lastReadTime = lastWriteTime = lastIoTime = System.currentTimeMillis();
+        lastReadTime = lastWriteTime = System.currentTimeMillis();
         readerIdleTimeoutTask = new ReaderIdleTimeoutTask(ctx);
         writerIdleTimeoutTask = new WriterIdleTimeoutTask(ctx);
         if (readerIdleTimeMillis > 0) {
@@ -153,9 +152,9 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
             writerIdleTimeout = timer.newTimeout(
                     writerIdleTimeoutTask, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
         }
-        if (bothIdleTimeMillis > 0) {
-            bothIdleTimeout = timer.newTimeout(
-                    bothIdleTimeoutTask, bothIdleTimeMillis, TimeUnit.MILLISECONDS);
+        if (allIdleTimeMillis > 0) {
+            allIdleTimeout = timer.newTimeout(
+                    allIdleTimeoutTask, allIdleTimeMillis, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -166,15 +165,15 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
         if (writerIdleTimeout != null) {
             writerIdleTimeout.cancel();
         }
-        if (bothIdleTimeout != null) {
-            bothIdleTimeout.cancel();
+        if (allIdleTimeout != null) {
+            allIdleTimeout.cancel();
         }
         readerIdleTimeout = null;
         readerIdleTimeoutTask = null;
         writerIdleTimeout = null;
         writerIdleTimeoutTask = null;
-        bothIdleTimeout = null;
-        bothIdleTimeoutTask = null;
+        allIdleTimeout = null;
+        allIdleTimeoutTask = null;
     }
 
     protected void channelIdle(
@@ -249,11 +248,11 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
         }
     }
 
-    private final class BothIdleTimeoutTask implements TimerTask {
+    private final class AllIdleTimeoutTask implements TimerTask {
 
         private final ChannelHandlerContext ctx;
 
-        BothIdleTimeoutTask(ChannelHandlerContext ctx) {
+        AllIdleTimeoutTask(ChannelHandlerContext ctx) {
             this.ctx = ctx;
         }
 
@@ -263,13 +262,13 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
             }
 
             long currentTime = System.currentTimeMillis();
-            long lastIoTime = IdleStateHandler.this.lastIoTime;
-            long nextDelay = bothIdleTimeMillis - (currentTime - lastIoTime);
+            long lastIoTime = Math.max(lastReadTime, lastWriteTime);
+            long nextDelay = allIdleTimeMillis - (currentTime - lastIoTime);
             if (nextDelay <= 0) {
                 // Both reader and writer are idle - set a new timeout and
                 // notify the callback.
-                bothIdleTimeout =
-                    timer.newTimeout(this, bothIdleTimeMillis, TimeUnit.MILLISECONDS);
+                allIdleTimeout =
+                    timer.newTimeout(this, allIdleTimeMillis, TimeUnit.MILLISECONDS);
                 try {
                     channelIdle(ctx, IdleState.ALL_IDLE, lastReadTime);
                 } catch (Throwable t) {
@@ -278,7 +277,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
             } else {
                 // Either read or write occurred before the timeout - set a new
                 // timeout with shorter delay.
-                bothIdleTimeout =
+                allIdleTimeout =
                     timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
