@@ -45,7 +45,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 @ChannelPipelineCoverage("one")
 public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
-    private static final ChannelBuffer LAST_CHUNK = copiedBuffer("0\r\n\r\n", "USASCII");
+    private static final ChannelBuffer LAST_CHUNK = copiedBuffer("0\r\n\r\n", "ASCII");
 
     @Override
     protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
@@ -74,7 +74,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
                 int contentLength = content.readableBytes();
 
                 return wrappedBuffer(
-                        copiedBuffer(Integer.toHexString(contentLength), "USASCII"),
+                        copiedBuffer(Integer.toHexString(contentLength), "ASCII"),
                         wrappedBuffer(CRLF),
                         content.slice(content.readerIndex(), contentLength),
                         wrappedBuffer(CRLF));

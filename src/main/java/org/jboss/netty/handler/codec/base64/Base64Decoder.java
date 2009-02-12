@@ -75,7 +75,7 @@ public class Base64Decoder extends OneToOneDecoder {
             throws Exception {
         if (msg instanceof String) {
             msg = ChannelBuffers.wrappedBuffer(
-                    ((String) msg).getBytes("US-ASCII"));
+                    ((String) msg).getBytes("ASCII"));
         } else if (!(msg instanceof ChannelBuffer)) {
             return msg;
         }
