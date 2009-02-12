@@ -91,6 +91,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         case READ_HEADER: {
             readHeaders(buffer);
             if (message.isChunked()) {
+                System.err.println("CHUNKED!");
                 checkpoint(State.READ_CHUNK_SIZE);
             } else if (message.getContentLength() == 0) {
                 content = ChannelBuffers.EMPTY_BUFFER;
@@ -221,7 +222,11 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     protected abstract void readInitial(ChannelBuffer buffer) throws Exception;
 
     private int getChunkSize(String hex) {
-        return Integer.valueOf(hex, 16);
+        int delimPos = hex.indexOf(';');
+        if (delimPos >= 0) {
+            hex = hex.substring(delimPos).trim();
+        }
+        return Integer.parseInt(hex, 16);
     }
 
     protected String readIntoCurrentLine(ChannelBuffer channel) {

@@ -36,10 +36,9 @@ public class HttpRequestDecoder extends HttpMessageDecoder {
     @Override
     protected void readInitial(ChannelBuffer buffer) throws Exception{
         String line = readIntoCurrentLine(buffer);
-        checkpoint(State.READ_HEADER);
         String[] split = splitInitial(line);
         message = new DefaultHttpRequest(
                 HttpVersion.valueOf(split[2]), HttpMethod.valueOf(split[0]), split[1]);
-
+        checkpoint(State.READ_HEADER);
     }
 }
