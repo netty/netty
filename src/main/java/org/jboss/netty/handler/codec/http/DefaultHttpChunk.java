@@ -38,7 +38,7 @@ public class DefaultHttpChunk implements HttpChunk {
         if (content == null) {
             throw new NullPointerException("content");
         }
-        last = content.readable();
+        last = !content.readable();
         this.content = content;
     }
 
