@@ -58,24 +58,33 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
      * @apiviz.exclude
      */
     protected enum State {
+        SKIP_CONTROL_CHARS,
         READ_INITIAL,
         READ_HEADER,
         READ_CONTENT,
         READ_FIXED_LENGTH_CONTENT,
         READ_CHUNK_SIZE,
         READ_CHUNKED_CONTENT,
-        READ_CRLF,;
+        READ_CRLF;
     }
 
     private State nextState;
 
     protected HttpMessageDecoder() {
-        super(State.READ_INITIAL);
+        super(State.SKIP_CONTROL_CHARS);
     }
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, State state) throws Exception {
         switch (state) {
+        case SKIP_CONTROL_CHARS: {
+            try {
+                skipControlCharacters(buffer);
+                checkpoint(State.READ_INITIAL);
+            } finally {
+                checkpoint();
+            }
+        }
         case READ_INITIAL: {
             readInitial(buffer);
         }
@@ -144,8 +153,19 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         message.setContent(content);
         content = null;
         nextState = null;
-        checkpoint(State.READ_INITIAL);
+        checkpoint(State.SKIP_CONTROL_CHARS);
         return message;
+    }
+
+    private void skipControlCharacters(ChannelBuffer buffer) {
+        for (;;) {
+            char c = (char) buffer.readUnsignedByte();
+            if (!Character.isISOControl(c) &&
+                !Character.isWhitespace(c)) {
+                buffer.readerIndex(buffer.readerIndex() - 1);
+                break;
+            }
+        }
     }
 
     private void readChunkedContent(Channel channel, ChannelBuffer buffer) {

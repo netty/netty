@@ -95,8 +95,9 @@ public class HttpVersion implements Comparable<HttpVersion> {
         }
 
         for (int i = 0; i < protocolName.length(); i ++) {
-            if (Character.isISOControl(protocolName.charAt(i))) {
-                throw new IllegalArgumentException("control character in protocolName");
+            if (Character.isISOControl(protocolName.charAt(i)) ||
+                Character.isWhitespace(protocolName.charAt(i))) {
+                throw new IllegalArgumentException("invalid character in protocolName");
             }
         }
 
