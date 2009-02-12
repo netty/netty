@@ -173,7 +173,11 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         case READ_CHUNK_FOOTER: {
             String line = readIntoCurrentLine(buffer);
             if (line.trim().length() == 0) {
-                return reset();
+                if (mergeChunks) {
+                    return reset();
+                } else {
+                    reset();
+                }
             } else {
                 checkpoint(State.READ_CHUNK_FOOTER);
                 return null;
