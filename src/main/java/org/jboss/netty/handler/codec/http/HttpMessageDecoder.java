@@ -81,7 +81,9 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
         case READ_HEADER: {
             readHeaders(buffer);
-            if (message.getContentLength() == 0) {
+            if (message.isChunked()) {
+                checkpoint(State.READ_CHUNK_SIZE);
+            } else if (message.getContentLength() == 0) {
                 content = ChannelBuffers.EMPTY_BUFFER;
                 return reset();
             }
@@ -186,13 +188,11 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
 
         State nextState;
-        if (message.getContentLength() >= 0) {
-            nextState = State.READ_FIXED_LENGTH_CONTENT;
-        }
-        else if (message.isChunked()) {
+        if (message.isChunked()) {
             nextState = State.READ_CHUNK_SIZE;
-        }
-        else {
+        } else if (message.getContentLength() >= 0) {
+            nextState = State.READ_FIXED_LENGTH_CONTENT;
+        } else {
             nextState = State.READ_CONTENT;
         }
         checkpoint(nextState);
