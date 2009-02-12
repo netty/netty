@@ -173,15 +173,18 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
                 // Reader is idle - set a new timeout and notify the callback.
                 readerIdleTimeout =
                     timer.newTimeout(this, readerIdleTimeMillis, TimeUnit.MILLISECONDS);
-                ctx.sendUpstream(new DefaultIdlenessEvent(
-                        ctx.getChannel(), lastReadTime, lastWriteTime,
-                        readerIdleTimeMillis, writerIdleTimeMillis));
+                onReaderIdleness(ctx);
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
                 readerIdleTimeout =
                     timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
+
+    }
+
+    protected void onReaderIdleness(ChannelHandlerContext ctx) {
+        ctx.sendUpstream(new DefaultReaderIdlenessEvent(ctx.getChannel()));
     }
 
     private final class WriterIdleTimeoutTask implements TimerTask {
@@ -208,14 +211,16 @@ public class IdlenessHandler extends SimpleChannelUpstreamHandler implements Lif
                 // Writer is idle - set a new timeout and notify the callback.
                 writerIdleTimeout =
                     timer.newTimeout(this, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
-                ctx.sendUpstream(new DefaultIdlenessEvent(
-                        ctx.getChannel(), lastReadTime, lastWriteTime,
-                        readerIdleTimeMillis, writerIdleTimeMillis));
+                onWriterIdleness(ctx);
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
                 writerIdleTimeout =
                     timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
+    }
+
+    protected void onWriterIdleness(ChannelHandlerContext ctx) {
+        ctx.sendUpstream(new DefaultWriterIdlenessEvent(ctx.getChannel()));
     }
 }

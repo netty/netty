@@ -114,8 +114,12 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler implemen
             // Mark the future as failure
             if (future.setFailure(EXCEPTION)) {
                 // If succeeded to mark as failure, notify the pipeline, too.
-                Channels.fireExceptionCaught(ctx, EXCEPTION);
+                onWriteTimeout(ctx);
             }
         }
+    }
+
+    protected void onWriteTimeout(ChannelHandlerContext ctx) {
+        Channels.fireExceptionCaught(ctx, EXCEPTION);
     }
 }

@@ -22,38 +22,22 @@
  */
 package org.jboss.netty.handler.timeout;
 
-import static org.jboss.netty.channel.Channels.*;
-
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class DefaultIdlenessEvent implements IdlenessEvent {
+public class DefaultReaderIdlenessEvent extends DefaultIdlenessEvent
+                                        implements ReaderIdlenessEvent {
 
-    private final Channel channel;
-
-    protected DefaultIdlenessEvent(Channel channel) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-
-        this.channel = channel;
-    }
-
-    public Channel getChannel() {
-        return channel;
-    }
-
-    public ChannelFuture getFuture() {
-        return succeededFuture(getChannel());
+    public DefaultReaderIdlenessEvent(Channel channel) {
+        super(channel);
     }
 
     @Override
     public String toString() {
-        return getChannel().toString() + " - (IDLE)";
+        return getChannel().toString() + " - (IDLE: READER)";
     }
 }

@@ -145,12 +145,16 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler implements 
                 // Read timed out - set a new timeout and notify the callback.
                 ReadTimeoutHandler.this.timeout =
                     timer.newTimeout(this, timeoutMillis, TimeUnit.MILLISECONDS);
-                Channels.fireExceptionCaught(ctx, EXCEPTION);
+                onReadTimeout(ctx);
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
                 ReadTimeoutHandler.this.timeout =
                     timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
+    }
+
+    protected void onReadTimeout(ChannelHandlerContext ctx) {
+        Channels.fireExceptionCaught(ctx, EXCEPTION);
     }
 }

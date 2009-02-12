@@ -30,6 +30,5 @@ import org.jboss.netty.channel.ChannelEvent;
  * @version $Rev$, $Date$
  */
 public interface IdlenessEvent extends ChannelEvent {
-    boolean isReaderIdle();
-    boolean isWriterIdle();
+    // This is a tag interface.
 }
