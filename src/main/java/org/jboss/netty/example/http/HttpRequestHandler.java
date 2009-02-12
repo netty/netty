@@ -21,7 +21,6 @@
  */
 package org.jboss.netty.example.http;
 
-import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -33,6 +32,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -44,26 +44,63 @@ import org.jboss.netty.handler.codec.http.QueryStringDecoder;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  */
-@ChannelPipelineCoverage("all")
+@ChannelPipelineCoverage("one")
 public class HttpRequestHandler extends SimpleChannelHandler {
+
+    private volatile boolean readingChunks;
+    private final StringBuilder responseContent = new StringBuilder();
+
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        HttpRequest request = (HttpRequest) e.getMessage();
-        System.out.println(request.getContent().toString(Charset.defaultCharset().name()));
-        QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getUri());
-        Map<String, List<String>> params = queryStringDecoder.getParameters();
-        for (Entry<String, List<String>> p: params.entrySet()) {
-            String key = p.getKey();
-            List<String> vals = p.getValue();
-            for (String val : vals) {
-                System.out.println("param: " + key + "=" + val);
+        if (!readingChunks) {
+            HttpRequest request = (HttpRequest) e.getMessage();
+
+            responseContent.append("HOST: " + request.getHeader(HttpHeaders.Names.HOST) + "\r\n");
+            responseContent.append("REQUEST_URI: " + request.getUri() + "\r\n");
+
+            for (String name: request.getHeaderNames()) {
+                for (String value: request.getHeaders(name)) {
+                    responseContent.append("HEADER: " + name + " = " + value + "\r\n");
+                }
+            }
+
+            QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getUri());
+            Map<String, List<String>> params = queryStringDecoder.getParameters();
+            for (Entry<String, List<String>> p: params.entrySet()) {
+                String key = p.getKey();
+                List<String> vals = p.getValue();
+                for (String val : vals) {
+                    responseContent.append("PARAM: " + key + " = " + val + "\r\n");
+                }
+            }
+
+            if (request.isChunked()) {
+                readingChunks = true;
+                return;
+            } else {
+                responseContent.append("CONTENT: " + request.getContent().toString("UTF-8") + "\r\n");
+                writeResponse(e);
+            }
+        } else {
+            HttpChunk chunk = (HttpChunk) e.getMessage();
+            if (chunk.isLast()) {
+                readingChunks = false;
+                responseContent.append("END OF CHUNK\r\n");
+                writeResponse(e);
+                return;
+            } else {
+                responseContent.append("CHUNK: " + chunk.getContent().toString("UTF-8") + "\r\n");
             }
         }
+    }
+
+    private void writeResponse(MessageEvent e) {
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        String message = "and its hello from me";
-        ChannelBuffer buf = ChannelBuffers.wrappedBuffer(message.getBytes());
+        ChannelBuffer buf = ChannelBuffers.copiedBuffer(responseContent.toString(), "UTF-8");
         response.setContent(buf);
+        response.setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8");
         response.addHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf.writerIndex()));
         e.getChannel().write(response);
+        responseContent.setLength(0);
     }
 }
