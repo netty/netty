@@ -89,7 +89,11 @@ public class QueryStringDecoder {
                 values = new ArrayList<String>();
                 this.params.put(key,values);
             }
-            values.add(removeSpaceDelimeters(split[1]));
+            if (split.length > 1) {
+                values.add(removeSpaceDelimeters(split[1]));
+            } else {
+                values.add("");
+            }
         }
     }
 
