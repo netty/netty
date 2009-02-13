@@ -75,7 +75,7 @@ public class Base64 {
         if (dialect == null) {
             throw new NullPointerException("dialect");
         }
-        return breakLines(dialect);
+        return dialect.breakLinesByDefault;
     }
 
     public static ChannelBuffer encode(ChannelBuffer src) {
