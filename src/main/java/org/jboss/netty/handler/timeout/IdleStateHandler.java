@@ -237,7 +237,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
                 writerIdleTimeout =
                     timer.newTimeout(this, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
                 try {
-                    channelIdle(ctx, IdleState.WRITER_IDLE, lastReadTime);
+                    channelIdle(ctx, IdleState.WRITER_IDLE, lastWriteTime);
                 } catch (Throwable t) {
                     fireExceptionCaught(ctx, t);
                 }
@@ -271,7 +271,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
                 allIdleTimeout =
                     timer.newTimeout(this, allIdleTimeMillis, TimeUnit.MILLISECONDS);
                 try {
-                    channelIdle(ctx, IdleState.ALL_IDLE, lastReadTime);
+                    channelIdle(ctx, IdleState.ALL_IDLE, lastIoTime);
                 } catch (Throwable t) {
                     fireExceptionCaught(ctx, t);
                 }
