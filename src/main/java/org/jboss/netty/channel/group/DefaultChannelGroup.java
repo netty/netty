@@ -283,6 +283,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + '(' + name + ')';
+        return getClass().getSimpleName() +
+               "(name: " + getName() + ", size: " + size() + ')';
     }
 }
