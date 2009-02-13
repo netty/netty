@@ -264,21 +264,21 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public int hashCode() {
-        return getName().hashCode();
+        return System.identityHashCode(this);
     }
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof ChannelGroup)) {
-            return false;
-        }
-
-        ChannelGroup that = (ChannelGroup) o;
-        return getName().equals(that.getName());
+        return this == o;
     }
 
     public int compareTo(ChannelGroup o) {
-        return getName().compareTo(o.getName());
+        int v = getName().compareTo(o.getName());
+        if (v != 0) {
+            return v;
+        }
+
+        return System.identityHashCode(this) - System.identityHashCode(o);
     }
 
     @Override
