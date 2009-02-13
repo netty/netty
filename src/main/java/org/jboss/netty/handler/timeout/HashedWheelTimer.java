@@ -69,13 +69,21 @@ public class HashedWheelTimer implements Timer {
         this(Executors.defaultThreadFactory());
     }
 
-    public HashedWheelTimer(
-            long tickDuration, TimeUnit unit, int ticksPerWheel) {
+    public HashedWheelTimer(long tickDuration, TimeUnit unit) {
+        this(Executors.defaultThreadFactory(), tickDuration, unit);
+    }
+
+    public HashedWheelTimer(long tickDuration, TimeUnit unit, int ticksPerWheel) {
         this(Executors.defaultThreadFactory(), tickDuration, unit, ticksPerWheel);
     }
 
     public HashedWheelTimer(ThreadFactory threadFactory) {
-        this(threadFactory, 100, TimeUnit.MILLISECONDS, 512); // about 50 sec
+        this(threadFactory, 100, TimeUnit.MILLISECONDS);
+    }
+
+    public HashedWheelTimer(
+            ThreadFactory threadFactory, long tickDuration, TimeUnit unit) {
+        this(threadFactory, tickDuration, unit, 512);
     }
 
     public HashedWheelTimer(
