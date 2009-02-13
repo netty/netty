@@ -119,7 +119,8 @@ public class LocalTimeClientHandler extends SimpleChannelHandler {
     @Override
     public void messageReceived(
             ChannelHandlerContext ctx, final MessageEvent e) {
-        answer.offer((LocalTimes) e.getMessage());
+        boolean offered = answer.offer((LocalTimes) e.getMessage());
+        assert offered;
     }
 
     @Override

@@ -300,7 +300,8 @@ public class ServerBootstrap extends Bootstrap {
             // Apply parent options.
             evt.getChannel().getConfig().setOptions(parentOptions);
 
-            futureQueue.offer(evt.getChannel().bind(localAddress));
+            boolean finished = futureQueue.offer(evt.getChannel().bind(localAddress));
+            assert finished;
             ctx.sendUpstream(evt);
         }
 

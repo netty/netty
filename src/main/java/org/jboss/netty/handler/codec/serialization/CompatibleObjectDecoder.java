@@ -85,6 +85,7 @@ public class CompatibleObjectDecoder extends ReplayingDecoder<CompatibleObjectDe
         case READ_HEADER:
             oin = newObjectInputStream(bin);
             checkpoint(CompatibleObjectDecoderState.READ_OBJECT);
+            return null;
         case READ_OBJECT:
             return oin.readObject();
         default:

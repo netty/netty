@@ -106,7 +106,8 @@ public class FactorialClientHandler extends SimpleChannelHandler {
             // Offer the answer after closing the connection.
             e.getChannel().close().addListener(new ChannelFutureListener() {
                 public void operationComplete(ChannelFuture future) {
-                    answer.offer((BigInteger) e.getMessage());
+                    boolean offered = answer.offer((BigInteger) e.getMessage());
+                    assert offered;
                 }
             });
         }

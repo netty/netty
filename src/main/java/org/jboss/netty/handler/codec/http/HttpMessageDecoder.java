@@ -92,9 +92,11 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             } finally {
                 checkpoint();
             }
+            return null;
         }
         case READ_INITIAL: {
             readInitial(buffer);
+            return null;
         }
         case READ_HEADER: {
             readHeaders(buffer);
@@ -135,10 +137,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             chunkSize = getChunkSize(line);
             if (chunkSize == 0) {
                 checkpoint(State.READ_CHUNK_FOOTER);
-                return null;
             } else {
                 checkpoint(State.READ_CHUNKED_CONTENT);
             }
+            return null;
         }
         case READ_CHUNKED_CONTENT: {
             if (mergeChunks) {

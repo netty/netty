@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -473,7 +474,8 @@ public class SslHandler extends FrameDecoder {
                         }
                         offered = true;
                     } else {
-                        switch (result.getHandshakeStatus()) {
+                        HandshakeStatus handshakeStatus = result.getHandshakeStatus();
+                        switch (handshakeStatus) {
                         case NEED_WRAP:
                             if (outAppBuf.hasRemaining()) {
                                 break;
@@ -487,8 +489,10 @@ public class SslHandler extends FrameDecoder {
                             runDelegatedTasks();
                             break;
                         case FINISHED:
-                            setHandshakeSuccess(channel);
                         case NOT_HANDSHAKING:
+                            if (handshakeStatus == HandshakeStatus.FINISHED) {
+                                setHandshakeSuccess(channel);
+                            }
                             if (result.getStatus() == Status.CLOSED) {
                                 success = false;
                             }
@@ -589,6 +593,8 @@ public class SslHandler extends FrameDecoder {
                 switch (result.getHandshakeStatus()) {
                 case FINISHED:
                     setHandshakeSuccess(channel);
+                    runDelegatedTasks();
+                    break;
                 case NEED_TASK:
                     runDelegatedTasks();
                     break;

@@ -240,7 +240,8 @@ class NioProviderMetadata {
                     try {
                         level = autodetectWithoutTimeout();
                     } finally {
-                        resultQueue.offer(Integer.valueOf(level));
+                        boolean finished = resultQueue.offer(Integer.valueOf(level));
+                        assert finished;
                     }
                 }
             }, "NIO constraint level detector");

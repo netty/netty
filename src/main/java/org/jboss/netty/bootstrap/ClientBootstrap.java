@@ -267,8 +267,8 @@ public class ClientBootstrap extends Bootstrap {
             if (localAddress != null) {
                 event.getChannel().bind(localAddress);
             } else {
-                futureQueue.offer(event.getChannel().connect(remoteAddress));
-                finished = true;
+                finished = futureQueue.offer(event.getChannel().connect(remoteAddress));
+                assert finished;
             }
         }
 
@@ -280,8 +280,8 @@ public class ClientBootstrap extends Bootstrap {
 
             // Connect if not connected yet.
             if (localAddress != null) {
-                futureQueue.offer(event.getChannel().connect(remoteAddress));
-                finished = true;
+                finished = futureQueue.offer(event.getChannel().connect(remoteAddress));
+                assert finished;
             }
         }
 
@@ -294,8 +294,8 @@ public class ClientBootstrap extends Bootstrap {
             Throwable cause = e.getCause();
             if (!(cause instanceof NotYetConnectedException) && !finished) {
                 e.getChannel().close();
-                futureQueue.offer(failedFuture(e.getChannel(), cause));
-                finished = true;
+                finished = futureQueue.offer(failedFuture(e.getChannel(), cause));
+                assert finished;
             }
         }
     }

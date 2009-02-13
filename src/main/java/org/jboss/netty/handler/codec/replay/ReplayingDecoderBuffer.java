@@ -56,7 +56,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void clear() {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     @Override
@@ -65,13 +65,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public int compareTo(ChannelBuffer buffer) {
-        reject();
-        return 0;
+        throw new UnreplayableOperationException();
     }
 
     public ChannelBuffer copy() {
-        reject();
-        return null;
+        throw new UnreplayableOperationException();
     }
 
     public ChannelBuffer copy(int index, int length) {
@@ -80,12 +78,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void discardReadBytes() {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public ChannelBuffer duplicate() {
-        reject();
-        return null;
+        throw new UnreplayableOperationException();
     }
 
     public byte getByte(int index) {
@@ -109,7 +106,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void getBytes(int index, ByteBuffer dst) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
@@ -118,22 +115,21 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void getBytes(int index, ChannelBuffer dst, int length) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void getBytes(int index, ChannelBuffer dst) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
-        reject();
-        return -1;
+        throw new UnreplayableOperationException();
     }
 
     public void getBytes(int index, OutputStream out, int length)
             throws IOException {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public int getInt(int index) {
@@ -173,8 +169,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     @Override
     public int hashCode() {
-        reject();
-        return 0;
+        throw new UnreplayableOperationException();
     }
 
     public int indexOf(int fromIndex, int toIndex, byte value) {
@@ -199,7 +194,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void markWriterIndex() {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public ChannelBufferFactory factory() {
@@ -239,7 +234,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void readBytes(ByteBuffer dst) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void readBytes(ChannelBuffer dst, int dstIndex, int length) {
@@ -248,11 +243,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void readBytes(ChannelBuffer dst, int length) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void readBytes(ChannelBuffer dst) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public ChannelBuffer readBytes(ChannelBufferIndexFinder endIndexFinder) {
@@ -265,8 +260,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     public int readBytes(GatheringByteChannel out, int length)
             throws IOException {
-        reject();
-        return -1;
+        throw new UnreplayableOperationException();
     }
 
     public ChannelBuffer readBytes(int length) {
@@ -289,7 +283,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void readBytes(OutputStream out, int length) throws IOException {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public int readerIndex() {
@@ -340,71 +334,69 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void resetWriterIndex() {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void setByte(int index, byte value) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void setBytes(int index, byte[] src, int srcIndex, int length) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void setBytes(int index, byte[] src) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void setBytes(int index, ByteBuffer src) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void setBytes(int index, ChannelBuffer src, int length) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void setBytes(int index, ChannelBuffer src) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public int setBytes(int index, InputStream in, int length)
             throws IOException {
-        reject();
-        return -1;
+        throw new UnreplayableOperationException();
     }
 
     public void setZero(int index, int length) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public int setBytes(int index, ScatteringByteChannel in, int length)
             throws IOException {
-        reject();
-        return -1;
+        throw new UnreplayableOperationException();
     }
 
     public void setIndex(int readerIndex, int writerIndex) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void setInt(int index, int value) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void setLong(int index, long value) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void setMedium(int index, int value) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void setShort(int index, short value) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public int skipBytes(ChannelBufferIndexFinder firstIndexFinder) {
@@ -423,8 +415,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public ChannelBuffer slice() {
-        reject();
-        return null;
+        throw new UnreplayableOperationException();
     }
 
     public ChannelBuffer slice(int index, int length) {
@@ -433,8 +424,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public ByteBuffer toByteBuffer() {
-        reject();
-        return null;
+        throw new UnreplayableOperationException();
     }
 
     public ByteBuffer toByteBuffer(int index, int length) {
@@ -442,8 +432,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public ByteBuffer[] toByteBuffers() {
-        reject();
-        return null;
+        throw new UnreplayableOperationException();
     }
 
     public ByteBuffer[] toByteBuffers(int index, int length) {
@@ -464,14 +453,12 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public String toString(String charsetName) {
-        reject();
-        return null;
+        throw new UnreplayableOperationException();
     }
 
     public String toString(
             String charsetName, ChannelBufferIndexFinder terminatorFinder) {
-        reject();
-        return null;
+        throw new UnreplayableOperationException();
     }
 
     @Override
@@ -488,57 +475,56 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void writeByte(byte value) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void writeBytes(byte[] src, int srcIndex, int length) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void writeBytes(byte[] src) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void writeBytes(ByteBuffer src) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void writeBytes(ChannelBuffer src, int srcIndex, int length) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void writeBytes(ChannelBuffer src, int length) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void writeBytes(ChannelBuffer src) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void writeBytes(InputStream in, int length) throws IOException {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public int writeBytes(ScatteringByteChannel in, int length)
             throws IOException {
-        reject();
-        return -1;
+        throw new UnreplayableOperationException();
     }
 
     public void writeInt(int value) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void writeLong(long value) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void writeMedium(int value) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void writeZero(int length) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public int writerIndex() {
@@ -546,11 +532,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void writerIndex(int writerIndex) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     public void writeShort(short value) {
-        reject();
+        throw new UnreplayableOperationException();
     }
 
     private void checkIndex(int index) {
@@ -569,10 +555,5 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         if (buffer.readableBytes() < readableBytes) {
             throw REPLAY;
         }
-    }
-
-    private void reject() {
-        throw new UnsupportedOperationException(
-                "Unsupported in " + ReplayingDecoder.class.getSimpleName());
     }
 }

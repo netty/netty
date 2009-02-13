@@ -58,13 +58,13 @@ class ServletChannelHandler extends SimpleChannelHandler {
 
     private final long reconnectTimeout;
 
-    boolean connected = false;
+    private volatile boolean connected = false;
 
-    AtomicBoolean invalidated = new AtomicBoolean(false);
+    private final AtomicBoolean invalidated = new AtomicBoolean(false);
 
-    private ServletOutputStream outputStream;
+    private volatile ServletOutputStream outputStream;
 
-    final boolean stream;
+    private final boolean stream;
 
     private final HttpSession session;
 

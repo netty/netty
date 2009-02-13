@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.ReadOnlyBufferException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
@@ -72,55 +73,49 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
 
     @Override
     public void discardReadBytes() {
-        rejectModification();
+        throw new ReadOnlyBufferException();
     }
 
     public void setByte(int index, byte value) {
-        rejectModification();
+        throw new ReadOnlyBufferException();
     }
 
     public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
-        rejectModification();
+        throw new ReadOnlyBufferException();
     }
 
     public void setBytes(int index, byte[] src, int srcIndex, int length) {
-        rejectModification();
+        throw new ReadOnlyBufferException();
     }
 
     public void setBytes(int index, ByteBuffer src) {
-        rejectModification();
+        throw new ReadOnlyBufferException();
     }
 
     public void setShort(int index, short value) {
-        rejectModification();
+        throw new ReadOnlyBufferException();
     }
 
     public void setMedium(int index, int value) {
-        rejectModification();
+        throw new ReadOnlyBufferException();
     }
 
     public void setInt(int index, int value) {
-        rejectModification();
+        throw new ReadOnlyBufferException();
     }
 
     public void setLong(int index, long value) {
-        rejectModification();
+        throw new ReadOnlyBufferException();
     }
 
     public int setBytes(int index, InputStream in, int length)
             throws IOException {
-        rejectModification();
-        return 0;
+        throw new ReadOnlyBufferException();
     }
 
     public int setBytes(int index, ScatteringByteChannel in, int length)
             throws IOException {
-        rejectModification();
-        return 0;
-    }
-
-    protected void rejectModification() {
-        throw new UnsupportedOperationException("read-only");
+        throw new ReadOnlyBufferException();
     }
 
     public int getBytes(int index, GatheringByteChannel out, int length)
