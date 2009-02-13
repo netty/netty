@@ -23,6 +23,7 @@
 package org.jboss.netty.channel.socket.nio;
 
 import java.net.Socket;
+import java.util.Map;
 
 import org.jboss.netty.channel.socket.DefaultSocketChannelConfig;
 import org.jboss.netty.logging.InternalLogger;
@@ -55,6 +56,20 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
     }
 
     @Override
+    public void setOptions(Map<String, Object> options) {
+        super.setOptions(options);
+        if (getWriteBufferHighWaterMark() < getWriteBufferLowWaterMark()) {
+            // Recover the integrity of the configuration with a sensible value.
+            setWriteBufferLowWaterMark0(getWriteBufferHighWaterMark() >>> 1);
+            // Notify the user about misconfiguration.
+            logger.warn(
+                    "writeBufferLowWaterMark cannot be greater than " +
+                    "writeBufferHighWaterMark; setting to the half of the " +
+                    "writeBufferHighWaterMark.");
+        }
+    }
+
+    @Override
     protected boolean setOption(String key, Object value) {
         if (super.setOption(key, value)) {
             return true;
@@ -63,11 +78,9 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
         if (key.equals("readWriteFair")) {
             setReadWriteFair(true); // Deprecated
         } else if (key.equals("writeBufferHighWaterMark")) {
-            // FIXME: low -> high
-            setWriteBufferHighWaterMark(ConversionUtil.toInt(value));
+            setWriteBufferHighWaterMark0(ConversionUtil.toInt(value));
         } else if (key.equals("writeBufferLowWaterMark")) {
-            // FIXME: high -> low
-            setWriteBufferLowWaterMark(ConversionUtil.toInt(value));
+            setWriteBufferLowWaterMark0(ConversionUtil.toInt(value));
         } else if (key.equals("writeSpinCount")) {
             setWriteSpinCount(ConversionUtil.toInt(value));
         } else if (key.equals("receiveBufferSizePredictor")) {
@@ -83,6 +96,16 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
     }
 
     public void setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        if (writeBufferHighWaterMark < getWriteBufferLowWaterMark()) {
+            throw new IllegalArgumentException(
+                    "writeBufferHighWaterMark cannot be less than " +
+                    "writeBufferLowWaterMark (" + getWriteBufferLowWaterMark() + "): " +
+                    writeBufferHighWaterMark);
+        }
+        setWriteBufferHighWaterMark0(writeBufferHighWaterMark);
+    }
+
+    private void setWriteBufferHighWaterMark0(int writeBufferHighWaterMark) {
         if (writeBufferHighWaterMark < 0) {
             throw new IllegalArgumentException(
                     "writeBufferHighWaterMark: " + writeBufferHighWaterMark);
@@ -95,6 +118,16 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
     }
 
     public void setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        if (writeBufferLowWaterMark > getWriteBufferHighWaterMark()) {
+            throw new IllegalArgumentException(
+                    "writeBufferLowWaterMark cannot be greater than " +
+                    "writeBufferHighWaterMark (" + getWriteBufferHighWaterMark() + "): " +
+                    writeBufferLowWaterMark);
+        }
+        setWriteBufferLowWaterMark0(writeBufferLowWaterMark);
+    }
+
+    private void setWriteBufferLowWaterMark0(int writeBufferLowWaterMark) {
         if (writeBufferLowWaterMark < 0) {
             throw new IllegalArgumentException(
                     "writeBufferLowWaterMark: " + writeBufferLowWaterMark);
