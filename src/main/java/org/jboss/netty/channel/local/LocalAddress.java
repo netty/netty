@@ -22,11 +22,6 @@
 package org.jboss.netty.channel.local;
 
 import java.net.SocketAddress;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.util.ConcurrentHashMap;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -35,54 +30,24 @@ import org.jboss.netty.util.ConcurrentHashMap;
  * @version $Rev$, $Date$
  */
 public final class LocalAddress extends SocketAddress implements Comparable<LocalAddress> {
+
     private static final long serialVersionUID = -3601961747680808645L;
 
-    // FIXME: Memory leak - use ConcurrentWeakValueHashMap
-    private static final ConcurrentMap<String, LocalAddress> addresses =
-        new ConcurrentHashMap<String, LocalAddress>();
-
-    private static final AtomicInteger nextEphemeralPort = new AtomicInteger();
-
-    public static LocalAddress getInstance(String id) {
-        if (id == null) {
-            throw new NullPointerException("id");
-        }
-        LocalAddress a = addresses.get(id);
-        if (a == null) {
-            a = new LocalAddress(id);
-            LocalAddress oldA = addresses.putIfAbsent(id, a);
-            if (oldA != null) {
-                a = oldA;
-            }
-        }
-
-        return a;
-    }
-
-    public static LocalAddress newEphemeralInstance() {
-        for (long i = (long) Integer.MAX_VALUE - Integer.MIN_VALUE; i >= 0; i --) {
-            String id = "ephemeral-" +
-                        Integer.toHexString(nextEphemeralPort.incrementAndGet());
-            LocalAddress a = new LocalAddress(id);
-            if (addresses.putIfAbsent(id, a) == null) {
-                return a;
-            }
-        }
-
-        // Not likely to reach here but let's be a paranoid.
-        throw new ChannelException("failed to allocate a local ephemeral port");
-    }
+    public static final String EPHEMERAL = "ephemeral";
 
     private final String id;
     private final boolean ephemeral;
 
-    private LocalAddress(String id) {
+    public LocalAddress(String id) {
         if (id == null) {
             throw new NullPointerException("id");
         }
+        id = id.trim().toLowerCase();
+        if (id.length() == 0) {
+            throw new IllegalArgumentException("empty id");
+        }
         this.id = id;
-
-        ephemeral = id.startsWith("ephemeral-");
+        ephemeral = id.equals("ephemeral");
     }
 
     public String getId() {
@@ -95,7 +60,11 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
 
     @Override
     public int hashCode() {
-        return id.hashCode();
+        if (ephemeral) {
+            return System.identityHashCode(this);
+        } else {
+            return id.hashCode();
+        }
     }
 
     @Override
@@ -104,7 +73,11 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
             return false;
         }
 
-        return getId().equals(((LocalAddress) o).getId());
+        if (ephemeral) {
+            return this == o;
+        } else {
+            return getId().equals(((LocalAddress) o).getId());
+        }
     }
 
     public int compareTo(LocalAddress o) {
@@ -114,10 +87,5 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
     @Override
     public String toString() {
         return "local:" + getId();
-    }
-
-    // Just in case someone serializes this class ..
-    private Object readResolve() {
-        return getInstance(getId());
     }
 }

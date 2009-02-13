@@ -48,7 +48,7 @@ public class LocalExample {
         ChannelFactory factory = new LocalServerChannelFactory();
         ServerBootstrap bootstrap = new ServerBootstrap(factory);
         EchoHandler handler = new EchoHandler();
-        LocalAddress socketAddress = LocalAddress.getInstance("1");
+        LocalAddress socketAddress = new LocalAddress("1");
         bootstrap.getPipeline().addLast("handler", handler);
         bootstrap.bind(socketAddress);
 
