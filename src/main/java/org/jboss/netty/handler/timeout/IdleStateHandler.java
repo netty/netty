@@ -144,6 +144,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
         lastReadTime = lastWriteTime = System.currentTimeMillis();
         readerIdleTimeoutTask = new ReaderIdleTimeoutTask(ctx);
         writerIdleTimeoutTask = new WriterIdleTimeoutTask(ctx);
+        allIdleTimeoutTask = new AllIdleTimeoutTask(ctx);
         if (readerIdleTimeMillis > 0) {
             readerIdleTimeout = timer.newTimeout(
                     readerIdleTimeoutTask, readerIdleTimeMillis, TimeUnit.MILLISECONDS);
