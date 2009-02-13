@@ -25,7 +25,7 @@ package org.jboss.netty.channel.local;
 import java.util.concurrent.ConcurrentMap;
 
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.util.ConcurrentIdentityHashMap;
+import org.jboss.netty.util.ConcurrentHashMap;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -35,7 +35,7 @@ import org.jboss.netty.util.ConcurrentIdentityHashMap;
 final class LocalChannelRegistry {
 
     private static final ConcurrentMap<LocalAddress, Channel> map =
-        new ConcurrentIdentityHashMap<LocalAddress, Channel>();
+        new ConcurrentHashMap<LocalAddress, Channel>();
 
     static boolean isRegistered(LocalAddress address) {
         return map.containsKey(address);
