@@ -27,7 +27,6 @@
  */
 package org.jboss.netty.util;
 
-import java.io.Serializable;
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
@@ -245,7 +244,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
         /**
          * The number of elements in this segment's region.
          */
-        volatile int count;
+        transient volatile int count;
 
         /**
          * Number of updates that alter the size of the table. This is used
@@ -265,7 +264,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
         /**
          * The per-segment table.
          */
-        volatile HashEntry<K, V>[] table;
+        transient volatile HashEntry<K, V>[] table;
 
         /**
          * The load factor for the hash table.  Even though this value is same
@@ -1225,9 +1224,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
     /*
      * This class is needed for JDK5 compatibility.
      */
-    static class SimpleEntry<K, V> implements Entry<K, V>, Serializable {
-
-        private static final long serialVersionUID = -7482812091037709145L;
+    static class SimpleEntry<K, V> implements Entry<K, V> {
 
         private final K key;
 
@@ -1289,8 +1286,6 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
      * changes to the underlying map.
      */
     final class WriteThroughEntry extends SimpleEntry<K, V> {
-
-        private static final long serialVersionUID = 7779181742399903646L;
 
         WriteThroughEntry(K k, V v) {
             super(k, v);

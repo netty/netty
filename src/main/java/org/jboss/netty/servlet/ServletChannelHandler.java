@@ -79,14 +79,15 @@ class ServletChannelHandler extends SimpleChannelHandler {
 
         ChannelBuffer buffer = (ChannelBuffer) e.getMessage();
         if (stream) {
+            byte[] b = null;
             reconnectLock.lock();
-            if (outputStream == null) {
-                awaitingEvents.add(e);
-                return;
-            }
-            byte[] b = new byte[buffer.readableBytes()];
-            buffer.readBytes(b);
             try {
+                if (outputStream == null) {
+                    awaitingEvents.add(e);
+                    return;
+                }
+                b = new byte[buffer.readableBytes()];
+                buffer.readBytes(b);
                 outputStream.write(b);
                 outputStream.flush();
                 e.getFuture().setSuccess();
@@ -175,8 +176,8 @@ class ServletChannelHandler extends SimpleChannelHandler {
 
     public boolean awaitReconnect() {
         reconnectLock.lock();
-        connected = false;
         try {
+            connected = false;
             reconnectCondition.await(reconnectTimeout, TimeUnit.MILLISECONDS);
         }
         catch (InterruptedException e) {

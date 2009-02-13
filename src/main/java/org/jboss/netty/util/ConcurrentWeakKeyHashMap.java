@@ -27,7 +27,6 @@
  */
 package org.jboss.netty.util;
 
-import java.io.Serializable;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
@@ -284,7 +283,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
         /**
          * The number of elements in this segment's region.
          */
-        volatile int count;
+        transient volatile int count;
 
         /**
          * Number of updates that alter the size of the table. This is used
@@ -304,7 +303,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
         /**
          * The per-segment table.
          */
-        volatile HashEntry<K, V>[] table;
+        transient volatile HashEntry<K, V>[] table;
 
         /**
          * The load factor for the hash table.  Even though this value is same
@@ -319,7 +318,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
          * The collected weak-key reference queue for this segment. This should
          * be (re)initialized whenever table is assigned,
          */
-        volatile ReferenceQueue<Object> refQueue;
+        transient volatile ReferenceQueue<Object> refQueue;
 
         Segment(int initialCapacity, float lf) {
             loadFactor = lf;
@@ -1305,9 +1304,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
     /*
      * This class is needed for JDK5 compatibility.
      */
-    static class SimpleEntry<K, V> implements Entry<K, V>, Serializable {
-
-        private static final long serialVersionUID = -2743063770440054676L;
+    static class SimpleEntry<K, V> implements Entry<K, V> {
 
         private final K key;
 
@@ -1369,8 +1366,6 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
      * changes to the underlying map.
      */
     final class WriteThroughEntry extends SimpleEntry<K, V> {
-
-        private static final long serialVersionUID = 856037622737854185L;
 
         WriteThroughEntry(K k, V v) {
             super(k, v);

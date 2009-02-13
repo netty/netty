@@ -27,7 +27,6 @@
  */
 package org.jboss.netty.util;
 
-import java.io.Serializable;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
@@ -284,7 +283,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
         /**
          * The number of elements in this segment's region.
          */
-        volatile int count;
+        transient volatile int count;
 
         /**
          * Number of updates that alter the size of the table. This is used
@@ -304,7 +303,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
         /**
          * The per-segment table.
          */
-        volatile HashEntry<K, V>[] table;
+        transient volatile HashEntry<K, V>[] table;
 
         /**
          * The load factor for the hash table.  Even though this value is same
@@ -1305,9 +1304,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
     /*
      * This class is needed for JDK5 compatibility.
      */
-    static class SimpleEntry<K, V> implements Entry<K, V>, Serializable {
-
-        private static final long serialVersionUID = 8931408205638274090L;
+    static class SimpleEntry<K, V> implements Entry<K, V> {
 
         private final K key;
 
@@ -1369,8 +1366,6 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
      * changes to the underlying map.
      */
     final class WriteThroughEntry extends SimpleEntry<K, V> {
-
-        private static final long serialVersionUID = 4475636861021292972L;
 
         WriteThroughEntry(K k, V v) {
             super(k, v);
