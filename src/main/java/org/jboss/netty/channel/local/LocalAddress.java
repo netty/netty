@@ -112,7 +112,7 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
 
     @Override
     public String toString() {
-        return getId();
+        return "local:" + getId();
     }
 
     // Just in case someone serializes this class ..
