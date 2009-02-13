@@ -31,6 +31,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -46,6 +47,8 @@ import org.jboss.netty.util.ConcurrentHashMap;
  */
 public class DefaultChannelGroup extends AbstractSet<Channel> implements ChannelGroup {
 
+    private static final AtomicInteger nextId = new AtomicInteger();
+
     private final String name;
     private final ConcurrentMap<UUID, Channel> serverChannels = new ConcurrentHashMap<UUID, Channel>();
     private final ConcurrentMap<UUID, Channel> nonServerChannels = new ConcurrentHashMap<UUID, Channel>();
@@ -54,6 +57,10 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             remove(future.getChannel());
         }
     };
+
+    public DefaultChannelGroup() {
+        this("group-0x" + Integer.toHexString(nextId.incrementAndGet()));
+    }
 
     public DefaultChannelGroup(String name) {
         if (name == null) {
