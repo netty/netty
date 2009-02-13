@@ -89,7 +89,8 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(MemoryAwareThreadPoolExecutor.class);
 
-    private static final int MISUSE_WARNING_THRESHOLD = 1024;
+    // I'd say 64 active event thread pools are obvious misuse.
+    private static final int MISUSE_WARNING_THRESHOLD = 64;
     private static final AtomicInteger activeInstances = new AtomicInteger();
     private static final AtomicBoolean loggedMisuseWarning = new AtomicBoolean();
 
@@ -205,8 +206,9 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         int activeInstances = MemoryAwareThreadPoolExecutor.activeInstances.incrementAndGet();
         if (activeInstances >= MISUSE_WARNING_THRESHOLD &&
             loggedMisuseWarning.compareAndSet(false, true)) {
-            logger.warn(
-                    "There are too many active " + getClass().getSimpleName() +
+            logger.debug(
+                    "There are too many active " +
+                    MemoryAwareThreadPoolExecutor.class.getSimpleName() +
                     " instances (" + activeInstances + ") - you should share " +
                     "the small number of instances to avoid excessive resource " +
                     "consumption.");
