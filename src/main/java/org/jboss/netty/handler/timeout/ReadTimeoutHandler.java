@@ -41,7 +41,9 @@ import org.jboss.netty.util.ExternalResourceReleasable;
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("one")
-public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler, ExternalResourceReleasable {
+public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
+                                implements LifeCycleAwareChannelHandler,
+                                           ExternalResourceReleasable {
 
     static final ReadTimeoutException EXCEPTION = new ReadTimeoutException();
 

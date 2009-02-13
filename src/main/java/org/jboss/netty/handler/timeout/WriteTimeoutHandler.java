@@ -41,7 +41,8 @@ import org.jboss.netty.util.ExternalResourceReleasable;
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("all")
-public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler implements ExternalResourceReleasable {
+public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
+                                 implements ExternalResourceReleasable {
 
     static final WriteTimeoutException EXCEPTION = new WriteTimeoutException();
 
