@@ -66,7 +66,7 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
 
     private final Object bigEndianLock = new Object();
     private final Object littleEndianLock = new Object();
-    private final int preallocatedBufferCapacity = 1048576; // FIXME Magic number
+    private final int preallocatedBufferCapacity;
     private ChannelBuffer preallocatedBigEndianBuffer = null;
     private int preallocatedBigEndianBufferPosition;
     private ChannelBuffer preallocatedLittleEndianBuffer = null;
@@ -77,7 +77,15 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
      * {@link ByteOrder#BIG_ENDIAN}.
      */
     public DirectChannelBufferFactory() {
-        super();
+        this(ByteOrder.BIG_ENDIAN);
+    }
+
+    /**
+     * Creates a new factory whose default {@link ByteOrder} is
+     * {@link ByteOrder#BIG_ENDIAN}.
+     */
+    public DirectChannelBufferFactory(int preallocatedBufferCapacity) {
+        this(ByteOrder.BIG_ENDIAN, preallocatedBufferCapacity);
     }
 
     /**
@@ -86,7 +94,22 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
      * @param defaultOrder the default {@link ByteOrder} of this factory
      */
     public DirectChannelBufferFactory(ByteOrder defaultOrder) {
+        this(defaultOrder, 1048576);
+    }
+
+    /**
+     * Creates a new factory with the specified default {@link ByteOrder}.
+     *
+     * @param defaultOrder the default {@link ByteOrder} of this factory
+     */
+    public DirectChannelBufferFactory(ByteOrder defaultOrder, int preallocatedBufferCapacity) {
         super(defaultOrder);
+        if (preallocatedBufferCapacity <= 0) {
+            throw new IllegalArgumentException(
+                    "preallocatedBufferCapacity must be greater than 0: " + preallocatedBufferCapacity);
+        }
+
+        this.preallocatedBufferCapacity = preallocatedBufferCapacity;
     }
 
     public ChannelBuffer getBuffer(ByteOrder order, int capacity) {
