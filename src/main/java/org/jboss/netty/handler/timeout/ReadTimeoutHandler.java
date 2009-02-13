@@ -51,7 +51,7 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler implements 
     private volatile ReadTimeoutTask task;
     volatile long lastReadTime;
 
-    public ReadTimeoutHandler(Timer timer, long timeoutSeconds) {
+    public ReadTimeoutHandler(Timer timer, int timeoutSeconds) {
         this(timer, timeoutSeconds, TimeUnit.SECONDS);
     }
 

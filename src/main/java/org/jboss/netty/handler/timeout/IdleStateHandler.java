@@ -63,9 +63,9 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
 
     public IdleStateHandler(
             Timer timer,
-            long readerIdleTimeSeconds,
-            long writerIdleTimeSeconds,
-            long allIdleTimeSeconds) {
+            int readerIdleTimeSeconds,
+            int writerIdleTimeSeconds,
+            int allIdleTimeSeconds) {
 
         this(timer,
              readerIdleTimeSeconds, writerIdleTimeSeconds, allIdleTimeSeconds,

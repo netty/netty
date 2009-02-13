@@ -48,7 +48,7 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler implemen
     private final Timer timer;
     private final long timeoutMillis;
 
-    public WriteTimeoutHandler(Timer timer, long timeoutSeconds) {
+    public WriteTimeoutHandler(Timer timer, int timeoutSeconds) {
         this(timer, timeoutSeconds, TimeUnit.SECONDS);
     }
 
