@@ -191,9 +191,15 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     private Object reset() {
-        // TODO: Do we need to set message to null here?
+        HttpMessage message = this.message;
+        ChannelBuffer content = this.content;
+        if (content == null) {
+            content = ChannelBuffers.EMPTY_BUFFER;
+        }
         message.setContent(content);
-        content = null;
+
+        this.message = null;
+        this.content = null;
         checkpoint(State.SKIP_CONTROL_CHARS);
         return message;
     }
