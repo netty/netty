@@ -318,7 +318,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
          * The collected weak-key reference queue for this segment. This should
          * be (re)initialized whenever table is assigned,
          */
-        volatile ReferenceQueue<Object> refQueue;
+        transient volatile ReferenceQueue<Object> refQueue;
 
         Segment(int initialCapacity, float lf) {
             loadFactor = lf;
