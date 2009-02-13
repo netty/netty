@@ -53,6 +53,10 @@ public class HashedWheelTimer implements Timer {
         InternalLoggerFactory.getInstance(HashedWheelTimer.class);
     private static final AtomicInteger id = new AtomicInteger();
 
+    private static final int MISUSE_WARNING_THRESHOLD = 1024;
+    private static final AtomicInteger activeInstances = new AtomicInteger();
+    private static final AtomicBoolean loggedMisuseWarning = new AtomicBoolean();
+
     private final Worker worker = new Worker();
     final Thread workerThread;
     final AtomicBoolean shutdown = new AtomicBoolean();
@@ -125,6 +129,17 @@ public class HashedWheelTimer implements Timer {
 
         workerThread = threadFactory.newThread(new ThreadRenamingRunnable(
                         worker, "Hashed wheel timer #" + id.incrementAndGet()));
+
+        // Misuse check
+        int activeInstances = HashedWheelTimer.activeInstances.incrementAndGet();
+        if (activeInstances >= MISUSE_WARNING_THRESHOLD &&
+            loggedMisuseWarning.compareAndSet(false, true)) {
+            logger.warn(
+                    "There are too many active " + getClass().getSimpleName() +
+                    " instances (" + activeInstances + ") - you should share " +
+                    "the small number of instances to avoid excessive resource " +
+                    "consumption.");
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -187,6 +202,8 @@ public class HashedWheelTimer implements Timer {
                 // Ignore
             }
         }
+
+        activeInstances.decrementAndGet();
 
         Set<Timeout> unprocessedTimeouts = new HashSet<Timeout>();
         for (Set<HashedWheelTimeout> bucket: wheel) {

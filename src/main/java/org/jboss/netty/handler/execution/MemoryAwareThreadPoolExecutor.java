@@ -32,6 +32,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.jboss.netty.channel.Channel;
@@ -86,6 +88,10 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(MemoryAwareThreadPoolExecutor.class);
+
+    private static final int MISUSE_WARNING_THRESHOLD = 1024;
+    private static final AtomicInteger activeInstances = new AtomicInteger();
+    private static final AtomicBoolean loggedMisuseWarning = new AtomicBoolean();
 
     private volatile Settings settings;
 
@@ -194,6 +200,23 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
         settings = new Settings(
                 objectSizeEstimator, maxChannelMemorySize, maxTotalMemorySize);
+
+        // Misuse check
+        int activeInstances = MemoryAwareThreadPoolExecutor.activeInstances.incrementAndGet();
+        if (activeInstances >= MISUSE_WARNING_THRESHOLD &&
+            loggedMisuseWarning.compareAndSet(false, true)) {
+            logger.warn(
+                    "There are too many active " + getClass().getSimpleName() +
+                    " instances (" + activeInstances + ") - you should share " +
+                    "the small number of instances to avoid excessive resource " +
+                    "consumption.");
+        }
+    }
+
+    @Override
+    protected void terminated() {
+        super.terminated();
+        activeInstances.decrementAndGet();
     }
 
     /**
