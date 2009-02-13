@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.util.ConcurrentWeakHashMap;
+import org.jboss.netty.util.ConcurrentHashMap;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -37,8 +37,9 @@ import org.jboss.netty.util.ConcurrentWeakHashMap;
 public final class LocalAddress extends SocketAddress implements Comparable<LocalAddress> {
     private static final long serialVersionUID = -3601961747680808645L;
 
+    // FIXME: Memory leak - use ConcurrentWeakValueHashMap
     private static final ConcurrentMap<String, LocalAddress> addresses =
-        new ConcurrentWeakHashMap<String, LocalAddress>();
+        new ConcurrentHashMap<String, LocalAddress>();
 
     private static final AtomicInteger nextEphemeralPort = new AtomicInteger();
 

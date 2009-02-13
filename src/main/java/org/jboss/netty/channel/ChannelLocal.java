@@ -24,7 +24,7 @@ package org.jboss.netty.channel;
 
 import java.util.concurrent.ConcurrentMap;
 
-import org.jboss.netty.util.ConcurrentIdentityWeakHashMap;
+import org.jboss.netty.util.ConcurrentIdentityWeakKeyHashMap;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -35,7 +35,7 @@ import org.jboss.netty.util.ConcurrentIdentityWeakHashMap;
  */
 public class ChannelLocal<T> {
     private final ConcurrentMap<Channel, T> map =
-        new ConcurrentIdentityWeakHashMap<Channel, T>();
+        new ConcurrentIdentityWeakKeyHashMap<Channel, T>();
 
     /**
      * Creates a {@link Channel} local variable.

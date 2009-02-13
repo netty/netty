@@ -37,6 +37,7 @@ import org.jboss.netty.util.ConcurrentHashMap;
  */
 public class ChannelGroupFactory {
 
+    // FIXME: Memory leak - use ConcurrentWeakValueHashMap
     private static final ConcurrentMap<String, ChannelGroup> groups =
         new ConcurrentHashMap<String, ChannelGroup>();
 

@@ -58,7 +58,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  */
-public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> {
+public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> {
 
     /*
      * The basic strategy is to subdivide the table among Segments,
@@ -672,7 +672,7 @@ public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V>
      *                                  the load factor or concurrencyLevel are
      *                                  nonpositive.
      */
-    public ConcurrentIdentityWeakHashMap(
+    public ConcurrentIdentityWeakKeyHashMap(
             int initialCapacity, float loadFactor, int concurrencyLevel) {
         if (!(loadFactor > 0) || initialCapacity < 0 || concurrencyLevel <= 0) {
             throw new IllegalArgumentException();
@@ -724,7 +724,7 @@ public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V>
      *                                  negative or the load factor is
      *                                  nonpositive
      */
-    public ConcurrentIdentityWeakHashMap(int initialCapacity, float loadFactor) {
+    public ConcurrentIdentityWeakKeyHashMap(int initialCapacity, float loadFactor) {
         this(initialCapacity, loadFactor, DEFAULT_CONCURRENCY_LEVEL);
     }
 
@@ -738,7 +738,7 @@ public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V>
      * @throws IllegalArgumentException if the initial capacity of elements is
      *                                  negative.
      */
-    public ConcurrentIdentityWeakHashMap(int initialCapacity) {
+    public ConcurrentIdentityWeakKeyHashMap(int initialCapacity) {
         this(initialCapacity, DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL);
     }
 
@@ -747,7 +747,7 @@ public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V>
      * types (weak keys, strong values), default load factor (0.75) and
      * concurrencyLevel (16).
      */
-    public ConcurrentIdentityWeakHashMap() {
+    public ConcurrentIdentityWeakKeyHashMap() {
         this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL);
     }
 
@@ -759,7 +759,7 @@ public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V>
      *
      * @param m the map
      */
-    public ConcurrentIdentityWeakHashMap(Map<? extends K, ? extends V> m) {
+    public ConcurrentIdentityWeakKeyHashMap(Map<? extends K, ? extends V> m) {
         this(Math.max((int) (m.size() / DEFAULT_LOAD_FACTOR) + 1,
              DEFAULT_INITIAL_CAPACITY), DEFAULT_LOAD_FACTOR,
              DEFAULT_CONCURRENCY_LEVEL);
@@ -1273,7 +1273,7 @@ public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V>
             if (lastReturned == null) {
                 throw new IllegalStateException();
             }
-            ConcurrentIdentityWeakHashMap.this.remove(currentKey);
+            ConcurrentIdentityWeakKeyHashMap.this.remove(currentKey);
             lastReturned = null;
         }
     }
@@ -1391,7 +1391,7 @@ public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V>
                 throw new NullPointerException();
             }
             V v = super.setValue(value);
-            ConcurrentIdentityWeakHashMap.this.put(getKey(), value);
+            ConcurrentIdentityWeakKeyHashMap.this.put(getKey(), value);
             return v;
         }
 
@@ -1414,28 +1414,28 @@ public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V>
 
         @Override
         public int size() {
-            return ConcurrentIdentityWeakHashMap.this.size();
+            return ConcurrentIdentityWeakKeyHashMap.this.size();
         }
 
         @Override
         public boolean isEmpty() {
-            return ConcurrentIdentityWeakHashMap.this.isEmpty();
+            return ConcurrentIdentityWeakKeyHashMap.this.isEmpty();
         }
 
         @Override
         public boolean contains(Object o) {
-            return ConcurrentIdentityWeakHashMap.this.containsKey(o);
+            return ConcurrentIdentityWeakKeyHashMap.this.containsKey(o);
         }
 
         @Override
         public boolean remove(Object o) {
-            return ConcurrentIdentityWeakHashMap.this.remove(o) != null;
+            return ConcurrentIdentityWeakKeyHashMap.this.remove(o) != null;
 
         }
 
         @Override
         public void clear() {
-            ConcurrentIdentityWeakHashMap.this.clear();
+            ConcurrentIdentityWeakKeyHashMap.this.clear();
         }
     }
 
@@ -1447,22 +1447,22 @@ public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V>
 
         @Override
         public int size() {
-            return ConcurrentIdentityWeakHashMap.this.size();
+            return ConcurrentIdentityWeakKeyHashMap.this.size();
         }
 
         @Override
         public boolean isEmpty() {
-            return ConcurrentIdentityWeakHashMap.this.isEmpty();
+            return ConcurrentIdentityWeakKeyHashMap.this.isEmpty();
         }
 
         @Override
         public boolean contains(Object o) {
-            return ConcurrentIdentityWeakHashMap.this.containsValue(o);
+            return ConcurrentIdentityWeakKeyHashMap.this.containsValue(o);
         }
 
         @Override
         public void clear() {
-            ConcurrentIdentityWeakHashMap.this.clear();
+            ConcurrentIdentityWeakKeyHashMap.this.clear();
         }
     }
 
@@ -1478,7 +1478,7 @@ public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V>
                 return false;
             }
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
-            V v = ConcurrentIdentityWeakHashMap.this.get(e.getKey());
+            V v = ConcurrentIdentityWeakKeyHashMap.this.get(e.getKey());
             return v != null && v.equals(e.getValue());
         }
 
@@ -1488,22 +1488,22 @@ public final class ConcurrentIdentityWeakHashMap<K, V> extends AbstractMap<K, V>
                 return false;
             }
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
-            return ConcurrentIdentityWeakHashMap.this.remove(e.getKey(), e.getValue());
+            return ConcurrentIdentityWeakKeyHashMap.this.remove(e.getKey(), e.getValue());
         }
 
         @Override
         public int size() {
-            return ConcurrentIdentityWeakHashMap.this.size();
+            return ConcurrentIdentityWeakKeyHashMap.this.size();
         }
 
         @Override
         public boolean isEmpty() {
-            return ConcurrentIdentityWeakHashMap.this.isEmpty();
+            return ConcurrentIdentityWeakKeyHashMap.this.isEmpty();
         }
 
         @Override
         public void clear() {
-            ConcurrentIdentityWeakHashMap.this.clear();
+            ConcurrentIdentityWeakKeyHashMap.this.clear();
         }
     }
 }

@@ -31,7 +31,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.util.ConcurrentHashMap;
+import org.jboss.netty.util.ConcurrentIdentityWeakKeyHashMap;
 
 /**
  * The default {@link ObjectSizeEstimator} implementation for general purpose.
@@ -45,7 +45,7 @@ import org.jboss.netty.util.ConcurrentHashMap;
 public class DefaultObjectSizeEstimator implements ObjectSizeEstimator {
 
     private final ConcurrentMap<Class<?>, Integer> class2size =
-        new ConcurrentHashMap<Class<?>, Integer>();
+        new ConcurrentIdentityWeakKeyHashMap<Class<?>, Integer>();
 
     /**
      * Creates a new instance.

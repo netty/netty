@@ -58,7 +58,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  */
-public final class ConcurrentWeakHashMap<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> {
+public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> {
 
     /*
      * The basic strategy is to subdivide the table among Segments,
@@ -672,7 +672,7 @@ public final class ConcurrentWeakHashMap<K, V> extends AbstractMap<K, V> impleme
      *                                  the load factor or concurrencyLevel are
      *                                  nonpositive.
      */
-    public ConcurrentWeakHashMap(
+    public ConcurrentWeakKeyHashMap(
             int initialCapacity, float loadFactor, int concurrencyLevel) {
         if (!(loadFactor > 0) || initialCapacity < 0 || concurrencyLevel <= 0) {
             throw new IllegalArgumentException();
@@ -724,7 +724,7 @@ public final class ConcurrentWeakHashMap<K, V> extends AbstractMap<K, V> impleme
      *                                  negative or the load factor is
      *                                  nonpositive
      */
-    public ConcurrentWeakHashMap(int initialCapacity, float loadFactor) {
+    public ConcurrentWeakKeyHashMap(int initialCapacity, float loadFactor) {
         this(initialCapacity, loadFactor, DEFAULT_CONCURRENCY_LEVEL);
     }
 
@@ -738,7 +738,7 @@ public final class ConcurrentWeakHashMap<K, V> extends AbstractMap<K, V> impleme
      * @throws IllegalArgumentException if the initial capacity of elements is
      *                                  negative.
      */
-    public ConcurrentWeakHashMap(int initialCapacity) {
+    public ConcurrentWeakKeyHashMap(int initialCapacity) {
         this(initialCapacity, DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL);
     }
 
@@ -747,7 +747,7 @@ public final class ConcurrentWeakHashMap<K, V> extends AbstractMap<K, V> impleme
      * types (weak keys, strong values), default load factor (0.75) and
      * concurrencyLevel (16).
      */
-    public ConcurrentWeakHashMap() {
+    public ConcurrentWeakKeyHashMap() {
         this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL);
     }
 
@@ -759,7 +759,7 @@ public final class ConcurrentWeakHashMap<K, V> extends AbstractMap<K, V> impleme
      *
      * @param m the map
      */
-    public ConcurrentWeakHashMap(Map<? extends K, ? extends V> m) {
+    public ConcurrentWeakKeyHashMap(Map<? extends K, ? extends V> m) {
         this(Math.max((int) (m.size() / DEFAULT_LOAD_FACTOR) + 1,
              DEFAULT_INITIAL_CAPACITY), DEFAULT_LOAD_FACTOR,
              DEFAULT_CONCURRENCY_LEVEL);
@@ -1273,7 +1273,7 @@ public final class ConcurrentWeakHashMap<K, V> extends AbstractMap<K, V> impleme
             if (lastReturned == null) {
                 throw new IllegalStateException();
             }
-            ConcurrentWeakHashMap.this.remove(currentKey);
+            ConcurrentWeakKeyHashMap.this.remove(currentKey);
             lastReturned = null;
         }
     }
@@ -1391,7 +1391,7 @@ public final class ConcurrentWeakHashMap<K, V> extends AbstractMap<K, V> impleme
                 throw new NullPointerException();
             }
             V v = super.setValue(value);
-            ConcurrentWeakHashMap.this.put(getKey(), value);
+            ConcurrentWeakKeyHashMap.this.put(getKey(), value);
             return v;
         }
 
@@ -1414,28 +1414,28 @@ public final class ConcurrentWeakHashMap<K, V> extends AbstractMap<K, V> impleme
 
         @Override
         public int size() {
-            return ConcurrentWeakHashMap.this.size();
+            return ConcurrentWeakKeyHashMap.this.size();
         }
 
         @Override
         public boolean isEmpty() {
-            return ConcurrentWeakHashMap.this.isEmpty();
+            return ConcurrentWeakKeyHashMap.this.isEmpty();
         }
 
         @Override
         public boolean contains(Object o) {
-            return ConcurrentWeakHashMap.this.containsKey(o);
+            return ConcurrentWeakKeyHashMap.this.containsKey(o);
         }
 
         @Override
         public boolean remove(Object o) {
-            return ConcurrentWeakHashMap.this.remove(o) != null;
+            return ConcurrentWeakKeyHashMap.this.remove(o) != null;
 
         }
 
         @Override
         public void clear() {
-            ConcurrentWeakHashMap.this.clear();
+            ConcurrentWeakKeyHashMap.this.clear();
         }
     }
 
@@ -1447,22 +1447,22 @@ public final class ConcurrentWeakHashMap<K, V> extends AbstractMap<K, V> impleme
 
         @Override
         public int size() {
-            return ConcurrentWeakHashMap.this.size();
+            return ConcurrentWeakKeyHashMap.this.size();
         }
 
         @Override
         public boolean isEmpty() {
-            return ConcurrentWeakHashMap.this.isEmpty();
+            return ConcurrentWeakKeyHashMap.this.isEmpty();
         }
 
         @Override
         public boolean contains(Object o) {
-            return ConcurrentWeakHashMap.this.containsValue(o);
+            return ConcurrentWeakKeyHashMap.this.containsValue(o);
         }
 
         @Override
         public void clear() {
-            ConcurrentWeakHashMap.this.clear();
+            ConcurrentWeakKeyHashMap.this.clear();
         }
     }
 
@@ -1478,7 +1478,7 @@ public final class ConcurrentWeakHashMap<K, V> extends AbstractMap<K, V> impleme
                 return false;
             }
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
-            V v = ConcurrentWeakHashMap.this.get(e.getKey());
+            V v = ConcurrentWeakKeyHashMap.this.get(e.getKey());
             return v != null && v.equals(e.getValue());
         }
 
@@ -1488,22 +1488,22 @@ public final class ConcurrentWeakHashMap<K, V> extends AbstractMap<K, V> impleme
                 return false;
             }
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
-            return ConcurrentWeakHashMap.this.remove(e.getKey(), e.getValue());
+            return ConcurrentWeakKeyHashMap.this.remove(e.getKey(), e.getValue());
         }
 
         @Override
         public int size() {
-            return ConcurrentWeakHashMap.this.size();
+            return ConcurrentWeakKeyHashMap.this.size();
         }
 
         @Override
         public boolean isEmpty() {
-            return ConcurrentWeakHashMap.this.isEmpty();
+            return ConcurrentWeakKeyHashMap.this.isEmpty();
         }
 
         @Override
         public void clear() {
-            ConcurrentWeakHashMap.this.clear();
+            ConcurrentWeakKeyHashMap.this.clear();
         }
     }
 }
