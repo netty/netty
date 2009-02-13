@@ -86,3 +86,35 @@ which can be obtained at:
   * HOMEPAGE:
     * http://anonsvn.jboss.org/repos/common/common-logging-spi/
 
+This product optionally depends on 'JBoss Microcontainer', which can be
+obtained at:
+
+  * LICENSE:
+    * license/LICENSE.jboss-microcontainer.txt (GNU LGPL 2.1)
+  * HOMEPAGE:
+    * http://www.jboss.org/jbossmc/
+
+This product optionally depends on 'Apache Felix', an open source OSGi
+framework implementation, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.felix.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * http://felix.apache.org/
+
+This product optionally depends on 'Google Guice', a lightweight dependency
+injection framework, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.guice.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * http://code.google.com/p/google-guice/
+
+This product optionally depends on 'Spring Framework', which can be
+obtained at:
+
+  * LICENSE:
+    * license/LICENSE.spring.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * http://www.springframework.org/
+
