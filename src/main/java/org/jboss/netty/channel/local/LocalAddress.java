@@ -38,6 +38,10 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
     private final String id;
     private final boolean ephemeral;
 
+    public LocalAddress(int id) {
+        this(String.valueOf(id));
+    }
+
     public LocalAddress(String id) {
         if (id == null) {
             throw new NullPointerException("id");
