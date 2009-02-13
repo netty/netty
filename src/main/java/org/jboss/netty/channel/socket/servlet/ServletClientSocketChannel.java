@@ -193,7 +193,6 @@ class ServletClientSocketChannel extends AbstractChannel
             if (closed) {
                 throw e;
             }
-            lock.lock();
             if (lock.tryLock()) {
                 try {
                     connectAndSendHeaders(true, getRemoteAddress());
