@@ -371,11 +371,11 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             try {
                 result = decode(context, channel, replayable, state);
                 if (result == null) {
-                    if (oldReaderIndex == cumulation.readerIndex()) {
+                    if (oldReaderIndex == cumulation.readerIndex() && oldState == state) {
                         throw new IllegalStateException(
-                                "null cannot be returned if no data is consumed.");
+                                "null cannot be returned if no data is consumed and state didn't change.");
                     } else {
-                        // Previous data has been discarded.
+                        // Previous data has been discarded or caused state transition.
                         // Probably it is reading on.
                         continue;
                     }
