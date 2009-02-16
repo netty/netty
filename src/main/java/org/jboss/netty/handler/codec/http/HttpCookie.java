@@ -21,42 +21,25 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-
 /**
- * decodes an http request.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
- * @version $Rev$, $Date$
+ * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpRequestDecoder extends HttpMessageDecoder {
+public class HttpCookie {
 
-    public HttpRequestDecoder() {
-        super();
+    private final String name;
+
+    private final String value;
+
+    public HttpCookie(String name, String value) {
+        this.name = name;
+        this.value = value;
     }
 
-    public HttpRequestDecoder(boolean mergeChunks) {
-        super(mergeChunks);
+    public String getName() {
+        return name;
     }
 
-    @Override
-    protected void readInitial(ChannelBuffer buffer) throws Exception{
-        String line = readIntoCurrentLine(buffer);
-        String[] split = splitInitial(line);
-        message = new DefaultHttpRequest(
-                HttpVersion.valueOf(split[2]), HttpMethod.valueOf(split[0]), split[1]);
-        checkpoint(State.READ_HEADER);
-    }
-
-    @Override
-    protected boolean isDecodingRequest() {
-        return true;
-    }
-
-    @Override
-    protected String getCookieHeaderName() {
-        return "Cookie";
+    public String getValue() {
+        return value;
     }
 }

@@ -41,13 +41,15 @@ public class ServletClientSocketChannelFactory implements ClientSocketChannelFac
     private final Executor workerExecutor;
     private final ChannelSink sink;
     private final URL url;
+    ClientSocketChannelFactory clientSocketChannelFactory;
 
     /**
      *
      * @param workerExecutor
      */
-    public ServletClientSocketChannelFactory(Executor workerExecutor, URL url) {
+    public ServletClientSocketChannelFactory(ClientSocketChannelFactory clientSocketChannelFactory, Executor workerExecutor, URL url) {
         this(url, workerExecutor, Runtime.getRuntime().availableProcessors());
+       this.clientSocketChannelFactory = clientSocketChannelFactory;
     }
 
     /**
@@ -80,7 +82,7 @@ public class ServletClientSocketChannelFactory implements ClientSocketChannelFac
     }
 
     public SocketChannel newChannel(ChannelPipeline pipeline) {
-        return new ServletClientSocketChannel(this, pipeline, sink, url);
+        return new ServletClientSocketChannel(this, pipeline, sink, url, clientSocketChannelFactory);
     }
 
     public void releaseExternalResources() {

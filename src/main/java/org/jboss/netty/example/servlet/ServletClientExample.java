@@ -33,6 +33,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.socket.servlet.ServletClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
@@ -86,7 +87,7 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
 public class ServletClientExample {
     public static void main(String[] args) throws Exception {
         URL url = new URL("http", "localhost", 8080, "/netty/nettyServlet");
-        ServletClientSocketChannelFactory factory = new ServletClientSocketChannelFactory(Executors.newCachedThreadPool(), url);
+        ServletClientSocketChannelFactory factory = new ServletClientSocketChannelFactory(new OioClientSocketChannelFactory(Executors.newCachedThreadPool()), Executors.newCachedThreadPool(), url);
         ClientBootstrap bootstrap = new ClientBootstrap(factory);
         bootstrap.getPipeline().addLast("decoder", new StringDecoder());
         bootstrap.getPipeline().addLast("encoder", new StringEncoder());

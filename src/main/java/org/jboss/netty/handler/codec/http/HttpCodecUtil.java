@@ -58,6 +58,11 @@ class HttpCodecUtil {
     */
     static final byte COLON = 58;
 
+    /**
+    * Semicolon ';'
+    */
+    static final byte SEMICOLON = 59;
+
     private HttpCodecUtil() {
         super();
     }

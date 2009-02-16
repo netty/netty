@@ -23,6 +23,7 @@ package org.jboss.netty.handler.codec.http;
 
 import java.util.List;
 import java.util.Set;
+import java.util.Collection;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 
@@ -64,4 +65,13 @@ public interface HttpMessage {
     boolean isChunked();
 
     void clearHeaders();
+    
+    void addCookie(HttpCookie cookie);
+
+    HttpCookie getCookie(String name);
+
+    Collection<HttpCookie> getCookies();
+
+    Collection<String> getCookieNames();
+
 }

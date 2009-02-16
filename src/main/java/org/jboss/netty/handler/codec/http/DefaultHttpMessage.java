@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.Collection;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 
@@ -44,6 +45,7 @@ public class DefaultHttpMessage implements HttpMessage {
 
     private final HttpVersion version;
     private final Map<String, List<String>> headers = new TreeMap<String, List<String>>(caseIgnoringComparator);
+    private final Map<String, HttpCookie> cookies = new TreeMap<String, HttpCookie>(caseIgnoringComparator);
     private ChannelBuffer content;
 
     protected DefaultHttpMessage(final HttpVersion version) {
@@ -138,6 +140,21 @@ public class DefaultHttpMessage implements HttpMessage {
 
     public ChannelBuffer getContent() {
         return content;
+    }
+
+    public void addCookie(HttpCookie cookie) {
+        cookies.put(cookie.getName(), cookie);
+    }
+
+    public HttpCookie getCookie(String name) {
+        return cookies.get(name);
+    }
+
+    public Collection<HttpCookie> getCookies() {
+        return cookies.values();
+    }
+    public Collection<String> getCookieNames() {
+        return cookies.keySet();
     }
 
     private static final class CaseIgnoringComparator

@@ -22,29 +22,36 @@
  */
 package org.jboss.netty.channel.socket.servlet;
 
-import static org.jboss.netty.channel.Channels.*;
-import static org.jboss.netty.channel.socket.servlet.ServletClientSocketPipelineSink.*;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PushbackInputStream;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketAddress;
-import java.net.SocketException;
-import java.net.URL;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
+import static org.jboss.netty.channel.Channels.fireChannelOpen;
+import static org.jboss.netty.channel.Channels.pipeline;
+import org.jboss.netty.channel.DefaultChannelPipeline;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
+import static org.jboss.netty.channel.socket.servlet.ServletClientSocketPipelineSink.LINE_TERMINATOR;
+import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
+import org.jboss.netty.handler.codec.frame.Delimiters;
+import org.jboss.netty.util.LinkedTransferQueue;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.net.URL;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.Lock;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -52,58 +59,67 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  * @version $Rev$, $Date$
  */
 class ServletClientSocketChannel extends AbstractChannel
-      implements org.jboss.netty.channel.socket.SocketChannel {
+        implements org.jboss.netty.channel.socket.SocketChannel {
 
-    private final Lock lock = new ReentrantLock();
+    private final Lock reconnectLock = new ReentrantLock();
+
+    private volatile boolean awaitingInitialResponse = true;
 
     private final Object writeLock = new Object();
 
-    private Socket socket;
-
-    private ServletSocketChannelConfig config;
-
     volatile Thread workerThread;
-
-    private volatile PushbackInputStream in;
-
-    private volatile OutputStream out;
 
     private String sessionId;
 
     private boolean closed = false;
 
+    LinkedTransferQueue<byte[]> messages = new LinkedTransferQueue<byte[]>();
+
     private final URL url;
 
+    private ClientSocketChannelFactory clientSocketChannelFactory;
+
+    private SocketChannel channel;
+
+    private DelimiterBasedFrameDecoder handler = new DelimiterBasedFrameDecoder(8092, ChannelBuffers.wrappedBuffer(new byte[] { '\r', '\n' }));
+
+    private ServletClientSocketChannel.ServletChannelHandler servletHandler = new ServletChannelHandler();
+
     ServletClientSocketChannel(
-          ChannelFactory factory,
-          ChannelPipeline pipeline,
-          ChannelSink sink, URL url) {
+            ChannelFactory factory,
+            ChannelPipeline pipeline,
+            ChannelSink sink, URL url, ClientSocketChannelFactory clientSocketChannelFactory) {
 
         super(null, factory, pipeline, sink);
         this.url = url;
-        socket = new Socket();
-        config = new ServletSocketChannelConfig(socket);
+        this.clientSocketChannelFactory = clientSocketChannelFactory;
+
+        DefaultChannelPipeline channelPipeline = new DefaultChannelPipeline();
+        channelPipeline.addLast("DelimiterBasedFrameDecoder", handler);
+        channelPipeline.addLast("servletHandler", servletHandler);
+        channel = clientSocketChannelFactory.newChannel(channelPipeline);
+
         fireChannelOpen(this);
     }
 
     public SocketChannelConfig getConfig() {
-        return config;
+        return channel.getConfig();
     }
 
     public InetSocketAddress getLocalAddress() {
-        return (InetSocketAddress) socket.getLocalSocketAddress();
+        return channel.getLocalAddress();
     }
 
     public InetSocketAddress getRemoteAddress() {
-        return (InetSocketAddress) socket.getRemoteSocketAddress();
+        return channel.getRemoteAddress();
     }
 
     public boolean isBound() {
-        return isOpen() && socket.isBound();
+        return channel.isOpen();
     }
 
     public boolean isConnected() {
-        return isOpen() && socket.isConnected();
+        return channel.isConnected();
     }
 
     @Override
@@ -126,172 +142,129 @@ class ServletClientSocketChannel extends AbstractChannel
         }
     }
 
-    PushbackInputStream getInputStream() {
-        return in;
-    }
-
-
-    OutputStream getOutputStream() {
-        return out;
-    }
-
     void connectAndSendHeaders(boolean reconnect, SocketAddress remoteAddress) throws IOException {
         if (reconnect) {
-            System.out.println("reconnecting");
-            socket.close();
-            socket = new Socket();
-            config = config.copyConfig(socket);
+            DefaultChannelPipeline channelPipeline = new DefaultChannelPipeline();
+            channelPipeline.addLast("DelimiterBasedFrameDecoder", handler);
+            channelPipeline.addLast("servletHandler", servletHandler);
+            channel = clientSocketChannelFactory.newChannel(channelPipeline);
         }
-        socket.connect(
-              remoteAddress, getConfig().getConnectTimeoutMillis());
-
-        // Obtain I/O stream.
-        in = new PushbackInputStream(socket.getInputStream(), 1);
-        out = socket.getOutputStream();
-        //write and read headers
+        channel.connect(remoteAddress);
         StringBuilder builder = new StringBuilder();
         builder.append("POST ").append(url.toExternalForm()).append(" HTTP/1.1").append(LINE_TERMINATOR).
-              append("HOST: ").append(url.getHost()).append(":").append(url.getPort()).append(LINE_TERMINATOR).
-              append("Content-Type: application/octet-stream").append(LINE_TERMINATOR).append("Transfer-Encoding: chunked").
-              append(LINE_TERMINATOR).append("Content-Transfer-Encoding: Binary").append(LINE_TERMINATOR).append("Connection: Keep-Alive").
-              append(LINE_TERMINATOR);
+                append("HOST: ").append(url.getHost()).append(":").append(url.getPort()).append(LINE_TERMINATOR).
+                append("Content-Type: application/octet-stream").append(LINE_TERMINATOR).append("Transfer-Encoding: chunked").
+                append(LINE_TERMINATOR).append("Content-Transfer-Encoding: Binary").append(LINE_TERMINATOR).append("Connection: Keep-Alive").
+                append(LINE_TERMINATOR);
         if (reconnect) {
             builder.append("Cookie: JSESSIONID=").append(sessionId).append(LINE_TERMINATOR);
         }
         builder.append(LINE_TERMINATOR);
         String msg = builder.toString();
-        socket.getOutputStream().write(msg.getBytes("ASCII7"));
-        BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        String line;
-        while ((line = br.readLine()) != null) {
-
-            if (!reconnect) {
-                if (line.contains("Set-Cookie")) {
-                    int start = line.indexOf("JSESSIONID=") + 11;
-                    int end = line.indexOf(";", start);
-                    sessionId = line.substring(start, end);
-                }
-            }
-            if (line.equals(LINE_TERMINATOR) || line.equals("")) {
-                break;
-            }
-        }
+        channel.write(ChannelBuffers.wrappedBuffer(msg.getBytes("ASCII7")));
     }
 
     public void sendChunk(ChannelBuffer a) throws IOException {
         int size = a.readableBytes();
         String hex = Integer.toHexString(size) + LINE_TERMINATOR;
 
-        try {
-            synchronized (writeLock) {
-                out.write(hex.getBytes());
-                a.getBytes(a.readerIndex(), out, a.readableBytes());
-                out.write(LINE_TERMINATOR.getBytes());
-            }
-        }
-        catch (SocketException e) {
-            if (closed) {
-                throw e;
-            }
-            if (lock.tryLock()) {
-                try {
-                    connectAndSendHeaders(true, getRemoteAddress());
-                }
-                finally {
-                    lock.unlock();
-                }
-            }
-            else {
-                try {
-                    lock.lock();
-                }
-                finally {
-                    lock.unlock();
-                }
-            }
+        // try {
+        synchronized (writeLock) {
+            a.writeBytes(LINE_TERMINATOR.getBytes());
+            channel.write(ChannelBuffers.wrappedBuffer(hex.getBytes()));
+            channel.write(a).awaitUninterruptibly();
+            //channel.write(ChannelBuffers.wrappedBuffer(LINE_TERMINATOR.getBytes()));
         }
     }
 
     public byte[] receiveChunk() throws IOException {
-        byte[] buf;
-
+        byte[] buf = null;
         try {
-            buf = read();
+            buf = messages.take();
         }
-        catch (SocketException e) {
-            if (closed) {
-                throw e;
+        catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return buf;
+    }
+
+    private void reConnect() throws Exception{
+        if (closed) {
+                throw new IllegalStateException("channel closed");
             }
-            if (lock.tryLock()) {
+            if (reconnectLock.tryLock()) {
                 try {
-                    connectAndSendHeaders(true, socket.getRemoteSocketAddress());
+                    awaitingInitialResponse = true;
+
+                    connectAndSendHeaders(true, channel.getRemoteAddress());
                 }
                 finally {
-                    lock.unlock();
+                    reconnectLock.unlock();
                 }
             }
             else {
                 try {
-                    lock.lock();
+                    reconnectLock.lock();
                 }
                 finally {
-                    lock.unlock();
+                    reconnectLock.unlock();
                 }
             }
-            buf = read();
-        }
-        return buf;
-    }
-
-    private byte[] read() throws IOException {
-        //
-        byte[] buf;
-        StringBuffer hex = new StringBuffer();
-        int b;
-        while ((b = in.read()) != -1) {
-            if (b == 13) {
-                int end = in.read();
-                if (end != 10) {
-                    in.unread(end);
-                }
-                break;
-            }
-            hex.append((char) b);
-        }
-        int bytesToRead = Integer.parseInt(hex.toString(), 16);
-
-        buf = new byte[bytesToRead];
-
-        if (in.available() >= bytesToRead) {
-            in.read(buf, 0, bytesToRead);
-        }
-        else {
-            int readBytes = 0;
-            do {
-                readBytes += in.read(buf, readBytes, bytesToRead - readBytes);
-            }
-            while (bytesToRead != readBytes);
-        }
-        int end = in.read();
-        if (end != 13) {
-            in.unread(end);
-        }
-        else {
-            end = in.read();
-            if (end != 10) {
-                in.unread(end);
-            }
-        }
-        return buf;
     }
 
     public void closeSocket() throws IOException {
-       setClosed();
-       closed = true;
-        socket.close();
+        setClosed();
+        closed = true;
+        channel.close();
     }
 
     public void bindSocket(SocketAddress localAddress) throws IOException {
-        socket.bind(localAddress);
+        channel.bind(localAddress);
+    }
+
+    @ChannelPipelineCoverage("one")
+    class ServletChannelHandler extends SimpleChannelHandler {
+        int nextChunkSize = -1;
+
+
+        public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+            ChannelBuffer buf = (ChannelBuffer) e.getMessage();
+            byte[] bytes = new byte[buf.readableBytes()];
+            buf.getBytes(0, bytes);
+            if (awaitingInitialResponse) {
+                String line = new String(bytes);
+                if (line.contains("Set-Cookie")) {
+                    int start = line.indexOf("JSESSIONID=") + 11;
+                    int end = line.indexOf(";", start);
+                    sessionId = line.substring(start, end);
+                }
+                else if (line.equals("")) {
+                    awaitingInitialResponse = false;
+                }
+            }
+            else {
+                if(nextChunkSize == -1) {
+                    String hex = new String(bytes);
+                    nextChunkSize = Integer.parseInt(hex, 16);
+                    if(nextChunkSize == 0) {
+                        if(!closed) {
+                            nextChunkSize = -1;
+                            awaitingInitialResponse = true;
+                            reConnect();
+                        }
+                    }
+                }
+                else {
+                    messages.put(bytes);
+                    nextChunkSize = -1;
+                }
+            }
+
+        }
+
+       public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+            channel.close();
+        }
+
     }
 }

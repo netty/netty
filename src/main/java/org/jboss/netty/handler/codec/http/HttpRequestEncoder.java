@@ -34,7 +34,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * @version $Rev$, $Date$
  */
 public class HttpRequestEncoder extends HttpMessageEncoder {
-
+    private static final byte[] COOKIE_HEADER = "Cookie".getBytes();
     /**
      * writes the initial line i.e. 'GET /path/to/file/index.html HTTP/1.0'
      */
@@ -49,4 +49,7 @@ public class HttpRequestEncoder extends HttpMessageEncoder {
         buf.writeBytes(CRLF);
     }
 
+    public byte[] getCookieHeaderName() {
+        return COOKIE_HEADER;
+    }
 }

@@ -58,6 +58,8 @@ public class NettyServletContextListener implements ServletContextListener {
         context.getServletContext().setAttribute(RECONNECT_PROP, timeoutParam == null?DEFAULT_RECONNECT_TIMEOUT:Long.decode(timeoutParam.trim()));
         String streaming = context.getServletContext().getInitParameter(STREAMING_PROP);
         context.getServletContext().setAttribute(STREAMING_PROP, streaming == null?DEFAULT_IS_STREAMING: Boolean.valueOf(streaming.trim()));
+        String serverChannel = context.getServletContext().getInitParameter(SERVER_CHANNEL_PROP);
+        context.getServletContext().setAttribute(SERVER_CHANNEL_PROP, serverChannel);
     }
 
     public void contextDestroyed(ServletContextEvent context) {
