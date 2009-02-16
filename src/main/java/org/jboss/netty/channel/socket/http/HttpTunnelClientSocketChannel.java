@@ -47,6 +47,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URL;
+import java.net.URI;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.Lock;
 
@@ -72,8 +73,6 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
 
     LinkedTransferQueue<byte[]> messages = new LinkedTransferQueue<byte[]>();
 
-    private final URL url;
-
     private ClientSocketChannelFactory clientSocketChannelFactory;
 
     private SocketChannel channel;
@@ -82,13 +81,14 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
 
     private HttpTunnelClientSocketChannel.ServletChannelHandler servletHandler = new ServletChannelHandler();
 
+    private HttpTunnelAddress remoteAddress;
+
     HttpTunnelClientSocketChannel(
             ChannelFactory factory,
             ChannelPipeline pipeline,
-            ChannelSink sink, URL url, ClientSocketChannelFactory clientSocketChannelFactory) {
+            ChannelSink sink, ClientSocketChannelFactory clientSocketChannelFactory) {
 
         super(null, factory, pipeline, sink);
-        this.url = url;
         this.clientSocketChannelFactory = clientSocketChannelFactory;
 
         DefaultChannelPipeline channelPipeline = new DefaultChannelPipeline();
@@ -139,16 +139,19 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
         }
     }
 
-    void connectAndSendHeaders(boolean reconnect, SocketAddress remoteAddress) throws IOException {
+    void connectAndSendHeaders(boolean reconnect, HttpTunnelAddress remoteAddress) throws IOException {
+        this.remoteAddress = remoteAddress;
+        URI url = remoteAddress.getUri();
         if (reconnect) {
             DefaultChannelPipeline channelPipeline = new DefaultChannelPipeline();
             channelPipeline.addLast("DelimiterBasedFrameDecoder", handler);
             channelPipeline.addLast("servletHandler", servletHandler);
             channel = clientSocketChannelFactory.newChannel(channelPipeline);
         }
-        channel.connect(remoteAddress);
+        SocketAddress connectAddress = new InetSocketAddress(url.getHost(), url.getPort());
+        channel.connect(connectAddress);
         StringBuilder builder = new StringBuilder();
-        builder.append("POST ").append(url.toExternalForm()).append(" HTTP/1.1").append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).
+        builder.append("POST ").append(url.getRawPath()).append(" HTTP/1.1").append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).
                 append("HOST: ").append(url.getHost()).append(":").append(url.getPort()).append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).
                 append("Content-Type: application/octet-stream").append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).append("Transfer-Encoding: chunked").
                 append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).append("Content-Transfer-Encoding: Binary").append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).append("Connection: Keep-Alive").
@@ -193,7 +196,7 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
                 try {
                     awaitingInitialResponse = true;
 
-                    connectAndSendHeaders(true, channel.getRemoteAddress());
+                    connectAndSendHeaders(true, remoteAddress);
                 }
                 finally {
                     reconnectLock.unlock();

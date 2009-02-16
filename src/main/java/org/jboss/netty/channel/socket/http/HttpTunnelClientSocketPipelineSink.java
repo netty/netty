@@ -74,7 +74,7 @@ class HttpTunnelClientSocketPipelineSink extends AbstractChannelSink {
                 break;
             case CONNECTED:
                 if (value != null) {
-                    connect(channel, future, (SocketAddress) value);
+                    connect(channel, future, (HttpTunnelAddress) value);
                 } else {
                     HttpTunnelWorker.close(channel, future);
                 }
@@ -105,7 +105,7 @@ class HttpTunnelClientSocketPipelineSink extends AbstractChannelSink {
 
     private void connect(
             HttpTunnelClientSocketChannel channel, ChannelFuture future,
-            SocketAddress remoteAddress) {
+            HttpTunnelAddress remoteAddress) {
 
         boolean bound = channel.isBound();
         boolean connected = false;

@@ -25,6 +25,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.URL;
+import java.net.URI;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
@@ -33,6 +34,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.socket.http.HttpTunnelClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.http.HttpTunnelAddress;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 import org.jboss.netty.handler.codec.string.StringDecoder;
@@ -86,13 +88,30 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
  */
 public class HttpTunnelClientExample {
     public static void main(String[] args) throws Exception {
-        URL url = new URL("http", "localhost", 8080, "/netty/nettyServlet");
-        HttpTunnelClientSocketChannelFactory factory = new HttpTunnelClientSocketChannelFactory(new OioClientSocketChannelFactory(Executors.newCachedThreadPool()), Executors.newCachedThreadPool(), url);
+        if (args.length != 1) {
+            System.err.println(
+                    "Usage: " + HttpClient.class.getSimpleName() +
+                    " <URL>");
+            return;
+        }
+
+        URI uri = new URI(args[0]);
+        String scheme = uri.getScheme() == null? "http" : uri.getScheme();
+        String host = uri.getHost() == null? "localhost" : uri.getHost();
+        int port = uri.getPort() == -1? 80 : uri.getPort();
+
+        if (!scheme.equals("http")) {
+            // We can actually support HTTPS fairly easily by inserting
+            // an SslHandler to the pipeline - left as an exercise.
+            System.err.println("Only HTTP is supported.");
+            return;
+        }
+        HttpTunnelClientSocketChannelFactory factory = new HttpTunnelClientSocketChannelFactory(new OioClientSocketChannelFactory(Executors.newCachedThreadPool()), Executors.newCachedThreadPool());
         ClientBootstrap bootstrap = new ClientBootstrap(factory);
         bootstrap.getPipeline().addLast("decoder", new StringDecoder());
         bootstrap.getPipeline().addLast("encoder", new StringEncoder());
         bootstrap.getPipeline().addLast("handler", new PrintHandler());
-        ChannelFuture channelFuture = bootstrap.connect(new InetSocketAddress("localhost", 8080));
+        ChannelFuture channelFuture = bootstrap.connect(new HttpTunnelAddress(uri));
         channelFuture.awaitUninterruptibly();
         System.out.println("Enter text (quit to end)");
         // Read commands from the stdin.

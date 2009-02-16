@@ -40,15 +40,14 @@ public class HttpTunnelClientSocketChannelFactory implements ClientSocketChannel
 
     private final Executor workerExecutor;
     private final ChannelSink sink;
-    private final URL url;
     ClientSocketChannelFactory clientSocketChannelFactory;
 
     /**
      *
      * @param workerExecutor
      */
-    public HttpTunnelClientSocketChannelFactory(ClientSocketChannelFactory clientSocketChannelFactory, Executor workerExecutor, URL url) {
-        this(url, workerExecutor, Runtime.getRuntime().availableProcessors());
+    public HttpTunnelClientSocketChannelFactory(ClientSocketChannelFactory clientSocketChannelFactory, Executor workerExecutor) {
+        this(workerExecutor, Runtime.getRuntime().availableProcessors());
        this.clientSocketChannelFactory = clientSocketChannelFactory;
     }
 
@@ -56,18 +55,13 @@ public class HttpTunnelClientSocketChannelFactory implements ClientSocketChannel
      * Creates a new instance.
      *
      *        the {@link java.util.concurrent.Executor} which will execute the boss thread
-     * @param url
      * @param workerExecutor
      *        the {@link java.util.concurrent.Executor} which will execute the I/O worker threads
      * @param workerCount
      */
     public HttpTunnelClientSocketChannelFactory(
-          URL url, Executor workerExecutor,
+          Executor workerExecutor,
           int workerCount) {
-        if (url == null) {
-            throw new NullPointerException("Url is null");
-        }
-        this.url = url;
         if (workerExecutor == null) {
             throw new NullPointerException("workerExecutor");
         }
@@ -82,7 +76,7 @@ public class HttpTunnelClientSocketChannelFactory implements ClientSocketChannel
     }
 
     public SocketChannel newChannel(ChannelPipeline pipeline) {
-        return new HttpTunnelClientSocketChannel(this, pipeline, sink, url, clientSocketChannelFactory);
+        return new HttpTunnelClientSocketChannel(this, pipeline, sink, clientSocketChannelFactory);
     }
 
     public void releaseExternalResources() {
