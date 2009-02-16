@@ -255,7 +255,7 @@ public abstract class AbstractChannel implements Channel {
 
         StringBuilder buf = new StringBuilder(128);
         buf.append("[id: 0x");
-        buf.append(Integer.toHexString(id.intValue()));
+        buf.append(getIdString());
 
         if (connected) {
             buf.append(", ");
@@ -282,5 +282,36 @@ public abstract class AbstractChannel implements Channel {
             this.strVal = null;
         }
         return strVal;
+    }
+
+    private String getIdString() {
+        String answer = Integer.toHexString(id.intValue());
+        switch (answer.length()) {
+        case 0:
+            answer = "00000000";
+            break;
+        case 1:
+            answer = "0000000" + answer;
+            break;
+        case 2:
+            answer = "000000" + answer;
+            break;
+        case 3:
+            answer = "00000" + answer;
+            break;
+        case 4:
+            answer = "0000" + answer;
+            break;
+        case 5:
+            answer = "000" + answer;
+            break;
+        case 6:
+            answer = "00" + answer;
+            break;
+        case 7:
+            answer = "0" + answer;
+            break;
+        }
+        return answer;
     }
 }
