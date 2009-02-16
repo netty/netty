@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
@@ -54,7 +53,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         InternalLoggerFactory.getInstance(DefaultChannelGroupFuture.class);
 
     private final ChannelGroup group;
-    final Map<UUID, ChannelFuture> futures;
+    final Map<Integer, ChannelFuture> futures;
     private volatile ChannelGroupFutureListener firstListener;
     private volatile List<ChannelGroupFutureListener> otherListeners;
     private boolean done;
@@ -96,7 +95,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
 
         this.group = group;
 
-        Map<UUID, ChannelFuture> futureMap = new HashMap<UUID, ChannelFuture>();
+        Map<Integer, ChannelFuture> futureMap = new HashMap<Integer, ChannelFuture>();
         for (ChannelFuture f: futures) {
             futureMap.put(f.getChannel().getId(), f);
         }
@@ -113,7 +112,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         }
     }
 
-    DefaultChannelGroupFuture(ChannelGroup group, Map<UUID, ChannelFuture> futures) {
+    DefaultChannelGroupFuture(ChannelGroup group, Map<Integer, ChannelFuture> futures) {
         this.group = group;
         this.futures = Collections.unmodifiableMap(futures);
         for (ChannelFuture f: this.futures.values()) {
@@ -130,7 +129,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         return group;
     }
 
-    public ChannelFuture find(UUID channelId) {
+    public ChannelFuture find(Integer channelId) {
         return futures.get(channelId);
     }
 

@@ -70,9 +70,8 @@ public class DefaultWriteCompletionEvent implements WriteCompletionEvent {
         String channelString = getChannel().toString();
         StringBuilder buf = new StringBuilder(channelString.length() + 32);
         buf.append(channelString);
-        buf.append(" - (WRITTEN_AMOUNT: ");
+        buf.append(" WRITTEN_AMOUNT: ");
         buf.append(getWrittenAmount());
-        buf.append(')');
         return buf.toString();
     }
 }

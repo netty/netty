@@ -24,7 +24,6 @@ package org.jboss.netty.channel;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.UUID;
 
 
 /**
@@ -92,9 +91,9 @@ public interface Channel extends Comparable<Channel>{
     static int OP_READ_WRITE = OP_READ | OP_WRITE;
 
     /**
-     * Returns the {@link UUID} of this channel.
+     * Returns the unique integer ID of this channel.
      */
-    UUID getId();
+    Integer getId();
 
     /**
      * Returns the {@link ChannelFactory} which created this channel.

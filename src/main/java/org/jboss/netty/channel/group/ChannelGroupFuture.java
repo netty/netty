@@ -22,7 +22,6 @@
  */
 package org.jboss.netty.channel.group;
 
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
@@ -39,7 +38,7 @@ public interface ChannelGroupFuture extends Iterable<ChannelFuture>{
 
     ChannelGroup getGroup();
 
-    ChannelFuture find(UUID channelId);
+    ChannelFuture find(Integer channelId);
     ChannelFuture find(Channel channel);
 
     /**

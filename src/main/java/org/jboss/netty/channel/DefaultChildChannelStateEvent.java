@@ -69,11 +69,8 @@ public class DefaultChildChannelStateEvent implements ChildChannelStateEvent {
         String channelString = getChannel().toString();
         StringBuilder buf = new StringBuilder(channelString.length() + 32);
         buf.append(channelString);
-        buf.append(" - (");
-        buf.append(getChildChannel().isOpen()? "CHILD_OPEN" : "CHILD_CLOSED");
-        buf.append(": ");
+        buf.append(getChildChannel().isOpen()? " CHILD_OPEN: " : " CHILD_CLOSED: ");
         buf.append(getChildChannel().getId());
-        buf.append(')');
         return buf.toString();
     }
 }

@@ -73,9 +73,9 @@ public class DefaultIdleStateEvent implements IdleStateEvent {
 
     @Override
     public String toString() {
-        return getChannel().toString() + " - (" + getState() + " since " +
+        return getChannel().toString() + ' ' + getState() + " since " +
                DateFormat.getDateTimeInstance(
                        DateFormat.SHORT, DateFormat.SHORT, Locale.US).format(
-                               new Date(getLastActivityTimeMillis())) + ')';
+                               new Date(getLastActivityTimeMillis()));
     }
 }

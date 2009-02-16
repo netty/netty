@@ -79,12 +79,12 @@ public class UpstreamMessageEvent implements MessageEvent {
     @Override
     public String toString() {
         if (getRemoteAddress() == null) {
-            return getChannel().toString() + " - (RECEIVED: " +
-                   StringUtil.stripControlCharacters(getMessage()) + ')';
+            return getChannel().toString() + " RECEIVED: " +
+                   StringUtil.stripControlCharacters(getMessage());
         } else {
-            return getChannel().toString() + " - (RECEIVED: " +
+            return getChannel().toString() + " RECEIVED: " +
                    StringUtil.stripControlCharacters(getMessage()) + ", " +
-                   getRemoteAddress() + ')';
+                   getRemoteAddress();
         }
     }
 }

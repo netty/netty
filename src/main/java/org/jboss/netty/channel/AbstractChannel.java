@@ -23,9 +23,9 @@
 package org.jboss.netty.channel;
 
 import java.net.SocketAddress;
-import java.util.UUID;
+import java.util.concurrent.ConcurrentMap;
 
-import org.jboss.netty.util.TimeBasedUuidGenerator;
+import org.jboss.netty.util.ConcurrentHashMap;
 
 /**
  * A skeletal {@link Channel} implementation.
@@ -38,7 +38,35 @@ import org.jboss.netty.util.TimeBasedUuidGenerator;
  */
 public abstract class AbstractChannel implements Channel {
 
-    private final UUID id = TimeBasedUuidGenerator.generate();
+    static final ConcurrentMap<Integer, Channel> allChannels = new ConcurrentHashMap<Integer, Channel>();
+    private static final IdDeallocator ID_DEALLOCATOR = new IdDeallocator();
+
+    private static Integer allocateId(Channel channel) {
+        Integer id = Integer.valueOf(System.identityHashCode(channel));
+        for (;;) {
+            // Loop until a unique ID is acquired.
+            // It should be found in one loop practically.
+            if (allChannels.putIfAbsent(id, channel) == null) {
+                // Successfully acquired.
+                return id;
+            } else {
+                // Taken by other channel at almost the same moment.
+                id = Integer.valueOf(id.intValue() + 1);
+            }
+        }
+    }
+
+    private static final class IdDeallocator implements ChannelFutureListener {
+        IdDeallocator() {
+            super();
+        }
+
+        public void operationComplete(ChannelFuture future) throws Exception {
+            allChannels.remove(future.getChannel().getId());
+        }
+    }
+
+    private final Integer id = allocateId(this);
     private final Channel parent;
     private final ChannelFactory factory;
     private final ChannelPipeline pipeline;
@@ -69,10 +97,11 @@ public abstract class AbstractChannel implements Channel {
         this.parent = parent;
         this.factory = factory;
         this.pipeline = pipeline;
+        closeFuture.addListener(ID_DEALLOCATOR);
         pipeline.attach(this, sink);
     }
 
-    public final UUID getId() {
+    public final Integer getId() {
         return id;
     }
 
@@ -225,9 +254,8 @@ public abstract class AbstractChannel implements Channel {
         }
 
         StringBuilder buf = new StringBuilder(128);
-        buf.append(getClass().getSimpleName());
-        buf.append("(id: ");
-        buf.append(id.toString());
+        buf.append("[id: 0x");
+        buf.append(Integer.toHexString(id.intValue()));
 
         if (connected) {
             buf.append(", ");
@@ -245,7 +273,7 @@ public abstract class AbstractChannel implements Channel {
             buf.append(getLocalAddress());
         }
 
-        buf.append(')');
+        buf.append(']');
 
         String strVal = buf.toString();
         if (connected) {

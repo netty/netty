@@ -78,40 +78,38 @@ public class UpstreamChannelStateEvent implements ChannelStateEvent {
         String channelString = getChannel().toString();
         StringBuilder buf = new StringBuilder(channelString.length() + 64);
         buf.append(channelString);
-        buf.append(" - (");
         switch (getState()) {
         case OPEN:
             if (Boolean.TRUE.equals(getValue())) {
-                buf.append("OPEN");
+                buf.append(" OPEN");
             } else {
-                buf.append("CLOSED");
+                buf.append(" CLOSED");
             }
             break;
         case BOUND:
             if (getValue() != null) {
-                buf.append("BOUND: ");
+                buf.append(" BOUND: ");
                 buf.append(getValue());
             } else {
-                buf.append("UNBOUND");
+                buf.append(" UNBOUND");
             }
             break;
         case CONNECTED:
             if (getValue() != null) {
-                buf.append("CONNECTED: ");
+                buf.append(" CONNECTED: ");
                 buf.append(getValue());
             } else {
-                buf.append("DISCONNECTED");
+                buf.append(" DISCONNECTED");
             }
             break;
         case INTEREST_OPS:
-            buf.append("INTEREST_CHANGED");
+            buf.append(" INTEREST_CHANGED");
             break;
         default:
             buf.append(getState().name());
             buf.append(": ");
             buf.append(getValue());
         }
-        buf.append(')');
         return buf.toString();
     }
 }

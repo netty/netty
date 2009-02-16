@@ -83,12 +83,12 @@ public class DownstreamMessageEvent implements MessageEvent {
     @Override
     public String toString() {
         if (getRemoteAddress() == null) {
-            return getChannel().toString() + " - (WRITE: " +
-                   StringUtil.stripControlCharacters(getMessage()) + ')';
+            return getChannel().toString() + " WRITE: " +
+                   StringUtil.stripControlCharacters(getMessage());
         } else {
-            return getChannel().toString() + " - (WRITE: " +
+            return getChannel().toString() + " WRITE: " +
                    StringUtil.stripControlCharacters(getMessage()) + ", " +
-                   getRemoteAddress() + ')';
+                   getRemoteAddress();
         }
     }
 }

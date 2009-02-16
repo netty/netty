@@ -24,7 +24,6 @@ package org.jboss.netty.channel.group;
 
 import java.net.SocketAddress;
 import java.util.Set;
-import java.util.UUID;
 
 import org.jboss.netty.channel.Channel;
 
@@ -38,7 +37,7 @@ import org.jboss.netty.channel.Channel;
  */
 public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
     String getName();
-    Channel find(UUID id);
+    Channel find(Integer id);
     ChannelGroupFuture setInterestOps(int interestOps);
     ChannelGroupFuture setReadable(boolean readable);
     ChannelGroupFuture write(Object message);
