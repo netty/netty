@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.servlet;
+package org.jboss.netty.channel.socket.http;
 
 import java.net.URL;
 import java.util.concurrent.Executor;
@@ -36,7 +36,7 @@ import org.jboss.netty.util.ExecutorUtil;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-public class ServletClientSocketChannelFactory implements ClientSocketChannelFactory {
+public class HttpTunnelClientSocketChannelFactory implements ClientSocketChannelFactory {
 
     private final Executor workerExecutor;
     private final ChannelSink sink;
@@ -47,7 +47,7 @@ public class ServletClientSocketChannelFactory implements ClientSocketChannelFac
      *
      * @param workerExecutor
      */
-    public ServletClientSocketChannelFactory(ClientSocketChannelFactory clientSocketChannelFactory, Executor workerExecutor, URL url) {
+    public HttpTunnelClientSocketChannelFactory(ClientSocketChannelFactory clientSocketChannelFactory, Executor workerExecutor, URL url) {
         this(url, workerExecutor, Runtime.getRuntime().availableProcessors());
        this.clientSocketChannelFactory = clientSocketChannelFactory;
     }
@@ -61,7 +61,7 @@ public class ServletClientSocketChannelFactory implements ClientSocketChannelFac
      *        the {@link java.util.concurrent.Executor} which will execute the I/O worker threads
      * @param workerCount
      */
-    public ServletClientSocketChannelFactory(
+    public HttpTunnelClientSocketChannelFactory(
           URL url, Executor workerExecutor,
           int workerCount) {
         if (url == null) {
@@ -78,11 +78,11 @@ public class ServletClientSocketChannelFactory implements ClientSocketChannelFac
         }
 
         this.workerExecutor = workerExecutor;
-        sink = new ServletClientSocketPipelineSink(workerExecutor);
+        sink = new HttpTunnelClientSocketPipelineSink(workerExecutor);
     }
 
     public SocketChannel newChannel(ChannelPipeline pipeline) {
-        return new ServletClientSocketChannel(this, pipeline, sink, url, clientSocketChannelFactory);
+        return new HttpTunnelClientSocketChannel(this, pipeline, sink, url, clientSocketChannelFactory);
     }
 
     public void releaseExternalResources() {

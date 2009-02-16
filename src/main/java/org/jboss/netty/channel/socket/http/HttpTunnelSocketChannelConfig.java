@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.servlet;
+package org.jboss.netty.channel.socket.http;
 
 import java.net.Socket;
 import java.net.SocketException;
@@ -39,7 +39,7 @@ import org.jboss.netty.util.ConversionUtil;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-public class ServletSocketChannelConfig implements SocketChannelConfig {
+public class HttpTunnelSocketChannelConfig implements SocketChannelConfig {
 
     final Socket socket;
 
@@ -70,7 +70,7 @@ public class ServletSocketChannelConfig implements SocketChannelConfig {
     /**
      * Creates a new instance.
      */
-    public ServletSocketChannelConfig(Socket socket) {
+    public HttpTunnelSocketChannelConfig(Socket socket) {
         this.socket = socket;
     }
 
@@ -315,8 +315,8 @@ public class ServletSocketChannelConfig implements SocketChannelConfig {
         // Unused
     }
 
-    ServletSocketChannelConfig copyConfig(Socket socket) {
-        ServletSocketChannelConfig config = new ServletSocketChannelConfig(socket);
+    HttpTunnelSocketChannelConfig copyConfig(Socket socket) {
+        HttpTunnelSocketChannelConfig config = new HttpTunnelSocketChannelConfig(socket);
         config.setConnectTimeoutMillis(connectTimeoutMillis);
         if (trafficClass != null) {
             config.setTrafficClass(trafficClass);

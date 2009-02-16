@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.servlet;
+package org.jboss.netty.channel.socket.http;
 
 import static org.jboss.netty.channel.Channels.*;
 
@@ -42,18 +42,18 @@ import org.jboss.netty.util.ThreadRenamingRunnable;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-class ServletClientSocketPipelineSink  extends AbstractChannelSink {
+class HttpTunnelClientSocketPipelineSink extends AbstractChannelSink {
 
     static String LINE_TERMINATOR = "\r\n";
     private final Executor workerExecutor;
 
-    ServletClientSocketPipelineSink(Executor workerExecutor) {
+    HttpTunnelClientSocketPipelineSink(Executor workerExecutor) {
         this.workerExecutor = workerExecutor;
     }
 
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
-        ServletClientSocketChannel channel = (ServletClientSocketChannel) e.getChannel();
+        HttpTunnelClientSocketChannel channel = (HttpTunnelClientSocketChannel) e.getChannel();
         ChannelFuture future = e.getFuture();
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent stateEvent = (ChannelStateEvent) e;
@@ -62,36 +62,36 @@ class ServletClientSocketPipelineSink  extends AbstractChannelSink {
             switch (state) {
             case OPEN:
                 if (Boolean.FALSE.equals(value)) {
-                    ServletWorker.close(channel, future);
+                    HttpTunnelWorker.close(channel, future);
                 }
                 break;
             case BOUND:
                 if (value != null) {
                     bind(channel, future, (SocketAddress) value);
                 } else {
-                    ServletWorker.close(channel, future);
+                    HttpTunnelWorker.close(channel, future);
                 }
                 break;
             case CONNECTED:
                 if (value != null) {
                     connect(channel, future, (SocketAddress) value);
                 } else {
-                    ServletWorker.close(channel, future);
+                    HttpTunnelWorker.close(channel, future);
                 }
                 break;
             case INTEREST_OPS:
-                ServletWorker.setInterestOps(channel, future, ((Integer) value).intValue());
+                HttpTunnelWorker.setInterestOps(channel, future, ((Integer) value).intValue());
                 break;
             }
         } else if (e instanceof MessageEvent) {
-            ServletWorker.write(
+            HttpTunnelWorker.write(
                     channel, future,
                     ((MessageEvent) e).getMessage());
         }
     }
 
     private void bind(
-            ServletClientSocketChannel channel, ChannelFuture future,
+            HttpTunnelClientSocketChannel channel, ChannelFuture future,
             SocketAddress localAddress) {
         try {
             channel.bindSocket(localAddress);
@@ -104,7 +104,7 @@ class ServletClientSocketPipelineSink  extends AbstractChannelSink {
     }
 
     private void connect(
-            ServletClientSocketChannel channel, ChannelFuture future,
+            HttpTunnelClientSocketChannel channel, ChannelFuture future,
             SocketAddress remoteAddress) {
 
         boolean bound = channel.isBound();
@@ -130,7 +130,7 @@ class ServletClientSocketPipelineSink  extends AbstractChannelSink {
 
             // Start the business.
             workerExecutor.execute(new ThreadRenamingRunnable(
-                    new ServletWorker(channel),
+                    new HttpTunnelWorker(channel),
                     "Old I/O client worker (channelId: " + channel.getId() + ", " +
                     channel.getLocalAddress() + " => " +
                     channel.getRemoteAddress() + ')'));
@@ -141,7 +141,7 @@ class ServletClientSocketPipelineSink  extends AbstractChannelSink {
             fireExceptionCaught(channel, t);
         } finally {
             if (connected && !workerStarted) {
-                ServletWorker.close(channel, future);
+                HttpTunnelWorker.close(channel, future);
             }
         }
     }

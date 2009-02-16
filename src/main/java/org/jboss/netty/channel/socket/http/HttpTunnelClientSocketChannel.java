@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.servlet;
+package org.jboss.netty.channel.socket.http;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -36,14 +36,11 @@ import org.jboss.netty.channel.DefaultChannelPipeline;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
-import static org.jboss.netty.channel.socket.servlet.ServletClientSocketPipelineSink.LINE_TERMINATOR;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
-import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.util.LinkedTransferQueue;
 
 import java.io.IOException;
@@ -58,7 +55,7 @@ import java.util.concurrent.locks.Lock;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-class ServletClientSocketChannel extends AbstractChannel
+class HttpTunnelClientSocketChannel extends AbstractChannel
         implements org.jboss.netty.channel.socket.SocketChannel {
 
     private final Lock reconnectLock = new ReentrantLock();
@@ -83,9 +80,9 @@ class ServletClientSocketChannel extends AbstractChannel
 
     private DelimiterBasedFrameDecoder handler = new DelimiterBasedFrameDecoder(8092, ChannelBuffers.wrappedBuffer(new byte[] { '\r', '\n' }));
 
-    private ServletClientSocketChannel.ServletChannelHandler servletHandler = new ServletChannelHandler();
+    private HttpTunnelClientSocketChannel.ServletChannelHandler servletHandler = new ServletChannelHandler();
 
-    ServletClientSocketChannel(
+    HttpTunnelClientSocketChannel(
             ChannelFactory factory,
             ChannelPipeline pipeline,
             ChannelSink sink, URL url, ClientSocketChannelFactory clientSocketChannelFactory) {
@@ -151,26 +148,26 @@ class ServletClientSocketChannel extends AbstractChannel
         }
         channel.connect(remoteAddress);
         StringBuilder builder = new StringBuilder();
-        builder.append("POST ").append(url.toExternalForm()).append(" HTTP/1.1").append(LINE_TERMINATOR).
-                append("HOST: ").append(url.getHost()).append(":").append(url.getPort()).append(LINE_TERMINATOR).
-                append("Content-Type: application/octet-stream").append(LINE_TERMINATOR).append("Transfer-Encoding: chunked").
-                append(LINE_TERMINATOR).append("Content-Transfer-Encoding: Binary").append(LINE_TERMINATOR).append("Connection: Keep-Alive").
-                append(LINE_TERMINATOR);
+        builder.append("POST ").append(url.toExternalForm()).append(" HTTP/1.1").append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).
+                append("HOST: ").append(url.getHost()).append(":").append(url.getPort()).append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).
+                append("Content-Type: application/octet-stream").append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).append("Transfer-Encoding: chunked").
+                append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).append("Content-Transfer-Encoding: Binary").append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).append("Connection: Keep-Alive").
+                append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR);
         if (reconnect) {
-            builder.append("Cookie: JSESSIONID=").append(sessionId).append(LINE_TERMINATOR);
+            builder.append("Cookie: JSESSIONID=").append(sessionId).append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR);
         }
-        builder.append(LINE_TERMINATOR);
+        builder.append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR);
         String msg = builder.toString();
         channel.write(ChannelBuffers.wrappedBuffer(msg.getBytes("ASCII7")));
     }
 
     public void sendChunk(ChannelBuffer a) throws IOException {
         int size = a.readableBytes();
-        String hex = Integer.toHexString(size) + LINE_TERMINATOR;
+        String hex = Integer.toHexString(size) + HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR;
 
         // try {
         synchronized (writeLock) {
-            a.writeBytes(LINE_TERMINATOR.getBytes());
+            a.writeBytes(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR.getBytes());
             channel.write(ChannelBuffers.wrappedBuffer(hex.getBytes()));
             channel.write(a).awaitUninterruptibly();
             //channel.write(ChannelBuffers.wrappedBuffer(LINE_TERMINATOR.getBytes()));

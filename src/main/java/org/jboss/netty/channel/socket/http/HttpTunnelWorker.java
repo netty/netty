@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.servlet;
+package org.jboss.netty.channel.socket.http;
 
 import static org.jboss.netty.channel.Channels.*;
 
@@ -34,10 +34,10 @@ import org.jboss.netty.channel.ChannelFuture;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-class ServletWorker implements Runnable {
-    private final ServletClientSocketChannel channel;
+class HttpTunnelWorker implements Runnable {
+    private final HttpTunnelClientSocketChannel channel;
 
-    ServletWorker(ServletClientSocketChannel channel) {
+    HttpTunnelWorker(HttpTunnelClientSocketChannel channel) {
         this.channel = channel;
     }
 
@@ -85,7 +85,7 @@ class ServletWorker implements Runnable {
     }
 
     static void write(
-          ServletClientSocketChannel channel, ChannelFuture future,
+          HttpTunnelClientSocketChannel channel, ChannelFuture future,
           Object message) {
 
         try {
@@ -99,7 +99,7 @@ class ServletWorker implements Runnable {
     }
 
     static void setInterestOps(
-          ServletClientSocketChannel channel, ChannelFuture future, int interestOps) {
+          HttpTunnelClientSocketChannel channel, ChannelFuture future, int interestOps) {
 
         // Override OP_WRITE flag - a user cannot change this flag.
         interestOps &= ~Channel.OP_WRITE;
@@ -136,7 +136,7 @@ class ServletWorker implements Runnable {
         }
     }
 
-    static void close(ServletClientSocketChannel channel, ChannelFuture future) {
+    static void close(HttpTunnelClientSocketChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         try {
