@@ -29,7 +29,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -94,7 +93,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public boolean contains(Object o) {
-        if (o instanceof UUID) {
+        if (o instanceof Integer) {
             return nonServerChannels.containsKey(o) || serverChannels.containsKey(o);
         } else if (o instanceof Channel) {
             Channel c = (Channel) o;
@@ -123,7 +122,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     @Override
     public boolean remove(Object o) {
         Channel c = null;
-        if (o instanceof UUID) {
+        if (o instanceof Integer) {
             c = nonServerChannels.remove(o);
             if (c == null) {
                 c = serverChannels.remove(o);

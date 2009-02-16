@@ -34,7 +34,6 @@ import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.util.DummyHandler;
-import org.jboss.netty.util.TimeBasedUuidGenerator;
 import org.junit.Test;
 
 
@@ -46,12 +45,6 @@ import org.junit.Test;
  *
  */
 public class NioClientSocketShutdownTimeTest {
-
-    static {
-        // Initialize the MD5 algorithm before testing - it takes too long
-        // on some JDK.
-        TimeBasedUuidGenerator.generate();
-    }
 
     @Test
     public void testShutdownTime() throws Throwable {
