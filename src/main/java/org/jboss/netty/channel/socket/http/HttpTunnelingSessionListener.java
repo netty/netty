@@ -19,11 +19,11 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.servlet;
+package org.jboss.netty.channel.socket.http;
 
 import static org.jboss.netty.channel.Channels.*;
-import static org.jboss.netty.servlet.NettyServlet.*;
-import static org.jboss.netty.servlet.NettyServletContextListener.*;
+import static org.jboss.netty.channel.socket.http.HttpTunnelingServlet.*;
+import static org.jboss.netty.channel.socket.http.HttpTunnelingContextListener.*;
 
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionEvent;
@@ -44,7 +44,7 @@ import org.jboss.netty.channel.local.LocalAddress;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-public class NettySessionListener implements HttpSessionListener, ChannelHandler {
+public class HttpTunnelingSessionListener implements HttpSessionListener, ChannelHandler {
 
     public void sessionCreated(HttpSessionEvent event) {
         HttpSession session = event.getSession();
@@ -53,12 +53,12 @@ public class NettySessionListener implements HttpSessionListener, ChannelHandler
         if(streaming) {
             session.setMaxInactiveInterval(-1);
         }
-        final ServletChannelHandler handler = new ServletChannelHandler(streaming, session,  (Long) session.getServletContext().getAttribute(RECONNECT_PROP));
+        final HttpTunnelingChannelHandler handler = new HttpTunnelingChannelHandler(streaming, session,  (Long) session.getServletContext().getAttribute(RECONNECT_PROP));
         session.setAttribute(HANDLER_PROP, handler);
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline pipeline = pipeline();
-                pipeline.addLast(NettySessionListener.class.getName(), handler);
+                pipeline.addLast(HttpTunnelingSessionListener.class.getName(), handler);
                 return pipeline;
             }
         });

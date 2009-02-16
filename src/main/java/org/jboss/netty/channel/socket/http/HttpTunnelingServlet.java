@@ -19,7 +19,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.servlet;
+package org.jboss.netty.channel.socket.http;
 
 import java.io.IOException;
 import java.io.PushbackInputStream;
@@ -43,7 +43,7 @@ import org.jboss.netty.channel.MessageEvent;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-public class NettyServlet extends HttpServlet {
+public class HttpTunnelingServlet extends HttpServlet {
 
     private static final long serialVersionUID = -872309493835745385L;
 
@@ -55,8 +55,8 @@ public class NettyServlet extends HttpServlet {
             HttpServletResponse response) throws IOException {
         HttpSession session = request.getSession();
         Channel channel = (Channel) session.getAttribute(CHANNEL_PROP);
-        ServletChannelHandler handler =
-                (ServletChannelHandler) session.getAttribute(HANDLER_PROP);
+        HttpTunnelingChannelHandler handler =
+                (HttpTunnelingChannelHandler) session.getAttribute(HANDLER_PROP);
         if (handler.isStreaming()) {
             streamResponse(request, response, session, handler, channel);
         } else {
@@ -67,7 +67,7 @@ public class NettyServlet extends HttpServlet {
     private void streamResponse(
             final HttpServletRequest request,
             final HttpServletResponse response, HttpSession session,
-            ServletChannelHandler handler, Channel channel) throws IOException {
+            HttpTunnelingChannelHandler handler, Channel channel) throws IOException {
 
         response.setHeader("jsessionid", session.getId());
         response.setHeader("Content-Type", "application/octet-stream");
@@ -135,7 +135,7 @@ public class NettyServlet extends HttpServlet {
             Channel channel,
             HttpServletRequest request,
             HttpServletResponse response, HttpSession session,
-            ServletChannelHandler handler) throws IOException {
+            HttpTunnelingChannelHandler handler) throws IOException {
         int length = request.getContentLength();
         if (length > 0) {
             byte[] bytes = new byte[length];

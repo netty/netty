@@ -19,7 +19,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.servlet;
+package org.jboss.netty.channel.socket.http;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -49,7 +49,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("one")
-class ServletChannelHandler extends SimpleChannelHandler {
+class HttpTunnelingChannelHandler extends SimpleChannelHandler {
     List<MessageEvent> awaitingEvents = new ArrayList<MessageEvent>();
 
     private final Lock reconnectLock = new ReentrantLock();
@@ -68,7 +68,7 @@ class ServletChannelHandler extends SimpleChannelHandler {
 
     private final HttpSession session;
 
-    public ServletChannelHandler(boolean stream, HttpSession session, long reconnectTimeout) {
+    public HttpTunnelingChannelHandler(boolean stream, HttpSession session, long reconnectTimeout) {
         this.stream = stream;
         this.session = session;
         this.reconnectTimeout = reconnectTimeout;
