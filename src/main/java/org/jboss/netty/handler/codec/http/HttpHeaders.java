@@ -46,6 +46,7 @@ public final class HttpHeaders {
         public static final String CONTENT_MD5 = "Content-MD5";
         public static final String CONTENT_RANGE = "Content-Range";
         public static final String CONTENT_TYPE= "Content-Type";
+        public static final String COOKIE = "Cookie";
         public static final String DATE = "Date";
         public static final String ETAG = "ETag";
         public static final String EXPECT = "Expect";
@@ -67,6 +68,7 @@ public final class HttpHeaders {
         public static final String REFERER = "Referer";
         public static final String RETRY_AFTER = "Retry-After";
         public static final String SERVER = "Server";
+        public static final String SET_COOKIE = "Set-Cookie";
         public static final String TE = "TE";
         public static final String TRAILER = "Trailer";
         public static final String TRANSFER_ENCODING = "Transfer-Encoding";

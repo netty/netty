@@ -31,6 +31,7 @@ import java.util.TreeMap;
 import java.util.Collection;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.util.CaseIgnoringComparator;
 
 /**
  * a default Http Message which holds the headers and body.
@@ -45,7 +46,6 @@ public class DefaultHttpMessage implements HttpMessage {
 
     private final HttpVersion version;
     private final Map<String, List<String>> headers = new TreeMap<String, List<String>>(caseIgnoringComparator);
-    private final Map<String, HttpCookie> cookies = new TreeMap<String, HttpCookie>(caseIgnoringComparator);
     private ChannelBuffer content;
 
     protected DefaultHttpMessage(final HttpVersion version) {
@@ -140,34 +140,5 @@ public class DefaultHttpMessage implements HttpMessage {
 
     public ChannelBuffer getContent() {
         return content;
-    }
-
-    public void addCookie(HttpCookie cookie) {
-        cookies.put(cookie.getName(), cookie);
-    }
-
-    public HttpCookie getCookie(String name) {
-        return cookies.get(name);
-    }
-
-    public Collection<HttpCookie> getCookies() {
-        return cookies.values();
-    }
-    public Collection<String> getCookieNames() {
-        return cookies.keySet();
-    }
-
-    private static final class CaseIgnoringComparator
-            implements Comparator<String>, Serializable {
-
-        private static final long serialVersionUID = 4582133183775373862L;
-
-        CaseIgnoringComparator() {
-            super();
-        }
-
-        public int compare(String o1, String o2) {
-            return o1.compareToIgnoreCase(o2);
-        }
     }
 }

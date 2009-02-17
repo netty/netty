@@ -19,39 +19,23 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.codec.http;
+package org.jboss.netty.util;
 
-import org.jboss.netty.buffer.ChannelBuffer;
+import java.io.Serializable;
+import java.util.Comparator;
 
 /**
- * decodes an http request.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
- * @version $Rev$, $Date$
+ * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpRequestDecoder extends HttpMessageDecoder {
+public class CaseIgnoringComparator implements Comparator<String>, Serializable {
 
-    public HttpRequestDecoder() {
+    private static final long serialVersionUID = 4582133183775373862L;
+
+    public CaseIgnoringComparator() {
         super();
     }
 
-    public HttpRequestDecoder(boolean mergeChunks) {
-        super(mergeChunks);
-    }
-
-    @Override
-    protected void readInitial(ChannelBuffer buffer) throws Exception{
-        String line = readIntoCurrentLine(buffer);
-        String[] split = splitInitial(line);
-        message = new DefaultHttpRequest(
-                HttpVersion.valueOf(split[2]), HttpMethod.valueOf(split[0]), split[1]);
-        checkpoint(State.READ_HEADER);
-    }
-
-    @Override
-    protected boolean isDecodingRequest() {
-        return true;
+    public int compare(String o1, String o2) {
+        return o1.compareToIgnoreCase(o2);
     }
 }

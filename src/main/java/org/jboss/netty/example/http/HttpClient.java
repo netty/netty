@@ -35,6 +35,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.codec.http.HttpCookieEncoder;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -90,7 +91,10 @@ public class HttpClient {
         HttpRequest request = new DefaultHttpRequest(
                 HttpVersion.HTTP_1_0, HttpMethod.GET, uri.toASCIIString());
         request.addHeader(HttpHeaders.Names.HOST, host);
-
+        HttpCookieEncoder httpCookieEncoder = new HttpCookieEncoder();
+        httpCookieEncoder.addCookie("my-cookie", "foo");
+        httpCookieEncoder.addCookie("another-cookie", "bar");
+        request.addHeader(HttpHeaders.Names.COOKIE, httpCookieEncoder.encode());
         channel.write(request);
 
         // Wait for the server to close the connection.

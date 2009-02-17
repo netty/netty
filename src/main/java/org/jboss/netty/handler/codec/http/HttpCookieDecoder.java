@@ -21,37 +21,26 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
+import java.util.Set;
+import java.util.HashSet;
 
 /**
- * decodes an http request.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
- * @version $Rev$, $Date$
+ * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpRequestDecoder extends HttpMessageDecoder {
+public class HttpCookieDecoder {
+    private final static String semicolon = ";";
 
-    public HttpRequestDecoder() {
-        super();
-    }
+    private final static String equals = "=";
 
-    public HttpRequestDecoder(boolean mergeChunks) {
-        super(mergeChunks);
-    }
-
-    @Override
-    protected void readInitial(ChannelBuffer buffer) throws Exception{
-        String line = readIntoCurrentLine(buffer);
-        String[] split = splitInitial(line);
-        message = new DefaultHttpRequest(
-                HttpVersion.valueOf(split[2]), HttpMethod.valueOf(split[0]), split[1]);
-        checkpoint(State.READ_HEADER);
-    }
-
-    @Override
-    protected boolean isDecodingRequest() {
-        return true;
+    public Set<HttpCookie> decode(String header) {
+        Set<HttpCookie> cookies = new HashSet<HttpCookie>();
+        String[] split = header.split(semicolon);
+        for (String s : split) {
+            String[] cookie = s.split(equals);
+            if(cookie != null && cookie.length == 2) {
+                cookies.add(new HttpCookie(cookie[0].trim(), cookie[1].trim()));
+            }
+        }
+        return cookies;
     }
 }

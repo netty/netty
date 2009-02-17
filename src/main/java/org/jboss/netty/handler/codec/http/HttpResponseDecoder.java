@@ -53,9 +53,4 @@ public class HttpResponseDecoder extends HttpMessageDecoder {
     protected boolean isDecodingRequest() {
         return false;
     }
-    
-    @Override
-    protected String getCookieHeaderName() {
-        return "Set-Cookie";
-    }
 }

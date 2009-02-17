@@ -65,13 +65,5 @@ public interface HttpMessage {
     boolean isChunked();
 
     void clearHeaders();
-    
-    void addCookie(HttpCookie cookie);
-
-    HttpCookie getCookie(String name);
-
-    Collection<HttpCookie> getCookies();
-
-    Collection<String> getCookieNames();
 
 }

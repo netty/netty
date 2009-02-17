@@ -258,7 +258,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     protected abstract boolean isDecodingRequest();
-    protected abstract String getCookieHeaderName();
     protected abstract void readInitial(ChannelBuffer buffer) throws Exception;
 
     private int getChunkSize(String hex) {

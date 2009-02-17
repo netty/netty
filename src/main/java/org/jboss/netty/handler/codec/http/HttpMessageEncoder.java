@@ -56,7 +56,6 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
                     channel.getConfig().getBufferFactory());
             encodeInitialLine(header, request);
             encodeHeaders(header, request);
-            encodeCookies(header, request);
             header.writeBytes(CRLF);
 
             ChannelBuffer content = request.getContent();
@@ -110,23 +109,5 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
         }
     }
 
-    public void encodeCookies(ChannelBuffer buf, HttpMessage message) {
-        Collection<String> cookieNames = message.getCookieNames();
-        if(cookieNames.isEmpty()) {
-            return;
-        }
-        buf.writeBytes(getCookieHeaderName());
-        buf.writeByte(COLON);
-        buf.writeByte(SP);
-        for (String cookieName : cookieNames) {
-            buf.writeBytes(cookieName.getBytes());
-            buf.writeByte(EQUALS);
-            buf.writeBytes(message.getCookie(cookieName).getValue().getBytes());
-            buf.writeByte(SEMICOLON);
-        }
-        buf.writeBytes(CRLF);
-    }
-
-    protected abstract byte[] getCookieHeaderName();
     protected abstract void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception;
 }
