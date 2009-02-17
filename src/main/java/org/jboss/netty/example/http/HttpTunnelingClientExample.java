@@ -32,7 +32,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.socket.http.HttpTunnelAddress;
-import org.jboss.netty.channel.socket.http.HttpTunnelClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.http.HttpTunnelingClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 import org.jboss.netty.handler.codec.string.StringDecoder;
@@ -84,7 +84,7 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
 
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpTunnelClientExample {
+public class HttpTunnelingClientExample {
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println(
@@ -102,7 +102,7 @@ public class HttpTunnelClientExample {
             System.err.println("Only HTTP is supported.");
             return;
         }
-        HttpTunnelClientSocketChannelFactory factory = new HttpTunnelClientSocketChannelFactory(new OioClientSocketChannelFactory(Executors.newCachedThreadPool()), Executors.newCachedThreadPool());
+        HttpTunnelingClientSocketChannelFactory factory = new HttpTunnelingClientSocketChannelFactory(new OioClientSocketChannelFactory(Executors.newCachedThreadPool()), Executors.newCachedThreadPool());
         ClientBootstrap bootstrap = new ClientBootstrap(factory);
         bootstrap.getPipeline().addLast("decoder", new StringDecoder());
         bootstrap.getPipeline().addLast("encoder", new StringEncoder());
