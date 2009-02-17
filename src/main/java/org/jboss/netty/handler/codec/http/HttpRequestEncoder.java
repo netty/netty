@@ -50,7 +50,7 @@ public class HttpRequestEncoder extends HttpMessageEncoder {
     }
 
     @Override
-    public byte[] getCookieHeaderName() {
+    protected byte[] getCookieHeaderName() {
         return COOKIE_HEADER;
     }
 }

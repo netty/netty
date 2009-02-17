@@ -23,11 +23,10 @@ package org.jboss.netty.handler.codec.http;
 
 import static org.jboss.netty.buffer.ChannelBuffers.*;
 import static org.jboss.netty.handler.codec.http.HttpCodecUtil.*;
-import static org.jboss.netty.handler.codec.http.HttpCodecUtil.SEMICOLON;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.Collection;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -128,7 +127,6 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
         buf.writeBytes(CRLF);
     }
 
-    public abstract byte[] getCookieHeaderName();
-
+    protected abstract byte[] getCookieHeaderName();
     protected abstract void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception;
 }
