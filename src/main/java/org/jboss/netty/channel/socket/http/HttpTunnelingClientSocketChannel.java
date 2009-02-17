@@ -55,7 +55,7 @@ import org.jboss.netty.util.LinkedTransferQueue;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-class HttpTunnelClientSocketChannel extends AbstractChannel
+class HttpTunnelingClientSocketChannel extends AbstractChannel
         implements org.jboss.netty.channel.socket.SocketChannel {
 
     private final Lock reconnectLock = new ReentrantLock();
@@ -78,11 +78,11 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
 
     private final DelimiterBasedFrameDecoder handler = new DelimiterBasedFrameDecoder(8092, ChannelBuffers.wrappedBuffer(new byte[] { '\r', '\n' }));
 
-    private final HttpTunnelClientSocketChannel.ServletChannelHandler servletHandler = new ServletChannelHandler();
+    private final HttpTunnelingClientSocketChannel.ServletChannelHandler servletHandler = new ServletChannelHandler();
 
     private HttpTunnelAddress remoteAddress;
 
-    HttpTunnelClientSocketChannel(
+    HttpTunnelingClientSocketChannel(
             ChannelFactory factory,
             ChannelPipeline pipeline,
             ChannelSink sink, ClientSocketChannelFactory clientSocketChannelFactory) {
@@ -150,26 +150,26 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
         SocketAddress connectAddress = new InetSocketAddress(url.getHost(), url.getPort());
         channel.connect(connectAddress);
         StringBuilder builder = new StringBuilder();
-        builder.append("POST ").append(url.getRawPath()).append(" HTTP/1.1").append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).
-                append("HOST: ").append(url.getHost()).append(":").append(url.getPort()).append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).
-                append("Content-Type: application/octet-stream").append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).append("Transfer-Encoding: chunked").
-                append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).append("Content-Transfer-Encoding: Binary").append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR).append("Connection: Keep-Alive").
-                append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR);
+        builder.append("POST ").append(url.getRawPath()).append(" HTTP/1.1").append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR).
+                append("HOST: ").append(url.getHost()).append(":").append(url.getPort()).append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR).
+                append("Content-Type: application/octet-stream").append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR).append("Transfer-Encoding: chunked").
+                append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR).append("Content-Transfer-Encoding: Binary").append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR).append("Connection: Keep-Alive").
+                append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR);
         if (reconnect) {
-            builder.append("Cookie: JSESSIONID=").append(sessionId).append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR);
+            builder.append("Cookie: JSESSIONID=").append(sessionId).append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR);
         }
-        builder.append(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR);
+        builder.append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR);
         String msg = builder.toString();
         channel.write(ChannelBuffers.wrappedBuffer(msg.getBytes("ASCII7")));
     }
 
     public void sendChunk(ChannelBuffer a) {
         int size = a.readableBytes();
-        String hex = Integer.toHexString(size) + HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR;
+        String hex = Integer.toHexString(size) + HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR;
 
         // try {
         synchronized (writeLock) {
-            a.writeBytes(HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR.getBytes());
+            a.writeBytes(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR.getBytes());
             channel.write(ChannelBuffers.wrappedBuffer(hex.getBytes()));
             channel.write(a).awaitUninterruptibly();
             //channel.write(ChannelBuffers.wrappedBuffer(LINE_TERMINATOR.getBytes()));

@@ -42,18 +42,18 @@ import org.jboss.netty.util.ThreadRenamingRunnable;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-class HttpTunnelClientSocketPipelineSink extends AbstractChannelSink {
+class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
 
     static String LINE_TERMINATOR = "\r\n";
     private final Executor workerExecutor;
 
-    HttpTunnelClientSocketPipelineSink(Executor workerExecutor) {
+    HttpTunnelingClientSocketPipelineSink(Executor workerExecutor) {
         this.workerExecutor = workerExecutor;
     }
 
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
-        HttpTunnelClientSocketChannel channel = (HttpTunnelClientSocketChannel) e.getChannel();
+        HttpTunnelingClientSocketChannel channel = (HttpTunnelingClientSocketChannel) e.getChannel();
         ChannelFuture future = e.getFuture();
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent stateEvent = (ChannelStateEvent) e;
@@ -91,7 +91,7 @@ class HttpTunnelClientSocketPipelineSink extends AbstractChannelSink {
     }
 
     private void bind(
-            HttpTunnelClientSocketChannel channel, ChannelFuture future,
+            HttpTunnelingClientSocketChannel channel, ChannelFuture future,
             SocketAddress localAddress) {
         try {
             channel.bindSocket(localAddress);
@@ -104,7 +104,7 @@ class HttpTunnelClientSocketPipelineSink extends AbstractChannelSink {
     }
 
     private void connect(
-            HttpTunnelClientSocketChannel channel, ChannelFuture future,
+            HttpTunnelingClientSocketChannel channel, ChannelFuture future,
             HttpTunnelAddress remoteAddress) {
 
         boolean bound = channel.isBound();

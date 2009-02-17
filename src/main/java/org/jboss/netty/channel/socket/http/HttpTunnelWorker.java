@@ -35,9 +35,9 @@ import org.jboss.netty.channel.ChannelFuture;
  * @version $Rev$, $Date$
  */
 class HttpTunnelWorker implements Runnable {
-    private final HttpTunnelClientSocketChannel channel;
+    private final HttpTunnelingClientSocketChannel channel;
 
-    HttpTunnelWorker(HttpTunnelClientSocketChannel channel) {
+    HttpTunnelWorker(HttpTunnelingClientSocketChannel channel) {
         this.channel = channel;
     }
 
@@ -85,7 +85,7 @@ class HttpTunnelWorker implements Runnable {
     }
 
     static void write(
-          HttpTunnelClientSocketChannel channel, ChannelFuture future,
+          HttpTunnelingClientSocketChannel channel, ChannelFuture future,
           Object message) {
 
         try {
@@ -99,7 +99,7 @@ class HttpTunnelWorker implements Runnable {
     }
 
     static void setInterestOps(
-          HttpTunnelClientSocketChannel channel, ChannelFuture future, int interestOps) {
+          HttpTunnelingClientSocketChannel channel, ChannelFuture future, int interestOps) {
 
         // Override OP_WRITE flag - a user cannot change this flag.
         interestOps &= ~Channel.OP_WRITE;
@@ -136,7 +136,7 @@ class HttpTunnelWorker implements Runnable {
         }
     }
 
-    static void close(HttpTunnelClientSocketChannel channel, ChannelFuture future) {
+    static void close(HttpTunnelingClientSocketChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         try {

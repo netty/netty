@@ -35,7 +35,7 @@ import org.jboss.netty.util.ExecutorUtil;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-public class HttpTunnelClientSocketChannelFactory implements ClientSocketChannelFactory {
+public class HttpTunnelingClientSocketChannelFactory implements ClientSocketChannelFactory {
 
     private final Executor workerExecutor;
     private final ChannelSink sink;
@@ -45,7 +45,7 @@ public class HttpTunnelClientSocketChannelFactory implements ClientSocketChannel
      *
      * @param workerExecutor
      */
-    public HttpTunnelClientSocketChannelFactory(ClientSocketChannelFactory clientSocketChannelFactory, Executor workerExecutor) {
+    public HttpTunnelingClientSocketChannelFactory(ClientSocketChannelFactory clientSocketChannelFactory, Executor workerExecutor) {
         this(workerExecutor, Runtime.getRuntime().availableProcessors());
        this.clientSocketChannelFactory = clientSocketChannelFactory;
     }
@@ -58,7 +58,7 @@ public class HttpTunnelClientSocketChannelFactory implements ClientSocketChannel
      *        the {@link java.util.concurrent.Executor} which will execute the I/O worker threads
      * @param workerCount
      */
-    public HttpTunnelClientSocketChannelFactory(
+    public HttpTunnelingClientSocketChannelFactory(
           Executor workerExecutor,
           int workerCount) {
         if (workerExecutor == null) {
@@ -71,11 +71,11 @@ public class HttpTunnelClientSocketChannelFactory implements ClientSocketChannel
         }
 
         this.workerExecutor = workerExecutor;
-        sink = new HttpTunnelClientSocketPipelineSink(workerExecutor);
+        sink = new HttpTunnelingClientSocketPipelineSink(workerExecutor);
     }
 
     public SocketChannel newChannel(ChannelPipeline pipeline) {
-        return new HttpTunnelClientSocketChannel(this, pipeline, sink, clientSocketChannelFactory);
+        return new HttpTunnelingClientSocketChannel(this, pipeline, sink, clientSocketChannelFactory);
     }
 
     public void releaseExternalResources() {

@@ -39,7 +39,7 @@ import org.jboss.netty.util.ConversionUtil;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-public class HttpTunnelSocketChannelConfig implements SocketChannelConfig {
+public class HttpTunnelingSocketChannelConfig implements SocketChannelConfig {
 
     final Socket socket;
 
@@ -70,7 +70,7 @@ public class HttpTunnelSocketChannelConfig implements SocketChannelConfig {
     /**
      * Creates a new instance.
      */
-    public HttpTunnelSocketChannelConfig(Socket socket) {
+    public HttpTunnelingSocketChannelConfig(Socket socket) {
         this.socket = socket;
     }
 
@@ -315,8 +315,8 @@ public class HttpTunnelSocketChannelConfig implements SocketChannelConfig {
         // Unused
     }
 
-    HttpTunnelSocketChannelConfig copyConfig(Socket socket) {
-        HttpTunnelSocketChannelConfig config = new HttpTunnelSocketChannelConfig(socket);
+    HttpTunnelingSocketChannelConfig copyConfig(Socket socket) {
+        HttpTunnelingSocketChannelConfig config = new HttpTunnelingSocketChannelConfig(socket);
         config.setConnectTimeoutMillis(connectTimeoutMillis);
         if (trafficClass != null) {
             config.setTrafficClass(trafficClass);
