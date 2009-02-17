@@ -22,6 +22,15 @@
  */
 package org.jboss.netty.channel.socket.http;
 
+import static org.jboss.netty.channel.Channels.*;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.net.URI;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.AbstractChannel;
@@ -29,27 +38,17 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelSink;
-import static org.jboss.netty.channel.Channels.fireChannelOpen;
-import static org.jboss.netty.channel.Channels.pipeline;
 import org.jboss.netty.channel.DefaultChannelPipeline;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.util.LinkedTransferQueue;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.URL;
-import java.net.URI;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.Lock;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -61,25 +60,25 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
 
     private final Lock reconnectLock = new ReentrantLock();
 
-    private volatile boolean awaitingInitialResponse = true;
+    volatile boolean awaitingInitialResponse = true;
 
     private final Object writeLock = new Object();
 
     volatile Thread workerThread;
 
-    private String sessionId;
+    String sessionId;
 
-    private boolean closed = false;
+    boolean closed = false;
 
     LinkedTransferQueue<byte[]> messages = new LinkedTransferQueue<byte[]>();
 
-    private ClientSocketChannelFactory clientSocketChannelFactory;
+    private final ClientSocketChannelFactory clientSocketChannelFactory;
 
-    private SocketChannel channel;
+    SocketChannel channel;
 
-    private DelimiterBasedFrameDecoder handler = new DelimiterBasedFrameDecoder(8092, ChannelBuffers.wrappedBuffer(new byte[] { '\r', '\n' }));
+    private final DelimiterBasedFrameDecoder handler = new DelimiterBasedFrameDecoder(8092, ChannelBuffers.wrappedBuffer(new byte[] { '\r', '\n' }));
 
-    private HttpTunnelClientSocketChannel.ServletChannelHandler servletHandler = new ServletChannelHandler();
+    private final HttpTunnelClientSocketChannel.ServletChannelHandler servletHandler = new ServletChannelHandler();
 
     private HttpTunnelAddress remoteAddress;
 
@@ -188,7 +187,7 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
         return buf;
     }
 
-    private void reConnect() throws Exception{
+    void reconnect() throws Exception{
         if (closed) {
                 throw new IllegalStateException("channel closed");
             }
@@ -226,7 +225,7 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
     class ServletChannelHandler extends SimpleChannelHandler {
         int nextChunkSize = -1;
 
-
+        @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
             ChannelBuffer buf = (ChannelBuffer) e.getMessage();
             byte[] bytes = new byte[buf.readableBytes()];
@@ -250,7 +249,7 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
                         if(!closed) {
                             nextChunkSize = -1;
                             awaitingInitialResponse = true;
-                            reConnect();
+                            reconnect();
                         }
                     }
                 }
@@ -262,9 +261,9 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
 
         }
 
-       public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
             channel.close();
         }
-
     }
 }
