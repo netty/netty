@@ -49,6 +49,7 @@ public class HttpRequestEncoder extends HttpMessageEncoder {
         buf.writeBytes(CRLF);
     }
 
+    @Override
     public byte[] getCookieHeaderName() {
         return COOKIE_HEADER;
     }

@@ -23,8 +23,6 @@ package org.jboss.netty.example.http;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.net.InetSocketAddress;
-import java.net.URL;
 import java.net.URI;
 import java.util.concurrent.Executors;
 
@@ -33,8 +31,8 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.socket.http.HttpTunnelClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.http.HttpTunnelAddress;
+import org.jboss.netty.channel.socket.http.HttpTunnelClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 import org.jboss.netty.handler.codec.string.StringDecoder;
@@ -97,8 +95,6 @@ public class HttpTunnelClientExample {
 
         URI uri = new URI(args[0]);
         String scheme = uri.getScheme() == null? "http" : uri.getScheme();
-        String host = uri.getHost() == null? "localhost" : uri.getHost();
-        int port = uri.getPort() == -1? 80 : uri.getPort();
 
         if (!scheme.equals("http")) {
             // We can actually support HTTPS fairly easily by inserting

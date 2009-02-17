@@ -26,15 +26,40 @@ import java.net.URI;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
-public class HttpTunnelAddress extends SocketAddress {
+public class HttpTunnelAddress extends SocketAddress implements Comparable<HttpTunnelAddress> {
+
+    private static final long serialVersionUID = -7933609652910855887L;
+
     private final URI uri;
 
     public HttpTunnelAddress(URI uri) {
+        if (uri == null) {
+            throw new NullPointerException("uri");
+        }
         this.uri = uri;
     }
 
     public URI getUri() {
         return uri;
+    }
+
+    @Override
+    public int hashCode() {
+        return uri.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof HttpTunnelAddress)) {
+            return false;
+        }
+
+        return getUri().equals(((HttpTunnelAddress) o).getUri());
+    }
+
+    public int compareTo(HttpTunnelAddress o) {
+        return getUri().toASCIIString().compareTo(o.getUri().toASCIIString());
     }
 }

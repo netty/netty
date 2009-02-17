@@ -22,7 +22,6 @@
  */
 package org.jboss.netty.channel.socket.http;
 
-import java.net.URL;
 import java.util.concurrent.Executor;
 
 import org.jboss.netty.channel.ChannelPipeline;

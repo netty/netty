@@ -163,7 +163,7 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
         channel.write(ChannelBuffers.wrappedBuffer(msg.getBytes("ASCII7")));
     }
 
-    public void sendChunk(ChannelBuffer a) throws IOException {
+    public void sendChunk(ChannelBuffer a) {
         int size = a.readableBytes();
         String hex = Integer.toHexString(size) + HttpTunnelClientSocketPipelineSink.LINE_TERMINATOR;
 
@@ -176,7 +176,7 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
         }
     }
 
-    public byte[] receiveChunk() throws IOException {
+    public byte[] receiveChunk() {
         byte[] buf = null;
         try {
             buf = messages.take();
@@ -187,7 +187,7 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
         return buf;
     }
 
-    void reconnect() throws Exception{
+    void reconnect() throws Exception {
         if (closed) {
                 throw new IllegalStateException("channel closed");
             }
@@ -211,13 +211,13 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
             }
     }
 
-    public void closeSocket() throws IOException {
+    public void closeSocket() {
         setClosed();
         closed = true;
         channel.close();
     }
 
-    public void bindSocket(SocketAddress localAddress) throws IOException {
+    public void bindSocket(SocketAddress localAddress) {
         channel.bind(localAddress);
     }
 
