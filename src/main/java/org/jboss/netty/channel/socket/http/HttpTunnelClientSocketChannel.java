@@ -189,26 +189,23 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
 
     void reconnect() throws Exception {
         if (closed) {
-                throw new IllegalStateException("channel closed");
-            }
-            if (reconnectLock.tryLock()) {
-                try {
-                    awaitingInitialResponse = true;
+            throw new IllegalStateException("channel closed");
+        }
+        if (reconnectLock.tryLock()) {
+            try {
+                awaitingInitialResponse = true;
 
-                    connectAndSendHeaders(true, remoteAddress);
-                }
-                finally {
-                    reconnectLock.unlock();
-                }
+                connectAndSendHeaders(true, remoteAddress);
+            } finally {
+                reconnectLock.unlock();
             }
-            else {
-                try {
-                    reconnectLock.lock();
-                }
-                finally {
-                    reconnectLock.unlock();
-                }
+        } else {
+            try {
+                reconnectLock.lock();
+            } finally {
+                reconnectLock.unlock();
             }
+        }
     }
 
     public void closeSocket() {
@@ -258,7 +255,6 @@ class HttpTunnelClientSocketChannel extends AbstractChannel
                     nextChunkSize = -1;
                 }
             }
-
         }
 
         @Override
