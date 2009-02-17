@@ -46,6 +46,14 @@ Base64 Encoder and Decoder, which can be obtained at:
   * HOMEPAGE:
     * http://iharder.sourceforge.net/current/java/base64/
 
+This product optionally depends on 'XNIO', a simplified low-level I/O layer,
+which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.xnio.txt (GNU LGPL 2.1)
+  * HOMEPAGE:
+    * http://www.jboss.org/xnio/
+
 This product optionally depends on 'Protocol Buffers', Google's data
 interchange format, which can be obtained at:
 
