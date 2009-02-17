@@ -47,7 +47,7 @@ public class HttpTunnelingClientSocketChannelFactory implements ClientSocketChan
      */
     public HttpTunnelingClientSocketChannelFactory(ClientSocketChannelFactory clientSocketChannelFactory, Executor workerExecutor) {
         this(workerExecutor, Runtime.getRuntime().availableProcessors());
-       this.clientSocketChannelFactory = clientSocketChannelFactory;
+        this.clientSocketChannelFactory = clientSocketChannelFactory;
     }
 
     /**
@@ -58,9 +58,7 @@ public class HttpTunnelingClientSocketChannelFactory implements ClientSocketChan
      *        the {@link java.util.concurrent.Executor} which will execute the I/O worker threads
      * @param workerCount
      */
-    public HttpTunnelingClientSocketChannelFactory(
-          Executor workerExecutor,
-          int workerCount) {
+    public HttpTunnelingClientSocketChannelFactory(Executor workerExecutor, int workerCount) {
         if (workerExecutor == null) {
             throw new NullPointerException("workerExecutor");
         }

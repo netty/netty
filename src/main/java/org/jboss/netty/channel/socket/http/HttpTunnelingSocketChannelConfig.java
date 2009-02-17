@@ -39,7 +39,7 @@ import org.jboss.netty.util.ConversionUtil;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-public class HttpTunnelingSocketChannelConfig implements SocketChannelConfig {
+class HttpTunnelingSocketChannelConfig implements SocketChannelConfig {
 
     final Socket socket;
 
@@ -70,7 +70,7 @@ public class HttpTunnelingSocketChannelConfig implements SocketChannelConfig {
     /**
      * Creates a new instance.
      */
-    public HttpTunnelingSocketChannelConfig(Socket socket) {
+    HttpTunnelingSocketChannelConfig(Socket socket) {
         this.socket = socket;
     }
 
