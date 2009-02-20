@@ -37,6 +37,8 @@ import org.jboss.netty.example.echo.EchoHandler;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
+ *
+ * FIXME: Better name
  */
 public class LocalTransportRegister {
 
