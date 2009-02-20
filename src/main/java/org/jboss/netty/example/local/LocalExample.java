@@ -41,7 +41,9 @@ import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 
 /**
- * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Andy Taylor (andy.taylor@jboss.org)
+ * @version $Rev$, $Date$
  */
 public class LocalExample {
     public static void main(String[] args) throws Exception {
