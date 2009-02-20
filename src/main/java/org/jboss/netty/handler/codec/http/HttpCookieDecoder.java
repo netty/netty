@@ -32,8 +32,9 @@ import org.jboss.netty.util.CaseIgnoringComparator;
  * @version $Rev$, $Date$
  */
 public class HttpCookieDecoder {
-    private final static String semicolon = ";";
 
+    // TODO: Add domain, path, maxAge, and version (and perhaps secure and comment?)
+    private final static String semicolon = ";";
     private final static String equals = "=";
 
     public Map<String, HttpCookie> decode(String header) {

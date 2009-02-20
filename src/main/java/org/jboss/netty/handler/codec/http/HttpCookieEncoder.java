@@ -34,6 +34,7 @@ import org.jboss.netty.util.CaseIgnoringComparator;
  */
 public class HttpCookieEncoder {
 
+    // TODO: Add domain, path, maxAge, and version (and perhaps secure and comment?)
     private final Map<String, HttpCookie> cookies = new TreeMap<String, HttpCookie>(CaseIgnoringComparator.INSTANCE);
 
     public void addCookie(String name, String val) {
