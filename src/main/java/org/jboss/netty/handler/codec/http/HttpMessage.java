@@ -23,7 +23,6 @@ package org.jboss.netty.handler.codec.http;
 
 import java.util.List;
 import java.util.Set;
-import java.util.Collection;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 

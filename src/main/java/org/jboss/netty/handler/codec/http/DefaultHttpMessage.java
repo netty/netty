@@ -21,14 +21,11 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.Collection;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.util.CaseIgnoringComparator;
@@ -42,10 +39,9 @@ import org.jboss.netty.util.CaseIgnoringComparator;
  * @version $Rev$, $Date$
  */
 public class DefaultHttpMessage implements HttpMessage {
-    private final static Comparator<String> caseIgnoringComparator = new CaseIgnoringComparator();
 
     private final HttpVersion version;
-    private final Map<String, List<String>> headers = new TreeMap<String, List<String>>(caseIgnoringComparator);
+    private final Map<String, List<String>> headers = new TreeMap<String, List<String>>(CaseIgnoringComparator.INSTANCE);
     private ChannelBuffer content;
 
     protected DefaultHttpMessage(final HttpVersion version) {

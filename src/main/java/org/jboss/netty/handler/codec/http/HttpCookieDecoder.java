@@ -21,8 +21,10 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.util.Set;
-import java.util.HashSet;
+import java.util.Map;
+import java.util.TreeMap;
+
+import org.jboss.netty.util.CaseIgnoringComparator;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
@@ -32,13 +34,15 @@ public class HttpCookieDecoder {
 
     private final static String equals = "=";
 
-    public Set<HttpCookie> decode(String header) {
-        Set<HttpCookie> cookies = new HashSet<HttpCookie>();
+    public Map<String, HttpCookie> decode(String header) {
+        Map<String, HttpCookie> cookies = new TreeMap<String, HttpCookie>(CaseIgnoringComparator.INSTANCE);
         String[] split = header.split(semicolon);
         for (String s : split) {
             String[] cookie = s.split(equals);
             if(cookie != null && cookie.length == 2) {
-                cookies.add(new HttpCookie(cookie[0].trim(), cookie[1].trim()));
+                String name = cookie[0].trim();
+                String value = cookie[1].trim();
+                cookies.put(name, new HttpCookie(name, value));
             }
         }
         return cookies;

@@ -23,7 +23,6 @@ package org.jboss.netty.example.http;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -36,15 +35,15 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunk;
+import org.jboss.netty.handler.codec.http.HttpCookie;
+import org.jboss.netty.handler.codec.http.HttpCookieDecoder;
+import org.jboss.netty.handler.codec.http.HttpCookieEncoder;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.http.QueryStringDecoder;
-import org.jboss.netty.handler.codec.http.HttpCookieDecoder;
-import org.jboss.netty.handler.codec.http.HttpCookie;
-import org.jboss.netty.handler.codec.http.HttpCookieEncoder;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -131,16 +130,18 @@ public class HttpRequestHandler extends SimpleChannelHandler {
         response.setContent(buf);
         response.setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8");
         response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+
         HttpCookieDecoder cookieDecoder = new HttpCookieDecoder();
-        Set<HttpCookie> cookieSet = cookieDecoder.decode(request.getHeader(HttpHeaders.Names.COOKIE));
-        if(cookieSet != null) {
-            //lets reset the cookies
+        Map<String, HttpCookie> cookies = cookieDecoder.decode(request.getHeader(HttpHeaders.Names.COOKIE));
+        if(!cookies.isEmpty()) {
+            // Reset the cookies if necessary.
             HttpCookieEncoder cookieEncoder = new HttpCookieEncoder();
-            for (HttpCookie cookie : cookieSet) {
+            for (HttpCookie cookie : cookies.values()) {
                 cookieEncoder.addCookie(cookie);
             }
             response.addHeader(HttpHeaders.Names.SET_COOKIE, cookieEncoder.encode());
         }
+
         // Write the response.
         ChannelFuture future = e.getChannel().write(response);
 

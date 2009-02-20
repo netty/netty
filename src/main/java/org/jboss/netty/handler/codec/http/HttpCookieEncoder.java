@@ -21,29 +21,18 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.util.CaseIgnoringComparator;
-import static org.jboss.netty.handler.codec.http.HttpCodecUtil.COLON;
-import static org.jboss.netty.handler.codec.http.HttpCodecUtil.SP;
-import static org.jboss.netty.handler.codec.http.HttpCodecUtil.EQUALS;
-import static org.jboss.netty.handler.codec.http.HttpCodecUtil.SEMICOLON;
-import static org.jboss.netty.handler.codec.http.HttpCodecUtil.CRLF;
-
+import java.util.Collection;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.Comparator;
-import java.util.Collection;
+
+import org.jboss.netty.util.CaseIgnoringComparator;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
 public class HttpCookieEncoder {
-    private final static String semicolon = ";";
 
-    private final static String equals = "=";
-
-    private final static Comparator<String> caseIgnoringComparator = new CaseIgnoringComparator();
-
-    private final Map<String, HttpCookie> cookies = new TreeMap<String, HttpCookie>(caseIgnoringComparator);
+    private final Map<String, HttpCookie> cookies = new TreeMap<String, HttpCookie>(CaseIgnoringComparator.INSTANCE);
 
     public void addCookie(String name, String val) {
         cookies.put(name, new HttpCookie(name, val));
@@ -61,9 +50,9 @@ public class HttpCookieEncoder {
         }
         for (String cookieName : cookieNames) {
             sb.append(cookieName);
-            sb.append(equals);
+            sb.append((char) HttpCodecUtil.EQUALS);
             sb.append(cookies.get(cookieName).getValue());
-            sb.append(semicolon);
+            sb.append((char) HttpCodecUtil.SEMICOLON);
         }
         return sb.toString();
     }

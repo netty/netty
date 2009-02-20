@@ -24,7 +24,6 @@ package org.jboss.netty.handler.codec.http;
 import static org.jboss.netty.buffer.ChannelBuffers.*;
 import static org.jboss.netty.handler.codec.http.HttpCodecUtil.*;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
