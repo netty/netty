@@ -23,14 +23,22 @@ package org.jboss.netty.handler.codec.http;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author Trustin Lee (tlee@redhat.com)
  */
-public class HttpCookie {
+public class HttpCookie implements Comparable<HttpCookie> {
 
+    // TODO: Add domain, path, maxAge, and version (and perhaps secure and comment?)
     private final String name;
-
     private final String value;
 
     public HttpCookie(String name, String value) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+        if (value == null) {
+            throw new NullPointerException("value");
+        }
+
         this.name = name;
         this.value = value;
     }
@@ -41,5 +49,28 @@ public class HttpCookie {
 
     public String getValue() {
         return value;
+    }
+
+    @Override
+    public int hashCode() {
+        return getName().hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof HttpCookie)) {
+            return false;
+        }
+
+        return getName().equalsIgnoreCase(((HttpCookie) o).getName());
+    }
+
+    public int compareTo(HttpCookie c) {
+        return getName().compareToIgnoreCase(c.getName());
+    }
+
+    @Override
+    public String toString() {
+        return getName() + " = " + getValue();
     }
 }
