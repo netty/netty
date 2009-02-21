@@ -55,7 +55,7 @@ public class BootstrapTest {
 
     @Test(expected = IllegalStateException.class)
     public void shouldNotAllowInitialFactoryToChange() {
-        new Bootstrap(createMock(ChannelFactory.class)).setFactory(null);
+        new Bootstrap(createMock(ChannelFactory.class)).setFactory(createMock(ChannelFactory.class));
     }
 
     @Test

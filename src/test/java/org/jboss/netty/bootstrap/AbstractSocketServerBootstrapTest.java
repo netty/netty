@@ -41,6 +41,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChildChannelStateEvent;
+import org.jboss.netty.channel.ServerChannelFactory;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.util.DummyHandler;
@@ -159,13 +160,13 @@ public abstract class AbstractSocketServerBootstrapTest {
 
     @Test(expected = IllegalStateException.class)
     public void shouldHaveLocalAddressOption() {
-        new ServerBootstrap(createMock(ChannelFactory.class)).bind();
+        new ServerBootstrap(createMock(ServerChannelFactory.class)).bind();
     }
 
 
     @Test(expected = NullPointerException.class)
     public void shouldDisallowNullLocalAddressParameter() {
-        new ServerBootstrap(createMock(ChannelFactory.class)).bind(null);
+        new ServerBootstrap(createMock(ServerChannelFactory.class)).bind(null);
     }
 
     @ChannelPipelineCoverage("all")
