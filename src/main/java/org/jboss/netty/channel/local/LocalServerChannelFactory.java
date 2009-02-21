@@ -21,7 +21,6 @@
  */
 package org.jboss.netty.channel.local;
 
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
@@ -40,8 +39,8 @@ public class LocalServerChannelFactory implements ChannelFactory {
         super();
     }
 
-    public Channel newChannel(ChannelPipeline pipeline) {
-        return new LocalServerChannel(this, pipeline, sink);
+    public LocalServerChannel newChannel(ChannelPipeline pipeline) {
+        return new DefaultLocalServerChannel(this, pipeline, sink);
     }
 
     public void releaseExternalResources() {

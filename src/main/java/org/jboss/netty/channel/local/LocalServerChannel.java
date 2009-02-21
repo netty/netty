@@ -21,16 +21,8 @@
  */
 package org.jboss.netty.channel.local;
 
-import static org.jboss.netty.channel.Channels.*;
-
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.jboss.netty.channel.AbstractServerChannel;
 import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.DefaultServerChannelConfig;
+import org.jboss.netty.channel.ServerChannel;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -38,36 +30,8 @@ import org.jboss.netty.channel.DefaultServerChannelConfig;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-final class LocalServerChannel extends AbstractServerChannel {
-
-    final ChannelConfig channelConfig;
-    final AtomicBoolean bound = new AtomicBoolean();
-    volatile LocalAddress localAddress;
-
-    LocalServerChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink) {
-        super(factory, pipeline, sink);
-        channelConfig = new DefaultServerChannelConfig();
-        fireChannelOpen(this);
-    }
-
-    public ChannelConfig getConfig() {
-        return channelConfig;
-    }
-
-    public boolean isBound() {
-        return isOpen() && bound.get();
-    }
-
-    public LocalAddress getLocalAddress() {
-        return isBound()? localAddress : null;
-    }
-
-    public LocalAddress getRemoteAddress() {
-        return null;
-    }
-
-    @Override
-    protected boolean setClosed() {
-        return super.setClosed();
-    }
+public interface LocalServerChannel extends ServerChannel {
+    ChannelConfig getConfig();
+    LocalAddress getLocalAddress();
+    LocalAddress getRemoteAddress();
 }

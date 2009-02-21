@@ -21,9 +21,16 @@
  */
 package org.jboss.netty.channel.local;
 
+import static org.jboss.netty.channel.Channels.*;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.jboss.netty.channel.AbstractServerChannel;
+import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.DefaultServerChannelConfig;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -31,19 +38,37 @@ import org.jboss.netty.channel.ChannelSink;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class LocalClientChannelFactory implements ChannelFactory {
+final class DefaultLocalServerChannel extends AbstractServerChannel
+                                      implements LocalServerChannel {
 
-    private final ChannelSink sink;
+    final ChannelConfig channelConfig;
+    final AtomicBoolean bound = new AtomicBoolean();
+    volatile LocalAddress localAddress;
 
-    public LocalClientChannelFactory() {
-        sink = new LocalClientChannelSink();
+    DefaultLocalServerChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink) {
+        super(factory, pipeline, sink);
+        channelConfig = new DefaultServerChannelConfig();
+        fireChannelOpen(this);
     }
 
-    public LocalChannel newChannel(ChannelPipeline pipeline) {
-        return new DefaultLocalChannel(null, this, pipeline, sink, null);
+    public ChannelConfig getConfig() {
+        return channelConfig;
     }
 
-    public void releaseExternalResources() {
-        // No external resources.
+    public boolean isBound() {
+        return isOpen() && bound.get();
+    }
+
+    public LocalAddress getLocalAddress() {
+        return isBound()? localAddress : null;
+    }
+
+    public LocalAddress getRemoteAddress() {
+        return null;
+    }
+
+    @Override
+    protected boolean setClosed() {
+        return super.setClosed();
     }
 }

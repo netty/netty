@@ -115,12 +115,12 @@ final class LocalClientChannelSink extends AbstractChannelSink {
 
     private void connect(DefaultLocalChannel channel, ChannelFuture future, LocalAddress remoteAddress) {
         Channel remoteChannel = LocalChannelRegistry.getChannel(remoteAddress);
-        if (!(remoteChannel instanceof LocalServerChannel)) {
+        if (!(remoteChannel instanceof DefaultLocalServerChannel)) {
             future.setFailure(new ConnectException("connection refused"));
             return;
         }
 
-        LocalServerChannel serverChannel = (LocalServerChannel) remoteChannel;
+        DefaultLocalServerChannel serverChannel = (DefaultLocalServerChannel) remoteChannel;
         ChannelPipeline pipeline;
         try {
             pipeline = serverChannel.getConfig().getPipelineFactory().getPipeline();
