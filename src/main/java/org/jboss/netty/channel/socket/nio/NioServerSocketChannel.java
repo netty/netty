@@ -103,10 +103,6 @@ class NioServerSocketChannel extends AbstractServerChannel
         return isOpen() && socket.socket().isBound();
     }
 
-    public boolean isConnected() {
-        return false;
-    }
-
     @Override
     protected boolean setClosed() {
         return super.setClosed();

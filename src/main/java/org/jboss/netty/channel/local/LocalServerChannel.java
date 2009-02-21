@@ -57,10 +57,6 @@ final class LocalServerChannel extends AbstractServerChannel {
         return isOpen() && bound.get();
     }
 
-    public boolean isConnected() {
-        return false;
-    }
-
     public LocalAddress getLocalAddress() {
         return isBound()? localAddress : null;
     }
