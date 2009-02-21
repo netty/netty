@@ -24,13 +24,9 @@ package org.jboss.netty.channel.socket.http;
 
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.Map;
-import java.util.Map.Entry;
 
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.HeapChannelBufferFactory;
 import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.DefaultChannelConfig;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.util.ConversionUtil;
 
@@ -39,32 +35,19 @@ import org.jboss.netty.util.ConversionUtil;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-class HttpTunnelingSocketChannelConfig implements SocketChannelConfig {
+class HttpTunnelingSocketChannelConfig extends DefaultChannelConfig
+                                       implements SocketChannelConfig {
 
     final Socket socket;
-
-    private volatile ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
-
-    private volatile int connectTimeoutMillis = 10000; // 10 seconds
-
     private Integer trafficClass;
-
     private Boolean tcpNoDelay;
-
     private Integer soLinger;
-
     private Integer sendBufferSize;
-
     private Boolean reuseAddress;
-
     private Integer receiveBufferSize;
-
     private Integer connectionTime;
-
     private Integer latency;
-
     private Integer bandwidth;
-
     private Boolean keepAlive;
 
     /**
@@ -74,51 +57,23 @@ class HttpTunnelingSocketChannelConfig implements SocketChannelConfig {
         this.socket = socket;
     }
 
-    public void setOptions(Map<String, Object> options) {
-        for (Entry<String, Object> e : options.entrySet()) {
-            setOption(e.getKey(), e.getValue());
-        }
-    }
-
-    /**
-     * Sets an individual option.  You can override this method to support
-     * additional configuration parameters.
-     */
+    @Override
     protected boolean setOption(String key, Object value) {
         if (key.equals("receiveBufferSize")) {
             setReceiveBufferSize(ConversionUtil.toInt(value));
-        }
-        else if (key.equals("sendBufferSize")) {
+        } else if (key.equals("sendBufferSize")) {
             setSendBufferSize(ConversionUtil.toInt(value));
-        }
-        else if (key.equals("tcpNoDelay")) {
+        } else if (key.equals("tcpNoDelay")) {
             setTcpNoDelay(ConversionUtil.toBoolean(value));
-        }
-        else if (key.equals("keepAlive")) {
+        } else if (key.equals("keepAlive")) {
             setKeepAlive(ConversionUtil.toBoolean(value));
-        }
-        else if (key.equals("reuseAddress")) {
+        } else if (key.equals("reuseAddress")) {
             setReuseAddress(ConversionUtil.toBoolean(value));
-        }
-        else if (key.equals("soLinger")) {
+        } else if (key.equals("soLinger")) {
             setSoLinger(ConversionUtil.toInt(value));
-        }
-        else if (key.equals("trafficClass")) {
+        } else if (key.equals("trafficClass")) {
             setTrafficClass(ConversionUtil.toInt(value));
-        }
-        else if (key.equals("writeTimeoutMillis")) {
-            setWriteTimeoutMillis(ConversionUtil.toInt(value));
-        }
-        else if (key.equals("connectTimeoutMillis")) {
-            setConnectTimeoutMillis(ConversionUtil.toInt(value));
-        }
-        else if (key.equals("pipelineFactory")) {
-            setPipelineFactory((ChannelPipelineFactory) value);
-        }
-        else if (key.equals("bufferFactory")) {
-            setBufferFactory((ChannelBufferFactory) value);
-        }
-        else {
+        } else {
             return false;
         }
         return true;
@@ -277,77 +232,33 @@ class HttpTunnelingSocketChannelConfig implements SocketChannelConfig {
 
     }
 
-    public int getConnectTimeoutMillis() {
-        return connectTimeoutMillis;
-    }
-
-    public ChannelBufferFactory getBufferFactory() {
-        return bufferFactory;
-    }
-
-    public void setBufferFactory(ChannelBufferFactory bufferFactory) {
-        if (bufferFactory == null) {
-            throw new NullPointerException("bufferFactory");
-        }
-        this.bufferFactory = bufferFactory;
-    }
-
-    public ChannelPipelineFactory getPipelineFactory() {
-        return null;
-    }
-
-    public int getWriteTimeoutMillis() {
-        return 0;
-    }
-
-    public void setConnectTimeoutMillis(int connectTimeoutMillis) {
-        if (connectTimeoutMillis < 0) {
-            throw new IllegalArgumentException("connectTimeoutMillis: " + connectTimeoutMillis);
-        }
-        this.connectTimeoutMillis = connectTimeoutMillis;
-    }
-
-    public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
-        // Unused
-    }
-
-    public void setWriteTimeoutMillis(int writeTimeoutMillis) {
-        // Unused
-    }
-
     HttpTunnelingSocketChannelConfig copyConfig(Socket socket) {
         HttpTunnelingSocketChannelConfig config = new HttpTunnelingSocketChannelConfig(socket);
-        config.setConnectTimeoutMillis(connectTimeoutMillis);
+        config.setConnectTimeoutMillis(getConnectTimeoutMillis());
         if (trafficClass != null) {
             config.setTrafficClass(trafficClass);
         }
         if (tcpNoDelay != null) {
             config.setTcpNoDelay(tcpNoDelay);
         }
-
         if (soLinger != null) {
             config.setSoLinger(soLinger);
         }
-
         if (sendBufferSize != null) {
             config.setSendBufferSize(sendBufferSize);
         }
-
         if (reuseAddress != null) {
             config.setReuseAddress(reuseAddress);
         }
-
         if (receiveBufferSize != null) {
             config.setReceiveBufferSize(receiveBufferSize);
         }
-
         if (keepAlive != null) {
             config.setKeepAlive(keepAlive);
         }
         if (connectionTime != null) {
             config.setPerformancePreferences(connectionTime, latency, bandwidth);
         }
-
         return config;
     }
 }

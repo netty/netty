@@ -1,7 +1,8 @@
 /*
  * JBoss, Home of Professional Open Source
- * Copyright 2005-2008, Red Hat Middleware LLC, and individual contributors
- * by the @authors tag. See the copyright.txt in the distribution for a
+ *
+ * Copyright 2008, Red Hat Middleware LLC, and individual contributors
+ * by the @author tags. See the COPYRIGHT.txt in the distribution for a
  * full listing of individual contributors.
  *
  * This is free software; you can redistribute it and/or modify it
@@ -19,28 +20,32 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.local;
+package org.jboss.netty.channel;
 
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.HeapChannelBufferFactory;
-import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
 
 /**
+ * The default {@link ServerSocketChannelConfig} implementation.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
+ *
  * @version $Rev$, $Date$
  */
-class LocalChannelConfig implements ChannelConfig {
+public class DefaultServerChannelConfig implements ChannelConfig {
 
-    private volatile ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
     private volatile ChannelPipelineFactory pipelineFactory;
+    private volatile ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
 
-    LocalChannelConfig() {
+    /**
+     * Creates a new instance.
+     */
+    public DefaultServerChannelConfig() {
         super();
     }
 
@@ -65,20 +70,27 @@ class LocalChannelConfig implements ChannelConfig {
         return true;
     }
 
-    public ChannelBufferFactory getBufferFactory() {
-        return bufferFactory;
-    }
-
-    public void setBufferFactory(ChannelBufferFactory bufferFactory) {
-        this.bufferFactory = bufferFactory;
-    }
-
     public ChannelPipelineFactory getPipelineFactory() {
         return pipelineFactory;
     }
 
     public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
+        if (pipelineFactory == null) {
+            throw new NullPointerException("pipelineFactory");
+        }
         this.pipelineFactory = pipelineFactory;
+    }
+
+    public ChannelBufferFactory getBufferFactory() {
+        return bufferFactory;
+    }
+
+    public void setBufferFactory(ChannelBufferFactory bufferFactory) {
+        if (bufferFactory == null) {
+            throw new NullPointerException("bufferFactory");
+        }
+
+        this.bufferFactory = bufferFactory;
     }
 
     public int getConnectTimeoutMillis() {

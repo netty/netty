@@ -24,11 +24,11 @@ package org.jboss.netty.handler.codec.embedder;
 
 import java.net.SocketAddress;
 
-import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.DefaultChannelConfig;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -43,12 +43,7 @@ class EmbeddedChannel extends AbstractChannel {
 
     EmbeddedChannel(ChannelPipeline pipeline, ChannelSink sink) {
         super(null, EmbeddedChannelFactory.INSTANCE, pipeline, sink);
-        config = EmbeddedChannelConfig.DEFAULT_INSTANCE;
-    }
-
-    EmbeddedChannel(ChannelBufferFactory bufferFactory, ChannelPipeline pipeline, ChannelSink sink) {
-        super(null, EmbeddedChannelFactory.INSTANCE, pipeline, sink);
-        config = new EmbeddedChannelConfig(bufferFactory);
+        config = new DefaultChannelConfig();
     }
 
     public ChannelConfig getConfig() {

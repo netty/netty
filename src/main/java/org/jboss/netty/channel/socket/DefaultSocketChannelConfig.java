@@ -24,13 +24,9 @@ package org.jboss.netty.channel.socket;
 
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.Map;
-import java.util.Map.Entry;
 
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.HeapChannelBufferFactory;
 import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.DefaultChannelConfig;
 import org.jboss.netty.util.ConversionUtil;
 
 /**
@@ -42,11 +38,10 @@ import org.jboss.netty.util.ConversionUtil;
  * @version $Rev$, $Date$
  *
  */
-public class DefaultSocketChannelConfig implements SocketChannelConfig {
+public class DefaultSocketChannelConfig extends DefaultChannelConfig
+                                        implements SocketChannelConfig {
 
     private final Socket socket;
-    private volatile ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
-    private volatile int connectTimeoutMillis = 10000; // 10 seconds
 
     /**
      * Creates a new instance.
@@ -58,17 +53,12 @@ public class DefaultSocketChannelConfig implements SocketChannelConfig {
         this.socket = socket;
     }
 
-    public void setOptions(Map<String, Object> options) {
-        for (Entry<String, Object> e: options.entrySet()) {
-            setOption(e.getKey(), e.getValue());
-        }
-    }
-
-    /**
-     * Sets an individual option.  You can override this method to support
-     * additional configuration parameters.
-     */
+    @Override
     protected boolean setOption(String key, Object value) {
+        if (super.setOption(key, value)) {
+            return true;
+        }
+
         if (key.equals("receiveBufferSize")) {
             setReceiveBufferSize(ConversionUtil.toInt(value));
         } else if (key.equals("sendBufferSize")) {
@@ -83,12 +73,6 @@ public class DefaultSocketChannelConfig implements SocketChannelConfig {
             setSoLinger(ConversionUtil.toInt(value));
         } else if (key.equals("trafficClass")) {
             setTrafficClass(ConversionUtil.toInt(value));
-        } else if (key.equals("connectTimeoutMillis")) {
-            setConnectTimeoutMillis(ConversionUtil.toInt(value));
-        } else if (key.equals("pipelineFactory")) {
-            setPipelineFactory((ChannelPipelineFactory) value);
-        } else if (key.equals("bufferFactory")) {
-            setBufferFactory((ChannelBufferFactory) value);
         } else {
             return false;
         }
@@ -214,45 +198,5 @@ public class DefaultSocketChannelConfig implements SocketChannelConfig {
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
-    }
-
-    public int getConnectTimeoutMillis() {
-        return connectTimeoutMillis;
-    }
-
-    public ChannelBufferFactory getBufferFactory() {
-        return bufferFactory;
-    }
-
-    public void setBufferFactory(ChannelBufferFactory bufferFactory) {
-        if (bufferFactory == null) {
-            throw new NullPointerException("bufferFactory");
-        }
-        this.bufferFactory = bufferFactory;
-    }
-
-    public ChannelPipelineFactory getPipelineFactory() {
-        return null;
-    }
-
-    @Deprecated
-    public int getWriteTimeoutMillis() {
-        return 0;
-    }
-
-    public void setConnectTimeoutMillis(int connectTimeoutMillis) {
-        if (connectTimeoutMillis < 0) {
-            throw new IllegalArgumentException("connectTimeoutMillis: " + connectTimeoutMillis);
-        }
-        this.connectTimeoutMillis = connectTimeoutMillis;
-    }
-
-    public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
-        // Unused
-    }
-
-    @Deprecated
-    public void setWriteTimeoutMillis(int writeTimeoutMillis) {
-        // Unused
     }
 }

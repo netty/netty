@@ -62,10 +62,8 @@ public abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
     }
 
     protected AbstractCodecEmbedder(ChannelBufferFactory bufferFactory, ChannelHandler... handlers) {
-        pipeline = Channels.pipeline();
-        configurePipeline(handlers);
-        channel = new EmbeddedChannel(bufferFactory, pipeline, sink);
-        fireInitialEvents();
+        this(handlers);
+        getChannel().getConfig().setBufferFactory(bufferFactory);
     }
 
     private void fireInitialEvents() {

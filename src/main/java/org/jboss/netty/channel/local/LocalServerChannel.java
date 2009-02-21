@@ -30,6 +30,7 @@ import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.DefaultServerChannelConfig;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -38,14 +39,14 @@ import org.jboss.netty.channel.ChannelSink;
  * @version $Rev$, $Date$
  */
 final class LocalServerChannel extends AbstractServerChannel {
-    final ChannelConfig channelConfig;
 
-    volatile LocalAddress localAddress;
+    final ChannelConfig channelConfig;
     final AtomicBoolean bound = new AtomicBoolean();
+    volatile LocalAddress localAddress;
 
     LocalServerChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink) {
         super(factory, pipeline, sink);
-        channelConfig = new LocalChannelConfig();
+        channelConfig = new DefaultServerChannelConfig();
         fireChannelOpen(this);
     }
 

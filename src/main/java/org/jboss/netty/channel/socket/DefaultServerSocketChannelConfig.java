@@ -24,13 +24,9 @@ package org.jboss.netty.channel.socket;
 
 import java.net.ServerSocket;
 import java.net.SocketException;
-import java.util.Map;
-import java.util.Map.Entry;
 
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.HeapChannelBufferFactory;
 import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.DefaultServerChannelConfig;
 import org.jboss.netty.util.ConversionUtil;
 
 /**
@@ -41,12 +37,11 @@ import org.jboss.netty.util.ConversionUtil;
  *
  * @version $Rev$, $Date$
  */
-public class DefaultServerSocketChannelConfig implements ServerSocketChannelConfig {
+public class DefaultServerSocketChannelConfig extends DefaultServerChannelConfig
+                                              implements ServerSocketChannelConfig {
 
     private final ServerSocket socket;
     private volatile int backlog;
-    private volatile ChannelPipelineFactory pipelineFactory;
-    private volatile ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
 
     /**
      * Creates a new instance.
@@ -58,27 +53,18 @@ public class DefaultServerSocketChannelConfig implements ServerSocketChannelConf
         this.socket = socket;
     }
 
-    public void setOptions(Map<String, Object> options) {
-        for (Entry<String, Object> e: options.entrySet()) {
-            setOption(e.getKey(), e.getValue());
-        }
-    }
-
-    /**
-     * Sets an individual option.  You can override this method to support
-     * additional configuration parameters.
-     */
+    @Override
     protected boolean setOption(String key, Object value) {
+        if (super.setOption(key, value)) {
+            return true;
+        }
+
         if (key.equals("receiveBufferSize")) {
             setReceiveBufferSize(ConversionUtil.toInt(value));
         } else if (key.equals("reuseAddress")) {
             setReuseAddress(ConversionUtil.toBoolean(value));
         } else if (key.equals("backlog")) {
             setBacklog(ConversionUtil.toInt(value));
-        } else if (key.equals("pipelineFactory")) {
-            setPipelineFactory((ChannelPipelineFactory) value);
-        } else if (key.equals("bufferFactory")) {
-            setBufferFactory((ChannelBufferFactory) value);
         } else {
             return false;
         }
@@ -121,29 +107,6 @@ public class DefaultServerSocketChannelConfig implements ServerSocketChannelConf
         socket.setPerformancePreferences(connectionTime, latency, bandwidth);
     }
 
-    public ChannelPipelineFactory getPipelineFactory() {
-        return pipelineFactory;
-    }
-
-    public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
-        if (pipelineFactory == null) {
-            throw new NullPointerException("pipelineFactory");
-        }
-        this.pipelineFactory = pipelineFactory;
-    }
-
-    public ChannelBufferFactory getBufferFactory() {
-        return bufferFactory;
-    }
-
-    public void setBufferFactory(ChannelBufferFactory bufferFactory) {
-        if (bufferFactory == null) {
-            throw new NullPointerException("bufferFactory");
-        }
-
-        this.bufferFactory = bufferFactory;
-    }
-
     public int getBacklog() {
         return backlog;
     }
@@ -153,23 +116,5 @@ public class DefaultServerSocketChannelConfig implements ServerSocketChannelConf
             throw new IllegalArgumentException("backlog: " + backlog);
         }
         this.backlog = backlog;
-    }
-
-    public int getConnectTimeoutMillis() {
-        return 0;
-    }
-
-    public void setConnectTimeoutMillis(int connectTimeoutMillis) {
-        // Unused
-    }
-
-    @Deprecated
-    public int getWriteTimeoutMillis() {
-        return 0;
-    }
-
-    @Deprecated
-    public void setWriteTimeoutMillis(int writeTimeoutMillis) {
-        // Unused
     }
 }

@@ -34,6 +34,7 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.DefaultChannelConfig;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.util.LinkedTransferQueue;
 
@@ -51,17 +52,18 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
         }
     };
 
+    private final ChannelConfig config;
+    final AtomicBoolean bound = new AtomicBoolean();
+    final Queue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>();
+
     volatile DefaultLocalChannel pairedChannel;
     volatile LocalAddress localAddress;
     volatile LocalAddress remoteAddress;
-    final AtomicBoolean bound = new AtomicBoolean();
-    private final LocalChannelConfig config;
-    final Queue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>();
 
     DefaultLocalChannel(LocalServerChannel parent, ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, DefaultLocalChannel pairedChannel) {
         super(parent, factory, pipeline, sink);
         this.pairedChannel = pairedChannel;
-        config = new LocalChannelConfig();
+        config = new DefaultChannelConfig();
         fireChannelOpen(this);
     }
 
