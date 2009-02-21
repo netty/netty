@@ -34,7 +34,8 @@ import org.jboss.netty.channel.ChannelFuture;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-class HttpTunnelWorker implements Runnable {
+final class HttpTunnelWorker implements Runnable {
+
     private final HttpTunnelingClientSocketChannel channel;
 
     HttpTunnelWorker(HttpTunnelingClientSocketChannel channel) {

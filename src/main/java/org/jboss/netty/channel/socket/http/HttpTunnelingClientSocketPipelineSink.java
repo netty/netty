@@ -42,7 +42,7 @@ import org.jboss.netty.util.ThreadRenamingRunnable;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
+final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
 
     static String LINE_TERMINATOR = "\r\n";
     private final Executor workerExecutor;

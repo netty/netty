@@ -35,7 +35,7 @@ import org.jboss.netty.util.ConversionUtil;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-class HttpTunnelingSocketChannelConfig extends DefaultChannelConfig
+final class HttpTunnelingSocketChannelConfig extends DefaultChannelConfig
                                        implements SocketChannelConfig {
 
     final Socket socket;
