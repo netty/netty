@@ -55,8 +55,8 @@ final class LocalClientChannelSink extends AbstractChannelSink {
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent event = (ChannelStateEvent) e;
 
-            AbstractLocalChannel channel =
-                  (AbstractLocalChannel) event.getChannel();
+            DefaultLocalChannel channel =
+                  (DefaultLocalChannel) event.getChannel();
             ChannelFuture future = event.getFuture();
             ChannelState state = event.getState();
             Object value = event.getValue();
@@ -87,13 +87,13 @@ final class LocalClientChannelSink extends AbstractChannelSink {
         }
         else if (e instanceof MessageEvent) {
             MessageEvent event = (MessageEvent) e;
-            AbstractLocalChannel channel = (AbstractLocalChannel) event.getChannel();
+            DefaultLocalChannel channel = (DefaultLocalChannel) event.getChannel();
             channel.writeBuffer.offer(event);
             channel.flushWriteBuffer();
         }
     }
 
-    private void bind(AbstractLocalChannel channel, ChannelFuture future, LocalAddress localAddress) {
+    private void bind(DefaultLocalChannel channel, ChannelFuture future, LocalAddress localAddress) {
         try {
             if (!LocalChannelRegistry.register(localAddress, channel)) {
                 throw new ChannelException("address already in use: " + localAddress);
@@ -113,7 +113,7 @@ final class LocalClientChannelSink extends AbstractChannelSink {
         }
     }
 
-    private void connect(AbstractLocalChannel channel, ChannelFuture future, LocalAddress remoteAddress) {
+    private void connect(DefaultLocalChannel channel, ChannelFuture future, LocalAddress remoteAddress) {
         Channel remoteChannel = LocalChannelRegistry.getChannel(remoteAddress);
         if (!(remoteChannel instanceof LocalServerChannel)) {
             future.setFailure(new ConnectException("connection refused"));
@@ -132,7 +132,7 @@ final class LocalClientChannelSink extends AbstractChannelSink {
         }
 
         future.setSuccess();
-        AbstractLocalChannel acceptedChannel = new LocalAcceptedChannel(
+        DefaultLocalChannel acceptedChannel = new DefaultLocalChannel(
                 serverChannel, serverChannel.getFactory(), pipeline, this, channel);
         channel.pairedChannel = acceptedChannel;
 

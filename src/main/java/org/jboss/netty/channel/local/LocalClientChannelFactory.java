@@ -41,7 +41,7 @@ public class LocalClientChannelFactory implements ChannelFactory {
     }
 
     public Channel newChannel(ChannelPipeline pipeline) {
-        return new LocalClientChannel(this, pipeline, sink, null);
+        return new DefaultLocalChannel(null, this, pipeline, sink, null);
     }
 
     public void releaseExternalResources() {

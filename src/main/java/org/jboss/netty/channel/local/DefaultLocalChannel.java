@@ -43,7 +43,7 @@ import org.jboss.netty.util.LinkedTransferQueue;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-class AbstractLocalChannel extends AbstractChannel {
+final class DefaultLocalChannel extends AbstractChannel implements LocalChannel {
     private final ThreadLocal<Boolean> delivering = new ThreadLocal<Boolean>() {
         @Override
         protected Boolean initialValue() {
@@ -51,14 +51,14 @@ class AbstractLocalChannel extends AbstractChannel {
         }
     };
 
-    volatile AbstractLocalChannel pairedChannel;
+    volatile DefaultLocalChannel pairedChannel;
     volatile LocalAddress localAddress;
     volatile LocalAddress remoteAddress;
     final AtomicBoolean bound = new AtomicBoolean();
     private final LocalChannelConfig config;
     final Queue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>();
 
-    AbstractLocalChannel(LocalServerChannel parent, ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, AbstractLocalChannel pairedChannel) {
+    DefaultLocalChannel(LocalServerChannel parent, ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, DefaultLocalChannel pairedChannel) {
         super(parent, factory, pipeline, sink);
         this.pairedChannel = pairedChannel;
         config = new LocalChannelConfig();
@@ -94,7 +94,7 @@ class AbstractLocalChannel extends AbstractChannel {
                 return;
             }
 
-            AbstractLocalChannel pairedChannel = this.pairedChannel;
+            DefaultLocalChannel pairedChannel = this.pairedChannel;
             if (pairedChannel != null) {
                 this.pairedChannel = null;
                 this.localAddress = null;
@@ -108,7 +108,7 @@ class AbstractLocalChannel extends AbstractChannel {
                 return;
             }
 
-            AbstractLocalChannel me = pairedChannel.pairedChannel;
+            DefaultLocalChannel me = pairedChannel.pairedChannel;
             if (me != null) {
                 pairedChannel.pairedChannel = null;
                 pairedChannel.localAddress = null;
@@ -124,7 +124,7 @@ class AbstractLocalChannel extends AbstractChannel {
     }
 
     void flushWriteBuffer() {
-        AbstractLocalChannel pairedChannel = this.pairedChannel;
+        DefaultLocalChannel pairedChannel = this.pairedChannel;
         if (pairedChannel != null) {
             if (pairedChannel.isConnected()){
                 // Channel is open and connected and channelConnected event has
