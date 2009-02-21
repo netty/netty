@@ -98,4 +98,11 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
         return getUnsupportedOperationFuture();
     }
 
+    public SocketAddress getRemoteAddress() {
+        return null;
+    }
+
+    public boolean isConnected() {
+        return false;
+    }
 }
