@@ -40,6 +40,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.util.LinkedTransferQueue;
+import org.jboss.netty.util.ThreadLocalBoolean;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -164,12 +165,7 @@ class NioSocketChannel extends AbstractChannel
 
     private final class WriteBuffer extends LinkedTransferQueue<MessageEvent> {
 
-        private final ThreadLocal<Boolean> notifying = new ThreadLocal<Boolean>() {
-            @Override
-            protected Boolean initialValue() {
-                return Boolean.FALSE;
-            }
-        };
+        private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
         WriteBuffer() {
             super();

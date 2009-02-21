@@ -37,6 +37,7 @@ import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.DefaultChannelConfig;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.util.LinkedTransferQueue;
+import org.jboss.netty.util.ThreadLocalBoolean;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -45,14 +46,9 @@ import org.jboss.netty.util.LinkedTransferQueue;
  * @version $Rev$, $Date$
  */
 final class DefaultLocalChannel extends AbstractChannel implements LocalChannel {
-    private final ThreadLocal<Boolean> delivering = new ThreadLocal<Boolean>() {
-        @Override
-        protected Boolean initialValue() {
-            return false;
-        }
-    };
 
     private final ChannelConfig config;
+    private final ThreadLocalBoolean delivering = new ThreadLocalBoolean();
     final AtomicBoolean bound = new AtomicBoolean();
     final Queue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>();
 
