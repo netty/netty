@@ -100,12 +100,12 @@ public class Bootstrap {
      *         if the factory is already set
      */
     public void setFactory(ChannelFactory factory) {
+        if (factory == null) {
+            throw new NullPointerException("factory");
+        }
         if (this.factory != null) {
             throw new IllegalStateException(
                     "factory can't change once set.");
-        }
-        if (factory == null) {
-            throw new NullPointerException("factory");
         }
         this.factory = factory;
     }

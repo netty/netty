@@ -46,6 +46,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChildChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.ServerChannelFactory;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
@@ -164,6 +165,20 @@ public class ServerBootstrap extends Bootstrap {
      */
     public ServerBootstrap(ChannelFactory channelFactory) {
         super(channelFactory);
+    }
+
+    @Override
+    public void setFactory(ChannelFactory factory) {
+        if (factory == null) {
+            throw new NullPointerException("factory");
+        }
+        if (!(factory instanceof ServerChannelFactory)) {
+            throw new IllegalArgumentException(
+                    "factory must be a " +
+                    ServerChannelFactory.class.getSimpleName() + ": " +
+                    factory.getClass());
+        }
+        super.setFactory(factory);
     }
 
     /**
