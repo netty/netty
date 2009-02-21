@@ -21,14 +21,14 @@
  */
 package org.jboss.netty.channel.local;
 
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ServerChannelFactory;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public interface LocalServerChannelFactory extends ChannelFactory {
+public interface LocalServerChannelFactory extends ServerChannelFactory {
     LocalServerChannel newChannel(ChannelPipeline pipeline);
 }

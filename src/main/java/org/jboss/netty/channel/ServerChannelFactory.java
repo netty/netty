@@ -20,22 +20,19 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket;
+package org.jboss.netty.channel;
 
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ServerChannelFactory;
+
 
 /**
- * A {@link ChannelFactory} which creates a {@link ServerSocketChannel}.
- *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
  *
- * @apiviz.has org.jboss.netty.channel.socket.ServerSocketChannel oneway - - creates
+ * @apiviz.landmark
+ * @apiviz.has        org.jboss.netty.channel.ServerChannel oneway - - creates
  */
-public interface ServerSocketChannelFactory extends ServerChannelFactory {
-    ServerSocketChannel newChannel(ChannelPipeline pipeline);
+public interface ServerChannelFactory extends ChannelFactory {
+    ServerChannel newChannel(ChannelPipeline pipeline);
 }
