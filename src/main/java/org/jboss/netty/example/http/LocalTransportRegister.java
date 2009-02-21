@@ -24,8 +24,8 @@ package org.jboss.netty.example.http;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.local.DefaultLocalServerChannelFactory;
 import org.jboss.netty.channel.local.LocalAddress;
-import org.jboss.netty.channel.local.LocalServerChannelFactory;
 import org.jboss.netty.example.echo.EchoHandler;
 
 /**
@@ -42,7 +42,7 @@ import org.jboss.netty.example.echo.EchoHandler;
  */
 public class LocalTransportRegister {
 
-    private final ChannelFactory factory = new LocalServerChannelFactory();
+    private final ChannelFactory factory = new DefaultLocalServerChannelFactory();
     private volatile Channel serverChannel;
 
     public void start() {

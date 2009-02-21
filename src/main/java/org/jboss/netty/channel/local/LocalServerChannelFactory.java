@@ -23,27 +23,12 @@ package org.jboss.netty.channel.local;
 
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class LocalServerChannelFactory implements ChannelFactory {
-
-    private final ChannelSink sink = new LocalServerChannelSink();
-
-    public LocalServerChannelFactory() {
-        super();
-    }
-
-    public LocalServerChannel newChannel(ChannelPipeline pipeline) {
-        return new DefaultLocalServerChannel(this, pipeline, sink);
-    }
-
-    public void releaseExternalResources() {
-        // Unused
-    }
+public interface LocalServerChannelFactory extends ChannelFactory {
+    LocalServerChannel newChannel(ChannelPipeline pipeline);
 }

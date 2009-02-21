@@ -26,7 +26,7 @@ import javax.servlet.ServletContextListener;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.local.LocalClientChannelFactory;
+import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
 
 /**
  * A context listener that creates a client bootstrap that uses a local channel factory. The local channel factory should
@@ -50,7 +50,7 @@ public class HttpTunnelingContextListener implements ServletContextListener {
 
     static final String BOOTSTRAP_PROP = "bootstrap";
 
-    private final ChannelFactory factory = new LocalClientChannelFactory();
+    private final ChannelFactory factory = new DefaultLocalClientChannelFactory();
 
     public void contextInitialized(ServletContextEvent context) {
         context.getServletContext().setAttribute(BOOTSTRAP_PROP, new ClientBootstrap(factory));

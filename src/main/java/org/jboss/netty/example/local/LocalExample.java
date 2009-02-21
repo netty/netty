@@ -33,9 +33,9 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
+import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
+import org.jboss.netty.channel.local.DefaultLocalServerChannelFactory;
 import org.jboss.netty.channel.local.LocalAddress;
-import org.jboss.netty.channel.local.LocalClientChannelFactory;
-import org.jboss.netty.channel.local.LocalServerChannelFactory;
 import org.jboss.netty.example.echo.EchoHandler;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
@@ -47,14 +47,14 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
  */
 public class LocalExample {
     public static void main(String[] args) throws Exception {
-        ChannelFactory factory = new LocalServerChannelFactory();
+        ChannelFactory factory = new DefaultLocalServerChannelFactory();
         ServerBootstrap bootstrap = new ServerBootstrap(factory);
         EchoHandler handler = new EchoHandler();
         LocalAddress socketAddress = new LocalAddress("1");
         bootstrap.getPipeline().addLast("handler", handler);
         bootstrap.bind(socketAddress);
 
-        ChannelFactory channelFactory = new LocalClientChannelFactory();
+        ChannelFactory channelFactory = new DefaultLocalClientChannelFactory();
         ClientBootstrap clientBootstrap = new ClientBootstrap(channelFactory);
         clientBootstrap.getPipeline().addLast("decoder", new StringDecoder());
         clientBootstrap.getPipeline().addLast("encoder", new StringEncoder());
