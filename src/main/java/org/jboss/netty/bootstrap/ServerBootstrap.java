@@ -333,6 +333,10 @@ public class ServerBootstrap extends Bootstrap {
         public void exceptionCaught(
                 ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
+            System.err.println(e);
+            e.getCause().printStackTrace();
+            boolean finished = futureQueue.offer(failedFuture(e.getChannel(), e.getCause()));
+            assert finished;
             ctx.sendUpstream(e);
         }
     }

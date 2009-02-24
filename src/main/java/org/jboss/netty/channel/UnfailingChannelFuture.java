@@ -48,6 +48,6 @@ public class UnfailingChannelFuture extends DefaultChannelFuture {
 
     @Override
     public boolean setFailure(Throwable cause) {
-        throw new IllegalStateException("Can not fail");
+        throw new IllegalStateException("Can not fail", cause);
     }
 }
