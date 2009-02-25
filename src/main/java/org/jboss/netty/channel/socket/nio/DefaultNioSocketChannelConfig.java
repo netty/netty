@@ -25,6 +25,8 @@ package org.jboss.netty.channel.socket.nio;
 import java.net.Socket;
 import java.util.Map;
 
+import org.jboss.netty.channel.DefaultReceiveBufferSizePredictor;
+import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.channel.socket.DefaultSocketChannelConfig;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;

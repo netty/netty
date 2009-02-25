@@ -20,12 +20,13 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.channel.socket.nio;
+package org.jboss.netty.channel;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
- * Predicts the number of readable bytes in the socket receive buffer.
+ * Predicts the number of readable bytes in the receive buffer of a
+ * {@link Channel}.
  * <p>
  * It calculates the close-to-optimal capacity of the {@link ChannelBuffer}
  * for the next read operation depending on the actual number of read bytes
