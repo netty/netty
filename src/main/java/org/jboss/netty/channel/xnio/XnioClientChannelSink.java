@@ -24,6 +24,8 @@ package org.jboss.netty.channel.xnio;
 
 import static org.jboss.netty.channel.Channels.*;
 
+import java.nio.channels.AlreadyConnectedException;
+import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.GatheringByteChannel;
 
 import org.jboss.netty.channel.AbstractChannelSink;
@@ -77,30 +79,44 @@ final class XnioClientChannelSink extends AbstractChannelSink {
                     if (channel instanceof XnioClientChannel) {
                         final XnioClientChannel cc = (XnioClientChannel) channel;
                         synchronized (cc.connectLock) {
-                            // TODO: Add connect-in-progress flag.
-                            java.nio.channels.Channel xnioChannel = cc.xnioChannel;
-                            if (xnioChannel == null) {
-                                FutureConnection fc =
-                                    cc.xnioConnector.connectTo(value, HANDLER);
-                                fc.addNotifier(new Notifier() {
-                                    public void notify(
-                                            IoFuture future, Object attachment) {
-                                        ChannelFuture cf = (ChannelFuture) attachment;
-                                        try {
-                                            java.nio.channels.Channel xnioChannel = (java.nio.channels.Channel) future.get();
-                                            cc.xnioChannel = xnioChannel;
-                                            XnioChannelRegistry.registerChannelMapping(cc);
-                                            cf.setSuccess();
-                                        } catch (Throwable t) {
-                                            cf.setFailure(t);
-                                            fireExceptionCaught(cc, t);
+                            if (cc.connecting) {
+                                Exception cause = new ConnectionPendingException();
+                                future.setFailure(cause);
+                                fireExceptionCaught(channel, cause);
+                            } else {
+                                cc.connecting = true;
+                                java.nio.channels.Channel xnioChannel = cc.xnioChannel;
+                                if (xnioChannel == null) {
+                                    FutureConnection fc =
+                                        cc.xnioConnector.connectTo(value, HANDLER);
+                                    fc.addNotifier(new Notifier() {
+                                        public void notify(
+                                                IoFuture future, Object attachment) {
+                                            ChannelFuture cf = (ChannelFuture) attachment;
+                                            try {
+                                                java.nio.channels.Channel xnioChannel = (java.nio.channels.Channel) future.get();
+                                                cc.xnioChannel = xnioChannel;
+                                                XnioChannelRegistry.registerChannelMapping(cc);
+                                                cf.setSuccess();
+                                            } catch (Throwable t) {
+                                                cf.setFailure(t);
+                                                fireExceptionCaught(cc, t);
+                                            } finally {
+                                                cc.connecting = false;
+                                            }
                                         }
-                                    }
-                                }, future);
+                                    }, future);
+                                } else {
+                                    Exception cause = new AlreadyConnectedException();
+                                    future.setFailure(cause);
+                                    fireExceptionCaught(cc, cause);
+                                }
                             }
                         }
                     } else {
-                        future.setFailure(new UnsupportedOperationException());
+                        Exception cause = new UnsupportedOperationException();
+                        future.setFailure(cause);
+                        fireExceptionCaught(channel, cause);
                     }
                 } else {
                     channel.closeNow(future);

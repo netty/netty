@@ -39,6 +39,7 @@ final class XnioClientChannel extends XnioChannel {
 
     final Object connectLock = new Object();
     final Connector xnioConnector;
+    volatile boolean connecting;
 
     XnioClientChannel(
             XnioClientChannelFactory factory,
