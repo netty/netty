@@ -22,7 +22,6 @@
  */
 package org.jboss.netty.channel.xnio;
 
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -89,9 +88,8 @@ final class XnioChannelRegistry {
         XnioServerChannel answer = serverChannels.get(localAddress);
         if (answer == null && localAddress instanceof InetSocketAddress) {
             InetSocketAddress a = (InetSocketAddress) localAddress;
-            if (a.getAddress() instanceof Inet4Address) {
-                answer = serverChannels.get(new InetSocketAddress(ANY_IPV6, a.getPort()));
-            } else {
+            answer = serverChannels.get(new InetSocketAddress(ANY_IPV6, a.getPort()));
+            if (answer == null) {
                 answer = serverChannels.get(new InetSocketAddress(ANY_IPV4, a.getPort()));
             }
         }
