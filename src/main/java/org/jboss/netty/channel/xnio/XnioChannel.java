@@ -59,6 +59,8 @@ class XnioChannel extends AbstractChannel {
     MessageEvent currentWriteEvent;
     int currentWriteIndex;
 
+    // TODO implement high / low water mark
+
     /**
      * @param parent
      * @param factory
