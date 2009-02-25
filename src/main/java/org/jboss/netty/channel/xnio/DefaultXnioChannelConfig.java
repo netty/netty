@@ -43,7 +43,7 @@ import org.jboss.netty.util.ConversionUtil;
  * @version $Rev$, $Date$
  *
  */
-class DefaultXnioChannelConfig implements XnioChannelConfig {
+final class DefaultXnioChannelConfig implements XnioChannelConfig {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(DefaultXnioChannelConfig.class);

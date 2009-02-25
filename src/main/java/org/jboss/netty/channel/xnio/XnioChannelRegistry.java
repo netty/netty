@@ -37,8 +37,8 @@ import org.jboss.netty.util.ConcurrentIdentityHashMap;
  */
 final class XnioChannelRegistry {
 
-    private static final ConcurrentMap<SocketAddress, XnioServerChannel> serverChannels =
-        new ConcurrentHashMap<SocketAddress, XnioServerChannel>();
+    private static final ConcurrentMap<SocketAddress, DefaultXnioServerChannel> serverChannels =
+        new ConcurrentHashMap<SocketAddress, DefaultXnioServerChannel>();
     private static final ConcurrentMap<java.nio.channels.Channel, BaseXnioChannel> mapping =
         new ConcurrentIdentityHashMap<java.nio.channels.Channel, BaseXnioChannel>();
 
@@ -65,7 +65,7 @@ final class XnioChannelRegistry {
         }
     }
 
-    static void registerServerChannel(XnioServerChannel channel) {
+    static void registerServerChannel(DefaultXnioServerChannel channel) {
         SocketAddress localAddress = channel.getLocalAddress();
         if (localAddress == null) {
             throw new IllegalStateException("cannot register an unbound channel");
@@ -82,9 +82,9 @@ final class XnioChannelRegistry {
         serverChannels.remove(localAddress);
     }
 
-    static XnioServerChannel getServerChannel(SocketAddress localAddress) {
+    static DefaultXnioServerChannel getServerChannel(SocketAddress localAddress) {
         // XXX: More IPv4 <-> IPv6 address conversion
-        XnioServerChannel answer = serverChannels.get(localAddress);
+        DefaultXnioServerChannel answer = serverChannels.get(localAddress);
         if (answer == null && localAddress instanceof InetSocketAddress) {
             InetSocketAddress a = (InetSocketAddress) localAddress;
             answer = serverChannels.get(new InetSocketAddress(ANY_IPV6, a.getPort()));

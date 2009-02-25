@@ -23,7 +23,6 @@
 package org.jboss.netty.channel.xnio;
 
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ServerChannel;
 import org.jboss.netty.channel.ServerChannelFactory;
 import org.jboss.xnio.channels.BoundServer;
 
@@ -46,8 +45,8 @@ public class XnioServerChannelFactory implements ServerChannelFactory {
         sink = new XnioServerChannelSink();
     }
 
-    public ServerChannel newChannel(ChannelPipeline pipeline) {
-        return new XnioServerChannel(this, pipeline, sink, xnioServer);
+    public XnioServerChannel newChannel(ChannelPipeline pipeline) {
+        return new DefaultXnioServerChannel(this, pipeline, sink, xnioServer);
     }
 
     public void releaseExternalResources() {

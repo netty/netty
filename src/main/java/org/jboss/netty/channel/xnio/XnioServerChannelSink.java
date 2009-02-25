@@ -48,10 +48,12 @@ final class XnioServerChannelSink extends AbstractChannelSink {
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         Channel channel = e.getChannel();
-        if (channel instanceof XnioServerChannel) {
+        if (channel instanceof DefaultXnioServerChannel) {
             handleServerSocket(e);
         } else if (channel instanceof XnioChannel) {
             acceptedChannelSink.eventSunk(pipeline, e);
+        } else {
+            throw new Error("should not reach here");
         }
     }
 
@@ -61,7 +63,7 @@ final class XnioServerChannelSink extends AbstractChannelSink {
         }
 
         ChannelStateEvent event = (ChannelStateEvent) e;
-        XnioServerChannel channel = (XnioServerChannel) event.getChannel();
+        DefaultXnioServerChannel channel = (DefaultXnioServerChannel) event.getChannel();
         ChannelFuture future = event.getFuture();
         ChannelState state = event.getState();
         Object value = event.getValue();

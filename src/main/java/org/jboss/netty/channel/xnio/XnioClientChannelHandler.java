@@ -7,7 +7,7 @@ import static org.jboss.netty.channel.Channels.*;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class XnioClientChannelHandler extends AbstractXnioChannelHandler {
+final class XnioClientChannelHandler extends AbstractXnioChannelHandler {
 
     public void handleOpened(java.nio.channels.Channel channel) {
         XnioChannel c = XnioChannelRegistry.getChannel(channel);

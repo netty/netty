@@ -18,7 +18,7 @@ final class XnioAcceptedChannelHandler extends AbstractXnioChannelHandler {
 
     public void handleOpened(java.nio.channels.Channel channel) {
         // Get the parent channel
-        XnioServerChannel parent = null;
+        DefaultXnioServerChannel parent = null;
         if (channel instanceof BoundChannel) {
             SocketAddress localAddress = (SocketAddress) ((BoundChannel) channel).getLocalAddress();
             parent = XnioChannelRegistry.getServerChannel(localAddress);
