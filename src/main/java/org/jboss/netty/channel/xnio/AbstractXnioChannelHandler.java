@@ -14,10 +14,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.xnio.IoHandler;
-import org.jboss.xnio.IoUtils;
-import org.jboss.xnio.channels.BoundChannel;
-import org.jboss.xnio.channels.ConnectedChannel;
-import org.jboss.xnio.channels.MultipointMessageChannel;
 import org.jboss.xnio.channels.MultipointReadResult;
 import org.jboss.xnio.channels.MultipointReadableMessageChannel;
 import org.jboss.xnio.channels.MultipointWritableMessageChannel;
@@ -32,66 +28,17 @@ import org.jboss.xnio.channels.WritableMessageChannel;
  * @version $Rev$, $Date$
  */
 @SuppressWarnings("unchecked")
-public class XnioChannelHandler implements IoHandler<java.nio.channels.Channel> {
+public abstract class AbstractXnioChannelHandler implements IoHandler<java.nio.channels.Channel> {
 
-    public void handleOpened(java.nio.channels.Channel channel) {
-        // Get the parent channel
-        XnioServerChannel parent = null;
-        if (channel instanceof BoundChannel && !(channel instanceof ConnectedChannel)) {
-            SocketAddress localAddress = (SocketAddress) ((BoundChannel) channel).getLocalAddress();
-            parent = XnioChannelRegistry.getServerChannel(localAddress);
-            if (parent == null) {
-                // An accepted channel with no parent
-                // probably a race condition or a port not bound by Netty.
-                IoUtils.safeClose(channel);
-                return;
-            }
-        }
-
-        if (parent != null) {
-            if (parent.xnioChannel instanceof MultipointMessageChannel) {
-                // Multipoint channel
-                XnioChannelRegistry.registerChannelMapping(parent);
-            } else {
-                // Accepted child channel
-                try {
-                    XnioChannel c = new XnioAcceptedChannel(
-                            parent, parent.getFactory(),
-                            parent.getConfig().getPipelineFactory().getPipeline(),
-                            parent.getFactory().sink);
-                    c.xnioChannel = channel;
-                    fireChannelOpen(c);
-                    if (c.isBound()) {
-                        fireChannelBound(c, c.getLocalAddress());
-                        if (c.isConnected()) {
-                            fireChannelConnected(c, c.getRemoteAddress());
-                        }
-                    }
-                    XnioChannelRegistry.registerChannelMapping(c);
-                } catch (Throwable t) {
-                    t.printStackTrace();
-                }
-            }
-        } else {
-            // Connected channel
-            XnioChannel c = XnioChannelRegistry.getChannel(channel);
-            fireChannelOpen(c);
-            if (c.isBound()) {
-                fireChannelBound(c, c.getLocalAddress());
-                if (c.isConnected()) {
-                    fireChannelConnected(c, c.getRemoteAddress());
-                }
-            }
-        }
-
-        // Start to read.
-        resumeRead(channel);
+    protected AbstractXnioChannelHandler() {
+        super();
     }
 
     public void handleReadable(java.nio.channels.Channel channel) {
         XnioChannel c = XnioChannelRegistry.getChannel(channel);
 
         boolean closed = false;
+
         // TODO: Use ReceiveBufferSizePredictor
         ChannelBuffer buf = c.getConfig().getBufferFactory().getBuffer(2048);
         SocketAddress remoteAddress = null;
@@ -240,13 +187,13 @@ public class XnioChannelHandler implements IoHandler<java.nio.channels.Channel> 
         close(XnioChannelRegistry.getChannel(channel));
     }
 
-    private void resumeRead(java.nio.channels.Channel channel) {
+    protected void resumeRead(java.nio.channels.Channel channel) {
         if (channel instanceof SuspendableReadChannel) {
             ((SuspendableReadChannel) channel).resumeReads();
         }
     }
 
-    private void close(XnioChannel c) {
+    protected void close(XnioChannel c) {
         if (c != null) {
             c.closeNow(c.getCloseFuture());
         }

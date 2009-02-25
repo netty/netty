@@ -49,7 +49,7 @@ import org.jboss.xnio.channels.WritableMessageChannel;
  */
 final class XnioClientChannelSink extends AbstractChannelSink {
 
-    private static final XnioChannelHandler HANDLER = new XnioChannelHandler();
+    private static final XnioClientChannelHandler HANDLER = new XnioClientChannelHandler();
 
     XnioClientChannelSink() {
         super();

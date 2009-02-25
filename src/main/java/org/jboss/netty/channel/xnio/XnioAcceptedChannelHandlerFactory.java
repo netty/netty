@@ -30,12 +30,11 @@ import org.jboss.xnio.IoHandlerFactory;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-@SuppressWarnings("unchecked")
-public class XnioChannelHandlerFactory implements IoHandlerFactory {
+public class XnioAcceptedChannelHandlerFactory implements IoHandlerFactory<java.nio.channels.Channel> {
 
-    private final XnioChannelHandler handler = new XnioChannelHandler();
+    private final XnioAcceptedChannelHandler handler = new XnioAcceptedChannelHandler();
 
-    public IoHandler createHandler() {
+    public IoHandler<java.nio.channels.Channel> createHandler() {
         return handler;
     }
 }
