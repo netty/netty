@@ -72,7 +72,7 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
     }
 
     @Override
-    protected boolean setOption(String key, Object value) {
+    public boolean setOption(String key, Object value) {
         if (super.setOption(key, value)) {
             return true;
         }

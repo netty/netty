@@ -78,6 +78,28 @@ public interface ChannelConfig {
      */
     void setOptions(Map<String, Object> options);
 
+    /**
+     * Sets a configuration property with the specified name and value.
+     * To override this method properly, you must call the super class:
+     * <pre>
+     * public boolean setOption(String name, Object value) {
+     *     if (super.setOption(name, value)) {
+     *         return true;
+     *     }
+     *
+     *     if (name.equals("additionalOption")) {
+     *         ....
+     *         return true;
+     *     }
+     *
+     *     return false;
+     * }
+     * </pre>
+     *
+     * @return {@code true} if and only if the property has been set
+     */
+    boolean setOption(String name, Object value);
+
     ChannelBufferFactory getBufferFactory();
 
     void setBufferFactory(ChannelBufferFactory bufferFactory);

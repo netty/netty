@@ -58,7 +58,7 @@ final class HttpTunnelingSocketChannelConfig extends DefaultChannelConfig
     }
 
     @Override
-    protected boolean setOption(String key, Object value) {
+    public boolean setOption(String key, Object value) {
         if (key.equals("receiveBufferSize")) {
             setReceiveBufferSize(ConversionUtil.toInt(value));
         } else if (key.equals("sendBufferSize")) {

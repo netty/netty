@@ -56,11 +56,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         }
     }
 
-    /**
-     * Sets an individual option.  You can override this method to support
-     * additional configuration parameters.
-     */
-    protected boolean setOption(String key, Object value) {
+    public boolean setOption(String key, Object value) {
         if (key.equals("pipelineFactory")) {
             setPipelineFactory((ChannelPipelineFactory) value);
         } else if (key.equals("bufferFactory")) {
