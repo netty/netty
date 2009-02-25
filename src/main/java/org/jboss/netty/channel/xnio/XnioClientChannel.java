@@ -26,7 +26,6 @@ import static org.jboss.netty.channel.Channels.*;
 
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.DefaultServerChannelConfig;
 import org.jboss.xnio.Connector;
 
 /**
@@ -35,7 +34,7 @@ import org.jboss.xnio.Connector;
  * @version $Rev$, $Date$
  */
 @SuppressWarnings("unchecked")
-final class XnioClientChannel extends XnioChannel {
+final class XnioClientChannel extends BaseXnioChannel {
 
     final Object connectLock = new Object();
     final Connector xnioConnector;
@@ -44,7 +43,7 @@ final class XnioClientChannel extends XnioChannel {
     XnioClientChannel(
             XnioClientChannelFactory factory,
             ChannelPipeline pipeline, ChannelSink sink, Connector xnioConnector) {
-        super(null, factory, pipeline, sink, new DefaultServerChannelConfig());
+        super(null, factory, pipeline, sink, new DefaultXnioChannelConfig());
         this.xnioConnector = xnioConnector;
         fireChannelOpen(this);
     }

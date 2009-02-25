@@ -35,7 +35,7 @@ public abstract class AbstractXnioChannelHandler implements IoHandler<java.nio.c
     }
 
     public void handleReadable(java.nio.channels.Channel channel) {
-        XnioChannel c = XnioChannelRegistry.getChannel(channel);
+        BaseXnioChannel c = XnioChannelRegistry.getChannel(channel);
 
         boolean closed = false;
 
@@ -100,7 +100,7 @@ public abstract class AbstractXnioChannelHandler implements IoHandler<java.nio.c
     }
 
     public void handleWritable(java.nio.channels.Channel channel) {
-        XnioChannel c = XnioChannelRegistry.getChannel(channel);
+        BaseXnioChannel c = XnioChannelRegistry.getChannel(channel);
         if (channel instanceof GatheringByteChannel) {
             boolean open = true;
             boolean addOpWrite = false;
@@ -129,8 +129,7 @@ public abstract class AbstractXnioChannelHandler implements IoHandler<java.nio.c
                     }
 
                     try {
-                        // TODO: Use configuration
-                        final int writeSpinCount = 4;
+                        final int writeSpinCount = c.getConfig().getWriteSpinCount();
                         for (int i = writeSpinCount; i > 0; i --) {
                             int localWrittenBytes = buf.getBytes(
                                 bufIdx,
@@ -193,7 +192,7 @@ public abstract class AbstractXnioChannelHandler implements IoHandler<java.nio.c
         }
     }
 
-    protected void close(XnioChannel c) {
+    protected void close(BaseXnioChannel c) {
         if (c != null) {
             c.closeNow(c.getCloseFuture());
         }

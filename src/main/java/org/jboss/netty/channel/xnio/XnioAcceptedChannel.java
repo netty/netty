@@ -29,20 +29,19 @@ import java.net.SocketAddress;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.DefaultChannelConfig;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-final class XnioAcceptedChannel extends XnioChannel {
+final class XnioAcceptedChannel extends BaseXnioChannel {
 
     XnioAcceptedChannel(
             XnioServerChannel parent,
             XnioServerChannelFactory factory,
             ChannelPipeline pipeline, ChannelSink sink) {
-        super(parent, factory, pipeline, sink, new DefaultChannelConfig());
+        super(parent, factory, pipeline, sink, new DefaultXnioChannelConfig());
         fireChannelOpen(this);
     }
 

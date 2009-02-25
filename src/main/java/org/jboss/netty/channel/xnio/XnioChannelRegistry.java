@@ -27,7 +27,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentMap;
 
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.util.ConcurrentHashMap;
 import org.jboss.netty.util.ConcurrentIdentityHashMap;
 
@@ -40,8 +39,8 @@ final class XnioChannelRegistry {
 
     private static final ConcurrentMap<SocketAddress, XnioServerChannel> serverChannels =
         new ConcurrentHashMap<SocketAddress, XnioServerChannel>();
-    private static final ConcurrentMap<java.nio.channels.Channel, XnioChannel> mapping =
-        new ConcurrentIdentityHashMap<java.nio.channels.Channel, XnioChannel>();
+    private static final ConcurrentMap<java.nio.channels.Channel, BaseXnioChannel> mapping =
+        new ConcurrentIdentityHashMap<java.nio.channels.Channel, BaseXnioChannel>();
 
     private static final InetAddress ANY_IPV4;
     private static final InetAddress ANY_IPV6;
@@ -96,28 +95,20 @@ final class XnioChannelRegistry {
         return answer;
     }
 
-    static void registerChannelMapping(XnioChannel channel) {
+    static void registerChannelMapping(BaseXnioChannel channel) {
         if (mapping.putIfAbsent(channel.xnioChannel, channel) != null) {
             throw new IllegalStateException("duplicate mapping: " + channel);
         }
     }
 
-    static void unregisterChannelMapping(Channel channel) {
-        java.nio.channels.Channel xnioChannel;
-        if (channel instanceof XnioChannel) {
-            xnioChannel = ((XnioChannel) channel).xnioChannel;
-        } else if (channel instanceof XnioServerChannel) {
-            xnioChannel = ((XnioServerChannel) channel).xnioChannel;
-        } else {
-            throw new Error("should not reach here");
-        }
-
+    static void unregisterChannelMapping(BaseXnioChannel channel) {
+        java.nio.channels.Channel xnioChannel = channel.xnioChannel;
         if (xnioChannel != null) {
             mapping.remove(xnioChannel);
         }
     }
 
-    static XnioChannel getChannel(java.nio.channels.Channel channel) {
+    static BaseXnioChannel getChannel(java.nio.channels.Channel channel) {
         return mapping.get(channel);
     }
 

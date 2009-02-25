@@ -60,7 +60,7 @@ final class XnioClientChannelSink extends AbstractChannelSink {
     @SuppressWarnings("unchecked")
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
-        XnioChannel channel = (XnioChannel) e.getChannel();
+        BaseXnioChannel channel = (BaseXnioChannel) e.getChannel();
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent event = (ChannelStateEvent) e;
             ChannelFuture future = event.getFuture();

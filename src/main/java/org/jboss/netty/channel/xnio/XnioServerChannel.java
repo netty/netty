@@ -29,7 +29,6 @@ import java.net.SocketAddress;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.DefaultServerChannelConfig;
 import org.jboss.netty.channel.ServerChannel;
 import org.jboss.xnio.IoFuture;
 import org.jboss.xnio.IoUtils;
@@ -42,7 +41,7 @@ import org.jboss.xnio.channels.BoundServer;
  * @version $Rev$, $Date$
  */
 @SuppressWarnings("unchecked")
-final class XnioServerChannel extends XnioChannel implements ServerChannel {
+final class XnioServerChannel extends BaseXnioChannel implements ServerChannel {
 
     private static final Object bindLock = new Object();
 
@@ -51,7 +50,7 @@ final class XnioServerChannel extends XnioChannel implements ServerChannel {
     XnioServerChannel(
             XnioServerChannelFactory factory,
             ChannelPipeline pipeline, ChannelSink sink, BoundServer xnioServer) {
-        super(null, factory, pipeline, sink, new DefaultServerChannelConfig());
+        super(null, factory, pipeline, sink, new DefaultXnioChannelConfig());
         this.xnioServer = xnioServer;
         fireChannelOpen(this);
     }

@@ -41,7 +41,7 @@ final class XnioAcceptedChannelHandler extends AbstractXnioChannelHandler {
         } else {
             // Accepted child channel
             try {
-                XnioChannel c = new XnioAcceptedChannel(
+                BaseXnioChannel c = new XnioAcceptedChannel(
                         parent, parent.getFactory(),
                         parent.getConfig().getPipelineFactory().getPipeline(),
                         parent.getFactory().sink);
