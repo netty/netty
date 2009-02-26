@@ -275,7 +275,7 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         }
 
         ChannelBuffer newBuffer = factory().getBuffer(order(), newCapacity);
-        newBuffer.writeBytes(buffer, readerIndex(), readableBytes());
+        newBuffer.writeBytes(buffer, 0, writerIndex());
         buffer = newBuffer;
     }
 }
