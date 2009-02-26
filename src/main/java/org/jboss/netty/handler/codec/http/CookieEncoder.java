@@ -34,7 +34,6 @@ import org.jboss.netty.util.CaseIgnoringComparator;
  */
 public class CookieEncoder {
 
-    // TODO: Add domain, path, maxAge, and version (and perhaps secure and comment?)
     private final Map<String, Cookie> cookies = new TreeMap<String, Cookie>(CaseIgnoringComparator.INSTANCE);
 
     public void addCookie(String name, String val) {
@@ -46,6 +45,9 @@ public class CookieEncoder {
     }
 
     public String encode() {
+        // FIXME: Support both version 0 and 1 cookies
+        // FIXME: Encode all cookie fields, including domain, path, maxAge, secure, and comment.
+        // FIXME: Check RFC 2109 - http://www.ietf.org/rfc/rfc2109.txt
         StringBuffer sb = new StringBuffer();
         Collection<String> cookieNames = cookies.keySet();
         if(cookieNames.isEmpty()) {

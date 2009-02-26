@@ -33,11 +33,14 @@ import org.jboss.netty.util.CaseIgnoringComparator;
  */
 public class CookieDecoder {
 
-    // TODO: Add domain, path, maxAge, and version (and perhaps secure and comment?)
     private final static String semicolon = ";";
     private final static String equals = "=";
 
     public Map<String, Cookie> decode(String header) {
+        // FIXME: Support both version 0 and 1 cookies
+        // FIXME: Decode all cookie fields, including domain, path, maxAge, secure, and comment.
+        // FIXME: CookieDecoder cannot assume that the first field is always the name-value pair.
+        // FIXME: Check RFC 2109 - http://www.ietf.org/rfc/rfc2109.txt
         Map<String, Cookie> cookies = new TreeMap<String, Cookie>(CaseIgnoringComparator.INSTANCE);
         String[] split = header.split(semicolon);
         for (String s : split) {
