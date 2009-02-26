@@ -80,7 +80,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     }
 
     public synchronized boolean isSuccess() {
-        return cause == null;
+        return done && cause == null;
     }
 
     public synchronized Throwable getCause() {
