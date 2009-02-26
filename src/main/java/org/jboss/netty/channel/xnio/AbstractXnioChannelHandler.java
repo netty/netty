@@ -259,10 +259,8 @@ public abstract class AbstractXnioChannelHandler implements IoHandler<java.nio.c
 
             fireWriteComplete(c, writtenBytes);
 
-            if (open) {
-                if (addOpWrite && channel instanceof SuspendableWriteChannel) {
-                    ((SuspendableWriteChannel) channel).resumeWrites();
-                }
+            if (open && addOpWrite) {
+                ((SuspendableWriteChannel) channel).resumeWrites();
             }
         } else if (channel instanceof WritableMessageChannel) {
             boolean open = true;
@@ -332,10 +330,8 @@ public abstract class AbstractXnioChannelHandler implements IoHandler<java.nio.c
 
             fireWriteComplete(c, writtenBytes);
 
-            if (open) {
-                if (addOpWrite && channel instanceof SuspendableWriteChannel) {
-                    ((SuspendableWriteChannel) channel).resumeWrites();
-                }
+            if (open && addOpWrite) {
+                ((SuspendableWriteChannel) channel).resumeWrites();
             }
         }
     }
