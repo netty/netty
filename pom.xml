@@ -597,12 +597,12 @@
     <repository>
       <id>repository.jboss.org</id>
       <name>JBoss.org Release Distribution Repository</name>
-      <url>https://svn.jboss.org/repos/repository.jboss.org/maven2</url>
+      <url>dav:https://svn.jboss.org/repos/repository.jboss.org/maven2</url>
     </repository>
     <snapshotRepository>
       <id>snapshots.jboss.org</id>
       <name>JBoss.org Development Snapshot Repository</name>
-      <url>https://snapshots.jboss.org/maven2</url>
+      <url>dav:https://snapshots.jboss.org/maven2</url>
     </snapshotRepository>
   </distributionManagement>
 
