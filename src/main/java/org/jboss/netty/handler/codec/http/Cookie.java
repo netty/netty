@@ -23,56 +23,23 @@ package org.jboss.netty.handler.codec.http;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class HttpCookie implements Comparable<HttpCookie> {
-
-    // TODO: Add domain, path, maxAge, and version (and perhaps secure and comment?)
-    private final String name;
-    private final String value;
-
-    public HttpCookie(String name, String value) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
-
-        this.name = name;
-        this.value = value;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getValue() {
-        return value;
-    }
-
-    @Override
-    public int hashCode() {
-        return getName().hashCode();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof HttpCookie)) {
-            return false;
-        }
-
-        return getName().equalsIgnoreCase(((HttpCookie) o).getName());
-    }
-
-    public int compareTo(HttpCookie c) {
-        return getName().compareToIgnoreCase(c.getName());
-    }
-
-    @Override
-    public String toString() {
-        return getName() + " = " + getValue();
-    }
+public interface Cookie extends Comparable<Cookie> {
+    String getName();
+    String getValue();
+    void setValue(String value);
+    String getDomain();
+    void setDomain(String domain);
+    String getPath();
+    void setPath(String path);
+    String getComment();
+    void setComment(String comment);
+    int getMaxAge();
+    void setMaxAge(int maxAge);
+    int getVersion();
+    void setVersion(int version);
+    boolean isSecure();
+    void setSecure(boolean secure);
 }

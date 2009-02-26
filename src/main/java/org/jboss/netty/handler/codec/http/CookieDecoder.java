@@ -21,7 +21,6 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.util.Collection;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -32,31 +31,23 @@ import org.jboss.netty.util.CaseIgnoringComparator;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-public class HttpCookieEncoder {
+public class CookieDecoder {
 
     // TODO: Add domain, path, maxAge, and version (and perhaps secure and comment?)
-    private final Map<String, HttpCookie> cookies = new TreeMap<String, HttpCookie>(CaseIgnoringComparator.INSTANCE);
+    private final static String semicolon = ";";
+    private final static String equals = "=";
 
-    public void addCookie(String name, String val) {
-        cookies.put(name, new HttpCookie(name, val));
-    }
-
-    public void addCookie(HttpCookie cookie) {
-        cookies.put(cookie.getName(), cookie);
-    }
-
-    public String encode() {
-        StringBuffer sb = new StringBuffer();
-        Collection<String> cookieNames = cookies.keySet();
-        if(cookieNames.isEmpty()) {
-            return null;
+    public Map<String, Cookie> decode(String header) {
+        Map<String, Cookie> cookies = new TreeMap<String, Cookie>(CaseIgnoringComparator.INSTANCE);
+        String[] split = header.split(semicolon);
+        for (String s : split) {
+            String[] cookie = s.split(equals);
+            if(cookie != null && cookie.length == 2) {
+                String name = cookie[0].trim();
+                String value = cookie[1].trim();
+                cookies.put(name, new DefaultCookie(name, value));
+            }
         }
-        for (String cookieName : cookieNames) {
-            sb.append(cookieName);
-            sb.append((char) HttpCodecUtil.EQUALS);
-            sb.append(cookies.get(cookieName).getValue());
-            sb.append((char) HttpCodecUtil.SEMICOLON);
-        }
-        return sb.toString();
+        return cookies;
     }
 }
