@@ -21,7 +21,10 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,22 +33,50 @@ import java.util.Map;
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  *
  * @apiviz.stereotype utility
  */
 public class QueryStringDecoder {
 
+    static final String DEFAULT_CHARSET = "UTF-8";
+
+    private final String charset;
     private final String uri;
     private String path;
     private final Map<String, List<String>> params = new HashMap<String, List<String>>();
 
     public QueryStringDecoder(String uri) {
-        this.uri = uri;
+        this(uri, DEFAULT_CHARSET);
     }
 
-    public QueryStringDecoder(URI uri){
+    public QueryStringDecoder(String uri, String charset) {
+        if (uri == null) {
+            throw new NullPointerException("uri");
+        }
+        if (charset == null) {
+            throw new NullPointerException("charset");
+        }
+
+        this.uri = uri;
+        this.charset = charset;
+    }
+
+    public QueryStringDecoder(URI uri) {
+        this(uri, DEFAULT_CHARSET);
+    }
+
+    public QueryStringDecoder(URI uri, String charset){
+        if (uri == null) {
+            throw new NullPointerException("uri");
+        }
+        if (charset == null) {
+            throw new NullPointerException("charset");
+        }
+
         this.uri = uri.toASCIIString();
+        this.charset = charset;
     }
 
     public String getPath() {
@@ -83,22 +114,25 @@ public class QueryStringDecoder {
         String[] params = s.split("&");
         for (String param : params) {
             String[] split = param.split("=");
-            String key = removeSpaceDelimeters(split[0]);
+            String key = decodeComponent(split[0]);
             List<String> values = this.params.get(key);
             if(values == null) {
                 values = new ArrayList<String>();
                 this.params.put(key,values);
             }
             if (split.length > 1) {
-                values.add(removeSpaceDelimeters(split[1]));
+                values.add(decodeComponent(split[1]));
             } else {
                 values.add("");
             }
         }
     }
 
-    // FIXME Use URLDecoder or something equivalent
-    private String removeSpaceDelimeters(String s) {
-        return s.replaceAll("%20", " ");
+    private String decodeComponent(String s) {
+        try {
+            return URLDecoder.decode(s, charset);
+        } catch (UnsupportedEncodingException e) {
+            throw new UnsupportedCharsetException(charset);
+        }
     }
 }

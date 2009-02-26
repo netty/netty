@@ -21,33 +21,50 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  *
  * @apiviz.stereotype utility
  */
 public class QueryStringEncoder {
 
-    private final String url;
+    private final String charset;
+    private final String uri;
     private final List<Param> params = new ArrayList<Param>();
 
-    public QueryStringEncoder(String url) {
-        this.url = url;
+    public QueryStringEncoder(String uri) {
+        this(uri, QueryStringDecoder.DEFAULT_CHARSET);
+    }
+
+    public QueryStringEncoder(String uri, String charset) {
+        if (uri == null) {
+            throw new NullPointerException("uri");
+        }
+        if (charset == null) {
+            throw new NullPointerException("charset");
+        }
+
+        this.uri = uri;
+        this.charset = charset;
     }
 
     public void addParam(String name, String value) {
-        if(name == null) {
-            throw new NullPointerException("name is null");
+        if (name == null) {
+            throw new NullPointerException("name");
         }
-        if(value == null) {
-            throw new NullPointerException("value is null");
+        if (value == null) {
+            throw new NullPointerException("value");
         }
         params.add(new Param(name, value));
     }
@@ -58,14 +75,15 @@ public class QueryStringEncoder {
 
     @Override
     public String toString() {
-        if (params.size() == 0) {
-            return url;
-        }
-        else {
-            StringBuilder sb = new StringBuilder(url).append("?");
+        if (params.isEmpty()) {
+            return uri;
+        } else {
+            StringBuilder sb = new StringBuilder(uri).append("?");
             for (int i = 0; i < params.size(); i++) {
                 Param param = params.get(i);
-                sb.append(replaceSpaces(param.name)).append("=").append(replaceSpaces(param.value));
+                sb.append(encodeComponent(param.name));
+                sb.append("=");
+                sb.append(encodeComponent(param.value));
                 if(i != params.size() - 1) {
                     sb.append("&");
                 }
@@ -74,9 +92,12 @@ public class QueryStringEncoder {
         }
     }
 
-    // FIXME Use URLEncoder or something equivalent
-    private String replaceSpaces(String s) {
-        return s.replaceAll(" ", "%20");
+    private String encodeComponent(String s) {
+        try {
+            return URLEncoder.encode(s, charset).replaceAll("\\+", "%20");
+        } catch (UnsupportedEncodingException e) {
+            throw new UnsupportedCharsetException(charset);
+        }
     }
 
     private static final class Param {
