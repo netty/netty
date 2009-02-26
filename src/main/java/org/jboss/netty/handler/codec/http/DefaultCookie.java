@@ -21,6 +21,7 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -41,6 +42,28 @@ public class DefaultCookie implements Cookie {
     public DefaultCookie(String name, String value) {
         if (name == null) {
             throw new NullPointerException("name");
+        }
+        name = name.trim();
+        if (name.length() == 0) {
+            throw new IllegalArgumentException("empty name");
+        }
+
+        for (int i = 0; i < name.length(); i ++) {
+            char c = name.charAt(i);
+            if (c > 127) {
+                throw new IllegalArgumentException(
+                        "name contains non-ascii character: " + name);
+            }
+
+            // Check prohibited characters.
+            switch (c) {
+            case '=':  case ',':  case ';': case ' ':
+            case '\t': case '\r': case '\n': case '\f':
+            case 0x0b: // Vertical tab
+                throw new IllegalArgumentException(
+                        "name contains one of the following characters: " +
+                        "=,; \\t\\r\\n\\v\\f: " + name);
+            }
         }
         this.name = name;
         setValue(value);
