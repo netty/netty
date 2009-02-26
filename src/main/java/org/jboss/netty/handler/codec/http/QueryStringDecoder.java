@@ -114,21 +114,21 @@ public class QueryStringDecoder {
         String[] params = s.split("&");
         for (String param : params) {
             String[] split = param.split("=");
-            String key = decodeComponent(split[0]);
+            String key = decodeComponent(split[0], charset);
             List<String> values = this.params.get(key);
             if(values == null) {
                 values = new ArrayList<String>();
                 this.params.put(key,values);
             }
             if (split.length > 1) {
-                values.add(decodeComponent(split[1]));
+                values.add(decodeComponent(split[1], charset));
             } else {
                 values.add("");
             }
         }
     }
 
-    private String decodeComponent(String s) {
+    static String decodeComponent(String s, String charset) {
         try {
             return URLDecoder.decode(s, charset);
         } catch (UnsupportedEncodingException e) {

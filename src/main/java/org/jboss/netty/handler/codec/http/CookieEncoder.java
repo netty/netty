@@ -36,6 +36,19 @@ public class CookieEncoder {
 
     private final Map<String, Cookie> cookies = new TreeMap<String, Cookie>(CaseIgnoringComparator.INSTANCE);
 
+    private final String charset;
+
+    public CookieEncoder() {
+        this(QueryStringDecoder.DEFAULT_CHARSET);
+    }
+
+    public CookieEncoder(String charset) {
+        if (charset == null) {
+            throw new NullPointerException("charset");
+        }
+        this.charset = charset;
+    }
+
     public void addCookie(String name, String val) {
         cookies.put(name, new DefaultCookie(name, val));
     }
@@ -53,10 +66,11 @@ public class CookieEncoder {
         if(cookieNames.isEmpty()) {
             return null;
         }
-        for (String cookieName : cookieNames) {
+        for (String cookieName: cookieNames) {
             sb.append(cookieName);
             sb.append((char) HttpCodecUtil.EQUALS);
-            sb.append(cookies.get(cookieName).getValue());
+            sb.append(QueryStringEncoder.encodeComponent(
+                    cookies.get(cookieName).getValue(), charset));
             sb.append((char) HttpCodecUtil.SEMICOLON);
         }
         return sb.toString();

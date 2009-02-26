@@ -36,6 +36,19 @@ public class CookieDecoder {
     private final static String semicolon = ";";
     private final static String equals = "=";
 
+    private final String charset;
+
+    public CookieDecoder() {
+        this(QueryStringDecoder.DEFAULT_CHARSET);
+    }
+
+    public CookieDecoder(String charset) {
+        if (charset == null) {
+            throw new NullPointerException("charset");
+        }
+        this.charset = charset;
+    }
+
     public Map<String, Cookie> decode(String header) {
         // FIXME: Support both version 0 and 1 cookies
         // FIXME: Decode all cookie fields, including domain, path, maxAge, secure, and comment.
@@ -47,7 +60,7 @@ public class CookieDecoder {
             String[] cookie = s.split(equals);
             if(cookie != null && cookie.length == 2) {
                 String name = cookie[0].trim();
-                String value = cookie[1].trim();
+                String value = QueryStringDecoder.decodeComponent(cookie[1], charset);
                 cookies.put(name, new DefaultCookie(name, value));
             }
         }

@@ -81,9 +81,9 @@ public class QueryStringEncoder {
             StringBuilder sb = new StringBuilder(uri).append("?");
             for (int i = 0; i < params.size(); i++) {
                 Param param = params.get(i);
-                sb.append(encodeComponent(param.name));
+                sb.append(encodeComponent(param.name, charset));
                 sb.append("=");
-                sb.append(encodeComponent(param.value));
+                sb.append(encodeComponent(param.value, charset));
                 if(i != params.size() - 1) {
                     sb.append("&");
                 }
@@ -92,7 +92,7 @@ public class QueryStringEncoder {
         }
     }
 
-    private String encodeComponent(String s) {
+    static String encodeComponent(String s, String charset) {
         try {
             return URLEncoder.encode(s, charset).replaceAll("\\+", "%20");
         } catch (UnsupportedEncodingException e) {
