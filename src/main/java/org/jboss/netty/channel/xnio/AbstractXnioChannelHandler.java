@@ -11,8 +11,10 @@ import java.nio.channels.ScatteringByteChannel;
 import java.util.Queue;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.xnio.IoHandler;
 import org.jboss.xnio.channels.MultipointReadResult;
 import org.jboss.xnio.channels.MultipointReadableMessageChannel;
@@ -39,8 +41,10 @@ public abstract class AbstractXnioChannelHandler implements IoHandler<java.nio.c
 
         boolean closed = false;
 
-        // TODO: Use ReceiveBufferSizePredictor
-        ChannelBuffer buf = c.getConfig().getBufferFactory().getBuffer(2048);
+        ReceiveBufferSizePredictor predictor = c.getConfig().getReceiveBufferSizePredictor();
+        ChannelBufferFactory bufferFactory = c.getConfig().getBufferFactory();
+        ChannelBuffer buf = bufferFactory.getBuffer(predictor.nextReceiveBufferSize());
+
         SocketAddress remoteAddress = null;
         Throwable exception = null;
         if (channel instanceof ScatteringByteChannel) {
@@ -86,8 +90,13 @@ public abstract class AbstractXnioChannelHandler implements IoHandler<java.nio.c
         }
 
         if (buf.readable()) {
+            // Update the predictor.
+            predictor.previousReceiveBufferSize(buf.readableBytes());
+
+            // Fire the event.
             fireMessageReceived(c, buf, remoteAddress);
         }
+
         if (exception != null) {
             fireExceptionCaught(c, exception);
         }
