@@ -53,8 +53,6 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
- *
- * @apiviz.has org.jboss.netty.channel.socket.nio.ReceiveBufferSizePredictor
  */
 public interface XnioChannelConfig extends ChannelConfig {
 
