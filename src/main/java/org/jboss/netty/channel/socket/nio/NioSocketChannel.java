@@ -65,6 +65,7 @@ class NioSocketChannel extends AbstractChannel
     final Queue<MessageEvent> writeBuffer = new WriteBuffer();
     final AtomicInteger writeBufferSize = new AtomicInteger();
     final AtomicInteger highWaterMarkCounter = new AtomicInteger();
+    volatile boolean inWriteNowLoop;
 
     MessageEvent currentWriteEvent;
     int currentWriteIndex;

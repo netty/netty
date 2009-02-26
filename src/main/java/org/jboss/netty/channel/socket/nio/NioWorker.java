@@ -51,7 +51,6 @@ import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.LinkedTransferQueue;
-import org.jboss.netty.util.ThreadLocalBoolean;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 
 /**
@@ -68,8 +67,6 @@ class NioWorker implements Runnable {
         InternalLoggerFactory.getInstance(NioWorker.class);
 
     private static final int CONSTRAINT_LEVEL = NioProviderMetadata.CONSTRAINT_LEVEL;
-
-    private static final ThreadLocalBoolean writing = new ThreadLocalBoolean();
 
     private final int bossId;
     private final int id;
@@ -330,15 +327,10 @@ class NioWorker implements Runnable {
             return;
         }
 
-        if (writing.get()) {
+        if (channel.inWriteNowLoop) {
             scheduleWriteIfNecessary(channel);
         } else {
-            writing.set(Boolean.TRUE);
-            try {
-                writeNow(channel, channel.getConfig().getWriteSpinCount());
-            } finally {
-                writing.set(Boolean.FALSE);
-            }
+            writeNow(channel, channel.getConfig().getWriteSpinCount());
         }
 
     }
@@ -375,6 +367,7 @@ class NioWorker implements Runnable {
 
         Queue<MessageEvent> writeBuffer = channel.writeBuffer;
         synchronized (channel.writeLock) {
+            channel.inWriteNowLoop = true;
             evt = channel.currentWriteEvent;
             for (;;) {
                 if (evt == null) {
@@ -429,6 +422,7 @@ class NioWorker implements Runnable {
                     }
                 }
             }
+            channel.inWriteNowLoop = false;
         }
 
         fireWriteComplete(channel, writtenBytes);
