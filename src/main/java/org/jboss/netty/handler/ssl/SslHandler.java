@@ -651,7 +651,6 @@ public class SslHandler extends FrameDecoder {
                     try {
                         result = engine.unwrap(inNetBuf, outAppBuf);
                     } catch (SSLException e) {
-                        System.err.println(engine.getUseClientMode());
                         throw e;
                     }
 

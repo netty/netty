@@ -23,7 +23,6 @@ final class XnioAcceptedChannelHandler extends AbstractXnioChannelHandler {
             SocketAddress localAddress = (SocketAddress) ((BoundChannel) channel).getLocalAddress();
             parent = XnioChannelRegistry.getServerChannel(localAddress);
             if (parent == null) {
-                System.out.println(localAddress);
                 // An accepted channel with no parent
                 // probably a race condition or a port not bound by Netty.
                 IoUtils.safeClose(channel);
