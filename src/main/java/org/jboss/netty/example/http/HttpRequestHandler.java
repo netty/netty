@@ -35,9 +35,9 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpCookie;
-import org.jboss.netty.handler.codec.http.HttpCookieDecoder;
-import org.jboss.netty.handler.codec.http.HttpCookieEncoder;
+import org.jboss.netty.handler.codec.http.Cookie;
+import org.jboss.netty.handler.codec.http.CookieDecoder;
+import org.jboss.netty.handler.codec.http.CookieEncoder;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -131,12 +131,12 @@ public class HttpRequestHandler extends SimpleChannelHandler {
         response.setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8");
         response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
 
-        HttpCookieDecoder cookieDecoder = new HttpCookieDecoder();
-        Map<String, HttpCookie> cookies = cookieDecoder.decode(request.getHeader(HttpHeaders.Names.COOKIE));
+        CookieDecoder cookieDecoder = new CookieDecoder();
+        Map<String, Cookie> cookies = cookieDecoder.decode(request.getHeader(HttpHeaders.Names.COOKIE));
         if(!cookies.isEmpty()) {
             // Reset the cookies if necessary.
-            HttpCookieEncoder cookieEncoder = new HttpCookieEncoder();
-            for (HttpCookie cookie : cookies.values()) {
+            CookieEncoder cookieEncoder = new CookieEncoder();
+            for (Cookie cookie : cookies.values()) {
                 cookieEncoder.addCookie(cookie);
             }
             response.addHeader(HttpHeaders.Names.SET_COOKIE, cookieEncoder.encode());
