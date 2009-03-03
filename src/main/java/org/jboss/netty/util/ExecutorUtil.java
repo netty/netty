@@ -74,6 +74,17 @@ public class ExecutorUtil {
             for (;;) {
                 try {
                     es.shutdownNow();
+                } catch (SecurityException ex) {
+                    // Running in a restricted environment - fall back.
+                    try {
+                        es.shutdown();
+                    } catch (SecurityException ex2) {
+                        // Running in a more restricted environment.
+                        // Can't shut down this executor - skip to the next.
+                        break;
+                    } catch (NullPointerException ex2) {
+                        // Some JDK throws NPE here, but shouldn't.
+                    }
                 } catch (NullPointerException ex) {
                     // Some JDK throws NPE here, but shouldn't.
                 }
