@@ -27,6 +27,7 @@ import static org.jboss.netty.channel.Channels.*;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.ScatteringByteChannel;
@@ -244,23 +245,15 @@ class NioWorker implements Runnable {
         for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
             SelectionKey k = i.next();
             i.remove();
-
-            if (!k.isValid()) {
+            try {
+                if (k.isReadable()) {
+                    read(k);
+                }
+                if (k.isWritable()) {
+                    write(k);
+                }
+            } catch (CancelledKeyException e) {
                 close(k);
-                continue;
-            }
-
-            if (k.isReadable()) {
-                read(k);
-            }
-
-            if (!k.isValid()) {
-                close(k);
-                continue;
-            }
-
-            if (k.isWritable()) {
-                write(k);
             }
         }
     }
