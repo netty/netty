@@ -364,20 +364,21 @@ public class Base64 {
 
         // Example: DkLE
         else {
+        	int outBuff;
             try {
-                int outBuff =
+                outBuff =
                         (DECODABET[src[srcOffset    ]] & 0xFF) << 18 |
                         (DECODABET[src[srcOffset + 1]] & 0xFF) << 12 |
                         (DECODABET[src[srcOffset + 2]] & 0xFF) <<  6 |
                          DECODABET[src[srcOffset + 3]] & 0xFF;
-
-                dest.setByte(destOffset    , (byte) (outBuff >> 16));
-                dest.setByte(destOffset + 1, (byte) (outBuff >>  8));
-                dest.setByte(destOffset + 2, (byte)  outBuff);
-                return 3;
-            } catch (Exception e) {
+            } catch (IndexOutOfBoundsException e) {
                 throw new IllegalArgumentException("not encoded in Base64");
-            }
+            }            	
+
+            dest.setByte(destOffset    , (byte) (outBuff >> 16));
+            dest.setByte(destOffset + 1, (byte) (outBuff >>  8));
+            dest.setByte(destOffset + 2, (byte)  outBuff);
+            return 3;
         }
     }
 
