@@ -339,11 +339,6 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         decreaseCounter(r);
     }
 
-    @Override
-    protected void afterExecute(Runnable r, Throwable e) {
-        super.afterExecute(r, e);
-    }
-
     protected boolean increaseCounter(Runnable task) {
         if (!shouldCount(task)) {
             return false;

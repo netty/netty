@@ -25,6 +25,14 @@
     <Method name="run"/>
     <Bug code="ESync"/>
   </Match>
+  <Match>
+    <Class name="~.*Channel"/>
+    <Or>
+      <Method name="setClosed"/>
+      <Method name="setInterestOpsNow"/>
+    </Or>
+    <Bug pattern="USM_USELESS_SUBCLASS_METHOD"/>
+  </Match>
   <!-- Known issues that don't matter -->
   <Match>
     <Or>
