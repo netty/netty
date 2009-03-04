@@ -220,7 +220,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             throws IOException {
         // XXX Gathering write is not supported because of a known issue.
         //     See http://bugs.sun.com/view_bug.do?bug_id=6210541
-        return out.write(toByteBuffer());
+        return out.write(toByteBuffer(index, length));
     }
 
     public void getBytes(int index, OutputStream out, int length)
