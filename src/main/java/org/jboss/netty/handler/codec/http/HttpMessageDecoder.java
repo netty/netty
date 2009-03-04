@@ -97,13 +97,15 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             readInitial(buffer);
         }
         case READ_HEADER: {
-            readHeaders(buffer);
-            if (message.isChunked()) {
-                checkpoint(State.READ_CHUNK_SIZE);
+            State nextState = readHeaders(buffer);
+            checkpoint(nextState);
+            if (nextState == State.READ_CHUNK_SIZE) {
+                // Chunked encoding
                 if (!mergeChunks) {
                     return message;
                 }
             } else {
+                // Not a chunked encoding
                 int contentLength = message.getContentLength(-1);
                 if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
                     content = ChannelBuffers.EMPTY_BUFFER;
@@ -224,7 +226,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
     }
 
-    private void readHeaders(ChannelBuffer buffer) {
+    private State readHeaders(ChannelBuffer buffer) {
         message.clearHeaders();
         String line = readIntoCurrentLine(buffer);
         String lastHeader = null;
@@ -252,7 +254,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         } else {
             nextState = State.READ_VARIABLE_LENGTH_CONTENT;
         }
-        checkpoint(nextState);
+        return nextState;
     }
 
     protected abstract boolean isDecodingRequest();
