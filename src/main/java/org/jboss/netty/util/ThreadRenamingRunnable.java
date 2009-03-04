@@ -63,7 +63,7 @@ public class ThreadRenamingRunnable implements Runnable {
         try {
             currentThread.setName(threadName);
             renamed = true;
-        } catch (Exception e) {
+        } catch (SecurityException e) {
             // Probably SecurityException.
         }
 
