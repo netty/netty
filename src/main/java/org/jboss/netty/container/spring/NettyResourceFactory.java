@@ -60,7 +60,7 @@ public class NettyResourceFactory implements InitializingBean, DisposableBean {
         unterminatableExecutor = null;
     }
 
-    public Executor getChannelFactoryExecutor() {
+    public synchronized Executor getChannelFactoryExecutor() {
         return unterminatableExecutor;
     }
 }
