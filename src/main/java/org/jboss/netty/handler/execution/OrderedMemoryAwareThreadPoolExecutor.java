@@ -185,6 +185,10 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
         return super.shouldCount(task);
     }
 
+    void onAfterExecute(Runnable r, Throwable t) {
+        afterExecute(r, t);
+    }
+
     private final class ChildExecutor implements Executor, Runnable {
         private final LinkedList<Runnable> tasks = new LinkedList<Runnable>();
 
@@ -217,10 +221,10 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
                 try {
                     task.run();
                     ran = true;
-                    afterExecute(task, null);
+                    onAfterExecute(task, null);
                 } catch (RuntimeException e) {
                     if (!ran) {
-                        afterExecute(task, e);
+                        onAfterExecute(task, e);
                     }
                     throw e;
                 } finally {
