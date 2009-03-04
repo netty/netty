@@ -135,7 +135,8 @@ public abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
 
         private void handleEvent(ChannelEvent e) {
             if (e instanceof MessageEvent) {
-                productQueue.offer(((MessageEvent) e).getMessage());
+                boolean offered = productQueue.offer(((MessageEvent) e).getMessage());
+                assert offered;
             } else if (e instanceof ExceptionEvent) {
                 throw new CodecEmbedderException(((ExceptionEvent) e).getCause());
             }
