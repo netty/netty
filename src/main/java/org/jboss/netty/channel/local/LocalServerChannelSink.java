@@ -109,7 +109,8 @@ final class LocalServerChannelSink extends AbstractChannelSink {
         } else if (e instanceof MessageEvent) {
             MessageEvent event = (MessageEvent) e;
             DefaultLocalChannel channel = (DefaultLocalChannel) event.getChannel();
-            channel.writeBuffer.offer(event);
+            boolean offered = channel.writeBuffer.offer(event);
+            assert offered;
             channel.flushWriteBuffer();
         }
     }

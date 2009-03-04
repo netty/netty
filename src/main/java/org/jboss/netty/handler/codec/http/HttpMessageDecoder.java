@@ -53,7 +53,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     private volatile ChannelBuffer content;
     private volatile int chunkSize;
 
-
     /**
      * @author The Netty Project (netty-dev@lists.jboss.org)
      * @author Trustin Lee (tlee@redhat.com)

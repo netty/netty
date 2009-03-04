@@ -141,7 +141,8 @@ final class XnioClientChannelSink extends AbstractChannelSink {
             if (xnioChannel instanceof GatheringByteChannel ||
                 xnioChannel instanceof MultipointWritableMessageChannel ||
                 xnioChannel instanceof WritableMessageChannel) {
-                channel.writeBuffer.offer(event);
+                boolean offered = channel.writeBuffer.offer(event);
+                assert offered;
                 if (xnioChannel instanceof SuspendableWriteChannel) {
                     ((SuspendableWriteChannel) xnioChannel).resumeWrites();
                 }
