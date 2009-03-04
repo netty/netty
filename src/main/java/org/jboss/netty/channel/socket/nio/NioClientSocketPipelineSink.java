@@ -117,7 +117,8 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         } else if (e instanceof MessageEvent) {
             MessageEvent event = (MessageEvent) e;
             NioSocketChannel channel = (NioSocketChannel) event.getChannel();
-            channel.writeBuffer.offer(event);
+            boolean offered = channel.writeBuffer.offer(event);
+            assert offered;
             NioWorker.write(channel, true);
         }
     }
@@ -217,7 +218,8 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                 assert selector != null && selector.isOpen();
 
                 started = true;
-                registerTaskQueue.offer(registerTask);
+                boolean offered = registerTaskQueue.offer(registerTask);
+                assert offered;
             }
 
             if (wakenUp.compareAndSet(false, true)) {
