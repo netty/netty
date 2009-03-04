@@ -132,7 +132,8 @@ class NioWorker implements Runnable {
             assert selector != null && selector.isOpen();
 
             started = true;
-            registerTaskQueue.offer(registerTask);
+            boolean offered = registerTaskQueue.offer(registerTask);
+            assert offered;
         }
 
         if (wakenUp.compareAndSet(false, true)) {
@@ -333,7 +334,8 @@ class NioWorker implements Runnable {
         Thread workerThread = worker.thread;
         if (workerThread == null || Thread.currentThread() != workerThread) {
             if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
-                worker.writeTaskQueue.offer(channel.writeTask);
+                boolean offered = worker.writeTaskQueue.offer(channel.writeTask);
+                assert offered;
             }
             Selector workerSelector = worker.selector;
             if (workerSelector != null) {
