@@ -47,6 +47,18 @@ public interface ChannelFutureListener extends EventListener {
     };
 
     /**
+     * A {@link ChannelFutureListener} that closes the {@link Channel} when the
+     * operation ended up with a failure or cancellation rather than a success.
+     */
+    static ChannelFutureListener CLOSE_ON_FAILURE = new ChannelFutureListener() {
+        public void operationComplete(ChannelFuture future) {
+            if (!future.isSuccess()) {
+                future.getChannel().close();
+            }
+        }
+    };
+
+    /**
      * Invoked when the I/O operation associated with the {@link ChannelFuture}
      * has been completed.
      *

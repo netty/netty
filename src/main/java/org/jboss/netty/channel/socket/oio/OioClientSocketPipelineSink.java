@@ -114,13 +114,7 @@ class OioClientSocketPipelineSink extends AbstractChannelSink {
         boolean connected = false;
         boolean workerStarted = false;
 
-        future.addListener(new ChannelFutureListener() {
-            public void operationComplete(ChannelFuture future) {
-                if (future.isCancelled()) {
-                    future.getChannel().close();
-                }
-            }
-        });
+        future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
 
         try {
             channel.socket.connect(

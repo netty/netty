@@ -44,7 +44,7 @@ import org.jboss.netty.util.ThreadRenamingRunnable;
  */
 final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
 
-    static String LINE_TERMINATOR = "\r\n";
+    static final String LINE_TERMINATOR = "\r\n";
     private final Executor workerExecutor;
 
     HttpTunnelingClientSocketPipelineSink(Executor workerExecutor) {
@@ -111,13 +111,7 @@ final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
         boolean connected = false;
         boolean workerStarted = false;
 
-        future.addListener(new ChannelFutureListener() {
-            public void operationComplete(ChannelFuture future) {
-                if (future.isCancelled()) {
-                    future.getChannel().close();
-                }
-            }
-        });
+        future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
 
         try {
             channel.connectAndSendHeaders(false, remoteAddress);

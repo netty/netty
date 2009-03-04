@@ -144,13 +144,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             if (channel.socket.connect(remoteAddress)) {
                 channel.worker.register(channel, future);
             } else {
-                future.addListener(new ChannelFutureListener() {
-                    public void operationComplete(ChannelFuture future) {
-                        if (future.isCancelled()) {
-                            channel.close();
-                        }
-                    }
-                });
+                future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
                 channel.connectFuture = future;
                 boss.register(channel);
             }

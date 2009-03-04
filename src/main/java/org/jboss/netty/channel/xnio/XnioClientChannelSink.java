@@ -89,23 +89,7 @@ final class XnioClientChannelSink extends AbstractChannelSink {
                                 if (xnioChannel == null) {
                                     FutureConnection fc =
                                         cc.xnioConnector.connectTo(value, HANDLER);
-                                    fc.addNotifier(new Notifier() {
-                                        public void notify(
-                                                IoFuture future, Object attachment) {
-                                            ChannelFuture cf = (ChannelFuture) attachment;
-                                            try {
-                                                java.nio.channels.Channel xnioChannel = (java.nio.channels.Channel) future.get();
-                                                cc.xnioChannel = xnioChannel;
-                                                XnioChannelRegistry.registerChannelMapping(cc);
-                                                cf.setSuccess();
-                                            } catch (Throwable t) {
-                                                cf.setFailure(t);
-                                                fireExceptionCaught(cc, t);
-                                            } finally {
-                                                cc.connecting = false;
-                                            }
-                                        }
-                                    }, future);
+                                    fc.addNotifier(new FutureConnectionNotifier(cc), future);
                                 } else {
                                     Exception cause = new AlreadyConnectedException();
                                     future.setFailure(cause);
@@ -148,6 +132,31 @@ final class XnioClientChannelSink extends AbstractChannelSink {
                 }
             } else {
                 event.getFuture().setFailure(new IllegalStateException());
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static final class FutureConnectionNotifier implements Notifier {
+    
+        private final XnioClientChannel cc;
+    
+        FutureConnectionNotifier(XnioClientChannel cc) {
+            this.cc = cc;
+        }
+    
+        public void notify(IoFuture future, Object attachment) {
+            ChannelFuture cf = (ChannelFuture) attachment;
+            try {
+                java.nio.channels.Channel xnioChannel = (java.nio.channels.Channel) future.get();
+                cc.xnioChannel = xnioChannel;
+                XnioChannelRegistry.registerChannelMapping(cc);
+                cf.setSuccess();
+            } catch (Throwable t) {
+                cf.setFailure(t);
+                fireExceptionCaught(cc, t);
+            } finally {
+                cc.connecting = false;
             }
         }
     }
