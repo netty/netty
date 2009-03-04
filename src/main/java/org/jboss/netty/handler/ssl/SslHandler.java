@@ -339,7 +339,8 @@ public class SslHandler extends FrameDecoder {
         PendingWrite pendingWrite =
             new PendingWrite(evt.getFuture(), msg.toByteBuffer(msg.readerIndex(), msg.readableBytes()));
         synchronized (pendingUnencryptedWrites) {
-            pendingUnencryptedWrites.offer(pendingWrite);
+            boolean offered = pendingUnencryptedWrites.offer(pendingWrite);
+            assert offered;
         }
 
         wrap(context, evt.getChannel());
@@ -763,7 +764,8 @@ public class SslHandler extends FrameDecoder {
                     ChannelFuture closeNotifyFuture = wrapNonAppData(context, e.getChannel());
                     closeNotifyFuture.addListener(new ChannelFutureListener() {
                         public void operationComplete(ChannelFuture closeNotifyFuture) throws Exception {
-                            closeFutures.offer(e.getFuture());
+                            boolean offered = closeFutures.offer(e.getFuture());
+                            assert offered;
                         }
                     });
                 }
