@@ -63,9 +63,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
             } else {
                 return wrappedBuffer(header, content);
             }
-        }
-
-        if (msg instanceof HttpChunk) {
+        } else if (msg instanceof HttpChunk) {
             HttpChunk chunk = (HttpChunk) msg;
             if (chunk.isLast()) {
                 return LAST_CHUNK.duplicate();
