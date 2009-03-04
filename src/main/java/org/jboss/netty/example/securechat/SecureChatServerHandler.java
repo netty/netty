@@ -77,26 +77,7 @@ public class SecureChatServerHandler extends SimpleChannelHandler {
 
         // Get notified when SSL handshake is done.
         ChannelFuture handshakeFuture = sslHandler.handshake(e.getChannel());
-        handshakeFuture.addListener(new ChannelFutureListener() {
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.isSuccess()) {
-                    // Once session is secured, send a greeting.
-                    future.getChannel().write(
-                            "Welcome to " + InetAddress.getLocalHost().getHostName() +
-                            " secure chat service!\n");
-                    future.getChannel().write(
-                            "Your session is protected by " +
-                            sslHandler.getEngine().getSession().getCipherSuite() +
-                            " cipher suite.\n");
-
-                    // Register the channel to the global channel list
-                    // so the channel received the messages from others.
-                    channels.add(future.getChannel());
-                } else {
-                    future.getChannel().close();
-                }
-            }
-        });
+        handshakeFuture.addListener(new Greeter(sslHandler));
     }
 
     @Override
@@ -136,5 +117,38 @@ public class SecureChatServerHandler extends SimpleChannelHandler {
                 "Unexpected exception from downstream.",
                 e.getCause());
         e.getChannel().close();
+    }
+
+    /**
+     * @author The Netty Project (netty-dev@lists.jboss.org)
+     * @author Trustin Lee (tlee@redhat.com)
+     * @version $Rev$, $Date$
+     */
+    private static final class Greeter implements ChannelFutureListener {
+    
+        private final SslHandler sslHandler;
+    
+        Greeter(SslHandler sslHandler) {
+            this.sslHandler = sslHandler;
+        }
+    
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (future.isSuccess()) {
+                // Once session is secured, send a greeting.
+                future.getChannel().write(
+                        "Welcome to " + InetAddress.getLocalHost().getHostName() +
+                        " secure chat service!\n");
+                future.getChannel().write(
+                        "Your session is protected by " +
+                        sslHandler.getEngine().getSession().getCipherSuite() +
+                        " cipher suite.\n");
+    
+                // Register the channel to the global channel list
+                // so the channel received the messages from others.
+                channels.add(future.getChannel());
+            } else {
+                future.getChannel().close();
+            }
+        }
     }
 }
