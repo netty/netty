@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
  * return immediately with no guarantee that the requested I/O operation has
  * been completed at the end of the call.  Instead, you will be returned with
  * a {@link ChannelFuture} instance which tells you when the requested I/O
- * operation has succeeded, failed, or canceled.
+ * operation has succeeded, failed, or cancelled.
  * <p>
  * Various methods are provided to let you check if the I/O operation has been
  * completed, wait for the completion, and retrieve the result of the I/O
@@ -57,13 +57,13 @@ public interface ChannelFuture {
     /**
      * Returns {@code true} if and only if this future is
      * complete, regardless of whether the operation was successful, failed,
-     * or canceled.
+     * or cancelled.
      */
     boolean isDone();
 
     /**
      * Returns {@code true} if and only if this future was
-     * canceled by a {@link #cancel()} method.
+     * cancelled by a {@link #cancel()} method.
      */
     boolean isCancelled();
 
