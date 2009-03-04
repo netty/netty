@@ -466,13 +466,14 @@ public class SslHandler extends FrameDecoder {
                         MessageEvent encryptedWrite = new DownstreamMessageEvent(
                                 channel, future, msg, channel.getRemoteAddress());
                         if (Thread.holdsLock(pendingEncryptedWrites)) {
-                            pendingEncryptedWrites.offer(encryptedWrite);
+                            offered = pendingEncryptedWrites.offer(encryptedWrite);
+
                         } else {
                             synchronized (pendingEncryptedWrites) {
-                                pendingEncryptedWrites.offer(encryptedWrite);
+                                offered = pendingEncryptedWrites.offer(encryptedWrite);
                             }
                         }
-                        offered = true;
+                        assert offered;
                     } else {
                         HandshakeStatus handshakeStatus = result.getHandshakeStatus();
                         switch (handshakeStatus) {
