@@ -85,11 +85,7 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
                     new WriteTimeoutTask(ctx, future),
                     timeoutMillis, TimeUnit.MILLISECONDS);
 
-            future.addListener(new ChannelFutureListener() {
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    timeout.cancel();
-                }
-            });
+            future.addListener(new TimeoutCanceller(timeout));
         }
 
         super.writeRequested(ctx, e);
@@ -127,6 +123,23 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
                     fireExceptionCaught(ctx, t);
                 }
             }
+        }
+    }
+
+    /**
+     * @author The Netty Project (netty-dev@lists.jboss.org)
+     * @author Trustin Lee (tlee@redhat.com)
+     * @version $Rev$, $Date$
+     */
+    private static final class TimeoutCanceller implements ChannelFutureListener {
+        private final Timeout timeout;
+    
+        TimeoutCanceller(Timeout timeout) {
+            this.timeout = timeout;
+        }
+    
+        public void operationComplete(ChannelFuture future) throws Exception {
+            timeout.cancel();
         }
     }
 }
