@@ -63,7 +63,7 @@ public class NettyResourceFactory {
         unterminatableExecutor = null;
     }
 
-    public Executor getChannelFactoryExecutor() {
+    public synchronized Executor getChannelFactoryExecutor() {
         return unterminatableExecutor;
     }
 }
