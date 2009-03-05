@@ -60,6 +60,37 @@ import org.junit.Test;
  */
 public abstract class AbstractSocketServerBootstrapTest {
 
+    private static final boolean BUFSIZE_MODIFIABLE;
+
+    static {
+        boolean bufSizeModifiable = true;
+
+        Socket s = new Socket();
+        try {
+            s.setReceiveBufferSize(1234);
+            try {
+                if (s.getReceiveBufferSize() != 1234) {
+                    throw new IllegalStateException();
+                }
+            } catch (Exception e) {
+                bufSizeModifiable = false;
+                System.err.println(
+                        "Socket.getReceiveBufferSize() does not work: " + e);
+            }
+        } catch (Exception e) {
+            bufSizeModifiable = false;
+            System.err.println(
+                    "Socket.setReceiveBufferSize() does not work: " + e);
+        } finally {
+            BUFSIZE_MODIFIABLE = bufSizeModifiable;
+            try {
+                s.close();
+            } catch (IOException e) {
+                // Ignore.
+            }
+        }
+    }
+
     private static ExecutorService executor;
 
     @BeforeClass
@@ -110,8 +141,10 @@ public abstract class AbstractSocketServerBootstrapTest {
             }
 
             SocketChannelConfig cfg = (SocketChannelConfig) pch.child.getConfig();
-            assertEquals(9753, cfg.getReceiveBufferSize());
-            assertEquals(8642, cfg.getSendBufferSize());
+            if (BUFSIZE_MODIFIABLE) {
+                assertEquals(9753, cfg.getReceiveBufferSize());
+                assertEquals(8642, cfg.getSendBufferSize());
+            }
         } finally {
             if (socket != null) {
                 try {
