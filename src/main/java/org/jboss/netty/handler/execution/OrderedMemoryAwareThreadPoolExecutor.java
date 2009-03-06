@@ -54,6 +54,10 @@ import org.jboss.netty.util.ConcurrentIdentityHashMap;
  * Thread Y: --- Channel B (Event 1) --'   '-- Channel A (Event 2) --- Channel A (Event 3) ---&gt;
  * </pre>
  *
+ * Please note that the events of different channels are independent from each
+ * other.  That is, an event of Channel B will not be blocked by an event of
+ * Channel A and vice versa, unless the thread pool is exhausted.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @author David M. Lloyd (david.lloyd@redhat.com)
