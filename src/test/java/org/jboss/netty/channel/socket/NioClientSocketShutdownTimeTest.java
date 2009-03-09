@@ -34,6 +34,7 @@ import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.util.DummyHandler;
+import org.jboss.netty.util.TimingTestUtil;
 import org.junit.Test;
 
 
@@ -48,6 +49,10 @@ public class NioClientSocketShutdownTimeTest {
 
     @Test
     public void testShutdownTime() throws Throwable {
+        if (!TimingTestUtil.isTimingTestEnabled()) {
+            return;
+        }
+
         ServerSocketChannel serverSocket = ServerSocketChannel.open();
         serverSocket.socket().bind(new InetSocketAddress(0));
 
