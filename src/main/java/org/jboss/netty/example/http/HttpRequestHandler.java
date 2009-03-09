@@ -33,11 +33,11 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.Cookie;
 import org.jboss.netty.handler.codec.http.CookieDecoder;
 import org.jboss.netty.handler.codec.http.CookieEncoder;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -131,15 +131,18 @@ public class HttpRequestHandler extends SimpleChannelHandler {
         response.setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8");
         response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
 
-        CookieDecoder cookieDecoder = new CookieDecoder();
-        Map<String, Cookie> cookies = cookieDecoder.decode(request.getHeader(HttpHeaders.Names.COOKIE));
-        if(!cookies.isEmpty()) {
-            // Reset the cookies if necessary.
-            CookieEncoder cookieEncoder = new CookieEncoder();
-            for (Cookie cookie : cookies.values()) {
-                cookieEncoder.addCookie(cookie);
+        String cookieString = request.getHeader(HttpHeaders.Names.COOKIE);
+        if (cookieString != null) {
+            CookieDecoder cookieDecoder = new CookieDecoder();
+            Map<String, Cookie> cookies = cookieDecoder.decode(cookieString);
+            if(!cookies.isEmpty()) {
+                // Reset the cookies if necessary.
+                CookieEncoder cookieEncoder = new CookieEncoder();
+                for (Cookie cookie : cookies.values()) {
+                    cookieEncoder.addCookie(cookie);
+                }
+                response.addHeader(HttpHeaders.Names.SET_COOKIE, cookieEncoder.encode());
             }
-            response.addHeader(HttpHeaders.Names.SET_COOKIE, cookieEncoder.encode());
         }
 
         // Write the response.
