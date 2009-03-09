@@ -23,6 +23,7 @@
 package org.jboss.netty.handler.codec.http;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -30,6 +31,9 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * @version $Rev$, $Date$
  */
 public interface HttpChunk {
+
+    static HttpChunk LAST_CHUNK = new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER);
+
     boolean isLast();
     ChannelBuffer getContent();
 }

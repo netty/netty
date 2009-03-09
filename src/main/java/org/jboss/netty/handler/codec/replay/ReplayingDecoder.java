@@ -22,8 +22,7 @@
  */
 package org.jboss.netty.handler.codec.replay;
 
-import static org.jboss.netty.channel.Channels.*;
-
+import java.lang.reflect.Array;
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -220,6 +219,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
 
     private final AtomicReference<ChannelBuffer> cumulation =
         new AtomicReference<ChannelBuffer>();
+    private final boolean unfold;
     private volatile ReplayingDecoderBuffer replayable;
     private volatile T state;
     private volatile int checkpoint;
@@ -231,11 +231,20 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
         this(null);
     }
 
+    protected ReplayingDecoder(boolean unfold) {
+        this(null, unfold);
+    }
+
     /**
      * Creates a new instance with the specified initial state.
      */
     protected ReplayingDecoder(T initialState) {
+        this(initialState, false);
+    }
+
+    protected ReplayingDecoder(T initialState, boolean unfold) {
         this.state = initialState;
+        this.unfold = unfold;
     }
 
     /**
@@ -398,6 +407,29 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             }
 
             // A successful decode
+            fireMessageReceived(context, remoteAddress, result);
+        }
+    }
+
+    private void fireMessageReceived(ChannelHandlerContext context, SocketAddress remoteAddress, Object result) {
+        if (unfold) {
+            if (result instanceof Object[]) {
+                for (Object r: (Object[]) result) {
+                    Channels.fireMessageReceived(context, r, remoteAddress);
+                }
+            } else if (result.getClass().isArray()){
+                int length = Array.getLength(result);
+                for (int i = 0; i < length; i ++) {
+                    Channels.fireMessageReceived(context, Array.get(result, i), remoteAddress);
+                }
+            } else if (result instanceof Iterable) {
+                for (Object r: (Iterable<?>) result) {
+                    Channels.fireMessageReceived(context, r, remoteAddress);
+                }
+            } else {
+                Channels.fireMessageReceived(context, result, remoteAddress);
+            }
+        } else {
             Channels.fireMessageReceived(context, result, remoteAddress);
         }
     }
@@ -413,7 +445,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                     // and send the remainders too if necessary.
                     Object partiallyDecoded = decodeLast(ctx, e.getChannel(), cumulation, state);
                     if (partiallyDecoded != null) {
-                        fireMessageReceived(ctx, partiallyDecoded, null);
+                        fireMessageReceived(ctx, null, partiallyDecoded);
                     }
                 }
             }

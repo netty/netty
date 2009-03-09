@@ -22,8 +22,7 @@
  */
 package org.jboss.netty.handler.codec.frame;
 
-import static org.jboss.netty.channel.Channels.*;
-
+import java.lang.reflect.Array;
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -35,6 +34,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
@@ -151,9 +151,17 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 public abstract class FrameDecoder
         extends SimpleChannelHandler implements LifeCycleAwareChannelHandler {
 
+    private final boolean unfold;
     private final AtomicReference<ChannelBuffer> cumulation =
         new AtomicReference<ChannelBuffer>();
 
+    protected FrameDecoder() {
+        this(false);
+    }
+
+    protected FrameDecoder(boolean unfold) {
+        this.unfold = unfold;
+    }
 
     @Override
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
@@ -276,7 +284,30 @@ public abstract class FrameDecoder
                         "if it returned a frame.");
             }
 
-            fireMessageReceived(context, frame, remoteAddress);
+            fireMessageReceived(context, remoteAddress, frame);
+        }
+    }
+
+    private void fireMessageReceived(ChannelHandlerContext context, SocketAddress remoteAddress, Object result) {
+        if (unfold) {
+            if (result instanceof Object[]) {
+                for (Object r: (Object[]) result) {
+                    Channels.fireMessageReceived(context, r, remoteAddress);
+                }
+            } else if (result.getClass().isArray()){
+                int length = Array.getLength(result);
+                for (int i = 0; i < length; i ++) {
+                    Channels.fireMessageReceived(context, Array.get(result, i), remoteAddress);
+                }
+            } else if (result instanceof Iterable) {
+                for (Object r: (Iterable<?>) result) {
+                    Channels.fireMessageReceived(context, r, remoteAddress);
+                }
+            } else {
+                Channels.fireMessageReceived(context, result, remoteAddress);
+            }
+        } else {
+            Channels.fireMessageReceived(context, result, remoteAddress);
         }
     }
 
@@ -291,7 +322,7 @@ public abstract class FrameDecoder
                     // and send the remainders too if necessary.
                     Object partialFrame = decodeLast(ctx, ctx.getChannel(), cumulation);
                     if (partialFrame != null) {
-                        fireMessageReceived(ctx, partialFrame, null);
+                        fireMessageReceived(ctx, null, partialFrame);
                     }
                 }
             }

@@ -37,8 +37,8 @@ public class HttpRequestDecoder extends HttpMessageDecoder {
         super();
     }
 
-    public HttpRequestDecoder(boolean mergeChunks) {
-        super(mergeChunks);
+    public HttpRequestDecoder(int maxChunkSize) {
+        super(maxChunkSize);
     }
 
     @Override

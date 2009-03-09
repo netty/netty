@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.util.CaseIgnoringComparator;
 
 /**
@@ -42,7 +43,7 @@ public class DefaultHttpMessage implements HttpMessage {
 
     private final HttpVersion version;
     private final Map<String, List<String>> headers = new TreeMap<String, List<String>>(CaseIgnoringComparator.INSTANCE);
-    private ChannelBuffer content;
+    private ChannelBuffer content = ChannelBuffers.EMPTY_BUFFER;
 
     protected DefaultHttpMessage(final HttpVersion version) {
         this.version = version;
