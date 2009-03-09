@@ -31,7 +31,11 @@ public final class TestOptions {
     private static final boolean ENABLED;
 
     static {
-        String value = System.getProperty("exclude-timing-tests", "false");
+        String value = System.getProperty("exclude-timing-tests", "false").trim();
+        if (value.length() == 0) {
+            value = "true";
+        }
+
         ENABLED = !ConversionUtil.toBoolean(value);
         if (!ENABLED) {
             System.err.println("Timing tests will be disabled as requested.");
