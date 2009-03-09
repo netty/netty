@@ -37,7 +37,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.util.TimingTestUtil;
+import org.jboss.netty.util.TestOptions;
 import org.junit.Test;
 
 
@@ -52,7 +52,7 @@ public class NioServerSocketShutdownTimeTest {
 
     @Test(timeout = 10000)
     public void testSuccessfulBindAttempt() throws Exception {
-        if (!TimingTestUtil.isTimingTestEnabled()) {
+        if (!TestOptions.isTimingTestEnabled()) {
             return;
         }
 

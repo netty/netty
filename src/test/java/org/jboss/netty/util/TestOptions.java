@@ -27,7 +27,7 @@ package org.jboss.netty.util;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public final class TimingTestUtil {
+public final class TestOptions {
     private static final boolean ENABLED;
 
     static {
@@ -40,7 +40,7 @@ public final class TimingTestUtil {
         return ENABLED;
     }
 
-    private TimingTestUtil() {
+    private TestOptions() {
         // Unused
     }
 }
