@@ -61,7 +61,7 @@ public class DefaultCookie implements Cookie {
             case '\t': case '\r': case '\n': case '\f':
             case 0x0b: // Vertical tab
                 throw new IllegalArgumentException(
-                        "name contains one of the following characters: " +
+                        "name contains one of the following prohibited characters: " +
                         "=,; \\t\\r\\n\\v\\f: " + name);
             }
         }

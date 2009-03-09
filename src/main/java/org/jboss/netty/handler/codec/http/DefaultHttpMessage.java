@@ -22,6 +22,7 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,6 +51,8 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public void addHeader(final String name, final String value) {
+        validateHeaderName(name);
+        validateHeaderValue(value);
         if (value == null) {
             throw new NullPointerException("value is null");
         }
@@ -60,6 +63,8 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public void setHeader(final String name, final String value) {
+        validateHeaderName(name);
+        validateHeaderValue(value);
         if (value == null) {
             throw new NullPointerException("value");
         }
@@ -69,11 +74,71 @@ public class DefaultHttpMessage implements HttpMessage {
         headers.put(name, values);
     }
 
-    public void setHeader(final String name, final List<String> values) {
-        if (values == null || values.size() == 0) {
-            throw new NullPointerException("no values present");
+    public void setHeader(final String name, final Iterable<String> values) {
+        validateHeaderName(name);
+        if (values == null) {
+            throw new NullPointerException("values");
         }
-        headers.put(name, values);
+
+        int nValues = 0;
+        for (String v: values) {
+            validateHeaderValue(v);
+            nValues ++;
+        }
+
+        if (nValues == 0) {
+            throw new IllegalArgumentException("values is empty.");
+        }
+
+        if (values instanceof List) {
+            headers.put(name, (List<String>) values);
+        } else {
+            List<String> valueList = new LinkedList<String>();
+            for (String v: values) {
+                valueList.add(v);
+            }
+            headers.put(name, valueList);
+        }
+    }
+
+    private static void validateHeaderName(String name) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+        for (int i = 0; i < name.length(); i ++) {
+            char c = name.charAt(i);
+            if (c > 127) {
+                throw new IllegalArgumentException(
+                        "name contains non-ascii character: " + name);
+            }
+
+            // Check prohibited characters.
+            switch (c) {
+            case '=':  case ',':  case ';': case ' ': case ':':
+            case '\t': case '\r': case '\n': case '\f':
+            case 0x0b: // Vertical tab
+                throw new IllegalArgumentException(
+                        "name contains one of the following prohibited characters: " +
+                        "=,;: \\t\\r\\n\\v\\f: " + name);
+            }
+        }
+    }
+
+    private static void validateHeaderValue(String value) {
+        if (value == null) {
+            throw new NullPointerException("value");
+        }
+        for (int i = 0; i < value.length(); i ++) {
+            char c = value.charAt(i);
+            // Check prohibited characters.
+            switch (c) {
+            case '\r': case '\n': case '\f':
+            case 0x0b: // Vertical tab
+                throw new IllegalArgumentException(
+                        "value contains one of the following prohibited characters: " +
+                        "\\r\\n\\v\\f: " + value);
+            }
+        }
     }
 
     public void removeHeader(final String name) {

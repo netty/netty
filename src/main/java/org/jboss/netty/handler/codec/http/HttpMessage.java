@@ -51,7 +51,7 @@ public interface HttpMessage {
 
     void setHeader(String name, String value);
 
-    void setHeader(String name, List<String> values);
+    void setHeader(String name, Iterable<String> values);
 
     void removeHeader(String name);
 
