@@ -32,7 +32,7 @@ package org.jboss.netty.handler.codec.http;
  *
  * @apiviz.exclude
  */
-public class HttpResponseStatus {
+public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     public static final HttpResponseStatus CONTINUE = new HttpResponseStatus(100, "Continue");
 
@@ -130,5 +130,32 @@ public class HttpResponseStatus {
 
     public String getReasonPhrase() {
         return reasonPhrase;
+    }
+
+    @Override
+    public int hashCode() {
+        return getCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof HttpResponseStatus)) {
+            return false;
+        }
+
+        return getCode() == ((HttpResponseStatus) o).getCode();
+    }
+
+    public int compareTo(HttpResponseStatus o) {
+        return getCode() - o.getCode();
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder(reasonPhrase + 5);
+        buf.append(code);
+        buf.append(' ');
+        buf.append(reasonPhrase);
+        return buf.toString();
     }
 }
