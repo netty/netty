@@ -152,7 +152,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder(reasonPhrase + 5);
+        StringBuilder buf = new StringBuilder(reasonPhrase.length() + 5);
         buf.append(code);
         buf.append(' ');
         buf.append(reasonPhrase);
