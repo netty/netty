@@ -21,23 +21,59 @@
  */
 package org.jboss.netty.example.http;
 
-import java.nio.charset.Charset;
-
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
  */
-@ChannelPipelineCoverage("all")
+@ChannelPipelineCoverage("one")
 public class HttpResponseHandler extends SimpleChannelHandler {
+
+    private volatile boolean readingChunks;
+
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        HttpResponse response = (HttpResponse) e.getMessage();
-        System.out.println(response.getContent().toString(Charset.defaultCharset().name()));
+        if (!readingChunks) {
+            HttpResponse response = (HttpResponse) e.getMessage();
+
+            System.out.println("STATUS: " + response.getStatus());
+            System.out.println("VERSION: " + response.getProtocolVersion());
+            System.out.println();
+
+            if (!response.getHeaderNames().isEmpty()) {
+                for (String name: response.getHeaderNames()) {
+                    for (String value: response.getHeaders(name)) {
+                        System.out.println("HEADER: " + name + " = " + value);
+                    }
+                }
+                System.out.println();
+            }
+
+            if (response.getStatus().getCode() == 200 && response.isChunked()) {
+                readingChunks = true;
+                System.out.println("CHUNKED CONTENT:");
+            } else {
+                ChannelBuffer content = response.getContent();
+                if (content.readable()) {
+                    System.out.println("CONTENT:");
+                    System.out.println(content.toString("UTF-8"));
+                }
+            }
+        } else {
+            HttpChunk chunk = (HttpChunk) e.getMessage();
+            if (chunk.isLast()) {
+                readingChunks = false;
+            } else {
+                System.out.println(chunk.getContent().toString("UTF-8"));
+            }
+        }
     }
 }

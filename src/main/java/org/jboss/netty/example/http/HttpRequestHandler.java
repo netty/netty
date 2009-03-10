@@ -93,7 +93,6 @@ public class HttpRequestHandler extends SimpleChannelHandler {
 
             if (request.isChunked()) {
                 readingChunks = true;
-                return;
             } else {
                 ChannelBuffer content = request.getContent();
                 if (content.readable()) {
@@ -107,7 +106,6 @@ public class HttpRequestHandler extends SimpleChannelHandler {
                 readingChunks = false;
                 responseContent.append("END OF CONTENT\r\n");
                 writeResponse(e);
-                return;
             } else {
                 responseContent.append("CHUNK: " + chunk.getContent().toString("UTF-8") + "\r\n");
             }

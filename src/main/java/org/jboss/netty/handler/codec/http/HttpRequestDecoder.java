@@ -32,10 +32,6 @@ package org.jboss.netty.handler.codec.http;
  */
 public class HttpRequestDecoder extends HttpMessageDecoder {
 
-    public HttpRequestDecoder() {
-        super();
-    }
-
     public HttpRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
         super(maxInitialLineLength, maxHeaderSize, maxChunkSize);
