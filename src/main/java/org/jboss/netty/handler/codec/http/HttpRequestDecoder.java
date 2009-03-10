@@ -21,7 +21,6 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
  * decodes an http request.
@@ -37,17 +36,15 @@ public class HttpRequestDecoder extends HttpMessageDecoder {
         super();
     }
 
-    public HttpRequestDecoder(int maxChunkSize) {
-        super(maxChunkSize);
+    public HttpRequestDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
+        super(maxInitialLineLength, maxHeaderSize, maxChunkSize);
     }
 
     @Override
-    protected void readInitial(ChannelBuffer buffer) throws Exception{
-        String line = readIntoCurrentLine(buffer);
-        String[] split = splitInitial(line);
-        message = new DefaultHttpRequest(
-                HttpVersion.valueOf(split[2]), HttpMethod.valueOf(split[0]), split[1]);
-        checkpoint(State.READ_HEADER);
+    protected HttpMessage createMessage(String[] initialLine) throws Exception{
+        return new DefaultHttpRequest(
+                HttpVersion.valueOf(initialLine[2]), HttpMethod.valueOf(initialLine[0]), initialLine[1]);
     }
 
     @Override

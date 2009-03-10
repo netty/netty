@@ -29,6 +29,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 
 /**
@@ -46,9 +47,12 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     private static final Pattern HEADER_PATTERN = Pattern.compile(
             "^\\s*(\\S+)\\s*:\\s*(.*)\\s*$");
 
+    private final int maxInitialLineLength;
+    private final int maxHeaderSize;
     private final int maxChunkSize;
     protected volatile HttpMessage message;
     private volatile ChannelBuffer content;
+    private volatile int headerSize;
     private volatile int chunkSize;
 
     /**
@@ -74,16 +78,28 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     protected HttpMessageDecoder() {
-        this(0);
+        this(8192, 8192, 0);
     }
 
-    protected HttpMessageDecoder(int maxChunkSize) {
+    protected HttpMessageDecoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
         super(State.SKIP_CONTROL_CHARS, true);
+        if (maxInitialLineLength <= 0) {
+            throw new IllegalArgumentException(
+                    "maxInitialLineLength must be a positive integer: " +
+                    maxInitialLineLength);
+        }
+        if (maxHeaderSize <= 0) {
+            throw new IllegalArgumentException(
+                    "maxHeaderSize must be a positive integer: " +
+                    maxChunkSize);
+        }
         if (maxChunkSize < 0) {
             throw new IllegalArgumentException(
                     "maxChunkSize must not be a negative integer: " +
                     maxChunkSize);
         }
+        this.maxInitialLineLength = maxInitialLineLength;
+        this.maxHeaderSize = maxHeaderSize;
         this.maxChunkSize = maxChunkSize;
     }
 
@@ -103,7 +119,16 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             }
         }
         case READ_INITIAL: {
-            readInitial(buffer);
+            String[] initialLine = splitInitialLine(readLine(buffer, maxInitialLineLength));
+            if (initialLine.length < 3) {
+                // Invalid initial line - ignore.
+                checkpoint(State.SKIP_CONTROL_CHARS);
+                return null;
+            }
+
+            message = createMessage(initialLine);
+            checkpoint(State.READ_HEADER);
+            headerSize = 0;
         }
         case READ_HEADER: {
             State nextState = readHeaders(buffer);
@@ -200,7 +225,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
          * read chunk, read and ignore the CRLF and repeat until 0
          */
         case READ_CHUNK_SIZE: {
-            String line = readIntoCurrentLine(buffer);
+            String line = readLine(buffer, maxInitialLineLength);
             int chunkSize = getChunkSize(line);
             this.chunkSize = chunkSize;
             if (chunkSize == 0) {
@@ -268,18 +293,20 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             }
         }
         case READ_CHUNK_FOOTER: {
-            String line = readIntoCurrentLine(buffer);
-            if (line.trim().length() == 0) {
-                if (maxChunkSize == 0) {
-                    // Chunked encoding disabled.
-                    return reset();
-                } else {
-                    reset();
-                    // The last chunk, which is empty
-                    return HttpChunk.LAST_CHUNK;
+            // Skip the footer; does anyone use it?
+            try {
+                if (!skipLine(buffer)) {
+                    if (maxChunkSize == 0) {
+                        // Chunked encoding disabled.
+                        return reset();
+                    } else {
+                        reset();
+                        // The last chunk, which is empty
+                        return HttpChunk.LAST_CHUNK;
+                    }
                 }
-            } else {
-                checkpoint(State.READ_CHUNK_FOOTER);
+            } finally {
+                checkpoint();
             }
             return null;
         }
@@ -324,9 +351,9 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
     }
 
-    private State readHeaders(ChannelBuffer buffer) {
+    private State readHeaders(ChannelBuffer buffer) throws TooLongFrameException {
         message.clearHeaders();
-        String line = readIntoCurrentLine(buffer);
+        String line = readHeader(buffer);
         String lastHeader = null;
         while (line.length() != 0) {
             if (line.startsWith(" ") || line.startsWith("\t")) {
@@ -341,7 +368,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 message.addHeader(header[0], header[1]);
                 lastHeader = header[0];
             }
-            line = readIntoCurrentLine(buffer);
+            line = readHeader(buffer);
         }
 
         State nextState;
@@ -355,8 +382,38 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return nextState;
     }
 
+    private String readHeader(ChannelBuffer buffer) throws TooLongFrameException {
+        StringBuilder sb = new StringBuilder(64);
+        int headerSize = this.headerSize;
+        while (true) {
+            byte nextByte = buffer.readByte();
+            if (nextByte == HttpCodecUtil.CR) {
+                nextByte = buffer.readByte();
+                if (nextByte == HttpCodecUtil.LF) {
+                    this.headerSize = headerSize + 2;
+                    return sb.toString();
+                }
+            }
+            else if (nextByte == HttpCodecUtil.LF) {
+                this.headerSize = headerSize + 1;
+                return sb.toString();
+            }
+            else {
+                // Abort decoding if the header part is too large.
+                if (headerSize >= maxHeaderSize) {
+                    throw new TooLongFrameException(
+                            "HTTP header is larger than " +
+                            maxHeaderSize + " bytes.");
+
+                }
+                headerSize ++;
+                sb.append((char) nextByte);
+            }
+        }
+    }
+
     protected abstract boolean isDecodingRequest();
-    protected abstract void readInitial(ChannelBuffer buffer) throws Exception;
+    protected abstract HttpMessage createMessage(String[] initialLine) throws Exception;
 
     private int getChunkSize(String hex) {
         hex = hex.trim();
@@ -371,8 +428,9 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return Integer.parseInt(hex, 16);
     }
 
-    protected String readIntoCurrentLine(ChannelBuffer buffer) {
+    private String readLine(ChannelBuffer buffer, int maxLineLength) throws TooLongFrameException {
         StringBuilder sb = new StringBuilder(64);
+        int lineLength = 0;
         while (true) {
             byte nextByte = buffer.readByte();
             if (nextByte == HttpCodecUtil.CR) {
@@ -385,12 +443,42 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 return sb.toString();
             }
             else {
+                if (lineLength >= maxLineLength) {
+                    throw new TooLongFrameException(
+                            "An HTTP line is larger than " + maxLineLength +
+                            " bytes.");
+                }
+                lineLength ++;
                 sb.append((char) nextByte);
             }
         }
     }
 
-    protected String[] splitInitial(String sb) {
+    /**
+     * Returns {@code true} if only if the skipped line was not empty.
+     * Please note that an empty line is also skipped, while {@code} false is
+     * returned.
+     */
+    private boolean skipLine(ChannelBuffer buffer) {
+        int lineLength = 0;
+        while (true) {
+            byte nextByte = buffer.readByte();
+            if (nextByte == HttpCodecUtil.CR) {
+                nextByte = buffer.readByte();
+                if (nextByte == HttpCodecUtil.LF) {
+                    return lineLength != 0;
+                }
+            }
+            else if (nextByte == HttpCodecUtil.LF) {
+                return lineLength != 0;
+            }
+            else if (!Character.isWhitespace((char) nextByte)) {
+                lineLength ++;
+            }
+        }
+    }
+
+    private String[] splitInitialLine(String sb) {
         Matcher m = INITIAL_PATTERN.matcher(sb);
         if (m.matches()) {
             return new String[] { m.group(1), m.group(2), m.group(3) };
