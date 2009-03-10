@@ -297,13 +297,13 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     private Object reset() {
         HttpMessage message = this.message;
         ChannelBuffer content = this.content;
-        if (content == null) {
-            content = ChannelBuffers.EMPTY_BUFFER;
-        }
-        message.setContent(content);
 
+        if (content != null) {
+            message.setContent(content);
+            this.content = null;
+        }
         this.message = null;
-        this.content = null;
+
         checkpoint(State.SKIP_CONTROL_CHARS);
         return message;
     }
