@@ -71,8 +71,10 @@ public class HttpResponseHandler extends SimpleChannelHandler {
             HttpChunk chunk = (HttpChunk) e.getMessage();
             if (chunk.isLast()) {
                 readingChunks = false;
+                System.out.println();
             } else {
-                System.out.println(chunk.getContent().toString("UTF-8"));
+                System.out.print(chunk.getContent().toString("UTF-8"));
+                System.out.flush();
             }
         }
     }
