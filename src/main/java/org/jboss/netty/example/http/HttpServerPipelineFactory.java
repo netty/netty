@@ -45,6 +45,7 @@ public class HttpServerPipelineFactory implements ChannelPipelineFactory {
         ChannelPipeline pipeline = pipeline();
 
         pipeline.addLast("decoder", new HttpRequestDecoder(8192, 8192, 8192));
+        //pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
         pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("handler", handler);
         return pipeline;
