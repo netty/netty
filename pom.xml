@@ -232,8 +232,10 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.4.3</version>
         <configuration>
+          <forkMode>never</forkMode>
           <excludes>
             <exclude>**/Abstract*</exclude>
+            <exclude>**/TestOption*</exclude>
           </excludes>
         </configuration>
       </plugin>
