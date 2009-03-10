@@ -77,8 +77,15 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         READ_CHUNK_FOOTER;
     }
 
-    protected HttpMessageDecoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
+    protected HttpMessageDecoder() {
+        this(4096, 8192, 8192);
+    }
+
+    protected HttpMessageDecoder(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
+
         super(State.SKIP_CONTROL_CHARS, true);
+
         if (maxInitialLineLength <= 0) {
             throw new IllegalArgumentException(
                     "maxInitialLineLength must be a positive integer: " +

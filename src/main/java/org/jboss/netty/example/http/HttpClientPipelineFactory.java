@@ -43,7 +43,7 @@ public class HttpClientPipelineFactory implements ChannelPipelineFactory {
     public ChannelPipeline getPipeline() throws Exception {
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();
-        pipeline.addLast("decoder", new HttpResponseDecoder(8192, 8192, 8192));
+        pipeline.addLast("decoder", new HttpResponseDecoder());
         //pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
         pipeline.addLast("encoder", new HttpRequestEncoder());
         pipeline.addLast("handler", handler);
