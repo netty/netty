@@ -25,7 +25,7 @@ package org.jboss.netty.channel.socket.nio;
 import java.net.Socket;
 import java.util.Map;
 
-import org.jboss.netty.channel.DefaultReceiveBufferSizePredictor;
+import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictor;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.channel.socket.DefaultSocketChannelConfig;
 import org.jboss.netty.logging.InternalLogger;
@@ -50,7 +50,7 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
     private volatile int writeBufferHighWaterMark = 64 * 1024;
     private volatile int writeBufferLowWaterMark  = 32 * 1024;
     private volatile ReceiveBufferSizePredictor predictor =
-        new DefaultReceiveBufferSizePredictor();
+        new AdaptiveReceiveBufferSizePredictor();
     private volatile int writeSpinCount = 16;
 
     DefaultNioSocketChannelConfig(Socket socket) {

@@ -26,7 +26,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.DefaultReceiveBufferSizePredictor;
+import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictor;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 
@@ -86,14 +86,14 @@ public interface XnioChannelConfig extends ChannelConfig {
     /**
      * Returns the {@link ReceiveBufferSizePredictor} which predicts the
      * number of readable bytes in the socket receive buffer.  The default
-     * predictor is {@link DefaultReceiveBufferSizePredictor}.
+     * predictor is {@link AdaptiveReceiveBufferSizePredictor}.
      */
     ReceiveBufferSizePredictor getReceiveBufferSizePredictor();
 
     /**
      * Sets the {@link ReceiveBufferSizePredictor} which predicts the
      * number of readable bytes in the socket receive buffer.  The default
-     * predictor is {@link DefaultReceiveBufferSizePredictor}.
+     * predictor is {@link AdaptiveReceiveBufferSizePredictor}.
      */
     void setReceiveBufferSizePredictor(ReceiveBufferSizePredictor predictor);
 }

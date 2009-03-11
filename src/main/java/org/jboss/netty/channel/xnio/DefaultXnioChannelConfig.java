@@ -28,7 +28,7 @@ import java.util.Map.Entry;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.HeapChannelBufferFactory;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.DefaultReceiveBufferSizePredictor;
+import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictor;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -53,7 +53,7 @@ final class DefaultXnioChannelConfig implements XnioChannelConfig {
     private volatile int writeBufferHighWaterMark = 64 * 1024;
     private volatile int writeBufferLowWaterMark  = 32 * 1024;
     private volatile ReceiveBufferSizePredictor predictor =
-        new DefaultReceiveBufferSizePredictor();
+        new AdaptiveReceiveBufferSizePredictor();
     private volatile int writeSpinCount = 16;
 
     DefaultXnioChannelConfig() {

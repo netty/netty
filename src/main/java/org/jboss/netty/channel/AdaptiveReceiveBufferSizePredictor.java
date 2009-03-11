@@ -26,13 +26,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The default {@link ReceiveBufferSizePredictor} implementation.
+ * The {@link ReceiveBufferSizePredictor} that automatically increases and
+ * decreases the predicted buffer size on feed back.
  * <p>
- * It gradually increases the expected number of readable bytes if the
- * previous read filled the allocated buffer.  It gradually decreases the
- * expected number of readable bytes if the read operation was not able to
- * fill a certain amount of the allocated buffer two times consecutively.
- * Otherwise, it keeps returning the previous prediction.
+ * It gradually increases the expected number of readable bytes if the previous
+ * read filled the allocated buffer.  It gradually decreases the expected number
+ * of readable bytes if the read operation was not able to fill a certain amount
+ * of the allocated buffer two times consecutively.  Otherwise, it keeps
+ * returning the previous prediction.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -40,7 +41,7 @@ import java.util.List;
  * @version $Rev$, $Date$
  *
  */
-public class DefaultReceiveBufferSizePredictor implements
+public class AdaptiveReceiveBufferSizePredictor implements
         ReceiveBufferSizePredictor {
 
     private static final int INDEX_INCREMENT = 4;
@@ -115,7 +116,7 @@ public class DefaultReceiveBufferSizePredictor implements
      * parameters, the expected buffer size starts from {@code 1024}, does not
      * go down below {@code 64}, and does not go up above {@code 65536}.
      */
-    public DefaultReceiveBufferSizePredictor() {
+    public AdaptiveReceiveBufferSizePredictor() {
         this(DEFAULT_MINIMUM, DEFAULT_INITIAL, DEFAULT_MAXIMUM);
     }
 
@@ -126,7 +127,7 @@ public class DefaultReceiveBufferSizePredictor implements
      * @param initial  the initial buffer size when no feed back was received
      * @param maximum  the inclusive upper bound of the expected buffer size
      */
-    public DefaultReceiveBufferSizePredictor(int minimum, int initial, int maximum) {
+    public AdaptiveReceiveBufferSizePredictor(int minimum, int initial, int maximum) {
         if (minimum <= 0) {
             throw new IllegalArgumentException("minimum: " + minimum);
         }
