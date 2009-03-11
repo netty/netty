@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.logging.InternalLogger;
@@ -360,6 +361,11 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             if (maxChannelMemorySize != 0 && channelCounter >= maxChannelMemorySize && channel.isOpen()) {
                 if (channel.isReadable()) {
                     //System.out.println("UNREADABLE");
+                    ChannelHandlerContext ctx = eventTask.getContext();
+                    if (ctx.getHandler() instanceof ExecutionHandler) {
+                        // readSuspended = true;
+                        ctx.setAttachment(Boolean.TRUE);
+                    }
                     channel.setReadable(false);
                 }
             }
@@ -396,12 +402,18 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         }
 
         if (task instanceof ChannelEventRunnable) {
-            Channel channel = ((ChannelEventRunnable) task).getEvent().getChannel();
+            ChannelEventRunnable eventTask = (ChannelEventRunnable) task;
+            Channel channel = eventTask.getEvent().getChannel();
             long channelCounter = getChannelCounter(channel).addAndGet(-increment);
             //System.out.println("DC: " + channelCounter + ", " + increment);
             if (maxChannelMemorySize != 0 && channelCounter < maxChannelMemorySize && channel.isOpen()) {
                 if (!channel.isReadable()) {
                     //System.out.println("READABLE");
+                    ChannelHandlerContext ctx = eventTask.getContext();
+                    if (ctx.getHandler() instanceof ExecutionHandler) {
+                        // readSuspended = false;
+                        ctx.setAttachment(null);
+                    }
                     channel.setReadable(true);
                 }
             }
