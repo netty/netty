@@ -48,7 +48,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
     private static final ChannelSink discardingSink = new DiscardingChannelSink();
-    
+
     private volatile Channel channel;
     private volatile ChannelSink sink;
     private volatile DefaultChannelHandlerContext head;
@@ -687,127 +687,126 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-	private final class DefaultChannelHandlerContext implements ChannelHandlerContext {
-	    volatile DefaultChannelHandlerContext next;
-	    volatile DefaultChannelHandlerContext prev;
-	    private final String name;
-	    private final ChannelHandler handler;
-	    private final boolean canHandleUpstream;
-	    private final boolean canHandleDownstream;
-	
-	    DefaultChannelHandlerContext(
-	            DefaultChannelHandlerContext prev, DefaultChannelHandlerContext next,
-	            String name, ChannelHandler handler) {
-	
-	        if (name == null) {
-	            throw new NullPointerException("name");
-	        }
-	        if (handler == null) {
-	            throw new NullPointerException("handler");
-	        }
-	        canHandleUpstream = handler instanceof ChannelUpstreamHandler;
-	        canHandleDownstream = handler instanceof ChannelDownstreamHandler;
-	
-	
-	        if (!canHandleUpstream && !canHandleDownstream) {
-	            throw new IllegalArgumentException(
-	                    "handler must be either " +
-	                    ChannelUpstreamHandler.class.getName() + " or " +
-	                    ChannelDownstreamHandler.class.getName() + '.');
-	        }
-	
-	
-	        ChannelPipelineCoverage coverage = handler.getClass().getAnnotation(ChannelPipelineCoverage.class);
-	        if (coverage == null) {
-	            logger.warn(
-	                    "Handler '" + handler.getClass().getName() +
-	                    "' does not have a '" +
-	                    ChannelPipelineCoverage.class.getSimpleName() +
-	                    "' annotation with its class declaration. " +
-	                    "It is recommended to add the annotation to tell if " +
-	                    "one handler instance can handle more than one pipeline " +
-	                    "(\"" + ALL + "\") or not (\"" + ONE + "\")");
-	        } else {
-	            String coverageValue = coverage.value();
-	            if (coverageValue == null) {
-	                throw new AnnotationFormatError(
-	                        ChannelPipelineCoverage.class.getSimpleName() +
-	                        " annotation value is undefined for type: " +
-	                        handler.getClass().getName());
-	            }
-	
-	
-	            if (!coverageValue.equals(ALL) && !coverageValue.equals(ONE)) {
-	                throw new AnnotationFormatError(
-	                        ChannelPipelineCoverage.class.getSimpleName() +
-	                        " annotation value: " + coverageValue +
-	                        " (must be either \"" + ALL + "\" or \"" + ONE + ")");
-	            }
-	        }
-	
-	        this.prev = prev;
-	        this.next = next;
-	        this.name = name;
-	        this.handler = handler;
-	    }
-	
-	    public Channel getChannel() {
-	        return getPipeline().getChannel();
-	    }
-	
-	    public ChannelPipeline getPipeline() {
-	        return DefaultChannelPipeline.this;
-	    }
-	
-	    public boolean canHandleDownstream() {
-	        return canHandleDownstream;
-	    }
-	
-	    public boolean canHandleUpstream() {
-	        return canHandleUpstream;
-	    }
-	
-	    public ChannelHandler getHandler() {
-	        return handler;
-	    }
-	
-	    public String getName() {
-	        return name;
-	    }
-	
-	    public void sendDownstream(ChannelEvent e) {
-	        DefaultChannelHandlerContext prev = getActualDownstreamContext(this.prev);
-	        if (prev == null) {
-	            try {
-	                getSink().eventSunk(DefaultChannelPipeline.this, e);
-	            } catch (Throwable t) {
-	                notifyHandlerException(e, t);
-	            }
-	        } else {
-	            DefaultChannelPipeline.this.sendDownstream(prev, e);
-	        }
-	    }
-	
-	    public void sendUpstream(ChannelEvent e) {
-	        DefaultChannelHandlerContext next = getActualUpstreamContext(this.next);
-	        if (next != null) {
-	            DefaultChannelPipeline.this.sendUpstream(next, e);
-	        }
-	    }
-	}
+    private final class DefaultChannelHandlerContext implements ChannelHandlerContext {
+        volatile DefaultChannelHandlerContext next;
+        volatile DefaultChannelHandlerContext prev;
+        private final String name;
+        private final ChannelHandler handler;
+        private final boolean canHandleUpstream;
+        private final boolean canHandleDownstream;
 
-	private static final class DiscardingChannelSink implements ChannelSink {
-		DiscardingChannelSink() {
-			super();
-		}
-		
-		public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) {
+        DefaultChannelHandlerContext(
+                DefaultChannelHandlerContext prev, DefaultChannelHandlerContext next,
+                String name, ChannelHandler handler) {
+
+            if (name == null) {
+                throw new NullPointerException("name");
+            }
+            if (handler == null) {
+                throw new NullPointerException("handler");
+            }
+            canHandleUpstream = handler instanceof ChannelUpstreamHandler;
+            canHandleDownstream = handler instanceof ChannelDownstreamHandler;
+
+
+            if (!canHandleUpstream && !canHandleDownstream) {
+                throw new IllegalArgumentException(
+                        "handler must be either " +
+                        ChannelUpstreamHandler.class.getName() + " or " +
+                        ChannelDownstreamHandler.class.getName() + '.');
+            }
+
+
+            ChannelPipelineCoverage coverage = handler.getClass().getAnnotation(ChannelPipelineCoverage.class);
+            if (coverage == null) {
+                logger.warn(
+                        "Handler '" + handler.getClass().getName() +
+                        "' does not have a '" +
+                        ChannelPipelineCoverage.class.getSimpleName() +
+                        "' annotation with its class declaration. " +
+                        "It is recommended to add the annotation to tell if " +
+                        "one handler instance can handle more than one pipeline " +
+                        "(\"" + ALL + "\") or not (\"" + ONE + "\")");
+            } else {
+                String coverageValue = coverage.value();
+                if (coverageValue == null) {
+                    throw new AnnotationFormatError(
+                            ChannelPipelineCoverage.class.getSimpleName() +
+                            " annotation value is undefined for type: " +
+                            handler.getClass().getName());
+                }
+
+                if (!coverageValue.equals(ALL) && !coverageValue.equals(ONE)) {
+                    throw new AnnotationFormatError(
+                            ChannelPipelineCoverage.class.getSimpleName() +
+                            " annotation value: " + coverageValue +
+                            " (must be either \"" + ALL + "\" or \"" + ONE + ")");
+                }
+            }
+
+            this.prev = prev;
+            this.next = next;
+            this.name = name;
+            this.handler = handler;
+        }
+
+        public Channel getChannel() {
+            return getPipeline().getChannel();
+        }
+
+        public ChannelPipeline getPipeline() {
+            return DefaultChannelPipeline.this;
+        }
+
+        public boolean canHandleDownstream() {
+            return canHandleDownstream;
+        }
+
+        public boolean canHandleUpstream() {
+            return canHandleUpstream;
+        }
+
+        public ChannelHandler getHandler() {
+            return handler;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void sendDownstream(ChannelEvent e) {
+            DefaultChannelHandlerContext prev = getActualDownstreamContext(this.prev);
+            if (prev == null) {
+                try {
+                    getSink().eventSunk(DefaultChannelPipeline.this, e);
+                } catch (Throwable t) {
+                    notifyHandlerException(e, t);
+                }
+            } else {
+                DefaultChannelPipeline.this.sendDownstream(prev, e);
+            }
+        }
+
+        public void sendUpstream(ChannelEvent e) {
+            DefaultChannelHandlerContext next = getActualUpstreamContext(this.next);
+            if (next != null) {
+                DefaultChannelPipeline.this.sendUpstream(next, e);
+            }
+        }
+    }
+
+    private static final class DiscardingChannelSink implements ChannelSink {
+        DiscardingChannelSink() {
+            super();
+        }
+
+        public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) {
             logger.warn("Not attached yet; discarding: " + e);
         }
 
-		public void exceptionCaught(ChannelPipeline pipeline,
+        public void exceptionCaught(ChannelPipeline pipeline,
                 ChannelEvent e, ChannelPipelineException cause) throws Exception {
             throw cause;
         }
-	}
+    }
 }
