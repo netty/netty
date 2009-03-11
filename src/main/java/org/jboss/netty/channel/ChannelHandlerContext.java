@@ -95,4 +95,7 @@ public interface ChannelHandlerContext {
      * rather than calling this method directly.
      */
     void sendDownstream(ChannelEvent e);
+
+    Object getAttachment();
+    void setAttachment(Object attachment);
 }

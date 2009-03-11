@@ -694,6 +694,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         private final ChannelHandler handler;
         private final boolean canHandleUpstream;
         private final boolean canHandleDownstream;
+        private volatile Object attachment;
 
         DefaultChannelHandlerContext(
                 DefaultChannelHandlerContext prev, DefaultChannelHandlerContext next,
@@ -772,6 +773,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         public String getName() {
             return name;
+        }
+
+        public Object getAttachment() {
+            return attachment;
+        }
+
+        public void setAttachment(Object attachment) {
+            this.attachment = attachment;
         }
 
         public void sendDownstream(ChannelEvent e) {
