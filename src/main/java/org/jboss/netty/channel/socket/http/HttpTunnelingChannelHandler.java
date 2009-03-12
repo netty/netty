@@ -183,11 +183,9 @@ class HttpTunnelingChannelHandler extends SimpleChannelHandler {
         try {
             connected = false;
             reconnectCondition.await(reconnectTimeoutMillis, TimeUnit.MILLISECONDS);
-        }
-        catch (InterruptedException e) {
-            return connected;
-        }
-        finally {
+        } catch (InterruptedException e) {
+            // return with current state.
+        } finally {
             reconnectLock.unlock();
         }
         return connected;
