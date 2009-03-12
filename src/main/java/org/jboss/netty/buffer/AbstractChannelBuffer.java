@@ -418,10 +418,13 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         writerIndex += length;
     }
 
-    public void writeBytes(InputStream in, int length)
+    public int writeBytes(InputStream in, int length)
             throws IOException {
-        setBytes(writerIndex, in, length);
-        writerIndex += length;
+        int writtenBytes = setBytes(writerIndex, in, length);
+        if (writtenBytes > 0) {
+            writerIndex += writtenBytes;
+        }
+        return writtenBytes;
     }
 
     public int writeBytes(ScatteringByteChannel in, int length)

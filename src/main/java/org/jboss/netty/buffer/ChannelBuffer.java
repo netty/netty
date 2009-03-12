@@ -1228,12 +1228,14 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *
      * @param length the number of bytes to transfer
      *
+     * @return the actual number of bytes read in from the specified stream
+     *
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@code this.writableBytes}
      * @throws IOException
      *         if the specified stream threw an exception during I/O
      */
-    void writeBytes(InputStream in, int length) throws IOException;
+    int  writeBytes(InputStream in, int length) throws IOException;
 
     /**
      * Transfers the content of the specified channel to this buffer

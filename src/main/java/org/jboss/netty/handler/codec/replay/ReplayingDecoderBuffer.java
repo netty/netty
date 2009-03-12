@@ -502,7 +502,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         throw new UnreplayableOperationException();
     }
 
-    public void writeBytes(InputStream in, int length) throws IOException {
+    public int writeBytes(InputStream in, int length) throws IOException {
         throw new UnreplayableOperationException();
     }
 

@@ -217,6 +217,19 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
+    public int writeBytes(InputStream in, int length) throws IOException {
+        ensureWritableBytes(length);
+        return super.writeBytes(in, length);
+    }
+
+    @Override
+    public int writeBytes(ScatteringByteChannel in, int length)
+            throws IOException {
+        ensureWritableBytes(length);
+        return super.writeBytes(in, length);
+    }
+
+    @Override
     public void writeZero(int length) {
         ensureWritableBytes(length);
         super.writeZero(length);
