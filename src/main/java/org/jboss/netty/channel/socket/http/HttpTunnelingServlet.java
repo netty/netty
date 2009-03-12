@@ -22,6 +22,7 @@
 package org.jboss.netty.channel.socket.http;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PushbackInputStream;
 import java.util.List;
 
@@ -136,16 +137,24 @@ public class HttpTunnelingServlet extends HttpServlet {
             HttpServletRequest request,
             HttpServletResponse response, HttpSession session,
             HttpTunnelingChannelHandler handler) throws IOException {
-        int length = request.getContentLength();
-        if (length > 0) {
-            byte[] bytes = new byte[length];
-            request.getInputStream().read(bytes);
-            ChannelBuffer cb = ChannelBuffers.copiedBuffer(bytes);
-            channel.write(cb);
+
+        InputStream in = request.getInputStream();
+        if (in != null) {
+            ChannelBuffer requestContent = ChannelBuffers.dynamicBuffer();
+            for (;;) {
+                int writtenBytes = requestContent.writeBytes(in, 4096);
+                if (writtenBytes < 0) {
+                    break;
+                }
+            }
+            if (requestContent.readable()) {
+                channel.write(requestContent);
+            }
         }
+
         handler.setOutputStream(response.getOutputStream());
         List<MessageEvent> buffers = handler.getAwaitingEvents();
-        length = 0;
+        int length = 0;
         if (buffers.size() > 0) {
             for (MessageEvent buffer: buffers) {
                 length += ((ChannelBuffer) buffer.getMessage()).readableBytes();
