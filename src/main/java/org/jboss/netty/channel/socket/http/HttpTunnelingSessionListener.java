@@ -50,7 +50,7 @@ public class HttpTunnelingSessionListener implements HttpSessionListener, Channe
         HttpSession session = event.getSession();
         ClientBootstrap bootstrap = (ClientBootstrap) session.getServletContext().getAttribute(BOOTSTRAP_PROP);
         Boolean streaming = (Boolean) session.getServletContext().getAttribute(STREAMING_PROP);
-        if(streaming) {
+        if (streaming) {
             session.setMaxInactiveInterval(-1);
         }
         final HttpTunnelingChannelHandler handler = new HttpTunnelingChannelHandler(streaming, session,  (Long) session.getServletContext().getAttribute(RECONNECT_PROP));
