@@ -25,7 +25,6 @@ package org.jboss.netty.channel.socket;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.Executors;
@@ -75,7 +74,7 @@ public class NioServerSocketShutdownTimeTest {
         Socket socket = null;
         try {
             socket = new Socket(
-                    InetAddress.getLocalHost(),
+                    TestOptions.getLocalHost(),
                     ((InetSocketAddress) channel.getLocalAddress()).getPort());
 
             while (!handler.connected) {

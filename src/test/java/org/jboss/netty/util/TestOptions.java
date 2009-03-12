@@ -22,6 +22,9 @@
  */
 package org.jboss.netty.util;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -30,7 +33,9 @@ package org.jboss.netty.util;
  */
 @org.junit.Ignore
 public final class TestOptions {
+
     private static final boolean ENABLED;
+    private static final InetAddress LOCALHOST;
 
     static {
         String value = System.getProperty("exclude-timing-tests", "false").trim();
@@ -42,10 +47,32 @@ public final class TestOptions {
         if (!ENABLED) {
             System.err.println("Timing tests will be disabled as requested.");
         }
+
+        InetAddress localhost = null;
+        try {
+            localhost = InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+            try {
+                localhost = InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 });
+            } catch (UnknownHostException e1) {
+                try {
+                    localhost = InetAddress.getByAddress(new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
+                } catch (UnknownHostException e2) {
+                    System.err.println("Failed to get the localhost.");
+                    e2.printStackTrace();
+                }
+            }
+        }
+
+        LOCALHOST = localhost;
     }
 
     public static boolean isTimingTestEnabled() {
         return ENABLED;
+    }
+
+    public static InetAddress getLocalHost() {
+        return LOCALHOST;
     }
 
     private TestOptions() {

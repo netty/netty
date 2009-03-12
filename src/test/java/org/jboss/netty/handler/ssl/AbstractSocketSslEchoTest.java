@@ -25,7 +25,6 @@ package org.jboss.netty.handler.ssl;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.concurrent.Executor;
@@ -54,6 +53,7 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ExecutorUtil;
+import org.jboss.netty.util.TestOptions;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -128,7 +128,7 @@ public abstract class AbstractSocketSslEchoTest {
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(InetAddress.getLocalHost(), port));
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(TestOptions.getLocalHost(), port));
         ccf.awaitUninterruptibly();
         if (!ccf.isSuccess()) {
             logger.error("Connection attempt failed", ccf.getCause());

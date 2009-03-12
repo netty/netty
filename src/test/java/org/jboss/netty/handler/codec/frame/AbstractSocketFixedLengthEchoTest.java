@@ -25,7 +25,6 @@ package org.jboss.netty.handler.codec.frame;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.concurrent.Executor;
@@ -47,6 +46,7 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.util.ExecutorUtil;
+import org.jboss.netty.util.TestOptions;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -99,7 +99,7 @@ public abstract class AbstractSocketFixedLengthEchoTest {
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(InetAddress.getLocalHost(), port));
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(TestOptions.getLocalHost(), port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
         Channel cc = ccf.getChannel();

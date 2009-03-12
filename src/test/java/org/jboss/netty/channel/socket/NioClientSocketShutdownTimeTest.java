@@ -25,7 +25,6 @@ package org.jboss.netty.channel.socket;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.Executors;
@@ -69,7 +68,7 @@ public class NioClientSocketShutdownTimeTest {
             serverSocket.configureBlocking(false);
 
             ChannelFuture f = b.connect(new InetSocketAddress(
-                    InetAddress.getLocalHost(),
+                    TestOptions.getLocalHost(),
                     serverSocket.socket().getLocalPort()));
 
             serverSocket.accept();

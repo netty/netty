@@ -26,7 +26,6 @@ import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.Executor;
@@ -46,6 +45,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.util.DummyHandler;
 import org.jboss.netty.util.ExecutorUtil;
+import org.jboss.netty.util.TestOptions;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -132,7 +132,7 @@ public abstract class AbstractSocketServerBootstrapTest {
         Socket socket = null;
         try {
             socket = new Socket(
-                    InetAddress.getLocalHost(),
+                    TestOptions.getLocalHost(),
                     ((InetSocketAddress) channel.getLocalAddress()).getPort());
 
             // Wait until the connection is open in the server side.
@@ -188,7 +188,7 @@ public abstract class AbstractSocketServerBootstrapTest {
         expect(pipelineFactory.getPipeline()).andThrow(new ChannelPipelineException());
         replay(pipelineFactory);
 
-        bootstrap.connect(new InetSocketAddress(InetAddress.getLocalHost(), 1));
+        bootstrap.connect(new InetSocketAddress(TestOptions.getLocalHost(), 1));
     }
 
     @Test(expected = IllegalStateException.class)
