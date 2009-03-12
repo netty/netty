@@ -22,8 +22,8 @@
 package org.jboss.netty.channel.socket.http;
 
 import static org.jboss.netty.channel.Channels.*;
-import static org.jboss.netty.channel.socket.http.HttpTunnelingServlet.*;
 import static org.jboss.netty.channel.socket.http.HttpTunnelingContextListener.*;
+import static org.jboss.netty.channel.socket.http.HttpTunnelingServlet.*;
 
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionEvent;
@@ -55,13 +55,7 @@ public class HttpTunnelingSessionListener implements HttpSessionListener, Channe
         }
         final HttpTunnelingChannelHandler handler = new HttpTunnelingChannelHandler(streaming, session,  (Long) session.getServletContext().getAttribute(RECONNECT_PROP));
         session.setAttribute(HANDLER_PROP, handler);
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() throws Exception {
-                ChannelPipeline pipeline = pipeline();
-                pipeline.addLast(HttpTunnelingSessionListener.class.getName(), handler);
-                return pipeline;
-            }
-        });
+        bootstrap.setPipelineFactory(new HttpTunnelingChannelPipelineFactory(handler));
         ChannelFuture future = bootstrap.connect(new LocalAddress((String) session.getServletContext().getAttribute(SERVER_CHANNEL_PROP)));
         future.awaitUninterruptibly();
         final Channel ch = future.getChannel();
@@ -72,6 +66,26 @@ public class HttpTunnelingSessionListener implements HttpSessionListener, Channe
         Channel channel = (Channel) event.getSession().getAttribute(CHANNEL_PROP);
         if (channel != null) {
             channel.close();
+        }
+    }
+
+    /**
+     * @author The Netty Project (netty-dev@lists.jboss.org)
+     * @author Trustin Lee (tlee@redhat.com)
+     * @version $Rev$, $Date$
+     */
+    private static final class HttpTunnelingChannelPipelineFactory implements ChannelPipelineFactory {
+
+        private final HttpTunnelingChannelHandler handler;
+
+        HttpTunnelingChannelPipelineFactory(HttpTunnelingChannelHandler handler) {
+            this.handler = handler;
+        }
+
+        public ChannelPipeline getPipeline() throws Exception {
+            ChannelPipeline pipeline = pipeline();
+            pipeline.addLast(HttpTunnelingSessionListener.class.getName(), handler);
+            return pipeline;
         }
     }
 }
