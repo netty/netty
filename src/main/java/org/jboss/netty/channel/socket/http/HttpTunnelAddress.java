@@ -62,7 +62,7 @@ public class HttpTunnelAddress extends SocketAddress implements Comparable<HttpT
     }
 
     public int compareTo(HttpTunnelAddress o) {
-        return getUri().toASCIIString().compareTo(o.getUri().toASCIIString());
+        return getUri().compareTo(o.getUri());
     }
 
     @Override
