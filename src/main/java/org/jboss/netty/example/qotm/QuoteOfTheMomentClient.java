@@ -34,6 +34,9 @@ import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 
 /**
+ * A UDP broadcast client that asks for a quote of the moment (QOTM) to
+ * {@link QuoteOfTheMomentServer}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
