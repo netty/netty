@@ -33,6 +33,11 @@
     </Or>
     <Bug pattern="USM_USELESS_SUBCLASS_METHOD"/>
   </Match>
+  <Match>
+    <Class name="~.*HttpTunnelingChannelHandler"/>
+    <Method name="~await.*"/>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE,RV_RETURN_VALUE_IGNORED2"/>
+  </Match>
   <!-- Known issues that don't matter -->
   <Match>
     <Or>
