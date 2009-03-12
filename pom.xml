@@ -235,7 +235,7 @@
           <forkMode>never</forkMode>
           <excludes>
             <exclude>**/Abstract*</exclude>
-            <exclude>**/TestOption*</exclude>
+            <exclude>**/TestUtil*</exclude>
           </excludes>
         </configuration>
       </plugin>

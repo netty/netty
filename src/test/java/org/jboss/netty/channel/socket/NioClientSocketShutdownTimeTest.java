@@ -33,7 +33,7 @@ import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.util.DummyHandler;
-import org.jboss.netty.util.TestOptions;
+import org.jboss.netty.util.TestUtil;
 import org.junit.Test;
 
 
@@ -48,7 +48,7 @@ public class NioClientSocketShutdownTimeTest {
 
     @Test
     public void testShutdownTime() throws Throwable {
-        if (!TestOptions.isTimingTestEnabled()) {
+        if (!TestUtil.isTimingTestEnabled()) {
             return;
         }
 
@@ -68,7 +68,7 @@ public class NioClientSocketShutdownTimeTest {
             serverSocket.configureBlocking(false);
 
             ChannelFuture f = b.connect(new InetSocketAddress(
-                    TestOptions.getLocalHost(),
+                    TestUtil.getLocalHost(),
                     serverSocket.socket().getLocalPort()));
 
             serverSocket.accept();

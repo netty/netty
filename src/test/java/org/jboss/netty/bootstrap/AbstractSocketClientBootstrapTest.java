@@ -38,7 +38,7 @@ import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.util.DummyHandler;
 import org.jboss.netty.util.ExecutorUtil;
-import org.jboss.netty.util.TestOptions;
+import org.jboss.netty.util.TestUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -93,7 +93,7 @@ public abstract class AbstractSocketClientBootstrapTest {
             bootstrap.setOption(
                     "remoteAddress",
                     new InetSocketAddress(
-                            TestOptions.getLocalHost(),
+                            TestUtil.getLocalHost(),
                             serverSocket.socket().getLocalPort()));
 
             ChannelFuture future = bootstrap.connect();
@@ -130,7 +130,7 @@ public abstract class AbstractSocketClientBootstrapTest {
             bootstrap.setOption(
                     "remoteAddress",
                     new InetSocketAddress(
-                            TestOptions.getLocalHost(),
+                            TestUtil.getLocalHost(),
                             serverSocket.socket().getLocalPort()));
             bootstrap.setOption("localAddress", new InetSocketAddress(0));
 
@@ -162,7 +162,7 @@ public abstract class AbstractSocketClientBootstrapTest {
         expect(pipelineFactory.getPipeline()).andThrow(new ChannelPipelineException());
         replay(pipelineFactory);
 
-        bootstrap.connect(new InetSocketAddress(TestOptions.getLocalHost(), 1));
+        bootstrap.connect(new InetSocketAddress(TestUtil.getLocalHost(), 1));
     }
 
     @Test(expected = IllegalStateException.class)

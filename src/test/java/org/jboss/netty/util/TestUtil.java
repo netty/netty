@@ -32,7 +32,7 @@ import java.net.UnknownHostException;
  * @version $Rev$, $Date$
  */
 @org.junit.Ignore
-public final class TestOptions {
+public final class TestUtil {
 
     private static final boolean ENABLED;
     private static final InetAddress LOCALHOST;
@@ -72,10 +72,13 @@ public final class TestOptions {
     }
 
     public static InetAddress getLocalHost() {
+        // We cache this because some machine takes almost forever to return
+        // from InetAddress.getLocalHost().  I think it's due to the incorrect
+        // /etc/hosts or /etc/resolve.conf.
         return LOCALHOST;
     }
 
-    private TestOptions() {
+    private TestUtil() {
         // Unused
     }
 }
