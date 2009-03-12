@@ -24,7 +24,6 @@ package org.jboss.netty.channel.socket.http;
 
 import static org.jboss.netty.channel.Channels.*;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
@@ -138,7 +137,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         }
     }
 
-    void connectAndSendHeaders(boolean reconnect, HttpTunnelAddress remoteAddress) throws IOException {
+    void connectAndSendHeaders(boolean reconnect, HttpTunnelAddress remoteAddress) {
         this.remoteAddress = remoteAddress;
         URI url = remoteAddress.getUri();
         if (reconnect) {
@@ -151,7 +150,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         channel.connect(connectAddress);
         StringBuilder builder = new StringBuilder();
         builder.append("POST ").append(url.getRawPath()).append(" HTTP/1.1").append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR).
-                append("HOST: ").append(url.getHost()).append(":").append(url.getPort()).append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR).
+                append("Host: ").append(url.getHost()).append(":").append(url.getPort()).append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR).
                 append("Content-Type: application/octet-stream").append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR).append("Transfer-Encoding: chunked").
                 append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR).append("Content-Transfer-Encoding: Binary").append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR).append("Connection: Keep-Alive").
                 append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR);
@@ -160,7 +159,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         }
         builder.append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR);
         String msg = builder.toString();
-        channel.write(ChannelBuffers.wrappedBuffer(msg.getBytes("ASCII7")));
+        channel.write(ChannelBuffers.copiedBuffer(msg, "ASCII"));
     }
 
     public void sendChunk(ChannelBuffer a) {
@@ -194,7 +193,6 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         if (reconnectLock.tryLock()) {
             try {
                 awaitingInitialResponse = true;
-
                 connectAndSendHeaders(true, remoteAddress);
             } finally {
                 reconnectLock.unlock();

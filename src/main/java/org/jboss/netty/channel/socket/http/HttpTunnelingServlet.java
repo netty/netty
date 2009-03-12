@@ -70,30 +70,33 @@ public class HttpTunnelingServlet extends HttpServlet {
             final HttpServletResponse response, HttpSession session,
             HttpTunnelingChannelHandler handler, Channel channel) throws IOException {
 
-        response.setHeader("jsessionid", session.getId());
-        response.setHeader("Content-Type", "application/octet-stream");
-        response.setContentLength(-1);
-        response.setStatus(HttpServletResponse.SC_OK);
-        response.getOutputStream().flush();
-        handler.setOutputStream(response.getOutputStream());
+        try {
+            response.setHeader("JSESSIONID", session.getId());
+            response.setHeader("Content-Type", "application/octet-stream");
+            response.setContentLength(-1);
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.getOutputStream().flush();
+            handler.setOutputStream(response.getOutputStream());
 
-        PushbackInputStream in =
-                new PushbackInputStream(request.getInputStream());
-        do {
-            try {
-                ChannelBuffer buffer = read(in);
-                if (buffer == null) {
+            PushbackInputStream in =
+                    new PushbackInputStream(request.getInputStream());
+            for (;;) {
+                try {
+                    ChannelBuffer buffer = read(in);
+                    if (buffer == null) {
+                        break;
+                    }
+                    channel.write(buffer);
+                } catch (IOException e) {
+                    // this is ok, the client can reconnect.
                     break;
                 }
-                channel.write(buffer);
-            } catch (IOException e) {
-                // this is ok, the client can reconnect.
-                break;
             }
-        } while (true);
-
-        if (!handler.awaitReconnect()) {
-            channel.close();
+        } finally {
+            // Mark the channel as closed if the client didn't reconnect in time.
+            if (!handler.awaitReconnect()) {
+                channel.close();
+            }
         }
     }
 
@@ -101,7 +104,7 @@ public class HttpTunnelingServlet extends HttpServlet {
         byte[] buf;
         int readBytes;
 
-        do {
+        for (;;) {
             int bytesToRead = in.available();
             if (bytesToRead > 0) {
                 buf = new byte[bytesToRead];
@@ -121,7 +124,8 @@ public class HttpTunnelingServlet extends HttpServlet {
             } else {
                 return null;
             }
-        } while (true);
+        }
+
         ChannelBuffer buffer;
         if (readBytes == buf.length) {
             buffer = ChannelBuffers.wrappedBuffer(buf);
@@ -160,7 +164,7 @@ public class HttpTunnelingServlet extends HttpServlet {
                 length += ((ChannelBuffer) buffer.getMessage()).readableBytes();
             }
         }
-        response.setHeader("jsessionid", session.getId());
+        response.setHeader("JSESSIONID", session.getId());
         response.setContentLength(length);
         response.setStatus(HttpServletResponse.SC_OK);
         for (MessageEvent event: buffers) {
