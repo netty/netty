@@ -27,6 +27,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 
 import org.jboss.netty.channel.ChannelConfig;
+import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 
 /**
  * A {@link ChannelConfig} for a {@link DatagramChannel}.
@@ -51,6 +52,8 @@ import org.jboss.netty.channel.ChannelConfig;
  * <td>{@code "reuseAddress"}</td><td>{@link #setReuseAddress(boolean)}</td>
  * </tr><tr>
  * <td>{@code "receiveBufferSize"}</td><td>{@link #setReceiveBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@code "receiveBufferSizePredictor"}</td><td>{@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}</td>
  * </tr><tr>
  * <td>{@code "sendBufferSize"}</td><td>{@link #setSendBufferSize(int)}</td>
  * </tr><tr>
@@ -127,4 +130,6 @@ public interface DatagramChannelConfig extends ChannelConfig {
     NetworkInterface getNetworkInterface();
     void setNetworkInterface(NetworkInterface networkInterface);
 
+    ReceiveBufferSizePredictor getReceiveBufferSizePredictor();
+    void setReceiveBufferSizePredictor(ReceiveBufferSizePredictor predictor);
 }

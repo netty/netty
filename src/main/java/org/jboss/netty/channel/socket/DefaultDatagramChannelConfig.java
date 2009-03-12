@@ -31,6 +31,8 @@ import java.net.SocketException;
 
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.DefaultChannelConfig;
+import org.jboss.netty.channel.FixedReceiveBufferSizePredictor;
+import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.util.ConversionUtil;
 
 /**
@@ -46,6 +48,8 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
                                         implements DatagramChannelConfig {
 
     private final DatagramSocket socket;
+    private volatile ReceiveBufferSizePredictor predictor =
+        new FixedReceiveBufferSizePredictor(768);
 
     /**
      * Creates a new instance.
@@ -253,5 +257,16 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         } catch (SocketException e) {
             throw new ChannelException(e);
         }
+    }
+
+    public ReceiveBufferSizePredictor getReceiveBufferSizePredictor() {
+        return predictor;
+    }
+
+    public void setReceiveBufferSizePredictor(ReceiveBufferSizePredictor predictor) {
+        if (predictor == null) {
+            throw new NullPointerException("predictor");
+        }
+        this.predictor = predictor;
     }
 }
