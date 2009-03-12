@@ -103,7 +103,8 @@ final class LocalServerChannelSink extends AbstractChannelSink {
                 }
                 break;
             case INTEREST_OPS:
-                // TODO: Implement traffic control
+                // Unsupported - discard silently.
+                future.setSuccess();
                 break;
             }
         } else if (e instanceof MessageEvent) {

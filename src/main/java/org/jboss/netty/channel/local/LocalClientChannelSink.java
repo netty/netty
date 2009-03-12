@@ -81,7 +81,8 @@ final class LocalClientChannelSink extends AbstractChannelSink {
                 }
                 break;
             case INTEREST_OPS:
-                // TODO: Implement traffic control.
+                // Unsupported - discard silently.
+                future.setSuccess();
                 break;
             }
         }
