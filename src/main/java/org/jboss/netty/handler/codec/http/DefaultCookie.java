@@ -128,11 +128,20 @@ public class DefaultCookie implements Cookie {
     }
 
     public int[] getPortList() {
-        return portList;
+        return portList.clone();
     }
 
-    public void setPortList(int[] portList) {
-        this.portList = portList;
+    public void setPortList(int... portList) {
+        if (portList == null) {
+            throw new NullPointerException("portList");
+        }
+        int[] portListCopy = portList.clone();
+        for (int p: portListCopy) {
+            if (p <= 0 || p > 65535) {
+                throw new IllegalArgumentException("port out of range: " + p);
+            }
+        }
+        this.portList = portListCopy;
     }
 
     public int getMaxAge() {

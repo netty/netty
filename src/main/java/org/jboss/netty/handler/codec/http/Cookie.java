@@ -47,5 +47,5 @@ public interface Cookie extends Comparable<Cookie> {
     boolean isDiscard();
     void setDiscard(boolean discard);
     int[] getPortList();
-    void setPortList(int[] portList);
+    void setPortList(int... portList);
 }
