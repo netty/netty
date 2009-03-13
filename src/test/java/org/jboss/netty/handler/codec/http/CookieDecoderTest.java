@@ -21,14 +21,11 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 import java.util.Map;
+
+import org.junit.Test;
 
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
@@ -49,7 +46,7 @@ public class CookieDecoderTest {
         assertFalse(cookie.isDiscard());
         assertEquals(50, cookie.getMaxAge());
         assertEquals("/apathsomewhere", cookie.getPath());
-        assertNull(cookie.getPortList());
+        assertTrue(cookie.getPorts().isEmpty());
         assertTrue(cookie.isSecure());
         assertEquals(0, cookie.getVersion());
     }
@@ -69,7 +66,7 @@ public class CookieDecoderTest {
         assertFalse(cookie.isDiscard());
         assertEquals(50, cookie.getMaxAge());
         assertEquals("/apathsomewhere", cookie.getPath());
-        assertNull(cookie.getPortList());
+        assertTrue(cookie.getPorts().isEmpty());
         assertTrue(cookie.isSecure());
         assertEquals(0, cookie.getVersion());
     }
@@ -88,7 +85,7 @@ public class CookieDecoderTest {
         assertFalse(cookie.isDiscard());
         assertEquals(50, cookie.getMaxAge());
         assertEquals("/apathsomewhere", cookie.getPath());
-        assertNull(cookie.getPortList());
+        assertTrue(cookie.getPorts().isEmpty());
         assertTrue(cookie.isSecure());
         assertEquals(1, cookie.getVersion());
     }
@@ -108,7 +105,7 @@ public class CookieDecoderTest {
         assertFalse(cookie.isDiscard());
         assertEquals(50, cookie.getMaxAge());
         assertEquals("/apathsomewhere", cookie.getPath());
-        assertNull(cookie.getPortList());
+        assertTrue(cookie.getPorts().isEmpty());
         assertTrue(cookie.isSecure());
         assertEquals(1, cookie.getVersion());
     }
@@ -127,10 +124,9 @@ public class CookieDecoderTest {
         assertTrue(cookie.isDiscard());
         assertEquals(50, cookie.getMaxAge());
         assertEquals("/apathsomewhere", cookie.getPath());
-        assertNotNull(cookie.getPortList());
-        assertEquals(2, cookie.getPortList().length);
-        assertEquals(80, cookie.getPortList()[0]);
-        assertEquals(8080, cookie.getPortList()[1]);
+        assertEquals(2, cookie.getPorts().size());
+        assertTrue(cookie.getPorts().contains(80));
+        assertTrue(cookie.getPorts().contains(8080));
         assertTrue(cookie.isSecure());
         assertEquals(2, cookie.getVersion());
     }
@@ -154,10 +150,9 @@ public class CookieDecoderTest {
         assertTrue(cookie.isDiscard());
         assertEquals(50, cookie.getMaxAge());
         assertEquals("/apathsomewhere", cookie.getPath());
-        assertNotNull(cookie.getPortList());
-        assertEquals(2, cookie.getPortList().length);
-        assertEquals(80, cookie.getPortList()[0]);
-        assertEquals(8080, cookie.getPortList()[1]);
+        assertEquals(2, cookie.getPorts().size());
+        assertTrue(cookie.getPorts().contains(80));
+        assertTrue(cookie.getPorts().contains(8080));
         assertTrue(cookie.isSecure());
         assertEquals(2, cookie.getVersion());
         cookie = cookieMap.get("MyCookie2");
@@ -169,7 +164,7 @@ public class CookieDecoderTest {
         assertFalse(cookie.isDiscard());
         assertEquals(0, cookie.getMaxAge());
         assertEquals("/anotherpathsomewhere", cookie.getPath());
-        assertNull(cookie.getPortList());
+        assertTrue(cookie.getPorts().isEmpty());
         assertFalse(cookie.isSecure());
         assertEquals(2, cookie.getVersion());
         cookie = cookieMap.get("MyCookie3");
@@ -181,7 +176,7 @@ public class CookieDecoderTest {
         assertFalse(cookie.isDiscard());
         assertEquals(0, cookie.getMaxAge());
         assertNull(cookie.getPath());
-        assertNull(cookie.getPortList());
+        assertTrue(cookie.getPorts().isEmpty());
         assertFalse(cookie.isSecure());
         assertEquals(2, cookie.getVersion());
     }

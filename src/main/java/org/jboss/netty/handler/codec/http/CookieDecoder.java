@@ -21,10 +21,10 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.util.CaseIgnoringComparator;
-
 import java.util.Map;
 import java.util.TreeMap;
+
+import org.jboss.netty.util.CaseIgnoringComparator;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -73,17 +73,22 @@ public class CookieDecoder {
                 int version = 0;
                 int maxAge = 0;
                 int[] ports = null;
+                loop:
                 for (int j = i + 1; j < split.length; j++, i++) {
                     String[] val = split[j].split(EQUALS, 2);
-                    if (val != null && val.length == 1) {
+                    if (val == null) {
+                        continue;
+                    }
+                    switch (val.length) {
+                    case 1:
                         if (CookieHeaderNames.DISCARD.equalsIgnoreCase(val[0])) {
                             discard = true;
                         }
                         else if (CookieHeaderNames.SECURE.equalsIgnoreCase(val[0])) {
                             secure = true;
                         }
-                    }
-                    else if (val != null && val.length == 2) {
+                        break;
+                    case 2:
                         name = val[0].trim();
                         value = val[1].trim();
                         if (CookieHeaderNames.COMMENT.equalsIgnoreCase(name)) {
@@ -107,17 +112,17 @@ public class CookieDecoder {
                         else if (CookieHeaderNames.VERSION.equalsIgnoreCase(name)) {
                             version = Integer.valueOf(value);
                         }
-                        else if (CookieHeaderNames.PORTLIST.equalsIgnoreCase(name)) {
+                        else if (CookieHeaderNames.PORT.equalsIgnoreCase(name)) {
                             String[] portList = value.split(COMMA);
                             ports = new int[portList.length];
                             for (int i1 = 0; i1 < portList.length; i1++) {
                                 String s1 = portList[i1];
                                 ports[i1] = Integer.valueOf(s1);
                             }
+                        } else {
+                            break loop;
                         }
-                        else {
-                            break;
-                        }
+                        break;
                     }
                 }
                 theCookie.setVersion(version);
@@ -130,11 +135,12 @@ public class CookieDecoder {
                 }
                 if (version > 1) {
                     theCookie.setCommentURL(commentURL);
-                    theCookie.setPortList(ports);
+                    if (ports != null) {
+                        theCookie.setPorts(ports);
+                    }
                     theCookie.setDiscard(discard);
                 }
             }
-
         }
         return cookies;
     }

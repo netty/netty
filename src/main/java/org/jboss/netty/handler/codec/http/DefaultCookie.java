@@ -21,6 +21,10 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.TreeSet;
+
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -37,7 +41,8 @@ public class DefaultCookie implements Cookie {
     private String comment;
     private String commentURL;
     private boolean discard;
-    private int[] portList;
+    private Set<Integer> ports = Collections.emptySet();
+    private Set<Integer> unmodifiablePorts = ports;
     private int maxAge;
     private int version;
     private boolean secure;
@@ -127,21 +132,48 @@ public class DefaultCookie implements Cookie {
         this.discard = discard;
     }
 
-    public int[] getPortList() {
-        return portList.clone();
+    public Set<Integer> getPorts() {
+        if (unmodifiablePorts == null) {
+            unmodifiablePorts = Collections.unmodifiableSet(ports);
+        }
+        return unmodifiablePorts;
     }
 
-    public void setPortList(int... portList) {
-        if (portList == null) {
-            throw new NullPointerException("portList");
+    public void setPorts(int... ports) {
+        if (ports == null) {
+            throw new NullPointerException("ports");
         }
-        int[] portListCopy = portList.clone();
-        for (int p: portListCopy) {
+
+        int[] portsCopy = ports.clone();
+        if (portsCopy.length == 0) {
+            unmodifiablePorts = this.ports = Collections.emptySet();
+        } else {
+            Set<Integer> newPorts = new TreeSet<Integer>();
+            for (int p: portsCopy) {
+                if (p <= 0 || p > 65535) {
+                    throw new IllegalArgumentException("port out of range: " + p);
+                }
+                newPorts.add(Integer.valueOf(p));
+            }
+            this.ports = newPorts;
+            unmodifiablePorts = null;
+        }
+    }
+
+    public void setPorts(Iterable<Integer> ports) {
+        Set<Integer> newPorts = new TreeSet<Integer>();
+        for (int p: ports) {
             if (p <= 0 || p > 65535) {
                 throw new IllegalArgumentException("port out of range: " + p);
             }
+            newPorts.add(Integer.valueOf(p));
         }
-        this.portList = portListCopy;
+        if (newPorts.isEmpty()) {
+            unmodifiablePorts = this.ports = Collections.emptySet();
+        } else {
+            this.ports = newPorts;
+            unmodifiablePorts = null;
+        }
     }
 
     public int getMaxAge() {

@@ -21,7 +21,8 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
+
 import org.junit.Test;
 
 
@@ -41,7 +42,7 @@ public class CookieEncoderTest {
         cookie.setDiscard(true);
         cookie.setMaxAge(50);
         cookie.setPath("/apathsomewhere");
-        cookie.setPortList(new int[]{80, 8080});
+        cookie.setPorts(80, 8080);
         cookie.setSecure(true);
         String encodedCookie = encoder.encode();
         assertEquals(result, encodedCookie);
@@ -58,7 +59,7 @@ public class CookieEncoderTest {
         cookie.setDiscard(true);
         cookie.setMaxAge(50);
         cookie.setPath("/apathsomewhere");
-        cookie.setPortList(new int[]{80, 8080});
+        cookie.setPorts(80, 8080);
         cookie.setSecure(true);
         String encodedCookie = encoder.encode();
         assertEquals(result, encodedCookie);
@@ -75,7 +76,7 @@ public class CookieEncoderTest {
         cookie.setDiscard(true);
         cookie.setMaxAge(50);
         cookie.setPath("/apathsomewhere");
-        cookie.setPortList(new int[]{80, 8080});
+        cookie.setPorts(80, 8080);
         cookie.setSecure(true);
         String encodedCookie = encoder.encode();
         assertEquals(result, encodedCookie);
@@ -94,7 +95,7 @@ public class CookieEncoderTest {
         cookie.setDiscard(true);
         cookie.setMaxAge(50);
         cookie.setPath("/apathsomewhere");
-        cookie.setPortList(new int[]{80, 8080});
+        cookie.setPorts(80, 8080);
         cookie.setSecure(true);
         encoder.addCookie(cookie);
         Cookie cookie2 = new DefaultCookie("myCookie2", "myValue2");

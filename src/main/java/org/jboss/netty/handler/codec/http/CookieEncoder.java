@@ -21,11 +21,11 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import org.jboss.netty.util.CaseIgnoringComparator;
-
 import java.util.Collection;
 import java.util.Map;
 import java.util.TreeMap;
+
+import org.jboss.netty.util.CaseIgnoringComparator;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -106,16 +106,14 @@ public class CookieEncoder {
                 if (cookie.getCommentURL() != null) {
                     add(sb, CookieHeaderNames.COMMENTURL, QueryStringEncoder.encodeComponent(cookie.getCommentURL(), charset));
                 }
-                if(cookie.getPortList() != null && cookie.getPortList().length > 0) {
-                    sb.append(CookieHeaderNames.PORTLIST);
+                if(!cookie.getPorts().isEmpty()) {
+                    sb.append(CookieHeaderNames.PORT);
                     sb.append((char) HttpCodecUtil.EQUALS);
-                    for (int i = 0; i < cookie.getPortList().length; i++) {
-                        int port = cookie.getPortList()[i];
-                        if(i > 0) {
-                            sb.append((char)HttpCodecUtil.COMMA);
-                        }
+                    for (int port: cookie.getPorts()) {
                         sb.append(port);
+                        sb.append((char) HttpCodecUtil.COMMA);
                     }
+                    sb.setLength(sb.length() - 1); // Remove the trailing comma.
                     sb.append((char) HttpCodecUtil.SEMICOLON);
                 }
                 if (cookie.isDiscard()) {

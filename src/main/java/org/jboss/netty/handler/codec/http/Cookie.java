@@ -21,6 +21,8 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.util.Set;
+
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -46,6 +48,7 @@ public interface Cookie extends Comparable<Cookie> {
     void setCommentURL(String commentURL);
     boolean isDiscard();
     void setDiscard(boolean discard);
-    int[] getPortList();
-    void setPortList(int... portList);
+    Set<Integer> getPorts();
+    void setPorts(int... ports);
+    void setPorts(Iterable<Integer> ports);
 }

@@ -41,7 +41,7 @@ public class CookieHeaderNames {
 
     public static final String DISCARD = "discard";
 
-    public static final String PORTLIST = "port";
+    public static final String PORT = "port";
 
     public static final String VERSION = "version";
 
