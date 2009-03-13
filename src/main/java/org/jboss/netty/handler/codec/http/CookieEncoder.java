@@ -81,6 +81,8 @@ public class CookieEncoder {
             Cookie cookie = cookies.get(cookieName);
             add(sb, cookieName, QueryStringEncoder.encodeComponent(cookie.getValue(), charset));
 
+            // FIXME: Expires attribute has different representation from Max-Age.
+            //        Format: Wdy, DD-Mon-YYYY HH:MM:SS GMT
             add(sb, CookieHeaderNames.getMaxAgeString(encodingVersion), cookie.getMaxAge());
 
             if (cookie.getPath() != null) {

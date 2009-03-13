@@ -105,6 +105,8 @@ public class CookieDecoder {
                             path = QueryStringDecoder.decodeComponent(value, charset);
                         }
                         else if (CookieHeaderNames.EXPIRES.equalsIgnoreCase(name)) {
+                            // FIXME: Expires attribute has different representation from Max-Age.
+                            //        Format: Wdy, DD-Mon-YYYY HH:MM:SS GMT
                             maxAge = Integer.valueOf(value);
                         }
                         else if (CookieHeaderNames.MAX_AGE.equalsIgnoreCase(name)) {
