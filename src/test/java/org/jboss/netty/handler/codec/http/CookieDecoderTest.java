@@ -27,6 +27,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -220,6 +221,40 @@ public class CookieDecoderTest {
         assertNull(c.getDomain());
         assertTrue(c.getPorts().isEmpty());
         assertEquals(-1, c.getMaxAge());
+    }
 
+    @Test
+    @Ignore
+    public void testDecodingCommaSeparatedClientSideCookies() {
+        // FIXME Fix CookieDecoder to pass this test.
+        String source =
+            "$Version=\"1\"; session_id=\"1234\", " +
+            "$Version=\"1\"; session_id=\"1111\"; $Domain=\".cracker.edu\"";
+
+        Set<Cookie> cookies = new CookieDecoder().decode(source);
+        Iterator<Cookie> it = cookies.iterator();
+        Cookie c;
+
+        c = it.next();
+        assertEquals(1, c.getVersion());
+        assertEquals("session_id", c.getName());
+        assertEquals("1234", c.getValue());
+        assertNull(c.getPath());
+        assertNull(c.getComment());
+        assertNull(c.getCommentUrl());
+        assertNull(c.getDomain());
+        assertTrue(c.getPorts().isEmpty());
+        assertEquals(-1, c.getMaxAge());
+
+        c = it.next();
+        assertEquals(1, c.getVersion());
+        assertEquals("session_id", c.getName());
+        assertEquals("1111", c.getValue());
+        assertEquals(".cracker.edu", c.getDomain());
+        assertNull(c.getPath());
+        assertNull(c.getComment());
+        assertNull(c.getCommentUrl());
+        assertTrue(c.getPorts().isEmpty());
+        assertEquals(-1, c.getMaxAge());
     }
 }

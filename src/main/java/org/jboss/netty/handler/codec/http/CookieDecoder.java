@@ -58,8 +58,8 @@ public class CookieDecoder {
         Set<Cookie> cookies = new TreeSet<Cookie>();
         String[] split = header.split(SEMICOLON);
         int version = 0;
-        boolean versionAtTheBeginning = false;
         for (int i = 0; i < split.length; i++) {
+            boolean versionAtTheBeginning = false;
             DefaultCookie theCookie;
             String s = split[i];
             String[] cookie = s.split(EQUALS, 2);
