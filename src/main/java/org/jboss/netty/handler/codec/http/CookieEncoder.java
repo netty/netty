@@ -21,12 +21,9 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.util.Collection;
 import java.util.Date;
-import java.util.Map;
-import java.util.TreeMap;
-
-import org.jboss.netty.util.CaseIgnoringComparator;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -36,7 +33,7 @@ import org.jboss.netty.util.CaseIgnoringComparator;
  */
 public class CookieEncoder {
 
-    private final Map<String, Cookie> cookies = new TreeMap<String, Cookie>(CaseIgnoringComparator.INSTANCE);
+    private final Set<Cookie> cookies = new TreeSet<Cookie>();
 
     private final String charset;
 
@@ -51,23 +48,19 @@ public class CookieEncoder {
         this.charset = charset;
     }
 
-    public void addCookie(String name, String val) {
-        cookies.put(name, new DefaultCookie(name, val));
+    public void addCookie(String name, String value) {
+        cookies.add(new DefaultCookie(name, value));
     }
 
     public void addCookie(Cookie cookie) {
-        cookies.put(cookie.getName(), cookie);
+        cookies.add(cookie);
     }
 
     public String encode() {
         StringBuffer sb = new StringBuffer();
-        Collection<String> cookieNames = cookies.keySet();
-        if (cookieNames.isEmpty()) {
-            return null;
-        }
-        for (String cookieName : cookieNames) {
-            Cookie cookie = cookies.get(cookieName);
-            add(sb, cookieName, QueryStringEncoder.encodeComponent(cookie.getValue(), charset));
+
+        for (Cookie cookie: cookies) {
+            add(sb, cookie.getName(), QueryStringEncoder.encodeComponent(cookie.getValue(), charset));
 
             if (cookie.getMaxAge() >= 0) {
                 if (cookie.getVersion() == 0) {
