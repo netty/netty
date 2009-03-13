@@ -22,6 +22,8 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -89,7 +91,7 @@ public class CookieDecoder {
                 String domain = null;
                 String path = null;
                 int maxAge = -1;
-                int[] ports = null;
+                List<Integer> ports = new ArrayList<Integer>(2);
                 loop:
                 for (int j = i + 1; j < split.length; j++, i++) {
                     String[] val = split[j].split(EQUALS, 2);
@@ -136,18 +138,20 @@ public class CookieDecoder {
                             }
                         }
                         else if (CookieHeaderNames.MAX_AGE.equalsIgnoreCase(name)) {
-                            maxAge = Integer.valueOf(value);
+                            maxAge = Integer.parseInt(value);
                         }
                         else if (CookieHeaderNames.VERSION.equalsIgnoreCase(name)) {
-                            version = Integer.valueOf(value);
+                            version = Integer.parseInt(value);
                         }
                         else if (CookieHeaderNames.PORT.equalsIgnoreCase(name)) {
                             value = trimValue(value);
                             String[] portList = value.split(COMMA);
-                            ports = new int[portList.length];
-                            for (int i1 = 0; i1 < portList.length; i1++) {
-                                String s1 = portList[i1];
-                                ports[i1] = Integer.valueOf(s1);
+                            for (String s1: portList) {
+                                try {
+                                    ports.add(Integer.valueOf(s1));
+                                } catch (NumberFormatException e) {
+                                    // Ignore.
+                                }
                             }
                         } else {
                             break loop;
@@ -165,9 +169,7 @@ public class CookieDecoder {
                 }
                 if (version > 1) {
                     theCookie.setCommentUrl(commentURL);
-                    if (ports != null) {
-                        theCookie.setPorts(ports);
-                    }
+                    theCookie.setPorts(ports);
                     theCookie.setDiscard(discard);
                 }
             }
