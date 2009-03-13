@@ -68,6 +68,8 @@ class HttpCodecUtil {
     */
     static final byte COMMA = 44;
 
+    static final byte DOUBLE_QUOTE = '"';
+
     private HttpCodecUtil() {
         super();
     }

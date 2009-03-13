@@ -104,16 +104,17 @@ public class CookieEncoder {
 
             if (encodingVersion == 2) {
                 if (cookie.getCommentURL() != null) {
-                    add(sb, CookieHeaderNames.COMMENTURL, QueryStringEncoder.encodeComponent(cookie.getCommentURL(), charset));
+                    addQuoted(sb, CookieHeaderNames.COMMENTURL, QueryStringEncoder.encodeComponent(cookie.getCommentURL(), charset));
                 }
                 if(!cookie.getPorts().isEmpty()) {
                     sb.append(CookieHeaderNames.PORT);
                     sb.append((char) HttpCodecUtil.EQUALS);
+                    sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
                     for (int port: cookie.getPorts()) {
                         sb.append(port);
                         sb.append((char) HttpCodecUtil.COMMA);
                     }
-                    sb.setLength(sb.length() - 1); // Remove the trailing comma.
+                    sb.setCharAt(sb.length() - 1, (char) HttpCodecUtil.DOUBLE_QUOTE);
                     sb.append((char) HttpCodecUtil.SEMICOLON);
                 }
                 if (cookie.isDiscard()) {
@@ -129,6 +130,15 @@ public class CookieEncoder {
         sb.append(name);
         sb.append((char) HttpCodecUtil.EQUALS);
         sb.append(val);
+        sb.append((char) HttpCodecUtil.SEMICOLON);
+    }
+
+    private void addQuoted(StringBuffer sb, String name, String val) {
+        sb.append(name);
+        sb.append((char) HttpCodecUtil.EQUALS);
+        sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
+        sb.append(val);
+        sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
         sb.append((char) HttpCodecUtil.SEMICOLON);
     }
 
