@@ -23,6 +23,7 @@ package org.jboss.netty.example.http;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -132,11 +133,11 @@ public class HttpRequestHandler extends SimpleChannelHandler {
         String cookieString = request.getHeader(HttpHeaders.Names.COOKIE);
         if (cookieString != null) {
             CookieDecoder cookieDecoder = new CookieDecoder();
-            Map<String, Cookie> cookies = cookieDecoder.decode(cookieString);
+            Set<Cookie> cookies = cookieDecoder.decode(cookieString);
             if(!cookies.isEmpty()) {
                 // Reset the cookies if necessary.
                 CookieEncoder cookieEncoder = new CookieEncoder();
-                for (Cookie cookie : cookies.values()) {
+                for (Cookie cookie : cookies) {
                     cookieEncoder.addCookie(cookie);
                 }
                 response.addHeader(HttpHeaders.Names.SET_COOKIE, cookieEncoder.encode());

@@ -22,10 +22,8 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.text.ParseException;
-import java.util.Map;
-import java.util.TreeMap;
-
-import org.jboss.netty.util.CaseIgnoringComparator;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -54,10 +52,11 @@ public class CookieDecoder {
         this.charset = charset;
     }
 
-    public Map<String, Cookie> decode(String header) {
-        Map<String, Cookie> cookies = new TreeMap<String, Cookie>(CaseIgnoringComparator.INSTANCE);
+    public Set<Cookie> decode(String header) {
+        Set<Cookie> cookies = new TreeSet<Cookie>();
         String[] split = header.split(SEMICOLON);
         int version = 0;
+        boolean versionAtTheBeginning = false;
         for (int i = 0; i < split.length; i++) {
             DefaultCookie theCookie;
             String s = split[i];
@@ -68,19 +67,21 @@ public class CookieDecoder {
 
                 // $Version is the only attribute that can come before the
                 // actual cookie name-value pair.
-                if (name.equalsIgnoreCase(CookieHeaderNames.VERSION)) {
+                if (!versionAtTheBeginning &&
+                    name.equalsIgnoreCase(CookieHeaderNames.VERSION)) {
                     try {
                         version = Integer.parseInt(trimValue(cookie[1]));
                     } catch (NumberFormatException e) {
                         // Ignore.
                     }
+                    versionAtTheBeginning = true;
                     continue;
                 }
 
                 // If it's not a version attribute, it's the name-value pair.
                 value = QueryStringDecoder.decodeComponent(trimValue(cookie[1]), charset);
                 theCookie = new DefaultCookie(name, value);
-                cookies.put(name, theCookie);
+                cookies.add(theCookie);
                 boolean discard = false;
                 boolean secure = false;
                 String comment = null;
@@ -175,6 +176,7 @@ public class CookieDecoder {
     }
 
     private String trimName(String name) {
+        name = name.trim();
         if (name.startsWith("$")) {
             return name.substring(1);
         } else {

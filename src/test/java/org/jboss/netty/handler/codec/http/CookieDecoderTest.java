@@ -24,7 +24,8 @@ package org.jboss.netty.handler.codec.http;
 import static org.junit.Assert.*;
 
 import java.util.Date;
-import java.util.Map;
+import java.util.Iterator;
+import java.util.Set;
 
 import org.junit.Test;
 
@@ -41,9 +42,9 @@ public class CookieDecoderTest {
         cookieString = cookieString.replace("XXX", new CookieDateFormat().format(new Date(System.currentTimeMillis() + 50000)));
 
         CookieDecoder cookieDecoder = new CookieDecoder();
-        Map<String, Cookie> cookieMap = cookieDecoder.decode(cookieString);
-        assertEquals(1, cookieMap.size());
-        Cookie cookie = cookieMap.get("MyCookie");
+        Set<Cookie> cookies = cookieDecoder.decode(cookieString);
+        assertEquals(1, cookies.size());
+        Cookie cookie = cookies.iterator().next();
         assertNotNull(cookie);
         assertEquals("myValue", cookie.getValue());
         assertNull(cookie.getComment());
@@ -61,9 +62,9 @@ public class CookieDecoderTest {
     public void testDecodingSingleCookieV0ExtraParamsIgnored() {
         String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=0;commentURL=http://aurl.com;port=80,8080;discard;";
         CookieDecoder cookieDecoder = new CookieDecoder();
-        Map<String, Cookie> cookieMap = cookieDecoder.decode(cookieString);
-        assertEquals(1, cookieMap.size());
-        Cookie cookie = cookieMap.get("MyCookie");
+        Set<Cookie> cookies = cookieDecoder.decode(cookieString);
+        assertEquals(1, cookies.size());
+        Cookie cookie = cookies.iterator().next();
         assertNotNull(cookie);
         assertEquals("myValue", cookie.getValue());
         assertNull(cookie.getComment());
@@ -80,9 +81,9 @@ public class CookieDecoderTest {
     public void testDecodingSingleCookieV1() {
         String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;";
         CookieDecoder cookieDecoder = new CookieDecoder();
-        Map<String, Cookie> cookieMap = cookieDecoder.decode(cookieString);
-        assertEquals(1, cookieMap.size());
-        Cookie cookie = cookieMap.get("MyCookie");
+        Set<Cookie> cookies = cookieDecoder.decode(cookieString);
+        assertEquals(1, cookies.size());
+        Cookie cookie = cookies.iterator().next();
         assertEquals("myValue", cookie.getValue());
         assertNotNull(cookie);
         assertEquals("this is a comment", cookie.getComment());
@@ -100,9 +101,9 @@ public class CookieDecoderTest {
     public void testDecodingSingleCookieV1ExtraParamsIgnored() {
         String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;commentURL=http://aurl.com;port=80,8080;discard;";
         CookieDecoder cookieDecoder = new CookieDecoder();
-        Map<String, Cookie> cookieMap = cookieDecoder.decode(cookieString);
-        assertEquals(1, cookieMap.size());
-        Cookie cookie = cookieMap.get("MyCookie");
+        Set<Cookie> cookies = cookieDecoder.decode(cookieString);
+        assertEquals(1, cookies.size());
+        Cookie cookie = cookies.iterator().next();
         assertNotNull(cookie);
         assertEquals("myValue", cookie.getValue());
         assertEquals("this is a comment", cookie.getComment());
@@ -119,9 +120,9 @@ public class CookieDecoderTest {
     public void testDecodingSingleCookieV2() {
         String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=2;commentURL=http://aurl.com;port=\"80,8080\";discard;";
         CookieDecoder cookieDecoder = new CookieDecoder();
-        Map<String, Cookie> cookieMap = cookieDecoder.decode(cookieString);
-        assertEquals(1, cookieMap.size());
-        Cookie cookie = cookieMap.get("MyCookie");
+        Set<Cookie> cookies = cookieDecoder.decode(cookieString);
+        assertEquals(1, cookies.size());
+        Cookie cookie = cookies.iterator().next();
         assertNotNull(cookie);
         assertEquals("myValue", cookie.getValue());
         assertEquals("this is a comment", cookie.getComment());
@@ -145,9 +146,10 @@ public class CookieDecoderTest {
         String c3 = "myCookie3=myValue3;max-age=0;version=2;";
         CookieDecoder decoder = new CookieDecoder();
 
-        Map<String, Cookie> cookieMap = decoder.decode(c1 + c2 + c3);
-        assertEquals(3, cookieMap.size());
-        Cookie cookie = cookieMap.get("MyCookie");
+        Set<Cookie> cookies = decoder.decode(c1 + c2 + c3);
+        assertEquals(3, cookies.size());
+        Iterator<Cookie> it = cookies.iterator();
+        Cookie cookie = it.next();
         assertNotNull(cookie);
         assertEquals("myValue", cookie.getValue());
         assertEquals("this is a comment", cookie.getComment());
@@ -161,7 +163,7 @@ public class CookieDecoderTest {
         assertTrue(cookie.getPorts().contains(8080));
         assertTrue(cookie.isSecure());
         assertEquals(2, cookie.getVersion());
-        cookie = cookieMap.get("MyCookie2");
+        cookie = it.next();
         assertNotNull(cookie);
         assertEquals("myValue2", cookie.getValue());
         assertEquals("this is another comment", cookie.getComment());
@@ -173,7 +175,7 @@ public class CookieDecoderTest {
         assertTrue(cookie.getPorts().isEmpty());
         assertFalse(cookie.isSecure());
         assertEquals(2, cookie.getVersion());
-        cookie = cookieMap.get("MyCookie3");
+        cookie = it.next();
         assertNotNull(cookie);
         assertEquals("myValue3", cookie.getValue());
         assertNull( cookie.getComment());
@@ -185,5 +187,39 @@ public class CookieDecoderTest {
         assertTrue(cookie.getPorts().isEmpty());
         assertFalse(cookie.isSecure());
         assertEquals(2, cookie.getVersion());
+    }
+
+    @Test
+    public void testDecodingClientSideCookies() {
+        String source = "$Version=\"1\"; " +
+                "Part_Number=\"Riding_Rocket_0023\"; $Path=\"/acme/ammo\"; " +
+                "Part_Number=\"Rocket_Launcher_0001\"; $Path=\"/acme\"";
+
+        Set<Cookie> cookies = new CookieDecoder().decode(source);
+        Iterator<Cookie> it = cookies.iterator();
+        Cookie c;
+
+        c = it.next();
+        assertEquals(1, c.getVersion());
+        assertEquals("Part_Number", c.getName());
+        assertEquals("Rocket_Launcher_0001", c.getValue());
+        assertEquals("/acme", c.getPath());
+        assertNull(c.getComment());
+        assertNull(c.getCommentUrl());
+        assertNull(c.getDomain());
+        assertTrue(c.getPorts().isEmpty());
+        assertEquals(-1, c.getMaxAge());
+
+        c = it.next();
+        assertEquals(1, c.getVersion());
+        assertEquals("Part_Number", c.getName());
+        assertEquals("Riding_Rocket_0023", c.getValue());
+        assertEquals("/acme/ammo", c.getPath());
+        assertNull(c.getComment());
+        assertNull(c.getCommentUrl());
+        assertNull(c.getDomain());
+        assertTrue(c.getPorts().isEmpty());
+        assertEquals(-1, c.getMaxAge());
+
     }
 }
