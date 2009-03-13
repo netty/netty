@@ -56,8 +56,8 @@ public class CookieEncoderTest {
         long currentTime = System.currentTimeMillis();
         assertTrue(
                 encodedCookie.equals(result.replace("XXX", df.format(new Date(currentTime + 50000)))) ||
-                encodedCookie.equals(result.replace("XXX", df.format(new Date(currentTime + 50500)))) ||
-                encodedCookie.equals(result.replace("XXX", df.format(new Date(currentTime + 49500)))));
+                encodedCookie.equals(result.replace("XXX", df.format(new Date(currentTime + 50750)))) ||
+                encodedCookie.equals(result.replace("XXX", df.format(new Date(currentTime + 49250)))));
     }
     @Test
     public void testEncodingSingleCookieV1() {
