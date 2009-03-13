@@ -265,7 +265,7 @@ public class DefaultCookie implements Cookie {
             switch (c) {
             case '\r': case '\n': case '\f': case 0x0b: case ';':
                 throw new IllegalArgumentException(
-                        value + " contains one of the following prohibited characters: " +
+                        name + " contains one of the following prohibited characters: " +
                         ";\\r\\n\\f\\v (" + value + ')');
             }
         }

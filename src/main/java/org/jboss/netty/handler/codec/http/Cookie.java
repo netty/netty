@@ -26,6 +26,7 @@ import java.util.Set;
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
+ * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
 public interface Cookie extends Comparable<Cookie> {

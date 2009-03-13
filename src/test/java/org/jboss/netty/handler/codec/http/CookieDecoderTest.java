@@ -28,7 +28,10 @@ import java.util.Map;
 import org.junit.Test;
 
 /**
- * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Andy Taylor (andy.taylor@jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ * @version $Rev$, $Date$
  */
 public class CookieDecoderTest {
     @Test

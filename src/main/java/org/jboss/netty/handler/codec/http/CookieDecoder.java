@@ -29,6 +29,7 @@ import org.jboss.netty.util.CaseIgnoringComparator;
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
 public class CookieDecoder {
