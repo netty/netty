@@ -218,11 +218,56 @@ public class DefaultCookie implements Cookie {
             return false;
         }
 
-        return getName().equalsIgnoreCase(((Cookie) o).getName());
+        Cookie that = (Cookie) o;
+        if (!getName().equalsIgnoreCase(that.getName())) {
+            return false;
+        }
+
+        if (getPath() == null && that.getPath() != null) {
+            return false;
+        } else if (that.getPath() == null) {
+            return false;
+        }
+        if (!getPath().equals(that.getPath())) {
+            return false;
+        }
+
+        if (getDomain() == null && that.getDomain() != null) {
+            return false;
+        } else if (that.getDomain() == null) {
+            return false;
+        }
+        if (!getDomain().equalsIgnoreCase(that.getDomain())) {
+            return false;
+        }
+
+        return true;
     }
 
     public int compareTo(Cookie c) {
-        return getName().compareToIgnoreCase(c.getName());
+        int v;
+        v = getName().compareToIgnoreCase(c.getName());
+        if (v != 0) {
+            return v;
+        }
+
+        if (getPath() == null && c.getPath() != null) {
+            return -1;
+        } else if (c.getPath() == null) {
+            return 1;
+        }
+        v = getPath().compareTo(c.getPath());
+        if (v != 0) {
+            return v;
+        }
+
+        if (getDomain() == null && c.getDomain() != null) {
+            return -1;
+        } else if (c.getDomain() == null) {
+            return 1;
+        }
+        v = getDomain().compareToIgnoreCase(c.getDomain());
+        return v;
     }
 
     @Override
