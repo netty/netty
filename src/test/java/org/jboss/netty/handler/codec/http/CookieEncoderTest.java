@@ -66,7 +66,7 @@ public class CookieEncoderTest {
     }
     @Test
     public void testEncodingSingleCookieV2() {
-        String result = "myCookie=myValue;max-age=50;path=%2Fapathsomewhere;domain=%2Fadomainsomewhere;secure;comment=this%20is%20a%20comment;version=2;commentURL=\"http%2F%3Aaurl.com\";port=\"80,8080\";discard;";
+        String result = "myCookie=myValue;max-age=50;path=%2Fapathsomewhere;domain=%2Fadomainsomewhere;secure;comment=this%20is%20a%20comment;version=1;commentURL=\"http%2F%3Aaurl.com\";port=\"80,8080\";discard;";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         CookieEncoder encoder = new CookieEncoder(2);
         encoder.addCookie(cookie);
@@ -84,9 +84,9 @@ public class CookieEncoderTest {
 
     @Test
     public void testEncodingMultipleCookies() {
-        String c1 = "myCookie=myValue;max-age=50;path=%2Fapathsomewhere;domain=%2Fadomainsomewhere;secure;comment=this%20is%20a%20comment;version=2;commentURL=\"http%2F%3Aaurl.com\";port=\"80,8080\";discard;";
-        String c2 = "myCookie2=myValue2;max-age=0;path=%2Fanotherpathsomewhere;domain=%2Fanotherdomainsomewhere;comment=this%20is%20another%20comment;version=2;commentURL=\"http%2F%3Aanotherurl.com\";";
-        String c3 = "myCookie3=myValue3;max-age=0;version=2;";
+        String c1 = "myCookie=myValue;max-age=50;path=%2Fapathsomewhere;domain=%2Fadomainsomewhere;secure;comment=this%20is%20a%20comment;version=1;commentURL=\"http%2F%3Aaurl.com\";port=\"80,8080\";discard;";
+        String c2 = "myCookie2=myValue2;max-age=0;path=%2Fanotherpathsomewhere;domain=%2Fanotherdomainsomewhere;comment=this%20is%20another%20comment;version=1;commentURL=\"http%2F%3Aanotherurl.com\";";
+        String c3 = "myCookie3=myValue3;max-age=0;version=1;";
         CookieEncoder encoder = new CookieEncoder(2);
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setComment("this is a comment");

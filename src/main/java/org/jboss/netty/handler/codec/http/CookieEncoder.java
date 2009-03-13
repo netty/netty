@@ -101,7 +101,7 @@ public class CookieEncoder {
                     add(sb, CookieHeaderNames.COMMENT, QueryStringEncoder.encodeComponent(cookie.getComment(), charset));
                 }
 
-                add(sb, CookieHeaderNames.VERSION, encodingVersion);
+                add(sb, CookieHeaderNames.VERSION, 1);
             }
 
             if (encodingVersion == 2) {
