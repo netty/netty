@@ -21,10 +21,10 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import org.jboss.netty.util.CaseIgnoringComparator;
+
 import java.util.Map;
 import java.util.TreeMap;
-
-import org.jboss.netty.util.CaseIgnoringComparator;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -33,8 +33,11 @@ import org.jboss.netty.util.CaseIgnoringComparator;
  */
 public class CookieDecoder {
 
-    private final static String semicolon = ";";
-    private final static String equals = "=";
+    private final static String SEMICOLON = ";";
+
+    private final static String EQUALS = "=";
+
+    private final static String COMMA = ",";
 
     private final String charset;
 
@@ -50,19 +53,88 @@ public class CookieDecoder {
     }
 
     public Map<String, Cookie> decode(String header) {
-        // FIXME: Support both version 0 and 1 cookies
-        // FIXME: Decode all cookie fields, including domain, path, maxAge, secure, and comment.
-        // FIXME: CookieDecoder cannot assume that the first field is always the name-value pair.
-        // FIXME: Check RFC 2109 - http://www.ietf.org/rfc/rfc2109.txt
         Map<String, Cookie> cookies = new TreeMap<String, Cookie>(CaseIgnoringComparator.INSTANCE);
-        String[] split = header.split(semicolon);
-        for (String s : split) {
-            String[] cookie = s.split(equals);
-            if(cookie != null && cookie.length == 2) {
+        String[] split = header.split(SEMICOLON);
+        for (int i = 0; i < split.length; i++) {
+            DefaultCookie theCookie;
+            String s = split[i];
+            String[] cookie = s.split(EQUALS, 2);
+            if (cookie != null && cookie.length == 2) {
                 String name = cookie[0].trim();
                 String value = QueryStringDecoder.decodeComponent(cookie[1], charset);
-                cookies.put(name, new DefaultCookie(name, value));
+                theCookie = new DefaultCookie(name, value);
+                cookies.put(name, theCookie);
+                boolean discard = false;
+                boolean secure = false;
+                String comment = null;
+                String commentURL = null;
+                String domain = null;
+                String path = null;
+                int version = 0;
+                int maxAge = 0;
+                int[] ports = null;
+                for (int j = i + 1; j < split.length; j++, i++) {
+                    String[] val = split[j].split(EQUALS, 2);
+                    if (val != null && val.length == 1) {
+                        if (CookieHeaderNames.DISCARD.equalsIgnoreCase(val[0])) {
+                            discard = true;
+                        }
+                        else if (CookieHeaderNames.SECURE.equalsIgnoreCase(val[0])) {
+                            secure = true;
+                        }
+                    }
+                    else if (val != null && val.length == 2) {
+                        name = val[0].trim();
+                        value = val[1].trim();
+                        if (CookieHeaderNames.COMMENT.equalsIgnoreCase(name)) {
+                            comment = QueryStringDecoder.decodeComponent(value, charset);
+                        }
+                        else if (CookieHeaderNames.COMMENTURL.equalsIgnoreCase(name)) {
+                            commentURL = QueryStringDecoder.decodeComponent(value, charset);
+                        }
+                        else if (CookieHeaderNames.DOMAIN.equalsIgnoreCase(name)) {
+                            domain = QueryStringDecoder.decodeComponent(value, charset);
+                        }
+                        else if (CookieHeaderNames.PATH.equalsIgnoreCase(name)) {
+                            path = QueryStringDecoder.decodeComponent(value, charset);
+                        }
+                        else if (CookieHeaderNames.EXPIRES.equalsIgnoreCase(name)) {
+                            maxAge = Integer.valueOf(value);
+                        }
+                        else if (CookieHeaderNames.MAX_AGE.equalsIgnoreCase(name)) {
+                            maxAge = Integer.valueOf(value);
+                        }
+                        else if (CookieHeaderNames.VERSION.equalsIgnoreCase(name)) {
+                            version = Integer.valueOf(value);
+                        }
+                        else if (CookieHeaderNames.PORTLIST.equalsIgnoreCase(name)) {
+                            String[] portList = value.split(COMMA);
+                            ports = new int[portList.length];
+                            for (int i1 = 0; i1 < portList.length; i1++) {
+                                String s1 = portList[i1];
+                                ports[i1] = Integer.valueOf(s1);
+                            }
+                        }
+                        else {
+                            break;
+                        }
+                    }
+                }
+                theCookie.setVersion(version);
+                theCookie.setMaxAge(maxAge);
+                theCookie.setPath(path);
+                theCookie.setDomain(domain);
+                theCookie.setSecure(secure);
+                if (version > 0) {
+                    theCookie.setComment(comment);
+                }
+                if (version > 1) {
+                    theCookie.setCommentURL(commentURL);
+                    theCookie.setPortList(ports);
+                    theCookie.setDiscard(discard);
+                }
             }
+
         }
         return cookies;
     }

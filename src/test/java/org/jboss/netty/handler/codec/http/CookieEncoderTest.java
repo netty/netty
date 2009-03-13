@@ -28,7 +28,7 @@ import org.junit.Test;
 /**
  * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-public class HttpCookieEncoderTest {
+public class CookieEncoderTest {
     @Test
     public void testEncodingSingleCookieV0() {
         String result = "myCookie=myValue;expires=50;path=%2Fapathsomewhere;domain=%2Fadomainsomewhere;secure;";

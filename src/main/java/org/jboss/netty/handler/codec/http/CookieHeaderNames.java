@@ -27,9 +27,9 @@ package org.jboss.netty.handler.codec.http;
 public class CookieHeaderNames {
     public static final String PATH = "path";
 
-    private static final String EXPIRES = "expires";
+    public static final String EXPIRES = "expires";
 
-    private static final String MAX_AGE = "max-age";
+    public static final String MAX_AGE = "max-age";
 
     public static final String DOMAIN = "domain";
 
