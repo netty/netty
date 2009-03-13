@@ -28,38 +28,25 @@ package org.jboss.netty.handler.codec.http;
  * @version $Rev$, $Date$
  */
 final class CookieHeaderNames {
-    static final String PATH = "path";
+    static final String PATH = "Path";
 
-    static final String EXPIRES = "expires";
+    static final String EXPIRES = "Expires";
 
-    static final String MAX_AGE = "max-age";
+    static final String MAX_AGE = "Max-Age";
 
-    static final String DOMAIN = "domain";
+    static final String DOMAIN = "Domain";
 
-    static final String SECURE = "secure";
+    static final String SECURE = "Secure";
 
-    static final String COMMENT = "comment";
+    static final String COMMENT = "Comment";
 
-    static final String COMMENTURL = "commentURL";
+    static final String COMMENTURL = "CommentURL";
 
-    static final String DISCARD = "discard";
+    static final String DISCARD = "Discard";
 
-    static final String PORT = "port";
+    static final String PORT = "Port";
 
-    static final String VERSION = "version";
-
-    static String getMaxAgeString(int version) {
-        switch (version) {
-            case 0:
-                return EXPIRES;
-            case 1:
-                return MAX_AGE;
-            case 2:
-                return MAX_AGE;
-            default:
-                return EXPIRES;
-        }
-    }
+    static final String VERSION = "Version";
 
     private CookieHeaderNames() {
         // Unused.
