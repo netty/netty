@@ -95,6 +95,7 @@ public class CookieDecoder {
                             comment = QueryStringDecoder.decodeComponent(value, charset);
                         }
                         else if (CookieHeaderNames.COMMENTURL.equalsIgnoreCase(name)) {
+                            value = trimSurroundingQuotes(value);
                             commentURL = QueryStringDecoder.decodeComponent(value, charset);
                         }
                         else if (CookieHeaderNames.DOMAIN.equalsIgnoreCase(name)) {
@@ -113,6 +114,7 @@ public class CookieDecoder {
                             version = Integer.valueOf(value);
                         }
                         else if (CookieHeaderNames.PORT.equalsIgnoreCase(name)) {
+                            value = trimSurroundingQuotes(value);
                             String[] portList = value.split(COMMA);
                             ports = new int[portList.length];
                             for (int i1 = 0; i1 < portList.length; i1++) {
@@ -143,5 +145,18 @@ public class CookieDecoder {
             }
         }
         return cookies;
+    }
+
+    private String trimSurroundingQuotes(String value) {
+        if (value.length() >= 2) {
+            char firstChar = value.charAt(0);
+            char lastChar = value.charAt(value.length() - 1);
+            if ((firstChar == '"' || firstChar == '\'') &&
+                (lastChar == '"' || lastChar == '\'')) {
+                // Strip surrounding quotes.
+                value = value.substring(1, value.length() - 1);
+            }
+        }
+        return value;
     }
 }
