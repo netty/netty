@@ -21,6 +21,10 @@
  */
 package org.jboss.netty.example.http;
 
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.concurrent.Executors;
+
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
@@ -32,10 +36,6 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.concurrent.Executors;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -91,7 +91,7 @@ public class HttpClient {
         HttpRequest request = new DefaultHttpRequest(
                 HttpVersion.HTTP_1_0, HttpMethod.GET, uri.toASCIIString());
         request.addHeader(HttpHeaders.Names.HOST, host);
-        CookieEncoder httpCookieEncoder = new CookieEncoder(2);
+        CookieEncoder httpCookieEncoder = new CookieEncoder();
         httpCookieEncoder.addCookie("my-cookie", "foo");
         httpCookieEncoder.addCookie("another-cookie", "bar");
         request.addHeader(HttpHeaders.Names.COOKIE, httpCookieEncoder.encode());

@@ -23,6 +23,7 @@ package org.jboss.netty.handler.codec.http;
 
 import static org.junit.Assert.*;
 
+import java.util.Date;
 import java.util.Map;
 
 import org.junit.Test;
@@ -36,7 +37,9 @@ import org.junit.Test;
 public class CookieDecoderTest {
     @Test
     public void testDecodingSingleCookieV0() {
-        String cookieString = "myCookie=myValue;expires=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;";
+        String cookieString = "myCookie=myValue;expires=XXX;path=/apathsomewhere;domain=.adomainsomewhere;secure;";
+        cookieString = cookieString.replace("XXX", new CookieDateFormat().format(new Date(System.currentTimeMillis() + 50000)));
+
         CookieDecoder cookieDecoder = new CookieDecoder();
         Map<String, Cookie> cookieMap = cookieDecoder.decode(cookieString);
         assertEquals(1, cookieMap.size());

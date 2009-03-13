@@ -21,6 +21,10 @@
  */
 package org.jboss.netty.example.http;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelFuture;
@@ -40,10 +44,6 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.http.QueryStringDecoder;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -135,7 +135,7 @@ public class HttpRequestHandler extends SimpleChannelHandler {
             Map<String, Cookie> cookies = cookieDecoder.decode(cookieString);
             if(!cookies.isEmpty()) {
                 // Reset the cookies if necessary.
-                CookieEncoder cookieEncoder = new CookieEncoder(2);
+                CookieEncoder cookieEncoder = new CookieEncoder();
                 for (Cookie cookie : cookies.values()) {
                     cookieEncoder.addCookie(cookie);
                 }

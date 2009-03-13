@@ -21,6 +21,7 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.text.ParseException;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -106,9 +107,18 @@ public class CookieDecoder {
                             path = value;
                         }
                         else if (CookieHeaderNames.EXPIRES.equalsIgnoreCase(name)) {
-                            // FIXME: Expires attribute has different representation from Max-Age.
-                            //        Format: Wdy, DD-Mon-YYYY HH:MM:SS GMT
-                            maxAge = Integer.valueOf(value);
+                            try {
+                                long maxAgeMillis =
+                                    new CookieDateFormat().parse(value).getTime() - System.currentTimeMillis();
+                                if (maxAgeMillis <= 0) {
+                                    maxAge = 0;
+                                } else {
+                                    maxAge = (int) (maxAgeMillis / 1000) +
+                                             (maxAgeMillis % 1000 != 0? 1 : 0);
+                                }
+                            } catch (ParseException e) {
+                                maxAge = 0;
+                            }
                         }
                         else if (CookieHeaderNames.MAX_AGE.equalsIgnoreCase(name)) {
                             maxAge = Integer.valueOf(value);

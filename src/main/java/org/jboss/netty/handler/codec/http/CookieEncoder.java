@@ -22,6 +22,7 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.util.Collection;
+import java.util.Date;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -39,25 +40,11 @@ public class CookieEncoder {
 
     private final String charset;
 
-    private final int encodingVersion;
-
     public CookieEncoder() {
-        this(QueryStringDecoder.DEFAULT_CHARSET, 0);
-    }
-
-    public CookieEncoder(int encodingVersion) {
-        this(QueryStringDecoder.DEFAULT_CHARSET, encodingVersion);
+        this(QueryStringDecoder.DEFAULT_CHARSET);
     }
 
     public CookieEncoder(String charset) {
-        this(charset, 0);
-    }
-
-    public CookieEncoder(String charset, int encodingVersion) {
-        if (encodingVersion < 0 || encodingVersion > 2) {
-            throw new IllegalArgumentException("encoding version must be 0,1 or 2");
-        }
-        this.encodingVersion = encodingVersion;
         if (charset == null) {
             throw new NullPointerException("charset");
         }
@@ -82,9 +69,16 @@ public class CookieEncoder {
             Cookie cookie = cookies.get(cookieName);
             add(sb, cookieName, QueryStringEncoder.encodeComponent(cookie.getValue(), charset));
 
-            // FIXME: Expires attribute has different representation from Max-Age.
-            //        Format: Wdy, DD-Mon-YYYY HH:MM:SS GMT
-            add(sb, CookieHeaderNames.getMaxAgeString(encodingVersion), cookie.getMaxAge());
+            if (cookie.getMaxAge() >= 0) {
+                if (cookie.getVersion() == 0) {
+                    add(sb, CookieHeaderNames.EXPIRES,
+                            new CookieDateFormat().format(
+                                    new Date(System.currentTimeMillis() +
+                                             cookie.getMaxAge() * 1000L)));
+                } else {
+                    add(sb, CookieHeaderNames.MAX_AGE, cookie.getMaxAge());
+                }
+            }
 
             if (cookie.getPath() != null) {
                 add(sb, CookieHeaderNames.PATH, cookie.getPath());
@@ -97,18 +91,17 @@ public class CookieEncoder {
                     sb.append(CookieHeaderNames.SECURE);
                     sb.append((char) HttpCodecUtil.SEMICOLON);
                 }
-            if (encodingVersion >= 1) {
+            if (cookie.getVersion() >= 1) {
                 if (cookie.getComment() != null) {
                     add(sb, CookieHeaderNames.COMMENT, cookie.getComment());
                 }
 
                 add(sb, CookieHeaderNames.VERSION, 1);
-            }
 
-            if (encodingVersion == 2) {
                 if (cookie.getCommentUrl() != null) {
                     addQuoted(sb, CookieHeaderNames.COMMENTURL, cookie.getCommentUrl());
                 }
+
                 if(!cookie.getPorts().isEmpty()) {
                     sb.append(CookieHeaderNames.PORT);
                     sb.append((char) HttpCodecUtil.EQUALS);
