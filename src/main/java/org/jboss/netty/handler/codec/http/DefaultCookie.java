@@ -73,6 +73,8 @@ public class DefaultCookie implements Cookie {
                         "=,; \\t\\r\\n\\v\\f: " + name);
             }
         }
+
+        // FIXME: Refuse known attribute names.
         this.name = name;
         setValue(value);
     }

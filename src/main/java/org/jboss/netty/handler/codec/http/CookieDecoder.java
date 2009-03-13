@@ -57,13 +57,28 @@ public class CookieDecoder {
     public Map<String, Cookie> decode(String header) {
         Map<String, Cookie> cookies = new TreeMap<String, Cookie>(CaseIgnoringComparator.INSTANCE);
         String[] split = header.split(SEMICOLON);
+        int version = 0;
         for (int i = 0; i < split.length; i++) {
             DefaultCookie theCookie;
             String s = split[i];
             String[] cookie = s.split(EQUALS, 2);
             if (cookie != null && cookie.length == 2) {
-                String name = cookie[0].trim();
-                String value = QueryStringDecoder.decodeComponent(cookie[1], charset);
+                String name = trimName(cookie[0]);
+                String value;
+
+                // $Version is the only attribute that can come before the
+                // actual cookie name-value pair.
+                if (name.equalsIgnoreCase(CookieHeaderNames.VERSION)) {
+                    try {
+                        version = Integer.parseInt(trimValue(cookie[1]));
+                    } catch (NumberFormatException e) {
+                        // Ignore.
+                    }
+                    continue;
+                }
+
+                // If it's not a version attribute, it's the name-value pair.
+                value = QueryStringDecoder.decodeComponent(trimValue(cookie[1]), charset);
                 theCookie = new DefaultCookie(name, value);
                 cookies.put(name, theCookie);
                 boolean discard = false;
@@ -72,8 +87,7 @@ public class CookieDecoder {
                 String commentURL = null;
                 String domain = null;
                 String path = null;
-                int version = 0;
-                int maxAge = 0;
+                int maxAge = -1;
                 int[] ports = null;
                 loop:
                 for (int j = i + 1; j < split.length; j++, i++) {
@@ -91,13 +105,13 @@ public class CookieDecoder {
                         }
                         break;
                     case 2:
-                        name = val[0].trim();
-                        value = val[1].trim();
+                        name = trimName(val[0]);
+                        value = trimValue(val[1]);
                         if (CookieHeaderNames.COMMENT.equalsIgnoreCase(name)) {
                             comment = value;
                         }
                         else if (CookieHeaderNames.COMMENTURL.equalsIgnoreCase(name)) {
-                            value = trimSurroundingQuotes(value);
+                            value = trimValue(value);
                             commentURL = value;
                         }
                         else if (CookieHeaderNames.DOMAIN.equalsIgnoreCase(name)) {
@@ -127,7 +141,7 @@ public class CookieDecoder {
                             version = Integer.valueOf(value);
                         }
                         else if (CookieHeaderNames.PORT.equalsIgnoreCase(name)) {
-                            value = trimSurroundingQuotes(value);
+                            value = trimValue(value);
                             String[] portList = value.split(COMMA);
                             ports = new int[portList.length];
                             for (int i1 = 0; i1 < portList.length; i1++) {
@@ -160,7 +174,16 @@ public class CookieDecoder {
         return cookies;
     }
 
-    private String trimSurroundingQuotes(String value) {
+    private String trimName(String name) {
+        if (name.startsWith("$")) {
+            return name.substring(1);
+        } else {
+            return name;
+        }
+    }
+
+    private String trimValue(String value) {
+        value = value.trim();
         if (value.length() >= 2) {
             char firstChar = value.charAt(0);
             char lastChar = value.charAt(value.length() - 1);
