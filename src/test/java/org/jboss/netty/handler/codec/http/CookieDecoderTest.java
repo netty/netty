@@ -52,7 +52,7 @@ public class CookieDecoderTest {
         assertNull(cookie.getCommentUrl());
         assertEquals(".adomainsomewhere", cookie.getDomain());
         assertFalse(cookie.isDiscard());
-        assertEquals(50, cookie.getMaxAge());
+        assertTrue(cookie.getMaxAge() == 50 || cookie.getMaxAge() == 49 || cookie.getMaxAge() == 51);
         assertEquals("/apathsomewhere", cookie.getPath());
         assertTrue(cookie.getPorts().isEmpty());
         assertTrue(cookie.isSecure());
