@@ -39,7 +39,7 @@ public class CookieEncoderTest {
     public void testEncodingSingleCookieV0() {
         String result = "myCookie=myValue;expires=XXX;path=/apathsomewhere;domain=.adomainsomewhere;secure;";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
-        CookieEncoder encoder = new CookieEncoder();
+        CookieEncoder encoder = new CookieEncoder(true);
         encoder.addCookie(cookie);
         cookie.setComment("this is a comment");
         cookie.setCommentUrl("http://aurl.com");
@@ -57,7 +57,7 @@ public class CookieEncoderTest {
     public void testEncodingSingleCookieV1() {
         String result = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
-        CookieEncoder encoder = new CookieEncoder();
+        CookieEncoder encoder = new CookieEncoder(true);
         encoder.addCookie(cookie);
         cookie.setVersion(1);
         cookie.setComment("this is a comment");
@@ -72,7 +72,7 @@ public class CookieEncoderTest {
     public void testEncodingSingleCookieV2() {
         String result = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;commentURL=\"http://aurl.com\";port=\"80,8080\";discard;";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
-        CookieEncoder encoder = new CookieEncoder();
+        CookieEncoder encoder = new CookieEncoder(true);
         encoder.addCookie(cookie);
         cookie.setVersion(1);
         cookie.setComment("this is a comment");
@@ -92,7 +92,7 @@ public class CookieEncoderTest {
         String c1 = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;commentURL=\"http://aurl.com\";port=\"80,8080\";discard;";
         String c2 = "myCookie2=myValue2;path=/anotherpathsomewhere;domain=.anotherdomainsomewhere;comment=this is another comment;version=1;commentURL=\"http://anotherurl.com\";";
         String c3 = "myCookie3=myValue3;version=1;";
-        CookieEncoder encoder = new CookieEncoder();
+        CookieEncoder encoder = new CookieEncoder(true);
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setVersion(1);
         cookie.setComment("this is a comment");

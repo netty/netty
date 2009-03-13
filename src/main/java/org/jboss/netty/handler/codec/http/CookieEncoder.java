@@ -34,17 +34,18 @@ import java.util.TreeSet;
 public class CookieEncoder {
 
     private final Set<Cookie> cookies = new TreeSet<Cookie>();
-
+    private final boolean server;
     private final String charset;
 
-    public CookieEncoder() {
-        this(QueryStringDecoder.DEFAULT_CHARSET);
+    public CookieEncoder(boolean server) {
+        this(server, QueryStringDecoder.DEFAULT_CHARSET);
     }
 
-    public CookieEncoder(String charset) {
+    public CookieEncoder(boolean server, String charset) {
         if (charset == null) {
             throw new NullPointerException("charset");
         }
+        this.server = server;
         this.charset = charset;
     }
 
@@ -57,7 +58,15 @@ public class CookieEncoder {
     }
 
     public String encode() {
-        StringBuffer sb = new StringBuffer();
+        if (server) {
+            return encodeServerSide();
+        } else {
+            return encodeClientSide();
+        }
+    }
+
+    private String encodeServerSide() {
+        StringBuilder sb = new StringBuilder();
 
         for (Cookie cookie: cookies) {
             add(sb, cookie.getName(), QueryStringEncoder.encodeComponent(cookie.getValue(), charset));
@@ -115,14 +124,50 @@ public class CookieEncoder {
         return sb.toString();
     }
 
-    private void add(StringBuffer sb, String name, String val) {
+    private String encodeClientSide() {
+        StringBuilder sb = new StringBuilder();
+
+        for (Cookie cookie: cookies) {
+            if (cookie.getVersion() >= 1) {
+                add(sb, '$' + CookieHeaderNames.VERSION, 1);
+            }
+
+            add(sb, cookie.getName(), QueryStringEncoder.encodeComponent(cookie.getValue(), charset));
+
+            if (cookie.getPath() != null) {
+                add(sb, '$' + CookieHeaderNames.PATH, cookie.getPath());
+            }
+
+            if (cookie.getDomain() != null) {
+                add(sb, '$' + CookieHeaderNames.DOMAIN, cookie.getDomain());
+            }
+
+            if (cookie.getVersion() >= 1) {
+                if(!cookie.getPorts().isEmpty()) {
+                    sb.append('$');
+                    sb.append(CookieHeaderNames.PORT);
+                    sb.append((char) HttpCodecUtil.EQUALS);
+                    sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
+                    for (int port: cookie.getPorts()) {
+                        sb.append(port);
+                        sb.append((char) HttpCodecUtil.COMMA);
+                    }
+                    sb.setCharAt(sb.length() - 1, (char) HttpCodecUtil.DOUBLE_QUOTE);
+                    sb.append((char) HttpCodecUtil.SEMICOLON);
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    private static void add(StringBuilder sb, String name, String val) {
         sb.append(name);
         sb.append((char) HttpCodecUtil.EQUALS);
         sb.append(val);
         sb.append((char) HttpCodecUtil.SEMICOLON);
     }
 
-    private void addQuoted(StringBuffer sb, String name, String val) {
+    private static void addQuoted(StringBuilder sb, String name, String val) {
         sb.append(name);
         sb.append((char) HttpCodecUtil.EQUALS);
         sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
@@ -131,7 +176,7 @@ public class CookieEncoder {
         sb.append((char) HttpCodecUtil.SEMICOLON);
     }
 
-    private void add(StringBuffer sb, String name, int val) {
+    private static void add(StringBuilder sb, String name, int val) {
         sb.append(name);
         sb.append((char) HttpCodecUtil.EQUALS);
         sb.append(val);

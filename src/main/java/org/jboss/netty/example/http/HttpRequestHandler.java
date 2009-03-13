@@ -136,7 +136,7 @@ public class HttpRequestHandler extends SimpleChannelHandler {
             Set<Cookie> cookies = cookieDecoder.decode(cookieString);
             if(!cookies.isEmpty()) {
                 // Reset the cookies if necessary.
-                CookieEncoder cookieEncoder = new CookieEncoder();
+                CookieEncoder cookieEncoder = new CookieEncoder(true);
                 for (Cookie cookie : cookies) {
                     cookieEncoder.addCookie(cookie);
                 }
