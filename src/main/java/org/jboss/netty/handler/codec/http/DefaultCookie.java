@@ -35,6 +35,9 @@ public class DefaultCookie implements Cookie {
     private String domain;
     private String path;
     private String comment;
+    private String commentURL;
+    private boolean discard;
+    private int[] portList;
     private int maxAge;
     private int version;
     private boolean secure;
@@ -106,6 +109,30 @@ public class DefaultCookie implements Cookie {
 
     public void setComment(String comment) {
         this.comment = comment;
+    }
+
+    public String getCommentURL() {
+        return commentURL;
+    }
+
+    public void setCommentURL(String commentURL) {
+        this.commentURL = commentURL;
+    }
+
+    public boolean isDiscard() {
+        return discard;
+    }
+
+    public void setDiscard(boolean discard) {
+        this.discard = discard;
+    }
+
+    public int[] getPortList() {
+        return portList;
+    }
+
+    public void setPortList(int[] portList) {
+        this.portList = portList;
     }
 
     public int getMaxAge() {

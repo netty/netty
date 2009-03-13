@@ -22,53 +22,39 @@
 package org.jboss.netty.handler.codec.http;
 
 /**
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @version $Rev$, $Date$
+ * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
  */
-class HttpCodecUtil {
-    //space ' '
-    static final byte SP = 32;
+public class CookieHeaderNames {
+    public static final String PATH = "path";
 
-    //tab ' '
-    static final byte HT = 9;
+    private static final String EXPIRES = "expires";
 
-    /**
-     * Carriage return
-     */
-    static final byte CR = 13;
+    private static final String MAX_AGE = "max-age";
 
-    /**
-     * Equals '='
-     */
-    static final byte EQUALS = 61;
+    public static final String DOMAIN = "domain";
 
-    /**
-     * Line feed character
-     */
-    static final byte LF = 10;
+    public static final String SECURE = "secure";
 
-    /**
-     * carriage return line feed
-     */
-    static final byte[] CRLF = new byte[] { CR, LF };
+    public static final String COMMENT = "comment";
 
-    /**
-    * Colon ':'
-    */
-    static final byte COLON = 58;
+    public static final String COMMENTURL = "commentURL";
 
-    /**
-    * Semicolon ';'
-    */
-    static final byte SEMICOLON = 59;
+    public static final String DISCARD = "discard";
 
-     /**
-    * comma ','
-    */
-    static final byte COMMA = 44;
+    public static final String PORTLIST = "port";
 
-    private HttpCodecUtil() {
-        super();
+    public static final String VERSION = "version";
+
+    public static String getMaxAgeString(int version) {
+        switch (version) {
+            case 0:
+                return EXPIRES;
+            case 1:
+                return MAX_AGE;
+            case 2:
+                return MAX_AGE;
+            default:
+                return EXPIRES;
+        }
     }
 }

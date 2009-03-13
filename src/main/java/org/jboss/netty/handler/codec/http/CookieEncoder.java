@@ -21,11 +21,11 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import org.jboss.netty.util.CaseIgnoringComparator;
+
 import java.util.Collection;
 import java.util.Map;
 import java.util.TreeMap;
-
-import org.jboss.netty.util.CaseIgnoringComparator;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -38,11 +38,25 @@ public class CookieEncoder {
 
     private final String charset;
 
+    private final int encodingVersion;
+
     public CookieEncoder() {
-        this(QueryStringDecoder.DEFAULT_CHARSET);
+        this(QueryStringDecoder.DEFAULT_CHARSET, 0);
+    }
+
+    public CookieEncoder(int encodingVersion) {
+        this(QueryStringDecoder.DEFAULT_CHARSET, encodingVersion);
     }
 
     public CookieEncoder(String charset) {
+        this(charset, 0);
+    }
+
+    public CookieEncoder(String charset, int encodingVersion) {
+        if (encodingVersion < 0 || encodingVersion > 2) {
+            throw new IllegalArgumentException("encoding version must be 0,1 or 2");
+        }
+        this.encodingVersion = encodingVersion;
         if (charset == null) {
             throw new NullPointerException("charset");
         }
@@ -58,21 +72,72 @@ public class CookieEncoder {
     }
 
     public String encode() {
-        // FIXME: Support both version 0 and 1 cookies
-        // FIXME: Encode all cookie fields, including domain, path, maxAge, secure, and comment.
-        // FIXME: Check RFC 2109 - http://www.ietf.org/rfc/rfc2109.txt
         StringBuffer sb = new StringBuffer();
         Collection<String> cookieNames = cookies.keySet();
-        if(cookieNames.isEmpty()) {
+        if (cookieNames.isEmpty()) {
             return null;
         }
-        for (String cookieName: cookieNames) {
-            sb.append(cookieName);
-            sb.append((char) HttpCodecUtil.EQUALS);
-            sb.append(QueryStringEncoder.encodeComponent(
-                    cookies.get(cookieName).getValue(), charset));
-            sb.append((char) HttpCodecUtil.SEMICOLON);
+        for (String cookieName : cookieNames) {
+            Cookie cookie = cookies.get(cookieName);
+            add(sb, cookieName, QueryStringEncoder.encodeComponent(cookie.getValue(), charset));
+
+            add(sb, CookieHeaderNames.getMaxAgeString(encodingVersion), cookie.getMaxAge());
+
+            if (cookie.getPath() != null) {
+                add(sb, CookieHeaderNames.PATH, QueryStringEncoder.encodeComponent(cookie.getPath(), charset));
+            }
+
+            if (cookie.getDomain() != null) {
+                add(sb, CookieHeaderNames.DOMAIN, QueryStringEncoder.encodeComponent(cookie.getDomain(), charset));
+            }
+            if (cookie.isSecure()) {
+                    sb.append(CookieHeaderNames.SECURE);
+                    sb.append((char) HttpCodecUtil.SEMICOLON);
+                }
+            if (encodingVersion >= 1) {
+                if (cookie.getComment() != null) {
+                    add(sb, CookieHeaderNames.COMMENT, QueryStringEncoder.encodeComponent(cookie.getComment(), charset));
+                }
+
+                add(sb, CookieHeaderNames.VERSION, encodingVersion);
+            }
+
+            if (encodingVersion == 2) {
+                if (cookie.getCommentURL() != null) {
+                    add(sb, CookieHeaderNames.COMMENTURL, QueryStringEncoder.encodeComponent(cookie.getCommentURL(), charset));
+                }
+                if(cookie.getPortList() != null && cookie.getPortList().length > 0) {
+                    sb.append(CookieHeaderNames.PORTLIST);
+                    sb.append((char) HttpCodecUtil.EQUALS);
+                    for (int i = 0; i < cookie.getPortList().length; i++) {
+                        int port = cookie.getPortList()[i];
+                        if(i > 0) {
+                            sb.append((char)HttpCodecUtil.COMMA);
+                        }
+                        sb.append(port);
+                    }
+                    sb.append((char) HttpCodecUtil.SEMICOLON);
+                }
+                if (cookie.isDiscard()) {
+                    sb.append(CookieHeaderNames.DISCARD);
+                    sb.append((char) HttpCodecUtil.SEMICOLON);
+                }
+            }
         }
         return sb.toString();
+    }
+
+    private void add(StringBuffer sb, String name, String val) {
+        sb.append(name);
+        sb.append((char) HttpCodecUtil.EQUALS);
+        sb.append(val);
+        sb.append((char) HttpCodecUtil.SEMICOLON);
+    }
+
+    private void add(StringBuffer sb, String name, int val) {
+        sb.append(name);
+        sb.append((char) HttpCodecUtil.EQUALS);
+        sb.append(val);
+        sb.append((char) HttpCodecUtil.SEMICOLON);
     }
 }
