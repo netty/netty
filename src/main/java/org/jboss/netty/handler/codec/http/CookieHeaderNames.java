@@ -22,30 +22,33 @@
 package org.jboss.netty.handler.codec.http;
 
 /**
- * @author <a href="mailto:andy.taylor@jboss.org">Andy Taylor</a>
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Andy Taylor (andy.taylor@jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ * @version $Rev$, $Date$
  */
-public class CookieHeaderNames {
-    public static final String PATH = "path";
+final class CookieHeaderNames {
+    static final String PATH = "path";
 
-    public static final String EXPIRES = "expires";
+    static final String EXPIRES = "expires";
 
-    public static final String MAX_AGE = "max-age";
+    static final String MAX_AGE = "max-age";
 
-    public static final String DOMAIN = "domain";
+    static final String DOMAIN = "domain";
 
-    public static final String SECURE = "secure";
+    static final String SECURE = "secure";
 
-    public static final String COMMENT = "comment";
+    static final String COMMENT = "comment";
 
-    public static final String COMMENTURL = "commentURL";
+    static final String COMMENTURL = "commentURL";
 
-    public static final String DISCARD = "discard";
+    static final String DISCARD = "discard";
 
-    public static final String PORT = "port";
+    static final String PORT = "port";
 
-    public static final String VERSION = "version";
+    static final String VERSION = "version";
 
-    public static String getMaxAgeString(int version) {
+    static String getMaxAgeString(int version) {
         switch (version) {
             case 0:
                 return EXPIRES;
@@ -56,5 +59,9 @@ public class CookieHeaderNames {
             default:
                 return EXPIRES;
         }
+    }
+
+    private CookieHeaderNames() {
+        // Unused.
     }
 }
