@@ -33,7 +33,7 @@ import org.junit.Test;
 public class CookieDecoderTest {
     @Test
     public void testDecodingSingleCookieV0() {
-        String cookieString = "myCookie=myValue;expires=50;path=%2Fapathsomewhere;domain=%2Fadomainsomewhere;secure;";
+        String cookieString = "myCookie=myValue;expires=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;";
         CookieDecoder cookieDecoder = new CookieDecoder();
         Map<String, Cookie> cookieMap = cookieDecoder.decode(cookieString);
         assertEquals(1, cookieMap.size());
@@ -41,8 +41,8 @@ public class CookieDecoderTest {
         assertNotNull(cookie);
         assertEquals("myValue", cookie.getValue());
         assertNull(cookie.getComment());
-        assertNull(cookie.getCommentURL());
-        assertEquals("/adomainsomewhere", cookie.getDomain());
+        assertNull(cookie.getCommentUrl());
+        assertEquals(".adomainsomewhere", cookie.getDomain());
         assertFalse(cookie.isDiscard());
         assertEquals(50, cookie.getMaxAge());
         assertEquals("/apathsomewhere", cookie.getPath());
@@ -53,7 +53,7 @@ public class CookieDecoderTest {
 
     @Test
     public void testDecodingSingleCookieV0ExtraParamsIgnored() {
-        String cookieString = "myCookie=myValue;max-age=50;path=%2Fapathsomewhere;domain=%2Fadomainsomewhere;secure;comment=this%20is%20a%20comment;version=0;commentURL=http%2F%3Aaurl.com;port=80,8080;discard;";
+        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=0;commentURL=http://aurl.com;port=80,8080;discard;";
         CookieDecoder cookieDecoder = new CookieDecoder();
         Map<String, Cookie> cookieMap = cookieDecoder.decode(cookieString);
         assertEquals(1, cookieMap.size());
@@ -61,8 +61,8 @@ public class CookieDecoderTest {
         assertNotNull(cookie);
         assertEquals("myValue", cookie.getValue());
         assertNull(cookie.getComment());
-        assertNull(cookie.getCommentURL());
-        assertEquals("/adomainsomewhere", cookie.getDomain());
+        assertNull(cookie.getCommentUrl());
+        assertEquals(".adomainsomewhere", cookie.getDomain());
         assertFalse(cookie.isDiscard());
         assertEquals(50, cookie.getMaxAge());
         assertEquals("/apathsomewhere", cookie.getPath());
@@ -72,7 +72,7 @@ public class CookieDecoderTest {
     }
     @Test
     public void testDecodingSingleCookieV1() {
-        String cookieString = "myCookie=myValue;max-age=50;path=%2Fapathsomewhere;domain=%2Fadomainsomewhere;secure;comment=this%20is%20a%20comment;version=1;";
+        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;";
         CookieDecoder cookieDecoder = new CookieDecoder();
         Map<String, Cookie> cookieMap = cookieDecoder.decode(cookieString);
         assertEquals(1, cookieMap.size());
@@ -80,8 +80,8 @@ public class CookieDecoderTest {
         assertEquals("myValue", cookie.getValue());
         assertNotNull(cookie);
         assertEquals("this is a comment", cookie.getComment());
-        assertNull(cookie.getCommentURL());
-        assertEquals("/adomainsomewhere", cookie.getDomain());
+        assertNull(cookie.getCommentUrl());
+        assertEquals(".adomainsomewhere", cookie.getDomain());
         assertFalse(cookie.isDiscard());
         assertEquals(50, cookie.getMaxAge());
         assertEquals("/apathsomewhere", cookie.getPath());
@@ -92,7 +92,7 @@ public class CookieDecoderTest {
 
     @Test
     public void testDecodingSingleCookieV1ExtraParamsIgnored() {
-        String cookieString = "myCookie=myValue;max-age=50;path=%2Fapathsomewhere;domain=%2Fadomainsomewhere;secure;comment=this%20is%20a%20comment;version=1;commentURL=http%2F%3Aaurl.com;port=80,8080;discard;";
+        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;commentURL=http://aurl.com;port=80,8080;discard;";
         CookieDecoder cookieDecoder = new CookieDecoder();
         Map<String, Cookie> cookieMap = cookieDecoder.decode(cookieString);
         assertEquals(1, cookieMap.size());
@@ -100,8 +100,8 @@ public class CookieDecoderTest {
         assertNotNull(cookie);
         assertEquals("myValue", cookie.getValue());
         assertEquals("this is a comment", cookie.getComment());
-        assertNull(cookie.getCommentURL());
-        assertEquals("/adomainsomewhere", cookie.getDomain());
+        assertNull(cookie.getCommentUrl());
+        assertEquals(".adomainsomewhere", cookie.getDomain());
         assertFalse(cookie.isDiscard());
         assertEquals(50, cookie.getMaxAge());
         assertEquals("/apathsomewhere", cookie.getPath());
@@ -111,7 +111,7 @@ public class CookieDecoderTest {
     }
     @Test
     public void testDecodingSingleCookieV2() {
-        String cookieString = "myCookie=myValue;max-age=50;path=%2Fapathsomewhere;domain=%2Fadomainsomewhere;secure;comment=this%20is%20a%20comment;version=2;commentURL=http%2F%3Aaurl.com;port=80,8080;discard;";
+        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=2;commentURL=http://aurl.com;port=\"80,8080\";discard;";
         CookieDecoder cookieDecoder = new CookieDecoder();
         Map<String, Cookie> cookieMap = cookieDecoder.decode(cookieString);
         assertEquals(1, cookieMap.size());
@@ -119,8 +119,8 @@ public class CookieDecoderTest {
         assertNotNull(cookie);
         assertEquals("myValue", cookie.getValue());
         assertEquals("this is a comment", cookie.getComment());
-        assertEquals("http/:aurl.com", cookie.getCommentURL());
-        assertEquals("/adomainsomewhere", cookie.getDomain());
+        assertEquals("http://aurl.com", cookie.getCommentUrl());
+        assertEquals(".adomainsomewhere", cookie.getDomain());
         assertTrue(cookie.isDiscard());
         assertEquals(50, cookie.getMaxAge());
         assertEquals("/apathsomewhere", cookie.getPath());
@@ -134,8 +134,8 @@ public class CookieDecoderTest {
 
     @Test
     public void testDecodingMultipleCookies() {
-        String c1 = "myCookie=myValue;max-age=50;path=%2Fapathsomewhere;domain=%2Fadomainsomewhere;secure;comment=this%20is%20a%20comment;version=2;commentURL=http%2F%3Aaurl.com;port=80,8080;discard;";
-        String c2 = "myCookie2=myValue2;max-age=0;path=%2Fanotherpathsomewhere;domain=%2Fanotherdomainsomewhere;comment=this%20is%20another%20comment;version=2;commentURL=http%2F%3Aanotherurl.com;";
+        String c1 = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=2;commentURL=\"http://aurl.com\";port='80,8080';discard;";
+        String c2 = "myCookie2=myValue2;max-age=0;path=/anotherpathsomewhere;domain=.anotherdomainsomewhere;comment=this is another comment;version=2;commentURL=http://anotherurl.com;";
         String c3 = "myCookie3=myValue3;max-age=0;version=2;";
         CookieDecoder decoder = new CookieDecoder();
 
@@ -145,8 +145,8 @@ public class CookieDecoderTest {
         assertNotNull(cookie);
         assertEquals("myValue", cookie.getValue());
         assertEquals("this is a comment", cookie.getComment());
-        assertEquals("http/:aurl.com", cookie.getCommentURL());
-        assertEquals("/adomainsomewhere", cookie.getDomain());
+        assertEquals("http://aurl.com", cookie.getCommentUrl());
+        assertEquals(".adomainsomewhere", cookie.getDomain());
         assertTrue(cookie.isDiscard());
         assertEquals(50, cookie.getMaxAge());
         assertEquals("/apathsomewhere", cookie.getPath());
@@ -159,8 +159,8 @@ public class CookieDecoderTest {
         assertNotNull(cookie);
         assertEquals("myValue2", cookie.getValue());
         assertEquals("this is another comment", cookie.getComment());
-        assertEquals("http/:anotherurl.com", cookie.getCommentURL());
-        assertEquals("/anotherdomainsomewhere", cookie.getDomain());
+        assertEquals("http://anotherurl.com", cookie.getCommentUrl());
+        assertEquals(".anotherdomainsomewhere", cookie.getDomain());
         assertFalse(cookie.isDiscard());
         assertEquals(0, cookie.getMaxAge());
         assertEquals("/anotherpathsomewhere", cookie.getPath());
@@ -171,7 +171,7 @@ public class CookieDecoderTest {
         assertNotNull(cookie);
         assertEquals("myValue3", cookie.getValue());
         assertNull( cookie.getComment());
-        assertNull(cookie.getCommentURL());
+        assertNull(cookie.getCommentUrl());
         assertNull(cookie.getDomain());
         assertFalse(cookie.isDiscard());
         assertEquals(0, cookie.getMaxAge());

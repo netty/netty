@@ -92,17 +92,17 @@ public class CookieDecoder {
                         name = val[0].trim();
                         value = val[1].trim();
                         if (CookieHeaderNames.COMMENT.equalsIgnoreCase(name)) {
-                            comment = QueryStringDecoder.decodeComponent(value, charset);
+                            comment = value;
                         }
                         else if (CookieHeaderNames.COMMENTURL.equalsIgnoreCase(name)) {
                             value = trimSurroundingQuotes(value);
-                            commentURL = QueryStringDecoder.decodeComponent(value, charset);
+                            commentURL = value;
                         }
                         else if (CookieHeaderNames.DOMAIN.equalsIgnoreCase(name)) {
-                            domain = QueryStringDecoder.decodeComponent(value, charset);
+                            domain = value;
                         }
                         else if (CookieHeaderNames.PATH.equalsIgnoreCase(name)) {
-                            path = QueryStringDecoder.decodeComponent(value, charset);
+                            path = value;
                         }
                         else if (CookieHeaderNames.EXPIRES.equalsIgnoreCase(name)) {
                             // FIXME: Expires attribute has different representation from Max-Age.
@@ -138,7 +138,7 @@ public class CookieDecoder {
                     theCookie.setComment(comment);
                 }
                 if (version > 1) {
-                    theCookie.setCommentURL(commentURL);
+                    theCookie.setCommentUrl(commentURL);
                     if (ports != null) {
                         theCookie.setPorts(ports);
                     }

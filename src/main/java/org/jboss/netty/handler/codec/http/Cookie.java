@@ -44,8 +44,8 @@ public interface Cookie extends Comparable<Cookie> {
     void setVersion(int version);
     boolean isSecure();
     void setSecure(boolean secure);
-    String getCommentURL();
-    void setCommentURL(String commentURL);
+    String getCommentUrl();
+    void setCommentUrl(String commentUrl);
     boolean isDiscard();
     void setDiscard(boolean discard);
     Set<Integer> getPorts();

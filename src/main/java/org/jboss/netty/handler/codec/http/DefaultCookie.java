@@ -39,7 +39,7 @@ public class DefaultCookie implements Cookie {
     private String domain;
     private String path;
     private String comment;
-    private String commentURL;
+    private String commentUrl;
     private boolean discard;
     private Set<Integer> ports = Collections.emptySet();
     private Set<Integer> unmodifiablePorts = ports;
@@ -97,7 +97,7 @@ public class DefaultCookie implements Cookie {
     }
 
     public void setDomain(String domain) {
-        this.domain = domain;
+        this.domain = validateValue("domain", domain);
     }
 
     public String getPath() {
@@ -105,7 +105,7 @@ public class DefaultCookie implements Cookie {
     }
 
     public void setPath(String path) {
-        this.path = path;
+        this.path = validateValue("path", path);
     }
 
     public String getComment() {
@@ -113,15 +113,15 @@ public class DefaultCookie implements Cookie {
     }
 
     public void setComment(String comment) {
-        this.comment = comment;
+        this.comment = validateValue("comment", comment);
     }
 
-    public String getCommentURL() {
-        return commentURL;
+    public String getCommentUrl() {
+        return commentUrl;
     }
 
-    public void setCommentURL(String commentURL) {
-        this.commentURL = commentURL;
+    public void setCommentUrl(String commentUrl) {
+        this.commentUrl = validateValue("commentUrl", commentUrl);
     }
 
     public boolean isDiscard() {
@@ -250,5 +250,25 @@ public class DefaultCookie implements Cookie {
             buf.append(", secure");
         }
         return buf.toString();
+    }
+
+    private static String validateValue(String name, String value) {
+        if (value == null) {
+            return null;
+        }
+        value = value.trim();
+        if (value.length() == 0) {
+            return null;
+        }
+        for (int i = 0; i < value.length(); i ++) {
+            char c = value.charAt(i);
+            switch (c) {
+            case '\r': case '\n': case '\f': case 0x0b: case ';':
+                throw new IllegalArgumentException(
+                        value + " contains one of the following prohibited characters: " +
+                        ";\\r\\n\\f\\v (" + value + ')');
+            }
+        }
+        return value;
     }
 }

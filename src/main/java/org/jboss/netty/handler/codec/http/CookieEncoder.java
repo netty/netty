@@ -86,11 +86,11 @@ public class CookieEncoder {
             add(sb, CookieHeaderNames.getMaxAgeString(encodingVersion), cookie.getMaxAge());
 
             if (cookie.getPath() != null) {
-                add(sb, CookieHeaderNames.PATH, QueryStringEncoder.encodeComponent(cookie.getPath(), charset));
+                add(sb, CookieHeaderNames.PATH, cookie.getPath());
             }
 
             if (cookie.getDomain() != null) {
-                add(sb, CookieHeaderNames.DOMAIN, QueryStringEncoder.encodeComponent(cookie.getDomain(), charset));
+                add(sb, CookieHeaderNames.DOMAIN, cookie.getDomain());
             }
             if (cookie.isSecure()) {
                     sb.append(CookieHeaderNames.SECURE);
@@ -98,15 +98,15 @@ public class CookieEncoder {
                 }
             if (encodingVersion >= 1) {
                 if (cookie.getComment() != null) {
-                    add(sb, CookieHeaderNames.COMMENT, QueryStringEncoder.encodeComponent(cookie.getComment(), charset));
+                    add(sb, CookieHeaderNames.COMMENT, cookie.getComment());
                 }
 
                 add(sb, CookieHeaderNames.VERSION, 1);
             }
 
             if (encodingVersion == 2) {
-                if (cookie.getCommentURL() != null) {
-                    addQuoted(sb, CookieHeaderNames.COMMENTURL, QueryStringEncoder.encodeComponent(cookie.getCommentURL(), charset));
+                if (cookie.getCommentUrl() != null) {
+                    addQuoted(sb, CookieHeaderNames.COMMENTURL, cookie.getCommentUrl());
                 }
                 if(!cookie.getPorts().isEmpty()) {
                     sb.append(CookieHeaderNames.PORT);

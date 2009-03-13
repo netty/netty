@@ -32,13 +32,13 @@ import org.junit.Test;
 public class CookieEncoderTest {
     @Test
     public void testEncodingSingleCookieV0() {
-        String result = "myCookie=myValue;expires=50;path=%2Fapathsomewhere;domain=%2Fadomainsomewhere;secure;";
+        String result = "myCookie=myValue;expires=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         CookieEncoder encoder = new CookieEncoder(0);
         encoder.addCookie(cookie);
         cookie.setComment("this is a comment");
-        cookie.setCommentURL("http/:aurl.com");
-        cookie.setDomain("/adomainsomewhere");
+        cookie.setCommentUrl("http://aurl.com");
+        cookie.setDomain(".adomainsomewhere");
         cookie.setDiscard(true);
         cookie.setMaxAge(50);
         cookie.setPath("/apathsomewhere");
@@ -49,13 +49,13 @@ public class CookieEncoderTest {
     }
     @Test
     public void testEncodingSingleCookieV1() {
-        String result = "myCookie=myValue;max-age=50;path=%2Fapathsomewhere;domain=%2Fadomainsomewhere;secure;comment=this%20is%20a%20comment;version=1;";
+        String result = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         CookieEncoder encoder = new CookieEncoder(1);
         encoder.addCookie(cookie);
         cookie.setComment("this is a comment");
-        cookie.setCommentURL("http/:aurl.com");
-        cookie.setDomain("/adomainsomewhere");
+        cookie.setCommentUrl("http://aurl.com");
+        cookie.setDomain(".adomainsomewhere");
         cookie.setDiscard(true);
         cookie.setMaxAge(50);
         cookie.setPath("/apathsomewhere");
@@ -66,13 +66,13 @@ public class CookieEncoderTest {
     }
     @Test
     public void testEncodingSingleCookieV2() {
-        String result = "myCookie=myValue;max-age=50;path=%2Fapathsomewhere;domain=%2Fadomainsomewhere;secure;comment=this%20is%20a%20comment;version=1;commentURL=\"http%2F%3Aaurl.com\";port=\"80,8080\";discard;";
+        String result = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;commentURL=\"http://aurl.com\";port=\"80,8080\";discard;";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         CookieEncoder encoder = new CookieEncoder(2);
         encoder.addCookie(cookie);
         cookie.setComment("this is a comment");
-        cookie.setCommentURL("http/:aurl.com");
-        cookie.setDomain("/adomainsomewhere");
+        cookie.setCommentUrl("http://aurl.com");
+        cookie.setDomain(".adomainsomewhere");
         cookie.setDiscard(true);
         cookie.setMaxAge(50);
         cookie.setPath("/apathsomewhere");
@@ -84,14 +84,14 @@ public class CookieEncoderTest {
 
     @Test
     public void testEncodingMultipleCookies() {
-        String c1 = "myCookie=myValue;max-age=50;path=%2Fapathsomewhere;domain=%2Fadomainsomewhere;secure;comment=this%20is%20a%20comment;version=1;commentURL=\"http%2F%3Aaurl.com\";port=\"80,8080\";discard;";
-        String c2 = "myCookie2=myValue2;max-age=0;path=%2Fanotherpathsomewhere;domain=%2Fanotherdomainsomewhere;comment=this%20is%20another%20comment;version=1;commentURL=\"http%2F%3Aanotherurl.com\";";
+        String c1 = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;commentURL=\"http://aurl.com\";port=\"80,8080\";discard;";
+        String c2 = "myCookie2=myValue2;max-age=0;path=/anotherpathsomewhere;domain=.anotherdomainsomewhere;comment=this is another comment;version=1;commentURL=\"http://anotherurl.com\";";
         String c3 = "myCookie3=myValue3;max-age=0;version=1;";
         CookieEncoder encoder = new CookieEncoder(2);
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setComment("this is a comment");
-        cookie.setCommentURL("http/:aurl.com");
-        cookie.setDomain("/adomainsomewhere");
+        cookie.setCommentUrl("http://aurl.com");
+        cookie.setDomain(".adomainsomewhere");
         cookie.setDiscard(true);
         cookie.setMaxAge(50);
         cookie.setPath("/apathsomewhere");
@@ -100,8 +100,8 @@ public class CookieEncoderTest {
         encoder.addCookie(cookie);
         Cookie cookie2 = new DefaultCookie("myCookie2", "myValue2");
         cookie2.setComment("this is another comment");
-        cookie2.setCommentURL("http/:anotherurl.com");
-        cookie2.setDomain("/anotherdomainsomewhere");
+        cookie2.setCommentUrl("http://anotherurl.com");
+        cookie2.setDomain(".anotherdomainsomewhere");
         cookie2.setDiscard(false);
         cookie2.setPath("/anotherpathsomewhere");
         cookie2.setSecure(false);
