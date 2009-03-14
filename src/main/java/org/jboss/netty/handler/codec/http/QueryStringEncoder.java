@@ -92,7 +92,7 @@ public class QueryStringEncoder {
         }
     }
 
-    static String encodeComponent(String s, String charset) {
+    private static String encodeComponent(String s, String charset) {
         try {
             return URLEncoder.encode(s, charset).replaceAll("\\+", "%20");
         } catch (UnsupportedEncodingException e) {

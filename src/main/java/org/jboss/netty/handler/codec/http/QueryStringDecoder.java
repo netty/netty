@@ -128,7 +128,7 @@ public class QueryStringDecoder {
         }
     }
 
-    static String decodeComponent(String s, String charset) {
+    private static String decodeComponent(String s, String charset) {
         try {
             return URLDecoder.decode(s, charset);
         } catch (UnsupportedEncodingException e) {

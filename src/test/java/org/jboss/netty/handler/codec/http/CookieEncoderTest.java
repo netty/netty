@@ -52,7 +52,7 @@ public class CookieEncoderTest {
         cookie.setPorts(80, 8080);
         cookie.setSecure(true);
         String encodedCookie = encoder.encode();
-
+        System.out.println(encodedCookie);
         long currentTime = System.currentTimeMillis();
         assertTrue(
                 encodedCookie.equals(result.replace("XXX", df.format(new Date(currentTime + 50000)))) ||
@@ -61,7 +61,7 @@ public class CookieEncoderTest {
     }
     @Test
     public void testEncodingSingleCookieV1() {
-        String result = "myCookie=myValue;Max-Age=50;Path=/apathsomewhere;Domain=.adomainsomewhere;Secure;Comment=this is a Comment;Version=1";
+        String result = "myCookie=myValue;Max-Age=50;Path=\"/apathsomewhere\";Domain=.adomainsomewhere;Secure;Comment=\"this is a Comment\";Version=1";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         CookieEncoder encoder = new CookieEncoder(true);
         encoder.addCookie(cookie);
@@ -76,7 +76,7 @@ public class CookieEncoderTest {
     }
     @Test
     public void testEncodingSingleCookieV2() {
-        String result = "myCookie=myValue;Max-Age=50;Path=/apathsomewhere;Domain=.adomainsomewhere;Secure;Comment=this is a Comment;Version=1;CommentURL=\"http://aurl.com\";Port=\"80,8080\";Discard";
+        String result = "myCookie=myValue;Max-Age=50;Path=\"/apathsomewhere\";Domain=.adomainsomewhere;Secure;Comment=\"this is a Comment\";Version=1;CommentURL=\"http://aurl.com\";Port=\"80,8080\";Discard";
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         CookieEncoder encoder = new CookieEncoder(true);
         encoder.addCookie(cookie);
@@ -95,8 +95,8 @@ public class CookieEncoderTest {
 
     @Test
     public void testEncodingMultipleCookies() {
-        String c1 = "myCookie=myValue;Max-Age=50;Path=/apathsomewhere;Domain=.adomainsomewhere;Secure;Comment=this is a Comment;Version=1;CommentURL=\"http://aurl.com\";Port=\"80,8080\";Discard;";
-        String c2 = "myCookie2=myValue2;Path=/anotherpathsomewhere;Domain=.anotherdomainsomewhere;Comment=this is another Comment;Version=1;CommentURL=\"http://anotherurl.com\";";
+        String c1 = "myCookie=myValue;Max-Age=50;Path=\"/apathsomewhere\";Domain=.adomainsomewhere;Secure;Comment=\"this is a Comment\";Version=1;CommentURL=\"http://aurl.com\";Port=\"80,8080\";Discard;";
+        String c2 = "myCookie2=myValue2;Path=\"/anotherpathsomewhere\";Domain=.anotherdomainsomewhere;Comment=\"this is another Comment\";Version=1;CommentURL=\"http://anotherurl.com\";";
         String c3 = "myCookie3=myValue3;Version=1";
         CookieEncoder encoder = new CookieEncoder(true);
         Cookie cookie = new DefaultCookie("myCookie", "myValue");

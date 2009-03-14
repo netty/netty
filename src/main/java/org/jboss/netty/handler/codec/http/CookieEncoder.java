@@ -35,18 +35,9 @@ public class CookieEncoder {
 
     private final Set<Cookie> cookies = new TreeSet<Cookie>();
     private final boolean server;
-    private final String charset;
 
     public CookieEncoder(boolean server) {
-        this(server, QueryStringDecoder.DEFAULT_CHARSET);
-    }
-
-    public CookieEncoder(boolean server, String charset) {
-        if (charset == null) {
-            throw new NullPointerException("charset");
-        }
         this.server = server;
-        this.charset = charset;
     }
 
     public void addCookie(String name, String value) {
@@ -69,11 +60,11 @@ public class CookieEncoder {
         StringBuilder sb = new StringBuilder();
 
         for (Cookie cookie: cookies) {
-            add(sb, cookie.getName(), QueryStringEncoder.encodeComponent(cookie.getValue(), charset));
+            add(sb, cookie.getName(), cookie.getValue());
 
             if (cookie.getMaxAge() >= 0) {
                 if (cookie.getVersion() == 0) {
-                    add(sb, CookieHeaderNames.EXPIRES,
+                    addUnquoted(sb, CookieHeaderNames.EXPIRES,
                             new CookieDateFormat().format(
                                     new Date(System.currentTimeMillis() +
                                              cookie.getMaxAge() * 1000L)));
@@ -83,11 +74,19 @@ public class CookieEncoder {
             }
 
             if (cookie.getPath() != null) {
-                add(sb, CookieHeaderNames.PATH, cookie.getPath());
+                if (cookie.getVersion() > 0) {
+                    add(sb, CookieHeaderNames.PATH, cookie.getPath());
+                } else {
+                    addUnquoted(sb, CookieHeaderNames.PATH, cookie.getPath());
+                }
             }
 
             if (cookie.getDomain() != null) {
-                add(sb, CookieHeaderNames.DOMAIN, cookie.getDomain());
+                if (cookie.getVersion() > 0) {
+                    add(sb, CookieHeaderNames.DOMAIN, cookie.getDomain());
+                } else {
+                    addUnquoted(sb, CookieHeaderNames.DOMAIN, cookie.getDomain());
+                }
             }
             if (cookie.isSecure()) {
                     sb.append(CookieHeaderNames.SECURE);
@@ -134,7 +133,7 @@ public class CookieEncoder {
                 add(sb, '$' + CookieHeaderNames.VERSION, 1);
             }
 
-            add(sb, cookie.getName(), QueryStringEncoder.encodeComponent(cookie.getValue(), charset));
+            add(sb, cookie.getName(), cookie.getValue());
 
             if (cookie.getPath() != null) {
                 add(sb, '$' + CookieHeaderNames.PATH, cookie.getPath());
@@ -165,6 +164,27 @@ public class CookieEncoder {
     }
 
     private static void add(StringBuilder sb, String name, String val) {
+        if (val == null) {
+            addQuoted(sb, name, "");
+            return;
+        }
+
+        for (int i = 0; i < val.length(); i ++) {
+            char c = val.charAt(i);
+            switch (c) {
+            case '(': case ')': case '<': case '>': case '@': case ',':
+            case ';': case ':': case '"': case '/': case '[': case ']':
+            case '?': case '=': case '{': case '}': case ' ':
+            case '\t': case '\\':
+                addQuoted(sb, name, val);
+                return;
+            }
+        }
+
+        addUnquoted(sb, name, val);
+    }
+
+    private static void addUnquoted(StringBuilder sb, String name, String val) {
         sb.append(name);
         sb.append((char) HttpCodecUtil.EQUALS);
         sb.append(val);
@@ -172,10 +192,14 @@ public class CookieEncoder {
     }
 
     private static void addQuoted(StringBuilder sb, String name, String val) {
+        if (val == null) {
+            val = "";
+        }
+
         sb.append(name);
         sb.append((char) HttpCodecUtil.EQUALS);
         sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
-        sb.append(val);
+        sb.append(val.replace("\\", "\\\\").replace("\"", "\\\""));
         sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
         sb.append((char) HttpCodecUtil.SEMICOLON);
     }
