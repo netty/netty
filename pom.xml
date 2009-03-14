@@ -214,6 +214,10 @@
     </dependency>
   </dependencies>
 
+  <properties>
+    <attach-distribution>false</attach-distribution>
+  </properties>
+
   <build>
     <plugins>
       <plugin>
@@ -543,7 +547,7 @@
           <descriptors>
             <descriptor>${basedir}/src/assembly/default.xml</descriptor>
           </descriptors>
-          <attach>false</attach>
+          <attach>${attach-distribution}</attach>
           <appendAssemblyId>true</appendAssemblyId>
           <tarLongFileMode>gnu</tarLongFileMode>
         </configuration>
