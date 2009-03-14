@@ -23,9 +23,12 @@ package org.jboss.netty.handler.codec.http;
 
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -35,168 +38,162 @@ import java.util.TreeSet;
  */
 public class CookieDecoder {
 
-    private final static String SEMICOLON = ";";
-
-    private final static String EQUALS = "=";
+    private final static Pattern PATTERN =
+        Pattern.compile("(?:\\s|[;,])*\\$*([^;=]+)(?:=(?:[\"']((?:\\\\.|[^\"])*)[\"']|([^;,]*)))?\\s*(?:[;,]+|$)");
 
     private final static String COMMA = ",";
 
-    private final String charset;
-
     public CookieDecoder() {
-        this(QueryStringDecoder.DEFAULT_CHARSET);
-    }
-
-    public CookieDecoder(String charset) {
-        if (charset == null) {
-            throw new NullPointerException("charset");
-        }
-        this.charset = charset;
+        super();
     }
 
     public Set<Cookie> decode(String header) {
-        Set<Cookie> cookies = new TreeSet<Cookie>();
-        String[] split = header.split(SEMICOLON);
+        Matcher m = PATTERN.matcher(header);
+        List<String> names = new ArrayList<String>(8);
+        List<String> values = new ArrayList<String>(8);
+        int pos = 0;
         int version = 0;
-        for (int i = 0; i < split.length; i++) {
-            boolean versionAtTheBeginning = false;
-            DefaultCookie theCookie;
-            String s = split[i];
-            String[] cookie = s.split(EQUALS, 2);
-            if (cookie != null && cookie.length == 2) {
-                String name = trimName(cookie[0]);
-                String value;
+        while (m.find(pos)) {
+            pos = m.end();
 
-                // $Version is the only attribute that can come before the
-                // actual cookie name-value pair.
-                if (!versionAtTheBeginning &&
-                    name.equalsIgnoreCase(CookieHeaderNames.VERSION)) {
-                    try {
-                        version = Integer.parseInt(trimValue(cookie[1]));
-                    } catch (NumberFormatException e) {
-                        // Ignore.
-                    }
-                    versionAtTheBeginning = true;
+            // Extract name and value pair from the match.
+            String name = m.group(1);
+            String value = m.group(3);
+            if (value == null) {
+                value = decodeValue(m.group(2));
+            }
+
+            // An exceptional case:
+            // 'Expires' attribute can contain a comma without surrounded with quotes.
+            if (name.equalsIgnoreCase(CookieHeaderNames.EXPIRES) &&
+                value.length() <= 3) {
+                // value contains comma, but not surrounded with quotes.
+                if (m.find(pos)) {
+                    value = value + ", " + m.group(1);
+                    pos = m.end();
+                } else {
                     continue;
                 }
+            }
 
-                // If it's not a version attribute, it's the name-value pair.
-                value = QueryStringDecoder.decodeComponent(trimValue(cookie[1]), charset);
-                theCookie = new DefaultCookie(name, value);
-                cookies.add(theCookie);
-                boolean discard = false;
-                boolean secure = false;
-                String comment = null;
-                String commentURL = null;
-                String domain = null;
-                String path = null;
-                int maxAge = -1;
-                List<Integer> ports = new ArrayList<Integer>(2);
-                loop:
-                for (int j = i + 1; j < split.length; j++, i++) {
-                    String[] val = split[j].split(EQUALS, 2);
-                    if (val == null) {
-                        continue;
-                    }
-                    switch (val.length) {
-                    case 1:
-                        if (CookieHeaderNames.DISCARD.equalsIgnoreCase(val[0])) {
-                            discard = true;
-                        }
-                        else if (CookieHeaderNames.SECURE.equalsIgnoreCase(val[0])) {
-                            secure = true;
-                        }
-                        break;
-                    case 2:
-                        name = trimName(val[0]);
-                        value = trimValue(val[1]);
-                        if (CookieHeaderNames.COMMENT.equalsIgnoreCase(name)) {
-                            comment = value;
-                        }
-                        else if (CookieHeaderNames.COMMENTURL.equalsIgnoreCase(name)) {
-                            value = trimValue(value);
-                            commentURL = value;
-                        }
-                        else if (CookieHeaderNames.DOMAIN.equalsIgnoreCase(name)) {
-                            domain = value;
-                        }
-                        else if (CookieHeaderNames.PATH.equalsIgnoreCase(name)) {
-                            path = value;
-                        }
-                        else if (CookieHeaderNames.EXPIRES.equalsIgnoreCase(name)) {
-                            try {
-                                long maxAgeMillis =
-                                    new CookieDateFormat().parse(value).getTime() - System.currentTimeMillis();
-                                if (maxAgeMillis <= 0) {
-                                    maxAge = 0;
-                                } else {
-                                    maxAge = (int) (maxAgeMillis / 1000) +
-                                             (maxAgeMillis % 1000 != 0? 1 : 0);
-                                }
-                            } catch (ParseException e) {
-                                maxAge = 0;
-                            }
-                        }
-                        else if (CookieHeaderNames.MAX_AGE.equalsIgnoreCase(name)) {
-                            maxAge = Integer.parseInt(value);
-                        }
-                        else if (CookieHeaderNames.VERSION.equalsIgnoreCase(name)) {
-                            version = Integer.parseInt(value);
-                        }
-                        else if (CookieHeaderNames.PORT.equalsIgnoreCase(name)) {
-                            value = trimValue(value);
-                            String[] portList = value.split(COMMA);
-                            for (String s1: portList) {
-                                try {
-                                    ports.add(Integer.valueOf(s1));
-                                } catch (NumberFormatException e) {
-                                    // Ignore.
-                                }
-                            }
+            names.add(name);
+            values.add(value);
+        }
+
+        if (names.isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        int i;
+
+        // $Version is the only attribute that can appear before the actual
+        // cookie name-value pair.
+        if (names.get(0).equalsIgnoreCase(CookieHeaderNames.VERSION)) {
+            try {
+                version = Integer.parseInt(values.get(0));
+            } catch (NumberFormatException e) {
+                // Ignore.
+            }
+            i = 1;
+        } else {
+            i = 0;
+        }
+
+        if (names.size() <= i) {
+            // There's a version attribute, but nothing more.
+            return Collections.emptySet();
+        }
+
+        Set<Cookie> cookies = new TreeSet<Cookie>();
+        for (; i < names.size(); i ++) {
+            String name = names.get(i);
+            String value = values.get(i);
+            if (value == null) {
+                value = "";
+            }
+
+            Cookie c = new DefaultCookie(name, value);
+            cookies.add(c);
+
+            boolean discard = false;
+            boolean secure = false;
+            String comment = null;
+            String commentURL = null;
+            String domain = null;
+            String path = null;
+            int maxAge = -1;
+            List<Integer> ports = new ArrayList<Integer>(2);
+
+            for (int j = i + 1; j < names.size(); j++, i++) {
+                name = names.get(j);
+                value = values.get(j);
+
+                if (CookieHeaderNames.DISCARD.equalsIgnoreCase(name)) {
+                    discard = true;
+                } else if (CookieHeaderNames.SECURE.equalsIgnoreCase(name)) {
+                    secure = true;
+                } else if (CookieHeaderNames.COMMENT.equalsIgnoreCase(name)) {
+                    comment = value;
+                } else if (CookieHeaderNames.COMMENTURL.equalsIgnoreCase(name)) {
+                    commentURL = value;
+                } else if (CookieHeaderNames.DOMAIN.equalsIgnoreCase(name)) {
+                    domain = value;
+                } else if (CookieHeaderNames.PATH.equalsIgnoreCase(name)) {
+                    path = value;
+                } else if (CookieHeaderNames.EXPIRES.equalsIgnoreCase(name)) {
+                    try {
+                        long maxAgeMillis =
+                            new CookieDateFormat().parse(value).getTime() -
+                            System.currentTimeMillis();
+                        if (maxAgeMillis <= 0) {
+                            maxAge = 0;
                         } else {
-                            break loop;
+                            maxAge = (int) (maxAgeMillis / 1000) +
+                                     (maxAgeMillis % 1000 != 0? 1 : 0);
                         }
-                        break;
+                    } catch (ParseException e) {
+                        // Ignore.
                     }
-                }
-                theCookie.setVersion(version);
-                theCookie.setMaxAge(maxAge);
-                theCookie.setPath(path);
-                theCookie.setDomain(domain);
-                theCookie.setSecure(secure);
-                if (version > 0) {
-                    theCookie.setComment(comment);
-                }
-                if (version > 1) {
-                    theCookie.setCommentUrl(commentURL);
-                    theCookie.setPorts(ports);
-                    theCookie.setDiscard(discard);
+                } else if (CookieHeaderNames.MAX_AGE.equalsIgnoreCase(name)) {
+                    maxAge = Integer.parseInt(value);
+                } else if (CookieHeaderNames.VERSION.equalsIgnoreCase(name)) {
+                    version = Integer.parseInt(value);
+                } else if (CookieHeaderNames.PORT.equalsIgnoreCase(name)) {
+                    String[] portList = value.split(COMMA);
+                    for (String s1: portList) {
+                        try {
+                            ports.add(Integer.valueOf(s1));
+                        } catch (NumberFormatException e) {
+                            // Ignore.
+                        }
+                    }
+                } else {
+                    break;
                 }
             }
+
+            c.setVersion(version);
+            c.setMaxAge(maxAge);
+            c.setPath(path);
+            c.setDomain(domain);
+            c.setSecure(secure);
+            if (version > 0) {
+                c.setComment(comment);
+            }
+            if (version > 1) {
+                c.setCommentUrl(commentURL);
+                c.setPorts(ports);
+                c.setDiscard(discard);
+            }
         }
+
         return cookies;
     }
 
-    private String trimName(String name) {
-        name = name.trim();
-        if (name.startsWith("$")) {
-            return name.substring(1);
-        } else {
-            return name;
+    private String decodeValue(String value) {
+        if (value == null) {
+            return value;
         }
-    }
-
-    private String trimValue(String value) {
-        value = value.trim();
-        if (value.length() >= 2) {
-            char firstChar = value.charAt(0);
-            char lastChar = value.charAt(value.length() - 1);
-            if ((firstChar == '"' || firstChar == '\'') &&
-                (lastChar == '"' || lastChar == '\'')) {
-                // Strip surrounding quotes.
-                value = value.substring(1, value.length() - 1);
-            }
-        }
-        return value;
+        return value.replace("\\\"", "\"").replace("\\\\", "\\");
     }
 }

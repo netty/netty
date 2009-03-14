@@ -27,7 +27,6 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -61,7 +60,7 @@ public class CookieDecoderTest {
 
     @Test
     public void testDecodingSingleCookieV0ExtraParamsIgnored() {
-        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=0;commentURL=http://aurl.com;port=80,8080;discard;";
+        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=0;commentURL=http://aurl.com;port=\"80,8080\";discard;";
         CookieDecoder cookieDecoder = new CookieDecoder();
         Set<Cookie> cookies = cookieDecoder.decode(cookieString);
         assertEquals(1, cookies.size());
@@ -100,7 +99,7 @@ public class CookieDecoderTest {
 
     @Test
     public void testDecodingSingleCookieV1ExtraParamsIgnored() {
-        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;commentURL=http://aurl.com;port=80,8080;discard;";
+        String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;secure;comment=this is a comment;version=1;commentURL=http://aurl.com;port='80,8080';discard;";
         CookieDecoder cookieDecoder = new CookieDecoder();
         Set<Cookie> cookies = cookieDecoder.decode(cookieString);
         assertEquals(1, cookies.size());
@@ -224,9 +223,7 @@ public class CookieDecoderTest {
     }
 
     @Test
-    @Ignore
     public void testDecodingCommaSeparatedClientSideCookies() {
-        // FIXME Fix CookieDecoder to pass this test.
         String source =
             "$Version=\"1\"; session_id=\"1234\", " +
             "$Version=\"1\"; session_id=\"1111\"; $Domain=\".cracker.edu\"";
@@ -256,5 +253,49 @@ public class CookieDecoderTest {
         assertNull(c.getCommentUrl());
         assertTrue(c.getPorts().isEmpty());
         assertEquals(-1, c.getMaxAge());
+    }
+
+    @Test
+    public void testDecodingQuotedCookie() {
+        String source =
+            "a=\"\"," +
+            "b=\"1\"," +
+            "c=\"\\\"1\\\"2\\\"\"," +
+            "d=\"1\\\"2\\\"3\"," +
+            "e=\"\\\"\\\"\"," +
+            "f=\"1\\\"\\\"2\"," +
+            "g=\"\\\\\"";
+
+        Set<Cookie> cookies = new CookieDecoder().decode(source);
+        Iterator<Cookie> it = cookies.iterator();
+        Cookie c;
+
+        c = it.next();
+        assertEquals("a", c.getName());
+        assertEquals("", c.getValue());
+
+        c = it.next();
+        assertEquals("b", c.getName());
+        assertEquals("1", c.getValue());
+
+        c = it.next();
+        assertEquals("c", c.getName());
+        assertEquals("\"1\"2\"", c.getValue());
+
+        c = it.next();
+        assertEquals("d", c.getName());
+        assertEquals("1\"2\"3", c.getValue());
+
+        c = it.next();
+        assertEquals("e", c.getName());
+        assertEquals("\"\"", c.getValue());
+
+        c = it.next();
+        assertEquals("f", c.getName());
+        assertEquals("1\"\"2", c.getValue());
+
+        c = it.next();
+        assertEquals("g", c.getName());
+        assertEquals("\\", c.getValue());
     }
 }

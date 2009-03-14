@@ -35,7 +35,7 @@ final class CookieDateFormat extends SimpleDateFormat {
     private static final long serialVersionUID = 1789486337887402640L;
 
     CookieDateFormat() {
-        super("E, d-MMM-y H:m:s z");
+        super("E, d-MMM-y HH:mm:ss z");
         setTimeZone(TimeZone.getTimeZone("GMT"));
     }
 }
