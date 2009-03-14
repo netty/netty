@@ -44,7 +44,7 @@ public class QueryStringEncoder {
     private final List<Param> params = new ArrayList<Param>();
 
     public QueryStringEncoder(String uri) {
-        this(uri, QueryStringDecoder.DEFAULT_CHARSET);
+        this(uri, HttpCodecUtil.DEFAULT_CHARSET);
     }
 
     public QueryStringEncoder(String uri, String charset) {

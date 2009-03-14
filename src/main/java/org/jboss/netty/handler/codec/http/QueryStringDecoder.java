@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -40,7 +42,7 @@ import java.util.Map;
  */
 public class QueryStringDecoder {
 
-    static final String DEFAULT_CHARSET = "UTF-8";
+    private static final Pattern PARAM_PATTERN = Pattern.compile("([^=]*)=([^&]*)&*");
 
     private final String charset;
     private final String uri;
@@ -48,7 +50,7 @@ public class QueryStringDecoder {
     private final Map<String, List<String>> params = new HashMap<String, List<String>>();
 
     public QueryStringDecoder(String uri) {
-        this(uri, DEFAULT_CHARSET);
+        this(uri, HttpCodecUtil.DEFAULT_CHARSET);
     }
 
     public QueryStringDecoder(String uri, String charset) {
@@ -64,7 +66,7 @@ public class QueryStringDecoder {
     }
 
     public QueryStringDecoder(URI uri) {
-        this(uri, DEFAULT_CHARSET);
+        this(uri, HttpCodecUtil.DEFAULT_CHARSET);
     }
 
     public QueryStringDecoder(URI uri, String charset){
@@ -105,30 +107,37 @@ public class QueryStringDecoder {
     }
 
     private void decode() {
-        String[] split = uri.split("\\?", 2);
-        path = split[0];
-        decodeParams(split[1]);
+        int pathEndPos = uri.indexOf('?');
+        if (pathEndPos < 0) {
+            path = uri;
+        } else {
+            path = uri.substring(0, pathEndPos);
+            decodeParams(uri.substring(pathEndPos + 1));
+        }
     }
 
     private void decodeParams(String s) {
-        String[] params = s.split("&");
-        for (String param : params) {
-            String[] split = param.split("=");
-            String key = decodeComponent(split[0], charset);
-            List<String> values = this.params.get(key);
+        Matcher m = PARAM_PATTERN.matcher(s);
+        int pos = 0;
+        while (m.find(pos)) {
+            pos = m.end();
+            String key = decodeComponent(m.group(1), charset);
+            String value = decodeComponent(m.group(2), charset);
+
+            List<String> values = params.get(key);
             if(values == null) {
                 values = new ArrayList<String>();
-                this.params.put(key,values);
+                params.put(key,values);
             }
-            if (split.length > 1) {
-                values.add(decodeComponent(split[1], charset));
-            } else {
-                values.add("");
-            }
+            values.add(value);
         }
     }
 
     private static String decodeComponent(String s, String charset) {
+        if (s == null) {
+            return "";
+        }
+
         try {
             return URLDecoder.decode(s, charset);
         } catch (UnsupportedEncodingException e) {

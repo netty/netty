@@ -70,6 +70,8 @@ class HttpCodecUtil {
 
     static final byte DOUBLE_QUOTE = '"';
 
+    static final String DEFAULT_CHARSET = "UTF-8";
+
     private HttpCodecUtil() {
         super();
     }
