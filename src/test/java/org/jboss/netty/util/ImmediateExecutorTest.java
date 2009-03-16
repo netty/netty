@@ -39,7 +39,7 @@ public class ImmediateExecutorTest {
     @Test
     public void shouldExecuteImmediately() {
         ImmediateExecutor e = ImmediateExecutor.INSTANCE;
-        long startTime = System.currentTimeMillis();
+        long startTime = System.nanoTime();
         e.execute(new Runnable() {
             public void run() {
                 for (;;) {
@@ -50,8 +50,8 @@ public class ImmediateExecutorTest {
                         // Ignore
                     }
                 }
-            }
+            } 
         });
-        assertTrue(System.currentTimeMillis() - startTime > 900);
+        assertTrue(System.nanoTime() - startTime > 900000000L);
     }
 }
