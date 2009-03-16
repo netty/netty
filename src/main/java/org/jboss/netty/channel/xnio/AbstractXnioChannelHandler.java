@@ -109,38 +109,37 @@ public abstract class AbstractXnioChannelHandler implements IoHandler<java.nio.c
     }
 
     public void handleWritable(java.nio.channels.Channel channel) {
-        // TODO Code cleanup & optimization
         BaseXnioChannel c = XnioChannelRegistry.getChannel(channel);
-        if (channel instanceof GatheringByteChannel) {
-            boolean open = true;
-            boolean addOpWrite = false;
+        int writtenBytes = 0;
+        boolean open = true;
+        boolean addOpWrite = false;
+        MessageEvent evt;
+        ChannelBuffer buf;
+        int bufIdx;
 
-            MessageEvent evt;
-            ChannelBuffer buf;
-            int bufIdx;
-            int writtenBytes = 0;
-
-            Queue<MessageEvent> writeBuffer = c.writeBuffer;
-            synchronized (c.writeLock) {
-                evt = c.currentWriteEvent;
-                for (;;) {
+        Queue<MessageEvent> writeBuffer = c.writeBuffer;
+        synchronized (c.writeLock) {
+            evt = c.currentWriteEvent;
+            for (;;) {
+                if (evt == null) {
+                    evt = writeBuffer.poll();
                     if (evt == null) {
-                        evt = writeBuffer.poll();
-                        if (evt == null) {
-                            c.currentWriteEvent = null;
-                            break;
-                        }
-
-                        buf = (ChannelBuffer) evt.getMessage();
-                        bufIdx = buf.readerIndex();
-                    } else {
-                        buf = (ChannelBuffer) evt.getMessage();
-                        bufIdx = c.currentWriteIndex;
+                        c.currentWriteEvent = null;
+                        break;
                     }
 
-                    try {
-                        final int writeSpinCount = c.getConfig().getWriteSpinCount();
-                        for (int i = writeSpinCount; i > 0; i --) {
+                    buf = (ChannelBuffer) evt.getMessage();
+                    bufIdx = buf.readerIndex();
+                } else {
+                    buf = (ChannelBuffer) evt.getMessage();
+                    bufIdx = c.currentWriteIndex;
+                }
+
+                try {
+                    final int writeSpinCount = c.getConfig().getWriteSpinCount();
+                    boolean sent = false;
+                    for (int i = writeSpinCount; i > 0; i --) {
+                        if (channel instanceof GatheringByteChannel) {
                             int localWrittenBytes = buf.getBytes(
                                 bufIdx,
                                 (GatheringByteChannel) channel,
@@ -151,148 +150,20 @@ public abstract class AbstractXnioChannelHandler implements IoHandler<java.nio.c
                                 writtenBytes += localWrittenBytes;
                                 break;
                             }
-                        }
-
-                        if (bufIdx == buf.writerIndex()) {
-                            // Successful write - proceed to the next message.
-                            evt.getFuture().setSuccess();
-                            evt = null;
-                        } else {
-                            // Not written fully - perhaps the kernel buffer is full.
-                            c.currentWriteEvent = evt;
-                            c.currentWriteIndex = bufIdx;
-                            addOpWrite = true;
-                            break;
-                        }
-                    } catch (AsynchronousCloseException e) {
-                        // Doesn't need a user attention - ignore.
-                    } catch (Throwable t) {
-                        evt.getFuture().setFailure(t);
-                        evt = null;
-                        fireExceptionCaught(c, t);
-                        if (t instanceof IOException) {
-                            open = false;
-                            c.closeNow(succeededFuture(c));
-                        }
-                    }
-                }
-            }
-
-            fireWriteComplete(c, writtenBytes);
-
-            if (open) {
-                if (addOpWrite && channel instanceof SuspendableWriteChannel) {
-                    ((SuspendableWriteChannel) channel).resumeWrites();
-                }
-            }
-        } else if (channel instanceof MultipointWritableMessageChannel) {
-            boolean open = true;
-            boolean addOpWrite = false;
-
-            MessageEvent evt;
-            ChannelBuffer buf;
-            int bufIdx;
-            int writtenBytes = 0;
-            SocketAddress remoteAddress;
-
-            Queue<MessageEvent> writeBuffer = c.writeBuffer;
-            synchronized (c.writeLock) {
-                evt = c.currentWriteEvent;
-                for (;;) {
-                    if (evt == null) {
-                        evt = writeBuffer.poll();
-                        if (evt == null) {
-                            c.currentWriteEvent = null;
-                            break;
-                        }
-
-                        buf = (ChannelBuffer) evt.getMessage();
-                        bufIdx = buf.readerIndex();
-                    } else {
-                        buf = (ChannelBuffer) evt.getMessage();
-                        bufIdx = c.currentWriteIndex;
-                    }
-
-                    remoteAddress = evt.getRemoteAddress();
-                    if (remoteAddress == null) {
-                        remoteAddress = c.getRemoteAddress();
-                    }
-
-                    try {
-                        final int writeSpinCount = c.getConfig().getWriteSpinCount();
-                        boolean sent = false;
-                        for (int i = writeSpinCount; i > 0; i --) {
+                        } else if (channel instanceof MultipointWritableMessageChannel) {
                             ByteBuffer nioBuf = buf.toByteBuffer(bufIdx, buf.writerIndex() - bufIdx);
                             int nioBufSize = nioBuf.remaining();
+                            SocketAddress remoteAddress = evt.getRemoteAddress();
+                            if (remoteAddress == null) {
+                                remoteAddress = c.getRemoteAddress();
+                            }
                             sent = ((MultipointWritableMessageChannel) channel).send(remoteAddress, nioBuf);
                             if (sent) {
                                 bufIdx += nioBufSize;
                                 writtenBytes += nioBufSize;
                                 break;
                             }
-                        }
-
-                        if (sent) {
-                            // Successful write - proceed to the next message.
-                            evt.getFuture().setSuccess();
-                            evt = null;
-                        } else {
-                            // Not written fully - perhaps the kernel buffer is full.
-                            c.currentWriteEvent = evt;
-                            c.currentWriteIndex = bufIdx;
-                            addOpWrite = true;
-                            break;
-                        }
-                    } catch (AsynchronousCloseException e) {
-                        // Doesn't need a user attention - ignore.
-                    } catch (Throwable t) {
-                        evt.getFuture().setFailure(t);
-                        evt = null;
-                        fireExceptionCaught(c, t);
-                        if (t instanceof IOException) {
-                            open = false;
-                            c.closeNow(succeededFuture(c));
-                        }
-                    }
-                }
-            }
-
-            fireWriteComplete(c, writtenBytes);
-
-            if (open && addOpWrite) {
-                ((SuspendableWriteChannel) channel).resumeWrites();
-            }
-        } else if (channel instanceof WritableMessageChannel) {
-            boolean open = true;
-            boolean addOpWrite = false;
-
-            MessageEvent evt;
-            ChannelBuffer buf;
-            int bufIdx;
-            int writtenBytes = 0;
-
-            Queue<MessageEvent> writeBuffer = c.writeBuffer;
-            synchronized (c.writeLock) {
-                evt = c.currentWriteEvent;
-                for (;;) {
-                    if (evt == null) {
-                        evt = writeBuffer.poll();
-                        if (evt == null) {
-                            c.currentWriteEvent = null;
-                            break;
-                        }
-
-                        buf = (ChannelBuffer) evt.getMessage();
-                        bufIdx = buf.readerIndex();
-                    } else {
-                        buf = (ChannelBuffer) evt.getMessage();
-                        bufIdx = c.currentWriteIndex;
-                    }
-
-                    try {
-                        final int writeSpinCount = c.getConfig().getWriteSpinCount();
-                        boolean sent = false;
-                        for (int i = writeSpinCount; i > 0; i --) {
+                        } else if (channel instanceof WritableMessageChannel) {
                             ByteBuffer nioBuf = buf.toByteBuffer(bufIdx, buf.writerIndex() - bufIdx);
                             int nioBufSize = nioBuf.remaining();
                             sent = ((WritableMessageChannel) channel).send(nioBuf);
@@ -301,36 +172,42 @@ public abstract class AbstractXnioChannelHandler implements IoHandler<java.nio.c
                                 writtenBytes += nioBufSize;
                                 break;
                             }
-                        }
-
-                        if (sent) {
-                            // Successful write - proceed to the next message.
-                            evt.getFuture().setSuccess();
-                            evt = null;
                         } else {
-                            // Not written fully - perhaps the kernel buffer is full.
-                            c.currentWriteEvent = evt;
-                            c.currentWriteIndex = bufIdx;
-                            addOpWrite = true;
-                            break;
+                            throw new IllegalArgumentException("Unsupported channel type: " + channel.getClass().getName());
                         }
-                    } catch (AsynchronousCloseException e) {
-                        // Doesn't need a user attention - ignore.
-                    } catch (Throwable t) {
-                        evt.getFuture().setFailure(t);
+                    }
+
+                    if (bufIdx == buf.writerIndex() || sent) {
+                        // Successful write - proceed to the next message.
+                        evt.getFuture().setSuccess();
                         evt = null;
-                        fireExceptionCaught(c, t);
-                        if (t instanceof IOException) {
-                            open = false;
-                            c.closeNow(succeededFuture(c));
-                        }
+                    } else {
+                        // Not written fully - perhaps the kernel buffer is full.
+                        c.currentWriteEvent = evt;
+                        c.currentWriteIndex = bufIdx;
+                        addOpWrite = true;
+                        break;
+                    }
+                } catch (AsynchronousCloseException e) {
+                    // Doesn't need a user attention - ignore.
+                } catch (Throwable t) {
+                    evt.getFuture().setFailure(t);
+                    evt = null;
+                    fireExceptionCaught(c, t);
+                    if (t instanceof IOException) {
+                        open = false;
+                        c.closeNow(succeededFuture(c));
                     }
                 }
             }
+        }
 
+        if (writtenBytes > 0) {
             fireWriteComplete(c, writtenBytes);
+        }
 
-            if (open && addOpWrite) {
+        if (open) {
+            if (addOpWrite && channel instanceof SuspendableWriteChannel) {
                 ((SuspendableWriteChannel) channel).resumeWrites();
             }
         }
