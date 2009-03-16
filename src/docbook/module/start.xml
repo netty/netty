@@ -344,7 +344,7 @@ public class TimeServerHandler extends &SimpleChannelHandler; {
         &ChannelFuture; f = ch.write(time);<co id="example.time.co3"/>
         
         f.addListener(new &ChannelFutureListener;() {<co id="example.time.co4"/>
-            public void operationComplete(&ChannelFuture; f) {
+            public void operationComplete(&ChannelFuture; future) {
                 &Channel; ch = future.getChannel();
                 ch.close();
             }
