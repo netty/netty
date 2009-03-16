@@ -463,7 +463,13 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     @Override
     public String toString() {
-        return buffer.toString();
+        return getClass().getSimpleName() + '(' +
+               "ridx=" +
+               readerIndex() +
+               ", " +
+               "widx=" +
+               writerIndex() +
+               ')';
     }
 
     public boolean writable() {
