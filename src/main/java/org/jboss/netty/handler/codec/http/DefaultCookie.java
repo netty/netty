@@ -25,6 +25,8 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.jboss.netty.util.CaseIgnoringComparator;
+
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -33,6 +35,21 @@ import java.util.TreeSet;
  * @version $Rev$, $Date$
  */
 public class DefaultCookie implements Cookie {
+
+    private static final Set<String> RESERVED_NAMES = new TreeSet<String>(CaseIgnoringComparator.INSTANCE);
+
+    static {
+        RESERVED_NAMES.add("Domain");
+        RESERVED_NAMES.add("Path");
+        RESERVED_NAMES.add("Comment");
+        RESERVED_NAMES.add("CommentURL");
+        RESERVED_NAMES.add("Discard");
+        RESERVED_NAMES.add("Port");
+        RESERVED_NAMES.add("Max-Age");
+        RESERVED_NAMES.add("Expires");
+        RESERVED_NAMES.add("Version");
+        RESERVED_NAMES.add("Secure");
+    }
 
     private final String name;
     private String value;
@@ -74,7 +91,10 @@ public class DefaultCookie implements Cookie {
             }
         }
 
-        // FIXME: Refuse known attribute names.
+        if (RESERVED_NAMES.contains(name)) {
+            throw new IllegalArgumentException("reserved name: " + name);
+        }
+
         this.name = name;
         setValue(value);
     }
