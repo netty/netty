@@ -41,11 +41,6 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * compatible with the standard {@link ObjectInputStream}.  Please use
  * {@link ObjectDecoder} or {@link ObjectDecoderInputStream} to ensure the
  * interoperability with this encoder.
- * <p>
- * Unless there's a requirement for the interoperability with the standard
- * object streams, it is recommended to use {@link ObjectEncoder} and
- * {@link ObjectDecoder} rather than {@link CompatibleObjectEncoder} and
- * {@link CompatibleObjectDecoder}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

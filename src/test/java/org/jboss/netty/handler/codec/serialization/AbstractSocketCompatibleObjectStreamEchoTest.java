@@ -90,6 +90,7 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testCompatibleObjectEcho() throws Throwable {
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));

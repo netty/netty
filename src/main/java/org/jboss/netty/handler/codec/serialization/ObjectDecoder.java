@@ -39,11 +39,6 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * compatible with the standard {@link ObjectOutputStream}.  Please use
  * {@link ObjectEncoder} or {@link ObjectEncoderOutputStream} to ensure the
  * interoperability with this decoder.
- * <p>
- * Unless there's a requirement for the interoperability with the standard
- * object streams, it is recommended to use {@link ObjectEncoder} and
- * {@link ObjectDecoder} rather than {@link CompatibleObjectEncoder} and
- * {@link CompatibleObjectDecoder}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

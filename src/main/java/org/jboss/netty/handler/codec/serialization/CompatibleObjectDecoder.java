@@ -48,13 +48,22 @@ import org.jboss.netty.util.SwitchableInputStream;
  * Please use {@link ObjectEncoder} and {@link ObjectDecoder} if you are not
  * required to keep the interoperability with the standard object streams.
  *
+ * @deprecated This decoder has a known critical bug which fails to decode and
+ *             raises a random exception in some circumstances.  Avoid to use
+ *             it whenever you can. The only workaround is to replace
+ *             {@link CompatibleObjectEncoder}, {@link CompatibleObjectDecoder},
+ *             {@link ObjectInputStream}, and {@link ObjectOutputStream} with
+ *             {@link ObjectEncoder}, {@link ObjectDecoder},
+ *             {@link ObjectEncoderOutputStream}, and
+ *             {@link ObjectDecoderInputStream} respectively.  This workaround
+ *             requires both a client and a server to be modified.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
- *
  */
+@Deprecated
 public class CompatibleObjectDecoder extends ReplayingDecoder<CompatibleObjectDecoderState> {
 
     private final SwitchableInputStream bin = new SwitchableInputStream();
