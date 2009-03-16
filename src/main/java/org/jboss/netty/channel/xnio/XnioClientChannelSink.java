@@ -112,8 +112,10 @@ final class XnioClientChannelSink extends AbstractChannelSink {
                 if (xnioChannel instanceof SuspendableReadChannel) {
                     if ((interestOps & Channel.OP_READ) == 0) {
                         ((SuspendableReadChannel) xnioChannel).suspendReads();
+                        channel.setRawInterestOpsNow(Channel.OP_NONE);
                     } else {
                         ((SuspendableReadChannel) xnioChannel).resumeReads();
+                        channel.setRawInterestOpsNow(Channel.OP_READ);
                     }
                 }
                 e.getFuture().setSuccess();
@@ -138,13 +140,13 @@ final class XnioClientChannelSink extends AbstractChannelSink {
 
     @SuppressWarnings("unchecked")
     private static final class FutureConnectionNotifier implements Notifier {
-    
+
         private final XnioClientChannel cc;
-    
+
         FutureConnectionNotifier(XnioClientChannel cc) {
             this.cc = cc;
         }
-    
+
         public void notify(IoFuture future, Object attachment) {
             ChannelFuture cf = (ChannelFuture) attachment;
             try {
