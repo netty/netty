@@ -51,8 +51,9 @@ public class CookieEncoderTest {
         cookie.setPath("/apathsomewhere");
         cookie.setPorts(80, 8080);
         cookie.setSecure(true);
+
         String encodedCookie = encoder.encode();
-        System.out.println(encodedCookie);
+
         long currentTime = System.currentTimeMillis();
         assertTrue(
                 encodedCookie.equals(result.replace("XXX", df.format(new Date(currentTime + 50000)))) ||
