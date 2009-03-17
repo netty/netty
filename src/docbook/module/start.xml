@@ -545,33 +545,39 @@ public class TimeClientHandler extends &SimpleChannelHandler; {
   
   <section>
     <title>
-      Dealing with Packet Fragmentation and Assembly
+      Dealing with a Stream-based Transport
     </title>
     <section>
       <title>
-        What is Packet Fragmentation and Assembly?
+        One Small Caveat of Socket Buffer
       </title>
       <para>
-        In a stream-based transport such as TCP/IP, packets can be fragmented and
-        reassembled during transmission even in a LAN environment.  For example,
-        let us assume you have received three packets:
+        In a stream-based transport such as TCP/IP, received data is stored
+        into a socket receive buffer.  Unfortunately, the buffer of a
+        stream-based transport is not a queue of packets but a queue of bytes.
+        It means, even if you sent two messages as two independent packets, an
+        operating system will not treat them as two messages but as just a
+        bunch of bytes.  Therefore, there is no guarantee that what you read
+        is exactly what your remote peer wrote.  For example, let us assume
+        that the TCP/IP stack of an operating system has received three packets:
       </para>
       <programlisting>+-----+-----+-----+
 | ABC | DEF | GHI |
 +-----+-----+-----+</programlisting>
       <para>
-        because of the packet fragmentation, a server can receive them as
-        follows:
+        Because of this general property of a stream-based protocol, there's
+        high chance of reading them in the following fragmented form in your
+        application:
       </para>
       <programlisting>+----+-------+---+---+
 | AB | CDEFG | H | I |
 +----+-------+---+---+</programlisting>
       <para>
-        Therefore, a receiving part, regardless it is server-side or client-side,
-        should defrag the received packets into one or more meaningful
+        Therefore, a receiving part, regardless it is server-side or
+        client-side, should defrag the received data into one or more meaningful
         <firstterm>frames</firstterm> that could be easily understood by the
-        application logic.  In case of the example above, the received packets
-        should be defragmented back like the following:
+        application logic.  In case of the example above, the received data
+        should be framed like the following:
       </para>
       <programlisting>+-----+-----+-----+
 | ABC | DEF | GHI |
@@ -582,9 +588,9 @@ public class TimeClientHandler extends &SimpleChannelHandler; {
         The First Solution
       </title>
       <para>
-        Now let us get back to the TIME client example.  We have the same problem
-        here.  A 32-bit integer is a very small amount of data, and it is not
-        likely to be fragmented often.  However, the problem is that it
+        Now let us get back to the TIME client example.  We have the same
+        problem here.  A 32-bit integer is a very small amount of data, and it
+        is not likely to be fragmented often.  However, the problem is that it
         <emphasis>can</emphasis> be fragmented, and the possibility of
         fragmentation will increase as the traffic increases.
       </para>
@@ -660,10 +666,10 @@ public class TimeClientHandler extends &SimpleChannelHandler; {
         There's another place that needs a fix.  Do you remember that we
         added a <classname>TimeClientHandler</classname> instance to the
         <emphasis>default</emphasis> &ChannelPipeline; of the &ClientBootstrap;?
-        It means one <classname>TimeClientHandler</classname> is going to handle
-        multiple &Channel;s and consequently the data will be corrupted.  To
-        create a new <classname>TimeClientHandler</classname> instance per
-        &Channel;, we should implement a &ChannelPipelineFactory;:
+        It means one same <classname>TimeClientHandler</classname> instance is
+        going to handle multiple &Channel;s and consequently the data will be
+        corrupted.  To create a new <classname>TimeClientHandler</classname>
+        instance per &Channel;, we have to implement a &ChannelPipelineFactory;:
       </para>
       <programlisting>package org.jboss.netty.example.time;
 
@@ -691,9 +697,9 @@ bootstrap.getPipeline().addLast("handler", handler);</programlisting>
         only one connection.
       </para>
       <para>
-        However, as your application gets more and more complex, you will end up
-        with an implementation of &ChannelPipelineFactory;, which yields much
-        more flexibility.
+        However, as your application gets more and more complex, you will
+        almost always end up with writing a &ChannelPipelineFactory;, which
+        yields much more flexibility to the pipeline configuration.
       </para>
     </section>
     <section>
@@ -716,8 +722,8 @@ bootstrap.getPipeline().addLast("handler", handler);</programlisting>
         <itemizedlist>
           <listitem>
             <para>
-              <classname>TimeDecoder</classname> which deals with the packet
-              fragmentation and assembly issue, and
+              <classname>TimeDecoder</classname> which deals with the
+              fragmentation issue, and
             </para>
           </listitem>
           <listitem>
@@ -728,8 +734,8 @@ bootstrap.getPipeline().addLast("handler", handler);</programlisting>
         </itemizedlist>
       </para>
       <para>
-        Fortunately, Netty provides an extensible class which enables you to
-        write the first one out of the box.
+        Fortunately, Netty provides an extensible class which helps you write
+        the first one out of the box:
       </para>
       <programlisting>package org.jboss.netty.example.time;
 
@@ -776,7 +782,7 @@ public class TimeDecoder extends &FrameDecoder; {
             internal cumulative buffer.  Please remember that you don't need
             to decode multiple messages.  &FrameDecoder; will keep calling
             the <methodname>decoder</methodname> method until it returns
-            <literal>null</literal>. 
+            <literal>null</literal>.
           </para>
         </callout>
       </calloutlist>
@@ -828,7 +834,7 @@ public class TimeDecoder extends &ReplayingDecoder;&lt;&VoidEnum;&gt; {
       primary data structure of a protocol message.  In this section, we will
       improve the TIME protocol client and server example to use a 
       <ulink url="http://en.wikipedia.org/wiki/POJO">POJO</ulink> instead of a
-      &ChannelBuffer;.  
+      &ChannelBuffer;.
     </para>
     <para>
       The advantage of using a POJO in your &ChannelHandler; is obvious;
@@ -924,15 +930,15 @@ public class TimeEncoder implements &SimpleChannelHandler; {
         &ChannelBuffer; buf = buffer(4);
         buf.writeInt(time.getValue());
         
-        &Channels;.write(ctx, e.getChannel(), e.getFuture(), buf);<co id="example.time6.co3"/>
+        &Channels;.write(ctx, e.getFuture(), buf);<co id="example.time6.co3"/>
     }
 }</programlisting>
     <calloutlist>
       <callout arearefs="example.time6.co1">
         <para>
           The &ChannelPipelineCoverage; value of an encoder is usually
-          <literal>"all"</literal> because an encoder is stateless in most
-          cases. 
+          <literal>"all"</literal> because this encoder is stateless.
+          Actually, most encoders are stateless.
         </para>
       </callout>
       <callout arearefs="example.time6.co2">
@@ -967,8 +973,8 @@ public class TimeEncoder implements &SimpleChannelHandler; {
           <programlisting>import static org.jboss.netty.channel.&Channels;.*;
 ...
 &ChannelPipeline; pipeline = pipeline();
-write(ctx, e.getChannel(), e.getFuture(), buf);
-fireChannelDisconnected(ctx, e.getChannel());</programlisting>
+write(ctx, e.getFuture(), buf);
+fireChannelDisconnected(ctx);</programlisting>
         </para>
       </callout>
     </calloutlist>
@@ -981,14 +987,217 @@ fireChannelDisconnected(ctx, e.getChannel());</programlisting>
   
   <section>
     <title>
+      Shutting Down Your Application
+    </title>
+    <para>
+      If you ran the <classname>TimeClient</classname>, you must have noticed
+      that the application doesn't exit but just keep running doing nothing.
+      Looking from the full stack trace, you will also find a couple I/O threads
+      are running.  To shut down the I/O threads and let the application exit
+      gracefully, you need to release the resources allocated by &ChannelFactory;.
+    </para>
+    <para>
+      The shutdown process of a typical network application is composed of the
+      following three steps:
+      <orderedlist>
+        <listitem>
+          <para>
+            Close all server sockets if there are any,
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Close all non-server sockets (i.e. client sockets and accepted
+            sockets) if there are any, and
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Release all resources used by &ChannelFactory;.
+          </para>
+        </listitem>
+      </orderedlist>
+    </para>
+    <para>
+      To apply the three steps above to the <classname>TimeClient</classname>,
+      <methodname>TimeClient.main()</methodname> could shut itself down
+      gracefully by closing the only one client connection and releasing all
+      resources used by &ChannelFactory;:
+    </para>
+    <programlisting>package org.jboss.netty.example.time;
+
+public class TimeClient {
+    public static void main(String[] args) throws Exception {
+        ...
+        &ChannelFactory; factory = ...;
+        &ClientBootstrap; bootstrap = ...;
+        ...
+        &ChannelFuture; future<co id="example.time7.co1"/> = bootstrap.connect(...);
+        future.awaitUninterruptible();<co id="example.time7.co2"/>
+        if (!future.isSuccess()) {
+            future.getCause().printStackTrace();<co id="example.time7.co3"/>
+        }
+        future.getChannel().getCloseFuture().awaitUninterruptibly();<co id="example.time7.co4"/>
+        factory.releaseExternalResources();<co id="example.time7.co5"/>
+    }
+}</programlisting>
+    <calloutlist>
+      <callout arearefs="example.time7.co1">
+        <para>
+          The <methodname>connect</methodname> method of &ClientBootstrap;
+          returns a &ChannelFuture; which notifies when a connection attempt
+          succeeds or fails.  It also has a reference to the &Channel; which
+          is associated with the connection attempt.
+        </para>
+      </callout>
+      <callout arearefs="example.time7.co2">
+        <para>
+          Wait for the returned &ChannelFuture; to determine if the connection
+          attempt was successful or not.
+        </para>
+      </callout>
+      <callout arearefs="example.time7.co3">
+        <para>
+          If failed, we print the cause of the failure to know why it failed.
+          the <methodname>getCause()</methodname> method of &ChannelFuture; will
+          return the cause of the failure if the connection attempt was neither
+          successful nor cancelled.
+        </para>
+      </callout>
+      <callout arearefs="example.time7.co4">
+        <para>
+          Now that the connection attempt is over, we need to wait until the
+          connection is closed by waiting for the <varname>closeFuture</varname>
+          of the &Channel;.  Every &Channel; has its own <varname>closeFuture</varname>
+          so that you are notified and can perform a certain action on closure.
+        </para>
+        <para>
+          Even if the connection attempt has failed the <varname>closeFuture</varname>
+          will be notified because the &Channel; will be closed automatically
+          when the connection attempt fails.
+        </para>
+      </callout>
+      <callout arearefs="example.time7.co5">
+        <para>
+          All connections have been closed at this point.  The only task left
+          is to release the resources being used by &ChannelFactory;.  It is as
+          simple as calling its <methodname>releaseExternalResources()</methodname>
+          method.  All resources including the NIO <classname>Selector</classname>s
+          and thread pools will be shut down and terminated automatically.
+        </para>
+      </callout>
+    </calloutlist>
+    <para>
+      Shutting down a client was pretty easy, but how about shutting down a
+      server?  You need to unbind from the port and close all open accepted
+      connections.  To do this, you need a data structure that keeps track of
+      the list of active connections, and it's not a trivial task.  Fortunately,
+      there is a solution, &ChannelGroup;.
+    </para>
+    <para>
+      &ChannelGroup; is a special extension of Java collections API which
+      represents a set of open &Channel;s.  If a &Channel; is added to a
+      &ChannelGroup; and the added &Channel; is closed, the closed &Channel;
+      is removed from its &ChannelGroup; automatically.  You can also perform
+      an operation on all &Channel;s in the same group.  For instance, you can
+      close all &Channel;s in a &ChannelGroup; when you shut down your server.
+    </para>
+    <para>
+      To keep track of open sockets, you need to modify the
+      <classname>TimeServerHandler</classname> to add a new open &Channel; to
+      the global &ChannelGroup;, <varname>TimeServer.allChannels</varname>:
+    </para>
+    <programlisting>@Override
+public void channelOpen(&ChannelHandlerContext; ctx, &ChannelStateEvent; e) {
+    TimeServer.allChannels.add(e.getChannel());<co id="example.time8.co1"/>
+}</programlisting>
+    <calloutlist>
+      <callout arearefs="example.time8.co1">
+        <para>
+          Yes, &ChannelGroup; is thread-safe.
+        </para>
+      </callout>
+    </calloutlist>
+    <para>
+      Now that the list of all active &Channel;s are maintained automatically,
+      shutting down a server is as easy as shutting down a client:
+    </para>
+    <programlisting>package org.jboss.netty.example.time;
+
+public class TimeServer {
+
+    static final &ChannelGroup; allChannels = new &DefaultChannelGroup;("time-server"<co id="example.time9.co1"/>);
+
+    public static void main(String[] args) throws Exception {
+        ...
+        &ChannelFactory; factory = ...;
+        &ServerBootstrap; bootstrap = ...;
+        ...
+        &Channel; channel<co id="example.time9.co2"/> = bootstrap.bind(...);
+        allChannels.add(channel);<co id="example.time9.co3"/>
+        waitForShutdownCommand();<co id="example.time9.co4"/>
+        &ChannelGroupFuture; future = allChannels.close();<co id="example.time9.co5"/>
+        future.awaitUninterruptibly();
+        factory.releaseExternalResources();
+    }
+}</programlisting>
+    <calloutlist>
+      <callout arearefs="example.time9.co1">
+        <para>
+          &DefaultChannelGroup; requires the name of the group as a constructor
+          parameter.  The group name is solely used to distinguish one group
+          from others.
+        </para>
+      </callout>
+      <callout arearefs="example.time9.co2">
+        <para>
+          The <methodname>bind</methodname> method of &ServerBootstrap;
+          returns a server side &Channel; which is bound to the specified
+          local address.  Calling the <methodname>close()</methodname> method
+          of the returned &Channel; will make the &Channel; unbind from the
+          bound local address.
+        </para>
+      </callout>
+      <callout arearefs="example.time9.co3">
+        <para>
+          Any type of &Channel;s can be added to a &ChannelGroup; regardless if
+          it is either server side, client-side, or accepted.  Therefore,
+          you can close the bound &Channel; along with the accepted &Channel;s
+          in one shot when the server shuts down.
+        </para>
+      </callout>
+      <callout arearefs="example.time9.co4">
+        <para>
+          <methodname>waitForShutdownCommand()</methodname> is an imaginary
+          method that waits for the shutdown signal.  You could wait for a
+          message from a privileged client or the JVM shutdown hook.
+        </para>
+      </callout>
+      <callout arearefs="example.time9.co5">
+        <para>
+          You can perform the same operation on all channels in the same 
+          &ChannelGroup;.  In this case, we close all channels, which means
+          the bound server-side &Channel; will be unbound and all accepted
+          connections will be closed asynchronously.  To notify when all
+          connections were closed successfully, it returns a &ChannelGroupFuture;
+          which has a similar role with &ChannelFuture;.
+        </para>
+      </callout>
+    </calloutlist>
+  </section>
+  
+  <section>
+    <title>
       Summary
     </title>
     <para>
       In this chapter, we had a quick tour of Netty with a demonstration on how
-      to write a network application on top of Netty.  More questions you may
-      have will be covered in the upcoming chapters and the revised version of
-      this chapter.  Please also note that <ulink url="&Community;">the Netty
-      project community</ulink> is always here to help you.
+      to write a fully working network application on top of Netty.  More
+      questions you may have will be covered in the upcoming chapters and the
+      revised version of this chapter.  Please also note that the
+      <ulink url="&Community;">community</ulink> is always waiting for your
+      questions and ideas to help you and keep improving Netty based on your
+      feed back.
     </para>
   </section>
 </chapter>
