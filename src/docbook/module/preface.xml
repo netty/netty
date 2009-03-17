@@ -14,9 +14,9 @@
     <title>The Problem</title>
     <para>
       Nowadays we use general purpose applications or libraries to communicate
-      with each other.  For example, we often use an open source HTTP client
-      library to retrieve information from an open source web server and to
-      invoke a remote procedure call via web services.
+      with each other.  For example, we often use an HTTP client library to
+      retrieve information from a web server and to invoke a remote procedure
+      call via web services.
     </para>
     <para>
       However, a general purpose protocol or its implementation sometimes 
@@ -26,8 +26,9 @@
       What's required is a highly optimized protocol implementation which is
       dedicated to a special purpose.  For example, you might want to
       implement an HTTP server which is optimized for AJAX-based chat
-      application.  You could even want to design and implement a whole new
-      protocol which is precisely tailored to your need.
+      application, media streaming, or large file transfer.  You could even
+      want to design and implement a whole new protocol which is precisely
+      tailored to your need.
     </para>
     <para>
       Another inevitable case is when you have to deal with a legacy
@@ -41,17 +42,16 @@
   <section>
     <title>The Solution</title>
     <para>
-      <firstterm><ulink url="&Home;">The Netty
-      project</ulink></firstterm> is an effort to provide an asynchronous
-      event-driven network application framework and tooling for the rapid
-      development of maintainable high-performance &middot; high-scalability
-      protocol servers and clients.
+      <firstterm><ulink url="&Home;">The Netty project</ulink></firstterm> is
+      an effort to provide an asynchronous event-driven network application
+      framework and tooling for the rapid development of maintainable
+      high-performance &middot; high-scalability protocol servers and clients.
     </para>
     <para>
       In other words, Netty is a NIO client server framework which enables
       quick and easy development of network applications such as protocol
       servers and clients.  It greatly simplifies and streamlines network
-      programming such as TCP/IP socket server development.
+      programming such as TCP and UDP socket server development.
     </para>
     <para>
       'Quick and easy' does not mean that a resulting application will suffer
