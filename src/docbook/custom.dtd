@@ -38,6 +38,12 @@
 <!ENTITY MessageEvent             "<ulink url='&API;channel/MessageEvent.html'><interfacename>MessageEvent</interfacename></ulink>">
 <!ENTITY SimpleChannelHandler     "<ulink url='&API;channel/SimpleChannelHandler.html'><classname>SimpleChannelHandler</classname></ulink>">
 
+<!-- Types in the channel.group package -->
+
+<!ENTITY ChannelGroup             "<ulink url='&API;channel/group/ChannelGroup.html'><interfacename>ChannelGroup</interfacename></ulink>">
+<!ENTITY ChannelGroupFuture       "<ulink url='&API;channel/group/ChannelGroupFuture.html'><interfacename>ChannelGroupFuture</interfacename></ulink>">
+<!ENTITY DefaultChannelGroup      "<ulink url='&API;channel/group/DefaultChannelGroup.html'><classname>DefaultChannelGroup</classname></ulink>">
+
 <!-- Types in the channel.socket package -->
 
 <!ENTITY ServerSocketChannel  "<ulink url='&API;channel/socket/ServerSocketChannel.html'><interfacename>ServerSocketChannel</interfacename></ulink>">
