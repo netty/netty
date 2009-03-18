@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -246,8 +247,15 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     public ChannelGroupFuture write(Object message) {
         Map<Integer, ChannelFuture> futures =
             new HashMap<Integer, ChannelFuture>(size());
-        for (Channel c: this) {
-            futures.put(c.getId(), c.write(message));
+        if (message instanceof ChannelBuffer) {
+            ChannelBuffer buf = (ChannelBuffer) message;
+            for (Channel c: this) {
+                futures.put(c.getId(), c.write(buf.duplicate()));
+            }
+        } else {
+            for (Channel c: this) {
+                futures.put(c.getId(), c.write(message));
+            }
         }
         return new DefaultChannelGroupFuture(this, futures);
     }
@@ -255,8 +263,15 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     public ChannelGroupFuture write(Object message, SocketAddress remoteAddress) {
         Map<Integer, ChannelFuture> futures =
             new HashMap<Integer, ChannelFuture>(size());
-        for (Channel c: this) {
-            futures.put(c.getId(), c.write(message, remoteAddress));
+        if (message instanceof ChannelBuffer) {
+            ChannelBuffer buf = (ChannelBuffer) message;
+            for (Channel c: this) {
+                futures.put(c.getId(), c.write(buf.duplicate(), remoteAddress));
+            }
+        } else {
+            for (Channel c: this) {
+                futures.put(c.getId(), c.write(message, remoteAddress));
+            }
         }
         return new DefaultChannelGroupFuture(this, futures);
     }
