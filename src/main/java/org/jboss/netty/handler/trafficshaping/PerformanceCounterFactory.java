@@ -28,7 +28,6 @@ import org.jboss.netty.channel.Channel;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
  * @author Frederic Bregier (fredbregier@free.fr)
  * @version $Rev$, $Date$
  *
