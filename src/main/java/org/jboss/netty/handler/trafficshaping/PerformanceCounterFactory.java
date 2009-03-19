@@ -343,7 +343,8 @@ public abstract class PerformanceCounterFactory {
      *         disabled
      */
     public PerformanceCounter createChannelPerformanceCounter(Channel channel) {
-        if (this.channelActive) {
+        if (this.channelActive && ((this.channelLimitRead > NO_LIMIT) || (this.channelLimitWrite > NO_LIMIT)
+                || (this.channelDelay > NO_STAT))) {
             return new PerformanceCounter(this, this.executorService, channel,
                     "ChannelPC" + channel.getId(), this.channelLimitWrite,
                     this.channelLimitRead, this.channelDelay);
