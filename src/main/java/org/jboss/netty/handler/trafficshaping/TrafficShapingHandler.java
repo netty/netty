@@ -39,133 +39,181 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * @author Trustin Lee (tlee@redhat.com)
  * @author Frederic Bregier (fredbregier@free.fr)
  * @version $Rev$, $Date$
- * 
- * TrafficShapingHandler allows to limit the global bandwidth or per session bandwidth, as traffic shaping.<br><br>
- *  
- * The method getMessageSize(MessageEvent) has to be implemented to specify what is the size of the object to be read or write
- * accordingly to the type of object. In simple case, it can be as simple as a call to getChannelBufferMessageSize(MessageEvent).<br><br>
- *  
- * TrafficShapingHandler depends on {@link PerformanceCounterFactory} to create or use the necessary {@link PerformanceCounter}
- * with the necessary options. However, you can change the behaviour of both global and channel PerformanceCounter if you like
- * by getting them from this handler and changing their status.
- * 
+ *
+ * TrafficShapingHandler allows to limit the global bandwidth or per session
+ * bandwidth, as traffic shaping.<br>
+ * <br>
+ *
+ * The method getMessageSize(MessageEvent) has to be implemented to specify what
+ * is the size of the object to be read or write accordingly to the type of
+ * object. In simple case, it can be as simple as a call to
+ * getChannelBufferMessageSize(MessageEvent).<br>
+ * <br>
+ *
+ * TrafficShapingHandler depends on {@link PerformanceCounterFactory} to create
+ * or use the necessary {@link PerformanceCounter} with the necessary options.
+ * However, you can change the behavior of both global and channel
+ * PerformanceCounter if you like by getting them from this handler and changing
+ * their status.
+ *
  */
 @ChannelPipelineCoverage("one")
 public abstract class TrafficShapingHandler extends SimpleChannelHandler {
-	/**
-	 * Channel Monitor
-	 */
-	private PerformanceCounter channelPerformanceCounter = null;
-	/**
-	 * Global Monitor
-	 */
-	private PerformanceCounter globalPerformanceCounter = null;
-	/**
-	 * Factory if used
-	 */
-	private PerformanceCounterFactory factory = null;
-	/**
-	 * Constructor
-	 * @param factory the PerformanceCounterFactory from which all Monitors will be created
-	 */
-	public TrafficShapingHandler(PerformanceCounterFactory factory) {
-		super();
-		this.factory = factory;
-		this.globalPerformanceCounter = this.factory.getGlobalPerformanceCounter();
-		this.channelPerformanceCounter = null; // will be set when connected is called
-	}
-	/**
-	 * This method has to be implemented. It returns the size in bytes of the message to be read or written.
-	 * @param arg1 the MessageEvent to be read or written
-	 * @return the size in bytes of the given MessageEvent
-	 * @exception Exception An exception can be thrown if the object is not of the expected type
-	 */
-	protected abstract long getMessageSize(MessageEvent arg1) throws Exception ;
-	/**
-	 * Example of function (which can be used) for the ChannelBuffer
-	 * @param arg1
-	 * @return the size in bytes of the given MessageEvent
-	 * @throws Exception
-	 */
-	protected long getChannelBufferMessageSize(MessageEvent arg1) throws Exception {
-		Object o = arg1.getMessage();
-		if (! (o instanceof ChannelBuffer)) {
-			// Type unimplemented
-			throw new InvalidClassException("Wrong object received in "+this.getClass().getName()+" codec "+o.getClass().getName());
-		}
-		ChannelBuffer dataBlock = (ChannelBuffer) o;
-		return dataBlock.readableBytes();
-	}
-	/* (non-Javadoc)
-	 * @see org.jboss.netty.channel.SimpleChannelHandler#messageReceived(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.MessageEvent)
-	 */
-	@Override
-	public void messageReceived(ChannelHandlerContext arg0, MessageEvent arg1) throws Exception {
-		long size = this.getMessageSize(arg1);
-		if (this.channelPerformanceCounter != null) {
-			this.channelPerformanceCounter.setReceivedBytes(arg0, size);
-		}
-		if (this.globalPerformanceCounter != null) {
-			this.globalPerformanceCounter.setReceivedBytes(arg0, size);
-		}
-		// The message is then just passed to the next Codec
-		super.messageReceived(arg0, arg1);
-	}
+    /**
+     * Channel Monitor
+     */
+    private PerformanceCounter channelPerformanceCounter = null;
 
-	/* (non-Javadoc)
-	 * @see org.jboss.netty.channel.SimpleChannelHandler#writeRequested(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.MessageEvent)
-	 */
-	@Override
-	public void writeRequested(ChannelHandlerContext arg0, MessageEvent arg1) throws Exception {
-		long size = this.getMessageSize(arg1);
-		if (this.channelPerformanceCounter != null) {
-			this.channelPerformanceCounter.setToWriteBytes(size);
-		}
-		if (this.globalPerformanceCounter != null) {
-			this.globalPerformanceCounter.setToWriteBytes(size);
-		}
-		// The message is then just passed to the next Codec
-		super.writeRequested(arg0, arg1);
-	}
-	/* (non-Javadoc)
-	 * @see org.jboss.netty.channel.SimpleChannelHandler#channelClosed(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelStateEvent)
-	 */
-	@Override
-	public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-		if (this.channelPerformanceCounter != null) {
-			this.channelPerformanceCounter.stopMonitoring();
-			this.channelPerformanceCounter = null;
-		}
-		super.channelClosed(ctx, e);
-	}
-	/* (non-Javadoc)
-	 * @see org.jboss.netty.channel.SimpleChannelHandler#channelConnected(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelStateEvent)
-	 */
-	@Override
-	public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-		// readSuspended = true;
+    /**
+     * Global Monitor
+     */
+    private PerformanceCounter globalPerformanceCounter = null;
+
+    /**
+     * Factory if used
+     */
+    private PerformanceCounterFactory factory = null;
+
+    /**
+     * Constructor
+     *
+     * @param factory
+     *            the PerformanceCounterFactory from which all Monitors will be
+     *            created
+     */
+    public TrafficShapingHandler(PerformanceCounterFactory factory) {
+        super();
+        this.factory = factory;
+        this.globalPerformanceCounter = this.factory
+                .getGlobalPerformanceCounter();
+        this.channelPerformanceCounter = null;
+        // will be set when connected is called
+    }
+
+    /**
+     * This method has to be implemented. It returns the size in bytes of the
+     * message to be read or written.
+     *
+     * @param arg1
+     *            the MessageEvent to be read or written
+     * @return the size in bytes of the given MessageEvent
+     * @exception Exception
+     *                An exception can be thrown if the object is not of the
+     *                expected type
+     */
+    protected abstract long getMessageSize(MessageEvent arg1) throws Exception;
+
+    /**
+     * Example of function (which can be used) for the ChannelBuffer
+     *
+     * @param arg1
+     * @return the size in bytes of the given MessageEvent
+     * @throws Exception
+     */
+    protected long getChannelBufferMessageSize(MessageEvent arg1)
+            throws Exception {
+        Object o = arg1.getMessage();
+        if (!(o instanceof ChannelBuffer)) {
+            // Type unimplemented
+            throw new InvalidClassException("Wrong object received in " +
+                    this.getClass().getName() + " codec " +
+                    o.getClass().getName());
+        }
+        ChannelBuffer dataBlock = (ChannelBuffer) o;
+        return dataBlock.readableBytes();
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see org.jboss.netty.channel.SimpleChannelHandler#messageReceived(org.jboss.netty.channel.ChannelHandlerContext,
+     *      org.jboss.netty.channel.MessageEvent)
+     */
+    @Override
+    public void messageReceived(ChannelHandlerContext arg0, MessageEvent arg1)
+            throws Exception {
+        long size = getMessageSize(arg1);
+        if (this.channelPerformanceCounter != null) {
+            this.channelPerformanceCounter.setReceivedBytes(arg0, size);
+        }
+        if (this.globalPerformanceCounter != null) {
+            this.globalPerformanceCounter.setReceivedBytes(arg0, size);
+        }
+        // The message is then just passed to the next Codec
+        super.messageReceived(arg0, arg1);
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see org.jboss.netty.channel.SimpleChannelHandler#writeRequested(org.jboss.netty.channel.ChannelHandlerContext,
+     *      org.jboss.netty.channel.MessageEvent)
+     */
+    @Override
+    public void writeRequested(ChannelHandlerContext arg0, MessageEvent arg1)
+            throws Exception {
+        long size = getMessageSize(arg1);
+        if (this.channelPerformanceCounter != null) {
+            this.channelPerformanceCounter.setToWriteBytes(size);
+        }
+        if (this.globalPerformanceCounter != null) {
+            this.globalPerformanceCounter.setToWriteBytes(size);
+        }
+        // The message is then just passed to the next Codec
+        super.writeRequested(arg0, arg1);
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see org.jboss.netty.channel.SimpleChannelHandler#channelClosed(org.jboss.netty.channel.ChannelHandlerContext,
+     *      org.jboss.netty.channel.ChannelStateEvent)
+     */
+    @Override
+    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
+            throws Exception {
+        if (this.channelPerformanceCounter != null) {
+            this.channelPerformanceCounter.stopMonitoring();
+            this.channelPerformanceCounter = null;
+        }
+        super.channelClosed(ctx, e);
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see org.jboss.netty.channel.SimpleChannelHandler#channelConnected(org.jboss.netty.channel.ChannelHandlerContext,
+     *      org.jboss.netty.channel.ChannelStateEvent)
+     */
+    @Override
+    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e)
+            throws Exception {
+        // readSuspended = true;
         ctx.setAttachment(Boolean.TRUE);
-		ctx.getChannel().setReadable(false);
-		if ((this.channelPerformanceCounter == null) && (this.factory != null)) {
-			// A factory was used
-			this.channelPerformanceCounter = this.factory.createChannelPerformanceCounter(ctx.getChannel());
-		}
-		if (this.channelPerformanceCounter != null) {
-			this.channelPerformanceCounter.setMonitoredChannel(ctx.getChannel());
-			this.channelPerformanceCounter.startMonitoring();
-		}
-		super.channelConnected(ctx, e);
-		// readSuspended = false;
+        ctx.getChannel().setReadable(false);
+        if ((this.channelPerformanceCounter == null) && (this.factory != null)) {
+            // A factory was used
+            this.channelPerformanceCounter = this.factory
+                    .createChannelPerformanceCounter(ctx.getChannel());
+        }
+        if (this.channelPerformanceCounter != null) {
+            this.channelPerformanceCounter
+                    .setMonitoredChannel(ctx.getChannel());
+            this.channelPerformanceCounter.startMonitoring();
+        }
+        super.channelConnected(ctx, e);
+        // readSuspended = false;
         ctx.setAttachment(null);
-		ctx.getChannel().setReadable(true);
-	}
-	
-	@Override
-	public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-		if (e instanceof ChannelStateEvent) {
+        ctx.getChannel().setReadable(true);
+    }
+
+    @Override
+    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
+            throws Exception {
+        if (e instanceof ChannelStateEvent) {
             ChannelStateEvent cse = (ChannelStateEvent) e;
             if (cse.getState() == ChannelState.INTEREST_OPS &&
-                (((Integer) cse.getValue()).intValue() & Channel.OP_READ) != 0) {
+                    (((Integer) cse.getValue()).intValue() & Channel.OP_READ) != 0) {
 
                 // setReadable(true) requested
                 boolean readSuspended = ctx.getAttachment() != null;
@@ -177,21 +225,26 @@ public abstract class TrafficShapingHandler extends SimpleChannelHandler {
                 }
             }
         }
-		super.handleDownstream(ctx, e);
-	}
-	/**
-	 * 
-	 * @return the current ChannelPerformanceCounter set from the factory (if channel is still connected) or null if this function was disabled in the Factory
-	 */
-	public PerformanceCounter getChannelPerformanceCounter() {
-		return this.channelPerformanceCounter;
-	}
-	/**
-	 * 
-	 * @return the GlobalPerformanceCounter from the factory or null if this function was disabled in the Factory
-	 */
-	public PerformanceCounter getGlobalPerformanceCounter() {
-		return this.globalPerformanceCounter;
-	}
-	
+        super.handleDownstream(ctx, e);
+    }
+
+    /**
+     *
+     * @return the current ChannelPerformanceCounter set from the factory (if
+     *         channel is still connected) or null if this function was disabled
+     *         in the Factory
+     */
+    public PerformanceCounter getChannelPerformanceCounter() {
+        return this.channelPerformanceCounter;
+    }
+
+    /**
+     *
+     * @return the GlobalPerformanceCounter from the factory or null if this
+     *         function was disabled in the Factory
+     */
+    public PerformanceCounter getGlobalPerformanceCounter() {
+        return this.globalPerformanceCounter;
+    }
+
 }
