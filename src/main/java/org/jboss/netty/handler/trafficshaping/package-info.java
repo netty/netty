@@ -51,7 +51,8 @@
  * sometimes it will block for a while which can turn to "timeout" operations.
  * For instance, let says that you've got 2 NioWorkers, and 10 clients wants to send data to your server. If you set a bandwidth limitation
  * of 100KB/s for each channel (client), you could have a final limitation of about 60KB/s for each channel since NioWorkers are
- * stopping by this handler.<br><br>
+ * stopping by this handler.<br>
+ * When it is used as a read traffic shaper, the handler will set the channel as not readable, so as to relax the NioWorkers.<br><br>
  * The method <tt>getMessageSize(MessageEvent)</tt> has to be implemented to specify what is the size of the object to be read or write
  * accordingly to the type of object. In simple case, it can be as simple as a call to <tt>getChannelBufferMessageSize(MessageEvent)</tt>.<br>
  * </ul></P>
