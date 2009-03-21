@@ -32,17 +32,18 @@
  *
  * <P>Three classes implement this behavior:<br>
  * <ul>
- * <li> <tt>PerformanceCounter</tt>: this class is the kernel of the package. It can be accessed to get some extra information
+ * <li> <tt>{@link TrafficCounter}</tt>: this class is the kernel of the package. It can be accessed to get some extra information
  * like the read or write bytes since last check, the read and write bandwidth from last check...</li><br><br>
  *
- * <li> <tt>PerformanceCounterFactory</tt>: this class has to be implemented in your code in order to implement (eventually empty)
- * the accounting method. This class is a Factory for PerformanceCounter which is used in the third class to create the
- * necessary PerformanceCounter according to your specifications.</li><br><br>
+ * <li> <tt>{@link TrafficCounterFactory}</tt>: this class has to be implemented in your code in order to implement (eventually empty)
+ * the accounting method. This class is a Factory for TrafficCounter which is used in the third class to create the
+ * necessary TrafficCounter according to your specifications.</li><br><br>
  *
- * <li> <tt>TrafficShapingHandler</tt>: this class is the handler to be inserted in your pipeline. The insertion can be wherever
- * you want, but <b>it must be placed before any <tt>MemoryAwareThreadPoolExecutor</tt> in your pipeline</b>.</li><br>
+ * <li> <tt>{@link TrafficShapingHandler}</tt>: this class is the handler to be inserted in your pipeline. The insertion can be wherever
+ * you want, but <b>it must be placed before any <tt>{@link MemoryAwareThreadPoolExecutor}</tt> in your pipeline</b>.</li><br>
  * <b><i>It is really recommended
- * to have such a</i> <tt>MemoryAwareThreadPoolExecutor</tt> <i>(either non ordered or </i><tt>OrderedMemoryAwareThreadPoolExecutor</tt>
+ * to have such a</i> <tt>{@link MemoryAwareThreadPoolExecutor}</tt> <i>(either non ordered or </i>
+ * <tt>{@link OrderedMemoryAwareThreadPoolExecutor}</tt>
  * <i>) in your pipeline</i></b>
  * when you want to use this feature with some real traffic shaping, since it will allow to relax the constraint on
  * NioWorker to do other jobs if necessary.<br>
@@ -53,8 +54,9 @@
  * of 100KB/s for each channel (client), you could have a final limitation of about 60KB/s for each channel since NioWorkers are
  * stopping by this handler.<br>
  * When it is used as a read traffic shaper, the handler will set the channel as not readable, so as to relax the NioWorkers.<br><br>
- * The method <tt>getMessageSize(MessageEvent)</tt> has to be implemented to specify what is the size of the object to be read or write
- * accordingly to the type of object. In simple case, it can be as simple as a call to <tt>getChannelBufferMessageSize(MessageEvent)</tt>.<br>
+ *  An {@link ObjectSizeEstimator} can be passed at construction to specify what
+ * is the size of the object to be read or write accordingly to the type of
+ * object. If not specified, it will used the {@link DefaultObjectSizeEstimator} implementation.
  * </ul></P>
  *
  * <P>Standard use could be as follow:</P>
@@ -62,26 +64,26 @@
  * <P><ul>
  * <li>To activate or deactivate the traffic shaping, change the value corresponding to your desire as
  * [Global or per Channel] [Write or Read] Limitation in byte/s.</li><br>
- * <tt>PerformanceCounterFactory.NO_LIMIT</tt> (-1)
+ * A value of <tt>0</tt>
  * stands for no limitation, so the traffic shaping is deactivate (on what you specified).<br>
- * You can either change those values with the method <tt>changeConfiguration</tt> in PerformanceCounterFactory or
- * directly from the PerformanceCounter method <tt>changeConfiguration</tt>.<br>
+ * You can either change those values with the method <tt>changeConfiguration</tt> in TrafficCounterFactory or
+ * directly from the TrafficCounter method <tt>changeConfiguration</tt>.<br>
  * <br>
  *
  * <li>To activate or deactivate the statistics, you can adjust the delay to a low (not less than 200ms
  * for efficiency reasons) or a high value (let say 24H in ms is huge enough to not get the problem)
- * or even using <tt>PerformanceCounterFactory.NO_STAT</tt> (-1)</li>.<br>
+ * or even using <tt>0</tt> which means no computation will be done.</li><br>
  * And if you don't want to do anything with this statistics, just implement an empty method for
- * <tt>PerformanceCounterFactory.accounting(PerformanceCounter)</tt>.<br>
- * Again this can be changed either from PerformanceCounterFactory or directly in PerformanceCounter.<br><br>
+ * <tt>TrafficCounterFactory.accounting(TrafficCounter)</tt>.<br>
+ * Again this can be changed either from TrafficCounterFactory or directly in TrafficCounter.<br><br>
  *
- * <li>You can also completely deactivate channel or global PerformanceCounter by setting the boolean to false
- * accordingly to your needs in the PerformanceCounterFactory. It will deactivate the global Monitor. For channels monitor,
+ * <li>You can also completely deactivate channel or global TrafficCounter by setting the boolean to false
+ * accordingly to your needs in the TrafficCounterFactory. It will deactivate the global Monitor. For channels monitor,
  * it will prevent new monitors to be created (or reversely they will be created for newly connected channels).</li>
  * </ul></P><br><br>
  *
- * <P>So in your application you will create your own PerformanceCounterFactory and setting the values to fit your needs.</P>
- * <tt>MyPerformanceCounterFactory myFactory = new MyPerformanceCounter(...);</tt><br><br><br>
+ * <P>So in your application you will create your own TrafficCounterFactory and setting the values to fit your needs.</P>
+ * <tt>MyTrafficCounterFactory myFactory = new MyTrafficCounter(...);</tt><br><br><br>
  * <P>Then you can create your pipeline (using a PipelineFactory since each TrafficShapingHandler must be unique by channel) and adding this handler before
  * your MemoryAwareThreadPoolExecutor:</P>
  * <tt>pipeline.addLast("MyTrafficShaping",new MyTrafficShapingHandler(myFactory));</tt><br>
@@ -89,11 +91,15 @@
  * <tt>pipeline.addLast("MemoryExecutor",new ExecutionHandler(memoryAwareThreadPoolExecutor));</tt><br><br>
  *
  * <P>TrafficShapingHandler must be unique by channel but however it is still global due to
- * the PerformanceCounterFactcory that is shared between all handlers across the channels.</P>
+ * the TrafficCounterFactcory that is shared between all handlers across the channels.</P>
  *
  *
  *
  * @apiviz.exclude ^java\.lang\.
  */
-package org.jboss.netty.handler.trafficshaping;
+package org.jboss.netty.handler.traffic;
 
+import org.jboss.netty.handler.execution.DefaultObjectSizeEstimator;
+import org.jboss.netty.handler.execution.ObjectSizeEstimator;
+import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
+import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;

@@ -20,11 +20,8 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.trafficshaping;
+package org.jboss.netty.handler.traffic;
 
-import java.io.InvalidClassException;
-
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -33,6 +30,8 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.handler.execution.DefaultObjectSizeEstimator;
+import org.jboss.netty.handler.execution.ObjectSizeEstimator;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -43,16 +42,15 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * bandwidth, as traffic shaping.<br>
  * <br>
  *
- * The method getMessageSize(MessageEvent) has to be implemented to specify what
+ * An {@link ObjectSizeEstimator} can be passed at construction to specify what
  * is the size of the object to be read or write accordingly to the type of
- * object. In simple case, it can be as simple as a call to
- * getChannelBufferMessageSize(MessageEvent).<br>
+ * object. If not specified, it will used the {@link DefaultObjectSizeEstimator} implementation.<br>
  * <br>
  *
- * TrafficShapingHandler depends on {@link PerformanceCounterFactory} to create
- * or use the necessary {@link PerformanceCounter} with the necessary options.
+ * TrafficShapingHandler depends on {@link TrafficCounterFactory} to create
+ * or use the necessary {@link TrafficCounter} with the necessary options.
  * However, you can change the behavior of both global and channel
- * PerformanceCounter if you like by getting them from this handler and changing
+ * TrafficCounter if you like by getting them from this handler and changing
  * their status.
  *
  */
@@ -61,67 +59,56 @@ public abstract class TrafficShapingHandler extends SimpleChannelHandler {
     /**
      * Channel Monitor
      */
-    private PerformanceCounter channelPerformanceCounter = null;
+    private TrafficCounter channelTrafficCounter = null;
 
     /**
      * Global Monitor
      */
-    private PerformanceCounter globalPerformanceCounter = null;
+    private TrafficCounter globalTrafficCounter = null;
 
     /**
      * Factory if used
      */
-    private PerformanceCounterFactory factory = null;
-
+    private TrafficCounterFactory factory = null;
     /**
-     * Constructor
+     * ObjectSizeEstimator
+     */
+    private ObjectSizeEstimator objectSizeEstimator = null;
+    /**
+     * Constructor using default {@link ObjectSizeEstimator}
      *
      * @param factory
-     *            the PerformanceCounterFactory from which all Monitors will be
+     *            the TrafficCounterFactory from which all Monitors will be
      *            created
      */
-    public TrafficShapingHandler(PerformanceCounterFactory factory) {
+    public TrafficShapingHandler(TrafficCounterFactory factory) {
         super();
         this.factory = factory;
-        this.globalPerformanceCounter = this.factory
-                .getGlobalPerformanceCounter();
-        this.channelPerformanceCounter = null;
+        this.globalTrafficCounter = this.factory
+                .getGlobalTrafficCounter();
+        this.channelTrafficCounter = null;
+        this.objectSizeEstimator = new DefaultObjectSizeEstimator();
         // will be set when connected is called
     }
-
     /**
-     * This method has to be implemented. It returns the size in bytes of the
-     * message to be read or written.
+     * Constructor using the specified ObjectSizeEstimator
      *
-     * @param arg1
-     *            the MessageEvent to be read or written
-     * @return the size in bytes of the given MessageEvent
-     * @exception Exception
-     *                An exception can be thrown if the object is not of the
-     *                expected type
+     * @param factory
+     *            the TrafficCounterFactory from which all Monitors will be
+     *            created
+     * @param objectSizeEstimator
+     *            the {@link ObjectSizeEstimator} that will be used to compute 
+     *            the size of the message
      */
-    protected abstract long getMessageSize(MessageEvent arg1) throws Exception;
-
-    /**
-     * Example of function (which can be used) for the ChannelBuffer
-     *
-     * @param arg1
-     * @return the size in bytes of the given MessageEvent
-     * @throws Exception
-     */
-    protected long getChannelBufferMessageSize(MessageEvent arg1)
-            throws Exception {
-        Object o = arg1.getMessage();
-        if (!(o instanceof ChannelBuffer)) {
-            // Type unimplemented
-            throw new InvalidClassException("Wrong object received in " +
-                    this.getClass().getName() + " codec " +
-                    o.getClass().getName());
-        }
-        ChannelBuffer dataBlock = (ChannelBuffer) o;
-        return dataBlock.readableBytes();
+    public TrafficShapingHandler(TrafficCounterFactory factory, ObjectSizeEstimator objectSizeEstimator) {
+        super();
+        this.factory = factory;
+        this.globalTrafficCounter = this.factory
+                .getGlobalTrafficCounter();
+        this.channelTrafficCounter = null;
+        this.objectSizeEstimator = objectSizeEstimator;
+        // will be set when connected is called
     }
-
     /*
      * (non-Javadoc)
      *
@@ -131,12 +118,12 @@ public abstract class TrafficShapingHandler extends SimpleChannelHandler {
     @Override
     public void messageReceived(ChannelHandlerContext arg0, MessageEvent arg1)
             throws Exception {
-        long size = getMessageSize(arg1);
-        if (this.channelPerformanceCounter != null) {
-            this.channelPerformanceCounter.setReceivedBytes(arg0, size);
+        long size = this.objectSizeEstimator.estimateSize(arg1.getMessage());
+        if (this.channelTrafficCounter != null) {
+            this.channelTrafficCounter.setReceivedBytes(arg0, size);
         }
-        if (this.globalPerformanceCounter != null) {
-            this.globalPerformanceCounter.setReceivedBytes(arg0, size);
+        if (this.globalTrafficCounter != null) {
+            this.globalTrafficCounter.setReceivedBytes(arg0, size);
         }
         // The message is then just passed to the next Codec
         super.messageReceived(arg0, arg1);
@@ -151,12 +138,12 @@ public abstract class TrafficShapingHandler extends SimpleChannelHandler {
     @Override
     public void writeRequested(ChannelHandlerContext arg0, MessageEvent arg1)
             throws Exception {
-        long size = getMessageSize(arg1);
-        if (this.channelPerformanceCounter != null) {
-            this.channelPerformanceCounter.setToWriteBytes(size);
+        long size = this.objectSizeEstimator.estimateSize(arg1.getMessage());
+        if (this.channelTrafficCounter != null) {
+            this.channelTrafficCounter.setToWriteBytes(size);
         }
-        if (this.globalPerformanceCounter != null) {
-            this.globalPerformanceCounter.setToWriteBytes(size);
+        if (this.globalTrafficCounter != null) {
+            this.globalTrafficCounter.setToWriteBytes(size);
         }
         // The message is then just passed to the next Codec
         super.writeRequested(arg0, arg1);
@@ -171,9 +158,9 @@ public abstract class TrafficShapingHandler extends SimpleChannelHandler {
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
-        if (this.channelPerformanceCounter != null) {
-            this.channelPerformanceCounter.stopMonitoring();
-            this.channelPerformanceCounter = null;
+        if (this.channelTrafficCounter != null) {
+            this.channelTrafficCounter.stopMonitoring();
+            this.channelTrafficCounter = null;
         }
         super.channelClosed(ctx, e);
     }
@@ -190,15 +177,15 @@ public abstract class TrafficShapingHandler extends SimpleChannelHandler {
         // readSuspended = true;
         ctx.setAttachment(Boolean.TRUE);
         ctx.getChannel().setReadable(false);
-        if ((this.channelPerformanceCounter == null) && (this.factory != null)) {
+        if ((this.channelTrafficCounter == null) && (this.factory != null)) {
             // A factory was used
-            this.channelPerformanceCounter = this.factory
-                    .createChannelPerformanceCounter(ctx.getChannel());
+            this.channelTrafficCounter = this.factory
+                    .createChannelTrafficCounter(ctx.getChannel());
         }
-        if (this.channelPerformanceCounter != null) {
-            this.channelPerformanceCounter
+        if (this.channelTrafficCounter != null) {
+            this.channelTrafficCounter
                     .setMonitoredChannel(ctx.getChannel());
-            this.channelPerformanceCounter.startMonitoring();
+            this.channelTrafficCounter.startMonitoring();
         }
         super.channelConnected(ctx, e);
         // readSuspended = false;
@@ -229,21 +216,21 @@ public abstract class TrafficShapingHandler extends SimpleChannelHandler {
 
     /**
      *
-     * @return the current ChannelPerformanceCounter set from the factory (if
+     * @return the current Channel TrafficCounter set from the factory (if
      *         channel is still connected) or null if this function was disabled
      *         in the Factory
      */
-    public PerformanceCounter getChannelPerformanceCounter() {
-        return this.channelPerformanceCounter;
+    public TrafficCounter getChannelTrafficCounter() {
+        return this.channelTrafficCounter;
     }
 
     /**
      *
-     * @return the GlobalPerformanceCounter from the factory or null if this
+     * @return the Global TrafficCounter from the factory or null if this
      *         function was disabled in the Factory
      */
-    public PerformanceCounter getGlobalPerformanceCounter() {
-        return this.globalPerformanceCounter;
+    public TrafficCounter getGlobalTrafficCounter() {
+        return this.globalTrafficCounter;
     }
 
 }

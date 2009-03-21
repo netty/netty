@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.trafficshaping;
+package org.jboss.netty.handler.traffic;
 
 import java.util.concurrent.ExecutorService;
 
@@ -31,45 +31,33 @@ import org.jboss.netty.channel.Channel;
  * @author Frederic Bregier (fredbregier@free.fr)
  * @version $Rev$, $Date$
  *
- * The {@link PerformanceCounterFactory} is a Factory for
- * {@link PerformanceCounter}. It stores the necessary information to enable
- * dynamic creation of {@link PerformanceCounter} inside the
+ * The {@link TrafficCounterFactory} is a Factory for
+ * {@link TrafficCounter}. It stores the necessary information to enable
+ * dynamic creation of {@link TrafficCounter} inside the
  * {@link TrafficShapingHandler}.
  *
  *
  */
-public abstract class PerformanceCounterFactory {
-    /**
-     * No limit
-     */
-    public static long NO_LIMIT = -1;
-
-    /**
-     * No statistics (if channel or global PerformanceCounter is a very long
-     * time living, it can produce a excess of capacity, i.e. 2^64 bytes so 17
-     * billions of billions of bytes).
-     */
-    public static long NO_STAT = -1;
-
+public abstract class TrafficCounterFactory {
     /**
      * Default delay between two checks: 1s
      */
     public static long DEFAULT_DELAY = 1000;
 
     /**
-     * ExecutorService to associated to any PerformanceCounter
+     * ExecutorService to associated to any TrafficCounter
      */
     private ExecutorService executorService = null;
 
     /**
-     * Limit in B/s to apply to write for all channel PerformanceCounter
+     * Limit in B/s to apply to write for all channel TrafficCounter
      */
-    private long channelLimitWrite = NO_LIMIT;
+    private long channelLimitWrite = 0;
 
     /**
-     * Limit in B/s to apply to read for all channel PerformanceCounter
+     * Limit in B/s to apply to read for all channel TrafficCounter
      */
-    private long channelLimitRead = NO_LIMIT;
+    private long channelLimitRead = 0;
 
     /**
      * Delay between two performance snapshots for channel
@@ -77,19 +65,19 @@ public abstract class PerformanceCounterFactory {
     private long channelDelay = DEFAULT_DELAY; // default 1 s
 
     /**
-     * Will the PerformanceCounter for Channel be active
+     * Will the TrafficCounter for Channel be active
      */
     private boolean channelActive = true;
 
     /**
-     * Limit in B/s to apply to write for the global PerformanceCounter
+     * Limit in B/s to apply to write for the global TrafficCounter
      */
-    private long globalLimitWrite = NO_LIMIT;
+    private long globalLimitWrite = 0;
 
     /**
-     * Limit in B/s to apply to read for the global PerformanceCounter
+     * Limit in B/s to apply to read for the global TrafficCounter
      */
-    private long globalLimitRead = NO_LIMIT;
+    private long globalLimitRead = 0;
 
     /**
      * Delay between two performance snapshots for global
@@ -97,23 +85,23 @@ public abstract class PerformanceCounterFactory {
     private long globalDelay = DEFAULT_DELAY; // default 1 s
 
     /**
-     * Will the PerformanceCounter for Global be active
+     * Will the TrafficCounter for Global be active
      */
     private boolean globalActive = true;
 
     /**
      * Global Monitor
      */
-    private PerformanceCounter globalPerformanceMonitor = null;
+    private TrafficCounter globalTrafficMonitor = null;
 
     /**
-     * Called each time the accounting is computed for the PerformanceCounters.
+     * Called each time the accounting is computed for the TrafficCounters.
      * This method could be used for instance to implement real time accounting.
      *
      * @param counter
-     *            the PerformanceCounter that computes its performance
+     *            the TrafficCounter that computes its performance
      */
-    protected abstract void accounting(PerformanceCounter counter);
+    protected abstract void accounting(TrafficCounter counter);
 
     /**
      *
@@ -149,7 +137,7 @@ public abstract class PerformanceCounterFactory {
      * @param executorService
      *            created for instance like Executors.newCachedThreadPool
      * @param channelActive
-     *            True if each channel will have a PerformanceCounter
+     *            True if each channel will have a TrafficCounter
      * @param channelLimitWrite
      *            NO_LIMIT or a limit in bytes/s
      * @param channelLimitRead
@@ -158,7 +146,7 @@ public abstract class PerformanceCounterFactory {
      *            The delay between two computations of performances for
      *            channels or NO_STAT if no stats are to be computed
      * @param globalActive
-     *            True if global context will have one unique PerformanceCounter
+     *            True if global context will have one unique TrafficCounter
      * @param globalLimitWrite
      *            NO_LIMIT or a limit in bytes/s
      * @param globalLimitRead
@@ -167,7 +155,7 @@ public abstract class PerformanceCounterFactory {
      *            The delay between two computations of performances for global
      *            context or NO_STAT if no stats are to be computed
      */
-    public PerformanceCounterFactory(ExecutorService executorService,
+    public TrafficCounterFactory(ExecutorService executorService,
             boolean channelActive, long channelLimitWrite,
             long channelLimitRead, long channelDelay, boolean globalActive,
             long globalLimitWrite, long globalLimitRead, long globalDelay) {
@@ -182,19 +170,19 @@ public abstract class PerformanceCounterFactory {
      * @param executorService
      *            created for instance like Executors.newCachedThreadPool
      * @param channelActive
-     *            True if each channel will have a PerformanceCounter
+     *            True if each channel will have a TrafficCounter
      * @param channelLimitWrite
      *            NO_LIMIT or a limit in bytes/s
      * @param channelLimitRead
      *            NO_LIMIT or a limit in bytes/s
      * @param globalActive
-     *            True if global context will have one unique PerformanceCounter
+     *            True if global context will have one unique TrafficCounter
      * @param globalLimitWrite
      *            NO_LIMIT or a limit in bytes/s
      * @param globalLimitRead
      *            NO_LIMIT or a limit in bytes/s
      */
-    public PerformanceCounterFactory(ExecutorService executorService,
+    public TrafficCounterFactory(ExecutorService executorService,
             boolean channelActive, long channelLimitWrite,
             long channelLimitRead, boolean globalActive, long globalLimitWrite,
             long globalLimitRead) {
@@ -209,9 +197,9 @@ public abstract class PerformanceCounterFactory {
      * @param executorService
      *            created for instance like Executors.newCachedThreadPool
      * @param channelActive
-     *            True if each channel will have a PerformanceCounter
+     *            True if each channel will have a TrafficCounter
      * @param globalActive
-     *            True if global context will have one unique PerformanceCounter
+     *            True if global context will have one unique TrafficCounter
      * @param globalLimitWrite
      *            NO_LIMIT or a limit in bytes/s
      * @param globalLimitRead
@@ -220,10 +208,10 @@ public abstract class PerformanceCounterFactory {
      *            The delay between two computations of performances for global
      *            context or NO_STAT if no stats are to be computed
      */
-    public PerformanceCounterFactory(ExecutorService executorService,
+    public TrafficCounterFactory(ExecutorService executorService,
             boolean channelActive, boolean globalActive, long globalLimitWrite,
             long globalLimitRead, long globalDelay) {
-        init(executorService, channelActive, NO_LIMIT, NO_LIMIT,
+        init(executorService, channelActive, 0, 0,
                 DEFAULT_DELAY, globalActive, globalLimitWrite, globalLimitRead,
                 globalDelay);
     }
@@ -234,18 +222,18 @@ public abstract class PerformanceCounterFactory {
      * @param executorService
      *            created for instance like Executors.newCachedThreadPool
      * @param channelActive
-     *            True if each channel will have a PerformanceCounter
+     *            True if each channel will have a TrafficCounter
      * @param globalActive
-     *            True if global context will have one unique PerformanceCounter
+     *            True if global context will have one unique TrafficCounter
      * @param globalLimitWrite
      *            NO_LIMIT or a limit in bytes/s
      * @param globalLimitRead
      *            NO_LIMIT or a limit in bytes/s
      */
-    public PerformanceCounterFactory(ExecutorService executorService,
+    public TrafficCounterFactory(ExecutorService executorService,
             boolean channelActive, boolean globalActive, long globalLimitWrite,
             long globalLimitRead) {
-        init(executorService, channelActive, NO_LIMIT, NO_LIMIT,
+        init(executorService, channelActive, 0, 0,
                 DEFAULT_DELAY, globalActive, globalLimitWrite, globalLimitRead,
                 DEFAULT_DELAY);
     }
@@ -256,18 +244,18 @@ public abstract class PerformanceCounterFactory {
      * @param executorService
      *            created for instance like Executors.newCachedThreadPool
      * @param channelActive
-     *            True if each channel will have a PerformanceCounter
+     *            True if each channel will have a TrafficCounter
      * @param globalActive
-     *            True if global context will have one unique PerformanceCounter
+     *            True if global context will have one unique TrafficCounter
      */
-    public PerformanceCounterFactory(ExecutorService executorService,
+    public TrafficCounterFactory(ExecutorService executorService,
             boolean channelActive, boolean globalActive) {
-        init(executorService, channelActive, NO_LIMIT, NO_LIMIT,
-                DEFAULT_DELAY, globalActive, NO_LIMIT, NO_LIMIT, DEFAULT_DELAY);
+        init(executorService, channelActive, 0, 0,
+                DEFAULT_DELAY, globalActive, 0, 0, DEFAULT_DELAY);
     }
 
     /**
-     * Enable to change the active status of PerformanceCounter on Channels (for
+     * Enable to change the active status of TrafficCounter on Channels (for
      * new one only)
      *
      * @param active
@@ -277,7 +265,7 @@ public abstract class PerformanceCounterFactory {
     }
 
     /**
-     * Enable to change the active status of PerformanceCounter on Global (stop
+     * Enable to change the active status of TrafficCounter on Global (stop
      * or start if necessary)
      *
      * @param active
@@ -285,16 +273,16 @@ public abstract class PerformanceCounterFactory {
     public void setGlobalActive(boolean active) {
         if (this.globalActive) {
             if (!active) {
-                stopGlobalPerformanceCounter();
+                stopGlobalTrafficCounter();
             }
         }
         this.globalActive = active;
-        getGlobalPerformanceCounter();
+        getGlobalTrafficCounter();
     }
 
     /**
-     * Change the underlying limitations. Only Global PerformanceCounter (if
-     * any) is dynamically changed, but Channels PerformanceCounters are not
+     * Change the underlying limitations. Only Global TrafficCounter (if
+     * any) is dynamically changed, but Channels TrafficCounters are not
      * changed, only new created ones.
      *
      * @param newchannelLimitWrite
@@ -314,37 +302,37 @@ public abstract class PerformanceCounterFactory {
         this.globalLimitWrite = newglobalLimitWrite;
         this.globalLimitRead = newglobalLimitRead;
         this.globalDelay = newglobaldelay;
-        if (this.globalPerformanceMonitor != null) {
-            this.globalPerformanceMonitor.changeConfiguration(null,
+        if (this.globalTrafficMonitor != null) {
+            this.globalTrafficMonitor.changeConfiguration(null,
                     newglobalLimitWrite, newglobalLimitRead, newglobaldelay);
         }
     }
 
     /**
-     * @return the Global PerformanceCounter or null if this support is disabled
+     * @return the Global TrafficCounter or null if this support is disabled
      */
-    public PerformanceCounter getGlobalPerformanceCounter() {
+    public TrafficCounter getGlobalTrafficCounter() {
         if (this.globalActive) {
-            if (this.globalPerformanceMonitor == null) {
-                this.globalPerformanceMonitor = new PerformanceCounter(this,
+            if (this.globalTrafficMonitor == null) {
+                this.globalTrafficMonitor = new TrafficCounter(this,
                         this.executorService, null, "GlobalPC",
                         this.globalLimitWrite, this.globalLimitRead,
                         this.globalDelay);
-                this.globalPerformanceMonitor.startMonitoring();
+                this.globalTrafficMonitor.startMonitoring();
             }
         }
-        return this.globalPerformanceMonitor;
+        return this.globalTrafficMonitor;
     }
 
     /**
      * @param channel
-     * @return the channel PerformanceCounter or null if this support is
+     * @return the channel TrafficCounter or null if this support is
      *         disabled
      */
-    public PerformanceCounter createChannelPerformanceCounter(Channel channel) {
-        if (this.channelActive && ((this.channelLimitRead > NO_LIMIT) || (this.channelLimitWrite > NO_LIMIT)
-                || (this.channelDelay > NO_STAT))) {
-            return new PerformanceCounter(this, this.executorService, channel,
+    public TrafficCounter createChannelTrafficCounter(Channel channel) {
+        if (this.channelActive && ((this.channelLimitRead > 0) || (this.channelLimitWrite > 0)
+                || (this.channelDelay > 0))) {
+            return new TrafficCounter(this, this.executorService, channel,
                     "ChannelPC" + channel.getId(), this.channelLimitWrite,
                     this.channelLimitRead, this.channelDelay);
         }
@@ -352,14 +340,14 @@ public abstract class PerformanceCounterFactory {
     }
 
     /**
-     * Stop the global performance counter if any (Even it is stopped, the
+     * Stop the global TrafficCounter if any (Even it is stopped, the
      * factory can however be reused)
      *
      */
-    public void stopGlobalPerformanceCounter() {
-        if (this.globalPerformanceMonitor != null) {
-            this.globalPerformanceMonitor.stopMonitoring();
-            this.globalPerformanceMonitor = null;
+    public void stopGlobalTrafficCounter() {
+        if (this.globalTrafficMonitor != null) {
+            this.globalTrafficMonitor.stopMonitoring();
+            this.globalTrafficMonitor = null;
         }
     }
 
@@ -421,8 +409,8 @@ public abstract class PerformanceCounterFactory {
      */
     public void setGlobalDelay(long globalDelay) {
         this.globalDelay = globalDelay;
-        if (this.globalPerformanceMonitor != null) {
-            this.globalPerformanceMonitor.changeConfiguration(null,
+        if (this.globalTrafficMonitor != null) {
+            this.globalTrafficMonitor.changeConfiguration(null,
                     this.globalLimitWrite, this.globalLimitRead,
                     this.globalDelay);
         }
@@ -441,8 +429,8 @@ public abstract class PerformanceCounterFactory {
      */
     public void setGlobalLimitRead(long globalLimitRead) {
         this.globalLimitRead = globalLimitRead;
-        if (this.globalPerformanceMonitor != null) {
-            this.globalPerformanceMonitor.changeConfiguration(null,
+        if (this.globalTrafficMonitor != null) {
+            this.globalTrafficMonitor.changeConfiguration(null,
                     this.globalLimitWrite, this.globalLimitRead,
                     this.globalDelay);
         }
@@ -461,8 +449,8 @@ public abstract class PerformanceCounterFactory {
      */
     public void setGlobalLimitWrite(long globalLimitWrite) {
         this.globalLimitWrite = globalLimitWrite;
-        if (this.globalPerformanceMonitor != null) {
-            this.globalPerformanceMonitor.changeConfiguration(null,
+        if (this.globalTrafficMonitor != null) {
+            this.globalTrafficMonitor.changeConfiguration(null,
                     this.globalLimitWrite, this.globalLimitRead,
                     this.globalDelay);
         }

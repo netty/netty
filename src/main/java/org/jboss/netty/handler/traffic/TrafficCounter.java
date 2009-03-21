@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.trafficshaping;
+package org.jboss.netty.handler.traffic;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -36,20 +36,20 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * @author Frederic Bregier (fredbregier@free.fr)
  * @version $Rev$, $Date$
  *
- * PerformanceCounter is associated with {@link TrafficShapingHandler} and
- * should be created through a {@link PerformanceCounterFactory}.<br>
+ * TrafficCounter is associated with {@link TrafficShapingHandler} and
+ * should be created through a {@link TrafficCounterFactory}.<br>
  * <br>
- * A PerformanceCounter can limit the traffic or not, globally or per channel,
+ * A TrafficCounter can limit the traffic or not, globally or per channel,
  * and always compute statistics on read and written bytes at the specified
  * interval.
  *
  */
-public class PerformanceCounter implements Runnable {
+public class TrafficCounter implements Runnable {
     /**
      * Internal logger
      */
     private static InternalLogger logger = InternalLoggerFactory
-            .getInstance(PerformanceCounter.class);
+            .getInstance(TrafficCounter.class);
 
     /**
      * Current writing bytes
@@ -89,17 +89,17 @@ public class PerformanceCounter implements Runnable {
     /**
      * Current Limit in B/s to apply to write
      */
-    private long limitWrite = PerformanceCounterFactory.NO_LIMIT;
+    private long limitWrite = 0;
 
     /**
      * Current Limit in B/s to apply to read
      */
-    private long limitRead = PerformanceCounterFactory.NO_LIMIT;
+    private long limitRead = 0;
 
     /**
      * Delay between two capture
      */
-    private long delay = PerformanceCounterFactory.DEFAULT_DELAY;
+    private long delay = TrafficCounterFactory.DEFAULT_DELAY;
 
     // default 1 s
 
@@ -119,9 +119,9 @@ public class PerformanceCounter implements Runnable {
     protected Channel monitoredChannel = null;
 
     /**
-     * The associated PerformanceCounterFactory
+     * The associated TrafficCounterFactory
      */
-    private PerformanceCounterFactory factory = null;
+    private TrafficCounterFactory factory = null;
 
     /**
      * Default ExecutorService
@@ -177,7 +177,7 @@ public class PerformanceCounter implements Runnable {
                 if (this.delay > 0) {
                     Thread.sleep(this.delay);
                 } else {
-                    // Delay goes to PerformanceCounterFactory.NO_STAT, so exit
+                    // Delay goes to TrafficCounterFactory.NO_STAT, so exit
                     return;
                 }
                 long endTime = System.currentTimeMillis();
@@ -218,7 +218,7 @@ public class PerformanceCounter implements Runnable {
      * computations in ms
      *
      * @param factory
-     *            the associated PerformanceCounterFactory
+     *            the associated TrafficCounterFactory
      * @param executorService
      *            Should be a CachedThreadPool for efficiency
      * @param channel
@@ -235,7 +235,7 @@ public class PerformanceCounter implements Runnable {
      * @param delay
      *            the delay in ms between two computations
      */
-    public PerformanceCounter(PerformanceCounterFactory factory,
+    public TrafficCounter(TrafficCounterFactory factory,
             ExecutorService executorService, Channel channel, String name,
             long writeLimit, long readLimit, long delay) {
         this.factory = factory;
@@ -362,7 +362,7 @@ public class PerformanceCounter implements Runnable {
         /**
          * Monitor
          */
-        private PerformanceCounter monitor = null;
+        private TrafficCounter monitor = null;
 
         /**
          * Time to wait before clearing the channel
@@ -376,7 +376,7 @@ public class PerformanceCounter implements Runnable {
          * @param timeToWait
          */
         public ReopenRead(ChannelHandlerContext ctx,
-                PerformanceCounter monitor, long timeToWait) {
+                TrafficCounter monitor, long timeToWait) {
             this.ctx = ctx;
             this.monitor = monitor;
             this.timeToWait = timeToWait;
@@ -419,7 +419,7 @@ public class PerformanceCounter implements Runnable {
     public void setReceivedBytes(ChannelHandlerContext ctx, long recv)
             throws InterruptedException {
         this.currentReadingBytes.addAndGet(recv);
-        if (this.limitRead == PerformanceCounterFactory.NO_LIMIT) {
+        if (this.limitRead == 0) {
             // no action
             return;
         }
@@ -473,7 +473,7 @@ public class PerformanceCounter implements Runnable {
      */
     public void setToWriteBytes(long write) throws InterruptedException {
         this.currentWritingBytes.addAndGet(write);
-        if (this.limitWrite == PerformanceCounterFactory.NO_LIMIT) {
+        if (this.limitWrite == 0) {
             return;
         }
         // compute the number of ms to wait before continue with the channel
