@@ -42,15 +42,18 @@ public class ImmediateExecutorTest {
         long startTime = System.nanoTime();
         e.execute(new Runnable() {
             public void run() {
+                long startTime = System.nanoTime();
                 for (;;) {
                     try {
                         Thread.sleep(1000);
-                        break;
                     } catch (InterruptedException e) {
                         // Ignore
                     }
+                    if (System.nanoTime() - startTime >= 1000000000L) {
+                        break;
+                    }
                 }
-            } 
+            }
         });
         assertTrue(System.nanoTime() - startTime > 900000000L);
     }
