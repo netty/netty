@@ -55,6 +55,6 @@ public class ImmediateExecutorTest {
                 }
             }
         });
-        assertTrue(System.nanoTime() - startTime > 900000000L);
+        assertTrue(System.nanoTime() - startTime >= 1000000000L);
     }
 }
