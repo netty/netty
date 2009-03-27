@@ -34,6 +34,9 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
 
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status) {
         super(version);
+        if (status == null) {
+            throw new NullPointerException("status");
+        }
         this.status = status;
     }
 

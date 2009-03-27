@@ -37,6 +37,12 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
 
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
         super(httpVersion);
+        if (method == null) {
+            throw new NullPointerException("method");
+        }
+        if (uri == null) {
+            throw new NullPointerException("uri");
+        }
         this.method = method;
         this.uri = uri;
     }

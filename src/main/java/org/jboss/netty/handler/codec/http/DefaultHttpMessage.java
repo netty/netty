@@ -47,6 +47,9 @@ public class DefaultHttpMessage implements HttpMessage {
     private ChannelBuffer content = ChannelBuffers.EMPTY_BUFFER;
 
     protected DefaultHttpMessage(final HttpVersion version) {
+        if (version == null) {
+            throw new NullPointerException("version");
+        }
         this.version = version;
     }
 
