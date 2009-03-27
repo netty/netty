@@ -12,11 +12,10 @@
     end of this chapter.
   </para>
   
-  <!-- The chapter 2 is not written yet. -->
-  <!--para>
-    If you prefer the top-down approach in learning something, you might want
-    to start from <xref linkend="architecture"/> and get back here.
-  </para-->
+  <para>
+    If you prefer top-down approach in learning something, you might want to
+    start from <xref linkend="architecture"/> and get back here.
+  </para>
   
   <section>
     <title>Before Getting Started</title>
