@@ -136,6 +136,9 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 // Chunked encoding
                 // Generate HttpMessage first.  HttpChunks will follow.
                 return message;
+            } else if (nextState == State.SKIP_CONTROL_CHARS) {
+                // No content is expected.
+                return message;
             } else {
                 int contentLength = message.getContentLength(-1);
                 if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
@@ -301,6 +304,22 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
     }
 
+
+    protected boolean isContentAlwaysEmpty(HttpMessage msg) {
+        if (msg instanceof HttpResponse) {
+            HttpResponse res = (HttpResponse) msg;
+            int code = res.getStatus().getCode();
+            if (code < 200) {
+                return true;
+            }
+            switch (code) {
+            case 204: case 205: case 304:
+                return true;
+            }
+        }
+        return false;
+    }
+
     private Object reset() {
         HttpMessage message = this.message;
         ChannelBuffer content = this.content;
@@ -356,7 +375,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
 
         State nextState;
-        if (message.isChunked()) {
+
+        if (isContentAlwaysEmpty(message)) {
+            nextState = State.SKIP_CONTROL_CHARS;
+        } else if (message.isChunked()) {
             nextState = State.READ_CHUNK_SIZE;
         } else if (message.getContentLength(-1) >= 0) {
             nextState = State.READ_FIXED_LENGTH_CONTENT;
