@@ -23,7 +23,6 @@ package org.jboss.netty.example.http;
 
 import static org.jboss.netty.channel.Channels.*;
 
-import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
@@ -34,12 +33,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
  * @author Andy Taylor (andy.taylor@jboss.org)
  */
 public class HttpServerPipelineFactory implements ChannelPipelineFactory {
-    private final ChannelHandler handler;
-
-    public HttpServerPipelineFactory(HttpRequestHandler handler) {
-        this.handler = handler;
-    }
-
     public ChannelPipeline getPipeline() throws Exception {
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();
@@ -48,7 +41,7 @@ public class HttpServerPipelineFactory implements ChannelPipelineFactory {
         // Uncomment the following line if you don't want to handle HttpChunks.
         //pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
         pipeline.addLast("encoder", new HttpResponseEncoder());
-        pipeline.addLast("handler", handler);
+        pipeline.addLast("handler", new HttpRequestHandler());
         return pipeline;
     }
 }

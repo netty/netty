@@ -73,8 +73,7 @@ public class HttpClient {
                     Executors.newCachedThreadPool());
 
         ClientBootstrap bootstrap = new ClientBootstrap(factory);
-        HttpClientPipelineFactory handler = new HttpClientPipelineFactory(new HttpResponseHandler());
-        bootstrap.setPipelineFactory(handler);
+        bootstrap.setPipelineFactory(new HttpClientPipelineFactory());
 
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));

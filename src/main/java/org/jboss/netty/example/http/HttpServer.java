@@ -41,8 +41,7 @@ public class HttpServer {
                     Executors.newCachedThreadPool());
 
         ServerBootstrap bootstrap = new ServerBootstrap(factory);
-        HttpServerPipelineFactory pipeline = new HttpServerPipelineFactory(new HttpRequestHandler());
-        bootstrap.setPipelineFactory(pipeline);
+        bootstrap.setPipelineFactory(new HttpServerPipelineFactory());
         bootstrap.setOption("child.tcpNoDelay", true);
         bootstrap.setOption("child.keepAlive", true);
 
