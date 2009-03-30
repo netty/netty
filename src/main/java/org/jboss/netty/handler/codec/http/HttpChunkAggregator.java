@@ -65,7 +65,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
         HttpMessage currentMessage = this.currentMessage;
         if (currentMessage == null) {
             HttpMessage m = (HttpMessage) msg;
-            if (!isContentAlwaysEmpty(m) && m.isChunked()) {
+            if (m.isChunked()) {
                 // A chunked message - remove 'Transfer-Encoding' header,
                 // initialize the cumulative buffer, and wait for incoming chunks.
                 List<String> encodings = m.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
@@ -99,20 +99,5 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
                 Channels.fireMessageReceived(ctx, currentMessage, e.getRemoteAddress());
             }
         }
-    }
-
-    protected boolean isContentAlwaysEmpty(HttpMessage msg) {
-        if (msg instanceof HttpResponse) {
-            HttpResponse res = (HttpResponse) msg;
-            int code = res.getStatus().getCode();
-            if (code < 200) {
-                return true;
-            }
-            switch (code) {
-            case 204: case 205: case 304:
-                return true;
-            }
-        }
-        return false;
     }
 }

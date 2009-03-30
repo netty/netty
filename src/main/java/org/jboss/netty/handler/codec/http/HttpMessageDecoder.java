@@ -138,6 +138,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 return message;
             } else if (nextState == State.SKIP_CONTROL_CHARS) {
                 // No content is expected.
+                // Remove the headers which are not supposed to be present not
+                // to confuse subsequent handlers.
+                message.removeHeader(HttpHeaders.Names.CONTENT_LENGTH);
+                message.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
                 return message;
             } else {
                 int contentLength = message.getContentLength(-1);
