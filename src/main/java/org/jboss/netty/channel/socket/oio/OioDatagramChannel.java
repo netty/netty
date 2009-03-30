@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.channel.socket.oio;
 
+import static org.jboss.netty.channel.Channels.*;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -67,6 +69,8 @@ final class OioDatagramChannel extends AbstractChannel
             throw new ChannelException("Failed to open a datagram socket.", e);
         }
         config = new DefaultDatagramChannelConfig(socket);
+
+        fireChannelOpen(this);
     }
 
     public DatagramChannelConfig getConfig() {
