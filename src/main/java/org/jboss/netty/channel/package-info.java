@@ -29,11 +29,12 @@
  * @apiviz.landmark
  * @apiviz.exclude ^java
  * @apiviz.exclude ^org\.jboss\.netty\.channel\.[^\.]+\.
- * @apiviz.exclude ^org\.jboss\.netty\.(bootstrap|handler)\.
+ * @apiviz.exclude ^org\.jboss\.netty\.(bootstrap|handler|util)\.
  * @apiviz.exclude \.(Abstract|Default).*$
  * @apiviz.exclude \.[A-Za-z]+ChannelFuture$
  * @apiviz.exclude \.ChannelPipelineFactory$
  * @apiviz.exclude \.ChannelHandlerContext$
  * @apiviz.exclude \.ChannelSink$
+ * @apiviz.exclude \.[A-Za-z]*ReceiveBufferSizePredictor$
  */
 package org.jboss.netty.channel;
