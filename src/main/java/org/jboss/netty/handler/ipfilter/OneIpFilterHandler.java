@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -59,13 +60,16 @@ public class OneIpFilterHandler extends IpFilteringHandler {
         return true;
     }
 
+
     /* (non-Javadoc)
      * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#handleRefusedChannel(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent, java.net.InetSocketAddress)
      */
     @Override
-    protected void handleRefusedChannel(ChannelHandlerContext ctx,
-            ChannelEvent e, InetSocketAddress inetSocketAddress) throws Exception {
+    protected ChannelFuture handleRefusedChannel(ChannelHandlerContext ctx,
+            ChannelEvent e, InetSocketAddress inetSocketAddress)
+            throws Exception {
         // Do nothing: could be overridden
+        return null;
     }
 
     /* (non-Javadoc)

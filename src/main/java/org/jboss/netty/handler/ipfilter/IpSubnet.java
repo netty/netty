@@ -31,25 +31,26 @@ import java.util.Vector;
  * This class allows to check if an IP-Address is contained in a subnet.<BR>
  * Supported Formats for the Subnets are: 1.1.1.1/255.255.255.255 or 1.1.1.1/32 (CIDR-Notation)
  * and (InetAddress,Mask) where Mask is a integer for CIDR-notation or a String for Standard Mask notation<BR>
+ * The first argument tells if this subnet is an ALLOW (TRUE) or a DENY (FALSE) subnet when used in access checking.<BR>
  * <BR><BR>Example1:<BR>
- * <tt>IpSubnet ips = new IpSubnet("192.168.1.0/24");</tt><BR>
- * <tt>System.out.println("Result: "+ ips.contains("192.168.1.123"));</tt><BR>
- * <tt>System.out.println("Result: "+ ips.contains(inetAddress2));</tt><BR>
+ * <tt>IpSubnet ips = new IpSubnet(true, "192.168.1.0/24");</tt><BR>
+ * <tt>System.out.println("Result: "+ ips.accept("192.168.1.123"));</tt><BR>
+ * <tt>System.out.println("Result: "+ ips.accept(inetAddress2));</tt><BR>
  * <BR>Example1 bis:<BR>
- * <tt>IpSubnet ips = new IpSubnet(inetAddress, 24);</tt><BR>
+ * <tt>IpSubnet ips = new IpSubnet(true, inetAddress, 24);</tt><BR>
  * where inetAddress is 192.168.1.0 and inetAddress2 is 192.168.1.123<BR>
  * <BR><BR>Example2:<BR>
- * <tt>IpSubnet ips = new IpSubnet("192.168.1.0/255.255.255.0");</tt><BR>
- * <tt>System.out.println("Result: "+ ips.contains("192.168.1.123"));</tt><BR>
- * <tt>System.out.println("Result: "+ ips.contains(inetAddress2));</tt><BR>
+ * <tt>IpSubnet ips = new IpSubnet(rue, "192.168.1.0/255.255.255.0");</tt><BR>
+ * <tt>System.out.println("Result: "+ ips.accept("192.168.1.123"));</tt><BR>
+ * <tt>System.out.println("Result: "+ ips.accept(inetAddress2));</tt><BR>
  * <BR>Example2 bis:<BR>
- * <tt>IpSubnet ips = new IpSubnet(inetAddress, "255.255.255.0");</tt><BR>
+ * <tt>IpSubnet ips = new IpSubnet(rue, inetAddress, "255.255.255.0");</tt><BR>
  * where inetAddress is 192.168.1.0 and inetAddress2 is 192.168.1.123<BR>
 
  * @author frederic bregier
  *
  */
-public class IpSubnet implements Comparable<IpSubnet> { 
+public class IpSubnet implements IpFilterRule, Comparable<IpSubnet> { 
     private static final int SUBNET_MASK = 0x80000000;
     private static final int BYTE_ADDRESS_MASK = 0xFF;
     
@@ -57,32 +58,52 @@ public class IpSubnet implements Comparable<IpSubnet> {
     private int subnet;
     private int mask;
     private int cidrMask;
+    private boolean isAllowed = true;
     
+    /**
+     * Create IpSubnet for ALLOW ALL (true) or DENY ALL (false)
+     * @param allow
+     */
+    public IpSubnet(boolean allow) {
+        // ALLOW or DENY ALL
+        this.mask = -1;
+        this.isAllowed = allow;
+        // other will be ignored
+        this.inetAddress = null;
+        this.subnet = 0;
+        this.cidrMask = 0;
+    }
     /**
      * Create IpSubnet using the CIDR or normal Notation<BR>
      * i.e.: 
      * IpSubnet subnet = new IpSubnet("10.10.10.0/24"); or
      * IpSubnet subnet = new IpSubnet("10.10.10.0/255.255.255.0");
+     * @param allow True if the given netAddress is to be allowed, False to be Denied
      * @param netAddress a network address as string. 
      * @throws UnknownHostException 
      * */
-    public IpSubnet(String netAddress) throws UnknownHostException {
+    public IpSubnet(boolean allow, String netAddress) throws UnknownHostException {
+        this.isAllowed = allow;
         setNetAddress(netAddress);
     }
     /**
      * Create IpSubnet using the CIDR Notation
+     * @param allow True if the given CIDR notation is to be allowed, False to be Denied
      * @param inetAddress
      * @param cidrNetMask
      */
-    public IpSubnet(InetAddress inetAddress, int cidrNetMask) {
+    public IpSubnet(boolean allow, InetAddress inetAddress, int cidrNetMask) {
+        this.isAllowed = allow;
         setNetAddress(inetAddress, cidrNetMask);
     }
     /**
      * Create IpSubnet using the normal Notation
+     * @param allow True if the given standard netmask notation is to be allowed, False to be Denied
      * @param inetAddress
      * @param netMask
      */
-    public IpSubnet(InetAddress inetAddress, String netMask) {
+    public IpSubnet(boolean allow, InetAddress inetAddress, String netMask) {
+        this.isAllowed = allow;
         setNetAddress(inetAddress, netMask);
     }
     
@@ -201,7 +222,7 @@ public class IpSubnet implements Comparable<IpSubnet> {
     public boolean contains(String ipAddr) throws UnknownHostException {
         InetAddress inetAddress1 = InetAddress.getByName(ipAddr);
         return this.contains(inetAddress1);
-    }
+    }    
     /**
      * Compares the given InetAddress against the Subnet and returns true if
      * the ip is in the subnet-ip-range and false if not.
@@ -210,10 +231,13 @@ public class IpSubnet implements Comparable<IpSubnet> {
      * set network.
      * */
     public boolean contains(InetAddress inetAddress1) {
-        if (this.mask == -1)
+        if (this.mask == -1) {
+            // ANY
             return true;
+        }
         return ((toInt(inetAddress1) & this.mask) == this.subnet);
     }
+
     @Override
     public String toString() {
         return this.inetAddress.getHostAddress()+"/"+this.cidrMask;
@@ -243,6 +267,12 @@ public class IpSubnet implements Comparable<IpSubnet> {
         }
         return 1;
     }
+    public boolean isAllowRule() {
+        return this.isAllowed;
+    }
+    public boolean isDenyRule() {
+        return (!this.isAllowed);
+    }
     /**
      * Simple test functions
      * @param args 
@@ -253,7 +283,7 @@ public class IpSubnet implements Comparable<IpSubnet> {
         if (args.length != 0) {
             IpSubnet ipSubnet = null;
             try {
-                ipSubnet = new IpSubnet(args[0]);
+                ipSubnet = new IpSubnet(true, args[0]);
             } catch (UnknownHostException e) {
                 return;
             }

@@ -24,29 +24,34 @@ package org.jboss.netty.handler.ipfilter;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 
 /**
- * Implementation of Banned or Allowed IP.<br>
+ * Implementation of Banned then Allowed IP, or Black and White list.<br>
  * <br>
  * 
  * The black list has the priority on white list (a InetAddress that would be included in both
  * black and white lists will be refused).<br>
- * The black list is first checked. If the {@link InetAddress}
- * is compatible with one {@link IpSubnet}, then it is refused.<br>
- * The white list is then checked. If the {@link InetAddress}
- * is compatible with one {@link IpSubnet}, then it is accepted.<br>
+ * <ul>
+ * <li>The black list is first checked. If the {@link InetAddress}
+ * is compatible with one {@link IpSubnet}, then it is refused.</li><br>
+ * <li>The white list is then checked. If the {@link InetAddress}
+ * is compatible with one {@link IpSubnet}, then it is accepted.</li><br>
  * <br>
- * An empty black list means allow all (no limitation).<br><br>
- * An empty white list means allow all (no limitation).<br><br>
+ * <li>An empty black list means allow all (no limitation).</li><br>
+ * <li>An empty white list means allow all (no limitation).</li><br>
  * <br>
+ * <li>If both lists are empty, any {@link InetAddress} are accepted.</li><br>
+ * <li>If white list is <b>not</b> empty, any {@link InetAddress} not in any white list subnets will be refused.</li><br>
+ * </ul>
+ * <br><br>
  * <b>This handler should be created only once and reused on every pipeline since it handles
  * a global status of what is allowed or blocked.
  * @author frederic bregier
@@ -80,10 +85,7 @@ public class IpBlackWhiteListHandler extends IpFilteringHandler {
      * empty lists implies allow all (empty white list meaning allow all).
      */
     public IpBlackWhiteListHandler() {
-        try {
-            this.whiteList.add(new IpSubnet("0.0.0.0/0"));
-        } catch (UnknownHostException e) {
-        }
+        this.whiteList.add(new IpSubnet(true));
     }
     /**
      * Add an IpSubnet in the black list
@@ -138,7 +140,9 @@ public class IpBlackWhiteListHandler extends IpFilteringHandler {
     public void allowAll() {
         this.whiteList.clear();
     }
-    
+    /* (non-Javadoc)
+     * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#accept(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent, java.net.InetSocketAddress)
+     */
     @Override
     protected boolean accept(ChannelHandlerContext ctx, ChannelEvent e,
             InetSocketAddress inetSocketAddress) throws Exception {
@@ -171,10 +175,15 @@ public class IpBlackWhiteListHandler extends IpFilteringHandler {
             return true;
         }
     }
+    /* (non-Javadoc)
+     * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#handleRefusedChannel(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent, java.net.InetSocketAddress)
+     */
     @Override
-    protected void handleRefusedChannel(ChannelHandlerContext ctx,
-            ChannelEvent e, InetSocketAddress inetSocketAddress) throws Exception {
+    protected ChannelFuture handleRefusedChannel(ChannelHandlerContext ctx,
+            ChannelEvent e, InetSocketAddress inetSocketAddress)
+            throws Exception {
         // Do nothing: could be overridden
+        return null;
     }
 
 }

@@ -25,6 +25,7 @@ package org.jboss.netty.handler.ipfilter;
 import java.net.InetSocketAddress;
 
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
@@ -50,14 +51,16 @@ public abstract class IpFilteringHandler implements ChannelUpstreamHandler {
     /**
      * Called when the channel has the CONNECTED status and the channel was refused by a previous call to accept().
      * This method enables your implementation to send a message back to the client before closing
-     * or whatever you need. If a message is sent back, you should await on its completion (using
-     * awaitUninterruptibly() for instance).
+     * or whatever you need. This method returns a ChannelFuture on which the implementation
+     * will wait uninterruptibly before closing the channel.<br>
+     * For instance, If a message is sent back, the corresponding ChannelFuture has to be returned.
      * @param ctx
      * @param e
      * @param inetSocketAddress the remote {@link InetSocketAddress} from client
+     * @return the associated ChannelFuture to be waited for before closing the channel. Null is allowed.
      * @throws Exception 
      */
-    protected abstract void handleRefusedChannel(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress) throws Exception;
+    protected abstract ChannelFuture handleRefusedChannel(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress) throws Exception;
     /**
      * Called if CONNECTED ChannelStateEvent is received
      * @param ctx
@@ -69,7 +72,10 @@ public abstract class IpFilteringHandler implements ChannelUpstreamHandler {
         InetSocketAddress inetSocketAddress = (InetSocketAddress) e.getChannel().getRemoteAddress();
         if (! this.accept(ctx, e, inetSocketAddress)) {
             ctx.setAttachment(Boolean.TRUE);
-            this.handleRefusedChannel(ctx, e, inetSocketAddress);
+            ChannelFuture future = this.handleRefusedChannel(ctx, e, inetSocketAddress);
+            if (future != null) {
+                future.awaitUninterruptibly();
+            }
             Channels.close(e.getChannel());
             return false;
         }
@@ -86,13 +92,16 @@ public abstract class IpFilteringHandler implements ChannelUpstreamHandler {
      */
     protected boolean channelClosedWasBlocked(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         boolean refused = this.isBlocked(ctx);
-        // don't pass to next level since channel was block early
+        // don't pass to next level since channel was blocked early
         return refused;
     }
     /**
-     * 
+     * Called in channelClosedWasBlocked to check if this channel was previously blocked and in handleUpstream
+     * to check if whatever the event (different than CONNECTED or CLOSED) it should be passed to the next
+     * entry in the pipeline. 
      * @param ctx
-     * @return True if the current channel was blocked by this filter
+     * @return True if the current channel was blocked by this filter so the event should not be passed to the 
+     * next entry in the pipeline 
      */
     protected boolean isBlocked(ChannelHandlerContext ctx) {
         return (ctx.getAttachment() != null);
@@ -110,7 +119,7 @@ public abstract class IpFilteringHandler implements ChannelUpstreamHandler {
                 if (Boolean.FALSE.equals(evt.getValue())) {
                     // CLOSED
                     if (channelClosedWasBlocked(ctx, evt)) {
-                        // don't pass to next level since channel was block early
+                        // don't pass to next level since channel was blocked early
                         return;                        
                     }
                 }
@@ -118,7 +127,7 @@ public abstract class IpFilteringHandler implements ChannelUpstreamHandler {
             case CONNECTED:
                 if (evt.getValue() != null) {
                     if (!channelConnectedAccept(ctx,evt)) {
-                        // don't pass to next level since channel was block early
+                        // don't pass to next level since channel is blocked
                         return;
                     }
                 }
@@ -126,7 +135,7 @@ public abstract class IpFilteringHandler implements ChannelUpstreamHandler {
             }
         }
         if (this.isBlocked(ctx)) {
-            // don't pass to next level since channel was block early
+            // don't pass to next level since channel was blocked early
             return;
         }
         // Whatever it is, if not blocked, goes to the next level
