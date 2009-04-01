@@ -46,22 +46,29 @@
  * <P><ul>
  * <li><tt>accept</tt> method allow to specify your way of choosing if a new connection is
  * to be allowed or not.</li><br>
- * In <tt>OneIpFilterHandler</tt> and in <tt>IpBlackWhiteListHandler</tt>, this method is already made.<br>
+ * In <tt>OneIpFilterHandler</tt>, <tt>IpBlackWhiteListHandler</tt> and <tt>IpFilterRuleHandler</tt>, 
+ * this method is already made.<br>
  * <br>
  *
  * <li><tt>handleRefusedChannel</tt> method is executed when the accept method filters (blocks, so returning false)
  * the new connection. This method allows you to implement specific actions to be taken before the channel is
  * closed. After this method is called, the channel is immediately closed.</li><br>
- * So if you want to send back a message to the client, <b>don't forget to wait on the futureChannel
- * on the write operation otherwise the message could be missed since the channel will be immediately
- * after closed</b> (at least with respect of asynchronous operations).<br><br>
+ * So if you want to send back a message to the client, <b>don't forget to return a respectful ChannelFuture, 
+ * otherwise the message could be missed since the channel will be closed immediately after this
+ * call and the waiting on this channelFuture</b> (at least with respect of asynchronous operations).<br><br>
  *
  * <li><tt>channelConnectedAccept</tt> is called when the CONNECTED event appears.</li><br>
  * It returns True if the channel was not blocked and let the event continues. It returns False if the channel is blocked
  * and therefore any new events (even the CONNECTED one) will not go to next handlers in the pipeline if any. This is
  * intend to prevent any action unnecessary since the connection is refused.<br>
  * However, you could change its behavior for instance because you don't want that this event (and the following)
- * will be blocked by this filter by returning always true.<br><br>
+ * will be blocked by this filter by returning always true even if blocked and by changing too the following method.<br><br>
+ * 
+ * <li><tt>isBlocked</tt> is called when the CLOSED or any other event than CONNECTED appears.</li><br>
+ * It returns True if the channel was previously blocked and therefore any new events will not go to next handlers 
+ * in the pipeline if any. This is intend to prevent any action unnecessary since the connection is refused.<br>
+ * However, you could change its behavior for instance because you don't want that any event
+ * will be blocked by this filter by returning always false.<br><br>
  * 
  * <li><tt>channelClosedWasBlocked</tt> is called when the CLOSED event appears.</li><br>
  * It returns True if the channel was blocked before and so ends the event transmission into the pipeline. 
