@@ -83,6 +83,7 @@ public class IpBlackWhiteListHandler extends IpFilteringHandler {
     /**
      * Empty constructor (no IpSubnet in the blackList and whitelist at construction). In such a situation, 
      * empty lists implies allow all (empty white list meaning allow all).
+     * 
      */
     public IpBlackWhiteListHandler() {
         this.whiteList.add(new IpSubnet(true));
