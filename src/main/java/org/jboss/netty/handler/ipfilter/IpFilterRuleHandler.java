@@ -36,7 +36,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 
 /**
  * Implementation of Filter of IP based on ALLOW and DENY netmask (standard notations or CIDR notations).<br>
- * <br>
+ * <br><br>
  * This implementation could be changed by implementing a new {@link IpFilterRule} than default one {@link IpSubnet}.<br>
  * <br>
  * The check is done by going from step to step in the underlying array of IpFilterRule.<br>

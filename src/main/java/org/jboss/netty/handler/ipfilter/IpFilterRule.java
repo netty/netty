@@ -26,6 +26,7 @@ import java.net.InetAddress;
 
 /**
  * This Interface defines an Ip Filter Rule.
+ * 
  * @author frederic bregier
  *
  */
