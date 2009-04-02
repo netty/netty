@@ -103,8 +103,8 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * configure it in two ways.
  *
  * {@linkplain #setPipeline(ChannelPipeline) The first approach} is to use
- * the default pipeline property and let the bootstrap to clone it for each
- * new child channel:
+ * the default pipeline and let the bootstrap to shallow copy the default
+ * pipeline for each new child channel:
  *
  * <pre>
  * ServerBootstrap b = ...;
@@ -115,7 +115,14 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * p.addLast("decoder", new DecodingHandler());
  * p.addLast("logic",   new LogicHandler());
  * </pre>
- *
+  *
+ * Please note 'shallow-copy' here means that the added {@link ChannelHandler}s
+ * are not cloned but only their references are added to the new pipeline.
+ * Therefore, you have to choose the second approach if you are going to accept
+ * more than one child {@link Channel} whose {@link ChannelPipeline} contains
+ * any {@link ChannelHandler} whose {@link ChannelPipelineCoverage} is
+ * {@code "one"}.
+ * <p>
  * {@linkplain #setPipelineFactory(ChannelPipelineFactory) The second approach}
  * is to specify a {@link ChannelPipelineFactory} by yourself and have full
  * control over how a new pipeline is created.  This approach is more complex:

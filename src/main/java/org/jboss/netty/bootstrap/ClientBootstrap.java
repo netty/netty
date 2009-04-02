@@ -35,6 +35,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -68,9 +69,10 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  *
  * Every channel has its own {@link ChannelPipeline} and you can configure it
  * in two ways.
- *
+ * <p>
  * {@linkplain #setPipeline(ChannelPipeline) The first approach} is to use
- * the default pipeline and let the bootstrap to clone it for each new channel:
+ * the default pipeline and let the bootstrap to shallow-copy the default
+ * pipeline for each new channel:
  *
  * <pre>
  * ClientBootstrap b = ...;
@@ -82,6 +84,13 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * p.addLast("logic",   new LogicHandler());
  * </pre>
  *
+ * Please note 'shallow-copy' here means that the added {@link ChannelHandler}s
+ * are not cloned but only their references are added to the new pipeline.
+ * Therefore, you have to choose the second approach if you are going to open
+ * more than one {@link Channel} whose {@link ChannelPipeline} contains any
+ * {@link ChannelHandler} whose {@link ChannelPipelineCoverage} is {@code "one"}.
+ *
+ * <p>
  * {@linkplain #setPipelineFactory(ChannelPipelineFactory) The second approach}
  * is to specify a {@link ChannelPipelineFactory} by yourself and have full
  * control over how a new pipeline is created.  This approach is more complex:
