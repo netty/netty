@@ -921,7 +921,7 @@ public void channelConnected(&ChannelHandlerContext; ctx, &ChannelStateEvent; e)
 import static org.jboss.netty.buffer.&ChannelBuffers;.*;
 
 @&ChannelPipelineCoverage;("all")<co id="example.time6.co1"/>
-public class TimeEncoder implements &SimpleChannelHandler; {
+public class TimeEncoder extends &SimpleChannelHandler; {
 
     public void writeRequested(&ChannelHandlerContext; ctx, &MessageEvent;<co id="example.time6.co2"/> e) {
         UnixTime time = (UnixTime) e.getMessage();
