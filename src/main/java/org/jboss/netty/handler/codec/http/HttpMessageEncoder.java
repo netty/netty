@@ -58,7 +58,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
             header.writeBytes(CRLF);
 
             ChannelBuffer content = request.getContent();
-            if (content == null) {
+            if (!content.readable()) {
                 return header; // no content
             } else {
                 return wrappedBuffer(header, content);

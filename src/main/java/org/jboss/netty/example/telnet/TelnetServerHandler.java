@@ -65,8 +65,8 @@ public class TelnetServerHandler extends SimpleChannelHandler {
             ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         // Send greeting for a new connection.
         e.getChannel().write(
-                "Welcome to " + InetAddress.getLocalHost().getHostName() + "!\n");
-        e.getChannel().write("It is " + new Date() + " now.\n");
+                "Welcome to " + InetAddress.getLocalHost().getHostName() + "!\r\n");
+        e.getChannel().write("It is " + new Date() + " now.\r\n");
     }
 
     @Override
@@ -81,12 +81,12 @@ public class TelnetServerHandler extends SimpleChannelHandler {
         String response;
         boolean close = false;
         if (request.length() == 0) {
-            response = "Please type something.\n";
+            response = "Please type something.\r\n";
         } else if (request.toLowerCase().equals("bye")) {
-            response = "Have a good day!\n";
+            response = "Have a good day!\r\n";
             close = true;
         } else {
-            response = "Did you say '" + request + "'?\n";
+            response = "Did you say '" + request + "'?\r\n";
         }
 
         // We do not need to write a ChannelBuffer here.

@@ -130,10 +130,9 @@ public class DefaultObjectSizeEstimator implements ObjectSizeEstimator {
     }
 
     private static int align(int size) {
-        if (size % 8 != 0) {
-            size /= 8;
-            size ++;
-            size *= 8;
+        int r = size % 8;
+        if (r != 0) {
+            size += 8 - r;
         }
         return size;
     }

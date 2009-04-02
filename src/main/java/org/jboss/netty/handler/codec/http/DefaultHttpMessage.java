@@ -178,7 +178,10 @@ public class DefaultHttpMessage implements HttpMessage {
         headers.clear();
     }
 
-    public void setContent(final ChannelBuffer content) {
+    public void setContent(ChannelBuffer content) {
+        if (content == null) {
+            content = ChannelBuffers.EMPTY_BUFFER;
+        }
         this.content = content;
     }
 
