@@ -517,6 +517,8 @@ public class TimeClient {
     </para>
     <programlisting>package org.jboss.netty.example.time;
 
+import java.util.Date;
+
 @&ChannelPipelineCoverage;("all")
 public class TimeClientHandler extends &SimpleChannelHandler; {
 
@@ -524,7 +526,7 @@ public class TimeClientHandler extends &SimpleChannelHandler; {
     public void messageReceived(&ChannelHandlerContext; ctx, &MessageEvent; e) {
         &ChannelBuffer; buf = (&ChannelBuffer;) e.getMessage();
         long currentTimeMillis = buf.readInt() * 1000L;
-        System.out.println(new Date(currentTimeMillis()));
+        System.out.println(new Date(currentTimeMillis));
         e.getChannel().close();
     }
 
@@ -603,6 +605,8 @@ public class TimeClientHandler extends &SimpleChannelHandler; {
 
 import static org.jboss.netty.buffer.&ChannelBuffers;.*;
 
+import java.util.Date;
+
 @&ChannelPipelineCoverage;("one")<co id="example.time3.co1"/>
 public class TimeClientHandler extends &SimpleChannelHandler; {
 
@@ -615,7 +619,7 @@ public class TimeClientHandler extends &SimpleChannelHandler; {
         
         if (buf.readableBytes() &gt;= 4) {<co id="example.time3.co4"/>
             long currentTimeMillis = buf.readInt() * 1000L;
-            System.out.println(new Date(currentTimeMillis()));
+            System.out.println(new Date(currentTimeMillis));
             e.getChannel().close();
         }
     }
@@ -848,6 +852,8 @@ public class TimeDecoder extends &ReplayingDecoder;&lt;&VoidEnum;&gt; {
       First, let us define a new type called <classname>UnixTime</classname>.
     </para>
     <programlisting>package org.jboss.netty.example.time;
+
+import java.util.Date;
 
 public class UnixTime {
     private final int value;
