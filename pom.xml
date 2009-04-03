@@ -398,7 +398,7 @@
           <docletArtifact>
             <groupId>org.jboss.apiviz</groupId>
             <artifactId>apiviz</artifactId>
-            <version>1.2.6.GA-SNAPSHOT</version>
+            <version>1.2.5.GA</version>
           </docletArtifact>
           <attach>false</attach>
           <useStandardDocletOptions>true</useStandardDocletOptions>
