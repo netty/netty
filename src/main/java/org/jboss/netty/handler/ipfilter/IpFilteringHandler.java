@@ -26,6 +26,7 @@ import java.net.InetSocketAddress;
 
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
@@ -38,6 +39,19 @@ import org.jboss.netty.channel.Channels;
  */
 public abstract class IpFilteringHandler implements ChannelUpstreamHandler {
 
+    /**
+     * Simple FutureListener to close channel when the handleRefusedChannel Future is done.
+     *
+     */
+    public class IpFilteringFutureListener implements ChannelFutureListener {
+        /**
+         * Simply close the channel
+         */
+        public void operationComplete(ChannelFuture future) throws Exception {
+            Channels.close(future.getChannel());
+        }
+        
+    }
     /**
      * Called when the channel is connected. It returns True if the corresponding connection
      * is to be allowed. Else it returns False.
@@ -62,48 +76,19 @@ public abstract class IpFilteringHandler implements ChannelUpstreamHandler {
      */
     protected abstract ChannelFuture handleRefusedChannel(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress) throws Exception;
     /**
-     * Called if CONNECTED ChannelStateEvent is received
-     * @param ctx
-     * @param e
-     * @return True if the Channel was blocked by the IpFiltering handler 
-     * @throws Exception 
-     */
-    protected boolean channelConnectedAccept(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        InetSocketAddress inetSocketAddress = (InetSocketAddress) e.getChannel().getRemoteAddress();
-        if (! this.accept(ctx, e, inetSocketAddress)) {
-            ctx.setAttachment(Boolean.TRUE);
-            ChannelFuture future = this.handleRefusedChannel(ctx, e, inetSocketAddress);
-            if (future != null) {
-                future.awaitUninterruptibly();
-            }
-            Channels.close(e.getChannel());
-            return false;
-        }
-        ctx.setAttachment(null);
-        return true;
-    }
-    /**
-     * Called if CLOSED ChannelStateEvent is received.<br>
-     * It can overridden if necessary in order to allow the closed event to be passed to the next handler.
-     * @param ctx
-     * @param e
-     * @return True if this Channel was blocked by the IpFiltering handler
-     * @throws Exception 
-     */
-    protected boolean channelClosedWasBlocked(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        boolean refused = this.isBlocked(ctx);
-        // don't pass to next level since channel was blocked early
-        return refused;
-    }
-    /**
      * Called in channelClosedWasBlocked to check if this channel was previously blocked and in handleUpstream
      * to check if whatever the event (different than CONNECTED or CLOSED) it should be passed to the next
-     * entry in the pipeline. 
+     * entry in the pipeline.<br>
+     * If one wants to not block events, just overridden this method by returning always false.<br><br>
+     * <b>Note that OPENED and BOUND events are still passed to the next entry in the pipeline since
+     * those events come out before the CONNECTED event and so the possibility to filter the connection.</b>
      * @param ctx
+     * @param e 
      * @return True if the current channel was blocked by this filter so the event should not be passed to the 
      * next entry in the pipeline 
+     * @throws Exception 
      */
-    protected boolean isBlocked(ChannelHandlerContext ctx) {
+    protected boolean isBlocked(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         return (ctx.getAttachment() != null);
     }
     
@@ -118,23 +103,34 @@ public abstract class IpFilteringHandler implements ChannelUpstreamHandler {
             case OPEN:
                 if (Boolean.FALSE.equals(evt.getValue())) {
                     // CLOSED
-                    if (channelClosedWasBlocked(ctx, evt)) {
+                    if (this.isBlocked(ctx, e)) {
                         // don't pass to next level since channel was blocked early
-                        return;                        
+                        return;
                     }
                 }
                 break;
             case CONNECTED:
                 if (evt.getValue() != null) {
-                    if (!channelConnectedAccept(ctx,evt)) {
-                        // don't pass to next level since channel is blocked
-                        return;
+                    InetSocketAddress inetSocketAddress = (InetSocketAddress) e.getChannel().getRemoteAddress();
+                    if (! this.accept(ctx, e, inetSocketAddress)) {
+                        ctx.setAttachment(Boolean.TRUE);
+                        ChannelFuture future = this.handleRefusedChannel(ctx, e, inetSocketAddress);
+                        if (future != null) {
+                            future.addListener(new IpFilteringFutureListener());
+                        } else {
+                            Channels.close(e.getChannel());
+                        }
+                        if (this.isBlocked(ctx, e)) {
+                            // don't pass to next level since channel was blocked early
+                            return;
+                        }
                     }
+                    ctx.setAttachment(null);
                 }
                 break;
             }
         }
-        if (this.isBlocked(ctx)) {
+        if (this.isBlocked(ctx, e)) {
             // don't pass to next level since channel was blocked early
             return;
         }

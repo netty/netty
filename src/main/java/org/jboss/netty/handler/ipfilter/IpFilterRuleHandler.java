@@ -37,13 +37,13 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 /**
  * Implementation of Filter of IP based on ALLOW and DENY netmask (standard notations or CIDR notations).<br>
  * <br><br>
- * This implementation could be changed by implementing a new {@link IpFilterRule} than default one {@link IpSubnet}.<br>
+ * This implementation could be changed by implementing a new {@link IpFilterRule} than default one {@link IpSubnetFilterRule}.<br>
  * <br>
  * The check is done by going from step to step in the underlying array of IpFilterRule.<br>
  * Each {@link IpFilterRule} answers to the method accept if the {@link InetAddress} is accepted or not,
  * according to its implementation. If an InetAddress arrives at the end of the list, as in Firewall
  * usual rules, the InetAddress is therefore accepted by default.<br>
- * For the {@link IpSubnet} implementation:<br>
+ * For the {@link IpSubnetFilterRule} implementation:<br>
  * <ul>
  * <li>If it was constructed with True as first argument, 
  * the IpFilterRule is an ALLOW rule (every InetAddress that fits in the subnet will be accepted).</li>

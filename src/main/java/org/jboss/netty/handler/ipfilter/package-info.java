@@ -34,9 +34,9 @@
  * <li> <tt>{@link OneIpFilterHandler}</tt>: This filter proposes to allow only one connection by client's IP Address.
  * I.E. this filter will prevent two connections from the same client based on its IP address.</li><br><br>
  *
- * <li> <tt>{@link IpBlackWhiteListHandler}</tt>: This filter proposes to allow or block IP range (based on standard notation
- * or on CIDR notation) when the connection is running. It relies on another class <tt>IpSubnet</tt> which implements those 
- * Ip ranges.</li><br><br>
+ * <li> <tt>{@link IpFilterRuleHandler}</tt>: This filter proposes to allow or block IP range (based on standard notation
+ * or on CIDR notation) when the connection is running. It relies on another class <tt>IpSubnetFilterRule</tt> 
+ * which implements those Ip ranges.</li><br><br>
  *
  * </ul></P>
  *
@@ -46,7 +46,7 @@
  * <P><ul>
  * <li><tt>accept</tt> method allow to specify your way of choosing if a new connection is
  * to be allowed or not.</li><br>
- * In <tt>OneIpFilterHandler</tt>, <tt>IpBlackWhiteListHandler</tt> and <tt>IpFilterRuleHandler</tt>, 
+ * In <tt>OneIpFilterHandler</tt> and <tt>IpFilterRuleHandler</tt>, 
  * this method is already made.<br>
  * <br>
  *
@@ -57,32 +57,21 @@
  * otherwise the message could be missed since the channel will be closed immediately after this
  * call and the waiting on this channelFuture</b> (at least with respect of asynchronous operations).<br><br>
  *
- * <li><tt>channelConnectedAccept</tt> is called when the CONNECTED event appears.</li><br>
- * It returns True if the channel was not blocked and let the event continues. It returns False if the channel is blocked
- * and therefore any new events (even the CONNECTED one) will not go to next handlers in the pipeline if any. This is
- * intend to prevent any action unnecessary since the connection is refused.<br>
- * However, you could change its behavior for instance because you don't want that this event (and the following)
- * will be blocked by this filter by returning always true even if blocked and by changing too the following method.<br><br>
- * 
- * <li><tt>isBlocked</tt> is called when the CLOSED or any other event than CONNECTED appears.</li><br>
+ * <li><tt>isBlocked</tt> is called when the CLOSED or any other event appears.</li><br>
  * It returns True if the channel was previously blocked and therefore any new events will not go to next handlers 
  * in the pipeline if any. This is intend to prevent any action unnecessary since the connection is refused.<br>
  * However, you could change its behavior for instance because you don't want that any event
- * will be blocked by this filter by returning always false.<br><br>
- * 
- * <li><tt>channelClosedWasBlocked</tt> is called when the CLOSED event appears.</li><br>
- * It returns True if the channel was blocked before and so ends the event transmission into the pipeline. 
- * It returns False if the channel was not blocked so it is a normal closed operation
- * and therefore let this event go to next handlers in the pipeline if any.<br>
- * However, you could change its behavior for instance because you don't want that this event
- * will be blocked by this filter by returning always true.<br><br>
+ * will be blocked by this filter by returning always false.<br>
+ * <b>Note that OPENED and BOUND events are still passed to the next entry in the pipeline since
+ * those events come out before the CONNECTED event, so there is no possibility to filter those two events
+ * before the CONNECTED event shows up.</b><br><br>
  * 
  * <li>Finally <tt>handleUpstream</tt> traps the CONNECTED and CLOSED events.</li><br>
  * If in the CONNECTED events the channel is blocked (<tt>accept</tt> refused the channel),
  * then any new events on this channel (except CLOSED) will be blocked.<br>
  * However, you could change its behavior for instance because you don't want that all events
  * will be blocked by this filter by testing the result of isBlocked, and if so, 
- * calling <tt>ctx.sendUpstream(e);</tt> after calling the super method.<br><br>
+ * calling <tt>ctx.sendUpstream(e);</tt> after calling the super method or by changing the <tt>isBlocked</tt> method.<br><br>
 
  * </ul></P><br><br>
  *

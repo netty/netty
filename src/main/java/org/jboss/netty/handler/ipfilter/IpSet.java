@@ -22,21 +22,21 @@
  */
 package org.jboss.netty.handler.ipfilter;
 
+import java.net.InetAddress;
+
 /**
- * This Interface defines an Ip Filter Rule.
+ * This Interface defines an IpSet object.
  * 
  * @author frederic bregier
  *
  */
-public interface IpFilterRule extends IpSet {
+public interface IpSet {
     /**
-     * 
-     * @return True if this Rule is an ALLOW rule
+     * Compares the given InetAddress against the IpSet and returns true if
+     * the InetAddress is contained in this Rule and false if not.
+     * @param inetAddress1
+     * @return returns true if the given IP address is contained in the current
+     * IpSet.
      */
-    public boolean isAllowRule();
-    /**
-     * 
-     * @return True if this Rule is a DENY rule
-     */
-    public boolean isDenyRule();
+    public boolean contains(InetAddress inetAddress1);
 }

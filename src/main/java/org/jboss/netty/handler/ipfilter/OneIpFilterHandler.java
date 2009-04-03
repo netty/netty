@@ -30,12 +30,19 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.util.ConcurrentHashMap;
 
 /**
  * Handler that block any new connection if there are already a currently active
- * channel connected with the same InetAddress (IP).
+ * channel connected with the same InetAddress (IP).<br>
+ * <br>
+ * 
+ * Take care to not change isBlocked method except if you know what you are doing
+ * since it is used to test if the current closed connection is to be removed
+ * or not from the map of currently connected channel.
+ * 
  * @author frederic bregier
  *
  */
@@ -54,10 +61,10 @@ public class OneIpFilterHandler extends IpFilteringHandler {
     protected boolean accept(ChannelHandlerContext ctx, ChannelEvent e,
             InetSocketAddress inetSocketAddress) throws Exception {
         InetAddress inetAddress = inetSocketAddress.getAddress();
-        if (connectedSet.containsKey(inetAddress)) {
+        if (this.connectedSet.containsKey(inetAddress)) {
             return false;
         }
-        connectedSet.put(inetAddress, Boolean.TRUE);
+        this.connectedSet.put(inetAddress, Boolean.TRUE);
         return true;
     }
 
@@ -74,17 +81,26 @@ public class OneIpFilterHandler extends IpFilteringHandler {
     }
 
     /* (non-Javadoc)
-     * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#channelClosedWasBlocked(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelStateEvent)
+     * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#handleUpstream(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent)
      */
     @Override
-    protected boolean channelClosedWasBlocked(ChannelHandlerContext ctx,
-            ChannelStateEvent e) throws Exception {
-        boolean refused = super.channelClosedWasBlocked(ctx, e);
-        if (! refused) {
-            InetSocketAddress inetSocketAddress = (InetSocketAddress) e.getChannel().getRemoteAddress();
-            connectedSet.remove(inetSocketAddress.getAddress());
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
+            throws Exception {
+        super.handleUpstream(ctx, e);
+        // Try to remove entry from Map if already exists
+        if (e instanceof ChannelStateEvent) {
+            ChannelStateEvent evt = (ChannelStateEvent) e;
+            if (evt.getState() == ChannelState.OPEN) {
+                if (Boolean.FALSE.equals(evt.getValue())) {
+                    // CLOSED
+                    if (! this.isBlocked(ctx,e)) {
+                        // remove inetsocketaddress from set
+                        InetSocketAddress inetSocketAddress = (InetSocketAddress) e.getChannel().getRemoteAddress();
+                        this.connectedSet.remove(inetSocketAddress.getAddress());
+                    }
+                }
+            }
         }
-        return refused;
     }
 
 }
