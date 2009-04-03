@@ -70,6 +70,7 @@ public class DefaultObjectSizeEstimator implements ObjectSizeEstimator {
 
         int answer = 8 + estimateSize(o.getClass(), null);
 
+        // FIXME: Cyclic dependency
         if (o instanceof ChannelEventRunnable) {
             answer += estimateSize(((ChannelEventRunnable) o).getEvent());
         } else if (o instanceof MessageEvent) {
