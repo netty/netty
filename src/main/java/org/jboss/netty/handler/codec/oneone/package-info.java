@@ -24,5 +24,7 @@
 /**
  * Simplistic abstract classes which help implement encoder and decoder that
  * transform an object into another object and vice versa.
+ *
+ * @apiviz.exclude
  */
 package org.jboss.netty.handler.codec.oneone;
