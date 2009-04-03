@@ -24,13 +24,14 @@ package org.jboss.netty.handler.ipfilter;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ConcurrentMap;
 
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.util.ConcurrentHashMap;
 
 /**
  * Handler that block any new connection if there are already a currently active
@@ -43,8 +44,8 @@ public class OneIpFilterHandler extends IpFilteringHandler {
     /**
      * HashMap of current remote connected InetAddress
      */
-    private final ConcurrentSkipListSet<InetAddress> connectedSet = 
-        new ConcurrentSkipListSet<InetAddress>();
+    private final ConcurrentMap<InetAddress, Boolean> connectedSet =
+        new ConcurrentHashMap<InetAddress, Boolean>();
 
     /* (non-Javadoc)
      * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#accept(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent, java.net.InetSocketAddress)
@@ -53,10 +54,10 @@ public class OneIpFilterHandler extends IpFilteringHandler {
     protected boolean accept(ChannelHandlerContext ctx, ChannelEvent e,
             InetSocketAddress inetSocketAddress) throws Exception {
         InetAddress inetAddress = inetSocketAddress.getAddress();
-        if (this.connectedSet.contains(inetAddress)) {
+        if (connectedSet.containsKey(inetAddress)) {
             return false;
         }
-        this.connectedSet.add(inetAddress);
+        connectedSet.put(inetAddress, Boolean.TRUE);
         return true;
     }
 
@@ -81,7 +82,7 @@ public class OneIpFilterHandler extends IpFilteringHandler {
         boolean refused = super.channelClosedWasBlocked(ctx, e);
         if (! refused) {
             InetSocketAddress inetSocketAddress = (InetSocketAddress) e.getChannel().getRemoteAddress();
-            this.connectedSet.remove(inetSocketAddress.getAddress());
+            connectedSet.remove(inetSocketAddress.getAddress());
         }
         return refused;
     }
