@@ -27,12 +27,12 @@ import java.util.Map.Entry;
 
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.HeapChannelBufferFactory;
-import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictor;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ConversionUtil;
+import org.jboss.netty.util.internal.ConversionUtil;
 
 /**
  * The default {@link XnioChannelConfig} implementation.

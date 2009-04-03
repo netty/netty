@@ -30,7 +30,7 @@ import java.util.TreeMap;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.util.CaseIgnoringComparator;
+import org.jboss.netty.util.internal.CaseIgnoringComparator;
 
 /**
  * a default Http Message which holds the headers and body.

@@ -32,8 +32,8 @@ import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
-import org.jboss.netty.util.ExecutorUtil;
-import org.jboss.netty.util.UnterminatableExecutor;
+import org.jboss.netty.util.internal.ExecutorUtil;
+import org.jboss.netty.util.internal.UnterminatableExecutor;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Scopes;

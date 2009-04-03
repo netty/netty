@@ -25,7 +25,7 @@
  * Expert Group and released to the public domain, as explained at
  * http://creativecommons.org/licenses/publicdomain
  */
-package org.jboss.netty.util;
+package org.jboss.netty.util.internal;
 
 import java.util.AbstractCollection;
 import java.util.AbstractMap;
@@ -41,8 +41,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantLock;
 
+
 /**
- * An alternative {@link ConcurrentMap} implementation which is similar to
+ * An alternative identity-comparing {@link ConcurrentMap} which is similar to
  * {@link java.util.concurrent.ConcurrentHashMap}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -54,7 +55,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  */
-public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
+public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
         implements ConcurrentMap<K, V>{
 
     /**
@@ -149,7 +150,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
     }
 
     private int hashOf(Object key) {
-        return hash(key.hashCode());
+        return hash(System.identityHashCode(key));
     }
 
     /**
@@ -239,7 +240,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
          * are marked in code comments.
          */
 
-        private static final long serialVersionUID = -2001752926705396395L;
+        private static final long serialVersionUID = 5207829234977119743L;
 
         /**
          * The number of elements in this segment's region.
@@ -286,7 +287,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
         }
 
         private boolean keyEq(Object src, Object dest) {
-            return src.equals(dest);
+            return src == dest;
         }
 
         /**
@@ -606,7 +607,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
      *                                  the load factor or concurrencyLevel are
      *                                  nonpositive.
      */
-    public ConcurrentHashMap(
+    public ConcurrentIdentityHashMap(
             int initialCapacity, float loadFactor,
             int concurrencyLevel) {
         if (!(loadFactor > 0) || initialCapacity < 0 || concurrencyLevel <= 0) {
@@ -660,7 +661,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
      *                                  negative or the load factor is
      *                                  nonpositive
      */
-    public ConcurrentHashMap(int initialCapacity, float loadFactor) {
+    public ConcurrentIdentityHashMap(int initialCapacity, float loadFactor) {
         this(initialCapacity, loadFactor, DEFAULT_CONCURRENCY_LEVEL);
     }
 
@@ -674,7 +675,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
      * @throws IllegalArgumentException if the initial capacity of elements is
      *                                  negative.
      */
-    public ConcurrentHashMap(int initialCapacity) {
+    public ConcurrentIdentityHashMap(int initialCapacity) {
         this(initialCapacity, DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL);
     }
 
@@ -683,7 +684,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
      * types (weak keys, strong values), default load factor (0.75) and
      * concurrencyLevel (16).
      */
-    public ConcurrentHashMap() {
+    public ConcurrentIdentityHashMap() {
         this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL);
     }
 
@@ -695,7 +696,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
      *
      * @param m the map
      */
-    public ConcurrentHashMap(Map<? extends K, ? extends V> m) {
+    public ConcurrentIdentityHashMap(Map<? extends K, ? extends V> m) {
         this(Math.max((int) (m.size() / DEFAULT_LOAD_FACTOR) + 1,
              DEFAULT_INITIAL_CAPACITY), DEFAULT_LOAD_FACTOR,
              DEFAULT_CONCURRENCY_LEVEL);
@@ -1192,7 +1193,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
             if (lastReturned == null) {
                 throw new IllegalStateException();
             }
-            ConcurrentHashMap.this.remove(currentKey);
+            ConcurrentIdentityHashMap.this.remove(currentKey);
             lastReturned = null;
         }
     }
@@ -1225,6 +1226,8 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
      * This class is needed for JDK5 compatibility.
      */
     static class SimpleEntry<K, V> implements Entry<K, V> {
+
+        private static final long serialVersionUID = -8144765946475398746L;
 
         private final K key;
 
@@ -1306,7 +1309,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
                 throw new NullPointerException();
             }
             V v = super.setValue(value);
-            ConcurrentHashMap.this.put(getKey(), value);
+            ConcurrentIdentityHashMap.this.put(getKey(), value);
             return v;
         }
 
@@ -1329,28 +1332,28 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
 
         @Override
         public int size() {
-            return ConcurrentHashMap.this.size();
+            return ConcurrentIdentityHashMap.this.size();
         }
 
         @Override
         public boolean isEmpty() {
-            return ConcurrentHashMap.this.isEmpty();
+            return ConcurrentIdentityHashMap.this.isEmpty();
         }
 
         @Override
         public boolean contains(Object o) {
-            return ConcurrentHashMap.this.containsKey(o);
+            return ConcurrentIdentityHashMap.this.containsKey(o);
         }
 
         @Override
         public boolean remove(Object o) {
-            return ConcurrentHashMap.this.remove(o) != null;
+            return ConcurrentIdentityHashMap.this.remove(o) != null;
 
         }
 
         @Override
         public void clear() {
-            ConcurrentHashMap.this.clear();
+            ConcurrentIdentityHashMap.this.clear();
         }
     }
 
@@ -1362,22 +1365,22 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
 
         @Override
         public int size() {
-            return ConcurrentHashMap.this.size();
+            return ConcurrentIdentityHashMap.this.size();
         }
 
         @Override
         public boolean isEmpty() {
-            return ConcurrentHashMap.this.isEmpty();
+            return ConcurrentIdentityHashMap.this.isEmpty();
         }
 
         @Override
         public boolean contains(Object o) {
-            return ConcurrentHashMap.this.containsValue(o);
+            return ConcurrentIdentityHashMap.this.containsValue(o);
         }
 
         @Override
         public void clear() {
-            ConcurrentHashMap.this.clear();
+            ConcurrentIdentityHashMap.this.clear();
         }
     }
 
@@ -1393,7 +1396,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
                 return false;
             }
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
-            V v = ConcurrentHashMap.this.get(e.getKey());
+            V v = ConcurrentIdentityHashMap.this.get(e.getKey());
             return v != null && v.equals(e.getValue());
         }
 
@@ -1403,22 +1406,22 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
                 return false;
             }
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
-            return ConcurrentHashMap.this.remove(e.getKey(), e.getValue());
+            return ConcurrentIdentityHashMap.this.remove(e.getKey(), e.getValue());
         }
 
         @Override
         public int size() {
-            return ConcurrentHashMap.this.size();
+            return ConcurrentIdentityHashMap.this.size();
         }
 
         @Override
         public boolean isEmpty() {
-            return ConcurrentHashMap.this.isEmpty();
+            return ConcurrentIdentityHashMap.this.isEmpty();
         }
 
         @Override
         public void clear() {
-            ConcurrentHashMap.this.clear();
+            ConcurrentIdentityHashMap.this.clear();
         }
     }
 }

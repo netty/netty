@@ -27,7 +27,7 @@
  * http://creativecommons.org/licenses/publicdomain
  */
 
-package org.jboss.netty.util;
+package org.jboss.netty.util.internal;
 
 import java.util.AbstractQueue;
 import java.util.Collection;

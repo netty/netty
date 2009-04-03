@@ -22,7 +22,7 @@
  */
 package org.jboss.netty.logging;
 
-import org.jboss.netty.util.StackTraceSimplifier;
+import org.jboss.netty.util.internal.StackTraceSimplifier;
 
 /**
  * Creates an {@link InternalLogger} or changes the default factory

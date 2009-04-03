@@ -25,8 +25,8 @@ package org.jboss.netty.channel.socket.nio;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
-import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictor;
+import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.SocketChannelConfig;

@@ -28,7 +28,7 @@ import java.net.SocketException;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.DefaultChannelConfig;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
-import org.jboss.netty.util.ConversionUtil;
+import org.jboss.netty.util.internal.ConversionUtil;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)

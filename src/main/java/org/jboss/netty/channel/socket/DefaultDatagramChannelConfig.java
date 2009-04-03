@@ -33,7 +33,7 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.DefaultChannelConfig;
 import org.jboss.netty.channel.FixedReceiveBufferSizePredictor;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
-import org.jboss.netty.util.ConversionUtil;
+import org.jboss.netty.util.internal.ConversionUtil;
 
 /**
  * The default {@link SocketChannelConfig} implementation.

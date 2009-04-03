@@ -25,7 +25,7 @@ package org.jboss.netty.channel.local;
 import java.util.concurrent.ConcurrentMap;
 
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.util.ConcurrentHashMap;
+import org.jboss.netty.util.internal.ConcurrentHashMap;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)

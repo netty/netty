@@ -32,7 +32,8 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.util.ConcurrentIdentityHashMap;
+import org.jboss.netty.util.ObjectSizeEstimator;
+import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
 
 /**
  * A {@link MemoryAwareThreadPoolExecutor} which maintains the

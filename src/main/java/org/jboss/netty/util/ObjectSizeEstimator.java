@@ -22,10 +22,11 @@
  */
 package org.jboss.netty.util;
 
-import java.util.concurrent.Executor;
+import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
+import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 
 /**
- * {@link Executor} which executes the command in the caller thread.
+ * Estimates the size of an object in bytes.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -33,14 +34,13 @@ import java.util.concurrent.Executor;
  * @version $Rev$, $Date$
  *
  */
-public class ImmediateExecutor implements Executor {
+public interface ObjectSizeEstimator {
 
     /**
-     * The default instance.
+     * Returns the estimated size of the specified object in bytes.
+     * This method must be implemented to return the same value for the same
+     * object.  {@link MemoryAwareThreadPoolExecutor} and
+     * {@link OrderedMemoryAwareThreadPoolExecutor} will malfunction otherwise.
      */
-    public static final ImmediateExecutor INSTANCE = new ImmediateExecutor();
-
-    public void execute(Runnable command) {
-        command.run();
-    }
+    int estimateSize(Object o);
 }

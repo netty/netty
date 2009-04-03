@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.util;
 
+import org.jboss.netty.util.internal.SystemPropertyUtil;
+
 /**
  * Determines if Netty is running in a debug mode or not.  Please note that
  * this is not a Java debug mode.  You can enable Netty debug mode by

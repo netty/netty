@@ -30,8 +30,8 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.handler.execution.DefaultObjectSizeEstimator;
-import org.jboss.netty.handler.execution.ObjectSizeEstimator;
+import org.jboss.netty.util.DefaultObjectSizeEstimator;
+import org.jboss.netty.util.ObjectSizeEstimator;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)

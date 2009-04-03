@@ -27,8 +27,8 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.logging.JBossLoggerFactory;
-import org.jboss.netty.util.ExecutorUtil;
-import org.jboss.netty.util.UnterminatableExecutor;
+import org.jboss.netty.util.internal.ExecutorUtil;
+import org.jboss.netty.util.internal.UnterminatableExecutor;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)

@@ -20,45 +20,62 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.util;
+package org.jboss.netty.util.internal;
 
-import static org.easymock.EasyMock.*;
-import static org.easymock.classextension.EasyMock.*;
-import static org.junit.Assert.*;
-
-import java.io.InputStream;
-
-import org.junit.Test;
-
+import java.io.Serializable;
+import java.util.AbstractSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 /**
+ * A {@link Map}-backed {@link Set}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
- *
  */
-public class SwitchableInputStreamTest {
+public class MapBackedSet<E> extends AbstractSet<E> implements Serializable {
 
-    @Test
-    public void testSwitchStream() throws Exception {
-        SwitchableInputStream sin = new SwitchableInputStream();
+    private static final long serialVersionUID = -6761513279741915432L;
 
-        InputStream in1 = createStrictMock(InputStream.class);
-        InputStream in2 = createStrictMock(InputStream.class);
-        expect(in1.read()).andReturn(1);
-        replay(in1, in2);
+    private final Map<E, Boolean> map;
 
-        sin.switchStream(in1);
-        assertEquals(1, sin.read());
-        verify(in1, in2);
-        reset(in1, in2);
+    /**
+     * Creates a new instance which wraps the specified {@code map}.
+     */
+    public MapBackedSet(Map<E, Boolean> map) {
+        this.map = map;
+    }
 
-        expect(in2.read()).andReturn(2);
-        replay(in1, in2);
+    @Override
+    public int size() {
+        return map.size();
+    }
 
-        sin.switchStream(in2);
-        assertEquals(2, sin.read());
-        verify(in1, in2);
+    @Override
+    public boolean contains(Object o) {
+        return map.containsKey(o);
+    }
+
+    @Override
+    public boolean add(E o) {
+        return map.put(o, Boolean.TRUE) == null;
+    }
+
+    @Override
+    public boolean remove(Object o) {
+        return map.remove(o) != null;
+    }
+
+    @Override
+    public void clear() {
+        map.clear();
+    }
+
+    @Override
+    public Iterator<E> iterator() {
+        return map.keySet().iterator();
     }
 }

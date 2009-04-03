@@ -37,10 +37,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ConcurrentIdentityHashMap;
-import org.jboss.netty.util.MapBackedSet;
-import org.jboss.netty.util.ReusableIterator;
-import org.jboss.netty.util.ThreadRenamingRunnable;
+import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
+import org.jboss.netty.util.internal.MapBackedSet;
+import org.jboss.netty.util.internal.ReusableIterator;
+import org.jboss.netty.util.internal.ThreadRenamingRunnable;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)

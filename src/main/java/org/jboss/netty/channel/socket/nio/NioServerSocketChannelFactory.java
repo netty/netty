@@ -32,7 +32,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
-import org.jboss.netty.util.ExecutorUtil;
+import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
  * A {@link ServerSocketChannelFactory} which creates a server-side NIO-based

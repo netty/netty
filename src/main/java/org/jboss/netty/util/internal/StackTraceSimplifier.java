@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.util;
+package org.jboss.netty.util.internal;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 
 import org.jboss.netty.channel.DefaultChannelPipeline;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.util.DebugUtil;
 
 /**
  * Simplifies an exception stack trace by removing unnecessary
@@ -46,7 +47,7 @@ public class StackTraceSimplifier {
     private static final Pattern EXCLUDED_STACK_TRACE =
         Pattern.compile(
                 "^org\\.jboss\\.netty\\." +
-                "(util\\.(ThreadRenamingRunnable)" +
+                "(util\\.internal\\.(ThreadRenamingRunnable)" +
                 "|channel\\.(SimpleChannelHandler|DefaultChannelPipeline.*))$");
 
     /**

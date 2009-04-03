@@ -25,6 +25,8 @@ package org.jboss.netty.util;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import org.jboss.netty.util.internal.ConversionUtil;
+
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)

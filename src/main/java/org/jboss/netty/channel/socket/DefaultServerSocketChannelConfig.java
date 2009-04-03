@@ -27,7 +27,7 @@ import java.net.SocketException;
 
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.DefaultServerChannelConfig;
-import org.jboss.netty.util.ConversionUtil;
+import org.jboss.netty.util.internal.ConversionUtil;
 
 /**
  * The default {@link ServerSocketChannelConfig} implementation.

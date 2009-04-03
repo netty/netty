@@ -34,7 +34,7 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.util.MapUtil;
+import org.jboss.netty.util.internal.MapUtil;
 
 /**
  * A helper class which initializes a {@link Channel}.  This class provides

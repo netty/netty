@@ -43,8 +43,10 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ConcurrentIdentityHashMap;
-import org.jboss.netty.util.LinkedTransferQueue;
+import org.jboss.netty.util.DefaultObjectSizeEstimator;
+import org.jboss.netty.util.ObjectSizeEstimator;
+import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
+import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
  * A {@link ThreadPoolExecutor} which blocks the task submission when there's
@@ -82,7 +84,7 @@ import org.jboss.netty.util.LinkedTransferQueue;
  *
  * @version $Rev$, $Date$
  *
- * @apiviz.uses org.jboss.netty.handler.execution.ObjectSizeEstimator
+ * @apiviz.uses org.jboss.netty.util.ObjectSizeEstimator
  * @apiviz.uses org.jboss.netty.handler.execution.ChannelEventRunnable
  */
 public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {

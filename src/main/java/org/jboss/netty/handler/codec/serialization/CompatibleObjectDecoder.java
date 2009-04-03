@@ -32,7 +32,7 @@ import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
-import org.jboss.netty.util.SwitchableInputStream;
+import org.jboss.netty.util.internal.SwitchableInputStream;
 
 /**
  * A decoder which deserializes the received {@link ChannelBuffer}s into Java

@@ -24,7 +24,7 @@ package org.jboss.netty.channel;
 
 import static org.jboss.netty.channel.Channels.*;
 
-import org.jboss.netty.util.StackTraceSimplifier;
+import org.jboss.netty.util.internal.StackTraceSimplifier;
 
 /**
  * The default {@link ExceptionEvent} implementation.

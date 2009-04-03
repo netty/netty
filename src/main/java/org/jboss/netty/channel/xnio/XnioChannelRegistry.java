@@ -27,8 +27,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentMap;
 
-import org.jboss.netty.util.ConcurrentHashMap;
-import org.jboss.netty.util.ConcurrentIdentityHashMap;
+import org.jboss.netty.util.internal.ConcurrentHashMap;
+import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)

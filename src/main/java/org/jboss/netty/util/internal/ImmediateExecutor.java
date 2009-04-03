@@ -1,7 +1,7 @@
 /*
  * JBoss, Home of Professional Open Source
  *
- * Copyright 2009, Red Hat Middleware LLC, and individual contributors
+ * Copyright 2008, Red Hat Middleware LLC, and individual contributors
  * by the @author tags. See the COPYRIGHT.txt in the distribution for a
  * full listing of individual contributors.
  *
@@ -20,29 +20,27 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.util;
+package org.jboss.netty.util.internal;
 
 import java.util.concurrent.Executor;
 
 /**
- * Disables shutdown of an {@link Executor} by wrapping the {@link Executor}.
+ * {@link Executor} which executes the command in the caller thread.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
+ *
  * @version $Rev$, $Date$
+ *
  */
-public class UnterminatableExecutor implements Executor {
+public class ImmediateExecutor implements Executor {
 
-    private final Executor executor;
-
-    public UnterminatableExecutor(Executor executor) {
-        if (executor == null) {
-            throw new NullPointerException("executor");
-        }
-        this.executor = executor;
-    }
+    /**
+     * The default instance.
+     */
+    public static final ImmediateExecutor INSTANCE = new ImmediateExecutor();
 
     public void execute(Runnable command) {
-        executor.execute(command);
+        command.run();
     }
 }

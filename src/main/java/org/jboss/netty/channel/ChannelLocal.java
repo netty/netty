@@ -24,7 +24,7 @@ package org.jboss.netty.channel;
 
 import java.util.concurrent.ConcurrentMap;
 
-import org.jboss.netty.util.ConcurrentIdentityWeakKeyHashMap;
+import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)

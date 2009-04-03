@@ -398,7 +398,7 @@
           <docletArtifact>
             <groupId>org.jboss.apiviz</groupId>
             <artifactId>apiviz</artifactId>
-            <version>1.2.5.GA</version>
+            <version>1.2.6.GA-SNAPSHOT</version>
           </docletArtifact>
           <attach>false</attach>
           <useStandardDocletOptions>true</useStandardDocletOptions>
@@ -430,14 +430,13 @@
             -group "Client &amp; Server bootstrapping utilities" ${project.groupId}.bootstrap*
             -group "Reusable I/O event interceptors" ${project.groupId}.handler*
             -group "IoC (Dependency Injection) container integration" ${project.groupId}.container*
-            -group "Miscellaneous" ${project.groupId}.logging*
+            -group "Miscellaneous" ${project.groupId}.logging*:${project.groupId}.util*
 
-            -nopackagediagram
             -sourceclasspath ${project.build.outputDirectory}
           </additionalparam>
           <encoding>UTF-8</encoding>
           <locale>en_US</locale>
-          <excludePackageNames>${project.groupId}.example*:${project.groupId}.util*</excludePackageNames>
+          <excludePackageNames>${project.groupId}.example*:${project.groupId}.util.internal*</excludePackageNames>
         </configuration>
       </plugin>
       <plugin>

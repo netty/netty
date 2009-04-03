@@ -26,7 +26,7 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.net.SocketAddress;
 
-import org.jboss.netty.util.StringUtil;
+import org.jboss.netty.util.internal.StringUtil;
 
 /**
  * The default {@link MessageEvent} implementation.

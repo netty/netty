@@ -33,8 +33,8 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.util.ExecutorUtil;
 import org.jboss.netty.util.ExternalResourceReleasable;
+import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
  * Forwards an upstream {@link ChannelEvent} to an {@link Executor}.

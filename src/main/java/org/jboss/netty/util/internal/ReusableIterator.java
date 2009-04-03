@@ -1,7 +1,7 @@
 /*
  * JBoss, Home of Professional Open Source
  *
- * Copyright 2008, Red Hat Middleware LLC, and individual contributors
+ * Copyright 2009, Red Hat Middleware LLC, and individual contributors
  * by the @author tags. See the COPYRIGHT.txt in the distribution for a
  * full listing of individual contributors.
  *
@@ -20,41 +20,15 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.util;
+package org.jboss.netty.util.internal;
 
-import static org.junit.Assert.*;
-
-import org.junit.Test;
-
+import java.util.Iterator;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
- *
  * @version $Rev$, $Date$
- *
  */
-public class ImmediateExecutorTest {
-
-    @Test
-    public void shouldExecuteImmediately() {
-        ImmediateExecutor e = ImmediateExecutor.INSTANCE;
-        long startTime = System.nanoTime();
-        e.execute(new Runnable() {
-            public void run() {
-                long startTime = System.nanoTime();
-                for (;;) {
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        // Ignore
-                    }
-                    if (System.nanoTime() - startTime >= 1000000000L) {
-                        break;
-                    }
-                }
-            }
-        });
-        assertTrue(System.nanoTime() - startTime >= 1000000000L);
-    }
+public interface ReusableIterator<E> extends Iterator<E> {
+    void rewind();
 }

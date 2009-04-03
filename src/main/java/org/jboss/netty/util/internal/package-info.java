@@ -20,36 +20,9 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.util;
-
-import java.io.FilterInputStream;
-import java.io.InputStream;
 
 /**
- * {@link FilterInputStream} which allows a user to change the underlying
- * stream at any time.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
- *
- * @version $Rev$, $Date$
- *
+ * <em>Internal-use-only</em> utilities which is not allowed to be used
+ * outside Netty.
  */
-public class SwitchableInputStream extends FilterInputStream {
-
-    /**
-     * Creates a new instance without initializing the reference to the
-     * underlying stream.
-     */
-    public SwitchableInputStream() {
-        super(null);
-    }
-
-    /**
-     * Creates a new instance with the initial reference to the underlying
-     * stream.
-     */
-    public void switchStream(InputStream in) {
-        this.in = in;
-    }
-}
+package org.jboss.netty.util.internal;

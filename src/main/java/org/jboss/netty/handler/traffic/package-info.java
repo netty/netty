@@ -99,7 +99,4 @@
  */
 package org.jboss.netty.handler.traffic;
 
-import org.jboss.netty.handler.execution.DefaultObjectSizeEstimator;
-import org.jboss.netty.handler.execution.ObjectSizeEstimator;
-import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
-import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+

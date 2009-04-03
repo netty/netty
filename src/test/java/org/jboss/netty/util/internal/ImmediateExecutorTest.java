@@ -20,62 +20,42 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.util;
+package org.jboss.netty.util.internal;
 
-import java.io.Serializable;
-import java.util.AbstractSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
+import static org.junit.Assert.*;
+
+import org.jboss.netty.util.internal.ImmediateExecutor;
+import org.junit.Test;
+
 
 /**
- * A {@link Map}-backed {@link Set}.
- *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
+ *
  */
-public class MapBackedSet<E> extends AbstractSet<E> implements Serializable {
+public class ImmediateExecutorTest {
 
-    private static final long serialVersionUID = -6761513279741915432L;
-
-    private final Map<E, Boolean> map;
-
-    /**
-     * Creates a new instance which wraps the specified {@code map}.
-     */
-    public MapBackedSet(Map<E, Boolean> map) {
-        this.map = map;
-    }
-
-    @Override
-    public int size() {
-        return map.size();
-    }
-
-    @Override
-    public boolean contains(Object o) {
-        return map.containsKey(o);
-    }
-
-    @Override
-    public boolean add(E o) {
-        return map.put(o, Boolean.TRUE) == null;
-    }
-
-    @Override
-    public boolean remove(Object o) {
-        return map.remove(o) != null;
-    }
-
-    @Override
-    public void clear() {
-        map.clear();
-    }
-
-    @Override
-    public Iterator<E> iterator() {
-        return map.keySet().iterator();
+    @Test
+    public void shouldExecuteImmediately() {
+        ImmediateExecutor e = ImmediateExecutor.INSTANCE;
+        long startTime = System.nanoTime();
+        e.execute(new Runnable() {
+            public void run() {
+                long startTime = System.nanoTime();
+                for (;;) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        // Ignore
+                    }
+                    if (System.nanoTime() - startTime >= 1000000000L) {
+                        break;
+                    }
+                }
+            }
+        });
+        assertTrue(System.nanoTime() - startTime >= 1000000000L);
     }
 }

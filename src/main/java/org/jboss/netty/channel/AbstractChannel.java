@@ -25,7 +25,7 @@ package org.jboss.netty.channel;
 import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentMap;
 
-import org.jboss.netty.util.ConcurrentHashMap;
+import org.jboss.netty.util.internal.ConcurrentHashMap;
 
 /**
  * A skeletal {@link Channel} implementation.

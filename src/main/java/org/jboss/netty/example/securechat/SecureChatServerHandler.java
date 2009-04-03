@@ -39,7 +39,7 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.ssl.SslHandler;
-import org.jboss.netty.util.MapBackedSet;
+import org.jboss.netty.util.internal.MapBackedSet;
 
 /**
  * Handles a server-side channel.
@@ -125,13 +125,13 @@ public class SecureChatServerHandler extends SimpleChannelHandler {
      * @version $Rev$, $Date$
      */
     private static final class Greeter implements ChannelFutureListener {
-    
+
         private final SslHandler sslHandler;
-    
+
         Greeter(SslHandler sslHandler) {
             this.sslHandler = sslHandler;
         }
-    
+
         public void operationComplete(ChannelFuture future) throws Exception {
             if (future.isSuccess()) {
                 // Once session is secured, send a greeting.
@@ -142,7 +142,7 @@ public class SecureChatServerHandler extends SimpleChannelHandler {
                         "Your session is protected by " +
                         sslHandler.getEngine().getSession().getCipherSuite() +
                         " cipher suite.\n");
-    
+
                 // Register the channel to the global channel list
                 // so the channel received the messages from others.
                 channels.add(future.getChannel());

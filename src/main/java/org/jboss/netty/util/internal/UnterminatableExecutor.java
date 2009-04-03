@@ -20,27 +20,29 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.util;
+package org.jboss.netty.util.internal;
+
+import java.util.concurrent.Executor;
 
 /**
+ * Disables shutdown of an {@link Executor} by wrapping the {@link Executor}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class ThreadLocalBoolean extends ThreadLocal<Boolean> {
+public class UnterminatableExecutor implements Executor {
 
-    private final boolean defaultValue;
+    private final Executor executor;
 
-    public ThreadLocalBoolean() {
-        this(false);
+    public UnterminatableExecutor(Executor executor) {
+        if (executor == null) {
+            throw new NullPointerException("executor");
+        }
+        this.executor = executor;
     }
 
-    public ThreadLocalBoolean(boolean defaultValue) {
-        this.defaultValue = defaultValue;
-    }
-
-    @Override
-    protected Boolean initialValue() {
-        return defaultValue? Boolean.TRUE : Boolean.FALSE;
+    public void execute(Runnable command) {
+        executor.execute(command);
     }
 }

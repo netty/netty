@@ -1,7 +1,7 @@
 /*
  * JBoss, Home of Professional Open Source
  *
- * Copyright 2009, Red Hat Middleware LLC, and individual contributors
+ * Copyright 2008, Red Hat Middleware LLC, and individual contributors
  * by the @author tags. See the COPYRIGHT.txt in the distribution for a
  * full listing of individual contributors.
  *
@@ -20,15 +20,36 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.util;
+package org.jboss.netty.util.internal;
 
-import java.util.Iterator;
+import java.io.FilterInputStream;
+import java.io.InputStream;
 
 /**
+ * {@link FilterInputStream} which allows a user to change the underlying
+ * stream at any time.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
+ *
  * @version $Rev$, $Date$
+ *
  */
-public interface ReusableIterator<E> extends Iterator<E> {
-    void rewind();
+public class SwitchableInputStream extends FilterInputStream {
+
+    /**
+     * Creates a new instance without initializing the reference to the
+     * underlying stream.
+     */
+    public SwitchableInputStream() {
+        super(null);
+    }
+
+    /**
+     * Creates a new instance with the initial reference to the underlying
+     * stream.
+     */
+    public void switchStream(InputStream in) {
+        this.in = in;
+    }
 }

@@ -29,7 +29,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.socket.DatagramChannel;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
-import org.jboss.netty.util.ExecutorUtil;
+import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
  * A {@link DatagramChannelFactory} which creates a client-side blocking

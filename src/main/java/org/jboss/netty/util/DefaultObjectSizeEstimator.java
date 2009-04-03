@@ -20,7 +20,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.execution;
+package org.jboss.netty.util;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -31,7 +31,8 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.util.ConcurrentIdentityWeakKeyHashMap;
+import org.jboss.netty.handler.execution.ChannelEventRunnable;
+import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
 
 /**
  * The default {@link ObjectSizeEstimator} implementation for general purpose.

@@ -37,8 +37,8 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ServerChannel;
-import org.jboss.netty.util.CombinedIterator;
-import org.jboss.netty.util.ConcurrentHashMap;
+import org.jboss.netty.util.internal.CombinedIterator;
+import org.jboss.netty.util.internal.ConcurrentHashMap;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)

@@ -20,24 +20,45 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.execution;
+package org.jboss.netty.util.internal;
+
+import static org.easymock.EasyMock.*;
+import static org.easymock.classextension.EasyMock.*;
+import static org.junit.Assert.*;
+
+import java.io.InputStream;
+
+import org.junit.Test;
+
 
 /**
- * Estimates the size of an object in bytes.
- *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
  *
  */
-public interface ObjectSizeEstimator {
+public class SwitchableInputStreamTest {
 
-    /**
-     * Returns the estimated size of the specified object in bytes.
-     * This method must be implemented to return the same value for the same
-     * object.  {@link MemoryAwareThreadPoolExecutor} and
-     * {@link OrderedMemoryAwareThreadPoolExecutor} will malfunction otherwise.
-     */
-    int estimateSize(Object o);
+    @Test
+    public void testSwitchStream() throws Exception {
+        SwitchableInputStream sin = new SwitchableInputStream();
+
+        InputStream in1 = createStrictMock(InputStream.class);
+        InputStream in2 = createStrictMock(InputStream.class);
+        expect(in1.read()).andReturn(1);
+        replay(in1, in2);
+
+        sin.switchStream(in1);
+        assertEquals(1, sin.read());
+        verify(in1, in2);
+        reset(in1, in2);
+
+        expect(in2.read()).andReturn(2);
+        replay(in1, in2);
+
+        sin.switchStream(in2);
+        assertEquals(2, sin.read());
+        verify(in1, in2);
+    }
 }

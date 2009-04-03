@@ -47,7 +47,7 @@ import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
-import org.jboss.netty.util.LinkedTransferQueue;
+import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)

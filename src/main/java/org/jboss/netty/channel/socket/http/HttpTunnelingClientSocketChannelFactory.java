@@ -28,7 +28,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
-import org.jboss.netty.util.ExecutorUtil;
+import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)

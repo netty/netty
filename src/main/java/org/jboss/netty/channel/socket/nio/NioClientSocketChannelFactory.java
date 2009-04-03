@@ -31,7 +31,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
-import org.jboss.netty.util.ExecutorUtil;
+import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
  * A {@link ClientSocketChannelFactory} which creates a client-side NIO-based
