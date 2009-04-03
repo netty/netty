@@ -22,7 +22,7 @@
  */
 
 /**
- * Miscellaneous utility types.
+ * Utility classes used across multiple packages.
  *
  * @apiviz.exclude
  */
