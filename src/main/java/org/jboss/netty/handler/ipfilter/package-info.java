@@ -57,21 +57,24 @@
  * otherwise the message could be missed since the channel will be closed immediately after this
  * call and the waiting on this channelFuture</b> (at least with respect of asynchronous operations).<br><br>
  *
- * <li><tt>isBlocked</tt> is called when the CLOSED or any other event appears.</li><br>
- * It returns True if the channel was previously blocked and therefore any new events will not go to next handlers 
- * in the pipeline if any. This is intend to prevent any action unnecessary since the connection is refused.<br>
+ * <li><tt>continues</tt> is called when any event appears after CONNECTED event and only for
+ * blocked channels.</li><br>
+ * It should return True if this new event has to go to next handlers 
+ * in the pipeline if any, and False (default) if no events has to be passed to the next
+ * handlers when a channel is blocked. This is intend to prevent any unnecessary action since the connection is refused.<br>
  * However, you could change its behavior for instance because you don't want that any event
- * will be blocked by this filter by returning always false.<br>
+ * will be blocked by this filter by returning always true or according to some events.<br>
  * <b>Note that OPENED and BOUND events are still passed to the next entry in the pipeline since
  * those events come out before the CONNECTED event, so there is no possibility to filter those two events
- * before the CONNECTED event shows up.</b><br><br>
+ * before the CONNECTED event shows up. Therefore, you might want to let CLOSED and UNBOUND be passed
+ * to the next entry in the pipeline.</b><br><br>
  * 
- * <li>Finally <tt>handleUpstream</tt> traps the CONNECTED and CLOSED events.</li><br>
+ * <li>Finally <tt>handleUpstream</tt> traps the CONNECTED and DISCONNECTED events.</li><br>
  * If in the CONNECTED events the channel is blocked (<tt>accept</tt> refused the channel),
- * then any new events on this channel (except CLOSED) will be blocked.<br>
+ * then any new events on this channel will be blocked.<br>
  * However, you could change its behavior for instance because you don't want that all events
  * will be blocked by this filter by testing the result of isBlocked, and if so, 
- * calling <tt>ctx.sendUpstream(e);</tt> after calling the super method or by changing the <tt>isBlocked</tt> method.<br><br>
+ * calling <tt>ctx.sendUpstream(e);</tt> after calling the super method or by changing the <tt>continues</tt> method.<br><br>
 
  * </ul></P><br><br>
  *

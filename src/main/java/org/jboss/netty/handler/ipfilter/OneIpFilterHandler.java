@@ -80,6 +80,13 @@ public class OneIpFilterHandler extends IpFilteringHandler {
         return null;
     }
 
+
+    @Override
+    protected boolean continues(ChannelHandlerContext ctx, ChannelEvent e)
+            throws Exception {
+        return false;
+    }
+
     /* (non-Javadoc)
      * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#handleUpstream(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent)
      */
@@ -90,11 +97,11 @@ public class OneIpFilterHandler extends IpFilteringHandler {
         // Try to remove entry from Map if already exists
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent evt = (ChannelStateEvent) e;
-            if (evt.getState() == ChannelState.OPEN) {
-                if (Boolean.FALSE.equals(evt.getValue())) {
-                    // CLOSED
-                    if (! this.isBlocked(ctx,e)) {
-                        // remove inetsocketaddress from set
+            if (evt.getState() == ChannelState.CONNECTED) {
+                if (evt.getValue() == null) {
+                    // DISCONNECTED but was this channel blocked or not
+                    if (this.isBlocked(ctx)) {
+                        // remove inetsocketaddress from set since this channel was not blocked before
                         InetSocketAddress inetSocketAddress = (InetSocketAddress) e.getChannel().getRemoteAddress();
                         this.connectedSet.remove(inetSocketAddress.getAddress());
                     }

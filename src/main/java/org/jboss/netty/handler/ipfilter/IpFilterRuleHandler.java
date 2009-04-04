@@ -284,4 +284,9 @@ public class IpFilterRuleHandler extends IpFilteringHandler {
         return null;
     }
 
+    @Override
+    protected boolean continues(ChannelHandlerContext ctx, ChannelEvent e)
+            throws Exception {
+        return false;
+    }
 }
