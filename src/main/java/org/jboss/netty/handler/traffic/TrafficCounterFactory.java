@@ -292,7 +292,7 @@ public abstract class TrafficCounterFactory {
      * @param newglobalLimitRead
      * @param newglobaldelay
      */
-    public void changeConfiguration(long newchannelLimitWrite,
+    public void configure(long newchannelLimitWrite,
             long newchannelLimitRead, long newchanneldelay,
             long newglobalLimitWrite, long newglobalLimitRead,
             long newglobaldelay) {
@@ -303,7 +303,7 @@ public abstract class TrafficCounterFactory {
         this.globalLimitRead = newglobalLimitRead;
         this.globalDelay = newglobaldelay;
         if (this.globalTrafficMonitor != null) {
-            this.globalTrafficMonitor.changeConfiguration(null,
+            this.globalTrafficMonitor.configure(null,
                     newglobalLimitWrite, newglobalLimitRead, newglobaldelay);
         }
     }
@@ -318,7 +318,7 @@ public abstract class TrafficCounterFactory {
                         this.executorService, null, "GlobalPC",
                         this.globalLimitWrite, this.globalLimitRead,
                         this.globalDelay);
-                this.globalTrafficMonitor.startMonitoring();
+                this.globalTrafficMonitor.start();
             }
         }
         return this.globalTrafficMonitor;
@@ -346,7 +346,7 @@ public abstract class TrafficCounterFactory {
      */
     public void stopGlobalTrafficCounter() {
         if (this.globalTrafficMonitor != null) {
-            this.globalTrafficMonitor.stopMonitoring();
+            this.globalTrafficMonitor.stop();
             this.globalTrafficMonitor = null;
         }
     }
@@ -410,7 +410,7 @@ public abstract class TrafficCounterFactory {
     public void setGlobalDelay(long globalDelay) {
         this.globalDelay = globalDelay;
         if (this.globalTrafficMonitor != null) {
-            this.globalTrafficMonitor.changeConfiguration(null,
+            this.globalTrafficMonitor.configure(null,
                     this.globalLimitWrite, this.globalLimitRead,
                     this.globalDelay);
         }
@@ -430,7 +430,7 @@ public abstract class TrafficCounterFactory {
     public void setGlobalLimitRead(long globalLimitRead) {
         this.globalLimitRead = globalLimitRead;
         if (this.globalTrafficMonitor != null) {
-            this.globalTrafficMonitor.changeConfiguration(null,
+            this.globalTrafficMonitor.configure(null,
                     this.globalLimitWrite, this.globalLimitRead,
                     this.globalDelay);
         }
@@ -450,7 +450,7 @@ public abstract class TrafficCounterFactory {
     public void setGlobalLimitWrite(long globalLimitWrite) {
         this.globalLimitWrite = globalLimitWrite;
         if (this.globalTrafficMonitor != null) {
-            this.globalTrafficMonitor.changeConfiguration(null,
+            this.globalTrafficMonitor.configure(null,
                     this.globalLimitWrite, this.globalLimitRead,
                     this.globalDelay);
         }

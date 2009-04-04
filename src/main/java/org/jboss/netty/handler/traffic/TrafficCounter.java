@@ -44,7 +44,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * interval.
  *
  */
-public class TrafficCounter implements Runnable {
+public class TrafficCounter {
     /**
      * Internal logger
      */
@@ -62,14 +62,24 @@ public class TrafficCounter implements Runnable {
     private final AtomicLong currentReadingBytes = new AtomicLong(0);
 
     /**
+     * Long life writing bytes
+     */
+    private final AtomicLong cumulativeWritingBytes = new AtomicLong(0);
+
+    /**
+     * Long life reading bytes
+     */
+    private final AtomicLong cumulativeReadingBytes = new AtomicLong(0);
+
+    /**
      * Last writing bandwidth
      */
-    private long lastWritingBandwidth = 0;
+    private long lastWritingThroughput = 0;
 
     /**
      * Last reading bandwidth
      */
-    private long lastReadingBandwidth = 0;
+    private long lastReadingThroughput = 0;
 
     /**
      * Last Time Check taken
@@ -99,7 +109,7 @@ public class TrafficCounter implements Runnable {
     /**
      * Delay between two capture
      */
-    private long delay = TrafficCounterFactory.DEFAULT_DELAY;
+    private long checkInterval = TrafficCounterFactory.DEFAULT_DELAY;
 
     // default 1 s
 
@@ -134,17 +144,72 @@ public class TrafficCounter implements Runnable {
     private Future<?> monitorFuture = null;
 
     /**
+     * Class to implement monitoring at fix delay
+     *
+     */
+    private class TrafficMonitoring implements Runnable {
+        /**
+         * Delay between two capture
+         */
+        private final long checkInterval1;
+        /**
+         * The associated TrafficCounterFactory
+         */
+        private final TrafficCounterFactory factory1;
+        /**
+         * The associated TrafficCounter
+         */
+        private final TrafficCounter counter;
+        
+        /**
+         * @param checkInterval
+         * @param factory
+         * @param counter
+         */
+        protected TrafficMonitoring(long checkInterval,
+                TrafficCounterFactory factory, TrafficCounter counter) {
+            this.checkInterval1 = checkInterval;
+            this.factory1 = factory;
+            this.counter = counter;
+        }
+
+        /**
+         * Default run
+         */
+        public void run() {
+            try {
+                for (;;) {
+                    if (this.checkInterval1 > 0) {
+                        Thread.sleep(this.checkInterval1);
+                    } else {
+                        // Delay goes to TrafficCounterFactory.NO_STAT, so exit
+                        return;
+                    }
+                    long endTime = System.currentTimeMillis();
+                    this.counter.resetAccounting(endTime);
+                    if (this.factory1 != null) {
+                        this.factory1.accounting(this.counter);
+                    }
+                }
+            } catch (InterruptedException e) {
+                // End of computations
+            }
+        }        
+    }
+    /**
      * Start the monitoring process
      *
      */
-    public void startMonitoring() {
+    public void start() {
         synchronized (this.lastTime) {
             if (this.monitorFuture != null) {
                 return;
             }
             this.lastTime.set(System.currentTimeMillis());
-            if (this.delay > 0) {
-                this.monitorFuture = this.executorService.submit(this);
+            if (this.checkInterval > 0) {
+                this.monitorFuture = 
+                    this.executorService.submit(new TrafficMonitoring(this.checkInterval,
+                        this.factory, this));
             }
         }
     }
@@ -153,7 +218,7 @@ public class TrafficCounter implements Runnable {
      * Stop the monitoring process
      *
      */
-    public void stopMonitoring() {
+    public void stop() {
         synchronized (this.lastTime) {
             if (this.monitorFuture == null) {
                 return;
@@ -169,34 +234,11 @@ public class TrafficCounter implements Runnable {
     }
 
     /**
-     * Default run
-     */
-    public void run() {
-        try {
-            for (;;) {
-                if (this.delay > 0) {
-                    Thread.sleep(this.delay);
-                } else {
-                    // Delay goes to TrafficCounterFactory.NO_STAT, so exit
-                    return;
-                }
-                long endTime = System.currentTimeMillis();
-                resetAccounting(endTime);
-                if (this.factory != null) {
-                    this.factory.accounting(this);
-                }
-            }
-        } catch (InterruptedException e) {
-            // End of computations
-        }
-    }
-
-    /**
      * Set the accounting on Read and Write
      *
      * @param newLastTime
      */
-    private void resetAccounting(long newLastTime) {
+    protected void resetAccounting(long newLastTime) {
         synchronized (this.lastTime) {
             long interval = newLastTime - this.lastTime.getAndSet(newLastTime);
             if (interval == 0) {
@@ -205,16 +247,16 @@ public class TrafficCounter implements Runnable {
             }
             this.lastReadingBytes = this.currentReadingBytes.getAndSet(0);
             this.lastWritingBytes = this.currentWritingBytes.getAndSet(0);
-            this.lastReadingBandwidth = this.lastReadingBytes / interval * 1000;
-            // nb byte / delay in ms * 1000 (1s)
-            this.lastWritingBandwidth = this.lastWritingBytes / interval * 1000;
-            // nb byte / delay in ms * 1000 (1s)
+            this.lastReadingThroughput = this.lastReadingBytes / interval * 1000;
+            // nb byte / checkInterval in ms * 1000 (1s)
+            this.lastWritingThroughput = this.lastWritingBytes / interval * 1000;
+            // nb byte / checkInterval in ms * 1000 (1s)
         }
     }
 
     /**
      * Constructor with the executorService to use, the channel if any, its
-     * name, the limits in Byte/s (not Bit/s) and the delay between two
+     * name, the limits in Byte/s (not Bit/s) and the checkInterval between two
      * computations in ms
      *
      * @param factory
@@ -232,16 +274,16 @@ public class TrafficCounter implements Runnable {
      *            the write limit in Byte/s
      * @param readLimit
      *            the read limit in Byte/s
-     * @param delay
-     *            the delay in ms between two computations
+     * @param checkInterval
+     *            the checkInterval in ms between two computations
      */
     public TrafficCounter(TrafficCounterFactory factory,
             ExecutorService executorService, Channel channel, String name,
-            long writeLimit, long readLimit, long delay) {
+            long writeLimit, long readLimit, long checkInterval) {
         this.factory = factory;
         this.executorService = executorService;
         this.name = name;
-        this.changeConfiguration(channel, writeLimit, readLimit, delay);
+        this.configure(channel, writeLimit, readLimit, checkInterval);
     }
 
     /**
@@ -253,7 +295,7 @@ public class TrafficCounter implements Runnable {
      *            later on therefore changing its behavior from global to per
      *            channel
      */
-    public void setMonitoredChannel(Channel channel) {
+    protected void setMonitoredChannel(Channel channel) {
         if (channel != null) {
             this.monitoredChannel = channel;
             this.isPerChannel = true;
@@ -264,7 +306,7 @@ public class TrafficCounter implements Runnable {
     }
 
     /**
-     * Specifies limits in Byte/s (not Bit/s) but do not changed the delay
+     * Specifies limits in Byte/s (not Bit/s) but do not changed the checkInterval
      *
      * @param channel
      *            Not null means this monitors will be for this channel only,
@@ -274,7 +316,7 @@ public class TrafficCounter implements Runnable {
      * @param writeLimit
      * @param readLimit
      */
-    public void changeConfiguration(Channel channel, long writeLimit,
+    public void configure(Channel channel, long writeLimit,
             long readLimit) {
         this.limitWrite = writeLimit;
         this.limitRead = readLimit;
@@ -282,7 +324,7 @@ public class TrafficCounter implements Runnable {
     }
 
     /**
-     * Specifies limits in Byte/s (not Bit/s) and the specified delay between
+     * Specifies limits in Byte/s (not Bit/s) and the specified checkInterval between
      * two computations in ms
      *
      * @param channel
@@ -294,23 +336,23 @@ public class TrafficCounter implements Runnable {
      * @param readLimit
      * @param delayToSet
      */
-    public void changeConfiguration(Channel channel, long writeLimit,
+    public void configure(Channel channel, long writeLimit,
             long readLimit, long delayToSet) {
-        if (this.delay != delayToSet) {
-            this.delay = delayToSet;
+        if (this.checkInterval != delayToSet) {
+            this.checkInterval = delayToSet;
             if (this.monitorFuture == null) {
-                this.changeConfiguration(channel, writeLimit, readLimit);
+                this.configure(channel, writeLimit, readLimit);
                 return;
             }
-            stopMonitoring();
-            if (this.delay > 0) {
-                startMonitoring();
+            stop();
+            if (this.checkInterval > 0) {
+                start();
             } else {
                 // No more active monitoring
                 this.lastTime.set(System.currentTimeMillis());
             }
         }
-        this.changeConfiguration(channel, writeLimit, readLimit);
+        this.configure(channel, writeLimit, readLimit);
     }
 
     /**
@@ -375,7 +417,7 @@ public class TrafficCounter implements Runnable {
          *            the associated channelHandlerContext
          * @param timeToWait
          */
-        public ReopenRead(ChannelHandlerContext ctx,
+        protected ReopenRead(ChannelHandlerContext ctx,
                 TrafficCounter monitor, long timeToWait) {
             this.ctx = ctx;
             this.monitor = monitor;
@@ -416,9 +458,10 @@ public class TrafficCounter implements Runnable {
      *            the size in bytes to read
      * @throws InterruptedException
      */
-    public void setReceivedBytes(ChannelHandlerContext ctx, long recv)
+    protected void bytesRecvFlowControl(ChannelHandlerContext ctx, long recv)
             throws InterruptedException {
         this.currentReadingBytes.addAndGet(recv);
+        this.cumulativeReadingBytes.addAndGet(recv);
         if (this.limitRead == 0) {
             // no action
             return;
@@ -471,8 +514,9 @@ public class TrafficCounter implements Runnable {
      *            the size in bytes to write
      * @throws InterruptedException
      */
-    public void setToWriteBytes(long write) throws InterruptedException {
+    protected void bytesWriteFlowControl(long write) throws InterruptedException {
         this.currentWritingBytes.addAndGet(write);
+        this.cumulativeWritingBytes.addAndGet(write);
         if (this.limitWrite == 0) {
             return;
         }
@@ -486,32 +530,32 @@ public class TrafficCounter implements Runnable {
 
     /**
      *
-     * @return the current delay between two computations of performance counter
+     * @return the current checkInterval between two computations of performance counter
      *         in ms
      */
-    public long getDelay() {
-        return this.delay;
+    public long getCheckInterval() {
+        return this.checkInterval;
     }
 
     /**
      *
-     * @return the current Read bandwidth in byte/s
+     * @return the current Read Throughput in byte/s
      */
-    public long getLastReadBandwidth() {
-        return this.lastReadingBandwidth;
+    public long getLastReadThroughput() {
+        return this.lastReadingThroughput;
     }
 
     /**
      *
-     * @return the current Write bandwidth in byte/s
+     * @return the current Write Throughput in byte/s
      */
-    public long getLastWriteBandwidth() {
-        return this.lastWritingBandwidth;
+    public long getLastWriteThroughput() {
+        return this.lastWritingThroughput;
     }
 
     /**
      *
-     * @return the current number of byte read since last delay
+     * @return the current number of byte read since last checkInterval
      */
     public long getLastBytesRead() {
         return this.lastReadingBytes;
@@ -519,10 +563,24 @@ public class TrafficCounter implements Runnable {
 
     /**
      *
-     * @return the current number of byte written since last delay
+     * @return the current number of byte written since last checkInterval
      */
-    public long getLastBytesWrite() {
+    public long getLastBytesWritten() {
         return this.lastWritingBytes;
+    }
+
+    /**
+     * @return the cumulativeWritingBytes
+     */
+    public long getCumulativeWritingBytes() {
+        return this.cumulativeWritingBytes.get();
+    }
+
+    /**
+     * @return the cumulativeReadingBytes
+     */
+    public long getCumulativeReadingBytes() {
+        return this.cumulativeReadingBytes.get();
     }
 
     /**
@@ -531,9 +589,10 @@ public class TrafficCounter implements Runnable {
     @Override
     public String toString() {
         return "Monitor " + this.name + " Current Speed Read: " +
-                (this.lastReadingBandwidth >> 10) + " KB/s, Write: " +
-                (this.lastWritingBandwidth >> 10) + " KB/s Current Read: " +
+                (this.lastReadingThroughput >> 10) + " KB/s, Write: " +
+                (this.lastWritingThroughput >> 10) + " KB/s Current Read: " +
                 (this.currentReadingBytes.get() >> 10) + " KB Current Write: " +
                 (this.currentWritingBytes.get() >> 10) + " KB";
     }
+
 }

@@ -66,8 +66,8 @@
  * [Global or per Channel] [Write or Read] Limitation in byte/s.</li><br>
  * A value of <tt>0</tt>
  * stands for no limitation, so the traffic shaping is deactivate (on what you specified).<br>
- * You can either change those values with the method <tt>changeConfiguration</tt> in TrafficCounterFactory or
- * directly from the TrafficCounter method <tt>changeConfiguration</tt>.<br>
+ * You can either change those values with the method <tt>configure</tt> in TrafficCounterFactory or
+ * directly from the TrafficCounter method <tt>configure</tt>.<br>
  * <br>
  *
  * <li>To activate or deactivate the statistics, you can adjust the delay to a low (not less than 200ms

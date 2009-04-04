@@ -120,10 +120,10 @@ public abstract class TrafficShapingHandler extends SimpleChannelHandler {
             throws Exception {
         long size = this.objectSizeEstimator.estimateSize(arg1.getMessage());
         if (this.channelTrafficCounter != null) {
-            this.channelTrafficCounter.setReceivedBytes(arg0, size);
+            this.channelTrafficCounter.bytesRecvFlowControl(arg0, size);
         }
         if (this.globalTrafficCounter != null) {
-            this.globalTrafficCounter.setReceivedBytes(arg0, size);
+            this.globalTrafficCounter.bytesRecvFlowControl(arg0, size);
         }
         // The message is then just passed to the next Codec
         super.messageReceived(arg0, arg1);
@@ -140,10 +140,10 @@ public abstract class TrafficShapingHandler extends SimpleChannelHandler {
             throws Exception {
         long size = this.objectSizeEstimator.estimateSize(arg1.getMessage());
         if (this.channelTrafficCounter != null) {
-            this.channelTrafficCounter.setToWriteBytes(size);
+            this.channelTrafficCounter.bytesWriteFlowControl(size);
         }
         if (this.globalTrafficCounter != null) {
-            this.globalTrafficCounter.setToWriteBytes(size);
+            this.globalTrafficCounter.bytesWriteFlowControl(size);
         }
         // The message is then just passed to the next Codec
         super.writeRequested(arg0, arg1);
@@ -159,7 +159,7 @@ public abstract class TrafficShapingHandler extends SimpleChannelHandler {
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         if (this.channelTrafficCounter != null) {
-            this.channelTrafficCounter.stopMonitoring();
+            this.channelTrafficCounter.stop();
             this.channelTrafficCounter = null;
         }
         super.channelClosed(ctx, e);
@@ -185,7 +185,7 @@ public abstract class TrafficShapingHandler extends SimpleChannelHandler {
         if (this.channelTrafficCounter != null) {
             this.channelTrafficCounter
                     .setMonitoredChannel(ctx.getChannel());
-            this.channelTrafficCounter.startMonitoring();
+            this.channelTrafficCounter.start();
         }
         super.channelConnected(ctx, e);
         // readSuspended = false;
