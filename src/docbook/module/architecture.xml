@@ -11,6 +11,7 @@
     stack.  Interesting features of each core component will be explained in
     detail, too.
   </para>
+
   <section>
     <title>Rich Buffer Data Structure</title>
     <para>
@@ -23,6 +24,7 @@
       <classname>ByteBuffer</classname> and to meet the daily needs of network
       application developers.
     </para>
+
     <section>
       <title>Extensibility</title>
       <para>
@@ -34,6 +36,7 @@
         &ChannelBuffer; interface rather than introducing an incompatible type.
       </para>
     </section>
+
     <section>
       <title>Near Zero Copy</title>
       <para>
@@ -100,6 +103,7 @@ messageWithFooter.getUnsignedInt(
         </callout>
       </calloutlist>
     </section>
+
     <section>
       <title>Automatic Capacity Expansion</title>
       <para>
@@ -145,10 +149,80 @@ dynamicBuffer.writeByte('7');</programlisting>
       </calloutlist>
     </section>
   </section>
+
   <section>
     <title>Universal Asynchronous I/O API</title>
     <para>
-      
+      Traditional I/O APIs in Java provided different types and methods for
+      different transport types.  For example,
+      <classname>java.net.Socket</classname> and
+      <classname>java.net.DatagramSocket</classname> do not have any common
+      super type and therefore they have very different ways to perform socket
+      I/O.
+    </para>
+    <para>
+      This mismatch makes porting a network application from one transport to
+      the other.  The lack of portability between transports becomes a problem
+      when you need to support more transports not rewriting the network layer
+      of the application.  Logically, many protocols can run on more than one
+      transport such as TCP/IP, UDP/IP, SCTP, and serial port communication.
+    </para>
+    <para>
+      To make the matter worse, Java New I/O (NIO) API introduced the
+      incompatibility with the old blocking I/O (OIO) API, and so will NIO.2
+      (AIO).  Because all these APIs are different from each other in design
+      and performance characteristics, you are often forced to determine which
+      API your application will depend on before you even begin the
+      implementation phase.
+    </para>
+    <para>
+      For instance, you might want to start with OIO because the number of
+      clients you are going to serve will be very small and writing a socket
+      server using OIO is much easier than using NIO.  However, you are going
+      to be in trouble when your business grows up exponentially and your server
+      starts to serve tens of thousand clients simultaneously.  You could
+      start with NIO, but it might take much longer time to implement due to
+      the complexity of the NIO Selector API, hindering your business.
+    </para>
+    <para>
+      Netty has a central interface called &Channel;.  &Channel; abstracts away
+      all operations required to point-to-point communication.  That is, once
+      you wrote your application on one Netty transport, your application can
+      run on other Netty transports in most cases.  Netty provides the following
+      transports via this universal I/O API:
+      <itemizedlist>
+        <listitem>
+          <para>
+            NIO-based TCP/IP transport
+            (see <literal>org.jboss.netty.channel.socket.nio</literal>),
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            OIO-based TCP/IP transport
+            (see <literal>org.jboss.netty.channel.socket.oio</literal>),
+          </para>
+        </listitem>
+        <listitem>
+          <para>OIO-based UDP/IP transport, and</para>
+        </listitem>
+        <listitem>
+          <para>
+            Local transport for communication between two Netty applications in
+            the same VM (see <literal>org.jboss.netty.channel.local</literal>).
+          </para>
+        </listitem>
+      </itemizedlist>
+      For instance, you could start to write your application with OIO-based
+      UDP/IP transport first, add TCP/IP support using the OIO-based TCP/IP
+      transport, and then replace the OIO-based TCP/IP transport with the
+      NIO-based TCP/IP transport to handle more concurrent connections, all by
+      replacing just a couple lines of constructor calls in the source code.
+    </para>
+    <para>
+      Also, you will even be able to take advantage of a new transport which is
+      going to be added to Netty, again by replacing just a couple lines of
+      constructor calls.
     </para>
   </section>
   
