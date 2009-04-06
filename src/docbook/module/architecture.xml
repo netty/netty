@@ -52,10 +52,10 @@
 +--------+----------+</programlisting>
       <para>
         If <classname>ByteBuffer</classname> were used, you would have to
-        create a new big buffer and copy the three parts into the new
+        create a new big buffer and copy the two parts into the new
         buffer.   Alternatively, you can perform a gathering write operation
         in NIO, but it restricts you to represent the composite of buffers
-        as an array of <classname>ByteBuffer</classname> rather than a
+        as an array of <classname>ByteBuffer</classname>s rather than a
         single <classname>ByteBuffer</classname>, breaking the abstraction and
         introducing complicated state management.  Moreover, it's of no use if
         you are not going to read or write from an NIO channel.
