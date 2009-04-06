@@ -217,7 +217,7 @@ dynamicBuffer.writeByte('7');</programlisting>
       implementation.
     </para>
     <para>
-      Also, you will even be able to take advantage of a new transport which is
+      Also, you are even able to take advantage of a new transport which is
       not written yet, serial port communication transport for instance, again
       by replacing just a couple lines of constructor calls.  Moreover, you can
       write your own transport by extending the core API because it is highly
