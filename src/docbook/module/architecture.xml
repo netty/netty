@@ -182,25 +182,25 @@ dynamicBuffer.writeByte('7');</programlisting>
       to be in trouble when your business grows up exponentially and your server
       starts to serve tens of thousand clients simultaneously.  You could
       start with NIO, but it might take much longer time to implement due to
-      the complexity of the NIO Selector API, hindering your business.
+      the complexity of the NIO Selector API, hindering rapid development.
     </para>
     <para>
-      Netty has a central interface called &Channel;.  &Channel; abstracts away
-      all operations required to point-to-point communication.  That is, once
-      you wrote your application on one Netty transport, your application can
-      run on other Netty transports in most cases.  Netty provides the following
-      transports via this universal I/O API:
+      Netty has a universal asynchronous I/O interface called &Channel;
+      &Channel; abstracts away all operations required to point-to-point
+      communication.  That is, once you wrote your application on one Netty
+      transport, your application can run on other Netty transports.  Netty
+      provides a number of essential transports via one universal API:
       <itemizedlist>
         <listitem>
           <para>
             NIO-based TCP/IP transport
-            (see <literal>org.jboss.netty.channel.socket.nio</literal>),
+            (See <literal>org.jboss.netty.channel.socket.nio</literal>),
           </para>
         </listitem>
         <listitem>
           <para>
             OIO-based TCP/IP transport
-            (see <literal>org.jboss.netty.channel.socket.oio</literal>),
+            (See <literal>org.jboss.netty.channel.socket.oio</literal>),
           </para>
         </listitem>
         <listitem>
@@ -208,21 +208,20 @@ dynamicBuffer.writeByte('7');</programlisting>
         </listitem>
         <listitem>
           <para>
-            Local transport for communication between two Netty applications in
-            the same VM (see <literal>org.jboss.netty.channel.local</literal>).
+            Local transport (See <literal>org.jboss.netty.channel.local</literal>).
           </para>
         </listitem>
       </itemizedlist>
-      For instance, you could start to write your application with OIO-based
-      UDP/IP transport first, add TCP/IP support using the OIO-based TCP/IP
-      transport, and then replace the OIO-based TCP/IP transport with the
-      NIO-based TCP/IP transport to handle more concurrent connections, all by
-      replacing just a couple lines of constructor calls in the source code.
+      Switching from one transport from the other usually takes just a couple
+      lines of changes such as choosing a different &ChannelFactory;
+      implementation.
     </para>
     <para>
       Also, you will even be able to take advantage of a new transport which is
-      going to be added to Netty, again by replacing just a couple lines of
-      constructor calls.
+      not written yet, serial port communication transport for instance, again
+      by replacing just a couple lines of constructor calls.  Moreover, you can
+      write your own transport by extending the core API because it is highly
+      extensible.
     </para>
   </section>
   
