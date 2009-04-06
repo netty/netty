@@ -185,11 +185,11 @@ dynamicBuffer.writeByte('7');</programlisting>
       the complexity of the NIO Selector API, hindering rapid development.
     </para>
     <para>
-      Netty has a universal asynchronous I/O interface called &Channel;
-      &Channel; abstracts away all operations required to point-to-point
-      communication.  That is, once you wrote your application on one Netty
-      transport, your application can run on other Netty transports.  Netty
-      provides a number of essential transports via one universal API:
+      Netty has a universal asynchronous I/O interface called &Channel;, which
+      abstracts away all operations required to point-to-point communication.
+      That is, once you wrote your application on one Netty transport, your
+      application can run on other Netty transports.  Netty provides a number
+      of essential transports via one universal API:
       <itemizedlist>
         <listitem>
           <para>
