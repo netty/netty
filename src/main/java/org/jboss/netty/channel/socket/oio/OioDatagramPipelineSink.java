@@ -35,6 +35,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.util.internal.IoWorkerRunnable;
 import org.jboss.netty.util.internal.ThreadRenamingRunnable;
 
 /**
@@ -106,11 +107,13 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
             fireChannelBound(channel, channel.getLocalAddress());
 
             // Start the business.
-            workerExecutor.execute(new ThreadRenamingRunnable(
-                    new OioDatagramWorker(channel),
-                    "Old I/O datagram worker (channelId: " + channel.getId() + ", " +
-                    channel.getLocalAddress() + ')'));
-
+            workerExecutor.execute(
+                    new IoWorkerRunnable(
+                            new ThreadRenamingRunnable(
+                                    new OioDatagramWorker(channel),
+                                    "Old I/O datagram worker (channelId: " +
+                                    channel.getId() + ", " +
+                                    channel.getLocalAddress() + ')')));
             workerStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
@@ -149,8 +152,10 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
                 channel.getRemoteAddress() + ')';
             if (!bound) {
                 // Start the business.
-                workerExecutor.execute(new ThreadRenamingRunnable(
-                        new OioDatagramWorker(channel), threadName));
+                workerExecutor.execute(
+                        new IoWorkerRunnable(
+                                new ThreadRenamingRunnable(
+                                        new OioDatagramWorker(channel), threadName)));
             } else {
                 // Worker started by bind() - just rename.
                 Thread workerThread = channel.workerThread;
