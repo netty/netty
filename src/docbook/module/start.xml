@@ -800,7 +800,8 @@ public class TimeDecoder extends &ReplayingDecoder;&lt;&VoidEnum;&gt; {
 
     @Override
     protected Object decode(
-            &ChannelHandlerContext; ctx, &Channel; channel, &ChannelBuffer; buffer, &VoidEnum; state) {
+            &ChannelHandlerContext; ctx, &Channel; channel,
+            &ChannelBuffer; buffer, &VoidEnum; state) {
             
         return buffer.readBytes(4);
     }
