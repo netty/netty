@@ -645,13 +645,14 @@ public class SslHandler extends FrameDecoder {
             for (;;) {
                 SSLEngineResult result;
                 synchronized (handshakeLock) {
+                    boolean outboundDone = engine.isOutboundDone();
                     if (initialHandshake && !engine.getUseClientMode() &&
-                        !engine.isInboundDone() && !engine.isOutboundDone()) {
+                        !engine.isInboundDone() && !outboundDone) {
                         handshake(channel);
                         initialHandshake = false;
                     }
 
-                    if (channel.getCloseFuture().isDone()) {
+                    if (outboundDone && !channel.isConnected()) {
                         ChannelFuture handshakeFuture = this.handshakeFuture;
                         if (handshakeFuture != null &&
                             handshakeFuture.getCause() != null) {
