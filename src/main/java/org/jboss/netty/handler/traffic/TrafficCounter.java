@@ -238,7 +238,7 @@ public class TrafficCounter {
      *
      * @param newLastTime
      */
-    protected void resetAccounting(long newLastTime) {
+    void resetAccounting(long newLastTime) {
         synchronized (lastTime) {
             long interval = newLastTime - lastTime.getAndSet(newLastTime);
             if (interval == 0) {
