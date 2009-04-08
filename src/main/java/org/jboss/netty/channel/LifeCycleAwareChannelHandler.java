@@ -31,10 +31,9 @@ package org.jboss.netty.channel;
  * {@linkplain ChannelPipeline#attach(Channel, ChannelSink) attached}.
  * That is, if you add a {@link LifeCycleAwareChannelHandler} to the unattached
  * {@link ChannelPipeline}, the life cycle handler methods in this handler will
- * not be invoked because there's no associated {@link Channel} and
- * {@link ChannelHandlerContext} with the handler:
+ * not be invoked because there's no associated {@link ChannelHandlerContext}:
  * <pre>
- * // Create a new unattached pipeline
+ * // Create a new pipeline which is unattached initially.
  * ChannelPipeline pipeline = Channels.pipeline();
  * // beforeAdd() and afterAdd() will not be called.
  * pipeline.addLast("handler", new MyLifeCycleAwareChannelHandler());
@@ -43,7 +42,7 @@ package org.jboss.netty.channel;
  * </pre>
  * However, once the {@link ChannelPipeline} is attached and the
  * {@code channelOpen} event is fired, the life cycle handler methods will
- * be invoked on addition of removal:
+ * be invoked on addition or removal:
  * <pre>
  * public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent evt) {
  *     // channelOpen event has been triggered, which means the pipeline has
