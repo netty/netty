@@ -650,6 +650,15 @@ public class SslHandler extends FrameDecoder {
                         handshake(channel);
                         initialHandshake = false;
                     }
+
+                    if (channel.getCloseFuture().isDone()) {
+                        ChannelFuture handshakeFuture = this.handshakeFuture;
+                        if (handshakeFuture != null &&
+                            handshakeFuture.getCause() != null) {
+                            break;
+                        }
+                    }
+
                     try {
                         result = engine.unwrap(inNetBuf, outAppBuf);
                     } catch (SSLException e) {
