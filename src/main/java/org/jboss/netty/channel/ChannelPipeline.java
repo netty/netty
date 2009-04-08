@@ -98,6 +98,35 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * to the last upstream handler (i.e. to the next) and a downstream event
  * flows from the last downstream handler to the first downstream handler
  * (i.e. to the previous).
+ * <p>
+ * For example, let us assume that we created the following pipeline:
+ * <pre>
+ * ChannelPipeline p = Channels.pipeline();
+ * p.addLast("1", new UpstreamHandlerA());
+ * p.addLast("2", new UpstreamHandlerB());
+ *.p.addLast("3", new DownstreamHandlerA());
+ *.p.addLast("4", new DownstreamHandlerB());
+ * p.addLast("5", new UpstreamHandlerX());
+ * </pre>
+ * The class whose name starts with {@code Upstream} means it is an upstream
+ * handler.  The class whose name starts with {@code Downstream} means it is a
+ * downstream handler.
+ * <p>
+ * In the given example configuration, the handler evaluation order is 1, 2, 3,
+ * 4, 5 when an event goes upstream.  When an event goes downstream, the order
+ * is 5, 4, 3, 2, 1.  On top of this principle, {@link ChannelPipeline} skips
+ * the evaluation of certain handlers to shorten the stack depth:
+ * <ul>
+ * <li>3 and 4 don't implement {@link ChannelUpstreamHandler}, and therefore the
+ *     actual evaluation order of an upstream event will be: 1, 2, and 5.</li>
+ * <li>1, 2, and 5 don't implement {@link ChannelDownstreamHandler}, and
+ *     therefore the actual evaluation order of a downstream event will be:
+ *     4 and 3.</li>
+ * <li>If 5 extended {@link SimpleChannelHandler} which implements both
+ *     {@link ChannelUpstreamHandler} and {@link ChannelDownstreamHandler}, the
+ *     evaluation order of an upstream and a downstream event could be 125 and
+ *     543 respectively.</li>
+ * </ul>
  *
  * <h3>Building a pipeline</h3>
  * <p>
