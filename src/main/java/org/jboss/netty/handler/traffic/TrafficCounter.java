@@ -70,7 +70,10 @@ public class TrafficCounter {
      * Long life reading bytes
      */
     private final AtomicLong cumulativeReadBytes = new AtomicLong(0);
-
+    /**
+     * Last Time where cumulative bytes where reset to zero  
+     */
+    private long lastCumulativeTime;
     /**
      * Last writing bandwidth
      */
@@ -257,7 +260,7 @@ public class TrafficCounter {
     /**
      * Constructor with the executorService to use, the channel if any, its
      * name, the limits in Byte/s (not Bit/s) and the checkInterval between two
-     * computations in ms
+     * computations in millisecond
      *
      * @param factory
      *            the associated TrafficCounterFactory
@@ -275,7 +278,7 @@ public class TrafficCounter {
      * @param readLimit
      *            the read limit in Byte/s
      * @param checkInterval
-     *            the checkInterval in ms between two computations
+     *            the checkInterval in millisecond between two computations
      */
     public TrafficCounter(TrafficCounterFactory factory,
             ExecutorService executorService, Channel channel, String name,
@@ -283,6 +286,7 @@ public class TrafficCounter {
         this.factory = factory;
         this.executorService = executorService;
         this.name = name;
+        this.lastCumulativeTime = System.currentTimeMillis();
         this.configure(channel, writeLimit, readLimit, checkInterval);
     }
 
@@ -325,7 +329,7 @@ public class TrafficCounter {
 
     /**
      * Specifies limits in Byte/s (not Bit/s) and the specified checkInterval between
-     * two computations in ms
+     * two computations in millisecond
      *
      * @param channel
      *            Not null means this monitors will be for this channel only,
@@ -530,8 +534,8 @@ public class TrafficCounter {
 
     /**
      *
-     * @return the current checkInterval between two computations of performance counter
-     *         in ms
+     * @return the current checkInterval between two computations of traffic counter
+     *         in millisecond
      */
     public long getCheckInterval() {
         return checkInterval;
@@ -570,17 +574,34 @@ public class TrafficCounter {
     }
 
     /**
-     * @return the cumulativeWritingBytes
+     * @return the cumulativeWrittenBytes
      */
     public long getCumulativeWrittenBytes() {
         return cumulativeWrittenBytes.get();
     }
 
     /**
-     * @return the cumulativeReadingBytes
+     * @return the cumulativeReadBytes
      */
     public long getCumulativeReadBytes() {
         return cumulativeReadBytes.get();
+    }
+
+    /**
+     * @return the lastCumulativeTime in millisecond as of System.currentTimeMillis() 
+     * when the cumulative counters were reset to 0.
+     */
+    public long getLastCumulativeTime() {
+        return this.lastCumulativeTime;
+    }
+
+    /**
+     * Reset both read and written cumulative bytes counters and the associated time.
+     */
+    public void resetCumulativeTime() {
+        this.lastCumulativeTime = System.currentTimeMillis();
+        cumulativeReadBytes.set(0);
+        cumulativeWrittenBytes.set(0);
     }
 
     /**

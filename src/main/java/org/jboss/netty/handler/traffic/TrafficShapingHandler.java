@@ -55,7 +55,7 @@ import org.jboss.netty.util.ObjectSizeEstimator;
  *
  */
 @ChannelPipelineCoverage("one")
-public abstract class TrafficShapingHandler extends SimpleChannelHandler {
+public class TrafficShapingHandler extends SimpleChannelHandler {
     /**
      * Channel Monitor
      */
