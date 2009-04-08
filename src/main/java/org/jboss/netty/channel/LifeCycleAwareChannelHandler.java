@@ -24,9 +24,42 @@ package org.jboss.netty.channel;
 
 /**
  * A {@link ChannelHandler} that is notified when it is added to or removed
- * from a {@link ChannelPipeline}.  Please note that the methods of this
- * handler is called only when the {@link ChannelPipeline} it belongs to has
- * been {@linkplain ChannelPipeline#attach(Channel, ChannelSink) attached}.
+ * from a {@link ChannelPipeline}.
+ * <p>
+ * Please note that the methods of this handler is called only when the
+ * {@link ChannelPipeline} it belongs to has been
+ * {@linkplain ChannelPipeline#attach(Channel, ChannelSink) attached}.
+ * That is, if you add a {@link LifeCycleAwareChannelHandler} to the unattached
+ * {@link ChannelPipeline}, the life cycle handler methods in this handler will
+ * not be invoked because there's no associated {@link Channel} and
+ * {@link ChannelHandlerContext} with the handler:
+ * <pre>
+ * // Create a new unattached pipeline
+ * ChannelPipeline pipeline = Channels.pipeline();
+ * // beforeAdd() and afterAdd() will not be called.
+ * pipeline.addLast("handler", new MyLifeCycleAwareChannelHandler());
+ * // beforeRemove() and afterRemove() will not be called.
+ * pipeline.remove("handler");
+ * </pre>
+ * However, once the {@link ChannelPipeline} is attached and the
+ * {@code channelOpen} event is fired, the life cycle handler methods will
+ * be invoked on addition of removal:
+ * <pre>
+ * public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent evt) {
+ *     // channelOpen event has been triggered, which means the pipeline has
+ *     // been attached to the channel.
+ *     ChannelPipeline pipeline = ctx.getChannel().getPipeline();
+ *     // beforeAdd() and afterAdd() will be called.
+ *     pipeline.addLast("handler", new MyLifeCycleAwareChannelHandler());
+ * }
+ *
+ * public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent evt) {
+ *     // Once attached, the pipeline is never detached.
+ *     ChannelPipeline pipeline = ctx.getChannel().getPipeline();
+ *     // beforeRemove() and afterRemove() will be called.
+ *     pipeline.remove("handler");
+ * }
+ * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
