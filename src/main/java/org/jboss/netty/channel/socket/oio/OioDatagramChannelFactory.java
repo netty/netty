@@ -32,10 +32,9 @@ import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
- * A {@link DatagramChannelFactory} which creates a client-side blocking
- * I/O based {@link DatagramChannel}.  It utilizes the good old blocking I/O API
- * which is known to yield better throughput and latency when there are
- * relatively small number of connections to serve.
+ * A {@link DatagramChannelFactory} which creates a blocking I/O based
+ * {@link DatagramChannel}.  It utilizes the good old blocking I/O API which
+ * has support for multicast.
  *
  * <h3>How threads work</h3>
  * <p>
