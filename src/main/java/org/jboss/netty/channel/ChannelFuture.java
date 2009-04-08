@@ -24,6 +24,8 @@ package org.jboss.netty.channel;
 
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.netty.handler.execution.ExecutionHandler;
+
 /**
  * The result of an asynchronous {@link Channel} I/O operation.
  * <p>
@@ -37,6 +39,60 @@ import java.util.concurrent.TimeUnit;
  * completed, wait for the completion, and retrieve the result of the I/O
  * operation. It also allows you to add more than one {@link ChannelFutureListener}
  * so you can get notified when the I/O operation has been completed.
+ *
+ * <h3>Prefer {@link #addListener(ChannelFutureListener)} to {@link #await()}</h3>
+ *
+ * It is recommended to prefer {@link #addListener(ChannelFutureListener)} to
+ * {@link #await()} wherever possible to get notified when an I/O operation is
+ * done and to do any follow-up tasks.
+ * <p>
+ * {@link #addListener(ChannelFutureListener)} is non-blocking.  It simply adds
+ * the specified {@link ChannelFutureListener} to the {@link ChannelFuture}, and
+ * I/O thread will notify the listeners when the I/O operation associated with
+ * the future is done.  {@link ChannelFutureListener} yields the best
+ * performance and resource utilization because it does not block at all, but
+ * it could be tricky to implement a sequential logic if you are not used to
+ * event-driven programming.
+ * <p>
+ * By contrast, {@link #await()} is a blocking operation.  Once called, the
+ * caller thread blocks until the operation is done.  It is easier to implement
+ * a sequential logic with {@link #await()}, but the caller thread blocks
+ * unnecessarily until the I/O operation is done and there's relatively
+ * expensive cost of inter-thread notification.  Moreover, there's a chance of
+ * dead lock in a particular circumstance, which is described below.
+ *
+ * <h3>Do not call {@link #await()} inside {@link ChannelHandler}</h3>
+ * <p>
+ * The event handler methods in {@link ChannelHandler} is often called by
+ * an I/O thread unless an {@link ExecutionHandler} is in the
+ * {@link ChannelPipeline}.  If {@link #await()} is called by an event handler
+ * method, which is called by the I/O thread, the I/O operation it is waiting
+ * for might never be complete because {@link #await()} can block the I/O
+ * operation it is waiting for, which is a dead lock.
+ * <pre>
+ * // BAD - NEVER DO THIS
+ * public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ *     if (e.getMessage() instanceof GoodByeMessage) {
+ *         ChannelFuture future = e.getChannel().close();
+ *         future.awaitUninterruptibly();
+ *         // Perform post-closure operation
+ *         // ...
+ *     }
+ * }
+ *
+ * // GOOD
+ * public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ *     if (e.getMessage() instanceof GoodByeMessage) {
+ *         ChannelFuture future = e.getChannel().close();
+ *         future.addListener(new ChannelFutureListener() {
+ *             public void operationComplete(ChannelFuture future) {
+ *                 // Perform post-closure operation
+ *                 // ...
+ *             }
+ *         });
+ *     }
+ * }
+ * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
