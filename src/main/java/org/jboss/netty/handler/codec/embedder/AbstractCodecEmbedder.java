@@ -52,7 +52,6 @@ public abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
     private final ChannelPipeline pipeline;
     private final EmbeddedChannelSink sink = new EmbeddedChannelSink();
 
-    CodecEmbedderException exception;
     final Queue<Object> productQueue = new LinkedList<Object>();
 
     protected AbstractCodecEmbedder(ChannelHandler... handlers) {
