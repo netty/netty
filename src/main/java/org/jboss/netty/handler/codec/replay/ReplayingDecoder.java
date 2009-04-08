@@ -407,11 +407,12 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             }
 
             // A successful decode
-            fireMessageReceived(context, remoteAddress, result);
+            unfoldAndfireMessageReceived(context, result, remoteAddress);
         }
     }
 
-    private void fireMessageReceived(ChannelHandlerContext context, SocketAddress remoteAddress, Object result) {
+    private void unfoldAndfireMessageReceived(
+            ChannelHandlerContext context, Object result, SocketAddress remoteAddress) {
         if (unfold) {
             if (result instanceof Object[]) {
                 for (Object r: (Object[]) result) {
@@ -443,9 +444,9 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                 callDecode(ctx, e.getChannel(), cumulation, null);
                 if (cumulation.readable()) {
                     // and send the remainders too if necessary.
-                    Object partiallyDecoded = decodeLast(ctx, e.getChannel(), cumulation, state);
+                    Object partiallyDecoded = decodeLast(ctx, e.getChannel(), replayable, state);
                     if (partiallyDecoded != null) {
-                        fireMessageReceived(ctx, null, partiallyDecoded);
+                        unfoldAndfireMessageReceived(ctx, partiallyDecoded, null);
                     }
                 }
             }
