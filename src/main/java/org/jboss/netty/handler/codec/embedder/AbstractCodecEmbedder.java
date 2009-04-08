@@ -37,7 +37,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.DefaultChannelPipeline;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 
@@ -52,10 +52,11 @@ public abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
     private final ChannelPipeline pipeline;
     private final EmbeddedChannelSink sink = new EmbeddedChannelSink();
 
+    CodecEmbedderException exception;
     final Queue<Object> productQueue = new LinkedList<Object>();
 
     protected AbstractCodecEmbedder(ChannelHandler... handlers) {
-        pipeline = Channels.pipeline();
+        pipeline = new EmbeddedChannelPipeline();
         configurePipeline(handlers);
         channel = new EmbeddedChannel(pipeline, sink);
         fireInitialEvents();
@@ -153,6 +154,25 @@ public abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
             }
 
             throw new CodecEmbedderException(actualCause);
+        }
+    }
+
+    private static final class EmbeddedChannelPipeline extends DefaultChannelPipeline {
+
+        EmbeddedChannelPipeline() {
+            super();
+        }
+
+        @Override
+        protected void notifyHandlerException(ChannelEvent e, Throwable t) {
+            while (t instanceof ChannelPipelineException && t.getCause() != null) {
+                t = t.getCause();
+            }
+            if (t instanceof CodecEmbedderException) {
+                throw (CodecEmbedderException) t;
+            } else {
+                throw new CodecEmbedderException(t);
+            }
         }
     }
 }

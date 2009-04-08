@@ -625,7 +625,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return realCtx;
     }
 
-    void notifyHandlerException(ChannelEvent e, Throwable t) {
+    protected void notifyHandlerException(ChannelEvent e, Throwable t) {
         if (e instanceof ExceptionEvent) {
             logger.warn(
                     "An exception was thrown by a user handler " +
