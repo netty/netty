@@ -43,7 +43,11 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * <p>
  * It is recommended to create a new pipeline using the helper methods in
  * {@link Channels} rather than calling an individual implementation's
- * constructor.
+ * constructor:
+ * <pre>
+ * import static org.jboss.netty.channel.Channels.*;
+ * ChannelPipeline pipeline = pipeline(); // same with Channels.pipeline()
+ * </pre>
  *
  * <h3>How an event flows in a pipeline</h3>
  * <p>
