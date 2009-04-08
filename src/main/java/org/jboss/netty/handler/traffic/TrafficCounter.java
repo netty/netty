@@ -458,7 +458,7 @@ public class TrafficCounter {
      *            the size in bytes to read
      * @throws InterruptedException
      */
-    protected void bytesRecvFlowControl(ChannelHandlerContext ctx, long recv)
+    void bytesRecvFlowControl(ChannelHandlerContext ctx, long recv)
             throws InterruptedException {
         currentReadingBytes.addAndGet(recv);
         cumulativeReadBytes.addAndGet(recv);
@@ -514,7 +514,7 @@ public class TrafficCounter {
      *            the size in bytes to write
      * @throws InterruptedException
      */
-    protected void bytesWriteFlowControl(long write) throws InterruptedException {
+    void bytesWriteFlowControl(long write) throws InterruptedException {
         currentWritingBytes.addAndGet(write);
         cumulativeWrittenBytes.addAndGet(write);
         if (limitWrite == 0) {
