@@ -295,7 +295,7 @@ public class TrafficCounter {
      *            later on therefore changing its behavior from global to per
      *            channel
      */
-    protected void setMonitoredChannel(Channel channel) {
+    void setMonitoredChannel(Channel channel) {
         if (channel != null) {
             monitoredChannel = channel;
             isPerChannel = true;
