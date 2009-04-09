@@ -74,7 +74,8 @@ import java.lang.annotation.Target;
  * {@code "one"} means you must create a new instance of the annotated handler
  * type for each new channel.  It means the member variables of the handler
  * instance can not be shared at all, and violating this contract will lead
- * the handler to a race condition.  The following code shows an example of a
+ * the handler to a race condition.  A new handler instance is usually created
+ * by {@link ChannelPipelineFactory}.  The following code shows an example of a
  * handler type annotated with {@code "one"} value:
  *
  * <pre>
@@ -99,6 +100,15 @@ import java.lang.annotation.Target;
  *         Channels.fireMessageReceived(ctx, message, e.getRemoteAddress());
  *     }
  *     ...
+ * }
+ *
+ * // Create a new handler instance per channel.
+ * public class MyPipelineFactory implements ChannelPipelineFactory {
+ *
+ *     public ChannelPipeline getPipeline() {
+ *         ChannelPipeline p = Channels.pipeline();
+ *         p.addLast("handler", new StatefulHandler());
+ *     }
  * }
  * </pre>
  *
