@@ -22,14 +22,13 @@
  */
 package org.jboss.netty.handler.timeout;
 
-import org.jboss.netty.channel.ChannelException;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class ReadTimeoutException extends ChannelException {
+public class ReadTimeoutException extends TimeoutException {
 
     private static final long serialVersionUID = -4596059237992273913L;
 
