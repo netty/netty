@@ -15,139 +15,44 @@
   <section>
     <title>Rich Buffer Data Structure</title>
     <para>
-      As you noticed from <xref linkend="start"/>, Netty uses its own buffer
-      API instead of <classname>java.nio.ByteBuffer</classname> to hold a
-      sequence of bytes. This approach has significant advantage over using
-      <classname>ByteBuffer</classname>, which cannot be inherited to modify or
-      augment its behavior at all. Netty's new buffer type, &ChannelBuffer; has
-      been designed from ground up to address the problems of
-      <classname>ByteBuffer</classname> and to meet the daily needs of network
-      application developers.
+      Netty uses its own buffer API instead of NIO <classname>ByteBuffer</classname>
+      to represent a sequence of bytes. This approach has significant advantage
+      over using <classname>ByteBuffer</classname>.  Netty's new buffer type,
+      &ChannelBuffer; has been designed from ground up to address the problems
+      of <classname>ByteBuffer</classname> and to meet the daily needs of
+      network application developers.  To list a few cool features:
+      <itemizedlist>
+        <listitem>
+          <para>
+            You can define your buffer type if necessary.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Transparent zero copy is achieved by built-in composite buffer type.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            A dynamic buffer type is provided out-of-the-box, whose capacity is
+            is expanded on demand, just like <classname>StringBuffer</classname>.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            There's no need to call <methodname>flip()</methodname> anymore.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            It is often faster than <classname>ByteBuffer</classname>.
+          </para>
+        </listitem>
+      </itemizedlist>
     </para>
-
-    <section>
-      <title>Extensibility</title>
-      <para>
-        &ChannelBuffer; has rich set of operations optimized for rapid protocol
-        implementation.  For example, &ChannelBuffer; provides various operations
-        for accessing unsigned values and strings and searching for certain byte
-        sequence in a buffer.  You can also extend or wrap existing buffer type
-        to add convenient accessors.  The custom buffer type can still implement
-        &ChannelBuffer; interface rather than introducing an incompatible type.
-      </para>
-    </section>
-
-    <section>
-      <title>Near Zero Copy</title>
-      <para>
-        To lift up the performance of a network application to the extreme,
-        you need to reduce the number of memory copy operation.  You might
-        have a set of buffers that could be sliced and combined to compose
-        a whole message.  Netty provides a composite buffer which allows you
-        to create a new buffer from the arbitrary number of existing buffers
-        with no memory copy.  For example, a message could be composed of two
-        parts; header and body.  In a modularized application, the two parts
-        could be produced by different modules and assembled later when the
-        message is sent out.
-      </para>
-      <programlisting>+--------+----------+
-| header |   body   |
-+--------+----------+</programlisting>
-      <para>
-        If <classname>ByteBuffer</classname> were used, you would have to
-        create a new big buffer and copy the two parts into the new
-        buffer.   Alternatively, you can perform a gathering write operation
-        in NIO, but it restricts you to represent the composite of buffers
-        as an array of <classname>ByteBuffer</classname>s rather than a
-        single <classname>ByteBuffer</classname>, breaking the abstraction and
-        introducing complicated state management.  Moreover, it's of no use if
-        you are not going to read or write from an NIO channel.
-      </para>
-      <programlisting>ByteBuffer[]<co id="example.buffer1.co1"/> message = new ByteBuffer[] { header, body, footer };</programlisting>
-      <calloutlist>
-        <callout arearefs="example.buffer1.co1">
-          <para>
-            The composite is not a <classname>ByteBuffer</classname> anymore.
-          </para>
-        </callout>
-      </calloutlist>
-      <para>
-        By contrast, &ChannelBuffer; does not have such caveats because it is
-        fully extensible and has a built-in composite buffer type.
-      </para>
-      <programlisting>&ChannelBuffer;<co id="example.buffer2.co1"/> message = &Channels;.wrappedBuffer(header, body);
-&ChannelBuffer;<co id="example.buffer2.co2"/> messageWithFooter = &Channels;.wrappedBuffer(message, footer);
-messageWithFooter.getUnsignedInt(
-    messageWithFooter.readableBytes() - footer.readableBytes() - 1<co id="example.buffer2.co3"/>);</programlisting>
-      <calloutlist>
-        <callout arearefs="example.buffer2.co1">
-          <para>
-            The composite is always a &ChannelBuffer;.  It is completely
-            transparent.
-          </para>
-        </callout>
-        <callout arearefs="example.buffer2.co2">
-          <para>
-            You can even create a composite by mixing an existing composite and
-            an ordinary buffer.
-          </para>
-        </callout>
-        <callout arearefs="example.buffer2.co3">
-          <para>
-            Because the composite is still a &ChannelBuffer;, you can access
-            its content easily, and the accessor method will behave just like
-            it's a single buffer even if the region you want to access spans
-            over multiple components.  The unsigned integer being read here is
-            located across body and footer.
-          </para>
-        </callout>
-      </calloutlist>
-    </section>
-
-    <section>
-      <title>Automatic Capacity Expansion</title>
-      <para>
-        Many protocols define variable length messages, which means there's no
-        way to determine the length of a message until you construct the
-        message or it is difficult and inconvenient to calculate the length
-        precisely.  It is just like when you build a <classname>String</classname>.
-        You often estimate the length of the resulting string and let 
-        <classname>StringBuffer</classname> to expand the capacity of its
-        internal buffer on demand.  Netty allows you to do the same via
-        a <firstterm>dynamic</firstterm> buffer which is created by the
-        &Channels;<literal>.</literal><methodname>dynamicBuffer()</methodname>
-        method.
-      </para>
-      <programlisting>&ChannelBuffer;<co id="example.buffer3.co1"/> dynamicBuffer = &Channels;.dynamicBuffer(4);
-dynamicBuffer.writeByte('1');<co id="example.buffer3.co2"/>
-dynamicBuffer.writeByte('2');
-dynamicBuffer.writeByte('3');
-dynamicBuffer.writeByte('4');
-dynamicBuffer.writeByte('5');<co id="example.buffer3.co3"/>
-dynamicBuffer.writeByte('6');
-dynamicBuffer.writeByte('7');</programlisting>
-      <calloutlist>
-        <callout arearefs="example.buffer3.co1">
-          <para>
-            A new dynamic buffer is created.  Internally, the actual buffer
-            is created lazily to avoid potentially wasted memory space.
-          </para>
-        </callout>
-        <callout arearefs="example.buffer3.co3">
-          <para>
-            When the first write attempt is made, the internal buffer is created
-            with the specified initial capacity (4).
-          </para>
-        </callout>
-        <callout arearefs="example.buffer2.co3">
-          <para>
-            When the number of written bytes exceeds the initial capacity (4),
-            the internal buffer is reallocated automatically with a larger
-            capacity.
-          </para>
-        </callout>
-      </calloutlist>
-    </section>
+    <para>
+      For more information, please refer to <xref linkend="buffer"/>.
+    </para>
   </section>
 
   <section>
@@ -228,7 +133,50 @@ dynamicBuffer.writeByte('7');</programlisting>
   <section>
     <title>Event Model based on the Interceptor Chain Pattern</title>
     <para>
-      
+      Well-defined and extensible event model is a must for an event-driven
+      application.  Netty does have a well-defined event model focused on I/O.
+      It also allows you to implement your own event type without breaking the
+      existing code at all because each event type is distinguished from
+      each other by strict type hierarchy.  This is another differentiator
+      against its competitors.  Many NIO frameworks have no or very limited
+      notion of event model; they often break the existing code when you try
+      to add a new custom event type, or just do not allow extension.
+    </para>
+    <para>
+      A &ChannelEvent; is handled by a list of &ChannelHandler;s in a
+      &ChannelPipeline;. The pipeline implements an advanced form of the
+      <ulink url="http://java.sun.com/blueprints/corej2eepatterns/Patterns/InterceptingFilter.html">Intercepting Filter</ulink>
+      pattern to give a user full control over how an event is handled and how
+      the handlers in the pipeline interact with each other.  For example,
+      you can define what to do when a data is read from a socket:
+    </para>
+    <programlisting>public class MyReadHandler implements &SimpleChannelHandler; {
+    public void messageReceived(&ChannelHandlerContext; ctx, &MessageEvent; evt) {
+        Object message = evt.getMessage();
+        // Do something with the received message.
+        ...
+        
+        // And forward the event to the next handler.
+        ctx.sendUpstream(evt);
+    }
+}</programlisting>
+    <para>
+      You can also define what to do when other handler requested a write
+      operation:
+    </para>
+    <programlisting>public class MyWriteHandler implements &SimpleChannelHandler; {
+    public void writeRequested(&ChannelHandlerContext; ctx, &MessageEvent; evt) {
+        Object message = evt.getMessage();
+        // Do something with the message to be written.
+        ...
+        
+        // And forward the event to the next handler.
+        ctx.sendDownstream(evt);
+    }
+}</programlisting>
+    <para>
+      For more information about the event model of Netty, please refer to the
+      API documentation of &ChannelEvent; and &ChannelPipeline;.
     </para>
   </section>
   
