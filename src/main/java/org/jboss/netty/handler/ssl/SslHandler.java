@@ -585,9 +585,6 @@ public class SslHandler extends FrameDecoder {
         try {
             for (;;) {
                 synchronized (handshakeLock) {
-                    if (engine.isOutboundDone()) {
-                        break;
-                    }
                     result = engine.wrap(EMPTY_BUFFER, outNetBuf);
                 }
 
