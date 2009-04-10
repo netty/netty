@@ -433,6 +433,7 @@
             -group "Miscellaneous" ${project.groupId}.logging*:${project.groupId}.util*
 
             -sourceclasspath ${project.build.outputDirectory}
+            -nopackagediagram
           </additionalparam>
           <encoding>UTF-8</encoding>
           <locale>en_US</locale>
