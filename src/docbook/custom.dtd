@@ -58,9 +58,15 @@
 
 <!ENTITY FrameDecoder  "<ulink url='&API;handler/codec/frame/FrameDecoder.html'><classname>FrameDecoder</classname></ulink>">
 
+<!-- Types in the handler.codec.protobuf package -->
+
+<!ENTITY ProtobufEncoder  "<ulink url='&API;handler/codec/protobuf/ProtobufEncoder.html'><classname>ProtobufEncoder</classname></ulink>">
+<!ENTITY ProtobufDecoder  "<ulink url='&API;handler/codec/protobuf/ProtobufDecoder.html'><classname>ProtobufDecoder</classname></ulink>">
+
 <!-- Types in the handler.codec.replay package -->
 
 <!ENTITY ReplayingDecoder  "<ulink url='&API;handler/codec/replay/ReplayingDecoder.html'><classname>ReplayingDecoder</classname></ulink>">
 <!ENTITY VoidEnum          "<ulink url='&API;handler/codec/replay/VoidEnum.html'><classname>VoidEnum</classname></ulink>">
 
-
+<!-- Types in the handler.ssl package -->
+<!ENTITY SslHandler  "<ulink url='&API;handler/ssl/SslHandler.html'><classname>SslHandler</classname></ulink>">
