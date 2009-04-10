@@ -439,18 +439,25 @@ public class SslHandler extends FrameDecoder {
                     }
 
                     ByteBuffer outAppBuf = pendingWrite.outAppBuf;
-
-                    SSLEngineResult result;
+                    boolean outboundDone;
+                    SSLEngineResult result = null;
                     try {
                         synchronized (handshakeLock) {
-                            result = engine.wrap(outAppBuf, outNetBuf);
+                            outboundDone = engine.isOutboundDone();
+                            if (!outboundDone) {
+                                result = engine.wrap(outAppBuf, outNetBuf);
+                            }
                         }
                     } finally {
                         if (!outAppBuf.hasRemaining()) {
                             pendingUnencryptedWrites.remove();
                         }
                     }
-                    if (result.bytesProduced() > 0) {
+
+                    if (outboundDone) {
+                        success = false;
+                        break;
+                    } else if (result.bytesProduced() > 0) {
                         outNetBuf.flip();
                         msg = ChannelBuffers.buffer(outNetBuf.remaining());
                         msg.writeBytes(outNetBuf.array(), 0, msg.capacity());
@@ -468,7 +475,6 @@ public class SslHandler extends FrameDecoder {
                                 channel, future, msg, channel.getRemoteAddress());
                         if (Thread.holdsLock(pendingEncryptedWrites)) {
                             offered = pendingEncryptedWrites.offer(encryptedWrite);
-
                         } else {
                             synchronized (pendingEncryptedWrites) {
                                 offered = pendingEncryptedWrites.offer(encryptedWrite);
@@ -519,6 +525,8 @@ public class SslHandler extends FrameDecoder {
             }
 
             if (!success) {
+                IllegalStateException cause =
+                    new IllegalStateException("SSLEngine already closed");
                 // Mark all remaining pending writes as failure if anything
                 // wrong happened before the write requests are wrapped.
                 // Please note that we do not call setFailure while a lock is
@@ -532,8 +540,7 @@ public class SslHandler extends FrameDecoder {
                         }
                     }
 
-                    pendingWrite.future.setFailure(
-                            new IllegalStateException("SSLEngine already closed"));
+                    pendingWrite.future.setFailure(cause);
                 }
             }
         }
@@ -578,6 +585,9 @@ public class SslHandler extends FrameDecoder {
         try {
             for (;;) {
                 synchronized (handshakeLock) {
+                    if (engine.isOutboundDone()) {
+                        break;
+                    }
                     result = engine.wrap(EMPTY_BUFFER, outNetBuf);
                 }
 
@@ -645,8 +655,14 @@ public class SslHandler extends FrameDecoder {
             for (;;) {
                 SSLEngineResult result;
                 synchronized (handshakeLock) {
+
+                    boolean inboundDone = engine.isInboundDone();
+                    if (inboundDone) {
+                        break;
+                    }
+
                     if (initialHandshake && !engine.getUseClientMode() &&
-                        !engine.isInboundDone() && !engine.isOutboundDone()) {
+                        !inboundDone && !engine.isOutboundDone()) {
                         handshake(channel);
                         initialHandshake = false;
                     }
