@@ -203,8 +203,8 @@
         that generates maintainable user codec.
       </para>
       <para>
-        Netty provides a number of fundamental and advanced codecs built on top
-        of the core to address most issues you will encounter when you write a
+        Netty provides a number of basic and advanced codecs built on top of
+        its core to address most issues you will encounter when you write a
         protocol codec regardless if it is simple or not, binary or text -
         simply whatever.
       </para>
