@@ -8,8 +8,7 @@
   <para>
     In this chapter, we will examine what core functionalities are provided in
     Netty and how they constitute a complete network application development
-    stack.  Interesting features of each core component will be explained in
-    detail, too.
+    stack.
   </para>
 
   <section>
