@@ -439,14 +439,10 @@ public class SslHandler extends FrameDecoder {
                     }
 
                     ByteBuffer outAppBuf = pendingWrite.outAppBuf;
-                    boolean outboundDone;
                     SSLEngineResult result = null;
                     try {
                         synchronized (handshakeLock) {
-                            outboundDone = engine.isOutboundDone();
-                            if (!outboundDone) {
-                                result = engine.wrap(outAppBuf, outNetBuf);
-                            }
+                            result = engine.wrap(outAppBuf, outNetBuf);
                         }
                     } finally {
                         if (!outAppBuf.hasRemaining()) {
@@ -454,10 +450,7 @@ public class SslHandler extends FrameDecoder {
                         }
                     }
 
-                    if (outboundDone) {
-                        success = false;
-                        break;
-                    } else if (result.bytesProduced() > 0) {
+                    if (result.bytesProduced() > 0) {
                         outNetBuf.flip();
                         msg = ChannelBuffers.buffer(outNetBuf.remaining());
                         msg.writeBytes(outNetBuf.array(), 0, msg.capacity());
@@ -652,14 +645,8 @@ public class SslHandler extends FrameDecoder {
             for (;;) {
                 SSLEngineResult result;
                 synchronized (handshakeLock) {
-
-                    boolean inboundDone = engine.isInboundDone();
-                    if (inboundDone) {
-                        break;
-                    }
-
                     if (initialHandshake && !engine.getUseClientMode() &&
-                        !inboundDone && !engine.isOutboundDone()) {
+                        !engine.isInboundDone() && !engine.isOutboundDone()) {
                         handshake(channel);
                         initialHandshake = false;
                     }
@@ -672,7 +659,7 @@ public class SslHandler extends FrameDecoder {
 
                     switch (result.getHandshakeStatus()) {
                     case NEED_UNWRAP:
-                        if (inNetBuf.hasRemaining()) {
+                        if (inNetBuf.hasRemaining() && !engine.isInboundDone()) {
                             break;
                         } else {
                             break loop;
