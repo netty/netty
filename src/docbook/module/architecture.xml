@@ -8,7 +8,7 @@
   <para>
     In this chapter, we will examine what core functionalities are provided in
     Netty and how they constitute a complete network application development
-    stack.
+    stack on top of the core.
   </para>
 
   <section>
@@ -137,7 +137,7 @@
       It also allows you to implement your own event type without breaking the
       existing code at all because each event type is distinguished from
       each other by strict type hierarchy.  This is another differentiator
-      against its competitors.  Many NIO frameworks have no or very limited
+      against other frameworks.  Many NIO frameworks have no or very limited
       notion of event model; they often break the existing code when you try
       to add a new custom event type, or just do not allow extension.
     </para>
@@ -174,7 +174,7 @@
     }
 }</programlisting>
     <para>
-      For more information about the event model of Netty, please refer to the
+      For more information about the event model, please refer to the
       API documentation of &ChannelEvent; and &ChannelPipeline;.
     </para>
   </section>
@@ -193,9 +193,9 @@
         As demonstrated in <xref linkend="start.pojo"/>, it is always a good
         idea to separate a protocol codec from a business logic. However, there
         are some complications when implementing this idea from scratch.  You
-        have to deal with the fragmentation of messages. Some protocols are a
-        multi-layered protocol built on top of other lower level protocol. Some
-        are too complicated to be implemented as a single state machine.
+        have to deal with the fragmentation of messages. Some protocols are
+        multi-layered (i.e. built on top of other lower level protocol). Some
+        are too complicated to be implemented in a single state machine.
       </para>
       <para>
         Consequently, a good network application framework should provide an
@@ -213,21 +213,86 @@
     <section>
       <title>SSL / TLS Support</title>
       <para>
-        
+        Unlike old blocking I/O, it is a non-trivial task to support SSL in NIO.
+        You can't simply wrap a stream to encrypt or decrypt data but you have
+        to use <classname>javax.net.ssl.SSLEngine</classname>.
+        <classname>SSLEngine</classname> is a state machine which is as complex
+        as SSL is.  You have to manage all possible states such as cipher suite
+        and encryption key negotiation (or re-negotiation), certificate
+        exchange and validation.  Moreover, <classname>SSLEngine</classname> is
+        not even completely thread-safe unlike usual expectation.
+      </para>
+      <para>
+        In Netty, &SslHandler; takes care of all the gory details and pitfalls
+        of <classname>SSLEngine</classname>.  All you need to do is to configure
+        and insert the &SslHandler; to your &ChannelPipeline;.  It also allows
+        you to implement advanced features like
+        <ulink url="http://en.wikipedia.org/wiki/Starttls">StartTLS</ulink>
+        very easily.
       </para>
     </section>
 
     <section>
       <title>HTTP Implementation</title>
       <para>
-        
+        HTTP is definitely the most popular protocol in the Internet. There are
+        already a number of HTTP implementations such as a Servlet container.
+        Then why does Netty have HTTP on top of its core?
+      </para>
+      <para>
+        Netty's HTTP support is very different from the existing HTTP libraries.
+        It gives you complete control over how HTTP messages are exchanged in a
+        low level.  Because it is basically the combination of HTTP codec and
+        HTTP message classes, there is no restriction such as enforced thread
+        model.  That is, you can write your own HTTP client or server that works
+        exactly the way you want.  You have full control over thread model,
+        connection life cycle, chunked encoding, and as much as what HTTP
+        specification allows you to do.
+      </para>
+      <para>
+        Thanks to its highly customizable nature, you can write a very efficient
+        HTTP server such as:
+        <itemizedlist>
+          <listitem>
+            <para>
+              Chat server that requires persistent connections and server push
+              technology (e.g. <ulink url="http://en.wikipedia.org/wiki/Comet_%28programming%29">Comet</ulink>)
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              Media streaming server that needs to keep the connection open
+              until the whole media is streamed (e.g. 2 hours of movie)
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              File server that allows the upload of large files without memory
+              pressure (e.g. uploading 1GB per request)
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              Scalable mash-up client that connects to tens of thousand 3rd
+              party web services asynchronously
+            </para>
+          </listitem>
+        </itemizedlist>
       </para>
     </section>
     
     <section>
       <title>Google Protocol Buffer Integration</title>
       <para>
-        
+        <ulink url="http://code.google.com/apis/protocolbuffers/docs/overview.html">Google Protocol Buffers</ulink>
+        are an ideal solution for the rapid implementation of a highly efficient
+        binary protocol that evolves over time.  With &ProtobufEncoder; and
+        &ProtobufDecoder;, you can turn the message classes generated by Google
+        Protocol Buffers Compiler (protoc) into Netty codec.  Please take a look
+        into the <ulink url="&XRef;example/localtime/package-summary.html">'LocalTime' example</ulink>
+        that shows how easily you can create a high-performing binary protocol
+        client and server from the
+        <ulink url="http://anonsvn.jboss.org/repos/netty/trunk/src/main/java/org/jboss/netty/example/localtime/LocalTimeProtocol.proto">sample protocol definition</ulink>.
       </para>
     </section>
   </section>
@@ -235,7 +300,19 @@
   <section>
     <title>Summary</title>
     <para>
-      
+      In this chapter, we reviewed the overall architecture of Netty from the
+      feature-wise standpoint.  Netty has simple yet powerful architecture.
+      It is composed of three components - buffer, channel, and event model -
+      and all advanced features are built on top of the three core components.
+      Once you understood how these three work together, it should not be
+      difficult to understand more advanced features which were covered briefly
+      in this chapter.
+    </para>
+    <para>
+      You might still have an unanswered question about what the overall
+      architecture looks exactly like and how each feature work together.
+      If so, it is a good idea to <ulink url="&Community;">talk to us</ulink>
+      to improve this guide.
     </para>
   </section>
 </chapter>
