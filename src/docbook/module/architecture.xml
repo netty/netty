@@ -181,16 +181,56 @@
   </section>
   
   <section>
-    <title>Miscellaneous Constructs</title>
+    <title>Advanced Components for More Rapid Development</title>
     <para>
+      On top of the core components mentioned above, that already enable the
+      implementation of all types of network applications, Netty provides a set
+      of advanced features to accelerate the development pace even more.
     </para>
-  </section>
+    
+    <section>
+      <title>Codec framework</title>
+      <para>
+        As demonstrated in <xref linkend="start.pojo"/>, it is always a good
+        idea to separate a protocol codec from a business logic. However, there
+        are some complications when implementing this idea from scratch.  You
+        have to deal with the fragmentation of messages. Some protocols are a
+        multi-layered protocol built on top of other lower level protocol. Some
+        are too complicated to be implemented as a single state machine.
+      </para>
+      <para>
+        Consequently, a good network application framework should provide an
+        extensible, reusable, unit-testable, and multi-layered codec framework
+        that generates maintainable user codec.
+      </para>
+      <para>
+        Netty provides a number of fundamental and advanced codecs built on top
+        of the core to address most issues you will encounter when you write a
+        protocol codec regardless if it is simple or not, binary or text -
+        simply whatever.
+      </para>
+    </section>
+    
+    <section>
+      <title>SSL / TLS Support</title>
+      <para>
+        
+      </para>
+    </section>
 
-  <section>
-    <title>A View from the Feature Set Standpoint</title>
-    <para>
-      
-    </para>
+    <section>
+      <title>HTTP Implementation</title>
+      <para>
+        
+      </para>
+    </section>
+    
+    <section>
+      <title>Google Protocol Buffer Integration</title>
+      <para>
+        
+      </para>
+    </section>
   </section>
 
   <section>

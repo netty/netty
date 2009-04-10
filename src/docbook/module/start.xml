@@ -829,7 +829,7 @@ public class TimeDecoder extends &ReplayingDecoder;&lt;&VoidEnum;&gt; {
     </section>
   </section>
   
-  <section>
+  <section id="start.pojo">
     <title>
       Speaking in POJO instead of ChannelBuffer
     </title>

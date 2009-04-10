@@ -4,7 +4,7 @@
 %CustomDTD; 
 ]>
 <chapter id="buffer">
-  <title>ChannelBuffer</title>
+  <title>ChannelBuffer - Why and How</title>
   <para>
     As mentioned in <xref linkend="architecture"/>, Netty uses its own buffer
     API instead of NIO <classname>ByteBuffer</classname> to represent a sequence
@@ -13,108 +13,104 @@
     augment its behavior at all. Netty's new buffer type, &ChannelBuffer; has
     been designed from ground up to address the problems of
     <classname>ByteBuffer</classname> and to meet the daily needs of network
-    application developers.
+    application developers.  In this chapter, we will overview the features of
+    the new buffer API to explain what exactly it is good for.
   </para>
 
   <section>
-    <title>The Advantages of Using New Buffer API</title>
+    <title>Extensibility</title>
     <para>
+      &ChannelBuffer; has rich set of operations optimized for rapid protocol
+      implementation.  For example, &ChannelBuffer; provides various operations
+      for accessing unsigned values and strings and searching for certain byte
+      sequence in a buffer.  You can also extend or wrap existing buffer type
+      to add convenient accessors.  The custom buffer type still implements
+      &ChannelBuffer; interface rather than introducing an incompatible type.
     </para>
-    
-    <section>
-      <title>Extensibility</title>
-      <para>
-        &ChannelBuffer; has rich set of operations optimized for rapid protocol
-        implementation.  For example, &ChannelBuffer; provides various operations
-        for accessing unsigned values and strings and searching for certain byte
-        sequence in a buffer.  You can also extend or wrap existing buffer type
-        to add convenient accessors.  The custom buffer type still implements
-        &ChannelBuffer; interface rather than introducing an incompatible type.
-      </para>
-    </section>
+  </section>
 
-    <section>
-      <title>Transparent Zero Copy</title>
-      <para>
-        To lift up the performance of a network application to the extreme,
-        you need to reduce the number of memory copy operation.  You might
-        have a set of buffers that could be sliced and combined to compose
-        a whole message.  Netty provides a composite buffer which allows you
-        to create a new buffer from the arbitrary number of existing buffers
-        with no memory copy.  For example, a message could be composed of two
-        parts; header and body.  In a modularized application, the two parts
-        could be produced by different modules and assembled later when the
-        message is sent out.
-      </para>
-      <programlisting>+--------+----------+
+  <section>
+    <title>Transparent Zero Copy</title>
+    <para>
+      To lift up the performance of a network application to the extreme,
+      you need to reduce the number of memory copy operation.  You might
+      have a set of buffers that could be sliced and combined to compose
+      a whole message.  Netty provides a composite buffer which allows you
+      to create a new buffer from the arbitrary number of existing buffers
+      with no memory copy.  For example, a message could be composed of two
+      parts; header and body.  In a modularized application, the two parts
+      could be produced by different modules and assembled later when the
+      message is sent out.
+    </para>
+    <programlisting>+--------+----------+
 | header |   body   |
 +--------+----------+</programlisting>
-      <para>
-        If <classname>ByteBuffer</classname> were used, you would have to
-        create a new big buffer and copy the two parts into the new
-        buffer.   Alternatively, you can perform a gathering write operation
-        in NIO, but it restricts you to represent the composite of buffers
-        as an array of <classname>ByteBuffer</classname>s rather than a
-        single <classname>ByteBuffer</classname>, breaking the abstraction and
-        introducing complicated state management.  Moreover, it's of no use if
-        you are not going to read or write from an NIO channel.
-      </para>
-      <programlisting>ByteBuffer[]<co id="example.buffer1.co1"/> message = new ByteBuffer[] { header, body };</programlisting>
-      <calloutlist>
-        <callout arearefs="example.buffer1.co1">
-          <para>
-            The composite is not a <classname>ByteBuffer</classname> anymore.
-          </para>
-        </callout>
-      </calloutlist>
-      <para>
-        By contrast, &ChannelBuffer; does not have such caveats because it is
-        fully extensible and has a built-in composite buffer type.
-      </para>
-      <programlisting>&ChannelBuffer;<co id="example.buffer2.co1"/> message = &Channels;.wrappedBuffer(header, body);
+    <para>
+      If <classname>ByteBuffer</classname> were used, you would have to
+      create a new big buffer and copy the two parts into the new
+      buffer.   Alternatively, you can perform a gathering write operation
+      in NIO, but it restricts you to represent the composite of buffers
+      as an array of <classname>ByteBuffer</classname>s rather than a
+      single <classname>ByteBuffer</classname>, breaking the abstraction and
+      introducing complicated state management.  Moreover, it's of no use if
+      you are not going to read or write from an NIO channel.
+    </para>
+    <programlisting>ByteBuffer[]<co id="example.buffer1.co1"/> message = new ByteBuffer[] { header, body };</programlisting>
+    <calloutlist>
+      <callout arearefs="example.buffer1.co1">
+        <para>
+          The composite is not a <classname>ByteBuffer</classname> anymore.
+        </para>
+      </callout>
+    </calloutlist>
+    <para>
+      By contrast, &ChannelBuffer; does not have such caveats because it is
+      fully extensible and has a built-in composite buffer type.
+    </para>
+    <programlisting>&ChannelBuffer;<co id="example.buffer2.co1"/> message = &Channels;.wrappedBuffer(header, body);
 &ChannelBuffer;<co id="example.buffer2.co2"/> messageWithFooter = &Channels;.wrappedBuffer(message, footer);
 messageWithFooter.getUnsignedInt(
     messageWithFooter.readableBytes() - footer.readableBytes() - 1<co id="example.buffer2.co3"/>);</programlisting>
-      <calloutlist>
-        <callout arearefs="example.buffer2.co1">
-          <para>
-            The composite is always a &ChannelBuffer;.  It is completely
-            transparent.
-          </para>
-        </callout>
-        <callout arearefs="example.buffer2.co2">
-          <para>
-            You can even create a composite by mixing an existing composite and
-            an ordinary buffer.
-          </para>
-        </callout>
-        <callout arearefs="example.buffer2.co3">
-          <para>
-            Because the composite is still a &ChannelBuffer;, you can access
-            its content easily, and the accessor method will behave just like
-            it's a single buffer even if the region you want to access spans
-            over multiple components.  The unsigned integer being read here is
-            located across body and footer.
-          </para>
-        </callout>
-      </calloutlist>
-    </section>
+    <calloutlist>
+      <callout arearefs="example.buffer2.co1">
+        <para>
+          The composite is always a &ChannelBuffer;.  It is completely
+          transparent.
+        </para>
+      </callout>
+      <callout arearefs="example.buffer2.co2">
+        <para>
+          You can even create a composite by mixing an existing composite and
+          an ordinary buffer.
+        </para>
+      </callout>
+      <callout arearefs="example.buffer2.co3">
+        <para>
+          Because the composite is still a &ChannelBuffer;, you can access
+          its content easily, and the accessor method will behave just like
+          it's a single buffer even if the region you want to access spans
+          over multiple components.  The unsigned integer being read here is
+          located across body and footer.
+        </para>
+      </callout>
+    </calloutlist>
+  </section>
 
-    <section>
-      <title>Automatic Capacity Expansion</title>
-      <para>
-        Many protocols define variable length messages, which means there's no
-        way to determine the length of a message until you construct the
-        message or it is difficult and inconvenient to calculate the length
-        precisely.  It is just like when you build a <classname>String</classname>.
-        You often estimate the length of the resulting string and let 
-        <classname>StringBuffer</classname> to expand the capacity of its
-        internal buffer on demand.  Netty allows you to do the same via
-        a <firstterm>dynamic</firstterm> buffer which is created by the
-        &Channels;<literal>.</literal><methodname>dynamicBuffer()</methodname>
-        method.
-      </para>
-      <programlisting>&ChannelBuffer;<co id="example.buffer3.co1"/> dynamicBuffer = &Channels;.dynamicBuffer(4);
+  <section>
+    <title>Automatic Capacity Expansion</title>
+    <para>
+      Many protocols define variable length messages, which means there's no
+      way to determine the length of a message until you construct the
+      message or it is difficult and inconvenient to calculate the length
+      precisely.  It is just like when you build a <classname>String</classname>.
+      You often estimate the length of the resulting string and let 
+      <classname>StringBuffer</classname> to expand the capacity of its
+      internal buffer on demand.  Netty allows you to do the same via
+      a <firstterm>dynamic</firstterm> buffer which is created by the
+      &Channels;<literal>.</literal><methodname>dynamicBuffer()</methodname>
+      method.
+    </para>
+    <programlisting>&ChannelBuffer;<co id="example.buffer3.co1"/> dynamicBuffer = &Channels;.dynamicBuffer(4);
 dynamicBuffer.writeByte('1');<co id="example.buffer3.co2"/>
 dynamicBuffer.writeByte('2');
 dynamicBuffer.writeByte('3');
@@ -122,33 +118,36 @@ dynamicBuffer.writeByte('4');
 dynamicBuffer.writeByte('5');<co id="example.buffer3.co3"/>
 dynamicBuffer.writeByte('6');
 dynamicBuffer.writeByte('7');</programlisting>
-      <calloutlist>
-        <callout arearefs="example.buffer3.co1">
-          <para>
-            A new dynamic buffer is created.  Internally, the actual buffer
-            is created lazily to avoid potentially wasted memory space.
-          </para>
-        </callout>
-        <callout arearefs="example.buffer3.co3">
-          <para>
-            When the first write attempt is made, the internal buffer is created
-            with the specified initial capacity (4).
-          </para>
-        </callout>
-        <callout arearefs="example.buffer2.co3">
-          <para>
-            When the number of written bytes exceeds the initial capacity (4),
-            the internal buffer is reallocated automatically with a larger
-            capacity.
-          </para>
-        </callout>
-      </calloutlist>
-    </section>
+    <calloutlist>
+      <callout arearefs="example.buffer3.co1">
+        <para>
+          A new dynamic buffer is created.  Internally, the actual buffer
+          is created lazily to avoid potentially wasted memory space.
+        </para>
+      </callout>
+      <callout arearefs="example.buffer3.co3">
+        <para>
+          When the first write attempt is made, the internal buffer is created
+          with the specified initial capacity (4).
+        </para>
+      </callout>
+      <callout arearefs="example.buffer3.co3">
+        <para>
+          When the number of written bytes exceeds the initial capacity (4),
+          the internal buffer is reallocated automatically with a larger
+          capacity.
+        </para>
+      </callout>
+    </calloutlist>
   </section>
 
   <section>
-    <title>Summary</title>
+    <title>Documentation in progress</title>
     <para>
+      This user guide is still under construction and waiting for your feed
+      back.  Any idea to improve the documentation is more than appreciated.
+      Please join us in the <ulink url="&Community;">community</ulink> now to
+      share your idea!
     </para>
   </section>
 </chapter>
