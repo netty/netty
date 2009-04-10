@@ -4,12 +4,24 @@
 %CustomDTD; 
 ]>
 <chapter id="architecture">
-  <title>Architecture</title>
-  <para>
-    In this chapter, we will examine what core functionalities are provided in
-    Netty and how they constitute a complete network application development
-    stack on top of the core.
-  </para>
+  <title>Architectural Overview</title>
+  
+  <mediaobject>
+    <imageobject>
+      <imagedata fileref="images/architecture.png" format="PNG"/>
+    </imageobject>
+    <textobject>
+      <phrase>The Architecture Diagram of Netty</phrase>
+    </textobject>
+    <caption>
+      <para>
+        In this chapter, we will examine what core functionalities are provided
+        in Netty and how they constitute a complete network application
+        development stack on top of the core.  Please keep this diagram in mind
+        as you read this chapter.
+      </para>
+    </caption>
+  </mediaobject>
 
   <section>
     <title>Rich Buffer Data Structure</title>
