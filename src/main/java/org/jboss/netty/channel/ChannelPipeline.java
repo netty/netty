@@ -108,8 +108,8 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * ChannelPipeline p = Channels.pipeline();
  * p.addLast("1", new UpstreamHandlerA());
  * p.addLast("2", new UpstreamHandlerB());
- *.p.addLast("3", new DownstreamHandlerA());
- *.p.addLast("4", new DownstreamHandlerB());
+ * p.addLast("3", new DownstreamHandlerA());
+ * p.addLast("4", new DownstreamHandlerB());
  * p.addLast("5", new UpstreamHandlerX());
  * </pre>
  * The class whose name starts with {@code Upstream} means it is an upstream
