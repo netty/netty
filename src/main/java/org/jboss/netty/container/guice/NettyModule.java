@@ -26,6 +26,10 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
+import org.jboss.netty.channel.local.DefaultLocalServerChannelFactory;
+import org.jboss.netty.channel.local.LocalClientChannelFactory;
+import org.jboss.netty.channel.local.LocalServerChannelFactory;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
@@ -96,6 +100,15 @@ public class NettyModule extends AbstractModule {
 
         bind(OioDatagramChannelFactory.class).
             toProvider(OioDatagramChannelFactoryProvider.class).
+            in(Scopes.SINGLETON);
+
+        // Local transports
+        bind(LocalClientChannelFactory.class).
+            to(DefaultLocalClientChannelFactory.class).
+            in(Scopes.SINGLETON);
+
+        bind(LocalServerChannelFactory.class).
+            to(DefaultLocalServerChannelFactory.class).
             in(Scopes.SINGLETON);
     }
 }

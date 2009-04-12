@@ -29,6 +29,10 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
+import org.jboss.netty.channel.local.DefaultLocalServerChannelFactory;
+import org.jboss.netty.channel.local.LocalClientChannelFactory;
+import org.jboss.netty.channel.local.LocalServerChannelFactory;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
@@ -77,6 +81,15 @@ public class NettyBundleActivator implements BundleActivator {
                 new OioDatagramChannelFactory(executor),
                 DatagramChannelFactory.class);
 
+        // Local transports
+        register(ctx,
+                new DefaultLocalClientChannelFactory(),
+                LocalClientChannelFactory.class);
+        register(ctx,
+                new DefaultLocalServerChannelFactory(),
+                LocalServerChannelFactory.class);
+
+        // Miscellaneous transports
         register(ctx, new OioClientSocketChannelFactory(executor));
         register(ctx, new OioServerSocketChannelFactory(executor, executor));
     }

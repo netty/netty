@@ -101,4 +101,16 @@
       </parameter>
     </constructor>
   </bean>
+
+  <bean mode="On Demand"
+        name="org.jboss.netty.channel.local.DefaultLocalClientChannelFactory"
+        class="org.jboss.netty.channel.local.DefaultLocalClientChannelFactory">
+    <alias>org.jboss.netty.channel.local.LocalClientChannelFactory</alias>
+  </bean>
+
+  <bean mode="On Demand"
+        name="org.jboss.netty.channel.local.DefaultLocalServerChannelFactory"
+        class="org.jboss.netty.channel.local.DefaultLocalServerChannelFactory">
+    <alias>org.jboss.netty.channel.local.LocalServerChannelFactory</alias>
+  </bean>
 </deployment>
