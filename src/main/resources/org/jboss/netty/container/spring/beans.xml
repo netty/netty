@@ -60,8 +60,16 @@
     <constructor-arg ref="org.jboss.netty.internal.ChannelFactoryExecutor"/>
   </bean>
   
+  <bean lazy-init="true" scope="singleton"
+        name="org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory"
+        class="org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory">
+    <constructor-arg ref="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+  </bean>
+  
   <alias name="org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory"
          alias="org.jboss.netty.channel.socket.ClientSocketChannelFactory" />
   <alias name="org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory"
          alias="org.jboss.netty.channel.socket.ServerSocketChannelFactory" />
+  <alias name="org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory"
+         alias="org.jboss.netty.channel.socket.DatagramChannelFactory" />
 </beans>

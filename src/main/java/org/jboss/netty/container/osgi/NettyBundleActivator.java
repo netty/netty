@@ -30,10 +30,12 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.logging.OsgiLoggerFactory;
@@ -70,6 +72,10 @@ public class NettyBundleActivator implements BundleActivator {
         register(ctx,
                  new NioServerSocketChannelFactory(executor, executor),
                  ServerSocketChannelFactory.class);
+        // ... except for the datagram transport.
+        register(ctx,
+                new OioDatagramChannelFactory(executor),
+                DatagramChannelFactory.class);
 
         register(ctx, new OioClientSocketChannelFactory(executor));
         register(ctx, new OioServerSocketChannelFactory(executor, executor));

@@ -27,10 +27,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
 import org.jboss.netty.util.internal.ExecutorUtil;
 import org.jboss.netty.util.internal.UnterminatableExecutor;
@@ -72,6 +74,10 @@ public class NettyModule extends AbstractModule {
             toProvider(NioServerSocketChannelFactoryProvider.class).
             in(Scopes.SINGLETON);
 
+        bind(DatagramChannelFactory.class).
+            toProvider(OioDatagramChannelFactoryProvider.class).
+            in(Scopes.SINGLETON);
+
         bind(NioClientSocketChannelFactory.class).
             toProvider(NioClientSocketChannelFactoryProvider.class).
             in(Scopes.SINGLETON);
@@ -86,6 +92,10 @@ public class NettyModule extends AbstractModule {
 
         bind(OioServerSocketChannelFactory.class).
             toProvider(OioServerSocketChannelFactoryProvider.class).
+            in(Scopes.SINGLETON);
+
+        bind(OioDatagramChannelFactory.class).
+            toProvider(OioDatagramChannelFactoryProvider.class).
             in(Scopes.SINGLETON);
     }
 }

@@ -89,4 +89,16 @@
       </parameter>
     </constructor>
   </bean>
+
+  <bean mode="On Demand"
+        name="org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory"
+        class="org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory">
+    <alias>org.jboss.netty.channel.socket.DatagramChannelFactory</alias>
+    <depends>org.jboss.netty.internal.ChannelFactoryExecutor</depends>
+    <constructor>
+      <parameter class="java.util.concurrent.Executor">
+        <inject bean="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+      </parameter>
+    </constructor>
+  </bean>
 </deployment>
