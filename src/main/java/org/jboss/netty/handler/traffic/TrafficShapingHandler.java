@@ -84,10 +84,10 @@ public class TrafficShapingHandler extends SimpleChannelHandler {
     public TrafficShapingHandler(TrafficCounterFactory factory) {
         super();
         this.factory = factory;
-        this.globalTrafficCounter = this.factory
+        globalTrafficCounter = this.factory
                 .getGlobalTrafficCounter();
-        this.channelTrafficCounter = null;
-        this.objectSizeEstimator = new DefaultObjectSizeEstimator();
+        channelTrafficCounter = null;
+        objectSizeEstimator = new DefaultObjectSizeEstimator();
         // will be set when connected is called
     }
     /**
@@ -97,95 +97,72 @@ public class TrafficShapingHandler extends SimpleChannelHandler {
      *            the TrafficCounterFactory from which all Monitors will be
      *            created
      * @param objectSizeEstimator
-     *            the {@link ObjectSizeEstimator} that will be used to compute 
+     *            the {@link ObjectSizeEstimator} that will be used to compute
      *            the size of the message
      */
     public TrafficShapingHandler(TrafficCounterFactory factory, ObjectSizeEstimator objectSizeEstimator) {
         super();
         this.factory = factory;
-        this.globalTrafficCounter = this.factory
+        globalTrafficCounter = this.factory
                 .getGlobalTrafficCounter();
-        this.channelTrafficCounter = null;
+        channelTrafficCounter = null;
         this.objectSizeEstimator = objectSizeEstimator;
         // will be set when connected is called
     }
-    /*
-     * (non-Javadoc)
-     *
-     * @see org.jboss.netty.channel.SimpleChannelHandler#messageReceived(org.jboss.netty.channel.ChannelHandlerContext,
-     *      org.jboss.netty.channel.MessageEvent)
-     */
+
     @Override
     public void messageReceived(ChannelHandlerContext arg0, MessageEvent arg1)
             throws Exception {
-        long size = this.objectSizeEstimator.estimateSize(arg1.getMessage());
-        if (this.channelTrafficCounter != null) {
-            this.channelTrafficCounter.bytesRecvFlowControl(arg0, size);
+        long size = objectSizeEstimator.estimateSize(arg1.getMessage());
+        if (channelTrafficCounter != null) {
+            channelTrafficCounter.bytesRecvFlowControl(arg0, size);
         }
-        if (this.globalTrafficCounter != null) {
-            this.globalTrafficCounter.bytesRecvFlowControl(arg0, size);
+        if (globalTrafficCounter != null) {
+            globalTrafficCounter.bytesRecvFlowControl(arg0, size);
         }
         // The message is then just passed to the next Codec
         super.messageReceived(arg0, arg1);
     }
 
-    /*
-     * (non-Javadoc)
-     *
-     * @see org.jboss.netty.channel.SimpleChannelHandler#writeRequested(org.jboss.netty.channel.ChannelHandlerContext,
-     *      org.jboss.netty.channel.MessageEvent)
-     */
     @Override
     public void writeRequested(ChannelHandlerContext arg0, MessageEvent arg1)
             throws Exception {
-        long size = this.objectSizeEstimator.estimateSize(arg1.getMessage());
-        if (this.channelTrafficCounter != null) {
-            this.channelTrafficCounter.bytesWriteFlowControl(size);
+        long size = objectSizeEstimator.estimateSize(arg1.getMessage());
+        if (channelTrafficCounter != null) {
+            channelTrafficCounter.bytesWriteFlowControl(size);
         }
-        if (this.globalTrafficCounter != null) {
-            this.globalTrafficCounter.bytesWriteFlowControl(size);
+        if (globalTrafficCounter != null) {
+            globalTrafficCounter.bytesWriteFlowControl(size);
         }
         // The message is then just passed to the next Codec
         super.writeRequested(arg0, arg1);
     }
 
-    /*
-     * (non-Javadoc)
-     *
-     * @see org.jboss.netty.channel.SimpleChannelHandler#channelClosed(org.jboss.netty.channel.ChannelHandlerContext,
-     *      org.jboss.netty.channel.ChannelStateEvent)
-     */
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
-        if (this.channelTrafficCounter != null) {
-            this.channelTrafficCounter.stop();
-            this.channelTrafficCounter = null;
+        if (channelTrafficCounter != null) {
+            channelTrafficCounter.stop();
+            channelTrafficCounter = null;
         }
         super.channelClosed(ctx, e);
     }
 
-    /*
-     * (non-Javadoc)
-     *
-     * @see org.jboss.netty.channel.SimpleChannelHandler#channelConnected(org.jboss.netty.channel.ChannelHandlerContext,
-     *      org.jboss.netty.channel.ChannelStateEvent)
-     */
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         // readSuspended = true;
         ctx.setAttachment(Boolean.TRUE);
         ctx.getChannel().setReadable(false);
-        if ((this.channelTrafficCounter == null) && (this.factory != null)) {
+        if (channelTrafficCounter == null && factory != null) {
             // A factory was used
-            this.channelTrafficCounter = this.factory
-                    .createChannelTrafficCounter(ctx.getChannel());
+            channelTrafficCounter =
+                factory.newChannelTrafficCounter(ctx.getChannel());
         }
-        if (this.channelTrafficCounter != null) {
-            this.channelTrafficCounter
+        if (channelTrafficCounter != null) {
+            channelTrafficCounter
                     .setMonitoredChannel(ctx.getChannel());
-            this.channelTrafficCounter.start();
+            channelTrafficCounter.start();
         }
         super.channelConnected(ctx, e);
         // readSuspended = false;
@@ -221,7 +198,7 @@ public class TrafficShapingHandler extends SimpleChannelHandler {
      *         in the Factory
      */
     public TrafficCounter getChannelTrafficCounter() {
-        return this.channelTrafficCounter;
+        return channelTrafficCounter;
     }
 
     /**
@@ -230,7 +207,7 @@ public class TrafficShapingHandler extends SimpleChannelHandler {
      *         function was disabled in the Factory
      */
     public TrafficCounter getGlobalTrafficCounter() {
-        return this.globalTrafficCounter;
+        return globalTrafficCounter;
     }
 
 }

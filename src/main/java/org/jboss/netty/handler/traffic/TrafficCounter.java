@@ -45,6 +45,11 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  *
  */
 public class TrafficCounter {
+    // XXX: Should the constructor package private?
+    //      We already have TrafficCounterFactory.newChannelTrafficCounter.
+    // XXX: Should TrafficCounter be able to be instantiated without TrafficCounterFactory?
+    // TODO: Implement ExternalResourceReleasable
+
     /**
      * Internal logger
      */
@@ -71,18 +76,18 @@ public class TrafficCounter {
      */
     private final AtomicLong cumulativeReadBytes = new AtomicLong(0);
     /**
-     * Last Time where cumulative bytes where reset to zero  
+     * Last Time where cumulative bytes where reset to zero
      */
     private long lastCumulativeTime;
     /**
      * Last writing bandwidth
      */
-    private long lastWritingThroughput = 0;
+    private long lastWriteThroughput = 0;
 
     /**
      * Last reading bandwidth
      */
-    private long lastReadingThroughput = 0;
+    private long lastReadThroughput = 0;
 
     /**
      * Last Time Check taken
@@ -102,17 +107,17 @@ public class TrafficCounter {
     /**
      * Current Limit in B/s to apply to write
      */
-    private long limitWrite = 0;
+    private long writeLimit = 0;
 
     /**
      * Current Limit in B/s to apply to read
      */
-    private long limitRead = 0;
+    private long readLimit = 0;
 
     /**
      * Delay between two capture
      */
-    private long checkInterval = TrafficCounterFactory.DEFAULT_DELAY;
+    private long checkInterval = TrafficCounterFactory.DEFAULT_CHECK_INTERVAL;
 
     // default 1 s
 
@@ -191,7 +196,7 @@ public class TrafficCounter {
                     long endTime = System.currentTimeMillis();
                     counter.resetAccounting(endTime);
                     if (factory1 != null) {
-                        factory1.accounting(counter);
+                        factory1.doAccounting(counter);
                     }
                 }
             } catch (InterruptedException e) {
@@ -230,7 +235,7 @@ public class TrafficCounter {
             monitorFuture = null;
             resetAccounting(System.currentTimeMillis());
             if (factory != null) {
-                factory.accounting(this);
+                factory.doAccounting(this);
             }
             setMonitoredChannel(null);
         }
@@ -250,9 +255,9 @@ public class TrafficCounter {
             }
             lastReadBytes = currentReadingBytes.getAndSet(0);
             lastWrittenBytes = currentWritingBytes.getAndSet(0);
-            lastReadingThroughput = lastReadBytes / interval * 1000;
+            lastReadThroughput = lastReadBytes / interval * 1000;
             // nb byte / checkInterval in ms * 1000 (1s)
-            lastWritingThroughput = lastWrittenBytes / interval * 1000;
+            lastWriteThroughput = lastWrittenBytes / interval * 1000;
             // nb byte / checkInterval in ms * 1000 (1s)
         }
     }
@@ -286,7 +291,7 @@ public class TrafficCounter {
         this.factory = factory;
         this.executorService = executorService;
         this.name = name;
-        this.lastCumulativeTime = System.currentTimeMillis();
+        lastCumulativeTime = System.currentTimeMillis();
         this.configure(channel, writeLimit, readLimit, checkInterval);
     }
 
@@ -322,8 +327,8 @@ public class TrafficCounter {
      */
     public void configure(Channel channel, long writeLimit,
             long readLimit) {
-        limitWrite = writeLimit;
-        limitRead = readLimit;
+        this.writeLimit = writeLimit;
+        this.readLimit = readLimit;
         setMonitoredChannel(channel);
     }
 
@@ -338,12 +343,12 @@ public class TrafficCounter {
      *            channel
      * @param writeLimit
      * @param readLimit
-     * @param delayToSet
+     * @param checkInterval
      */
     public void configure(Channel channel, long writeLimit,
-            long readLimit, long delayToSet) {
-        if (checkInterval != delayToSet) {
-            checkInterval = delayToSet;
+            long readLimit, long checkInterval) {
+        if (this.checkInterval != checkInterval) {
+            this.checkInterval = checkInterval;
             if (monitorFuture == null) {
                 this.configure(channel, writeLimit, readLimit);
                 return;
@@ -371,7 +376,7 @@ public class TrafficCounter {
                 // Time is too short, so just lets continue
                 return 0;
             }
-            long wait = currentReadingBytes.get() * 1000 / limitRead -
+            long wait = currentReadingBytes.get() * 1000 / readLimit -
                     interval;
             return wait;
         }
@@ -390,7 +395,7 @@ public class TrafficCounter {
                 return 0;
             }
             long wait = currentWritingBytes.get() * 1000 /
-                limitWrite - interval;
+                writeLimit - interval;
             return wait;
         }
     }
@@ -466,7 +471,7 @@ public class TrafficCounter {
             throws InterruptedException {
         currentReadingBytes.addAndGet(recv);
         cumulativeReadBytes.addAndGet(recv);
-        if (limitRead == 0) {
+        if (readLimit == 0) {
             // no action
             return;
         }
@@ -521,7 +526,7 @@ public class TrafficCounter {
     void bytesWriteFlowControl(long write) throws InterruptedException {
         currentWritingBytes.addAndGet(write);
         cumulativeWrittenBytes.addAndGet(write);
-        if (limitWrite == 0) {
+        if (writeLimit == 0) {
             return;
         }
         // compute the number of ms to wait before continue with the channel
@@ -546,7 +551,7 @@ public class TrafficCounter {
      * @return the current Read Throughput in byte/s
      */
     public long getLastReadThroughput() {
-        return lastReadingThroughput;
+        return lastReadThroughput;
     }
 
     /**
@@ -554,7 +559,7 @@ public class TrafficCounter {
      * @return the current Write Throughput in byte/s
      */
     public long getLastWriteThroughput() {
-        return lastWritingThroughput;
+        return lastWriteThroughput;
     }
 
     /**
@@ -588,18 +593,18 @@ public class TrafficCounter {
     }
 
     /**
-     * @return the lastCumulativeTime in millisecond as of System.currentTimeMillis() 
+     * @return the lastCumulativeTime in millisecond as of System.currentTimeMillis()
      * when the cumulative counters were reset to 0.
      */
     public long getLastCumulativeTime() {
-        return this.lastCumulativeTime;
+        return lastCumulativeTime;
     }
 
     /**
      * Reset both read and written cumulative bytes counters and the associated time.
      */
     public void resetCumulativeTime() {
-        this.lastCumulativeTime = System.currentTimeMillis();
+        lastCumulativeTime = System.currentTimeMillis();
         cumulativeReadBytes.set(0);
         cumulativeWrittenBytes.set(0);
     }
@@ -610,8 +615,8 @@ public class TrafficCounter {
     @Override
     public String toString() {
         return "Monitor " + name + " Current Speed Read: " +
-                (lastReadingThroughput >> 10) + " KB/s, Write: " +
-                (lastWritingThroughput >> 10) + " KB/s Current Read: " +
+                (lastReadThroughput >> 10) + " KB/s, Write: " +
+                (lastWriteThroughput >> 10) + " KB/s Current Read: " +
                 (currentReadingBytes.get() >> 10) + " KB Current Write: " +
                 (currentWritingBytes.get() >> 10) + " KB";
     }

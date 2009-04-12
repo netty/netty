@@ -38,11 +38,15 @@ import org.jboss.netty.channel.Channel;
  *
  *
  */
-public abstract class TrafficCounterFactory {
+public class TrafficCounterFactory {
+    // FIXME: Use Executor instead of ExecutorService
+    // TODO: Read/write limit needs to be configurable on a per-channel basis.
+    // TODO: Implement ExternalResourceReleasable
+
     /**
      * Default delay between two checks: 1s
      */
-    public static long DEFAULT_DELAY = 1000;
+    public static long DEFAULT_CHECK_INTERVAL = 1000;
 
     /**
      * ExecutorService to associated to any TrafficCounter
@@ -62,7 +66,7 @@ public abstract class TrafficCounterFactory {
     /**
      * Delay between two performance snapshots for channel
      */
-    private long channelDelay = DEFAULT_DELAY; // default 1 s
+    private long channelCheckInterval = DEFAULT_CHECK_INTERVAL; // default 1 s
 
     /**
      * Will the TrafficCounter for Channel be active
@@ -82,7 +86,7 @@ public abstract class TrafficCounterFactory {
     /**
      * Delay between two performance snapshots for global
      */
-    private long globalDelay = DEFAULT_DELAY; // default 1 s
+    private long globalCheckInterval = DEFAULT_CHECK_INTERVAL; // default 1 s
 
     /**
      * Will the TrafficCounter for Global be active
@@ -101,7 +105,10 @@ public abstract class TrafficCounterFactory {
      * @param counter
      *            the TrafficCounter that computes its performance
      */
-    protected abstract void accounting(TrafficCounter counter);
+    @SuppressWarnings("unused")
+    protected void doAccounting(TrafficCounter counter) {
+        // NOOP by default
+    }
 
     /**
      *
@@ -109,26 +116,26 @@ public abstract class TrafficCounterFactory {
      * @param newChannelActive
      * @param newChannelWriteLimit
      * @param newChannelReadLimit
-     * @param newChannelDelay
+     * @param newChannelCheckInterval
      * @param newGlobalActive
      * @param newGlobalWriteLimit
      * @param newGlobalReadLimit
-     * @param newGlobalDelay
+     * @param newGlobalCheckInterval
      */
     private void init(ExecutorService newexecutorService,
             boolean newChannelActive, long newChannelWriteLimit,
-            long newChannelReadLimit, long newChannelDelay,
+            long newChannelReadLimit, long newChannelCheckInterval,
             boolean newGlobalActive, long newGlobalWriteLimit,
-            long newGlobalReadLimit, long newGlobalDelay) {
+            long newGlobalReadLimit, long newGlobalCheckInterval) {
         executorService = newexecutorService;
         channelActive = newChannelActive;
         channelWriteLimit = newChannelWriteLimit;
         channelReadLimit = newChannelReadLimit;
-        channelDelay = newChannelDelay;
+        channelCheckInterval = newChannelCheckInterval;
         globalActive = newGlobalActive;
         globalWriteLimit = newGlobalWriteLimit;
         globalReadLimit = newGlobalReadLimit;
-        globalDelay = newGlobalDelay;
+        globalCheckInterval = newGlobalCheckInterval;
     }
 
     /**
@@ -142,7 +149,7 @@ public abstract class TrafficCounterFactory {
      *            NO_LIMIT or a limit in bytes/s
      * @param channelReadLimit
      *            NO_LIMIT or a limit in bytes/s
-     * @param channelDelay
+     * @param channelCheckInterval
      *            The delay between two computations of performances for
      *            channels or NO_STAT if no stats are to be computed
      * @param globalActive
@@ -151,17 +158,17 @@ public abstract class TrafficCounterFactory {
      *            NO_LIMIT or a limit in bytes/s
      * @param globalReadLimit
      *            NO_LIMIT or a limit in bytes/s
-     * @param globalDelay
+     * @param globalCheckInterval
      *            The delay between two computations of performances for global
      *            context or NO_STAT if no stats are to be computed
      */
     public TrafficCounterFactory(ExecutorService executorService,
             boolean channelActive, long channelWriteLimit,
-            long channelReadLimit, long channelDelay, boolean globalActive,
-            long globalWriteLimit, long globalReadLimit, long globalDelay) {
+            long channelReadLimit, long channelCheckInterval, boolean globalActive,
+            long globalWriteLimit, long globalReadLimit, long globalCheckInterval) {
         init(executorService, channelActive, channelWriteLimit,
-                channelReadLimit, channelDelay, globalActive, globalWriteLimit,
-                globalReadLimit, globalDelay);
+                channelReadLimit, channelCheckInterval, globalActive, globalWriteLimit,
+                globalReadLimit, globalCheckInterval);
     }
 
     /**
@@ -187,8 +194,8 @@ public abstract class TrafficCounterFactory {
             long channelReadLimit, boolean globalActive, long globalWriteLimit,
             long globalReadLimit) {
         init(executorService, channelActive, channelWriteLimit,
-                channelReadLimit, DEFAULT_DELAY, globalActive,
-                globalWriteLimit, globalReadLimit, DEFAULT_DELAY);
+                channelReadLimit, DEFAULT_CHECK_INTERVAL, globalActive,
+                globalWriteLimit, globalReadLimit, DEFAULT_CHECK_INTERVAL);
     }
 
     /**
@@ -204,16 +211,16 @@ public abstract class TrafficCounterFactory {
      *            NO_LIMIT or a limit in bytes/s
      * @param globalReadLimit
      *            NO_LIMIT or a limit in bytes/s
-     * @param globalDelay
+     * @param globalCheckInterval
      *            The delay between two computations of performances for global
      *            context or NO_STAT if no stats are to be computed
      */
     public TrafficCounterFactory(ExecutorService executorService,
             boolean channelActive, boolean globalActive, long globalWriteLimit,
-            long globalReadLimit, long globalDelay) {
+            long globalReadLimit, long globalCheckInterval) {
         init(executorService, channelActive, 0, 0,
-                DEFAULT_DELAY, globalActive, globalWriteLimit, globalReadLimit,
-                globalDelay);
+                DEFAULT_CHECK_INTERVAL, globalActive, globalWriteLimit, globalReadLimit,
+                globalCheckInterval);
     }
 
     /**
@@ -234,8 +241,8 @@ public abstract class TrafficCounterFactory {
             boolean channelActive, boolean globalActive, long globalWriteLimit,
             long globalReadLimit) {
         init(executorService, channelActive, 0, 0,
-                DEFAULT_DELAY, globalActive, globalWriteLimit, globalReadLimit,
-                DEFAULT_DELAY);
+                DEFAULT_CHECK_INTERVAL, globalActive, globalWriteLimit, globalReadLimit,
+                DEFAULT_CHECK_INTERVAL);
     }
 
     /**
@@ -251,7 +258,7 @@ public abstract class TrafficCounterFactory {
     public TrafficCounterFactory(ExecutorService executorService,
             boolean channelActive, boolean globalActive) {
         init(executorService, channelActive, 0, 0,
-                DEFAULT_DELAY, globalActive, 0, 0, DEFAULT_DELAY);
+                DEFAULT_CHECK_INTERVAL, globalActive, 0, 0, DEFAULT_CHECK_INTERVAL);
     }
 
     /**
@@ -287,24 +294,24 @@ public abstract class TrafficCounterFactory {
      *
      * @param newchannelWriteLimit
      * @param newchannelReadLimit
-     * @param newchanneldelay
+     * @param newchannelCheckInterval
      * @param newglobalWriteLimit
      * @param newglobalReadLimit
-     * @param newglobaldelay
+     * @param newGlobalCheckInterval
      */
     public void configure(long newchannelWriteLimit,
-            long newchannelReadLimit, long newchanneldelay,
+            long newchannelReadLimit, long newchannelCheckInterval,
             long newglobalWriteLimit, long newglobalReadLimit,
-            long newglobaldelay) {
+            long newGlobalCheckInterval) {
         channelWriteLimit = newchannelWriteLimit;
         channelReadLimit = newchannelReadLimit;
-        channelDelay = newchanneldelay;
+        channelCheckInterval = newchannelCheckInterval;
         globalWriteLimit = newglobalWriteLimit;
         globalReadLimit = newglobalReadLimit;
-        globalDelay = newglobaldelay;
+        globalCheckInterval = newGlobalCheckInterval;
         if (globalTrafficMonitor != null) {
             globalTrafficMonitor.configure(null,
-                    newglobalWriteLimit, newglobalReadLimit, newglobaldelay);
+                    newglobalWriteLimit, newglobalReadLimit, newGlobalCheckInterval);
         }
     }
 
@@ -317,7 +324,7 @@ public abstract class TrafficCounterFactory {
                 globalTrafficMonitor = new TrafficCounter(this,
                         executorService, null, "GlobalPC",
                         globalWriteLimit, globalReadLimit,
-                        globalDelay);
+                        globalCheckInterval);
                 globalTrafficMonitor.start();
             }
         }
@@ -326,17 +333,17 @@ public abstract class TrafficCounterFactory {
 
     /**
      * @param channel
-     * @return the channel TrafficCounter or null if this support is
-     *         disabled
+     *
+     * @throws UnsupportedOperationException if per-channel counter is disabled
      */
-    public TrafficCounter createChannelTrafficCounter(Channel channel) {
+    public TrafficCounter newChannelTrafficCounter(Channel channel) {
         if (channelActive && (channelReadLimit > 0 || channelWriteLimit > 0
-                || channelDelay > 0)) {
+                || channelCheckInterval > 0)) {
             return new TrafficCounter(this, executorService, channel,
                     "ChannelPC" + channel.getId(), channelWriteLimit,
-                    channelReadLimit, channelDelay);
+                    channelReadLimit, channelCheckInterval);
         }
-        return null;
+        throw new UnsupportedOperationException("per-channel counter disabled");
     }
 
     /**
@@ -352,18 +359,18 @@ public abstract class TrafficCounterFactory {
     }
 
     /**
-     * @return the channelDelay
+     * @return the channelCheckInterval
      */
-    public long getChannelDelay() {
-        return channelDelay;
+    public long getChannelCheckInterval() {
+        return channelCheckInterval;
     }
 
     /**
-     * @param channelDelay
-     *            the channelDelay to set
+     * @param channelCheckInterval
+     *            the channelCheckInterval to set
      */
-    public void setChannelDelay(long channelDelay) {
-        this.channelDelay = channelDelay;
+    public void setChannelCheckInterval(long channelCheckInterval) {
+        this.channelCheckInterval = channelCheckInterval;
     }
 
     /**
@@ -397,22 +404,22 @@ public abstract class TrafficCounterFactory {
     }
 
     /**
-     * @return the globalDelay
+     * @return the globalCheckInterval
      */
-    public long getGlobalDelay() {
-        return globalDelay;
+    public long getGlobalCheckInterval() {
+        return globalCheckInterval;
     }
 
     /**
-     * @param globalDelay
-     *            the globalDelay to set
+     * @param globalCheckInterval
+     *            the globalCheckInterval to set
      */
-    public void setGlobalDelay(long globalDelay) {
-        this.globalDelay = globalDelay;
+    public void setGlobalCheckInterval(long globalCheckInterval) {
+        this.globalCheckInterval = globalCheckInterval;
         if (globalTrafficMonitor != null) {
             globalTrafficMonitor.configure(null,
                     globalWriteLimit, globalReadLimit,
-                    this.globalDelay);
+                    globalCheckInterval);
         }
     }
 
@@ -432,7 +439,7 @@ public abstract class TrafficCounterFactory {
         if (globalTrafficMonitor != null) {
             globalTrafficMonitor.configure(null,
                     globalWriteLimit, this.globalReadLimit,
-                    globalDelay);
+                    globalCheckInterval);
         }
     }
 
@@ -452,7 +459,7 @@ public abstract class TrafficCounterFactory {
         if (globalTrafficMonitor != null) {
             globalTrafficMonitor.configure(null,
                     this.globalWriteLimit, globalReadLimit,
-                    globalDelay);
+                    globalCheckInterval);
         }
     }
 
@@ -469,5 +476,4 @@ public abstract class TrafficCounterFactory {
     public boolean isGlobalActive() {
         return globalActive;
     }
-
 }
