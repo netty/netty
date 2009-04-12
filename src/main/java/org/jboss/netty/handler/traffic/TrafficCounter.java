@@ -45,7 +45,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  *
  */
 public class TrafficCounter {
-    // XXX: Should the constructor package private?
+    // XXX: Should the constructor be package private?
     //      We already have TrafficCounterFactory.newChannelTrafficCounter.
     // XXX: Should TrafficCounter be able to be instantiated without TrafficCounterFactory?
     // TODO: Implement ExternalResourceReleasable
