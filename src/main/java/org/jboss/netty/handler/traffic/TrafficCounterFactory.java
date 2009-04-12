@@ -52,12 +52,12 @@ public abstract class TrafficCounterFactory {
     /**
      * Limit in B/s to apply to write for all channel TrafficCounter
      */
-    private long channelLimitWrite = 0;
+    private long channelWriteLimit = 0;
 
     /**
      * Limit in B/s to apply to read for all channel TrafficCounter
      */
-    private long channelLimitRead = 0;
+    private long channelReadLimit = 0;
 
     /**
      * Delay between two performance snapshots for channel
@@ -72,12 +72,12 @@ public abstract class TrafficCounterFactory {
     /**
      * Limit in B/s to apply to write for the global TrafficCounter
      */
-    private long globalLimitWrite = 0;
+    private long globalWriteLimit = 0;
 
     /**
      * Limit in B/s to apply to read for the global TrafficCounter
      */
-    private long globalLimitRead = 0;
+    private long globalReadLimit = 0;
 
     /**
      * Delay between two performance snapshots for global
@@ -107,28 +107,28 @@ public abstract class TrafficCounterFactory {
      *
      * @param newexecutorService
      * @param newChannelActive
-     * @param newChannelLimitWrite
-     * @param newChannelLimitRead
+     * @param newChannelWriteLimit
+     * @param newChannelReadLimit
      * @param newChannelDelay
      * @param newGlobalActive
-     * @param newGlobalLimitWrite
-     * @param newGlobalLimitRead
+     * @param newGlobalWriteLimit
+     * @param newGlobalReadLimit
      * @param newGlobalDelay
      */
     private void init(ExecutorService newexecutorService,
-            boolean newChannelActive, long newChannelLimitWrite,
-            long newChannelLimitRead, long newChannelDelay,
-            boolean newGlobalActive, long newGlobalLimitWrite,
-            long newGlobalLimitRead, long newGlobalDelay) {
-        this.executorService = newexecutorService;
-        this.channelActive = newChannelActive;
-        this.channelLimitWrite = newChannelLimitWrite;
-        this.channelLimitRead = newChannelLimitRead;
-        this.channelDelay = newChannelDelay;
-        this.globalActive = newGlobalActive;
-        this.globalLimitWrite = newGlobalLimitWrite;
-        this.globalLimitRead = newGlobalLimitRead;
-        this.globalDelay = newGlobalDelay;
+            boolean newChannelActive, long newChannelWriteLimit,
+            long newChannelReadLimit, long newChannelDelay,
+            boolean newGlobalActive, long newGlobalWriteLimit,
+            long newGlobalReadLimit, long newGlobalDelay) {
+        executorService = newexecutorService;
+        channelActive = newChannelActive;
+        channelWriteLimit = newChannelWriteLimit;
+        channelReadLimit = newChannelReadLimit;
+        channelDelay = newChannelDelay;
+        globalActive = newGlobalActive;
+        globalWriteLimit = newGlobalWriteLimit;
+        globalReadLimit = newGlobalReadLimit;
+        globalDelay = newGlobalDelay;
     }
 
     /**
@@ -138,30 +138,30 @@ public abstract class TrafficCounterFactory {
      *            created for instance like Executors.newCachedThreadPool
      * @param channelActive
      *            True if each channel will have a TrafficCounter
-     * @param channelLimitWrite
+     * @param channelWriteLimit
      *            NO_LIMIT or a limit in bytes/s
-     * @param channelLimitRead
+     * @param channelReadLimit
      *            NO_LIMIT or a limit in bytes/s
      * @param channelDelay
      *            The delay between two computations of performances for
      *            channels or NO_STAT if no stats are to be computed
      * @param globalActive
      *            True if global context will have one unique TrafficCounter
-     * @param globalLimitWrite
+     * @param globalWriteLimit
      *            NO_LIMIT or a limit in bytes/s
-     * @param globalLimitRead
+     * @param globalReadLimit
      *            NO_LIMIT or a limit in bytes/s
      * @param globalDelay
      *            The delay between two computations of performances for global
      *            context or NO_STAT if no stats are to be computed
      */
     public TrafficCounterFactory(ExecutorService executorService,
-            boolean channelActive, long channelLimitWrite,
-            long channelLimitRead, long channelDelay, boolean globalActive,
-            long globalLimitWrite, long globalLimitRead, long globalDelay) {
-        init(executorService, channelActive, channelLimitWrite,
-                channelLimitRead, channelDelay, globalActive, globalLimitWrite,
-                globalLimitRead, globalDelay);
+            boolean channelActive, long channelWriteLimit,
+            long channelReadLimit, long channelDelay, boolean globalActive,
+            long globalWriteLimit, long globalReadLimit, long globalDelay) {
+        init(executorService, channelActive, channelWriteLimit,
+                channelReadLimit, channelDelay, globalActive, globalWriteLimit,
+                globalReadLimit, globalDelay);
     }
 
     /**
@@ -171,24 +171,24 @@ public abstract class TrafficCounterFactory {
      *            created for instance like Executors.newCachedThreadPool
      * @param channelActive
      *            True if each channel will have a TrafficCounter
-     * @param channelLimitWrite
+     * @param channelWriteLimit
      *            NO_LIMIT or a limit in bytes/s
-     * @param channelLimitRead
+     * @param channelReadLimit
      *            NO_LIMIT or a limit in bytes/s
      * @param globalActive
      *            True if global context will have one unique TrafficCounter
-     * @param globalLimitWrite
+     * @param globalWriteLimit
      *            NO_LIMIT or a limit in bytes/s
-     * @param globalLimitRead
+     * @param globalReadLimit
      *            NO_LIMIT or a limit in bytes/s
      */
     public TrafficCounterFactory(ExecutorService executorService,
-            boolean channelActive, long channelLimitWrite,
-            long channelLimitRead, boolean globalActive, long globalLimitWrite,
-            long globalLimitRead) {
-        init(executorService, channelActive, channelLimitWrite,
-                channelLimitRead, DEFAULT_DELAY, globalActive,
-                globalLimitWrite, globalLimitRead, DEFAULT_DELAY);
+            boolean channelActive, long channelWriteLimit,
+            long channelReadLimit, boolean globalActive, long globalWriteLimit,
+            long globalReadLimit) {
+        init(executorService, channelActive, channelWriteLimit,
+                channelReadLimit, DEFAULT_DELAY, globalActive,
+                globalWriteLimit, globalReadLimit, DEFAULT_DELAY);
     }
 
     /**
@@ -200,19 +200,19 @@ public abstract class TrafficCounterFactory {
      *            True if each channel will have a TrafficCounter
      * @param globalActive
      *            True if global context will have one unique TrafficCounter
-     * @param globalLimitWrite
+     * @param globalWriteLimit
      *            NO_LIMIT or a limit in bytes/s
-     * @param globalLimitRead
+     * @param globalReadLimit
      *            NO_LIMIT or a limit in bytes/s
      * @param globalDelay
      *            The delay between two computations of performances for global
      *            context or NO_STAT if no stats are to be computed
      */
     public TrafficCounterFactory(ExecutorService executorService,
-            boolean channelActive, boolean globalActive, long globalLimitWrite,
-            long globalLimitRead, long globalDelay) {
+            boolean channelActive, boolean globalActive, long globalWriteLimit,
+            long globalReadLimit, long globalDelay) {
         init(executorService, channelActive, 0, 0,
-                DEFAULT_DELAY, globalActive, globalLimitWrite, globalLimitRead,
+                DEFAULT_DELAY, globalActive, globalWriteLimit, globalReadLimit,
                 globalDelay);
     }
 
@@ -225,16 +225,16 @@ public abstract class TrafficCounterFactory {
      *            True if each channel will have a TrafficCounter
      * @param globalActive
      *            True if global context will have one unique TrafficCounter
-     * @param globalLimitWrite
+     * @param globalWriteLimit
      *            NO_LIMIT or a limit in bytes/s
-     * @param globalLimitRead
+     * @param globalReadLimit
      *            NO_LIMIT or a limit in bytes/s
      */
     public TrafficCounterFactory(ExecutorService executorService,
-            boolean channelActive, boolean globalActive, long globalLimitWrite,
-            long globalLimitRead) {
+            boolean channelActive, boolean globalActive, long globalWriteLimit,
+            long globalReadLimit) {
         init(executorService, channelActive, 0, 0,
-                DEFAULT_DELAY, globalActive, globalLimitWrite, globalLimitRead,
+                DEFAULT_DELAY, globalActive, globalWriteLimit, globalReadLimit,
                 DEFAULT_DELAY);
     }
 
@@ -261,7 +261,7 @@ public abstract class TrafficCounterFactory {
      * @param active
      */
     public void setChannelActive(boolean active) {
-        this.channelActive = active;
+        channelActive = active;
     }
 
     /**
@@ -271,12 +271,12 @@ public abstract class TrafficCounterFactory {
      * @param active
      */
     public void setGlobalActive(boolean active) {
-        if (this.globalActive) {
+        if (globalActive) {
             if (!active) {
                 stopGlobalTrafficCounter();
             }
         }
-        this.globalActive = active;
+        globalActive = active;
         getGlobalTrafficCounter();
     }
 
@@ -285,26 +285,26 @@ public abstract class TrafficCounterFactory {
      * any) is dynamically changed, but Channels TrafficCounters are not
      * changed, only new created ones.
      *
-     * @param newchannelLimitWrite
-     * @param newchannelLimitRead
+     * @param newchannelWriteLimit
+     * @param newchannelReadLimit
      * @param newchanneldelay
-     * @param newglobalLimitWrite
-     * @param newglobalLimitRead
+     * @param newglobalWriteLimit
+     * @param newglobalReadLimit
      * @param newglobaldelay
      */
-    public void configure(long newchannelLimitWrite,
-            long newchannelLimitRead, long newchanneldelay,
-            long newglobalLimitWrite, long newglobalLimitRead,
+    public void configure(long newchannelWriteLimit,
+            long newchannelReadLimit, long newchanneldelay,
+            long newglobalWriteLimit, long newglobalReadLimit,
             long newglobaldelay) {
-        this.channelLimitWrite = newchannelLimitWrite;
-        this.channelLimitRead = newchannelLimitRead;
-        this.channelDelay = newchanneldelay;
-        this.globalLimitWrite = newglobalLimitWrite;
-        this.globalLimitRead = newglobalLimitRead;
-        this.globalDelay = newglobaldelay;
-        if (this.globalTrafficMonitor != null) {
-            this.globalTrafficMonitor.configure(null,
-                    newglobalLimitWrite, newglobalLimitRead, newglobaldelay);
+        channelWriteLimit = newchannelWriteLimit;
+        channelReadLimit = newchannelReadLimit;
+        channelDelay = newchanneldelay;
+        globalWriteLimit = newglobalWriteLimit;
+        globalReadLimit = newglobalReadLimit;
+        globalDelay = newglobaldelay;
+        if (globalTrafficMonitor != null) {
+            globalTrafficMonitor.configure(null,
+                    newglobalWriteLimit, newglobalReadLimit, newglobaldelay);
         }
     }
 
@@ -312,16 +312,16 @@ public abstract class TrafficCounterFactory {
      * @return the Global TrafficCounter or null if this support is disabled
      */
     public TrafficCounter getGlobalTrafficCounter() {
-        if (this.globalActive) {
-            if (this.globalTrafficMonitor == null) {
-                this.globalTrafficMonitor = new TrafficCounter(this,
-                        this.executorService, null, "GlobalPC",
-                        this.globalLimitWrite, this.globalLimitRead,
-                        this.globalDelay);
-                this.globalTrafficMonitor.start();
+        if (globalActive) {
+            if (globalTrafficMonitor == null) {
+                globalTrafficMonitor = new TrafficCounter(this,
+                        executorService, null, "GlobalPC",
+                        globalWriteLimit, globalReadLimit,
+                        globalDelay);
+                globalTrafficMonitor.start();
             }
         }
-        return this.globalTrafficMonitor;
+        return globalTrafficMonitor;
     }
 
     /**
@@ -330,11 +330,11 @@ public abstract class TrafficCounterFactory {
      *         disabled
      */
     public TrafficCounter createChannelTrafficCounter(Channel channel) {
-        if (this.channelActive && ((this.channelLimitRead > 0) || (this.channelLimitWrite > 0)
-                || (this.channelDelay > 0))) {
-            return new TrafficCounter(this, this.executorService, channel,
-                    "ChannelPC" + channel.getId(), this.channelLimitWrite,
-                    this.channelLimitRead, this.channelDelay);
+        if (channelActive && (channelReadLimit > 0 || channelWriteLimit > 0
+                || channelDelay > 0)) {
+            return new TrafficCounter(this, executorService, channel,
+                    "ChannelPC" + channel.getId(), channelWriteLimit,
+                    channelReadLimit, channelDelay);
         }
         return null;
     }
@@ -345,9 +345,9 @@ public abstract class TrafficCounterFactory {
      *
      */
     public void stopGlobalTrafficCounter() {
-        if (this.globalTrafficMonitor != null) {
-            this.globalTrafficMonitor.stop();
-            this.globalTrafficMonitor = null;
+        if (globalTrafficMonitor != null) {
+            globalTrafficMonitor.stop();
+            globalTrafficMonitor = null;
         }
     }
 
@@ -355,7 +355,7 @@ public abstract class TrafficCounterFactory {
      * @return the channelDelay
      */
     public long getChannelDelay() {
-        return this.channelDelay;
+        return channelDelay;
     }
 
     /**
@@ -367,40 +367,40 @@ public abstract class TrafficCounterFactory {
     }
 
     /**
-     * @return the channelLimitRead
+     * @return the channelReadLimit
      */
-    public long getChannelLimitRead() {
-        return this.channelLimitRead;
+    public long getChannelReadLimit() {
+        return channelReadLimit;
     }
 
     /**
-     * @param channelLimitRead
-     *            the channelLimitRead to set
+     * @param channelReadLimit
+     *            the channelReadLimit to set
      */
-    public void setChannelLimitRead(long channelLimitRead) {
-        this.channelLimitRead = channelLimitRead;
+    public void setChannelReadLimit(long channelReadLimit) {
+        this.channelReadLimit = channelReadLimit;
     }
 
     /**
-     * @return the channelLimitWrite
+     * @return the channelWriteLimit
      */
-    public long getChannelLimitWrite() {
-        return this.channelLimitWrite;
+    public long getChannelWriteLimit() {
+        return channelWriteLimit;
     }
 
     /**
-     * @param channelLimitWrite
-     *            the channelLimitWrite to set
+     * @param channelWriteLimit
+     *            the channelWriteLimit to set
      */
-    public void setChannelLimitWrite(long channelLimitWrite) {
-        this.channelLimitWrite = channelLimitWrite;
+    public void setChannelWriteLimit(long channelWriteLimit) {
+        this.channelWriteLimit = channelWriteLimit;
     }
 
     /**
      * @return the globalDelay
      */
     public long getGlobalDelay() {
-        return this.globalDelay;
+        return globalDelay;
     }
 
     /**
@@ -409,50 +409,50 @@ public abstract class TrafficCounterFactory {
      */
     public void setGlobalDelay(long globalDelay) {
         this.globalDelay = globalDelay;
-        if (this.globalTrafficMonitor != null) {
-            this.globalTrafficMonitor.configure(null,
-                    this.globalLimitWrite, this.globalLimitRead,
+        if (globalTrafficMonitor != null) {
+            globalTrafficMonitor.configure(null,
+                    globalWriteLimit, globalReadLimit,
                     this.globalDelay);
         }
     }
 
     /**
-     * @return the globalLimitRead
+     * @return the globalReadLimit
      */
-    public long getGlobalLimitRead() {
-        return this.globalLimitRead;
+    public long getGlobalReadLimit() {
+        return globalReadLimit;
     }
 
     /**
-     * @param globalLimitRead
-     *            the globalLimitRead to set
+     * @param globalReadLimit
+     *            the globalReadLimit to set
      */
-    public void setGlobalLimitRead(long globalLimitRead) {
-        this.globalLimitRead = globalLimitRead;
-        if (this.globalTrafficMonitor != null) {
-            this.globalTrafficMonitor.configure(null,
-                    this.globalLimitWrite, this.globalLimitRead,
-                    this.globalDelay);
+    public void setGlobalReadLimit(long globalReadLimit) {
+        this.globalReadLimit = globalReadLimit;
+        if (globalTrafficMonitor != null) {
+            globalTrafficMonitor.configure(null,
+                    globalWriteLimit, this.globalReadLimit,
+                    globalDelay);
         }
     }
 
     /**
-     * @return the globalLimitWrite
+     * @return the globalWriteLimit
      */
-    public long getGlobalLimitWrite() {
-        return this.globalLimitWrite;
+    public long getGlobalWriteLimit() {
+        return globalWriteLimit;
     }
 
     /**
-     * @param globalLimitWrite
-     *            the globalLimitWrite to set
+     * @param globalWriteLimit
+     *            the globalWriteLimit to set
      */
-    public void setGlobalLimitWrite(long globalLimitWrite) {
-        this.globalLimitWrite = globalLimitWrite;
-        if (this.globalTrafficMonitor != null) {
-            this.globalTrafficMonitor.configure(null,
-                    this.globalLimitWrite, this.globalLimitRead,
-                    this.globalDelay);
+    public void setGlobalWriteLimit(long globalWriteLimit) {
+        this.globalWriteLimit = globalWriteLimit;
+        if (globalTrafficMonitor != null) {
+            globalTrafficMonitor.configure(null,
+                    this.globalWriteLimit, globalReadLimit,
+                    globalDelay);
         }
     }
 
@@ -460,14 +460,14 @@ public abstract class TrafficCounterFactory {
      * @return the channelActive
      */
     public boolean isChannelActive() {
-        return this.channelActive;
+        return channelActive;
     }
 
     /**
      * @return the globalActive
      */
     public boolean isGlobalActive() {
-        return this.globalActive;
+        return globalActive;
     }
 
 }
