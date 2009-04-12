@@ -30,6 +30,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.ExternalResourceReleasable;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -44,11 +45,10 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * interval.
  *
  */
-public class TrafficCounter {
+public class TrafficCounter implements ExternalResourceReleasable {
     // XXX: Should the constructor be package private?
     //      We already have TrafficCounterFactory.newChannelTrafficCounter.
     // XXX: Should TrafficCounter be able to be instantiated without TrafficCounterFactory?
-    // TODO: Implement ExternalResourceReleasable
 
     /**
      * Internal logger
@@ -322,13 +322,13 @@ public class TrafficCounter {
      *            else it will be for global monitoring. Channel can be set
      *            later on therefore changing its behavior from global to per
      *            channel
-     * @param writeLimit
-     * @param readLimit
+     * @param newwriteLimit
+     * @param newreadLimit
      */
-    public void configure(Channel channel, long writeLimit,
-            long readLimit) {
-        this.writeLimit = writeLimit;
-        this.readLimit = readLimit;
+    public void configure(Channel channel, long newwriteLimit,
+            long newreadLimit) {
+        this.writeLimit = newwriteLimit;
+        this.readLimit = newreadLimit;
         setMonitoredChannel(channel);
     }
 
@@ -341,27 +341,64 @@ public class TrafficCounter {
      *            else it will be for global monitoring. Channel can be set
      *            later on therefore changing its behavior from global to per
      *            channel
-     * @param writeLimit
-     * @param readLimit
-     * @param checkInterval
+     * @param newwriteLimit
+     * @param newreadLimit
+     * @param newcheckInterval
      */
-    public void configure(Channel channel, long writeLimit,
-            long readLimit, long checkInterval) {
-        if (this.checkInterval != checkInterval) {
-            this.checkInterval = checkInterval;
+    public void configure(Channel channel, long newwriteLimit,
+            long newreadLimit, long newcheckInterval) {
+        if (this.checkInterval != newcheckInterval) {
+            this.checkInterval = newcheckInterval;
             if (monitorFuture == null) {
-                this.configure(channel, writeLimit, readLimit);
+                this.configure(channel, newwriteLimit, newreadLimit);
                 return;
             }
             stop();
-            if (checkInterval > 0) {
+            if (newcheckInterval > 0) {
                 start();
             } else {
                 // No more active monitoring
                 lastTime.set(System.currentTimeMillis());
             }
         }
-        this.configure(channel, writeLimit, readLimit);
+        this.configure(channel, newwriteLimit, newreadLimit);
+    }
+    /**
+     * Specifies limits in Byte/s (not Bit/s) but do not changed the checkInterval
+     *
+     * @param newwriteLimit
+     * @param newreadLimit
+     */
+    public void configure(long newwriteLimit,
+            long newreadLimit) {
+        this.writeLimit = newwriteLimit;
+        this.readLimit = newreadLimit;
+    }
+    /**
+     * Specifies limits in Byte/s (not Bit/s) and the specified checkInterval between
+     * two computations in millisecond
+     *
+     * @param newwriteLimit
+     * @param newreadLimit
+     * @param newcheckInterval
+     */
+    public void configure(long newwriteLimit,
+            long newreadLimit, long newcheckInterval) {
+        if (this.checkInterval != newcheckInterval) {
+            this.checkInterval = newcheckInterval;
+            if (monitorFuture == null) {
+                this.configure(newwriteLimit, newreadLimit);
+                return;
+            }
+            stop();
+            if (newcheckInterval > 0) {
+                start();
+            } else {
+                // No more active monitoring
+                lastTime.set(System.currentTimeMillis());
+            }
+        }
+        this.configure(newwriteLimit, newreadLimit);
     }
 
     /**
@@ -619,6 +656,13 @@ public class TrafficCounter {
                 (lastWriteThroughput >> 10) + " KB/s Current Read: " +
                 (currentReadingBytes.get() >> 10) + " KB Current Write: " +
                 (currentWritingBytes.get() >> 10) + " KB";
+    }
+
+    /* (non-Javadoc)
+     * @see org.jboss.netty.util.ExternalResourceReleasable#releaseExternalResources()
+     */
+    public void releaseExternalResources() {
+        // Nothing to do: done in TrafficCounterFactory
     }
 
 }

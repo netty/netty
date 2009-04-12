@@ -86,9 +86,9 @@ public class TrafficShapingHandler extends SimpleChannelHandler {
         this.factory = factory;
         globalTrafficCounter = this.factory
                 .getGlobalTrafficCounter();
+        // will be set when connected is called
         channelTrafficCounter = null;
         objectSizeEstimator = new DefaultObjectSizeEstimator();
-        // will be set when connected is called
     }
     /**
      * Constructor using the specified ObjectSizeEstimator
@@ -105,9 +105,9 @@ public class TrafficShapingHandler extends SimpleChannelHandler {
         this.factory = factory;
         globalTrafficCounter = this.factory
                 .getGlobalTrafficCounter();
+        // will be set when connected is called
         channelTrafficCounter = null;
         this.objectSizeEstimator = objectSizeEstimator;
-        // will be set when connected is called
     }
 
     @Override
@@ -156,8 +156,13 @@ public class TrafficShapingHandler extends SimpleChannelHandler {
         ctx.getChannel().setReadable(false);
         if (channelTrafficCounter == null && factory != null) {
             // A factory was used
-            channelTrafficCounter =
-                factory.newChannelTrafficCounter(ctx.getChannel());
+            try {
+                channelTrafficCounter =
+                    factory.newChannelTrafficCounter(ctx,e);
+            } catch (UnsupportedOperationException e1) {
+                // No Traffic Counter for this Channel but continue however!
+                channelTrafficCounter = null;
+            }
         }
         if (channelTrafficCounter != null) {
             channelTrafficCounter

@@ -25,6 +25,10 @@ package org.jboss.netty.handler.traffic;
 import java.util.concurrent.ExecutorService;
 
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.util.ExternalResourceReleasable;
+import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -38,10 +42,9 @@ import org.jboss.netty.channel.Channel;
  *
  *
  */
-public class TrafficCounterFactory {
+public class TrafficCounterFactory implements ExternalResourceReleasable {
     // FIXME: Use Executor instead of ExecutorService
     // TODO: Read/write limit needs to be configurable on a per-channel basis.
-    // TODO: Implement ExternalResourceReleasable
 
     /**
      * Default delay between two checks: 1s
@@ -105,7 +108,6 @@ public class TrafficCounterFactory {
      * @param counter
      *            the TrafficCounter that computes its performance
      */
-    @SuppressWarnings("unused")
     protected void doAccounting(TrafficCounter counter) {
         // NOOP by default
     }
@@ -146,21 +148,21 @@ public class TrafficCounterFactory {
      * @param channelActive
      *            True if each channel will have a TrafficCounter
      * @param channelWriteLimit
-     *            NO_LIMIT or a limit in bytes/s
+     *            0 or a limit in bytes/s
      * @param channelReadLimit
-     *            NO_LIMIT or a limit in bytes/s
+     *            0 or a limit in bytes/s
      * @param channelCheckInterval
      *            The delay between two computations of performances for
-     *            channels or NO_STAT if no stats are to be computed
+     *            channels or 0 if no stats are to be computed
      * @param globalActive
      *            True if global context will have one unique TrafficCounter
      * @param globalWriteLimit
-     *            NO_LIMIT or a limit in bytes/s
+     *            0 or a limit in bytes/s
      * @param globalReadLimit
-     *            NO_LIMIT or a limit in bytes/s
+     *            0 or a limit in bytes/s
      * @param globalCheckInterval
      *            The delay between two computations of performances for global
-     *            context or NO_STAT if no stats are to be computed
+     *            context or 0 if no stats are to be computed
      */
     public TrafficCounterFactory(ExecutorService executorService,
             boolean channelActive, long channelWriteLimit,
@@ -179,15 +181,15 @@ public class TrafficCounterFactory {
      * @param channelActive
      *            True if each channel will have a TrafficCounter
      * @param channelWriteLimit
-     *            NO_LIMIT or a limit in bytes/s
+     *            0 or a limit in bytes/s
      * @param channelReadLimit
-     *            NO_LIMIT or a limit in bytes/s
+     *            0 or a limit in bytes/s
      * @param globalActive
      *            True if global context will have one unique TrafficCounter
      * @param globalWriteLimit
-     *            NO_LIMIT or a limit in bytes/s
+     *            0 or a limit in bytes/s
      * @param globalReadLimit
-     *            NO_LIMIT or a limit in bytes/s
+     *            0 or a limit in bytes/s
      */
     public TrafficCounterFactory(ExecutorService executorService,
             boolean channelActive, long channelWriteLimit,
@@ -199,7 +201,7 @@ public class TrafficCounterFactory {
     }
 
     /**
-     * Constructor using NO_LIMIT and default delay for channels
+     * Constructor using NO LIMIT and default delay for channels
      *
      * @param executorService
      *            created for instance like Executors.newCachedThreadPool
@@ -208,9 +210,9 @@ public class TrafficCounterFactory {
      * @param globalActive
      *            True if global context will have one unique TrafficCounter
      * @param globalWriteLimit
-     *            NO_LIMIT or a limit in bytes/s
+     *            0 or a limit in bytes/s
      * @param globalReadLimit
-     *            NO_LIMIT or a limit in bytes/s
+     *            0 or a limit in bytes/s
      * @param globalCheckInterval
      *            The delay between two computations of performances for global
      *            context or NO_STAT if no stats are to be computed
@@ -224,7 +226,7 @@ public class TrafficCounterFactory {
     }
 
     /**
-     * Constructor using NO_LIMIT for channels and default delay for all
+     * Constructor using NO LIMIT for channels and default delay for all
      *
      * @param executorService
      *            created for instance like Executors.newCachedThreadPool
@@ -233,9 +235,9 @@ public class TrafficCounterFactory {
      * @param globalActive
      *            True if global context will have one unique TrafficCounter
      * @param globalWriteLimit
-     *            NO_LIMIT or a limit in bytes/s
+     *            0 or a limit in bytes/s
      * @param globalReadLimit
-     *            NO_LIMIT or a limit in bytes/s
+     *            0 or a limit in bytes/s
      */
     public TrafficCounterFactory(ExecutorService executorService,
             boolean channelActive, boolean globalActive, long globalWriteLimit,
@@ -246,7 +248,7 @@ public class TrafficCounterFactory {
     }
 
     /**
-     * Constructor using NO_LIMIT and default delay for all
+     * Constructor using NO LIMIT and default delay for all
      *
      * @param executorService
      *            created for instance like Executors.newCachedThreadPool
@@ -332,15 +334,19 @@ public class TrafficCounterFactory {
     }
 
     /**
-     * @param channel
+     * @param ctx 
+     * @param e 
+     * @return a new TrafficCount for the given channel or null if none are required
      *
      * @throws UnsupportedOperationException if per-channel counter is disabled
      */
-    public TrafficCounter newChannelTrafficCounter(Channel channel) {
+    public TrafficCounter newChannelTrafficCounter(ChannelHandlerContext ctx, ChannelStateEvent e) 
+    throws UnsupportedOperationException {
+        Channel channel = ctx.getChannel();
         if (channelActive && (channelReadLimit > 0 || channelWriteLimit > 0
                 || channelCheckInterval > 0)) {
             return new TrafficCounter(this, executorService, channel,
-                    "ChannelPC" + channel.getId(), channelWriteLimit,
+                    "ChannelTC" + channel.getId(), channelWriteLimit,
                     channelReadLimit, channelCheckInterval);
         }
         throw new UnsupportedOperationException("per-channel counter disabled");
@@ -475,5 +481,12 @@ public class TrafficCounterFactory {
      */
     public boolean isGlobalActive() {
         return globalActive;
+    }
+
+    /* (non-Javadoc)
+     * @see org.jboss.netty.util.ExternalResourceReleasable#releaseExternalResources()
+     */
+    public void releaseExternalResources() {
+        ExecutorUtil.terminate(this.executorService);
     }
 }
