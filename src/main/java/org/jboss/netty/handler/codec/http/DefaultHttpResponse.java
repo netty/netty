@@ -43,4 +43,10 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
     public HttpResponseStatus getStatus() {
         return status;
     }
+
+
+    @Override
+    public String toString() {
+        return getProtocolVersion().getText() + ' ' + getStatus().toString();
+    }
 }

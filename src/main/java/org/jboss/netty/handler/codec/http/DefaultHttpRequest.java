@@ -22,6 +22,7 @@
 package org.jboss.netty.handler.codec.http;
 
 
+
 /**
  * An http request implementation
  *
@@ -53,5 +54,10 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
 
     public String getUri() {
         return uri;
+    }
+
+    @Override
+    public String toString() {
+        return getMethod().toString() + ' ' + getUri() + ' ' + getProtocolVersion().getText();
     }
 }
