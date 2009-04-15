@@ -26,6 +26,9 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.io.OutputStream;
 import java.io.PushbackInputStream;
+import java.net.SocketException;
+import java.nio.channels.ClosedChannelException;
+import java.util.regex.Pattern;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -41,6 +44,9 @@ import org.jboss.netty.channel.ChannelFuture;
  *
  */
 class OioWorker implements Runnable {
+
+    private static final Pattern SOCKET_CLOSED_MESSAGE = Pattern.compile(
+            "^.*(?:Socket\\s*closed).*$", Pattern.CASE_INSENSITIVE);
 
     private final OioSocketChannel channel;
 
@@ -121,6 +127,13 @@ class OioWorker implements Runnable {
             fireWriteComplete(channel, bytes);
             future.setSuccess();
         } catch (Throwable t) {
+            // Convert 'SocketException: Socket closed' to
+            // ClosedChannelException.
+            if (t instanceof SocketException &&
+                    SOCKET_CLOSED_MESSAGE.matcher(
+                            String.valueOf(t.getMessage())).matches()) {
+                t = new ClosedChannelException();
+            }
             future.setFailure(t);
             fireExceptionCaught(channel, t);
         }
