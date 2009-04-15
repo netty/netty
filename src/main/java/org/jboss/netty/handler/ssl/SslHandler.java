@@ -110,7 +110,7 @@ public class SslHandler extends FrameDecoder {
     private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
-            "^.*(?:Connection\\s*reset|Broken\\s*pipe).*$",
+            "^.*(?:Connection.*reset|Broken.*pipe).*$",
             Pattern.CASE_INSENSITIVE);
 
     private static SslBufferPool defaultBufferPool;

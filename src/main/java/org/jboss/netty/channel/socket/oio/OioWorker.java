@@ -46,7 +46,7 @@ import org.jboss.netty.channel.ChannelFuture;
 class OioWorker implements Runnable {
 
     private static final Pattern SOCKET_CLOSED_MESSAGE = Pattern.compile(
-            "^.*(?:Socket\\s*closed).*$", Pattern.CASE_INSENSITIVE);
+            "^.*(?:Socket.*closed).*$", Pattern.CASE_INSENSITIVE);
 
     private final OioSocketChannel channel;
 
