@@ -806,13 +806,8 @@ public class SslHandler extends FrameDecoder {
             if (sentCloseNotify.compareAndSet(false, true)) {
                 engine.closeOutbound();
                 ChannelFuture closeNotifyFuture = wrapNonAppData(context, e.getChannel());
-                closeNotifyFuture.addListener(new ChannelFutureListener() {
-                    public void operationComplete(ChannelFuture closeNotifyFuture) throws Exception {
-                        if (!(closeNotifyFuture.getCause() instanceof ClosedChannelException)) {
-                            Channels.close(context, e.getFuture());
-                        }
-                    }
-                });
+                closeNotifyFuture.addListener(
+                        new ClosingChannelFutureListener(context, e));
                 return;
             }
         }
@@ -840,6 +835,24 @@ public class SslHandler extends FrameDecoder {
         PendingWrite(ChannelFuture future, ByteBuffer outAppBuf) {
             this.future = future;
             this.outAppBuf = outAppBuf;
+        }
+    }
+
+    private static final class ClosingChannelFutureListener implements ChannelFutureListener {
+
+        private final ChannelHandlerContext context;
+        private final ChannelStateEvent e;
+
+        ClosingChannelFutureListener(
+                ChannelHandlerContext context, ChannelStateEvent e) {
+            this.context = context;
+            this.e = e;
+        }
+
+        public void operationComplete(ChannelFuture closeNotifyFuture) throws Exception {
+            if (!(closeNotifyFuture.getCause() instanceof ClosedChannelException)) {
+                Channels.close(context, e.getFuture());
+            }
         }
     }
 }
