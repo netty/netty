@@ -109,8 +109,9 @@ public class SslHandler extends FrameDecoder {
 
     private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
-    private static final Pattern CONNECTION_RESET =
-        Pattern.compile("^.*Connection\\s*reset.*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CONNECTION_RESET = Pattern.compile(
+            "^.*(Connection\\s*reset|Broken\\s*pipe).*$",
+            Pattern.CASE_INSENSITIVE);
 
     private static SslBufferPool defaultBufferPool;
 
