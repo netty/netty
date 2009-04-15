@@ -189,15 +189,19 @@ public abstract class AbstractSocketSslEchoTest {
         sc.close().awaitUninterruptibly();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
+            System.err.println("Exception raised from the server side.");
             throw sh.exception.get();
         }
         if (ch.exception.get() != null && !(ch.exception.get() instanceof IOException)) {
+            System.err.println("Exception raised from the client side.");
             throw ch.exception.get();
         }
         if (sh.exception.get() != null) {
+            System.err.println("Exception raised from the server side.");
             throw sh.exception.get();
         }
         if (ch.exception.get() != null) {
+            System.err.println("Exception raised from the client side.");
             throw ch.exception.get();
         }
     }
