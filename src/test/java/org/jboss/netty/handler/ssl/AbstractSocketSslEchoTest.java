@@ -103,8 +103,8 @@ public abstract class AbstractSocketSslEchoTest {
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
 
-        EchoHandler sh = new EchoHandler();
-        EchoHandler ch = new EchoHandler();
+        EchoHandler sh = new EchoHandler(true);
+        EchoHandler ch = new EchoHandler(false);
 
         SSLEngine sse = SecureChatSslContextFactory.getServerContext().createSSLEngine();
         SSLEngine cse = SecureChatSslContextFactory.getClientContext().createSSLEngine();
@@ -189,19 +189,15 @@ public abstract class AbstractSocketSslEchoTest {
         sc.close().awaitUninterruptibly();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
-            System.err.println("Exception raised from the server side.");
             throw sh.exception.get();
         }
         if (ch.exception.get() != null && !(ch.exception.get() instanceof IOException)) {
-            System.err.println("Exception raised from the client side.");
             throw ch.exception.get();
         }
         if (sh.exception.get() != null) {
-            System.err.println("Exception raised from the server side.");
             throw sh.exception.get();
         }
         if (ch.exception.get() != null) {
-            System.err.println("Exception raised from the client side.");
             throw ch.exception.get();
         }
     }
@@ -211,9 +207,10 @@ public abstract class AbstractSocketSslEchoTest {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
+        private final boolean server;
 
-        EchoHandler() {
-            super();
+        EchoHandler(boolean server) {
+            this.server = server;
         }
 
         @Override
@@ -244,7 +241,9 @@ public abstract class AbstractSocketSslEchoTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
-            logger.warn("Unexpected exception", e.getCause());
+            logger.warn(
+                    "Unexpected exception from the " +
+                    (server? "server" : "client") + " side", e.getCause());
 
             exception.compareAndSet(null, e.getCause());
             e.getChannel().close();
