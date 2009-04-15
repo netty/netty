@@ -41,9 +41,9 @@
   <!-- Known issues that don't matter -->
   <Match>
     <Or>
-      <Class name="~.*\.util\.Concurrent[A-Za-z]*HashMap(\$[^\$]+)*"/>
-      <Class name="~.*\.util\..*TransferQueue(\$[^\$]+)*"/>
-      <Class name="~.*\.util\.MapBackedSet"/>
+      <Class name="~.*\.util\.internal\.Concurrent[A-Za-z]*HashMap(\$[^\$]+)*"/>
+      <Class name="~.*\.util\.internal\..*TransferQueue(\$[^\$]+)*"/>
+      <Class name="~.*\.util\.internal\.MapBackedSet"/>
     </Or>
     <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED,SE_BAD_FIELD"/>
   </Match>
