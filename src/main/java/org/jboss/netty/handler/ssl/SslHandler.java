@@ -138,6 +138,7 @@ public class SslHandler extends FrameDecoder {
 
     private final AtomicBoolean sentFirstMessage = new AtomicBoolean();
     private final AtomicBoolean sentCloseNotify = new AtomicBoolean();
+    final AtomicBoolean ignoreClosedChannelException = new AtomicBoolean();
     private final Queue<PendingWrite> pendingUnencryptedWrites = new LinkedList<PendingWrite>();
     private final Queue<MessageEvent> pendingEncryptedWrites = new LinkedList<MessageEvent>();
 
@@ -382,19 +383,28 @@ public class SslHandler extends FrameDecoder {
             throws Exception {
 
         Throwable cause = e.getCause();
-        if (cause instanceof IOException && engine.isOutboundDone()) {
-            String message = String.valueOf(cause.getMessage()).toLowerCase();
-            if (CONNECTION_RESET.matcher(message).matches()) {
-                // It is safe to ignore the 'connection reset by peer' error
-                // after sending closure_notify.
-                logger.debug(
-                        "Ignoring a 'connection reset by peer' error",
-                        cause);
+        if (cause instanceof IOException) {
+            if (cause instanceof ClosedChannelException) {
+                if (ignoreClosedChannelException.compareAndSet(true, false)) {
+                    logger.debug(
+                            "Swallowing an exception raised while writing " +
+                            "'closure_notify'", cause);
+                    return;
+                }
+            } else if (engine.isOutboundDone()) {
+                String message = String.valueOf(cause.getMessage()).toLowerCase();
+                if (CONNECTION_RESET.matcher(message).matches()) {
+                    // It is safe to ignore the 'connection reset by peer' error
+                    // after sending closure_notify.
+                    logger.debug(
+                            "Swallowing a 'connection reset by peer' error " +
+                            "occurred while writing 'closure_notify'", cause);
 
-                // Close the connection explicitly just in case the transport
-                // did not close the connection automatically.
-                Channels.close(ctx, succeededFuture(e.getChannel()));
-                return;
+                    // Close the connection explicitly just in case the transport
+                    // did not close the connection automatically.
+                    Channels.close(ctx, succeededFuture(e.getChannel()));
+                    return;
+                }
             }
         }
 
@@ -781,7 +791,11 @@ public class SslHandler extends FrameDecoder {
                 ChannelFuture closeNotifyFuture = wrapNonAppData(context, e.getChannel());
                 closeNotifyFuture.addListener(new ChannelFutureListener() {
                     public void operationComplete(ChannelFuture closeNotifyFuture) throws Exception {
-                        Channels.close(context, e.getFuture());
+                        if (closeNotifyFuture.getCause() instanceof ClosedChannelException) {
+                            ignoreClosedChannelException.set(true);
+                        } else {
+                            Channels.close(context, e.getFuture());
+                        }
                     }
                 });
                 return;
