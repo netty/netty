@@ -358,7 +358,7 @@ public class SslHandler extends FrameDecoder {
             }
         }
 
-        // Notify all close futures which were not notifieid yet.
+        // Notify all close futures which were not notified yet.
         synchronized (closeFutures) {
             for (;;) {
                 ChannelFuture future = closeFutures.poll();
