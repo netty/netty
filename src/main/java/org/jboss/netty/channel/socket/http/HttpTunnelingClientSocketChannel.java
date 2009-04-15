@@ -181,7 +181,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
             buf = messages.take();
         }
         catch (InterruptedException e) {
-            e.printStackTrace();
+            // Ignore
         }
         return buf;
     }
