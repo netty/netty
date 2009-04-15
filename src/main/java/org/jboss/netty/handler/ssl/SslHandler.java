@@ -619,10 +619,20 @@ public class SslHandler extends FrameDecoder {
                     ChannelBuffer msg = ChannelBuffers.buffer(outNetBuf.remaining());
                     msg.writeBytes(outNetBuf.array(), 0, msg.capacity());
                     outNetBuf.clear();
-                    if (channel.isConnected()) {
-                        future = future(channel);
-                        write(ctx, future, msg);
-                    }
+
+                    future = future(channel);
+                    future.addListener(new ChannelFutureListener() {
+                        public void operationComplete(ChannelFuture future)
+                                throws Exception {
+                            if (future.getCause() instanceof ClosedChannelException) {
+                                synchronized (ignoreClosedChannelExceptionLock) {
+                                    ignoreClosedChannelException ++;
+                                }
+                            }
+                        }
+                    });
+
+                    write(ctx, future, msg);
                 }
 
                 switch (result.getHandshakeStatus()) {
@@ -663,18 +673,8 @@ public class SslHandler extends FrameDecoder {
 
         if (future == null) {
             future = succeededFuture(channel);
-        } else {
-            future.addListener(new ChannelFutureListener() {
-                public void operationComplete(ChannelFuture future)
-                        throws Exception {
-                    if (future.getCause() instanceof ClosedChannelException) {
-                        synchronized (ignoreClosedChannelExceptionLock) {
-                            ignoreClosedChannelException ++;
-                        }
-                    }
-                }
-            });
         }
+
         return future;
     }
 
