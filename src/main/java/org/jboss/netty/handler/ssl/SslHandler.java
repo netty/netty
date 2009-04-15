@@ -109,7 +109,7 @@ public class SslHandler extends FrameDecoder {
 
     private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
-    private static final Pattern CONNECTION_RESET = Pattern.compile(
+    private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
             "^.*(?:Connection\\s*reset|Broken\\s*pipe).*$",
             Pattern.CASE_INSENSITIVE);
 
@@ -394,12 +394,13 @@ public class SslHandler extends FrameDecoder {
                 }
             } else if (engine.isOutboundDone()) {
                 String message = String.valueOf(cause.getMessage()).toLowerCase();
-                if (CONNECTION_RESET.matcher(message).matches()) {
-                    // It is safe to ignore the 'connection reset by peer' error
-                    // after sending closure_notify.
+                if (IGNORABLE_ERROR_MESSAGE.matcher(message).matches()) {
+                    // It is safe to ignore the 'connection reset by peer' or
+                    // 'broken pipe' error after sending closure_notify.
                     logger.debug(
-                            "Swallowing a 'connection reset by peer' error " +
-                            "occurred while writing 'closure_notify'", cause);
+                            "Swallowing a 'connection reset by peer / " +
+                            "broken pipe' error occurred while writing " +
+                            "'closure_notify'", cause);
 
                     // Close the connection explicitly just in case the transport
                     // did not close the connection automatically.
