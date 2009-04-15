@@ -32,6 +32,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.Cookie;
@@ -64,8 +65,10 @@ public class HttpRequestHandler extends SimpleChannelHandler {
             responseContent.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
             responseContent.append("===================================\r\n");
 
+            responseContent.append("VERSION: " + request.getProtocolVersion().getText() + "\r\n");
+
             if (request.containsHeader(HttpHeaders.Names.HOST)) {
-                responseContent.append("HOST: " + request.getHeader(HttpHeaders.Names.HOST) + "\r\n");
+                responseContent.append("HOSTNAME: " + request.getHeader(HttpHeaders.Names.HOST) + "\r\n");
             }
 
             responseContent.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
@@ -151,5 +154,12 @@ public class HttpRequestHandler extends SimpleChannelHandler {
         if (close) {
             future.addListener(ChannelFutureListener.CLOSE);
         }
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+            throws Exception {
+        e.getCause().printStackTrace();
+        e.getChannel().close();
     }
 }
