@@ -139,7 +139,8 @@ public class SslHandler extends FrameDecoder {
 
     private final AtomicBoolean sentFirstMessage = new AtomicBoolean();
     private final AtomicBoolean sentCloseNotify = new AtomicBoolean();
-    final AtomicBoolean ignoreClosedChannelException = new AtomicBoolean();
+    int ignoreClosedChannelException;
+    final Object ignoreClosedChannelExceptionLock = new Object();
     private final Queue<PendingWrite> pendingUnencryptedWrites = new LinkedList<PendingWrite>();
     private final Queue<MessageEvent> pendingEncryptedWrites = new LinkedList<MessageEvent>();
 
@@ -386,11 +387,14 @@ public class SslHandler extends FrameDecoder {
         Throwable cause = e.getCause();
         if (cause instanceof IOException) {
             if (cause instanceof ClosedChannelException) {
-                if (ignoreClosedChannelException.compareAndSet(true, false)) {
-                    logger.debug(
-                            "Swallowing an exception raised while writing " +
-                            "'closure_notify'", cause);
-                    return;
+                synchronized (ignoreClosedChannelExceptionLock) {
+                    if (ignoreClosedChannelException > 0) {
+                        ignoreClosedChannelException --;
+                        logger.debug(
+                                "Swallowing an exception raised while " +
+                                "writing non-app data", cause);
+                        return;
+                    }
                 }
             } else if (engine.isOutboundDone()) {
                 String message = String.valueOf(cause.getMessage()).toLowerCase();
@@ -659,6 +663,17 @@ public class SslHandler extends FrameDecoder {
 
         if (future == null) {
             future = succeededFuture(channel);
+        } else {
+            future.addListener(new ChannelFutureListener() {
+                public void operationComplete(ChannelFuture future)
+                        throws Exception {
+                    if (future.getCause() instanceof ClosedChannelException) {
+                        synchronized (ignoreClosedChannelExceptionLock) {
+                            ignoreClosedChannelException ++;
+                        }
+                    }
+                }
+            });
         }
         return future;
     }
@@ -793,9 +808,7 @@ public class SslHandler extends FrameDecoder {
                 ChannelFuture closeNotifyFuture = wrapNonAppData(context, e.getChannel());
                 closeNotifyFuture.addListener(new ChannelFutureListener() {
                     public void operationComplete(ChannelFuture closeNotifyFuture) throws Exception {
-                        if (closeNotifyFuture.getCause() instanceof ClosedChannelException) {
-                            ignoreClosedChannelException.set(true);
-                        } else {
+                        if (!(closeNotifyFuture.getCause() instanceof ClosedChannelException)) {
                             Channels.close(context, e.getFuture());
                         }
                     }
