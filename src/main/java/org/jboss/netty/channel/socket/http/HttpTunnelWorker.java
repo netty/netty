@@ -72,9 +72,9 @@ final class HttpTunnelWorker implements Runnable {
                 break;
             }
 
-            ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(buf);
-
-            fireMessageReceived(channel, buffer);
+            if (buf != null) {
+                fireMessageReceived(channel, ChannelBuffers.wrappedBuffer(buf));
+            }
         }
 
         // Setting the workerThread to null will prevent any channel
