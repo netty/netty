@@ -1,0 +1,406 @@
+/*
+ * JBoss, Home of Professional Open Source
+ *
+ * Copyright 2009, Red Hat Middleware LLC, and individual contributors
+ * by the @author tags. See the COPYRIGHT.txt in the distribution for a
+ * full listing of individual contributors.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+package org.jboss.netty.handler.traffic;
+
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.jboss.netty.channel.ChannelHandlerContext;
+
+/**
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Frederic Bregier (fredbregier@free.fr)
+ * @version $Rev$, $Date$
+ *
+ * TrafficCounter is associated with {@link TrafficShapingHandler} and
+ * should be created through a {@link TrafficCounterFactory}.<br>
+ * <br>
+ * A TrafficCounter can limit the traffic or not, globally or per channel,
+ * and always compute statistics on read and written bytes at the specified
+ * interval.
+ *
+ */
+public class TrafficCounter2 {
+    /**
+     * Current written bytes
+     */
+    private final AtomicLong currentWrittenBytes = new AtomicLong(0);
+
+    /**
+     * Current read bytes
+     */
+    private final AtomicLong currentReadBytes = new AtomicLong(0);
+
+    /**
+     * Long life written bytes
+     */
+    private final AtomicLong cumulativeWrittenBytes = new AtomicLong(0);
+
+    /**
+     * Long life read bytes
+     */
+    private final AtomicLong cumulativeReadBytes = new AtomicLong(0);
+    /**
+     * Last Time where cumulative bytes where reset to zero
+     */
+    private long lastCumulativeTime;
+    /**
+     * Last writing bandwidth
+     */
+    private long lastWriteThroughput = 0;
+
+    /**
+     * Last reading bandwidth
+     */
+    private long lastReadThroughput = 0;
+
+    /**
+     * Last Time Check taken
+     */
+    private final AtomicLong lastTime = new AtomicLong(0);
+
+    /**
+     * Last written bytes number during last check interval
+     */
+    private long lastWrittenBytes = 0;
+
+    /**
+     * Last read bytes number during last check interval
+     */
+    private long lastReadBytes = 0;
+
+    /**
+     * Delay between two captures
+     */
+    AtomicLong checkInterval = new AtomicLong(TrafficCounterFactory.DEFAULT_CHECK_INTERVAL);
+
+    // default 1 s
+
+    /**
+     * Name of this Monitor
+     */
+    private final String name;
+
+    /**
+     * The associated TrafficShapingHandler
+     */
+    private AbstractTrafficShapingHandler trafficShapingHandler = null;
+
+    /**
+     * Default Executor
+     */
+    private Executor executor = null;
+
+    /**
+     * Thread that will host this monitor
+     */
+    Thread monitorThread = null;
+    /**
+     * Monitor
+     */
+    private TrafficMonitoring trafficMonitoring = null;
+
+    /**
+     * Class to implement monitoring at fix delay
+     *
+     */
+    private class TrafficMonitoring implements Runnable {
+        /**
+         * The associated TrafficShapingHandler
+         */
+        private final AbstractTrafficShapingHandler trafficShapingHandler1;
+        /**
+         * The associated TrafficCounter
+         */
+        private final TrafficCounter2 counter;
+
+        /**
+         * @param trafficShapingHandler
+         * @param counter
+         */
+        protected TrafficMonitoring(AbstractTrafficShapingHandler trafficShapingHandler, TrafficCounter2 counter) {
+            trafficShapingHandler1 = trafficShapingHandler;
+            this.counter = counter;
+        }
+
+        /**
+         * Default run
+         */
+        public void run() {
+            counter.monitorThread = Thread.currentThread();
+            try {
+                for (;;) {
+                    long check = counter.checkInterval.get();
+                    if (check > 0) {
+                        Thread.sleep(check);
+                    } else {
+                        // Delay goes to 0, so exit
+                        return;
+                    }
+                    long endTime = System.currentTimeMillis();
+                    counter.resetAccounting(endTime);
+                    if (trafficShapingHandler1 != null) {
+                        trafficShapingHandler1.doAccounting(counter);
+                    }
+                }
+            } catch (InterruptedException e) {
+                // End of computations
+            }
+        }
+    }
+    /**
+     * Start the monitoring process
+     *
+     */
+    public void start() {
+        synchronized (lastTime) {
+            if (monitorThread != null) {
+                return;
+            }
+            lastTime.set(System.currentTimeMillis());
+            if (checkInterval.get() > 0) {
+                trafficMonitoring = new TrafficMonitoring(trafficShapingHandler, this);
+                executor.execute(trafficMonitoring);
+            }
+        }
+    }
+
+    /**
+     * Stop the monitoring process
+     *
+     */
+    public void stop() {
+        synchronized (lastTime) {
+            if (monitorThread == null) {
+                return;
+            }
+            monitorThread.interrupt();
+            monitorThread = null;
+            resetAccounting(System.currentTimeMillis());
+            if (trafficShapingHandler != null) {
+                trafficShapingHandler.doAccounting(this);
+            }
+        }
+    }
+
+    /**
+     * Reset the accounting on Read and Write
+     *
+     * @param newLastTime
+     */
+    void resetAccounting(long newLastTime) {
+        synchronized (lastTime) {
+            long interval = newLastTime - lastTime.getAndSet(newLastTime);
+            if (interval == 0) {
+                // nothing to do
+                return;
+            }
+            lastReadBytes = currentReadBytes.getAndSet(0);
+            lastWrittenBytes = currentWrittenBytes.getAndSet(0);
+            lastReadThroughput = lastReadBytes / interval * 1000;
+            // nb byte / checkInterval in ms * 1000 (1s)
+            lastWriteThroughput = lastWrittenBytes / interval * 1000;
+            // nb byte / checkInterval in ms * 1000 (1s)
+        }
+    }
+
+    /**
+     * Constructor with the {@link TrafficShapingHandler} that hosts it, the executorService to use, its
+     * name, the checkInterval between two computations in millisecond
+     * @param trafficShapingHandler the associated AbstractTrafficShapingHandler
+     * @param executor 
+     *            Should be a CachedThreadPool for efficiency
+     * @param name
+     *            the name given to this monitor
+     * @param checkInterval
+     *            the checkInterval in millisecond between two computations
+     */
+    public TrafficCounter2(AbstractTrafficShapingHandler trafficShapingHandler,
+            Executor executor, String name, long checkInterval) {
+        this.trafficShapingHandler = trafficShapingHandler;
+        this.executor = executor;
+        this.name = name;
+        lastCumulativeTime = System.currentTimeMillis();
+        this.configure(checkInterval);
+    }
+
+    /**
+     * Change checkInterval between
+     * two computations in millisecond
+     *
+     * @param newcheckInterval
+     */
+    public void configure(long newcheckInterval) {
+        if (this.checkInterval.get() != newcheckInterval) {
+            this.checkInterval.set(newcheckInterval);
+            if (newcheckInterval <= 0) {
+                stop();
+                // No more active monitoring
+                lastTime.set(System.currentTimeMillis());
+            } else {
+                // Start if necessary
+                start();
+            }
+        }
+    }
+
+    /**
+     * Computes counters for Read.
+     *
+     * @param ctx
+     *            the associated channelHandlerContext
+     * @param recv
+     *            the size in bytes to read
+     * @throws InterruptedException
+     */
+    void bytesRecvFlowControl(ChannelHandlerContext ctx, long recv)
+            throws InterruptedException {
+        currentReadBytes.addAndGet(recv);
+        cumulativeReadBytes.addAndGet(recv);
+    }
+
+    /**
+     * Computes counters for Write.
+     *
+     * @param write
+     *            the size in bytes to write
+     * @throws InterruptedException
+     */
+    void bytesWriteFlowControl(long write) throws InterruptedException {
+        currentWrittenBytes.addAndGet(write);
+        cumulativeWrittenBytes.addAndGet(write);
+    }
+
+    /**
+     *
+     * @return the current checkInterval between two computations of traffic counter
+     *         in millisecond
+     */
+    public long getCheckInterval() {
+        return checkInterval.get();
+    }
+
+    /**
+     *
+     * @return the Read Throughput in bytes/s computes in the last check interval
+     */
+    public long getLastReadThroughput() {
+        return lastReadThroughput;
+    }
+
+    /**
+     *
+     * @return the Write Throughput in bytes/s computes in the last check interval
+     */
+    public long getLastWriteThroughput() {
+        return lastWriteThroughput;
+    }
+
+    /**
+     *
+     * @return the number of bytes read during the last check Interval
+     */
+    public long getLastReadBytes() {
+        return lastReadBytes;
+    }
+
+    /**
+     *
+     * @return the number of bytes written during the last check Interval
+     */
+    public long getLastWrittenBytes() {
+        return lastWrittenBytes;
+    }
+    /**
+    *
+    * @return the current number of bytes read since the last checkInterval
+    */
+   public long getCurrentReadBytes() {
+       return currentReadBytes.get();
+   }
+
+   /**
+    *
+    * @return the current number of bytes written since the last check Interval
+    */
+   public long getCurrentWrittenBytes() {
+       return currentWrittenBytes.get();
+   }
+
+    /**
+     * @return the Time in millisecond of the last check as of System.currentTimeMillis()
+     */
+    public long getLastTime() {
+        return lastTime.get();
+    }
+
+    /**
+     * @return the cumulativeWrittenBytes
+     */
+    public long getCumulativeWrittenBytes() {
+        return cumulativeWrittenBytes.get();
+    }
+
+    /**
+     * @return the cumulativeReadBytes
+     */
+    public long getCumulativeReadBytes() {
+        return cumulativeReadBytes.get();
+    }
+
+    /**
+     * @return the lastCumulativeTime in millisecond as of System.currentTimeMillis()
+     * when the cumulative counters were reset to 0.
+     */
+    public long getLastCumulativeTime() {
+        return lastCumulativeTime;
+    }
+
+    /**
+     * Reset both read and written cumulative bytes counters and the associated time.
+     */
+    public void resetCumulativeTime() {
+        lastCumulativeTime = System.currentTimeMillis();
+        cumulativeReadBytes.set(0);
+        cumulativeWrittenBytes.set(0);
+    }
+
+    /**
+     * @return the name
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * String information
+     */
+    @Override
+    public String toString() {
+        return "Monitor " + name + " Current Speed Read: " +
+                (lastReadThroughput >> 10) + " KB/s, Write: " +
+                (lastWriteThroughput >> 10) + " KB/s Current Read: " +
+                (currentReadBytes.get() >> 10) + " KB Current Write: " +
+                (currentWrittenBytes.get() >> 10) + " KB";
+    }
+}
