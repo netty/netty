@@ -55,11 +55,21 @@ public class CookieEncoderTest {
         String encodedCookie = encoder.encode();
 
         long currentTime = System.currentTimeMillis();
-        assertTrue(
-                encodedCookie.equals(result.replace("XXX", df.format(new Date(currentTime + 50000)))) ||
-                encodedCookie.equals(result.replace("XXX", df.format(new Date(currentTime + 50750)))) ||
-                encodedCookie.equals(result.replace("XXX", df.format(new Date(currentTime + 49250)))));
+        boolean fail = true;
+        // +/- 10-second tolerance
+        for (int delta = 0; delta <= 20000; delta += 250) {
+            if (encodedCookie.equals(result.replace(
+                    "XXX", df.format(new Date(currentTime + 40000 + delta))))) {
+                fail = false;
+                break;
+            }
+        }
+
+        if (fail) {
+            fail("Expected: " + result + ", Actual: " + encodedCookie);
+        }
     }
+
     @Test
     public void testEncodingSingleCookieV1() {
         String result = "myCookie=myValue;Max-Age=50;Path=\"/apathsomewhere\";Domain=.adomainsomewhere;Secure;Comment=\"this is a Comment\";Version=1";
