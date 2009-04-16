@@ -85,6 +85,7 @@ public class CookieEncoderTest {
         String encodedCookie = encoder.encode();
         assertEquals(result, encodedCookie);
     }
+
     @Test
     public void testEncodingSingleCookieV2() {
         String result = "myCookie=myValue;Max-Age=50;Path=\"/apathsomewhere\";Domain=.adomainsomewhere;Secure;Comment=\"this is a Comment\";Version=1;CommentURL=\"http://aurl.com\";Port=\"80,8080\";Discard";
