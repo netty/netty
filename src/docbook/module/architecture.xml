@@ -46,7 +46,7 @@
         <listitem>
           <para>
             A dynamic buffer type is provided out-of-the-box, whose capacity is
-            is expanded on demand, just like <classname>StringBuffer</classname>.
+            expanded on demand, just like <classname>StringBuffer</classname>.
           </para>
         </listitem>
         <listitem>
