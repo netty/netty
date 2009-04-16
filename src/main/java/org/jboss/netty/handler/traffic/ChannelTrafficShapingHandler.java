@@ -24,7 +24,9 @@ package org.jboss.netty.handler.traffic;
 
 import java.util.concurrent.Executor;
 
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
@@ -143,8 +145,34 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
     }
 
     @Override
-    protected boolean isPerChannel() {
-        return true;
+    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
+            throws Exception {
+        if (trafficCounter != null) {
+            trafficCounter.stop();
+            trafficCounter = null;
+        }
+        super.channelClosed(ctx, e);
+    }
+    @Override
+    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e)
+            throws Exception {
+        // readSuspended = true;
+        ctx.setAttachment(Boolean.TRUE);
+        ctx.getChannel().setReadable(false);
+        if (trafficCounter == null) {
+            // create a new counter now
+            trafficCounter =
+                new TrafficCounter2(this, executor, 
+                        "ChannelTC"+ctx.getChannel().getId(),
+                        checkInterval);
+        }
+        if (trafficCounter != null) {
+            trafficCounter.start();
+        }
+        super.channelConnected(ctx, e);
+        // readSuspended = false;
+        ctx.setAttachment(null);
+        ctx.getChannel().setReadable(true);
     }
 
 }

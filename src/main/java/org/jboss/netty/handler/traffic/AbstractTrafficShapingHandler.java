@@ -84,7 +84,7 @@ public abstract class AbstractTrafficShapingHandler extends SimpleChannelHandler
     /**
      * Traffic Counter
      */
-    private TrafficCounter2 trafficCounter = null;
+    protected TrafficCounter2 trafficCounter = null;
     /**
      * ObjectSizeEstimator
      */
@@ -266,11 +266,6 @@ public abstract class AbstractTrafficShapingHandler extends SimpleChannelHandler
                 executor, 0, 0, checkInterval);
     }
     /**
-     * 
-     * @return True if this Handler is a Per Channel TrafficShaping
-     */
-    protected abstract boolean isPerChannel();
-    /**
      * Change the underlying limitations and check interval.
      *
      * @param newWriteLimit
@@ -450,40 +445,6 @@ public abstract class AbstractTrafficShapingHandler extends SimpleChannelHandler
             // The message is then just passed to the next Codec
             super.writeRequested(arg0, arg1);
         }
-    }
-
-    @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
-            throws Exception {
-        if (trafficCounter != null && isPerChannel()) {
-            trafficCounter.stop();
-            trafficCounter = null;
-        }
-        super.channelClosed(ctx, e);
-    }
-
-    @Override
-    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e)
-            throws Exception {
-        // readSuspended = true;
-        ctx.setAttachment(Boolean.TRUE);
-        ctx.getChannel().setReadable(false);
-        if (isPerChannel()) {
-            if (trafficCounter == null) {
-                // create a new counter now
-                trafficCounter =
-                    new TrafficCounter2(this, executor, 
-                            "ChannelTC"+ctx.getChannel().getId(),
-                            checkInterval);
-            }
-            if (trafficCounter != null) {
-                trafficCounter.start();
-            }
-        }
-        super.channelConnected(ctx, e);
-        // readSuspended = false;
-        ctx.setAttachment(null);
-        ctx.getChannel().setReadable(true);
     }
 
     @Override

@@ -158,9 +158,4 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         createGlobalTrafficCounter();
     }
 
-    @Override
-    protected boolean isPerChannel() {
-        return false;
-    }
-
 }
