@@ -118,6 +118,48 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  *     format is complicated unlike the example above.  In this case, your
  *     decoder might have to decode the same part of the message over and over
  *     again.</li>
+ * <li>You must keep in mind that {@code decode(..)} method can be called many
+ *     times to decode a single message.  For example, the following code will
+ *     not work:
+ * <pre>public class MyDecoder extends ReplayingDecoder&lt;VoidEnum&gt; {
+ *
+ *     private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
+ *
+ *     public Object decode(.., ChannelBuffer buffer, ..) throws Exception {
+ *
+ *         // A message contains 2 integers.
+ *         values.offer(buffer.readInt());
+ *         values.offer(buffer.readInt());
+ *
+ *         // This assertion will fail intermittently since values.offer()
+ *         // can be called more than two times!
+ *         assert values.size() == 2;
+ *         return values.poll() + values.poll();
+ *     }
+ * }</pre>
+ *      The correct implementation looks like the following, and you can utilize
+ *      the 'checkpoint' feature which is explained in detail in the next
+ *      section.
+ * <pre>public class MyDecoder extends ReplayingDecoder&lt;VoidEnum&gt; {
+ *
+ *     private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
+ *
+ *     public Object decode(.., ChannelBuffer buffer, ..) throws Exception {
+ *
+ *         // Revert the state of the variable that might have been changed
+ *         // since the last partial decode.
+ *         values.clear();
+ *
+ *         // A message contains 2 integers.
+ *         values.offer(buffer.readInt());
+ *         values.offer(buffer.readInt());
+ *
+ *         // Now we know this assertion will never fail.
+ *         assert values.size() == 2;
+ *         return values.poll() + values.poll();
+ *     }
+ * }</pre>
+ *     </li>
  * </ul>
  *
  * <h3>Improving the performance</h3>
