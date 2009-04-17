@@ -42,6 +42,7 @@ import javax.net.ssl.SSLEngineResult.Status;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -102,7 +103,7 @@ import org.jboss.netty.util.internal.ImmediateExecutor;
  * @apiviz.landmark
  * @apiviz.uses org.jboss.netty.handler.ssl.SslBufferPool
  */
-public class SslHandler extends FrameDecoder {
+public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SslHandler.class);
@@ -308,7 +309,6 @@ public class SslHandler extends FrameDecoder {
         return channel.getPipeline().getContext(getClass());
     }
 
-    @Override
     public void handleDownstream(
             final ChannelHandlerContext context, final ChannelEvent evt) throws Exception {
         if (evt instanceof ChannelStateEvent) {

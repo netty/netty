@@ -42,7 +42,7 @@ import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.DefaultChannelPipeline;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
@@ -217,7 +217,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
     }
 
     @ChannelPipelineCoverage("one")
-    class ServletChannelHandler extends SimpleChannelHandler {
+    class ServletChannelHandler extends SimpleChannelUpstreamHandler {
         int nextChunkSize = -1;
 
         @Override

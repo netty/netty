@@ -25,7 +25,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
@@ -35,7 +35,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
  * @author Trustin Lee (tlee@redhat.com)
  */
 @ChannelPipelineCoverage("one")
-public class HttpResponseHandler extends SimpleChannelHandler {
+public class HttpResponseHandler extends SimpleChannelUpstreamHandler {
 
     private volatile boolean readingChunks;
 

@@ -35,7 +35,7 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 
@@ -49,7 +49,7 @@ import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("all")
-public class ObjectEchoHandler extends SimpleChannelHandler {
+public class ObjectEchoHandler extends SimpleChannelUpstreamHandler {
 
     private static final Logger logger = Logger.getLogger(
             ObjectEchoHandler.class.getName());

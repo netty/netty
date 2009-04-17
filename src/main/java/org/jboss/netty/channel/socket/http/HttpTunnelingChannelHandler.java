@@ -39,7 +39,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * A channel handler that proxies messages to the servlet output stream
@@ -49,7 +49,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("one")
-class HttpTunnelingChannelHandler extends SimpleChannelHandler {
+class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
     List<MessageEvent> awaitingEvents = new ArrayList<MessageEvent>();
 
     private final Lock reconnectLock = new ReentrantLock();

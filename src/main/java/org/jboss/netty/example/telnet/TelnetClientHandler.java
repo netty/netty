@@ -31,7 +31,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * Handles a client-side channel.
@@ -42,7 +42,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("all")
-public class TelnetClientHandler extends SimpleChannelHandler {
+public class TelnetClientHandler extends SimpleChannelUpstreamHandler {
 
     private static final Logger logger = Logger.getLogger(
             TelnetClientHandler.class.getName());

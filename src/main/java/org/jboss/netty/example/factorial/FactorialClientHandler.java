@@ -37,7 +37,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * Handler for a client-side channel.  Please note that this handler's
@@ -54,7 +54,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("one") // <-- HERE
-public class FactorialClientHandler extends SimpleChannelHandler {
+public class FactorialClientHandler extends SimpleChannelUpstreamHandler {
 
     private static final Logger logger = Logger.getLogger(
             FactorialClientHandler.class.getName());

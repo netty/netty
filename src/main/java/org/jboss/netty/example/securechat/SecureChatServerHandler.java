@@ -37,7 +37,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.util.internal.MapBackedSet;
 
@@ -50,7 +50,7 @@ import org.jboss.netty.util.internal.MapBackedSet;
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("all")
-public class SecureChatServerHandler extends SimpleChannelHandler {
+public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
 
     private static final Logger logger = Logger.getLogger(
             SecureChatServerHandler.class.getName());

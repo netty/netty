@@ -47,7 +47,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChildChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.ServerChannelFactory;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * A helper class which creates a new server-side {@link Channel} and accepts
@@ -288,7 +288,7 @@ public class ServerBootstrap extends Bootstrap {
     }
 
     @ChannelPipelineCoverage("one")
-    private final class Binder extends SimpleChannelHandler {
+    private final class Binder extends SimpleChannelUpstreamHandler {
 
         private final SocketAddress localAddress;
         private final BlockingQueue<ChannelFuture> futureQueue;

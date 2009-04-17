@@ -42,7 +42,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.util.TestUtil;
@@ -170,7 +170,7 @@ public abstract class AbstractSocketStringEchoTest {
     }
 
     @ChannelPipelineCoverage("one")
-    private class EchoHandler extends SimpleChannelHandler {
+    private class EchoHandler extends SimpleChannelUpstreamHandler {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;

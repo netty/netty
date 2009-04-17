@@ -38,7 +38,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.example.localtime.LocalTimeProtocol.Continent;
 import org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime;
 import org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes;
@@ -52,7 +52,7 @@ import org.jboss.netty.example.localtime.LocalTimeProtocol.Locations;
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("one")
-public class LocalTimeClientHandler extends SimpleChannelHandler {
+public class LocalTimeClientHandler extends SimpleChannelUpstreamHandler {
 
     private static final Logger logger = Logger.getLogger(
             LocalTimeClientHandler.class.getName());

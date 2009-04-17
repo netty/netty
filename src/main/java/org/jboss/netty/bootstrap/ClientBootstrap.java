@@ -43,7 +43,7 @@ import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * A helper class which creates a new client-side {@link Channel} and makes a
@@ -249,7 +249,7 @@ public class ClientBootstrap extends Bootstrap {
     }
 
     @ChannelPipelineCoverage("one")
-    private final class Connector extends SimpleChannelHandler {
+    private final class Connector extends SimpleChannelUpstreamHandler {
         private final SocketAddress localAddress;
         private final BlockingQueue<ChannelFuture> futureQueue;
         private final SocketAddress remoteAddress;

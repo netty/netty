@@ -34,7 +34,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.Cookie;
 import org.jboss.netty.handler.codec.http.CookieDecoder;
 import org.jboss.netty.handler.codec.http.CookieEncoder;
@@ -52,7 +52,7 @@ import org.jboss.netty.handler.codec.http.QueryStringDecoder;
  * @author Andy Taylor (andy.taylor@jboss.org)
  */
 @ChannelPipelineCoverage("one")
-public class HttpRequestHandler extends SimpleChannelHandler {
+public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
 
     private volatile HttpRequest request;
     private volatile boolean readingChunks;

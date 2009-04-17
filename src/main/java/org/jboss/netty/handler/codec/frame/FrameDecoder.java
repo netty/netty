@@ -38,7 +38,7 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * Decodes the received {@link ChannelBuffer}s into a meaningful frame object.
@@ -149,7 +149,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  */
 @ChannelPipelineCoverage("one")
 public abstract class FrameDecoder
-        extends SimpleChannelHandler implements LifeCycleAwareChannelHandler {
+        extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler {
 
     private final boolean unfold;
     private final AtomicReference<ChannelBuffer> cumulation =

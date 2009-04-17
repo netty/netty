@@ -37,7 +37,7 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 
 /**
@@ -214,7 +214,7 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  */
 @ChannelPipelineCoverage("one")
 public abstract class ReplayingDecoder<T extends Enum<T>>
-        extends SimpleChannelHandler implements LifeCycleAwareChannelHandler {
+        extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler {
 
 
     private final AtomicReference<ChannelBuffer> cumulation =

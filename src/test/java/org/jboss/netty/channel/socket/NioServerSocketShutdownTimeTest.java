@@ -34,7 +34,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.util.TestUtil;
 import org.junit.Test;
@@ -111,7 +111,7 @@ public class NioServerSocketShutdownTimeTest {
     }
 
     @ChannelPipelineCoverage("all")
-    private static class DummyHandler extends SimpleChannelHandler {
+    private static class DummyHandler extends SimpleChannelUpstreamHandler {
         volatile boolean connected;
         volatile boolean closed;
 
