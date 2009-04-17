@@ -725,8 +725,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         "' does not have a '" +
                         ChannelPipelineCoverage.class.getSimpleName() +
                         "' annotation with its class declaration. " +
-                        "It is recommended to add the annotation to tell if " +
-                        "one handler instance can handle more than one pipeline " +
+                        "It is strongly recommended to add the annotation " +
+                        "for a documentation purpose to tell if a single " +
+                        "handler instance can handle more than one pipeline " +
                         "(\"" + ALL + "\") or not (\"" + ONE + "\")");
             } else {
                 String coverageValue = coverage.value();
