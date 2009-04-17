@@ -124,7 +124,9 @@ public class Bootstrap {
     public ChannelPipeline getPipeline() {
         ChannelPipeline pipeline = this.pipeline;
         if (pipeline == null) {
-            throw new IllegalStateException("pipelineFactory in use");
+            throw new IllegalStateException(
+                    "getPipeline() cannot be called " +
+                    "if setPipelineFactory() was called.");
         }
         return pipeline;
     }
