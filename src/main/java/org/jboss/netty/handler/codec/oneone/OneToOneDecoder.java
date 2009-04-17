@@ -74,10 +74,13 @@ public abstract class OneToOneDecoder implements ChannelUpstreamHandler {
         }
 
         MessageEvent e = (MessageEvent) evt;
-        fireMessageReceived(
-                ctx,
-                decode(ctx, e.getChannel(), e.getMessage()),
-                e.getRemoteAddress());
+        Object originalMessage = e.getMessage();
+        Object decodedMessage = decode(ctx, e.getChannel(), originalMessage);
+        if (originalMessage == decodedMessage) {
+            ctx.sendUpstream(evt);
+        } else {
+            fireMessageReceived(ctx, decodedMessage, e.getRemoteAddress());
+        }
     }
 
     protected abstract Object decode(
