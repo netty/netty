@@ -48,7 +48,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 @ChannelPipelineCoverage("all")
 public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
 
-    private final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
+    private final InternalLogger logger;
     private final boolean hexDump;
 
     public LoggingHandler() {
@@ -56,6 +56,31 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
     }
 
     public LoggingHandler(boolean hexDump) {
+        logger = InternalLoggerFactory.getInstance(getClass());
+        this.hexDump = hexDump;
+    }
+
+    public LoggingHandler(Class<?> clazz) {
+        this(clazz, true);
+    }
+
+    public LoggingHandler(Class<?> clazz, boolean hexDump) {
+        if (clazz == null) {
+            throw new NullPointerException("clazz");
+        }
+        logger = InternalLoggerFactory.getInstance(clazz);
+        this.hexDump = hexDump;
+    }
+
+    public LoggingHandler(String name) {
+        this(name, true);
+    }
+
+    public LoggingHandler(String name, boolean hexDump) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+        logger = InternalLoggerFactory.getInstance(name);
         this.hexDump = hexDump;
     }
 
