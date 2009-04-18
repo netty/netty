@@ -23,6 +23,7 @@
 package org.jboss.netty.handler.traffic;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -112,9 +113,9 @@ public class TrafficCounter2 {
     private Executor executor = null;
 
     /**
-     * Thread that will host this monitor
+     * Is Monitor active
      */
-    Thread monitorThread = null;
+    AtomicBoolean monitorActive = new AtomicBoolean(false);
     /**
      * Monitor
      */
@@ -147,9 +148,8 @@ public class TrafficCounter2 {
          * Default run
          */
         public void run() {
-            counter.monitorThread = Thread.currentThread();
             try {
-                for (;;) {
+                for (;monitorActive.get();) {
                     long check = counter.checkInterval.get();
                     if (check > 0) {
                         Thread.sleep(check);
@@ -174,11 +174,12 @@ public class TrafficCounter2 {
      */
     public void start() {
         synchronized (lastTime) {
-            if (monitorThread != null) {
+            if (monitorActive.get()) {
                 return;
             }
             lastTime.set(System.currentTimeMillis());
             if (checkInterval.get() > 0) {
+                monitorActive.set(true);
                 trafficMonitoring = new TrafficMonitoring(trafficShapingHandler, this);
                 executor.execute(trafficMonitoring);
             }
@@ -191,11 +192,10 @@ public class TrafficCounter2 {
      */
     public void stop() {
         synchronized (lastTime) {
-            if (monitorThread == null) {
+            if (! monitorActive.get()) {
                 return;
             }
-            monitorThread.interrupt();
-            monitorThread = null;
+            monitorActive.set(false);
             resetAccounting(System.currentTimeMillis());
             if (trafficShapingHandler != null) {
                 trafficShapingHandler.doAccounting(this);
