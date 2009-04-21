@@ -51,7 +51,18 @@ public class CookieDecoderTest {
         assertNull(cookie.getCommentUrl());
         assertEquals(".adomainsomewhere", cookie.getDomain());
         assertFalse(cookie.isDiscard());
-        assertTrue(cookie.getMaxAge() == 50 || cookie.getMaxAge() == 49 || cookie.getMaxAge() == 51);
+
+        boolean fail = true;
+        for (int i = 40; i <= 60; i ++) {
+            if (cookie.getMaxAge() == i) {
+                fail = false;
+                break;
+            }
+        }
+        if (fail) {
+            fail("expected: 50, actual: " + cookie.getMaxAge());
+        }
+
         assertEquals("/apathsomewhere", cookie.getPath());
         assertTrue(cookie.getPorts().isEmpty());
         assertTrue(cookie.isSecure());
