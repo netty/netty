@@ -152,7 +152,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
             channel = clientSocketChannelFactory.newChannel(channelPipeline);
         }
         SocketAddress connectAddress = new InetSocketAddress(url.getHost(), url.getPort());
-        channel.connect(connectAddress);
+        channel.connect(connectAddress).awaitUninterruptibly();
         StringBuilder builder = new StringBuilder();
         builder.append("POST ").append(url.getRawPath()).append(" HTTP/1.1").append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR).
                 append("Host: ").append(url.getHost()).append(":").append(url.getPort()).append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR).
