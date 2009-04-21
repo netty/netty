@@ -33,7 +33,7 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  *
  * @apiviz.stereotype utility
  */
-public class ChannelLocal<T> {
+public abstract class ChannelLocal<T> {
     private final ConcurrentMap<Channel, T> map =
         new ConcurrentIdentityWeakKeyHashMap<Channel, T>();
 
@@ -44,14 +44,18 @@ public class ChannelLocal<T> {
         super();
     }
 
-    protected T initialValue(@SuppressWarnings("unused") Channel channel) {
-        return null;
-    }
+    protected abstract T initialValue(Channel channel);
 
     public T get(Channel channel) {
         T value = map.get(channel);
         if (value == null) {
             value = initialValue(channel);
+            if (value == null) {
+                throw new IllegalStateException(
+                        ChannelLocal.class.getSimpleName() +
+                        ".initialValue() must return non-null.");
+            }
+
             T oldValue = setIfAbsent(channel, value);
             if (oldValue != null) {
                 value = oldValue;
