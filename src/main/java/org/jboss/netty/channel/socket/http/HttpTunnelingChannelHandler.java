@@ -55,7 +55,7 @@ class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpTunnelingChannelHandler.class);
 
-    List<MessageEvent> awaitingEvents = new ArrayList<MessageEvent>();
+    private final List<MessageEvent> awaitingEvents = new ArrayList<MessageEvent>();
 
     private final Lock reconnectLock = new ReentrantLock();
 
@@ -86,7 +86,7 @@ class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
         ChannelBuffer buffer = (ChannelBuffer) e.getMessage();
         if (stream) {
             boolean success = false;
-            Throwable cause = null;
+            Exception cause = null;
             byte[] b = null;
             reconnectLock.lock();
             try {
@@ -99,17 +99,17 @@ class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
                 outputStream.write(b);
                 outputStream.flush();
                 success = true;
-            } catch (Throwable t) {
+            } catch (Exception ex) {
                 success = false;
-                cause = t;
+                cause = ex;
                 if (awaitReconnect()) {
                     try {
                         outputStream.write(b);
                         outputStream.flush();
                         success = true;
-                    } catch (Throwable t2) {
+                    } catch (Exception ex2) {
                         success = false;
-                        cause = t2;
+                        cause = ex2;
                     }
                 } else {
                     if (invalidated.compareAndSet(false, true)) {
@@ -119,11 +119,8 @@ class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
                 }
             } finally {
                 reconnectLock.unlock();
-                if (success) {
-                    e.getFuture().setSuccess();
-                } else {
-                    assert cause != null;
-                    e.getFuture().setFailure(cause);
+                if (!success) {
+                    throw cause;
                 }
             }
         } else {
@@ -155,7 +152,7 @@ class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
         return list;
     }
 
-    void setOutputStream(ServletOutputStream outputStream) {
+    void setOutputStream(ServletOutputStream outputStream) throws IOException {
         reconnectLock.lock();
         try {
             this.outputStream = outputStream;
@@ -164,14 +161,8 @@ class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
                 ChannelBuffer buffer = (ChannelBuffer) awaitingEvent.getMessage();
                 byte[] b = new byte[buffer.readableBytes()];
                 buffer.readBytes(b);
-                try {
-                    outputStream.write(b);
-                    outputStream.flush();
-                    awaitingEvent.getFuture().setSuccess();
-                }
-                catch (IOException e) {
-                    awaitingEvent.getFuture().setFailure(e);
-                }
+                outputStream.write(b);
+                outputStream.flush();
             }
             reconnectCondition.signalAll();
         }

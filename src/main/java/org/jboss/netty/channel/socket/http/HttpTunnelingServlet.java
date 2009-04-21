@@ -58,10 +58,23 @@ public class HttpTunnelingServlet extends HttpServlet {
         Channel channel = (Channel) session.getAttribute(CHANNEL_PROP);
         HttpTunnelingChannelHandler handler =
                 (HttpTunnelingChannelHandler) session.getAttribute(HANDLER_PROP);
-        if (handler.isStreaming()) {
-            streamResponse(request, response, session, handler, channel);
-        } else {
-            pollResponse(channel, request, response, session, handler);
+        try {
+            if (handler.isStreaming()) {
+                streamResponse(request, response, session, handler, channel);
+            } else {
+                pollResponse(channel, request, response, session, handler);
+            }
+        } finally {
+            try {
+                request.getInputStream().close();
+            } catch (IOException e) {
+                // Ignore.
+            }
+            try {
+                response.getOutputStream().close();
+            } catch (IOException e) {
+                // Ignore.
+            }
         }
     }
 
