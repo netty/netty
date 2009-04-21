@@ -47,6 +47,8 @@ import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
@@ -56,6 +58,9 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  */
 class HttpTunnelingClientSocketChannel extends AbstractChannel
         implements org.jboss.netty.channel.socket.SocketChannel {
+
+    static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(HttpTunnelingClientSocketChannel.class);
 
     private final Lock reconnectLock = new ReentrantLock();
 
@@ -257,6 +262,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+            logger.warn("Unexpected exception", e.getCause());
             channel.close();
         }
     }
