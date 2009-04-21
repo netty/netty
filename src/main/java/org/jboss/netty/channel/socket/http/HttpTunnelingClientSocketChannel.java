@@ -166,12 +166,12 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         int size = a.readableBytes();
         String hex = Integer.toHexString(size) + HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR;
 
-        // try {
         synchronized (writeLock) {
-            a.writeBytes(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR.getBytes());
-            channel.write(ChannelBuffers.wrappedBuffer(hex.getBytes()));
-            channel.write(a).awaitUninterruptibly();
-            //channel.write(ChannelBuffers.wrappedBuffer(LINE_TERMINATOR.getBytes()));
+            ChannelFuture future = channel.write(ChannelBuffers.wrappedBuffer(
+                    ChannelBuffers.copiedBuffer(hex, "ASCII"),
+                    a,
+                    ChannelBuffers.copiedBuffer(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR, "ASCII")));
+            future.awaitUninterruptibly();
         }
     }
 
