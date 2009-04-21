@@ -67,8 +67,8 @@
       By contrast, &ChannelBuffer; does not have such caveats because it is
       fully extensible and has a built-in composite buffer type.
     </para>
-    <programlisting>&ChannelBuffer;<co id="example.buffer2.co1"/> message = &Channels;.wrappedBuffer(header, body);
-&ChannelBuffer;<co id="example.buffer2.co2"/> messageWithFooter = &Channels;.wrappedBuffer(message, footer);
+    <programlisting>&ChannelBuffer;<co id="example.buffer2.co1"/> message = &ChannelBuffers;.wrappedBuffer(header, body);
+&ChannelBuffer;<co id="example.buffer2.co2"/> messageWithFooter = &ChannelBuffers;.wrappedBuffer(message, footer);
 messageWithFooter.getUnsignedInt(
     messageWithFooter.readableBytes() - footer.readableBytes() - 1<co id="example.buffer2.co3"/>);</programlisting>
     <calloutlist>
@@ -107,10 +107,10 @@ messageWithFooter.getUnsignedInt(
       <classname>StringBuffer</classname> to expand the capacity of its
       internal buffer on demand.  Netty allows you to do the same via
       a <firstterm>dynamic</firstterm> buffer which is created by the
-      &Channels;<literal>.</literal><methodname>dynamicBuffer()</methodname>
+      &ChannelBuffers;<literal>.</literal><methodname>dynamicBuffer()</methodname>
       method.
     </para>
-    <programlisting>&ChannelBuffer;<co id="example.buffer3.co1"/> dynamicBuffer = &Channels;.dynamicBuffer(4);
+    <programlisting>&ChannelBuffer;<co id="example.buffer3.co1"/> dynamicBuffer = &ChannelBuffers;.dynamicBuffer(4);
 dynamicBuffer.writeByte('1');<co id="example.buffer3.co2"/>
 dynamicBuffer.writeByte('2');
 dynamicBuffer.writeByte('3');

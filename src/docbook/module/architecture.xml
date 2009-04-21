@@ -78,10 +78,11 @@
     </para>
     <para>
       This mismatch makes porting a network application from one transport to
-      the other.  The lack of portability between transports becomes a problem
-      when you need to support more transports not rewriting the network layer
-      of the application.  Logically, many protocols can run on more than one
-      transport such as TCP/IP, UDP/IP, SCTP, and serial port communication.
+      the other tedious and difficult.  The lack of portability between
+      transports becomes a problem when you need to support more transports not
+      rewriting the network layer of the application.  Logically, many protocols
+      can run on more than one transport such as TCP/IP, UDP/IP, SCTP, and
+      serial port communication.
     </para>
     <para>
       To make the matter worse, Java New I/O (NIO) API introduced the
