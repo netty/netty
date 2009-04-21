@@ -40,6 +40,8 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * A channel handler that proxies messages to the servlet output stream
@@ -50,6 +52,9 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  */
 @ChannelPipelineCoverage("one")
 class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpTunnelingChannelHandler.class);
+
     List<MessageEvent> awaitingEvents = new ArrayList<MessageEvent>();
 
     private final Lock reconnectLock = new ReentrantLock();
@@ -129,6 +134,7 @@ class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+        logger.warn("Unexpected exception", e.getCause());
         if (invalidated.compareAndSet(false, true)) {
             session.invalidate();
         }
