@@ -113,6 +113,7 @@ final class OioDatagramChannel extends AbstractChannel
     }
 
     public void joinGroup(InetAddress multicastAddress) {
+        ensureBound();
         try {
             socket.joinGroup(multicastAddress);
         } catch (IOException e) {
@@ -122,10 +123,19 @@ final class OioDatagramChannel extends AbstractChannel
 
     public void joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
+        ensureBound();
         try {
             socket.joinGroup(multicastAddress, networkInterface);
         } catch (IOException e) {
             throw new ChannelException(e);
+        }
+    }
+
+    private void ensureBound() {
+        if (!isBound()) {
+            throw new IllegalStateException(
+                    DatagramChannel.class.getName() +
+                    " must be bound to join a group.");
         }
     }
 
