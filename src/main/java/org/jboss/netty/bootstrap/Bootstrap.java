@@ -34,6 +34,7 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.internal.MapUtil;
 
 /**
@@ -50,7 +51,7 @@ import org.jboss.netty.util.internal.MapUtil;
  *
  * @apiviz.uses org.jboss.netty.channel.ChannelFactory
  */
-public class Bootstrap {
+public class Bootstrap implements ExternalResourceReleasable {
 
     private volatile ChannelFactory factory;
     private volatile ChannelPipeline pipeline = pipeline();
@@ -262,6 +263,13 @@ public class Bootstrap {
             options.remove(key);
         } else {
             options.put(key, value);
+        }
+    }
+
+    public void releaseExternalResources() {
+        ChannelFactory factory = this.factory;
+        if (factory != null) {
+            factory.releaseExternalResources();
         }
     }
 }
