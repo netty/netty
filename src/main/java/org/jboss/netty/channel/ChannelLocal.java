@@ -47,6 +47,10 @@ public abstract class ChannelLocal<T> {
     protected abstract T initialValue(Channel channel);
 
     public T get(Channel channel) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+
         T value = map.get(channel);
         if (value == null) {
             value = initialValue(channel);
@@ -64,15 +68,30 @@ public abstract class ChannelLocal<T> {
         return value;
     }
 
-    public T set(Channel channel, T newValue) {
-        return map.put(channel, newValue);
+    public T set(Channel channel, T value) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        if (value == null) {
+            throw new NullPointerException("value");
+        }
+        return map.put(channel, value);
     }
 
     public T setIfAbsent(Channel channel, T value) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
+        if (value == null) {
+            throw new NullPointerException("value");
+        }
         return map.putIfAbsent(channel, value);
     }
 
     public T remove(Channel channel) {
+        if (channel == null) {
+            throw new NullPointerException("channel");
+        }
         return map.remove(channel);
     }
 }
