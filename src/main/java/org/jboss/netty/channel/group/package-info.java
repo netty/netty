@@ -26,6 +26,6 @@
  * {@link org.jboss.netty.channel.Channel}s and perform bulk operations on them.
  *
  * @apiviz.exclude ^java
- * @apiviz.exclude \.(Abstract|Default).*$
+ * @apiviz.exclude \.DefaultChannelGroupFuture$
  */
 package org.jboss.netty.channel.group;

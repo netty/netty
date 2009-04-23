@@ -46,6 +46,8 @@ import org.jboss.netty.util.internal.ConcurrentHashMap;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 public class DefaultChannelGroup extends AbstractSet<Channel> implements ChannelGroup {
 
