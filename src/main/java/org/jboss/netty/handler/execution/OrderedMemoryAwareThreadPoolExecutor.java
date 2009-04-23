@@ -30,6 +30,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelState;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.util.ObjectSizeEstimator;
 import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
 
@@ -165,6 +167,15 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
             Executor oldExecutor = childExecutors.putIfAbsent(channel, executor);
             if (oldExecutor != null) {
                 executor = oldExecutor;
+            }
+        }
+
+        // Remove the entry when the channel closes.
+        if (e instanceof ChannelStateEvent) {
+            ChannelStateEvent se = (ChannelStateEvent) e;
+            if (se.getState() == ChannelState.OPEN &&
+                !channel.isOpen()) {
+                childExecutors.remove(channel);
             }
         }
         return executor;
