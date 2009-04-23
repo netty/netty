@@ -33,6 +33,9 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
 
 /**
  * The result of an asynchronous {@link ChannelGroup} operation.
+ * {@link ChannelGroupFuture} is composed of {@link ChannelFuture}s which
+ * represent the outcome of the individual I/O operations on the
+ * {@link Channel}s that belong to the {@link ChannelGroup}.
  *
  * <p>
  * All I/O operations in {@link ChannelGroup} are asynchronous.  It means any
@@ -122,8 +125,8 @@ public interface ChannelGroupFuture extends Iterable<ChannelFuture>{
     ChannelGroup getGroup();
 
     /**
-     * Returns the {@link ChannelFuture} of the I/O operation which is
-     * associated with the {@link Channel} whose ID matches the specified
+     * Returns the {@link ChannelFuture} of the individual I/O operation which
+     * is associated with the {@link Channel} whose ID matches the specified
      * integer.
      *
      * @return the matching {@link ChannelFuture} if found.
@@ -132,8 +135,8 @@ public interface ChannelGroupFuture extends Iterable<ChannelFuture>{
     ChannelFuture find(Integer channelId);
 
     /**
-     * Returns the {@link ChannelFuture} of the I/O operation which is
-     * associated with the specified {@link Channel}.
+     * Returns the {@link ChannelFuture} of the individual I/O operation which
+     * is associated with the specified {@link Channel}.
      *
      * @return the matching {@link ChannelFuture} if found.
      *         {@code null} otherwise.
