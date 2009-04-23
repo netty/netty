@@ -40,7 +40,7 @@ import org.jboss.netty.channel.ServerChannel;
  *
  * <h3>Simplify shutdown process with {@link ChannelGroup}</h3>
  * <p>
- * If both {@link ServerChannel}s and non-{@link ServerChannel}s exists in the
+ * If both {@link ServerChannel}s and non-{@link ServerChannel}s exist in the
  * same {@link ChannelGroup}, any requested I/O operations on the group are
  * performed for the {@link ServerChannel}s first and then for the others.
  * <p>
