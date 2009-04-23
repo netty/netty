@@ -36,8 +36,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * A Servlet that acts as a proxy for a netty channel
@@ -50,38 +48,20 @@ public class HttpTunnelingServlet extends HttpServlet {
 
     private static final long serialVersionUID = -872309493835745385L;
 
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(HttpTunnelingServlet.class);
-
     final static String CHANNEL_PROP = "channel";
     final static String HANDLER_PROP = "handler";
 
     protected void doRequest(
             HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response) throws IOException {
         HttpSession session = request.getSession();
         Channel channel = (Channel) session.getAttribute(CHANNEL_PROP);
         HttpTunnelingChannelHandler handler =
                 (HttpTunnelingChannelHandler) session.getAttribute(HANDLER_PROP);
-        try {
-            if (handler.isStreaming()) {
-                streamResponse(request, response, session, handler, channel);
-            } else {
-                pollResponse(channel, request, response, session, handler);
-            }
-        } catch (Throwable t) {
-            logger.warn("Unexpected exception", t);
-        } finally {
-            try {
-                request.getInputStream().close();
-            } catch (IOException e) {
-                // Ignore.
-            }
-            try {
-                response.getOutputStream().close();
-            } catch (IOException e) {
-                // Ignore.
-            }
+        if (handler.isStreaming()) {
+            streamResponse(request, response, session, handler, channel);
+        } else {
+            pollResponse(channel, request, response, session, handler);
         }
     }
 
@@ -93,8 +73,9 @@ public class HttpTunnelingServlet extends HttpServlet {
         try {
             response.setHeader("JSESSIONID", session.getId());
             response.setHeader("Content-Type", "application/octet-stream");
-            response.setContentLength(-1);
             response.setStatus(HttpServletResponse.SC_OK);
+
+            // Initiate chunked encoding by flushing the headers.
             response.getOutputStream().flush();
             handler.setOutputStream(response.getOutputStream());
 
