@@ -801,6 +801,11 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
 
     private void closeOutboundAndChannel(
             final ChannelHandlerContext context, final ChannelStateEvent e) throws SSLException {
+        if (!e.getChannel().isConnected()) {
+            context.sendDownstream(e);
+            return;
+        }
+
         unwrap(context, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
         if (!engine.isInboundDone()) {
             if (sentCloseNotify.compareAndSet(false, true)) {
