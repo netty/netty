@@ -242,7 +242,8 @@ public class DefaultChannelFuture implements ChannelFuture {
         if (IoWorkerRunnable.IN_IO_THREAD.get()) {
             throw new IllegalStateException(
                     "await*() in I/O thread causes a dead lock or " +
-                    "sudden performance drop. Use addListener() instead.");
+                    "sudden performance drop. Use addListener() instead or " +
+                    "call await*() from a different thread.");
         }
     }
 
