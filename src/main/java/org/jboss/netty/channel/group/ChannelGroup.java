@@ -38,6 +38,19 @@ import org.jboss.netty.channel.ServerChannel;
  * added {@link Channel}.  A {@link Channel} can belong to more than one
  * {@link ChannelGroup}.
  *
+ * <h3>Broadcast a message to multiple {@link Channel}s</h3>
+ * <p>
+ * If you need to broadcast a message to more than one {@link Channel}, you can
+ * add the {@link Channel}s associated with the recipients and call {@link ChannelGroup#write(Object)}:
+ * <pre>
+ * <strong>ChannelGroup recipients = new DefaultChannelGroup();</strong>
+ * recipients.add(channelA);
+ * recipients.add(channelB);
+ * ..
+ * <strong>recipients.write(ChannelBuffers.copiedBuffer(
+ *         "Service will shut down for maintenance in 5 minutes.", "UTF-8"));</strong>
+ * </pre>
+ *
  * <h3>Simplify shutdown process with {@link ChannelGroup}</h3>
  * <p>
  * If both {@link ServerChannel}s and non-{@link ServerChannel}s exist in the
@@ -47,7 +60,7 @@ import org.jboss.netty.channel.ServerChannel;
  * This rule is very useful when you shut down a server in one shot:
  *
  * <pre>
- * ChannelGroup allChannels = new DefaultChannelGroup();
+ * <strong>ChannelGroup allChannels = new DefaultChannelGroup();</strong>
  *
  * public static void main(String[] args) throws Exception {
  *     ServerBootstrap b = new ServerBootstrap(..);
@@ -56,11 +69,12 @@ import org.jboss.netty.channel.ServerChannel;
  *     // Start the server
  *     b.getPipeline().addLast("handler", new MyHandler());
  *     Channel serverChannel = b.bind(..);
+ *     <strong>allChannels.add(serverChannel);<strong>
  *
  *     ... Wait until the shutdown signal reception ...
  *
  *     // Close the serverChannel and then all accepted connections.
- *     allChannels.close().awaitUninterruptibly();
+ *     <strong>allChannels.close().awaitUninterruptibly();</strong>
  *     b.releaseExternalResources();
  * }
  *
@@ -68,7 +82,7 @@ import org.jboss.netty.channel.ServerChannel;
  *     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) {
  *         // Add all open channels to the global group so that they are
  *         // closed on shutdown.
- *         allChannels.add(e.getChannel());
+ *         <strong>allChannels.add(e.getChannel());</strong>
  *     }
  * }
  * </pre>

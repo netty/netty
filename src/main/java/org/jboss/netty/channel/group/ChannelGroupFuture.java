@@ -102,6 +102,11 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  *     }
  * }
  * </pre>
+ * <p>
+ * In spite of the disadvantages mentioned above, there are certainly cases
+ * where it is more convenient to call {@link #await()}. In such a case, please
+ * make sure you do not call {@link #await()} in an I/O thread.  Otherwise,
+ * {@link IllegalStateException} will be raised to avoid a dead lock.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
