@@ -258,13 +258,13 @@
             <Export-Package>
               !${project.groupId}.example.*,
               !${project.groupId}.logging.*,
-              !${project.groupId}.util.*,
+              !${project.groupId}.util.internal.*,
               ${project.groupId}.*;version=${project.version}
             </Export-Package>
             <Private-Package>
               ${project.groupId}.example.*,
               ${project.groupId}.logging.*,
-              ${project.groupId}.util.*,
+              ${project.groupId}.util.internal.*,
             </Private-Package>
             <Import-Package>
               *;resolution:=optional
