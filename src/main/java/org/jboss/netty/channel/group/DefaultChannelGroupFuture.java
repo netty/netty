@@ -38,6 +38,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.IoWorkerRunnable;
 
 /**
  * The default {@link ChannelGroupFuture} implementation.
@@ -210,6 +211,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     public ChannelGroupFuture await() throws InterruptedException {
         synchronized (this) {
             while (!done) {
+                checkDeadLock();
                 waiters++;
                 try {
                     this.wait();
@@ -233,6 +235,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     public ChannelGroupFuture awaitUninterruptibly() {
         synchronized (this) {
             while (!done) {
+                checkDeadLock();
                 waiters++;
                 try {
                     this.wait();
@@ -274,6 +277,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
                 return done;
             }
 
+            checkDeadLock();
             waiters++;
             try {
                 for (;;) {
@@ -297,6 +301,14 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
             } finally {
                 waiters--;
             }
+        }
+    }
+
+    private void checkDeadLock() {
+        if (IoWorkerRunnable.IN_IO_THREAD.get()) {
+            throw new IllegalStateException(
+                    "await*() in I/O thread causes a dead lock or " +
+                    "sudden performance drop.");
         }
     }
 
