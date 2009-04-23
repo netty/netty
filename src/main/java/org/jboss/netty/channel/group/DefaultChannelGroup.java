@@ -41,6 +41,8 @@ import org.jboss.netty.util.internal.CombinedIterator;
 import org.jboss.netty.util.internal.ConcurrentHashMap;
 
 /**
+ * The default {@link ChannelGroup} implementation.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
@@ -58,10 +60,18 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         }
     };
 
+    /**
+     * Creates a new group with a generated name.
+     */
     public DefaultChannelGroup() {
         this("group-0x" + Integer.toHexString(nextId.incrementAndGet()));
     }
 
+    /**
+     * Creates a new group with the specified {@code name}.  Please note that
+     * different groups can have the same name, which means no duplicate check
+     * is done against group names.
+     */
     public DefaultChannelGroup(String name) {
         if (name == null) {
             throw new NullPointerException("name");

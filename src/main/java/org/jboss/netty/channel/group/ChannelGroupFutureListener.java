@@ -26,8 +26,9 @@ import java.util.EventListener;
 
 /**
  * Listens to the result of a {@link ChannelGroupFuture}.  The result of the
- * asynchronous {@link ChannelGroup} I/O operation is notified once this
- * listener is added by calling {@link ChannelGroupFuture#addListener(ChannelGroupFutureListener)}.
+ * asynchronous {@link ChannelGroup} I/O operations is notified once this
+ * listener is added by calling {@link ChannelGroupFuture#addListener(ChannelGroupFutureListener)}
+ * and all I/O operations are complete.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -37,8 +38,8 @@ import java.util.EventListener;
 public interface ChannelGroupFutureListener extends EventListener {
 
     /**
-     * Invoked when the I/O operation associated with the
-     * {@link ChannelGroupFuture} has been completed.
+     * Invoked when all I/O operations associated with the
+     * {@link ChannelGroupFuture} have been completed.
      *
      * @param future  The source {@link ChannelGroupFuture} which called this
      *                callback.
