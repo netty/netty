@@ -34,8 +34,8 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
 /**
  * The result of an asynchronous {@link ChannelGroup} operation.
  * {@link ChannelGroupFuture} is composed of {@link ChannelFuture}s which
- * represent the outcome of the individual I/O operations on the
- * {@link Channel}s that belong to the {@link ChannelGroup}.
+ * represent the outcome of the individual I/O operations that affect the
+ * {@link Channel}s in the {@link ChannelGroup}.
  *
  * <p>
  * All I/O operations in {@link ChannelGroup} are asynchronous.  It means any
