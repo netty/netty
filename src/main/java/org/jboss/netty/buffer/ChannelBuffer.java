@@ -417,6 +417,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 
     /**
      * Gets a byte at the specified absolute {@code index} in this buffer.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -426,7 +428,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 
     /**
      * Gets an unsigned byte at the specified absolute {@code index} in this
-     * buffer.
+     * buffer.  This method does not modify {@code readerIndex} or
+     * {@code writerIndex} of this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -436,7 +439,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 
     /**
      * Gets a 16-bit short integer at the specified absolute {@code index} in
-     * this buffer.
+     * this buffer.  This method does not modify {@code readerIndex} or
+     * {@code writerIndex} of this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -446,7 +450,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 
     /**
      * Gets an unsigned 16-bit short integer at the specified absolute
-     * {@code index} in this buffer.
+     * {@code index} in this buffer.  This method does not modify
+     * {@code readerIndex} or {@code writerIndex} of this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -456,7 +461,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 
     /**
      * Gets a 24-bit medium integer at the specified absolute {@code index} in
-     * this buffer.
+     * this buffer.  This method does not modify {@code readerIndex} or
+     * {@code writerIndex} of this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -466,7 +472,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 
     /**
      * Gets an unsigned 24-bit medium integer at the specified absolute
-     * {@code index} in this buffer.
+     * {@code index} in this buffer.  This method does not modify
+     * {@code readerIndex} or {@code writerIndex} of this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -476,7 +483,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 
     /**
      * Gets a 32-bit integer at the specified absolute {@code index} in
-     * this buffer.
+     * this buffer.  This method does not modify {@code readerIndex} or
+     * {@code writerIndex} of this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -486,7 +494,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 
     /**
      * Gets an unsigned 32-bit integer at the specified absolute {@code index}
-     * in this buffer.
+     * in this buffer.  This method does not modify {@code readerIndex} or
+     * {@code writerIndex} of this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -496,7 +505,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 
     /**
      * Gets a 64-bit long integer at the specified absolute {@code index} in
-     * this buffer.
+     * this buffer.  This method does not modify {@code readerIndex} or
+     * {@code writerIndex} of this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -512,6 +522,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * method increases the {@code writerIndex} of the destination by the
      * number of the transferred bytes while
      * {@link #getBytes(int, ChannelBuffer, int, int)} does not.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * the source buffer (i.e. {@code this}).
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -527,6 +539,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * method increases the {@code writerIndex} of the destination by the
      * number of the transferred bytes while
      * {@link #getBytes(int, ChannelBuffer, int, int)} does not.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * the source buffer (i.e. {@code this}).
      *
      * @param length the number of bytes to transfer
      *
@@ -541,6 +555,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers this buffer's data to the specified destination starting at
      * the specified absolute {@code index}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex}
+     * of both the source (i.e. {@code this}) and the destination.
      *
      * @param dstIndex the first index of the destination
      * @param length   the number of bytes to transfer
@@ -558,6 +574,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers this buffer's data to the specified destination starting at
      * the specified absolute {@code index}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -569,6 +587,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers this buffer's data to the specified destination starting at
      * the specified absolute {@code index}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex}
+     * of this buffer.
      *
      * @param dstIndex the first index of the destination
      * @param length   the number of bytes to transfer
@@ -587,6 +607,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * Transfers this buffer's data to the specified destination starting at
      * the specified absolute {@code index} until the destination's position
      * reaches its limit.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer while the destination's {@code position} will be increased.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -598,6 +620,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers this buffer's data to the specified stream starting at the
      * specified absolute {@code index}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @param length the number of bytes to transfer
      *
@@ -613,6 +637,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers this buffer's data to the specified channel starting at the
      * specified absolute {@code index}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @param length the maximum number of bytes to transfer
      *
@@ -630,6 +656,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Sets the specified byte at the specified absolute {@code index} in this
      * buffer.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -640,6 +668,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Sets the specified 16-bit short integer at the specified absolute
      * {@code index} in this buffer.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -651,6 +681,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * Sets the specified 24-bit medium integer at the specified absolute
      * {@code index} in this buffer.  Please note that the most significant
      * byte is ignored in the specified value.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -661,6 +693,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Sets the specified 32-bit integer at the specified absolute
      * {@code index} in this buffer.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -671,6 +705,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Sets the specified 64-bit long integer at the specified absolute
      * {@code index} in this buffer.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -686,6 +722,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * method increases the {@code readerIndex} of the source buffer by
      * the number of the transferred bytes while
      * {@link #getBytes(int, ChannelBuffer, int, int)} does not.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * the source buffer (i.e. {@code this}).
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -701,6 +739,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * method increases the {@code readerIndex} of the source buffer by
      * the number of the transferred bytes while
      * {@link #getBytes(int, ChannelBuffer, int, int)} does not.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * the source buffer (i.e. {@code this}).
      *
      * @param length the number of bytes to transfer
      *
@@ -715,6 +755,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers the specified source buffer's data to this buffer starting at
      * the specified absolute {@code index}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex}
+     * of both the source (i.e. {@code this}) and the destination.
      *
      * @param srcIndex the first index of the source
      * @param length   the number of bytes to transfer
@@ -732,6 +774,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers the specified source array's data to this buffer starting at
      * the specified absolute {@code index}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -743,6 +787,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers the specified source array's data to this buffer starting at
      * the specified absolute {@code index}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0},
@@ -757,6 +803,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * Transfers the specified source buffer's data to this buffer starting at
      * the specified absolute {@code index} until the source buffer's position
      * reaches its limit.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -768,6 +816,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers the content of the specified source stream to this buffer
      * starting at the specified absolute {@code index}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @param length the number of bytes to transfer
      *
@@ -785,6 +835,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Transfers the content of the specified source channel to this buffer
      * starting at the specified absolute {@code index}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @param length the maximum number of bytes to transfer
      *
@@ -802,6 +854,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Fills this buffer with <tt>NUL (0x00)</tt> starting at the specified
      * absolute {@code index}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @param length the number of <tt>NUL</tt>s to write to the buffer
      *
@@ -1272,6 +1326,9 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * <p>
      * If {@code fromIndex} is greater than {@code toIndex}, the search is
      * performed in a reversed order.
+     * <p>
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @return the absolute index of the first occurrence if found.
      *         {@code -1} otherwise.
@@ -1286,6 +1343,9 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * <p>
      * If {@code fromIndex} is greater than {@code toIndex}, the search is
      * performed in a reversed order.
+     * <p>
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @return the absolute index where the specified {@code indexFinder}
      *         returned {@code true} if the {@code indexFinder} returned
@@ -1297,12 +1357,17 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * Returns a copy of this buffer's readable bytes.  Modifying the content
      * of the returned buffer or this buffer does not affect each other at all.
      * This method is identical to {@code buf.copy(buf.readerIndex(), buf.readableBytes())}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
      */
     ChannelBuffer copy();
 
     /**
      * Returns a copy of this buffer's sub-region.  Modifying the content of
      * the returned buffer or this buffer does not affect each other at all.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      */
     ChannelBuffer copy(int index, int length);
 
@@ -1311,6 +1376,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * of the returned buffer or this buffer affects each other's content
      * while they maintain separate indexes and marks.  This method is
      * identical to {@code buf.slice(buf.readerIndex(), buf.readableBytes())}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      */
     ChannelBuffer slice();
 
@@ -1319,6 +1386,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * the returned buffer or this buffer affects each other's content while
      * they maintain separate indexes and marks.  This method is identical to
      * {@code buf.slice(buf.readerIndex(), buf.readableBytes())}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      */
     ChannelBuffer slice(int index, int length);
 
@@ -1327,6 +1396,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * Modifying the content of the returned buffer or this buffer affects
      * each other's content while they maintain separate indexes and marks.
      * This method is identical to {@code buf.slice(0, buf.capacity())}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      */
     ChannelBuffer duplicate();
 
@@ -1335,6 +1406,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * buffer might or might not share the content with this buffer, while
      * they have separate indexes and marks.  This method is identical to
      * {@code buf.toByteBuffer(buf.readerIndex(), buf.readableBytes())}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      */
     ByteBuffer toByteBuffer();
 
@@ -1342,6 +1415,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * Converts this buffer's sub-region into a NIO buffer.  The returned
      * buffer might or might not share the content with this buffer, while
      * they have separate indexes and marks.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      */
     ByteBuffer toByteBuffer(int index, int length);
 
@@ -1350,6 +1425,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * The returned buffers might or might not share the content with this
      * buffer, while they have separate indexes and marks.  This method is
      * identical to {@code buf.toByteBuffers(buf.readerIndex(), buf.readableBytes())}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      */
     ByteBuffer[] toByteBuffers();
 
@@ -1357,6 +1434,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * Converts this buffer's sub-region into an array of NIO buffers.
      * The returned buffers might or might not share the content with this
      * buffer, while they have separate indexes and marks.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      */
     ByteBuffer[] toByteBuffers(int index, int length);
 
@@ -1364,6 +1443,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * Decodes this buffer's readable bytes into a string with the specified
      * character set name.  This method is identical to
      * {@code buf.toString(buf.readerIndex(), buf.readableBytes(), charsetName)}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @throws UnsupportedCharsetException
      *         if the specified character set name is not supported by the
@@ -1376,6 +1457,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * {@code terminatorFinder} returns {@code true} with the specified
      * character set name.  This method is identical to
      * {@code buf.toString(buf.readerIndex(), buf.readableBytes(), charsetName, terminatorFinder)}.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @throws UnsupportedCharsetException
      *         if the specified character set name is not supported by the
@@ -1387,6 +1470,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Decodes this buffer's sub-region into a string with the specified
      * character set name.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @throws UnsupportedCharsetException
      *         if the specified character set name is not supported by the
@@ -1398,6 +1483,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * Decodes this buffer's readable bytes into a string until the specified
      * {@code terminatorFinder} returns {@code true} with the specified
      * character set name.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
      *
      * @throws UnsupportedCharsetException
      *         if the specified character set name is not supported by the
