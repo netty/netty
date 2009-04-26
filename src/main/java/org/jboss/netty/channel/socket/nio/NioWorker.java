@@ -399,6 +399,7 @@ class NioWorker implements Runnable {
 
                     if (bufIdx == buf.writerIndex()) {
                         // Successful write - proceed to the next message.
+                        channel.currentWriteEvent = null;
                         evt.getFuture().setSuccess();
                         evt = null;
                     } else {
@@ -527,14 +528,7 @@ class NioWorker implements Runnable {
     }
 
     private static void cleanUpWriteBuffer(NioSocketChannel channel) {
-        // Create the exception only once to avoid the excessive overhead
-        // caused by fillStackTrace.
-        Exception cause;
-        if (channel.isOpen()) {
-            cause = new NotYetConnectedException();
-        } else {
-            cause = new ClosedChannelException();
-        }
+        Exception cause = null;
 
         // Clean up the stale messages in the write buffer.
         synchronized (channel.writeLock) {
@@ -542,18 +536,39 @@ class NioWorker implements Runnable {
             if (evt != null) {
                 channel.currentWriteEvent = null;
                 channel.currentWriteIndex = 0;
+
+                // Create the exception only once to avoid the excessive overhead
+                // caused by fillStackTrace.
+                if (channel.isOpen()) {
+                    cause = new NotYetConnectedException();
+                } else {
+                    cause = new ClosedChannelException();
+                }
                 evt.getFuture().setFailure(cause);
+
                 fireExceptionCaught(channel, cause);
             }
 
             Queue<MessageEvent> writeBuffer = channel.writeBuffer;
-            for (;;) {
-                evt = writeBuffer.poll();
-                if (evt == null) {
-                    break;
+            if (!writeBuffer.isEmpty()) {
+                // Create the exception only once to avoid the excessive overhead
+                // caused by fillStackTrace.
+                if (cause == null) {
+                    if (channel.isOpen()) {
+                        cause = new NotYetConnectedException();
+                    } else {
+                        cause = new ClosedChannelException();
+                    }
                 }
-                evt.getFuture().setFailure(cause);
-                fireExceptionCaught(channel, cause);
+
+                for (;;) {
+                    evt = writeBuffer.poll();
+                    if (evt == null) {
+                        break;
+                    }
+                    evt.getFuture().setFailure(cause);
+                    fireExceptionCaught(channel, cause);
+                }
             }
         }
     }
