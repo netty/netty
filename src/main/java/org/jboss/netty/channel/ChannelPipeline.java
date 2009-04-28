@@ -112,9 +112,9 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * p.addLast("4", new DownstreamHandlerB());
  * p.addLast("5", new UpstreamHandlerX());
  * </pre>
- * The class whose name starts with {@code Upstream} means it is an upstream
- * handler.  The class whose name starts with {@code Downstream} means it is a
- * downstream handler.
+ * In the example above, the class whose name starts with {@code Upstream} means
+ * it is an upstream handler.  The class whose name starts with
+ * {@code Downstream} means it is a downstream handler.
  * <p>
  * In the given example configuration, the handler evaluation order is 1, 2, 3,
  * 4, 5 when an event goes upstream.  When an event goes downstream, the order

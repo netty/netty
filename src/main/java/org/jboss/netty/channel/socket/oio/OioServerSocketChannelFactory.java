@@ -23,13 +23,12 @@
 package org.jboss.netty.channel.socket.oio;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 import org.jboss.netty.util.internal.ExecutorUtil;
@@ -74,11 +73,9 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  *
  * <ol>
  * <li>unbind all channels created by the factory,
- * <li>close all child channels accepted by the unbound channels,</li>
- * <li>call {@link ExecutorService#shutdownNow()} for all executors which were
- *     specified to create the factory, and</li>
- * <li>call {@link ExecutorService#awaitTermination(long, TimeUnit)}
- *     until it returns {@code true}.</li>
+ * <li>close all child channels accepted by the unbound channels,
+ *     (these two steps so far is usually done using {@link ChannelGroup#close()})</li>
+ * <li>call {@link #releaseExternalResources()}.</li>
  * </ol>
  *
  * Please make sure not to shut down the executor until all channels are

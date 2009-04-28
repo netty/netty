@@ -30,6 +30,7 @@ import java.util.concurrent.RejectedExecutionException;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 import org.jboss.netty.util.internal.ExecutorUtil;
@@ -77,7 +78,8 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  *
  * <ol>
  * <li>unbind all channels created by the factory,
- * <li>close all child channels accepted by the unbound channels, and</li>
+ * <li>close all child channels accepted by the unbound channels, and
+ *     (these two steps so far is usually done using {@link ChannelGroup#close()})</li>
  * <li>call {@link #releaseExternalResources()}.</li>
  * </ol>
  *

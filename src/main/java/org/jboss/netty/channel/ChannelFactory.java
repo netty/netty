@@ -24,6 +24,7 @@ package org.jboss.netty.channel;
 
 import java.util.concurrent.Executor;
 
+import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.util.ExternalResourceReleasable;
 
@@ -44,12 +45,14 @@ import org.jboss.netty.util.ExternalResourceReleasable;
  * To shut down a network application service which is managed by a factory.
  * you should follow the following steps:
  * <ol>
- * <li>close all channels created by the factory and their child channels, and</li>
+ * <li>close all channels created by the factory and their child channels
+ *     usually using {@link ChannelGroup#close()}, and</li>
  * <li>call {@link #releaseExternalResources()}.</li>
  * </ol>
  * <p>
  * For detailed transport-specific information on shutting down a factory,
- * please refer to the Javadoc of {@link ChannelFactory}'s subtypes.
+ * please refer to the Javadoc of {@link ChannelFactory}'s subtypes, such as
+ * {@link NioServerSocketChannelFactory}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -58,6 +61,8 @@ import org.jboss.netty.util.ExternalResourceReleasable;
  *
  * @apiviz.landmark
  * @apiviz.has        org.jboss.netty.channel.Channel oneway - - creates
+ *
+ * @apiviz.exclude ^org\.jboss\.netty\.channel\.([a-z]+\.)+.*ChannelFactory$
  */
 public interface ChannelFactory extends ExternalResourceReleasable {
 

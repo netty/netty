@@ -86,16 +86,16 @@ import java.net.SocketAddress;
  * <p>
  * You might want to refer to {@link ChannelUpstreamHandler} to see how a
  * {@link ChannelEvent} is interpreted when going upstream.  Also, please refer
- * to the {@link ChannelEvent} documentation to find out what an upstream event
- * and a downstream event are and what fundamental differences they have, if
- * you didn't read yet.
+ * to the {@link ChannelEvent} and {@link ChannelPipeline} documentation to find
+ * out what an upstream event and a downstream event are, what fundamental
+ * differences they have, and how they flow in a pipeline.
  *
  * <h3>Firing an event to the previous or next handler</h3>
  * <p>
  * You can forward the received event downstream or upstream.  In most cases,
  * {@link ChannelDownstreamHandler} will pass the event to the previous
- * handler (downstream) although it is absolutely normal to pass the event
- * to the next handler (upstream):
+ * handler (downstream) although it is legal to pass the event to the next
+ * handler (upstream):
  *
  * <pre>
  * // Sending the event forward (downstream)
@@ -132,6 +132,8 @@ import java.net.SocketAddress;
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
+ *
+ * @apiviz.exclude ^org\.jboss\.netty\.handler\..*$
  */
 public interface ChannelDownstreamHandler extends ChannelHandler {
 

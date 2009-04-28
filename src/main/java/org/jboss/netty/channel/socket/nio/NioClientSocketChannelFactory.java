@@ -29,6 +29,7 @@ import java.util.concurrent.RejectedExecutionException;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.util.internal.ExecutorUtil;
@@ -73,7 +74,8 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  * following:
  *
  * <ol>
- * <li>close all channels created by the factory, and</li>
+ * <li>close all channels created by the factory usually using
+ *     {@link ChannelGroup#close()}, and</li>
  * <li>call {@link #releaseExternalResources()}.</li>
  * </ol>
  *

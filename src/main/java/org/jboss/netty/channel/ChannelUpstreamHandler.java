@@ -122,9 +122,9 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * <p>
  * You might want to refer to {@link ChannelDownstreamHandler} to see how a
  * {@link ChannelEvent} is interpreted when going downstream.  Also, please
- * refer to the {@link ChannelEvent} documentation to find out what an upstream
- * event and a downstream event are and what fundamental differences they have,
- * if you didn't read yet.
+ * refer to the {@link ChannelEvent} and {@link ChannelPipeline} documentation
+ * to find out what an upstream event and a downstream event are, what
+ * fundamental differences they have, and how they flow in a pipeline.
  *
  * <h3>{@link SimpleChannelHandler}</h3>
  * <p>
@@ -138,8 +138,8 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * <p>
  * You can forward the received event upstream or downstream.  In most cases,
  * {@link ChannelUpstreamHandler} will sent the event to the next handler
- * (upstream) although it is absolutely normal to sent the event to the
- * previous handler (downstream):
+ * (upstream) although it is legal to sent the event to the previous handler
+ * (downstream):
  *
  * <pre>
  * // Sending the event forward (upstream)
@@ -200,6 +200,8 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
+ *
+ * @apiviz.exclude ^org\.jboss\.netty\.handler\..*$
  */
 public interface ChannelUpstreamHandler extends ChannelHandler {
 

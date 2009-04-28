@@ -54,7 +54,8 @@ package org.jboss.netty.channel;
  * ({@link ChannelUpstreamHandler} for upstream events and
  *  {@link ChannelDownstreamHandler} for downstream events) to find out how
  * a {@link ChannelEvent} is interpreted depending on the type of the handler
- * more in detail.
+ * more in detail.  Also, please refer to the {@link ChannelPipeline}
+ * documentation to find out how an event flows in a pipeline.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
