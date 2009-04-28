@@ -25,8 +25,8 @@ package org.jboss.netty.example.qotm;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
+import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.DatagramChannel;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
@@ -49,14 +49,14 @@ public class QuoteOfTheMomentClient {
         DatagramChannelFactory f =
             new OioDatagramChannelFactory(Executors.newCachedThreadPool());
 
-        ChannelPipeline p = Channels.pipeline();
+        ConnectionlessBootstrap b = new ConnectionlessBootstrap(f);
+        ChannelPipeline p = b.getPipeline();
         p.addLast("encoder", new StringEncoder("UTF-8"));
         p.addLast("decoder", new StringDecoder("UTF-8"));
         p.addLast("handler", new QuoteOfTheMomentClientHandler());
 
-        DatagramChannel c = f.newChannel(p);
-        c.getConfig().setBroadcast(true);
-        c.bind(new InetSocketAddress(0)).awaitUninterruptibly();
+        b.setOption("broadcast", "true");
+        DatagramChannel c = (DatagramChannel) b.bind(new InetSocketAddress(0));
 
         // Broadcast the QOTM request to port 8080.
         c.write("QOTM?", new InetSocketAddress("255.255.255.255", 8080));

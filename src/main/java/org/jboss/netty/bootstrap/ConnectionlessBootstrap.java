@@ -26,9 +26,6 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -42,79 +39,50 @@ import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ChildChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.ServerChannelFactory;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
- * A helper class which creates a new server-side {@link Channel} and accepts
- * incoming connections.
+ * A helper class which creates a new server-side {@link Channel} for a
+ * connectionless transport.
  *
- * <h3>Only for connection oriented transports</h3>
+ * <h3>Only for connectionless transports</h3>
  *
- * Use {@link ConnectionlessBootstrap} instead for connectionless
- * transports.  Do not use this helper if you are using a connectionless
- * transport such as UDP/IP which does not accept an incoming connection but
- * receives messages by itself without creating a child channel.
- *
- * <h3>Parent channel and its children</h3>
- *
- * A parent channel is a channel which is supposed to accept incoming
- * connections.  It is created by this bootstrap's {@link ChannelFactory} via
- * {@link #bind()} and {@link #bind(SocketAddress)}.
- * <p>
- * Once successfully bound, the parent channel starts to accept incoming
- * connections, and the accepted connections become the children of the
- * parent channel.
+ * Use {@link ServerBootstrap} instead for connection oriented transports.
+ * Do not use this helper if you are using a connection oriented transport such
+ * as TCP/IP and local transport which accepts an incoming connection and lets
+ * the accepted child channels handle received messages.
  *
  * <h3>Configuring channels</h3>
  *
- * {@link #setOption(String, Object) Options} are used to configure both a
- * parent channel and its child channels.  To configure the child channels,
- * prepend {@code "child."} prefix to the actual option names of a child
- * channel:
+ * {@link #setOption(String, Object) Options} are used to configure a channel:
  *
  * <pre>
- * ServerBootstrap b = ...;
+ * ConnectionlessBootstrap b = ...;
  *
- * // Options for a parent channel
+ * // Options for a new channel
  * b.setOption("localAddress", new {@link InetSocketAddress}(8080));
- * b.setOption("reuseAddress", true);
- *
- * // Options for its children
- * b.setOption("child.tcpNoDelay", true);
- * b.setOption("child.receiveBufferSize", 1048576);
+ * b.setOption("tcpNoDelay", true);
+ * b.setOption("receiveBufferSize", 1048576);
  * </pre>
  *
  * For the detailed list of available options, please refer to
- * {@link ChannelConfig} and its sub-types.
+ * {@link ChannelConfig} and its sub-types
  *
- * <h3>Configuring a parent channel pipeline</h3>
+ * <h3>Configuring a channel pipeline</h3>
  *
- * It is rare to configure the pipeline of a parent channel because what it is
- * supposed to do is very typical.  However, you might want to add a handler
- * to deal with some special needs such as degrading the process
- * <a href="http://en.wikipedia.org/wiki/User_identifier_(Unix)">UID</a> from
- * a <a href="http://en.wikipedia.org/wiki/Superuser">superuser</a> to a
- * normal user and changing the current VM security manager for better
- * security.  To support such a case,
- * the {@link #setParentHandler(ChannelHandler) parentHandler} property is
- * provided.
- *
- * <h3>Configuring a child channel pipeline</h3>
- *
- * Every child channel has its own {@link ChannelPipeline} and you can
- * configure it in two ways.
- *
+ * Every channel has its own {@link ChannelPipeline} and you can configure it
+ * in two ways.
+ * <p>
  * {@linkplain #setPipeline(ChannelPipeline) The first approach} is to use
- * the default pipeline and let the bootstrap to shallow copy the default
- * pipeline for each new child channel:
+ * the default pipeline and let the bootstrap to shallow-copy the default
+ * pipeline for each new channel:
  *
  * <pre>
- * ServerBootstrap b = ...;
+ * ConnectionlessBootstrap b = ...;
  * {@link ChannelPipeline} p = b.getPipeline();
  *
  * // Add handlers to the pipeline.
@@ -122,35 +90,35 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * p.addLast("decoder", new DecodingHandler());
  * p.addLast("logic",   new LogicHandler());
  * </pre>
-  *
+ *
  * Please note 'shallow-copy' here means that the added {@link ChannelHandler}s
  * are not cloned but only their references are added to the new pipeline.
- * Therefore, you have to choose the second approach if you are going to accept
- * more than one child {@link Channel} whose {@link ChannelPipeline} contains
- * any {@link ChannelHandler} whose {@link ChannelPipelineCoverage} is
- * {@code "one"}.
+ * Therefore, you have to choose the second approach if you are going to open
+ * more than one {@link Channel} whose {@link ChannelPipeline} contains any
+ * {@link ChannelHandler} whose {@link ChannelPipelineCoverage} is {@code "one"}.
+ *
  * <p>
  * {@linkplain #setPipelineFactory(ChannelPipelineFactory) The second approach}
  * is to specify a {@link ChannelPipelineFactory} by yourself and have full
  * control over how a new pipeline is created.  This approach is more complex:
  *
  * <pre>
- * ServerBootstrap b = ...;
+ * ConnectionlessBootstrap b = ...;
  * b.setPipelineFactory(new MyPipelineFactory());
  *
  * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
- *   // Create a new pipeline for a new child channel and configure it here ...
+ *   // Create a new pipeline for a new channel and configure it here ...
  * }
  * </pre>
  *
  * <h3>Applying different settings for different {@link Channel}s</h3>
  *
- * {@link ServerBootstrap} is just a helper class.  It neither allocates nor
- * manages any resources.  What manages the resources is the
+ * {@link ConnectionlessBootstrap} is just a helper class.  It neither
+ * allocates nor manages any resources.  What manages the resources is the
  * {@link ChannelFactory} implementation you specified in the constructor of
- * {@link ServerBootstrap}.  Therefore, it is OK to create as many
- * {@link ServerBootstrap} instances as you want to apply different settings
- * for different {@link Channel}s.
+ * {@link ConnectionlessBootstrap}.  Therefore, it is OK to create as
+ * many {@link ConnectionlessBootstrap} instances as you want to apply
+ * different settings for different {@link Channel}s.
  *
  * TODO: Show how to shut down a service.
  *
@@ -161,61 +129,22 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  *
  * @apiviz.landmark
  */
-public class ServerBootstrap extends Bootstrap {
-
-    private volatile ChannelHandler parentHandler;
+public class ConnectionlessBootstrap extends Bootstrap {
 
     /**
      * Creates a new instance with no {@link ChannelFactory} set.
      * {@link #setFactory(ChannelFactory)} must be called before any I/O
      * operation is requested.
      */
-    public ServerBootstrap() {
+    public ConnectionlessBootstrap() {
         super();
     }
 
     /**
      * Creates a new instance with the specified initial {@link ChannelFactory}.
      */
-    public ServerBootstrap(ChannelFactory channelFactory) {
+    public ConnectionlessBootstrap(ChannelFactory channelFactory) {
         super(channelFactory);
-    }
-
-    @Override
-    public void setFactory(ChannelFactory factory) {
-        if (factory == null) {
-            throw new NullPointerException("factory");
-        }
-        if (!(factory instanceof ServerChannelFactory)) {
-            throw new IllegalArgumentException(
-                    "factory must be a " +
-                    ServerChannelFactory.class.getSimpleName() + ": " +
-                    factory.getClass());
-        }
-        super.setFactory(factory);
-    }
-
-    /**
-     * Returns an optional {@link ChannelHandler} which intercepts an event
-     * of a new bound server-side channel which accepts incoming connections.
-     *
-     * @return the parent channel handler.
-     *         {@code null} if no parent channel handler is set.
-     */
-    public ChannelHandler getParentHandler() {
-        return parentHandler;
-    }
-
-    /**
-     * Sets an optional {@link ChannelHandler} which intercepts an event of
-     * a new bound server-side channel which accepts incoming connections.
-     *
-     * @param parentHandler
-     *        the parent channel handler.
-     *        {@code null} to unset the current parent channel handler.
-     */
-    public void setParentHandler(ChannelHandler parentHandler) {
-        this.parentHandler = parentHandler;
     }
 
     /**
@@ -264,15 +193,16 @@ public class ServerBootstrap extends Bootstrap {
         final BlockingQueue<ChannelFuture> futureQueue =
             new LinkedBlockingQueue<ChannelFuture>();
 
-        ChannelPipeline bossPipeline = pipeline();
-        bossPipeline.addLast("binder", new Binder(localAddress, futureQueue));
-
-        ChannelHandler parentHandler = getParentHandler();
-        if (parentHandler != null) {
-            bossPipeline.addLast("userHandler", parentHandler);
+        ChannelPipeline pipeline;
+        try {
+            pipeline = getPipelineFactory().getPipeline();
+        } catch (Exception e) {
+            throw new ChannelPipelineException("Failed to initialize a pipeline.", e);
         }
 
-        Channel channel = getFactory().newChannel(bossPipeline);
+        pipeline.addFirst("binder", new Binder(localAddress, futureQueue));
+
+        Channel channel = getFactory().newChannel(pipeline);
 
         // Wait until the future is available.
         ChannelFuture future = null;
@@ -283,6 +213,8 @@ public class ServerBootstrap extends Bootstrap {
                 // Ignore
             }
         } while (future == null);
+
+        pipeline.remove("binder");
 
         // Wait for the future.
         future.awaitUninterruptibly();
@@ -299,8 +231,6 @@ public class ServerBootstrap extends Bootstrap {
 
         private final SocketAddress localAddress;
         private final BlockingQueue<ChannelFuture> futureQueue;
-        private final Map<String, Object> childOptions =
-            new HashMap<String, Object>();
 
         Binder(SocketAddress localAddress, BlockingQueue<ChannelFuture> futureQueue) {
             this.localAddress = localAddress;
@@ -313,34 +243,12 @@ public class ServerBootstrap extends Bootstrap {
                 ChannelStateEvent evt) {
             evt.getChannel().getConfig().setPipelineFactory(getPipelineFactory());
 
-            // Split options into two categories: parent and child.
-            Map<String, Object> allOptions = getOptions();
-            Map<String, Object> parentOptions = new HashMap<String, Object>();
-            for (Entry<String, Object> e: allOptions.entrySet()) {
-                if (e.getKey().startsWith("child.")) {
-                    childOptions.put(
-                            e.getKey().substring(6),
-                            e.getValue());
-                } else if (!e.getKey().equals("pipelineFactory")) {
-                    parentOptions.put(e.getKey(), e.getValue());
-                }
-            }
-
-            // Apply parent options.
-            evt.getChannel().getConfig().setOptions(parentOptions);
+            // Apply options.
+            evt.getChannel().getConfig().setOptions(getOptions());
 
             boolean finished = futureQueue.offer(evt.getChannel().bind(localAddress));
             assert finished;
             ctx.sendUpstream(evt);
-        }
-
-        @Override
-        public void childChannelOpen(
-                ChannelHandlerContext ctx,
-                ChildChannelStateEvent e) throws Exception {
-            // Apply child options.
-            e.getChildChannel().getConfig().setOptions(childOptions);
-            ctx.sendUpstream(e);
         }
 
         @Override
