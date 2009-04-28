@@ -30,7 +30,6 @@ package org.jboss.netty.channel;
  *
  * @version $Rev$, $Date$
  *
- * @apiviz.landmark
  * @apiviz.has        org.jboss.netty.channel.ServerChannel oneway - - creates
  */
 public interface ServerChannelFactory extends ChannelFactory {

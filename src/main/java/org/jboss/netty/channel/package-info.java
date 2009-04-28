@@ -31,10 +31,12 @@
  * @apiviz.exclude ^org\.jboss\.netty\.channel\.[^\.]+\.
  * @apiviz.exclude ^org\.jboss\.netty\.(bootstrap|handler|util)\.
  * @apiviz.exclude \.(Abstract|Default).*$
+ * @apiviz.exclude \.(Downstream|Upstream).*Event$
  * @apiviz.exclude \.[A-Za-z]+ChannelFuture$
  * @apiviz.exclude \.ChannelPipelineFactory$
  * @apiviz.exclude \.ChannelHandlerContext$
  * @apiviz.exclude \.ChannelSink$
- * @apiviz.exclude \.[A-Za-z]*ReceiveBufferSizePredictor$
+ * @apiviz.exclude \.ChannelLocal$
+ * @apiviz.exclude \.[^\.]+ReceiveBufferSizePredictor$
  */
 package org.jboss.netty.channel;

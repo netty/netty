@@ -56,6 +56,8 @@ import java.util.Map;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
+ * @apiviz.landmark
+ *
  * @version $Rev$, $Date$
  */
 public class Channels {
