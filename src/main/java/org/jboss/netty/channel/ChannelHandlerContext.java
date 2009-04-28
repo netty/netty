@@ -33,7 +33,7 @@ package org.jboss.netty.channel;
  * +---------+ 1 .. 1 +----------+ 1    n +---------+ n    m +---------+
  * | Channel |--------| Pipeline |--------| Context |--------| Handler |
  * +---------+        +----------+        +---------+        +---------+
- *  n = the number of the handler entries in a pipeline
+ *         n = the number of the handler entries in a pipeline
  * </pre>
  *
  * Please note that a {@link ChannelHandler} instance can be added to more than
