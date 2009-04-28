@@ -29,6 +29,12 @@ import java.util.EventListener;
  * asynchronous {@link Channel} I/O operation is notified once this listener
  * is added by calling {@link ChannelFuture#addListener(ChannelFutureListener)}.
  *
+ * <h3>Return the control to the caller quickly</h3>
+ *
+ * {@link #operationComplete(ChannelFuture)} is directly called by an I/O
+ * thread.  Therefore, performing a time consuming task or a blocking operation
+ * in the handler method can cause an unexpected pause during I/O.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

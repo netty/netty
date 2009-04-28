@@ -29,15 +29,17 @@ package org.jboss.netty.channel;
  *
  * <h3>Sub-types</h3>
  * <p>
- * This is a tag interface.  There are two sub-interfaces which process a
- * received event, one for upstream events and the other for downstream events:
+ * {@link ChannelHandler} itself does not provide any method.  To handle a
+ * {@link ChannelEvent} you need to implement its sub-interfaces.  There are
+ * two sub-interfaces which handles a received event, one for upstream events
+ * and the other for downstream events:
  * <ul>
  * <li>{@link ChannelUpstreamHandler} handles and intercepts an upstream {@link ChannelEvent}.</li>
  * <li>{@link ChannelDownstreamHandler} handles and intercepts a downstream {@link ChannelEvent}.</li>
  * </ul>
  *
  * You will also find more detailed explanation from the documentation of
- * each sub-type on how an event is interpreted when it goes upstream and
+ * each sub-interface on how an event is interpreted when it goes upstream and
  * downstream respectively.
  *
  * <h3>The context object</h3>
@@ -46,14 +48,14 @@ package org.jboss.netty.channel;
  * object.  The {@link ChannelHandler} is supposed to interact with the
  * {@link ChannelPipeline} it belongs to via the context object.  Using the
  * context object, the {@link ChannelHandler} can pass events to the next
- * or previous handler or modify the behavior of the pipeline by adding or
+ * or the previous handler or modify the behavior of the pipeline by adding or
  * removing a handler for example.
  *
  * <h3>Additional resources worth reading</h3>
  * <p>
- * Please refer to the {@link ChannelEvent} documentation to find out what a
- * upstream event and a downstream event are and what fundamental differences
- * they have, if you didn't read yet.
+ * Please refer to the {@link ChannelEvent} and {@link ChannelPipeline}
+ * documentation to find out what a upstream event and a downstream event are,
+ * what fundamental differences they have, and how they flow in a pipeline.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -61,6 +63,7 @@ package org.jboss.netty.channel;
  * @version $Rev$, $Date$
  *
  * @apiviz.landmark
+ * @apiviz.exclude ^org\.jboss\.netty\.handler\..*$
  */
 public interface ChannelHandler {
     // This is a tag interface.

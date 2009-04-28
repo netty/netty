@@ -27,12 +27,36 @@ package org.jboss.netty.channel;
  * {@link ChannelHandler} and the {@link ChannelPipeline} it belongs to.
  * Via a {@link ChannelHandlerContext}, a {@link ChannelHandler} can send
  * an upstream or downstream {@link ChannelEvent} to the next or previous
- * {@link ChannelHandler} in the {@link ChannelPipeline}.
+ * {@link ChannelHandler} in a {@link ChannelPipeline}.
  *
  * <pre>
- * +---------+ 1 .. 1 +----------------+ 1 .. n +----------+ 1 .. 1 +---------+
- * | Handler |------->| HandlerContext |------->| Pipeline |------->| Channel |
- * +---------+        +----------------+        +----------+        +---------+
+ * +---------+ 1 .. 1 +----------+ 1    n +---------+ n    m +---------+
+ * | Channel |--------| Pipeline |--------| Context |--------| Handler |
+ * +---------+        +----------+        +---------+        +---------+
+ *  n = the number of the handler entries in a pipeline
+ * </pre>
+ *
+ * Please note that a {@link ChannelHandler} instance can be added to more than
+ * one {@link ChannelPipeline}.  It means a single {@link ChannelHandler}
+ * instance can have more than one {@link ChannelHandlerContext} and therefore
+ * can be invoked with different {@link ChannelHandlerContext}s if it is added
+ * to one or more {@link ChannelPipeline}s more than once.  For example, the
+ * following handler will have as many independent attachments as how many
+ * times it is added to pipelines, regardless if it is added to the same
+ * pipeline multiple times or added to different pipelines multiple times:
+ * <pre>
+ * public class FibonacciHandler extends SimpleUpstreamChannelHandler {
+ *   public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt) {
+ *     Integer a = (Integer) ctx.getAttachment();
+ *     Integer b = (Integer) evt.getMessage();
+ *
+ *     if (a == null) {
+ *       a = 0;
+ *     }
+ *
+ *     ctx.setAttachment(Integer.valueOf(a + b));
+ *   }
+ * }
  * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
