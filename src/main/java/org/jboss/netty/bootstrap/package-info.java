@@ -22,8 +22,8 @@
  */
 
 /**
- * Helper classes which enable an easy implementation of typical client side
- * and server side channel initialization.
+ * IoC/DI friendly helper classes which enable an easy implementation of
+ * typical client side and server side channel initialization.
  *
  * @apiviz.landmark
  */
