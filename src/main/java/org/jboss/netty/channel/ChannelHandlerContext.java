@@ -45,18 +45,35 @@ package org.jboss.netty.channel;
  * times it is added to pipelines, regardless if it is added to the same
  * pipeline multiple times or added to different pipelines multiple times:
  * <pre>
- * public class FibonacciHandler extends SimpleUpstreamChannelHandler {
+ * public class FactorialHandler extends SimpleUpstreamChannelHandler {
+ *
+ *   // This handler will receive a sequence of increasing integers starting
+ *   // from 1.
  *   public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt) {
  *     Integer a = (Integer) ctx.getAttachment();
  *     Integer b = (Integer) evt.getMessage();
  *
  *     if (a == null) {
- *       a = 0;
+ *       a = 1;
  *     }
  *
- *     ctx.setAttachment(Integer.valueOf(a + b));
+ *     ctx.setAttachment(Integer.valueOf(a * b));
  *   }
  * }
+ *
+ * // Different context objects are given to "f1", "f2", "f3", and "f4" even if
+ * //.they refer to the same handler instance.  Because the FactorialHandler
+ * // stores its state in a context object (as an attachment), the factorial is
+ * // calculated correctly 4 times.
+ * FactorialHandler fh = new FactorialHandler();
+ *
+ * ChannelPipeline p1 = Channels.pipeline();
+ * p1.addLast("f1", fh);
+ * p1.addLast("f2", fh);
+ *
+ * ChannelPipeline p2 = Channels.pipeline();
+ * p2.addLast("f3", fh);
+ * p2.addLast("f4", fh);
  * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
