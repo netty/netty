@@ -53,6 +53,12 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * A helper class which creates a new server-side {@link Channel} and accepts
  * incoming connections.
  *
+ * <h3>Only for connection oriented transports</h3>
+ *
+ * Do not use this helper if you are using a connectionless transport such as
+ * UDP/IP which does not accept an incoming connection but receives messages by
+ * itself without creating a child channel.
+ *
  * <h3>Parent channel and its children</h3>
  *
  * A parent channel is a channel which is supposed to accept incoming
