@@ -70,7 +70,7 @@ import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
  * @version $Rev$, $Date$
  *
  * @apiviz.has org.jboss.netty.channel.ChannelPipelineFactory
- * @apiviz.has org.jboss.netty.channel.ReceiveBufferSizePredictor
+ * @apiviz.composedOf org.jboss.netty.channel.ReceiveBufferSizePredictor
  */
 public interface ChannelConfig {
 
