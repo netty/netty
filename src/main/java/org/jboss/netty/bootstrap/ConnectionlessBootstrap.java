@@ -226,41 +226,6 @@ public class ConnectionlessBootstrap extends Bootstrap {
         return channel;
     }
 
-    @ChannelPipelineCoverage("one")
-    private final class ConnectionlessBinder extends SimpleChannelUpstreamHandler {
-
-        private final SocketAddress localAddress;
-        private final BlockingQueue<ChannelFuture> futureQueue;
-
-        ConnectionlessBinder(SocketAddress localAddress, BlockingQueue<ChannelFuture> futureQueue) {
-            this.localAddress = localAddress;
-            this.futureQueue = futureQueue;
-        }
-
-        @Override
-        public void channelOpen(
-                ChannelHandlerContext ctx,
-                ChannelStateEvent evt) {
-            evt.getChannel().getConfig().setPipelineFactory(getPipelineFactory());
-
-            // Apply options.
-            evt.getChannel().getConfig().setOptions(getOptions());
-
-            boolean finished = futureQueue.offer(evt.getChannel().bind(localAddress));
-            assert finished;
-            ctx.sendUpstream(evt);
-        }
-
-        @Override
-        public void exceptionCaught(
-                ChannelHandlerContext ctx, ExceptionEvent e)
-                throws Exception {
-            boolean finished = futureQueue.offer(failedFuture(e.getChannel(), e.getCause()));
-            assert finished;
-            ctx.sendUpstream(e);
-        }
-    }
-
     /**
      * Creates a new connected channel with the current {@code "remoteAddress"}
      * and {@code "localAddress"} option.  If the {@code "localAddress"} option
@@ -370,5 +335,40 @@ public class ConnectionlessBootstrap extends Bootstrap {
         pipeline.remove("connector");
 
         return future;
+    }
+
+    @ChannelPipelineCoverage("one")
+    private final class ConnectionlessBinder extends SimpleChannelUpstreamHandler {
+    
+        private final SocketAddress localAddress;
+        private final BlockingQueue<ChannelFuture> futureQueue;
+    
+        ConnectionlessBinder(SocketAddress localAddress, BlockingQueue<ChannelFuture> futureQueue) {
+            this.localAddress = localAddress;
+            this.futureQueue = futureQueue;
+        }
+    
+        @Override
+        public void channelOpen(
+                ChannelHandlerContext ctx,
+                ChannelStateEvent evt) {
+            evt.getChannel().getConfig().setPipelineFactory(getPipelineFactory());
+    
+            // Apply options.
+            evt.getChannel().getConfig().setOptions(getOptions());
+    
+            boolean finished = futureQueue.offer(evt.getChannel().bind(localAddress));
+            assert finished;
+            ctx.sendUpstream(evt);
+        }
+    
+        @Override
+        public void exceptionCaught(
+                ChannelHandlerContext ctx, ExceptionEvent e)
+                throws Exception {
+            boolean finished = futureQueue.offer(failedFuture(e.getChannel(), e.getCause()));
+            assert finished;
+            ctx.sendUpstream(e);
+        }
     }
 }
