@@ -55,6 +55,8 @@ import java.net.SocketAddress;
  * @apiviz.landmark
  * @apiviz.composedOf org.jboss.netty.channel.ChannelConfig
  * @apiviz.composedOf org.jboss.netty.channel.ChannelPipeline
+ *
+ * @apiviz.exclude ^org\.jboss\.netty\.channel\.([a-z]+\.)+[^\.]+Channel$
  */
 public interface Channel extends Comparable<Channel>{
 
