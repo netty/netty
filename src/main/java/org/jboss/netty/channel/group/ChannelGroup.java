@@ -69,7 +69,7 @@ import org.jboss.netty.channel.ServerChannel;
  *     // Start the server
  *     b.getPipeline().addLast("handler", new MyHandler());
  *     Channel serverChannel = b.bind(..);
- *     <strong>allChannels.add(serverChannel);<strong>
+ *     <strong>allChannels.add(serverChannel);</strong>
  *
  *     ... Wait until the shutdown signal reception ...
  *
