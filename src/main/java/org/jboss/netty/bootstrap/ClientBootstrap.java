@@ -229,7 +229,9 @@ public class ClientBootstrap extends Bootstrap {
             throw new ChannelPipelineException("Failed to initialize a pipeline.", e);
         }
 
-        pipeline.addFirst("connector", new Connector(remoteAddress, localAddress, futureQueue));
+        pipeline.addFirst(
+                "connector", new Connector(
+                        this, remoteAddress, localAddress, futureQueue));
 
         getFactory().newChannel(pipeline);
 
@@ -249,15 +251,19 @@ public class ClientBootstrap extends Bootstrap {
     }
 
     @ChannelPipelineCoverage("one")
-    private final class Connector extends SimpleChannelUpstreamHandler {
+    static final class Connector extends SimpleChannelUpstreamHandler {
+        private final Bootstrap bootstrap;
         private final SocketAddress localAddress;
         private final BlockingQueue<ChannelFuture> futureQueue;
         private final SocketAddress remoteAddress;
         private volatile boolean finished = false;
 
-        Connector(SocketAddress remoteAddress,
+        Connector(
+                Bootstrap bootstrap,
+                SocketAddress remoteAddress,
                 SocketAddress localAddress,
                 BlockingQueue<ChannelFuture> futureQueue) {
+            this.bootstrap = bootstrap;
             this.localAddress = localAddress;
             this.futureQueue = futureQueue;
             this.remoteAddress = remoteAddress;
@@ -270,7 +276,7 @@ public class ClientBootstrap extends Bootstrap {
             context.sendUpstream(event);
 
             // Apply options.
-            event.getChannel().getConfig().setOptions(getOptions());
+            event.getChannel().getConfig().setOptions(bootstrap.getOptions());
 
             // Bind or connect.
             if (localAddress != null) {
