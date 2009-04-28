@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd" [
 <!ENTITY % CustomDTD SYSTEM "../custom.dtd">
-%CustomDTD; 
+%CustomDTD;
 ]>
 <chapter id="architecture">
   <title>Architectural Overview</title>
-  
+
   <mediaobject>
     <imageobject>
       <imagedata fileref="images/architecture.png" format="PNG"/>
@@ -62,7 +62,8 @@
       </itemizedlist>
     </para>
     <para>
-      For more information, please refer to <xref linkend="buffer"/>.
+      For more information, please refer to the
+      <ulink url="&API;buffer/package-summary.html#package_description"><literal>org.jboss.netty.buffer</literal> package description</ulink>.
     </para>
   </section>
 
@@ -141,7 +142,7 @@
       extensible.
     </para>
   </section>
-  
+
   <section>
     <title>Event Model based on the Interceptor Chain Pattern</title>
     <para>
@@ -167,7 +168,7 @@
         Object message = evt.getMessage();
         // Do something with the received message.
         ...
-        
+
         // And forward the event to the next handler.
         ctx.sendUpstream(evt);
     }
@@ -181,7 +182,7 @@
         Object message = evt.getMessage();
         // Do something with the message to be written.
         ...
-        
+
         // And forward the event to the next handler.
         ctx.sendDownstream(evt);
     }
@@ -191,7 +192,7 @@
       API documentation of &ChannelEvent; and &ChannelPipeline;.
     </para>
   </section>
-  
+
   <section>
     <title>Advanced Components for More Rapid Development</title>
     <para>
@@ -199,7 +200,7 @@
       implementation of all types of network applications, Netty provides a set
       of advanced features to accelerate the development pace even more.
     </para>
-    
+
     <section>
       <title>Codec framework</title>
       <para>
@@ -222,7 +223,7 @@
         simply whatever.
       </para>
     </section>
-    
+
     <section>
       <title>SSL / TLS Support</title>
       <para>
@@ -293,7 +294,7 @@
         </itemizedlist>
       </para>
     </section>
-    
+
     <section>
       <title>Google Protocol Buffer Integration</title>
       <para>
