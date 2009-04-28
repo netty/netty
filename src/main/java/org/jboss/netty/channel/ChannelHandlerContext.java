@@ -62,7 +62,7 @@ package org.jboss.netty.channel;
  * }
  *
  * // Different context objects are given to "f1", "f2", "f3", and "f4" even if
- * //.they refer to the same handler instance.  Because the FactorialHandler
+ * // they refer to the same handler instance.  Because the FactorialHandler
  * // stores its state in a context object (as an attachment), the factorial is
  * // calculated correctly 4 times.
  * FactorialHandler fh = new FactorialHandler();
