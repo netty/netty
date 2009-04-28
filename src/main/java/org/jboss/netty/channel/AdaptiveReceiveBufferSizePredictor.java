@@ -30,10 +30,10 @@ import java.util.List;
  * decreases the predicted buffer size on feed back.
  * <p>
  * It gradually increases the expected number of readable bytes if the previous
- * read filled the allocated buffer.  It gradually decreases the expected number
- * of readable bytes if the read operation was not able to fill a certain amount
- * of the allocated buffer two times consecutively.  Otherwise, it keeps
- * returning the previous prediction.
+ * read fully filled the allocated buffer.  It gradually decreases the expected
+ * number of readable bytes if the read operation was not able to fill a certain
+ * amount of the allocated buffer two times consecutively.  Otherwise, it keeps
+ * returning the same prediction.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
