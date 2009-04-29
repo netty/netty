@@ -39,6 +39,12 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  * A {@link MemoryAwareThreadPoolExecutor} which maintains the
  * {@link ChannelEvent} order for the same {@link Channel}.
  * <p>
+ * {@link OrderedMemoryAwareThreadPoolExecutor} executes the queued task in the
+ * same thread if an existing thread is running a task associated with the same
+ * {@link Channel}.  This behavior is to make sure the events from the same
+ * {@link Channel} are handled in a correct order.  A different thread might be
+ * chosen only when the task queue of the {@link Channel} is empty.
+ * <p>
  * Although {@link OrderedMemoryAwareThreadPoolExecutor} guarantees the order
  * of {@link ChannelEvent}s.  It does not guarantee that the invocation will be
  * made by the same thread for the same channel, but it does guarantee that
