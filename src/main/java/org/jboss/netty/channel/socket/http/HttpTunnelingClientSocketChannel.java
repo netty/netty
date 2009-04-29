@@ -167,7 +167,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         channel.write(ChannelBuffers.copiedBuffer(msg, "ASCII"));
     }
 
-    public void sendChunk(ChannelBuffer a) {
+    void sendChunk(ChannelBuffer a) {
         int size = a.readableBytes();
         String hex = Integer.toHexString(size) + HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR;
 
@@ -180,7 +180,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         }
     }
 
-    public byte[] receiveChunk() {
+    byte[] receiveChunk() {
         byte[] buf = null;
         try {
             buf = messages.take();
@@ -211,13 +211,13 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         }
     }
 
-    public void closeSocket() {
+    void closeSocket() {
         setClosed();
         closed = true;
         channel.close();
     }
 
-    public void bindSocket(SocketAddress localAddress) {
+    void bindSocket(SocketAddress localAddress) {
         channel.bind(localAddress);
     }
 
