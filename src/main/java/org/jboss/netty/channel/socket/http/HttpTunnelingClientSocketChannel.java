@@ -212,18 +212,20 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
     }
 
     void closeSocket() {
-        // Send the end of chunk.
-        synchronized (writeLock) {
-            ChannelFuture future = channel.write(ChannelBuffers.copiedBuffer(
-                    "0" +
-                    HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR +
-                    HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR,
-                    "ASCII"));
-            future.awaitUninterruptibly();
+        if (setClosed()) {
+            // Send the end of chunk.
+            synchronized (writeLock) {
+                ChannelFuture future = channel.write(ChannelBuffers.copiedBuffer(
+                        "0" +
+                        HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR +
+                        HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR,
+                        "ASCII"));
+                future.awaitUninterruptibly();
+            }
+
+            closed = true;
+            channel.close();
         }
-        setClosed();
-        closed = true;
-        channel.close();
     }
 
     void bindSocket(SocketAddress localAddress) {
