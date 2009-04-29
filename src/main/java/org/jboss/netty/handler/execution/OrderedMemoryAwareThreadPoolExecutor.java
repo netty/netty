@@ -64,6 +64,9 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  * Please note that the events of different channels are independent from each
  * other.  That is, an event of Channel B will not be blocked by an event of
  * Channel A and vice versa, unless the thread pool is exhausted.
+ * <p>
+ * If you want the events associated with the same channel to be executed
+ * simultaneously, please use {@link MemoryAwareThreadPoolExecutor} instead.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
