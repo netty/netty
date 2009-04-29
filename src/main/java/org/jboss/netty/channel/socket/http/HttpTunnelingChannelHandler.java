@@ -112,9 +112,7 @@ class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
                         cause = ex2;
                     }
                 } else {
-                    if (invalidated.compareAndSet(false, true)) {
-                        session.invalidate();
-                    }
+                    invalidateHttpSession();
                     e.getChannel().close();
                 }
             } finally {
@@ -132,16 +130,22 @@ class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
         logger.warn("Unexpected exception", e.getCause());
-        if (invalidated.compareAndSet(false, true)) {
-            session.invalidate();
-        }
+        invalidateHttpSession();
         e.getChannel().close();
     }
 
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        invalidateHttpSession();
+    }
+
+    private void invalidateHttpSession() {
         if (invalidated.compareAndSet(false, true)) {
-            session.invalidate();
+            try {
+                session.invalidate();
+            } catch (Exception e) {
+                // Gulp - https://jira.jboss.org/jira/browse/JBWEB-139
+            }
         }
     }
 
