@@ -146,6 +146,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         this.remoteAddress = remoteAddress;
         URI url = remoteAddress.getUri();
         if (reconnect) {
+            closeSocket();
             DefaultChannelPipeline channelPipeline = new DefaultChannelPipeline();
             channelPipeline.addLast("DelimiterBasedFrameDecoder", handler);
             channelPipeline.addLast("servletHandler", servletHandler);
