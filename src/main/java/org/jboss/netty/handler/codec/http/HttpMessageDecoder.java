@@ -53,7 +53,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     protected volatile HttpMessage message;
     private volatile ChannelBuffer content;
     private volatile int headerSize;
-    private volatile int chunkSize;
+    private volatile long chunkSize;
 
     /**
      * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -144,7 +144,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 message.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
                 return message;
             } else {
-                int contentLength = message.getContentLength(-1);
+                long contentLength = message.getContentLength(-1);
                 if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
                     content = ChannelBuffers.EMPTY_BUFFER;
                     return reset();
@@ -204,13 +204,14 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             return reset();
         }
         case READ_FIXED_LENGTH_CONTENT_AS_CHUNKS: {
-            int chunkSize = this.chunkSize;
+            long chunkSize = this.chunkSize;
             HttpChunk chunk;
             if (chunkSize > maxChunkSize) {
                 chunk = new DefaultHttpChunk(buffer.readBytes(maxChunkSize));
                 chunkSize -= maxChunkSize;
             } else {
-                chunk = new DefaultHttpChunk(buffer.readBytes(chunkSize));
+                assert chunkSize <= Integer.MAX_VALUE;
+                chunk = new DefaultHttpChunk(buffer.readBytes((int) chunkSize));
                 chunkSize = 0;
             }
             this.chunkSize = chunkSize;
@@ -244,18 +245,20 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             }
         }
         case READ_CHUNKED_CONTENT: {
-            HttpChunk chunk = new DefaultHttpChunk(buffer.readBytes(chunkSize));
+            assert chunkSize <= Integer.MAX_VALUE;
+            HttpChunk chunk = new DefaultHttpChunk(buffer.readBytes((int) chunkSize));
             checkpoint(State.READ_CHUNK_DELIMITER);
             return chunk;
         }
         case READ_CHUNKED_CONTENT_AS_CHUNKS: {
-            int chunkSize = this.chunkSize;
+            long chunkSize = this.chunkSize;
             HttpChunk chunk;
             if (chunkSize > maxChunkSize) {
                 chunk = new DefaultHttpChunk(buffer.readBytes(maxChunkSize));
                 chunkSize -= maxChunkSize;
             } else {
-                chunk = new DefaultHttpChunk(buffer.readBytes(chunkSize));
+                assert chunkSize <= Integer.MAX_VALUE;
+                chunk = new DefaultHttpChunk(buffer.readBytes((int) chunkSize));
                 chunkSize = 0;
             }
             this.chunkSize = chunkSize;
@@ -350,11 +353,13 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     private void readFixedLengthContent(ChannelBuffer buffer) {
-        int length = message.getContentLength(-1);
+        long length = message.getContentLength(-1);
+        assert length <= Integer.MAX_VALUE;
+
         if (content == null) {
-            content = buffer.readBytes(length);
+            content = buffer.readBytes((int) length);
         } else {
-            content.writeBytes(buffer.readBytes(length));
+            content.writeBytes(buffer.readBytes((int) length));
         }
     }
 

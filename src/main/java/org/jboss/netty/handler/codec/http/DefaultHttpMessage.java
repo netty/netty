@@ -148,14 +148,14 @@ public class DefaultHttpMessage implements HttpMessage {
         headers.remove(name);
     }
 
-    public int getContentLength() {
+    public long getContentLength() {
         return getContentLength(0);
     }
 
-    public int getContentLength(int defaultValue) {
+    public long getContentLength(long defaultValue) {
         List<String> contentLength = headers.get(HttpHeaders.Names.CONTENT_LENGTH);
         if (contentLength != null && contentLength.size() > 0) {
-            return Integer.parseInt(contentLength.get(0));
+            return Long.parseLong(contentLength.get(0));
         }
         return defaultValue;
     }

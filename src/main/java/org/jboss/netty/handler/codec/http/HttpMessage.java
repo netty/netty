@@ -55,9 +55,9 @@ public interface HttpMessage {
 
     void removeHeader(String name);
 
-    int getContentLength();
+    long getContentLength();
 
-    int getContentLength(int defaultValue);
+    long getContentLength(long defaultValue);
 
     void setContent(ChannelBuffer content);
 
