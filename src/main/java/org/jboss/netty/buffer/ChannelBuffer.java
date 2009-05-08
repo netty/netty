@@ -1384,8 +1384,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Returns a slice of this buffer's sub-region. Modifying the content of
      * the returned buffer or this buffer affects each other's content while
-     * they maintain separate indexes and marks.  This method is identical to
-     * {@code buf.slice(buf.readerIndex(), buf.readableBytes())}.
+     * they maintain separate indexes and marks.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
      */
