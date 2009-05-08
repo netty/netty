@@ -42,7 +42,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("one")
+@ChannelPipelineCoverage("all")
 public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
     private static final ChannelBuffer LAST_CHUNK = copiedBuffer("0\r\n\r\n", "ASCII");
