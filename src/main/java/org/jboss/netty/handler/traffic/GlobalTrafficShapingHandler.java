@@ -34,23 +34,28 @@ import org.jboss.netty.util.ObjectSizeEstimator;
  * This implementation of the {@link AbstractTrafficShapingHandler} is for global
  * traffic shaping, that is to say a global limitation of the bandwidth, whatever
  * the number of opened channels.<br><br>
- * 
+ *
  * The general use should be as follow:<br>
  * <ul>
  * <li>Create your unique GlobalTrafficShapingHandler like:<br><br>
  * <tt>GlobalTrafficShapingHandler myHandler = new GlobalTrafficShapingHandler(executor);</tt><br><br>
  * executor could be created using <tt>Executors.newCachedThreadPool();<tt><br>
+ * <tt>pipeline.addLast("GLOBAL_TRAFFIC_SHAPING", myHandler);</tt><br><br>
+ * 
+ * <b>Note that this handler has a Pipeline Coverage of "all" which means only one such handler must be created
+ * and shared among all channels as the counter must be shared among all channels.</b><br><br> 
+ * 
  * Other arguments can be passed like write or read limitation (in bytes/s where 0 means no limitation)
  * or the check interval (in millisecond) that represents the delay between two computations of the
  * bandwidth and so the call back of the doAccounting method (0 means no accounting at all).<br><br>
- * 
- * Even if 0 means no accounting for checkInterval and you don't need such accounting, 
+ *
+ * A value of 0 means no accounting for checkInterval. If you need traffic shaping but no such accounting,
  * it is recommended to set a positive value, even if it is high since the precision of the
  * Traffic Shaping depends on the period where the traffic is computed. The highest the interval,
  * the less precise the traffic shaping will be. It is suggested as higher value something close
  * to 5 or 10 minutes.<br>
  * </li>
- * <li>Add it in your pipeline, before a recommended {@link ExecutionHandler} (like 
+ * <li>Add it in your pipeline, before a recommended {@link ExecutionHandler} (like
  * {@link OrderedMemoryAwareThreadPoolExecutor} or {@link MemoryAwareThreadPoolExecutor}).<br>
  * <tt>pipeline.addLast("GLOBAL_TRAFFIC_SHAPING", myHandler);</tt><br><br>
  * </li>
@@ -60,17 +65,22 @@ import org.jboss.netty.util.ObjectSizeEstimator;
  * </li>
  * </ul><br>
  *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Frederic Bregier
+ * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("all")
 public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     /**
-     * Create the global TrafficCounter 
+     * Create the global TrafficCounter
      */
     void createGlobalTrafficCounter() {
-        TrafficCounter2 tc = new TrafficCounter2(this,this.executor,"GlobalTC",this.checkInterval);
-        this.setTrafficCounter(tc);
+        TrafficCounter tc = new TrafficCounter(this, executor, "GlobalTC",
+                checkInterval);
+        setTrafficCounter(tc);
         tc.start();
     }
+
     /**
      * @param executor
      * @param writeLimit
@@ -121,7 +131,8 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     public GlobalTrafficShapingHandler(ObjectSizeEstimator objectSizeEstimator,
             Executor executor, long writeLimit, long readLimit,
             long checkInterval) {
-        super(objectSizeEstimator, executor, writeLimit, readLimit, checkInterval);
+        super(objectSizeEstimator, executor, writeLimit, readLimit,
+                checkInterval);
         createGlobalTrafficCounter();
     }
 

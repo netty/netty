@@ -22,63 +22,51 @@
  */
 package org.jboss.netty.handler.traffic;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ExternalResourceReleasable;
 
 /**
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Frederic Bregier (fredbregier@free.fr)
- * @version $Rev$, $Date$
- *
- * TrafficCounter is associated with {@link TrafficShapingHandler} and
- * should be created through a {@link TrafficCounterFactory}.<br>
+ * TrafficCounter is associated with {@link AbstractTrafficShapingHandler}.<br>
  * <br>
- * A TrafficCounter can limit the traffic or not, globally or per channel,
- * and always compute statistics on read and written bytes at the specified
- * interval.
+ * A TrafficCounter has for goal to count the traffic in order to enable to limit the traffic or not,
+ * globally or per channel. It compute statistics on read and written bytes at the specified
+ * interval and call back the {@link AbstractTrafficShapingHandler} doAccounting method at every
+ * specified interval. If this interval is set to 0, therefore no accounting will be done and only
+ * statistics will be computed at each receive or write operations.
  *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Frederic Bregier
+ * @version $Rev$, $Date$
  */
-public class TrafficCounter implements ExternalResourceReleasable {
-    // XXX: Should the constructor be package private?
-    //      We already have TrafficCounterFactory.newChannelTrafficCounter.
-    // XXX: Should TrafficCounter be able to be instantiated without TrafficCounterFactory?
-
+public class TrafficCounter {
     /**
-     * Internal logger
+     * Current written bytes
      */
-    private static InternalLogger logger = InternalLoggerFactory
-            .getInstance(TrafficCounter.class);
+    private final AtomicLong currentWrittenBytes = new AtomicLong(0);
 
     /**
-     * Current writing bytes
+     * Current read bytes
      */
-    private final AtomicLong currentWritingBytes = new AtomicLong(0);
+    private final AtomicLong currentReadBytes = new AtomicLong(0);
 
     /**
-     * Current reading bytes
-     */
-    private final AtomicLong currentReadingBytes = new AtomicLong(0);
-
-    /**
-     * Long life writing bytes
+     * Long life written bytes
      */
     private final AtomicLong cumulativeWrittenBytes = new AtomicLong(0);
 
     /**
-     * Long life reading bytes
+     * Long life read bytes
      */
     private final AtomicLong cumulativeReadBytes = new AtomicLong(0);
+
     /**
      * Last Time where cumulative bytes where reset to zero
      */
     private long lastCumulativeTime;
+
     /**
      * Last writing bandwidth
      */
@@ -95,29 +83,20 @@ public class TrafficCounter implements ExternalResourceReleasable {
     private final AtomicLong lastTime = new AtomicLong(0);
 
     /**
-     * Last written bytes number
+     * Last written bytes number during last check interval
      */
     private long lastWrittenBytes = 0;
 
     /**
-     * Last read bytes number
+     * Last read bytes number during last check interval
      */
     private long lastReadBytes = 0;
 
     /**
-     * Current Limit in B/s to apply to write
+     * Delay between two captures
      */
-    private long writeLimit = 0;
-
-    /**
-     * Current Limit in B/s to apply to read
-     */
-    private long readLimit = 0;
-
-    /**
-     * Delay between two capture
-     */
-    private long checkInterval = TrafficCounterFactory.DEFAULT_CHECK_INTERVAL;
+    AtomicLong checkInterval = new AtomicLong(
+            AbstractTrafficShapingHandler.DEFAULT_CHECK_INTERVAL);
 
     // default 1 s
 
@@ -127,29 +106,24 @@ public class TrafficCounter implements ExternalResourceReleasable {
     private final String name;
 
     /**
-     * Is this monitor for a channel monitoring or for global monitoring
+     * The associated TrafficShapingHandler
      */
-    private boolean isPerChannel = false;
+    private AbstractTrafficShapingHandler trafficShapingHandler = null;
 
     /**
-     * Associated monitoredChannel if any (global MUST NOT have any)
+     * Default Executor
      */
-    protected Channel monitoredChannel = null;
+    private Executor executor = null;
 
     /**
-     * The associated TrafficCounterFactory
+     * Is Monitor active
      */
-    private TrafficCounterFactory factory = null;
+    AtomicBoolean monitorActive = new AtomicBoolean(false);
 
     /**
-     * Default ExecutorService
+     * Monitor
      */
-    private ExecutorService executorService = null;
-
-    /**
-     * Thread that will host this monitor
-     */
-    private Future<?> monitorFuture = null;
+    private TrafficMonitoring trafficMonitoring = null;
 
     /**
      * Class to implement monitoring at fix delay
@@ -157,27 +131,23 @@ public class TrafficCounter implements ExternalResourceReleasable {
      */
     private class TrafficMonitoring implements Runnable {
         /**
-         * Delay between two capture
+         * The associated TrafficShapingHandler
          */
-        private final long checkInterval1;
-        /**
-         * The associated TrafficCounterFactory
-         */
-        private final TrafficCounterFactory factory1;
+        private final AbstractTrafficShapingHandler trafficShapingHandler1;
+
         /**
          * The associated TrafficCounter
          */
         private final TrafficCounter counter;
 
         /**
-         * @param checkInterval
-         * @param factory
+         * @param trafficShapingHandler
          * @param counter
          */
-        protected TrafficMonitoring(long checkInterval,
-                TrafficCounterFactory factory, TrafficCounter counter) {
-            checkInterval1 = checkInterval;
-            factory1 = factory;
+        protected TrafficMonitoring(
+                AbstractTrafficShapingHandler trafficShapingHandler,
+                TrafficCounter counter) {
+            trafficShapingHandler1 = trafficShapingHandler;
             this.counter = counter;
         }
 
@@ -186,17 +156,18 @@ public class TrafficCounter implements ExternalResourceReleasable {
          */
         public void run() {
             try {
-                for (;;) {
-                    if (checkInterval1 > 0) {
-                        Thread.sleep(checkInterval1);
+                for (; monitorActive.get();) {
+                    long check = counter.checkInterval.get();
+                    if (check > 0) {
+                        Thread.sleep(check);
                     } else {
-                        // Delay goes to TrafficCounterFactory.NO_STAT, so exit
+                        // Delay goes to 0, so exit
                         return;
                     }
                     long endTime = System.currentTimeMillis();
                     counter.resetAccounting(endTime);
-                    if (factory1 != null) {
-                        factory1.doAccounting(counter);
+                    if (trafficShapingHandler1 != null) {
+                        trafficShapingHandler1.doAccounting(counter);
                     }
                 }
             } catch (InterruptedException e) {
@@ -204,20 +175,22 @@ public class TrafficCounter implements ExternalResourceReleasable {
             }
         }
     }
+
     /**
      * Start the monitoring process
      *
      */
     public void start() {
         synchronized (lastTime) {
-            if (monitorFuture != null) {
+            if (monitorActive.get()) {
                 return;
             }
             lastTime.set(System.currentTimeMillis());
-            if (checkInterval > 0) {
-                monitorFuture =
-                    executorService.submit(new TrafficMonitoring(checkInterval,
-                        factory, this));
+            if (checkInterval.get() > 0) {
+                monitorActive.set(true);
+                trafficMonitoring = new TrafficMonitoring(
+                        trafficShapingHandler, this);
+                executor.execute(trafficMonitoring);
             }
         }
     }
@@ -228,21 +201,19 @@ public class TrafficCounter implements ExternalResourceReleasable {
      */
     public void stop() {
         synchronized (lastTime) {
-            if (monitorFuture == null) {
+            if (!monitorActive.get()) {
                 return;
             }
-            monitorFuture.cancel(true);
-            monitorFuture = null;
+            monitorActive.set(false);
             resetAccounting(System.currentTimeMillis());
-            if (factory != null) {
-                factory.doAccounting(this);
+            if (trafficShapingHandler != null) {
+                trafficShapingHandler.doAccounting(this);
             }
-            setMonitoredChannel(null);
         }
     }
 
     /**
-     * Set the accounting on Read and Write
+     * Reset the accounting on Read and Write
      *
      * @param newLastTime
      */
@@ -253,8 +224,8 @@ public class TrafficCounter implements ExternalResourceReleasable {
                 // nothing to do
                 return;
             }
-            lastReadBytes = currentReadingBytes.getAndSet(0);
-            lastWrittenBytes = currentWritingBytes.getAndSet(0);
+            lastReadBytes = currentReadBytes.getAndSet(0);
+            lastWrittenBytes = currentWrittenBytes.getAndSet(0);
             lastReadThroughput = lastReadBytes / interval * 1000;
             // nb byte / checkInterval in ms * 1000 (1s)
             lastWriteThroughput = lastWrittenBytes / interval * 1000;
@@ -263,240 +234,47 @@ public class TrafficCounter implements ExternalResourceReleasable {
     }
 
     /**
-     * Constructor with the executorService to use, the channel if any, its
-     * name, the limits in Byte/s (not Bit/s) and the checkInterval between two
-     * computations in millisecond
-     *
-     * @param factory
-     *            the associated TrafficCounterFactory
-     * @param executorService
+     * Constructor with the {@link AbstractTrafficShapingHandler} that hosts it, the executorService to use, its
+     * name, the checkInterval between two computations in millisecond
+     * @param trafficShapingHandler the associated AbstractTrafficShapingHandler
+     * @param executor
      *            Should be a CachedThreadPool for efficiency
-     * @param channel
-     *            Not null means this monitors will be for this channel only,
-     *            else it will be for global monitoring. Channel can be set
-     *            later on therefore changing its behavior from global to per
-     *            channel
      * @param name
      *            the name given to this monitor
-     * @param writeLimit
-     *            the write limit in Byte/s
-     * @param readLimit
-     *            the read limit in Byte/s
      * @param checkInterval
      *            the checkInterval in millisecond between two computations
      */
-    public TrafficCounter(TrafficCounterFactory factory,
-            ExecutorService executorService, Channel channel, String name,
-            long writeLimit, long readLimit, long checkInterval) {
-        this.factory = factory;
-        this.executorService = executorService;
+    public TrafficCounter(AbstractTrafficShapingHandler trafficShapingHandler,
+            Executor executor, String name, long checkInterval) {
+        this.trafficShapingHandler = trafficShapingHandler;
+        this.executor = executor;
         this.name = name;
         lastCumulativeTime = System.currentTimeMillis();
-        this.configure(channel, writeLimit, readLimit, checkInterval);
+        configure(checkInterval);
     }
 
     /**
-     * Set the Session monitoredChannel (not for Global Monitor)
-     *
-     * @param channel
-     *            Not null means this monitors will be for this channel only,
-     *            else it will be for global monitoring. Channel can be set
-     *            later on therefore changing its behavior from global to per
-     *            channel
-     */
-    void setMonitoredChannel(Channel channel) {
-        if (channel != null) {
-            monitoredChannel = channel;
-            isPerChannel = true;
-        } else {
-            isPerChannel = false;
-            monitoredChannel = null;
-        }
-    }
-
-    /**
-     * Specifies limits in Byte/s (not Bit/s) but do not changed the checkInterval
-     *
-     * @param channel
-     *            Not null means this monitors will be for this channel only,
-     *            else it will be for global monitoring. Channel can be set
-     *            later on therefore changing its behavior from global to per
-     *            channel
-     * @param newwriteLimit
-     * @param newreadLimit
-     */
-    public void configure(Channel channel, long newwriteLimit,
-            long newreadLimit) {
-        this.writeLimit = newwriteLimit;
-        this.readLimit = newreadLimit;
-        setMonitoredChannel(channel);
-    }
-
-    /**
-     * Specifies limits in Byte/s (not Bit/s) and the specified checkInterval between
+     * Change checkInterval between
      * two computations in millisecond
      *
-     * @param channel
-     *            Not null means this monitors will be for this channel only,
-     *            else it will be for global monitoring. Channel can be set
-     *            later on therefore changing its behavior from global to per
-     *            channel
-     * @param newwriteLimit
-     * @param newreadLimit
      * @param newcheckInterval
      */
-    public void configure(Channel channel, long newwriteLimit,
-            long newreadLimit, long newcheckInterval) {
-        if (this.checkInterval != newcheckInterval) {
-            this.checkInterval = newcheckInterval;
-            if (monitorFuture == null) {
-                this.configure(channel, newwriteLimit, newreadLimit);
-                return;
-            }
-            stop();
-            if (newcheckInterval > 0) {
-                start();
-            } else {
+    public void configure(long newcheckInterval) {
+        if (checkInterval.get() != newcheckInterval) {
+            checkInterval.set(newcheckInterval);
+            if (newcheckInterval <= 0) {
+                stop();
                 // No more active monitoring
                 lastTime.set(System.currentTimeMillis());
-            }
-        }
-        this.configure(channel, newwriteLimit, newreadLimit);
-    }
-    /**
-     * Specifies limits in Byte/s (not Bit/s) but do not changed the checkInterval
-     *
-     * @param newwriteLimit
-     * @param newreadLimit
-     */
-    public void configure(long newwriteLimit,
-            long newreadLimit) {
-        this.writeLimit = newwriteLimit;
-        this.readLimit = newreadLimit;
-    }
-    /**
-     * Specifies limits in Byte/s (not Bit/s) and the specified checkInterval between
-     * two computations in millisecond
-     *
-     * @param newwriteLimit
-     * @param newreadLimit
-     * @param newcheckInterval
-     */
-    public void configure(long newwriteLimit,
-            long newreadLimit, long newcheckInterval) {
-        if (this.checkInterval != newcheckInterval) {
-            this.checkInterval = newcheckInterval;
-            if (monitorFuture == null) {
-                this.configure(newwriteLimit, newreadLimit);
-                return;
-            }
-            stop();
-            if (newcheckInterval > 0) {
-                start();
             } else {
-                // No more active monitoring
-                lastTime.set(System.currentTimeMillis());
-            }
-        }
-        this.configure(newwriteLimit, newreadLimit);
-    }
-
-    /**
-     *
-     * @return the time that should be necessary to wait to respect limit. Can
-     *         be negative time
-     */
-    private long getReadTimeToWait() {
-        synchronized (lastTime) {
-            long interval = System.currentTimeMillis() - lastTime.get();
-            if (interval == 0) {
-                // Time is too short, so just lets continue
-                return 0;
-            }
-            long wait = currentReadingBytes.get() * 1000 / readLimit -
-                    interval;
-            return wait;
-        }
-    }
-
-    /**
-     *
-     * @return the time that should be necessary to wait to respect limit. Can
-     *         be negative time
-     */
-    private long getWriteTimeToWait() {
-        synchronized (lastTime) {
-            long interval = System.currentTimeMillis() - lastTime.get();
-            if (interval == 0) {
-                // Time is too short, so just lets continue
-                return 0;
-            }
-            long wait = currentWritingBytes.get() * 1000 /
-                writeLimit - interval;
-            return wait;
-        }
-    }
-
-    /**
-     * Class to implement setReadable at fix time
-     *
-     */
-    private class ReopenRead implements Runnable {
-        /**
-         * Associated ChannelHandlerContext
-         */
-        private ChannelHandlerContext ctx = null;
-
-        /**
-         * Monitor
-         */
-        private TrafficCounter monitor = null;
-
-        /**
-         * Time to wait before clearing the channel
-         */
-        private long timeToWait = 0;
-
-        /**
-         * @param monitor
-         * @param ctx
-         *            the associated channelHandlerContext
-         * @param timeToWait
-         */
-        protected ReopenRead(ChannelHandlerContext ctx,
-                TrafficCounter monitor, long timeToWait) {
-            this.ctx = ctx;
-            this.monitor = monitor;
-            this.timeToWait = timeToWait;
-        }
-
-        /**
-         * Truly run the waken up of the channel
-         */
-        public void run() {
-            try {
-                Thread.sleep(timeToWait);
-            } catch (InterruptedException e) {
-                // interruption so exit
-                return;
-            }
-            // logger.info("WAKEUP!");
-            if (monitor != null &&
-                    monitor.monitoredChannel != null &&
-                    monitor.monitoredChannel.isConnected()) {
-                // logger.warn(" setReadable TRUE: "+timeToWait);
-                if (ctx.getHandler() instanceof TrafficShapingHandler) {
-                    // readSuspended = false;
-                    ctx.setAttachment(null);
-                }
-                monitor.monitoredChannel.setReadable(true);
+                // Start if necessary
+                start();
             }
         }
     }
 
     /**
-     * If Read is in excess, it will block the read on channel or block until it
-     * will be ready again.
+     * Computes counters for Read.
      *
      * @param ctx
      *            the associated channelHandlerContext
@@ -506,72 +284,20 @@ public class TrafficCounter implements ExternalResourceReleasable {
      */
     void bytesRecvFlowControl(ChannelHandlerContext ctx, long recv)
             throws InterruptedException {
-        currentReadingBytes.addAndGet(recv);
+        currentReadBytes.addAndGet(recv);
         cumulativeReadBytes.addAndGet(recv);
-        if (readLimit == 0) {
-            // no action
-            return;
-        }
-        if (isPerChannel && monitoredChannel != null &&
-                !monitoredChannel.isConnected()) {
-            // no action can be taken since setReadable will throw a
-            // NotYetConnected
-            return;
-        }
-        // compute the number of ms to wait before reopening the channel
-        long wait = getReadTimeToWait();
-        if (wait > 20) { // At least 20ms seems a minimal time in order to
-            // try to limit the traffic
-            if (isPerChannel && monitoredChannel != null &&
-                    monitoredChannel.isConnected()) {
-                // Channel version
-                if (executorService == null) {
-                    // Sleep since no executor
-                    Thread.sleep(wait);
-                    return;
-                }
-                if (ctx.getAttachment() == null) {
-                    if (ctx.getHandler() instanceof TrafficShapingHandler) {
-                        // readSuspended = true;
-                        ctx.setAttachment(Boolean.TRUE);
-                    }
-                    monitoredChannel.setReadable(false);
-                    // logger.info("Read will wakeup after "+wait+" ms "+this);
-                    executorService
-                            .submit(new ReopenRead(ctx, this, wait));
-                } else {
-                    // should be waiting: but can occurs sometime so as a FIX
-                    logger.info("Read sleep ok but should not be here");
-                    Thread.sleep(wait);
-                }
-            } else {
-                // Global version
-                // logger.info("Read sleep "+wait+" ms for "+this);
-                Thread.sleep(wait);
-            }
-        }
     }
 
     /**
-     * If Write is in excess, it will block the write operation until it will be
-     * ready again.
+     * Computes counters for Write.
      *
      * @param write
      *            the size in bytes to write
      * @throws InterruptedException
      */
     void bytesWriteFlowControl(long write) throws InterruptedException {
-        currentWritingBytes.addAndGet(write);
+        currentWrittenBytes.addAndGet(write);
         cumulativeWrittenBytes.addAndGet(write);
-        if (writeLimit == 0) {
-            return;
-        }
-        // compute the number of ms to wait before continue with the channel
-        long wait = getWriteTimeToWait();
-        if (wait > 20) {
-            // Global or Session
-            Thread.sleep(wait);
-        }
     }
 
     /**
@@ -580,12 +306,12 @@ public class TrafficCounter implements ExternalResourceReleasable {
      *         in millisecond
      */
     public long getCheckInterval() {
-        return checkInterval;
+        return checkInterval.get();
     }
 
     /**
      *
-     * @return the current Read Throughput in byte/s
+     * @return the Read Throughput in bytes/s computes in the last check interval
      */
     public long getLastReadThroughput() {
         return lastReadThroughput;
@@ -593,7 +319,7 @@ public class TrafficCounter implements ExternalResourceReleasable {
 
     /**
      *
-     * @return the current Write Throughput in byte/s
+     * @return the Write Throughput in bytes/s computes in the last check interval
      */
     public long getLastWriteThroughput() {
         return lastWriteThroughput;
@@ -601,7 +327,7 @@ public class TrafficCounter implements ExternalResourceReleasable {
 
     /**
      *
-     * @return the current number of byte read since last checkInterval
+     * @return the number of bytes read during the last check Interval
      */
     public long getLastReadBytes() {
         return lastReadBytes;
@@ -609,10 +335,33 @@ public class TrafficCounter implements ExternalResourceReleasable {
 
     /**
      *
-     * @return the current number of byte written since last checkInterval
+     * @return the number of bytes written during the last check Interval
      */
     public long getLastWrittenBytes() {
         return lastWrittenBytes;
+    }
+
+    /**
+    *
+    * @return the current number of bytes read since the last checkInterval
+    */
+    public long getCurrentReadBytes() {
+        return currentReadBytes.get();
+    }
+
+    /**
+     *
+     * @return the current number of bytes written since the last check Interval
+     */
+    public long getCurrentWrittenBytes() {
+        return currentWrittenBytes.get();
+    }
+
+    /**
+     * @return the Time in millisecond of the last check as of System.currentTimeMillis()
+     */
+    public long getLastTime() {
+        return lastTime.get();
     }
 
     /**
@@ -647,6 +396,13 @@ public class TrafficCounter implements ExternalResourceReleasable {
     }
 
     /**
+     * @return the name
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
      * String information
      */
     @Override
@@ -654,15 +410,7 @@ public class TrafficCounter implements ExternalResourceReleasable {
         return "Monitor " + name + " Current Speed Read: " +
                 (lastReadThroughput >> 10) + " KB/s, Write: " +
                 (lastWriteThroughput >> 10) + " KB/s Current Read: " +
-                (currentReadingBytes.get() >> 10) + " KB Current Write: " +
-                (currentWritingBytes.get() >> 10) + " KB";
+                (currentReadBytes.get() >> 10) + " KB Current Write: " +
+                (currentWrittenBytes.get() >> 10) + " KB";
     }
-
-    /* (non-Javadoc)
-     * @see org.jboss.netty.util.ExternalResourceReleasable#releaseExternalResources()
-     */
-    public void releaseExternalResources() {
-        // Nothing to do: done in TrafficCounterFactory
-    }
-
 }
