@@ -45,9 +45,12 @@ public abstract class IpFilteringHandler implements ChannelUpstreamHandler {
      * @param e
      * @param inetSocketAddress the remote {@link InetSocketAddress} from client
      * @return True if the corresponding connection is allowed, else False.
-     * @throws Exception 
+     * @throws Exception
      */
-    protected abstract boolean accept(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress) throws Exception;
+    protected abstract boolean accept(ChannelHandlerContext ctx,
+            ChannelEvent e, InetSocketAddress inetSocketAddress)
+            throws Exception;
+
     /**
      * Called when the channel has the CONNECTED status and the channel was refused by a previous call to accept().
      * This method enables your implementation to send a message back to the client before closing
@@ -58,31 +61,36 @@ public abstract class IpFilteringHandler implements ChannelUpstreamHandler {
      * @param e
      * @param inetSocketAddress the remote {@link InetSocketAddress} from client
      * @return the associated ChannelFuture to be waited for before closing the channel. Null is allowed.
-     * @throws Exception 
+     * @throws Exception
      */
-    protected abstract ChannelFuture handleRefusedChannel(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress) throws Exception;
+    protected abstract ChannelFuture handleRefusedChannel(
+            ChannelHandlerContext ctx, ChannelEvent e,
+            InetSocketAddress inetSocketAddress) throws Exception;
+
     /**
      * Internal method to test if the current channel is blocked. Should not be overridden.
      * @param ctx
      * @return True if the current channel is blocked, else False
      */
     protected boolean isBlocked(ChannelHandlerContext ctx) {
-        return (ctx.getAttachment() != null);
+        return ctx.getAttachment() != null;
     }
+
     /**
-     * Called in handleUpstream, if this channel was previously blocked, 
+     * Called in handleUpstream, if this channel was previously blocked,
      * to check if whatever the event, it should be passed to the next entry in the pipeline.<br>
      * If one wants to not block events, just overridden this method by returning always true.<br><br>
      * <b>Note that OPENED and BOUND events are still passed to the next entry in the pipeline since
      * those events come out before the CONNECTED event and so the possibility to filter the connection.</b>
      * @param ctx
      * @param e
-     * @return True if the event should continue, False if the event should not continue 
+     * @return True if the event should continue, False if the event should not continue
      *          since this channel was blocked by this filter
      * @throws Exception
      */
-    protected abstract boolean continues(ChannelHandlerContext ctx, ChannelEvent e) throws Exception;
-    
+    protected abstract boolean continues(ChannelHandlerContext ctx,
+            ChannelEvent e) throws Exception;
+
     /* (non-Javadoc)
      * @see org.jboss.netty.channel.ChannelUpstreamHandler#handleUpstream(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent)
      */
@@ -93,9 +101,9 @@ public abstract class IpFilteringHandler implements ChannelUpstreamHandler {
             switch (evt.getState()) {
             case OPEN:
             case BOUND:
-                // Special case: OPEND and BOUND events are before CONNECTED, 
+                // Special case: OPEND and BOUND events are before CONNECTED,
                 // but CLOSED and UNBOUND events are after DISCONNECTED: should those events be blocked too?
-                if (this.isBlocked(ctx) && (! continues(ctx, evt))) {
+                if (isBlocked(ctx) && !continues(ctx, evt)) {
                     // don't pass to next level since channel was blocked early
                     return;
                 } else {
@@ -105,16 +113,18 @@ public abstract class IpFilteringHandler implements ChannelUpstreamHandler {
             case CONNECTED:
                 if (evt.getValue() != null) {
                     // CONNECTED
-                    InetSocketAddress inetSocketAddress = (InetSocketAddress) e.getChannel().getRemoteAddress();
-                    if (! this.accept(ctx, e, inetSocketAddress)) {
+                    InetSocketAddress inetSocketAddress = (InetSocketAddress) e
+                            .getChannel().getRemoteAddress();
+                    if (!accept(ctx, e, inetSocketAddress)) {
                         ctx.setAttachment(Boolean.TRUE);
-                        ChannelFuture future = this.handleRefusedChannel(ctx, e, inetSocketAddress);
+                        ChannelFuture future = handleRefusedChannel(ctx, e,
+                                inetSocketAddress);
                         if (future != null) {
                             future.addListener(ChannelFutureListener.CLOSE);
                         } else {
                             Channels.close(e.getChannel());
                         }
-                        if (this.isBlocked(ctx) && (! continues(ctx, evt))) {
+                        if (isBlocked(ctx) && !continues(ctx, evt)) {
                             // don't pass to next level since channel was blocked early
                             return;
                         }
@@ -123,7 +133,7 @@ public abstract class IpFilteringHandler implements ChannelUpstreamHandler {
                     ctx.setAttachment(null);
                 } else {
                     // DISCONNECTED
-                    if (this.isBlocked(ctx) && (! continues(ctx, evt))) {
+                    if (isBlocked(ctx) && !continues(ctx, evt)) {
                         // don't pass to next level since channel was blocked early
                         return;
                     }
@@ -131,7 +141,7 @@ public abstract class IpFilteringHandler implements ChannelUpstreamHandler {
                 break;
             }
         }
-        if (this.isBlocked(ctx) && (! continues(ctx, e))) {
+        if (isBlocked(ctx) && !continues(ctx, e)) {
             // don't pass to next level since channel was blocked early
             return;
         }

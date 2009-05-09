@@ -26,14 +26,11 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 /**
- * Ip V4 and Ip V6 filter rule.<br>
- * <br>
- * Note that mix of IPV4 and IPV6 is allowed but it is not recommended. So it is preferable to not
- * mix IPV4 addresses with IPV6 rules, even if it should work.
+ * IpV4 only Filter Rule
  * @author frederic bregier
  *
  */
-public class IpSubnetFilterRule extends IpSubnet implements IpFilterRule {
+public class IpV4SubnetFilterRule extends IpV4Subnet implements IpFilterRule {
     /**
      * Is this IpV4Subnet an ALLOW or DENY rule
      */
@@ -43,7 +40,7 @@ public class IpSubnetFilterRule extends IpSubnet implements IpFilterRule {
      * Constructor for a ALLOW or DENY ALL
      * @param allow True for ALLOW, False for DENY
      */
-    public IpSubnetFilterRule(boolean allow) {
+    public IpV4SubnetFilterRule(boolean allow) {
         super();
         isAllowRule = allow;
     }
@@ -52,10 +49,9 @@ public class IpSubnetFilterRule extends IpSubnet implements IpFilterRule {
      * @param allow True for ALLOW, False for DENY
      * @param inetAddress
      * @param cidrNetMask
-     * @throws UnknownHostException
      */
-    public IpSubnetFilterRule(boolean allow, InetAddress inetAddress,
-            int cidrNetMask) throws UnknownHostException {
+    public IpV4SubnetFilterRule(boolean allow, InetAddress inetAddress,
+            int cidrNetMask) {
         super(inetAddress, cidrNetMask);
         isAllowRule = allow;
     }
@@ -64,10 +60,9 @@ public class IpSubnetFilterRule extends IpSubnet implements IpFilterRule {
      * @param allow True for ALLOW, False for DENY
      * @param inetAddress
      * @param netMask
-     * @throws UnknownHostException
      */
-    public IpSubnetFilterRule(boolean allow, InetAddress inetAddress,
-            String netMask) throws UnknownHostException {
+    public IpV4SubnetFilterRule(boolean allow, InetAddress inetAddress,
+            String netMask) {
         super(inetAddress, netMask);
         isAllowRule = allow;
     }
@@ -77,7 +72,7 @@ public class IpSubnetFilterRule extends IpSubnet implements IpFilterRule {
      * @param netAddress
      * @throws UnknownHostException
      */
-    public IpSubnetFilterRule(boolean allow, String netAddress)
+    public IpV4SubnetFilterRule(boolean allow, String netAddress)
             throws UnknownHostException {
         super(netAddress);
         isAllowRule = allow;

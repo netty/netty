@@ -38,11 +38,11 @@ import org.jboss.netty.util.ConcurrentHashMap;
  * Handler that block any new connection if there are already a currently active
  * channel connected with the same InetAddress (IP).<br>
  * <br>
- * 
+ *
  * Take care to not change isBlocked method except if you know what you are doing
  * since it is used to test if the current closed connection is to be removed
  * or not from the map of currently connected channel.
- * 
+ *
  * @author frederic bregier
  *
  */
@@ -51,8 +51,7 @@ public class OneIpFilterHandler extends IpFilteringHandler {
     /**
      * HashMap of current remote connected InetAddress
      */
-    private final ConcurrentMap<InetAddress, Boolean> connectedSet =
-        new ConcurrentHashMap<InetAddress, Boolean>();
+    private final ConcurrentMap<InetAddress, Boolean> connectedSet = new ConcurrentHashMap<InetAddress, Boolean>();
 
     /* (non-Javadoc)
      * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#accept(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent, java.net.InetSocketAddress)
@@ -61,13 +60,12 @@ public class OneIpFilterHandler extends IpFilteringHandler {
     protected boolean accept(ChannelHandlerContext ctx, ChannelEvent e,
             InetSocketAddress inetSocketAddress) throws Exception {
         InetAddress inetAddress = inetSocketAddress.getAddress();
-        if (this.connectedSet.containsKey(inetAddress)) {
+        if (connectedSet.containsKey(inetAddress)) {
             return false;
         }
-        this.connectedSet.put(inetAddress, Boolean.TRUE);
+        connectedSet.put(inetAddress, Boolean.TRUE);
         return true;
     }
-
 
     /* (non-Javadoc)
      * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#handleRefusedChannel(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent, java.net.InetSocketAddress)
@@ -79,7 +77,6 @@ public class OneIpFilterHandler extends IpFilteringHandler {
         // Do nothing: could be overridden
         return null;
     }
-
 
     @Override
     protected boolean continues(ChannelHandlerContext ctx, ChannelEvent e)
@@ -100,10 +97,11 @@ public class OneIpFilterHandler extends IpFilteringHandler {
             if (evt.getState() == ChannelState.CONNECTED) {
                 if (evt.getValue() == null) {
                     // DISCONNECTED but was this channel blocked or not
-                    if (this.isBlocked(ctx)) {
+                    if (isBlocked(ctx)) {
                         // remove inetsocketaddress from set since this channel was not blocked before
-                        InetSocketAddress inetSocketAddress = (InetSocketAddress) e.getChannel().getRemoteAddress();
-                        this.connectedSet.remove(inetSocketAddress.getAddress());
+                        InetSocketAddress inetSocketAddress = (InetSocketAddress) e
+                                .getChannel().getRemoteAddress();
+                        connectedSet.remove(inetSocketAddress.getAddress());
                     }
                 }
             }

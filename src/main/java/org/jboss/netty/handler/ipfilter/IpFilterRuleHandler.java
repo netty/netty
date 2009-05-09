@@ -37,26 +37,31 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 /**
  * Implementation of Filter of IP based on ALLOW and DENY netmask (standard notations or CIDR notations).<br>
  * <br><br>
- * This implementation could be changed by implementing a new {@link IpFilterRule} than default one {@link IpSubnetFilterRule}.<br>
+ * This implementation could be changed by implementing a new {@link IpFilterRule} than default one
+ * {@link IpV4SubnetFilterRule} (IPV4 support only) or {@link IpSubnetFilterRule} (IPV4 and IPV6 support).<br>
  * <br>
  * The check is done by going from step to step in the underlying array of IpFilterRule.<br>
  * Each {@link IpFilterRule} answers to the method accept if the {@link InetAddress} is accepted or not,
  * according to its implementation. If an InetAddress arrives at the end of the list, as in Firewall
  * usual rules, the InetAddress is therefore accepted by default.<br>
- * For the {@link IpSubnetFilterRule} implementation:<br>
+ * For the {@link IpV4SubnetFilterRule} and {@link IpSubnetFilterRule} implementations:<br>
  * <ul>
- * <li>If it was constructed with True as first argument, 
+ * <li>If it was constructed with True as first argument,
  * the IpFilterRule is an ALLOW rule (every InetAddress that fits in the subnet will be accepted).</li>
- * <li>If it was constructed with False as first argument, 
+ * <li>If it was constructed with False as first argument,
  * the IpFilterRule is a DENY rule (every InetAddress that fits in the subnet will be refused).</li>
  * </ul><br>
  * <br>
  * An empty list means allow all (no limitation).<br><br>
- * <b>For efficiency reason, you should not add/remove too frequently IpFilterRules to/from this handler. 
+ * <b>For efficiency reason, you should not add/remove too frequently IpFilterRules to/from this handler.
  * You should prefer to replace an entry (<tt>set</tt> method) with an ALLOW/DENY ALL IpFilterRule
  * if possible.</b><br><br><br>
  * <b>This handler should be created only once and reused on every pipeline since it handles
- * a global status of what is allowed or blocked.</b>
+ * a global status of what is allowed or blocked.</b><br><br>
+ *
+ * Note that {@link IpSubnetFilterRule} which supports IPV4 and IPV6 should be used with as much as
+ * possible no mixed IP protocol. Both IPV4 and IPV6 are supported but a mix (IpFilter in IPV6 notation
+ * and the address from the channel in IPV4, or the reverse) can lead to wrong result.
  * @author frederic bregier
  *
  */
@@ -66,17 +71,19 @@ public class IpFilterRuleHandler extends IpFilteringHandler {
      * List of {@link IpFilterRule}
      */
     private final CopyOnWriteArrayList<IpFilterRule> ipFilterRuleList = new CopyOnWriteArrayList<IpFilterRule>();
+
     /**
      * Constructor from a new list of IpFilterRule
      * @param newList
      */
     public IpFilterRuleHandler(List<IpFilterRule> newList) {
         if (newList != null) {
-            this.ipFilterRuleList.addAll(newList);
+            ipFilterRuleList.addAll(newList);
         }
     }
+
     /**
-     * Empty constructor (no IpFilterRule in the List at construction). In such a situation, 
+     * Empty constructor (no IpFilterRule in the List at construction). In such a situation,
      * empty list implies allow all.
      */
     public IpFilterRuleHandler() {
@@ -91,8 +98,9 @@ public class IpFilterRuleHandler extends IpFilteringHandler {
         if (ipFilterRule == null) {
             throw new NullPointerException("IpFilterRule can not be null");
         }
-        this.ipFilterRuleList.add(ipFilterRule);
+        ipFilterRuleList.add(ipFilterRule);
     }
+
     /**
      * Add an ipFilterRule in the list at the specified position (shifting to the right other elements)
      * @param index
@@ -102,19 +110,21 @@ public class IpFilterRuleHandler extends IpFilteringHandler {
         if (ipFilterRule == null) {
             throw new NullPointerException("IpFilterRule can not be null");
         }
-        this.ipFilterRuleList.add(index, ipFilterRule);
+        ipFilterRuleList.add(index, ipFilterRule);
     }
+
     /**
-     * Appends all of the elements in the specified collection to the end of this list, 
-     * in the order that they are returned by the specified collection's iterator. 
+     * Appends all of the elements in the specified collection to the end of this list,
+     * in the order that they are returned by the specified collection's iterator.
      * @param c
      */
     public void addAll(Collection<IpFilterRule> c) {
         if (c == null) {
             throw new NullPointerException("Collection can not be null");
         }
-        this.ipFilterRuleList.addAll(c);
+        ipFilterRuleList.addAll(c);
     }
+
     /**
      * Inserts all of the elements in the specified collection into this list, starting at the specified position.
      * @param index
@@ -124,10 +134,11 @@ public class IpFilterRuleHandler extends IpFilteringHandler {
         if (c == null) {
             throw new NullPointerException("Collection can not be null");
         }
-        this.ipFilterRuleList.addAll(index, c);
+        ipFilterRuleList.addAll(index, c);
     }
+
     /**
-     * Append the element if not present. 
+     * Append the element if not present.
      * @param c
      * @return the number of elements added
      */
@@ -135,10 +146,11 @@ public class IpFilterRuleHandler extends IpFilteringHandler {
         if (c == null) {
             throw new NullPointerException("Collection can not be null");
         }
-        return this.ipFilterRuleList.addAllAbsent(c);
+        return ipFilterRuleList.addAllAbsent(c);
     }
+
     /**
-     * Append the element if not present. 
+     * Append the element if not present.
      * @param ipFilterRule
      * @return true if the element was added
      */
@@ -146,14 +158,16 @@ public class IpFilterRuleHandler extends IpFilteringHandler {
         if (ipFilterRule == null) {
             throw new NullPointerException("IpFilterRule can not be null");
         }
-        return this.ipFilterRuleList.addIfAbsent(ipFilterRule);
+        return ipFilterRuleList.addIfAbsent(ipFilterRule);
     }
+
     /**
      * Clear the list
      */
     public void clear() {
-        this.ipFilterRuleList.clear();
+        ipFilterRuleList.clear();
     }
+
     /**
      * Returns true if this list contains the specified element
      * @param ipFilterRule
@@ -163,8 +177,9 @@ public class IpFilterRuleHandler extends IpFilteringHandler {
         if (ipFilterRule == null) {
             throw new NullPointerException("IpFilterRule can not be null");
         }
-        return this.ipFilterRuleList.contains(ipFilterRule);
+        return ipFilterRuleList.contains(ipFilterRule);
     }
+
     /**
      * Returns true if this list contains all of the elements of the specified collection
      * @param c
@@ -174,23 +189,26 @@ public class IpFilterRuleHandler extends IpFilteringHandler {
         if (c == null) {
             throw new NullPointerException("Collection can not be null");
         }
-        return this.ipFilterRuleList.containsAll(c);
+        return ipFilterRuleList.containsAll(c);
     }
+
     /**
      * Returns the element at the specified position in this list
      * @param index
      * @return the element at the specified position in this list
      */
     public IpFilterRule get(int index) {
-        return this.ipFilterRuleList.get(index);
+        return ipFilterRuleList.get(index);
     }
+
     /**
      * Returns true if this list contains no elements
      * @return true if this list contains no elements
      */
     public boolean isEmpty() {
-        return this.ipFilterRuleList.isEmpty();
+        return ipFilterRuleList.isEmpty();
     }
+
     /**
      * Remove the ipFilterRule from the list
      * @param ipFilterRule
@@ -199,16 +217,18 @@ public class IpFilterRuleHandler extends IpFilteringHandler {
         if (ipFilterRule == null) {
             throw new NullPointerException("IpFilterRule can not be null");
         }
-        this.ipFilterRuleList.remove(ipFilterRule);
+        ipFilterRuleList.remove(ipFilterRule);
     }
+
     /**
      * Removes the element at the specified position in this list
      * @param index
-     * @return the element previously at the specified position 
+     * @return the element previously at the specified position
      */
     public IpFilterRule remove(int index) {
-        return this.ipFilterRuleList.remove(index);
+        return ipFilterRuleList.remove(index);
     }
+
     /**
      * Removes from this list all of its elements that are contained in the specified collection
      * @param c
@@ -217,8 +237,9 @@ public class IpFilterRuleHandler extends IpFilteringHandler {
         if (c == null) {
             throw new NullPointerException("Collection can not be null");
         }
-        this.ipFilterRuleList.removeAll(c);
+        ipFilterRuleList.removeAll(c);
     }
+
     /**
      * Retains only the elements in this list that are contained in the specified collection
      * @param c
@@ -227,40 +248,42 @@ public class IpFilterRuleHandler extends IpFilteringHandler {
         if (c == null) {
             throw new NullPointerException("Collection can not be null");
         }
-        this.ipFilterRuleList.retainAll(c);
+        ipFilterRuleList.retainAll(c);
     }
+
     /**
      * Replaces the element at the specified position in this list with the specified element
      * @param index
      * @param ipFilterRule
-     * @return the element previously at the specified position 
+     * @return the element previously at the specified position
      */
     public IpFilterRule set(int index, IpFilterRule ipFilterRule) {
         if (ipFilterRule == null) {
             throw new NullPointerException("IpFilterRule can not be null");
         }
-        return this.ipFilterRuleList.set(index, ipFilterRule);
+        return ipFilterRuleList.set(index, ipFilterRule);
     }
+
     /**
-     * Returns the number of elements in this list. 
-     * @return the number of elements in this list. 
+     * Returns the number of elements in this list.
+     * @return the number of elements in this list.
      */
     public int size() {
-        return this.ipFilterRuleList.size();
+        return ipFilterRuleList.size();
     }
-    
+
     /* (non-Javadoc)
      * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#accept(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent, java.net.InetSocketAddress)
      */
     @Override
     protected boolean accept(ChannelHandlerContext ctx, ChannelEvent e,
             InetSocketAddress inetSocketAddress) throws Exception {
-        if (this.ipFilterRuleList.isEmpty()) {
+        if (ipFilterRuleList.isEmpty()) {
             // No limitation neither in deny or allow, so accept
             return true;
         }
         InetAddress inetAddress = inetSocketAddress.getAddress();
-        Iterator<IpFilterRule> iterator = this.ipFilterRuleList.iterator();
+        Iterator<IpFilterRule> iterator = ipFilterRuleList.iterator();
         IpFilterRule ipFilterRule = null;
         while (iterator.hasNext()) {
             ipFilterRule = iterator.next();
