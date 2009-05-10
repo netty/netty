@@ -85,7 +85,7 @@ public class IpSubnet implements IpSet, Comparable<IpSubnet> {
      * @throws UnknownHostException
      * */
     public IpSubnet(String netAddress) throws UnknownHostException {
-        cidr = CIDR.generateCIDR(netAddress);
+        cidr = CIDR.newCIDR(netAddress);
     }
 
     /**
@@ -96,7 +96,7 @@ public class IpSubnet implements IpSet, Comparable<IpSubnet> {
      */
     public IpSubnet(InetAddress inetAddress, int cidrNetMask)
             throws UnknownHostException {
-        cidr = CIDR.generateCIDR(inetAddress, cidrNetMask);
+        cidr = CIDR.newCIDR(inetAddress, cidrNetMask);
     }
 
     /**
@@ -107,7 +107,7 @@ public class IpSubnet implements IpSet, Comparable<IpSubnet> {
      */
     public IpSubnet(InetAddress inetAddress, String netMask)
             throws UnknownHostException {
-        cidr = CIDR.generateCIDR(inetAddress, netMask);
+        cidr = CIDR.newCIDR(inetAddress, netMask);
     }
 
     /**

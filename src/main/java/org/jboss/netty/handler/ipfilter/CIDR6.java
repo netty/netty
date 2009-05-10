@@ -137,7 +137,7 @@ public class CIDR6 extends CIDR {
      */
     private static BigInteger ipv6AddressToBigInteger(InetAddress addr) {
         byte[] ipv6;
-        if (!(addr instanceof Inet6Address)) {
+        if (addr instanceof Inet4Address) {
             ipv6 = getIpV6FromIpV4((Inet4Address) addr);
         } else {
             ipv6 = addr.getAddress();

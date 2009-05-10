@@ -49,7 +49,7 @@ public abstract class CIDR implements Comparable<CIDR> {
      * @return the generated CIDR
      * @throws UnknownHostException
      */
-    public static CIDR generateCIDR(InetAddress baseAddress, int cidrMask)
+    public static CIDR newCIDR(InetAddress baseAddress, int cidrMask)
             throws UnknownHostException {
         if (cidrMask < 0) {
             throw new UnknownHostException("Invalid mask length used: " +
@@ -77,7 +77,7 @@ public abstract class CIDR implements Comparable<CIDR> {
      * @return the generated CIDR
      * @throws UnknownHostException
      */
-    public static CIDR generateCIDR(InetAddress baseAddress, String scidrMask)
+    public static CIDR newCIDR(InetAddress baseAddress, String scidrMask)
             throws UnknownHostException {
         int cidrMask = getNetMask(scidrMask);
         if (cidrMask < 0) {
@@ -103,14 +103,14 @@ public abstract class CIDR implements Comparable<CIDR> {
     /**
      * Create CIDR using the CIDR or normal Notation<BR>
      * i.e.:
-     * CIDR  subnet = new CIDR ("10.10.10.0/24"); or
-     * CIDR  subnet = new CIDR ("1fff:0:0a88:85a3:0:0:ac1f:8001/24"); or
-     * CIDR  subnet = new CIDR ("10.10.10.0/255.255.255.0");
+     * CIDR  subnet = newCIDR ("10.10.10.0/24"); or
+     * CIDR  subnet = newCIDR ("1fff:0:0a88:85a3:0:0:ac1f:8001/24"); or
+     * CIDR  subnet = newCIDR ("10.10.10.0/255.255.255.0");
      * @param cidr
      * @return the generated CIDR
      * @throws UnknownHostException
      */
-    public static CIDR generateCIDR(String cidr) throws UnknownHostException {
+    public static CIDR newCIDR(String cidr) throws UnknownHostException {
         int p = cidr.indexOf("/");
         if (p < 0) {
             throw new UnknownHostException("Invalid CIDR notation used: " +
@@ -132,7 +132,7 @@ public abstract class CIDR implements Comparable<CIDR> {
             throw new UnknownHostException("Invalid mask length used: " +
                     maskString);
         }
-        return generateCIDR(addr, mask);
+        return newCIDR(addr, mask);
     }
 
     /** @return the baseAddress of the CIDR block. */
