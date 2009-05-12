@@ -90,7 +90,13 @@ class CompactObjectInputStream extends ObjectInputStream {
     protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
         String name = desc.getName();
         try {
-            return Class.forName(name, false, classLoader);
+            if (classLoader == null) {
+                return Class.forName(
+                        name, false,
+                        Thread.currentThread().getContextClassLoader());
+            } else {
+                return Class.forName(name, false, classLoader);
+            }
         } catch (ClassNotFoundException ex) {
             return super.resolveClass(desc);
         }
