@@ -688,7 +688,6 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
             loop:
             for (;;) {
                 SSLEngineResult result;
-                boolean needsNonAppWrap = false;
                 synchronized (handshakeLock) {
                     if (initialHandshake && !engine.getUseClientMode() &&
                         !engine.isInboundDone() && !engine.isOutboundDone()) {
@@ -710,9 +709,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
                             break loop;
                         }
                     case NEED_WRAP:
-                        // wrapNonAppData must be called
-                        // while handshakeLock is not hold.
-                        needsNonAppWrap = true;
+                        wrapNonAppData(ctx, channel);
                         break;
                     case NEED_TASK:
                         runDelegatedTasks();
@@ -730,14 +727,15 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
                                 result.getHandshakeStatus());
                     }
                 }
-
-                if (needsNonAppWrap) {
-                    wrapNonAppData(ctx, channel);
-                }
             }
 
             if (needsWrap) {
-                wrap(ctx, channel);
+                // wrap() acquires pendingUnencryptedWrites first and then
+                // handshakeLock.  If handshakeLock is already hold by the
+                // current thread, calling wrap() will lead to a dead lock.
+                if (!Thread.holdsLock(handshakeLock)) {
+                    wrap(ctx, channel);
+                }
             }
 
             outAppBuf.flip();
