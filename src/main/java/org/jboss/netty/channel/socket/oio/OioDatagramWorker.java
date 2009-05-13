@@ -24,6 +24,7 @@ package org.jboss.netty.channel.socket.oio;
 
 import static org.jboss.netty.channel.Channels.*;
 
+import java.io.InterruptedIOException;
 import java.net.DatagramPacket;
 import java.net.MulticastSocket;
 import java.net.SocketAddress;
@@ -76,6 +77,10 @@ class OioDatagramWorker implements Runnable {
             DatagramPacket packet = new DatagramPacket(buf, buf.length);
             try {
                 socket.receive(packet);
+            } catch (InterruptedIOException e) {
+                // Can happen on interruption.
+                // Keep receiving unless the channel is closed.
+                continue;
             } catch (Throwable t) {
                 if (!channel.socket.isClosed()) {
                     fireExceptionCaught(channel, t);
