@@ -71,14 +71,7 @@ class CompactObjectInputStream extends ObjectInputStream {
             return super.readClassDescriptor();
         case CompactObjectOutputStream.TYPE_NON_PRIMITIVE:
             String className = readUTF();
-            Class<?> clazz;
-            if (classLoader == null) {
-                clazz = Class.forName(
-                        className, true,
-                        Thread.currentThread().getContextClassLoader());
-            } else {
-                clazz = Class.forName(className, true, classLoader);
-            }
+            Class<?> clazz = loadClass(className);
             return ObjectStreamClass.lookup(clazz);
         default:
             throw new StreamCorruptedException(
@@ -88,17 +81,26 @@ class CompactObjectInputStream extends ObjectInputStream {
 
     @Override
     protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
-        String name = desc.getName();
+        String className = desc.getName();
         try {
-            if (classLoader == null) {
-                return Class.forName(
-                        name, false,
-                        Thread.currentThread().getContextClassLoader());
-            } else {
-                return Class.forName(name, false, classLoader);
-            }
+            return loadClass(className);
         } catch (ClassNotFoundException ex) {
             return super.resolveClass(desc);
         }
+    }
+
+    private Class<?> loadClass(String className) throws ClassNotFoundException {
+        Class<?> clazz;
+        ClassLoader classLoader = this.classLoader;
+        if (classLoader == null) {
+            classLoader = Thread.currentThread().getContextClassLoader();
+        }
+
+        if (classLoader != null) {
+            clazz = classLoader.loadClass(className);
+        } else {
+            clazz = Class.forName(className);
+        }
+        return clazz;
     }
 }
