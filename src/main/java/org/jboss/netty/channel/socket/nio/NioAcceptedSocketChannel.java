@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
+import static org.jboss.netty.channel.Channels.*;
+
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
@@ -53,5 +55,9 @@ final class NioAcceptedSocketChannel extends NioSocketChannel {
         } catch (IOException e) {
             throw new ChannelException("Failed to enter non-blocking mode.", e);
         }
+
+        fireChannelOpen(this);
+        fireChannelBound(this, socket.socket().getLocalSocketAddress());
+        fireChannelConnected(this, socket.socket().getRemoteSocketAddress());
     }
 }

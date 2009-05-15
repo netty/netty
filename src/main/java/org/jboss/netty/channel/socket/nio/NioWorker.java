@@ -575,20 +575,22 @@ class NioWorker implements Runnable {
 
     static void setInterestOps(
             NioSocketChannel channel, ChannelFuture future, int interestOps) {
-        NioWorker worker = channel.worker;
-        Selector selector = worker.selector;
-        SelectionKey key = channel.socket.keyFor(selector);
-        if (key == null || selector == null) {
-            Exception cause = new NotYetConnectedException();
-            future.setFailure(cause);
-            fireExceptionCaught(channel, cause);
-        }
-
         boolean changed = false;
         try {
             // interestOps can change at any time and at any thread.
             // Acquire a lock to avoid possible race condition.
             synchronized (channel.interestOpsLock) {
+                NioWorker worker = channel.worker;
+                Selector selector = worker.selector;
+                SelectionKey key = channel.socket.keyFor(selector);
+
+                if (key == null || selector == null) {
+                    // Not registered to the worker yet.
+                    // Set the rawInterestOps immediately; RegisterTask will pick it up.
+                    channel.setRawInterestOpsNow(interestOps);
+                    return;
+                }
+
                 // Override OP_WRITE flag - a user cannot change this flag.
                 interestOps &= ~Channel.OP_WRITE;
                 interestOps |= channel.getRawInterestOps() & Channel.OP_WRITE;
@@ -665,7 +667,10 @@ class NioWorker implements Runnable {
             }
 
             try {
-                channel.socket.register(selector, SelectionKey.OP_READ, channel);
+                synchronized (channel.interestOpsLock) {
+                    channel.socket.register(
+                            selector, channel.getRawInterestOps(), channel);
+                }
                 if (future != null) {
                     future.setSuccess();
                 }
@@ -678,13 +683,12 @@ class NioWorker implements Runnable {
                         "Failed to register a socket to the selector.", e);
             }
 
-            if (server) {
-                fireChannelOpen(channel);
-                fireChannelBound(channel, localAddress);
-            } else if (!((NioClientSocketChannel) channel).boundManually) {
-                fireChannelBound(channel, localAddress);
+            if (!server) {
+                if (!((NioClientSocketChannel) channel).boundManually) {
+                    fireChannelBound(channel, localAddress);
+                }
+                fireChannelConnected(channel, remoteAddress);
             }
-            fireChannelConnected(channel, remoteAddress);
         }
     }
 }
