@@ -89,7 +89,7 @@ class CompactObjectInputStream extends ObjectInputStream {
         }
     }
 
-    private Class<?> loadClass(String className) throws ClassNotFoundException {
+    protected Class<?> loadClass(String className) throws ClassNotFoundException {
         Class<?> clazz;
         ClassLoader classLoader = this.classLoader;
         if (classLoader == null) {
