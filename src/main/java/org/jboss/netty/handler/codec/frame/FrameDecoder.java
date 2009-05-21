@@ -29,14 +29,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
@@ -148,8 +146,7 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * @apiviz.landmark
  */
 @ChannelPipelineCoverage("one")
-public abstract class FrameDecoder
-        extends SimpleChannelUpstreamHandler implements LifeCycleAwareChannelHandler {
+public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
 
     private final boolean unfold;
     private final AtomicReference<ChannelBuffer> cumulation =
@@ -161,29 +158,6 @@ public abstract class FrameDecoder
 
     protected FrameDecoder(boolean unfold) {
         this.unfold = unfold;
-    }
-
-    @Override
-    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        cumulation(ctx);
-        super.handleUpstream(ctx, e);
-    }
-
-    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        cumulation(ctx);
-    }
-
-    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
-        // Unused
-    }
-
-    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
-        // Unused
-    }
-
-    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
-        // Unused
     }
 
     @Override
