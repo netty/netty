@@ -97,8 +97,9 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
     }
 
     protected void log(ChannelEvent e) {
-        String msg = e.toString();
         if (logger.isDebugEnabled()) {
+            String msg = e.toString();
+
             // Append hex dump if necessary.
             if (hexDump && e instanceof MessageEvent) {
                 MessageEvent me = (MessageEvent) e;
