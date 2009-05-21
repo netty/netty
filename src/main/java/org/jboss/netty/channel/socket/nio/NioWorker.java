@@ -250,10 +250,14 @@ class NioWorker implements Runnable {
             SelectionKey k = i.next();
             i.remove();
             try {
-                if (k.isReadable()) {
-                    read(k);
+                int readyOps = k.readyOps();
+                if ((readyOps & SelectionKey.OP_READ) != 0) {
+                    if (!read(k)) {
+                        // Connection already closed - no need to handle write.
+                        continue;
+                    }
                 }
-                if (k.isWritable()) {
+                if ((readyOps & SelectionKey.OP_WRITE) != 0) {
                     write(k);
                 }
             } catch (CancelledKeyException e) {
@@ -262,7 +266,7 @@ class NioWorker implements Runnable {
         }
     }
 
-    private static void read(SelectionKey k) {
+    private static boolean read(SelectionKey k) {
         ScatteringByteChannel ch = (ScatteringByteChannel) k.channel();
         NioSocketChannel channel = (NioSocketChannel) k.attachment();
 
@@ -301,7 +305,10 @@ class NioWorker implements Runnable {
 
         if (ret < 0 || failure) {
             close(k);
+            return false;
         }
+
+        return true;
     }
 
     private static void write(SelectionKey k) {
