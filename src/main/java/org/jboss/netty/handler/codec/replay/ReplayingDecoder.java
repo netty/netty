@@ -517,7 +517,8 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
     private ChannelBuffer cumulation() {
         ChannelBuffer cumulation = this.cumulation.get();
         if (cumulation == null) {
-            throw new IllegalStateException("Should be called in decode() only");
+            throw new IllegalStateException(
+                    "checkpoint() should be called in decode() only");
         }
         return cumulation;
     }
