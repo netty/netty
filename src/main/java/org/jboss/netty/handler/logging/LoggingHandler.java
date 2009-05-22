@@ -96,8 +96,12 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
         ctx.sendDownstream(e);
     }
 
-    protected void log(ChannelEvent e) {
-        if (logger.isDebugEnabled()) {
+    public InternalLogger getLogger() {
+        return logger;
+    }
+
+    public void log(ChannelEvent e) {
+        if (isLogEnabled(e)) {
             String msg = e.toString();
 
             // Append hex dump if necessary.
@@ -111,10 +115,22 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
 
             // Log the message (and exception if available.)
             if (e instanceof ExceptionEvent) {
-                logger.debug(msg, ((ExceptionEvent) e).getCause());
+                log(msg, ((ExceptionEvent) e).getCause());
             } else {
-                logger.debug(msg);
+                log(msg);
             }
         }
+    }
+
+    public boolean isLogEnabled(@SuppressWarnings("unused") ChannelEvent e) {
+        return getLogger().isDebugEnabled();
+    }
+
+    public void log(String msg) {
+        getLogger().debug(msg);
+    }
+
+    public void log(String msg, Throwable cause) {
+        getLogger().debug(msg, cause);
     }
 }
