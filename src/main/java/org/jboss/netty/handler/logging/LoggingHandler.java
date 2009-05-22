@@ -126,7 +126,9 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
 
     /**
      * Logs the specified event to the {@link InternalLogger} returned by
-     * {@link #getLogger()}.
+     * {@link #getLogger()}. If hex dump has been enabled for this handler,
+     * the hex dump of the {@link ChannelBuffer} in a {@link MessageEvent} will
+     * be logged together.
      */
     public void log(ChannelEvent e) {
         if (getLogger().isDebugEnabled()) {
