@@ -39,9 +39,8 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 /**
  * A {@link ChannelHandler} that logs all events via {@link InternalLogger}.
  * By default, all events are logged in <tt>DEBUG</tt> level.  You can extend
- * this class and override {@link #isLogEnabled(ChannelEvent)},
- * {@link #log(String)}, and {@link #log(String, Throwable)} to override the
- * default behavior.
+ * this class and override {@link #log(ChannelEvent)} to change the default
+ * behavior.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -126,22 +125,11 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
     }
 
     /**
-     * Returns {@code true} if and only if logging has been enabled for the
-     * specified event.  The default implementation enables logging for all
-     * events at {@code DEBUG} level.
-     */
-    public boolean isLogEnabled(@SuppressWarnings("unused") ChannelEvent e) {
-        return getLogger().isDebugEnabled();
-    }
-
-    /**
-     * Logs the specified event.  First, it determines if the event is loggable
-     * by calling {@link #isLogEnabled(ChannelEvent)} with the specified event.
-     * If {@code true} is returned, {@link #log(String)} or
-     * {@link #log(String, Throwable)} is called.
+     * Logs the specified event to the {@link InternalLogger} returned by
+     * {@link #getLogger()}.
      */
     public void log(ChannelEvent e) {
-        if (isLogEnabled(e)) {
+        if (getLogger().isDebugEnabled()) {
             String msg = e.toString();
 
             // Append hex dump if necessary.
@@ -155,27 +143,11 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
 
             // Log the message (and exception if available.)
             if (e instanceof ExceptionEvent) {
-                log(msg, ((ExceptionEvent) e).getCause());
+                getLogger().debug(msg, ((ExceptionEvent) e).getCause());
             } else {
-                log(msg);
+                getLogger().debug(msg);
             }
         }
-    }
-
-    /**
-     * Logs the specified message.  The default implementation logs the
-     * specified message at {@code DEBUG} level.
-     */
-    public void log(String msg) {
-        getLogger().debug(msg);
-    }
-
-    /**
-     * Logs the specified message and cause.  The default implementation logs
-     * the specified message and cause at {@code DEBUG} level.
-     */
-    public void log(String msg, Throwable cause) {
-        getLogger().debug(msg, cause);
     }
 
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
