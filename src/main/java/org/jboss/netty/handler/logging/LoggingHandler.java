@@ -88,6 +88,10 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
         return logger;
     }
 
+    public boolean isLogEnabled(@SuppressWarnings("unused") ChannelEvent e) {
+        return getLogger().isDebugEnabled();
+    }
+
     public void log(ChannelEvent e) {
         if (isLogEnabled(e)) {
             String msg = e.toString();
@@ -108,10 +112,6 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
                 log(msg);
             }
         }
-    }
-
-    public boolean isLogEnabled(@SuppressWarnings("unused") ChannelEvent e) {
-        return getLogger().isDebugEnabled();
     }
 
     public void log(String msg) {
