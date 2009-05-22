@@ -118,6 +118,7 @@ class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
             } finally {
                 reconnectLock.unlock();
                 if (!success) {
+                    assert cause != null;
                     throw cause;
                 }
             }
@@ -145,6 +146,9 @@ class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
                 session.invalidate();
             } catch (Exception e) {
                 // Gulp - https://jira.jboss.org/jira/browse/JBWEB-139
+                logger.debug(
+                        "Unexpected exception raised by the Servlet container; " +
+                        "ignoring.", e);
             }
         }
     }
