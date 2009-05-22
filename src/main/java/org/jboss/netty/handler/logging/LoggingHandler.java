@@ -84,18 +84,6 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
         this.hexDump = hexDump;
     }
 
-    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        log(e);
-        ctx.sendUpstream(e);
-    }
-
-    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        log(e);
-        ctx.sendDownstream(e);
-    }
-
     public InternalLogger getLogger() {
         return logger;
     }
@@ -132,5 +120,17 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
 
     public void log(String msg, Throwable cause) {
         getLogger().debug(msg, cause);
+    }
+
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
+            throws Exception {
+        log(e);
+        ctx.sendUpstream(e);
+    }
+
+    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
+            throws Exception {
+        log(e);
+        ctx.sendDownstream(e);
     }
 }
