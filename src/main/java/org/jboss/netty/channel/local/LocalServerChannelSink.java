@@ -136,15 +136,22 @@ final class LocalServerChannelSink extends AbstractChannelSink {
     }
 
     private void close(DefaultLocalServerChannel channel, ChannelFuture future) {
-        future.setSuccess();
-        if (channel.setClosed()) {
-            LocalAddress localAddress = channel.localAddress;
-            if (channel.bound.compareAndSet(true, false)) {
-                channel.localAddress = null;
-                LocalChannelRegistry.unregister(localAddress);
-                fireChannelUnbound(channel);
+        try {
+            if (channel.setClosed()) {
+                future.setSuccess();
+                LocalAddress localAddress = channel.localAddress;
+                if (channel.bound.compareAndSet(true, false)) {
+                    channel.localAddress = null;
+                    LocalChannelRegistry.unregister(localAddress);
+                    fireChannelUnbound(channel);
+                }
+                fireChannelClosed(channel);
+            } else {
+                future.setSuccess();
             }
-            fireChannelClosed(channel);
+        } catch (Throwable t) {
+            future.setFailure(t);
+            fireExceptionCaught(channel, t);
         }
     }
 }

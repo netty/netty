@@ -183,18 +183,24 @@ class BaseXnioChannel extends AbstractChannel implements XnioChannel {
             return;
         }
 
-        IoUtils.safeClose(xnioChannel);
-        xnioChannel = null;
-        XnioChannelRegistry.unregisterChannelMapping(this);
+        try {
+            IoUtils.safeClose(xnioChannel);
+            xnioChannel = null;
+            XnioChannelRegistry.unregisterChannelMapping(this);
 
-        if (remoteAddress != null) {
-            fireChannelDisconnected(this);
-        }
-        if (localAddress != null) {
-            fireChannelUnbound(this);
-        }
+            future.setSuccess();
+            if (remoteAddress != null) {
+                fireChannelDisconnected(this);
+            }
+            if (localAddress != null) {
+                fireChannelUnbound(this);
+            }
 
-        fireChannelClosed(this);
+            fireChannelClosed(this);
+        } catch (Throwable t) {
+            future.setFailure(t);
+            fireExceptionCaught(this, t);
+        }
     }
 
     private final class WriteBuffer extends LinkedTransferQueue<MessageEvent> {

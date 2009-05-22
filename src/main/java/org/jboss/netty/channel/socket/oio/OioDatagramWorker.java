@@ -191,8 +191,8 @@ class OioDatagramWorker implements Runnable {
         boolean bound = channel.isBound();
         try {
             channel.socket.close();
-            future.setSuccess();
             if (channel.setClosed()) {
+                future.setSuccess();
                 if (connected) {
                     // Notify the worker so it stops reading.
                     Thread currentThread = Thread.currentThread();
@@ -206,6 +206,8 @@ class OioDatagramWorker implements Runnable {
                     fireChannelUnbound(channel);
                 }
                 fireChannelClosed(channel);
+            } else {
+                future.setSuccess();
             }
         } catch (Throwable t) {
             future.setFailure(t);

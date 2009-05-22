@@ -126,8 +126,8 @@ final class DefaultXnioServerChannel extends BaseXnioChannel implements XnioServ
         SocketAddress localAddress = getLocalAddress();
         boolean bound = localAddress != null;
         try {
-            future.setSuccess();
             if (setClosed()) {
+                future.setSuccess();
                 synchronized (bindLock) {
                     IoUtils.safeClose(xnioChannel);
                     XnioChannelRegistry.unregisterServerChannel(localAddress);
@@ -138,6 +138,8 @@ final class DefaultXnioServerChannel extends BaseXnioChannel implements XnioServ
                     fireChannelUnbound(this);
                 }
                 fireChannelClosed(this);
+            } else {
+                future.setSuccess();
             }
         } catch (Throwable t) {
             future.setFailure(t);

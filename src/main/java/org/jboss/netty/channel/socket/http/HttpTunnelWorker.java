@@ -142,8 +142,8 @@ final class HttpTunnelWorker implements Runnable {
         boolean bound = channel.isBound();
         try {
             channel.closeSocket();
-            future.setSuccess();
             if (channel.setClosed()) {
+                future.setSuccess();
                 if (connected) {
                     // Notify the worker so it stops reading.
                     Thread currentThread = Thread.currentThread();
@@ -157,6 +157,8 @@ final class HttpTunnelWorker implements Runnable {
                     fireChannelUnbound(channel);
                 }
                 fireChannelClosed(channel);
+            } else {
+                future.setSuccess();
             }
         }
         catch (Throwable t) {

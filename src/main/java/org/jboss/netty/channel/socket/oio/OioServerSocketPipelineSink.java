@@ -171,12 +171,14 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
         boolean bound = channel.isBound();
         try {
             channel.socket.close();
-            future.setSuccess();
             if (channel.setClosed()) {
+                future.setSuccess();
                 if (bound) {
                     fireChannelUnbound(channel);
                 }
                 fireChannelClosed(channel);
+            } else {
+                future.setSuccess();
             }
         } catch (Throwable t) {
             future.setFailure(t);
