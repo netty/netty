@@ -37,9 +37,11 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
- * A {@link ChannelHandler} that logs all events in <tt>DEBUG</tt> level.  This
- * handler is supposed to be used for debugging purpose only as the amount of
- * logged events will be large.
+ * A {@link ChannelHandler} that logs all events via {@link InternalLogger}.
+ * By default, all events are logged in <tt>DEBUG</tt> level.  You can extend
+ * this class and override {@link #isLogEnabled(ChannelEvent)},
+ * {@link #log(String)}, and {@link #log(String, Throwable)} to override the
+ * default behavior.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -51,19 +53,40 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
     private final InternalLogger logger;
     private final boolean hexDump;
 
+    /**
+     * Creates a new instance whose logger name is the fully qualified class
+     * name of the instance with hex dump enabled.
+     */
     public LoggingHandler() {
         this(true);
     }
 
+    /**
+     * Creates a new instance whose logger name is the fully qualified class
+     * name of the instance.
+     *
+     * @param hexDump {@code true} if and only if the hex dump of the received
+     *                message is logged
+     */
     public LoggingHandler(boolean hexDump) {
         logger = InternalLoggerFactory.getInstance(getClass());
         this.hexDump = hexDump;
     }
 
+    /**
+     * Creates a new instance with the specified logger name and with hex dump
+     * enabled.
+     */
     public LoggingHandler(Class<?> clazz) {
         this(clazz, true);
     }
 
+    /**
+     * Creates a new instance with the specified logger name.
+     *
+     * @param hexDump {@code true} if and only if the hex dump of the received
+     *                message is logged
+     */
     public LoggingHandler(Class<?> clazz, boolean hexDump) {
         if (clazz == null) {
             throw new NullPointerException("clazz");
@@ -72,10 +95,20 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
         this.hexDump = hexDump;
     }
 
+    /**
+     * Creates a new instance with the specified logger name and with hex dump
+     * enabled.
+     */
     public LoggingHandler(String name) {
         this(name, true);
     }
 
+    /**
+     * Creates a new instance with the specified logger name.
+     *
+     * @param hexDump {@code true} if and only if the hex dump of the received
+     *                message is logged
+     */
     public LoggingHandler(String name, boolean hexDump) {
         if (name == null) {
             throw new NullPointerException("name");
@@ -84,14 +117,29 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
         this.hexDump = hexDump;
     }
 
+    /**
+     * Returns the {@link InternalLogger} that this handler uses to log
+     * a {@link ChannelEvent}.
+     */
     public InternalLogger getLogger() {
         return logger;
     }
 
+    /**
+     * Returns {@code true} if and only if logging has been enabled for the
+     * specified event.  The default implementation enables logging for all
+     * events at {@code DEBUG} level.
+     */
     public boolean isLogEnabled(@SuppressWarnings("unused") ChannelEvent e) {
         return getLogger().isDebugEnabled();
     }
 
+    /**
+     * Logs the specified event.  First, it determines if the event is loggable
+     * by calling {@link #isLogEnabled(ChannelEvent)} with the specified event.
+     * If {@code true} is returned, {@link #log(String)} or
+     * {@link #log(String, Throwable)} is called.
+     */
     public void log(ChannelEvent e) {
         if (isLogEnabled(e)) {
             String msg = e.toString();
@@ -114,10 +162,18 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
         }
     }
 
+    /**
+     * Logs the specified message.  The default implementation logs the
+     * specified message at {@code DEBUG} level.
+     */
     public void log(String msg) {
         getLogger().debug(msg);
     }
 
+    /**
+     * Logs the specified message and cause.  The default implementation logs
+     * the specified message and cause at {@code DEBUG} level.
+     */
     public void log(String msg, Throwable cause) {
         getLogger().debug(msg, cause);
     }
