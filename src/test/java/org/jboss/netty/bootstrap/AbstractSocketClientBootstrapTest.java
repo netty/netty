@@ -71,6 +71,7 @@ public abstract class AbstractSocketClientBootstrapTest {
     public void testFailedConnectionAttempt() throws Exception {
         ClientBootstrap bootstrap = new ClientBootstrap();
         bootstrap.setFactory(newClientSocketChannelFactory(executor));
+        bootstrap.getPipeline().addLast("dummy", new DummyHandler());
         bootstrap.setOption("remoteAddress", new InetSocketAddress("255.255.255.255", 1));
         ChannelFuture future = bootstrap.connect();
         future.awaitUninterruptibly();
