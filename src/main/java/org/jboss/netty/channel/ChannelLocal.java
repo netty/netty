@@ -33,7 +33,7 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  *
  * @apiviz.stereotype utility
  */
-public abstract class ChannelLocal<T> {
+public class ChannelLocal<T> {
 
     private final ConcurrentMap<Channel, T> map =
         new ConcurrentIdentityWeakKeyHashMap<Channel, T>();
