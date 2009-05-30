@@ -57,7 +57,7 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
             throw new NullPointerException("buffer");
         }
 
-        this.buffer = buffer.slice();
+        this.buffer = buffer.slice().order(buffer.order());
         capacity = buffer.remaining();
         writerIndex(capacity);
     }
@@ -337,6 +337,7 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
 
         ByteBuffer dst = buffer.isDirect() ? ByteBuffer.allocateDirect(length) : ByteBuffer.allocate(length);
         dst.put(src);
+        dst.order(order());
         dst.clear();
         return new ByteBufferBackedChannelBuffer(dst);
     }

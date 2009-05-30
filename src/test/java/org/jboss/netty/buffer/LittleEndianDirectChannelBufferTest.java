@@ -24,6 +24,8 @@ package org.jboss.netty.buffer;
 
 import static org.junit.Assert.*;
 
+import java.nio.ByteOrder;
+
 /**
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -31,13 +33,14 @@ import static org.junit.Assert.*;
  *
  * @version $Rev$, $Date$
  */
-public class DirectChannelBufferTest extends AbstractChannelBufferTest {
+public class LittleEndianDirectChannelBufferTest extends AbstractChannelBufferTest {
 
     private ChannelBuffer buffer;
 
     @Override
     protected ChannelBuffer newBuffer(int length) {
-        buffer = ChannelBuffers.directBuffer(length);
+        buffer = ChannelBuffers.directBuffer(ByteOrder.LITTLE_ENDIAN, length);
+        assertSame(ByteOrder.LITTLE_ENDIAN, buffer.order());
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }
