@@ -88,7 +88,7 @@ public class HttpClient {
 
         // Send the HTTP request.
         HttpRequest request = new DefaultHttpRequest(
-                HttpVersion.HTTP_1_0, HttpMethod.GET, uri.toASCIIString());
+                HttpVersion.HTTP_1_1, HttpMethod.GET, uri.toASCIIString());
         request.addHeader(HttpHeaders.Names.HOST, host);
         CookieEncoder httpCookieEncoder = new CookieEncoder(false);
         httpCookieEncoder.addCookie("my-cookie", "foo");
