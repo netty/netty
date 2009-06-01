@@ -30,6 +30,7 @@ import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
+import java.net.SocketException;
 
 import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.channel.ChannelException;
@@ -67,6 +68,13 @@ final class OioDatagramChannel extends AbstractChannel
             socket = new MulticastSocket(null);
         } catch (IOException e) {
             throw new ChannelException("Failed to open a datagram socket.", e);
+        }
+
+        try {
+            socket.setSoTimeout(10);
+        } catch (SocketException e) {
+            throw new ChannelException(
+                    "Failed to configure the datagram socket timeout.", e);
         }
         config = new DefaultDatagramChannelConfig(socket);
 
