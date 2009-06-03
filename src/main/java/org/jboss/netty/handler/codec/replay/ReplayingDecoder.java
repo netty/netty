@@ -455,6 +455,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
     private void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         ChannelBuffer cumulation = cumulation(ctx);
+        replayable.terminate();
         try {
             if (cumulation.readable()) {
                 // Make sure all data was read before notifying a closed channel.

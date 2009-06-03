@@ -46,13 +46,22 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     private static final Error REPLAY = new ReplayError();
 
     private final ChannelBuffer buffer;
+    private boolean terminated;
 
     ReplayingDecoderBuffer(ChannelBuffer buffer) {
         this.buffer = buffer;
     }
 
+    void terminate() {
+        terminated = true;
+    }
+
     public int capacity() {
-        return Integer.MAX_VALUE;
+        if (terminated) {
+            return buffer.capacity();
+        } else {
+            return Integer.MAX_VALUE;
+        }
     }
 
     public void clear() {
@@ -210,7 +219,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public int readableBytes() {
-        return Integer.MAX_VALUE - buffer.readerIndex();
+        if (terminated) {
+            return buffer.readableBytes();
+        } else {
+            return Integer.MAX_VALUE - buffer.readerIndex();
+        }
     }
 
     public byte readByte() {
