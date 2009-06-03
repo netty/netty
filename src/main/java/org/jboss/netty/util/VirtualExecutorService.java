@@ -22,20 +22,15 @@
  */
 package org.jboss.netty.util;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.AbstractExecutorService;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.jboss.netty.util.internal.MapBackedSet;
 
@@ -153,75 +148,6 @@ public class VirtualExecutorService extends AbstractExecutorService {
             }
 
             return isTerminated();
-        }
-    }
-
-    @Override
-    public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
-            throws InterruptedException {
-        if (s != null) {
-            return s.invokeAll(tasks);
-        } else {
-            return super.invokeAll(tasks);
-        }
-    }
-
-    @Override
-    public <T> List<Future<T>> invokeAll(
-            Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-            throws InterruptedException {
-        if (s != null) {
-            return s.invokeAll(tasks, timeout, unit);
-        } else {
-            return super.invokeAll(tasks, timeout, unit);
-        }
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
-            throws InterruptedException, ExecutionException {
-        if (s != null) {
-            return s.invokeAny(tasks);
-        } else {
-            return super.invokeAny(tasks);
-        }
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks,
-            long timeout, TimeUnit unit) throws InterruptedException,
-            ExecutionException, TimeoutException {
-        if (s != null) {
-            return s.invokeAny(tasks, timeout, unit);
-        } else {
-            return super.invokeAny(tasks, timeout, unit);
-        }
-    }
-
-    @Override
-    public <T> Future<T> submit(Callable<T> task) {
-        if (s != null) {
-            return s.submit(task);
-        } else {
-            return super.submit(task);
-        }
-    }
-
-    @Override
-    public Future<?> submit(Runnable task) {
-        if (s != null) {
-            return s.submit(task);
-        } else {
-            return super.submit(task);
-        }
-    }
-
-    @Override
-    public <T> Future<T> submit(Runnable task, T result) {
-        if (s != null) {
-            return s.submit(task, result);
-        } else {
-            return super.submit(task, result);
         }
     }
 
