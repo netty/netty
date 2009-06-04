@@ -89,7 +89,7 @@ public class CompatibleObjectDecoder extends ReplayingDecoder<CompatibleObjectDe
     protected Object decode(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, CompatibleObjectDecoderState state) throws Exception {
         bin.switchStream(new ChannelBufferInputStream(buffer));
-
+        System.out.println(buffer);
         switch (state) {
         case READ_HEADER:
             oin = newObjectInputStream(bin);
@@ -105,12 +105,16 @@ public class CompatibleObjectDecoder extends ReplayingDecoder<CompatibleObjectDe
     protected Object decodeLast(ChannelHandlerContext ctx, Channel channel,
             ChannelBuffer buffer, CompatibleObjectDecoderState state)
             throws Exception {
-        // Ignore the last TC_RESET
-        if (buffer.readableBytes() == 1 &&
-            buffer.getByte(buffer.readerIndex()) == ObjectStreamConstants.TC_RESET) {
-            buffer.skipBytes(1);
-            oin.close();
+        switch (buffer.readableBytes()) {
+        case 0:
             return null;
+        case 1:
+            // Ignore the last TC_RESET
+            if (buffer.getByte(buffer.readerIndex()) == ObjectStreamConstants.TC_RESET) {
+                buffer.skipBytes(1);
+                oin.close();
+                return null;
+            }
         }
 
         Object decoded =  decode(ctx, channel, buffer, state);
