@@ -111,7 +111,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
     private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
-            "^.*(?:Connection.*reset|Broken.*pipe).*$",
+            "^.*(?:connection.*reset|connection.*closed|broken.*pipe).*$",
             Pattern.CASE_INSENSITIVE);
 
     private static SslBufferPool defaultBufferPool;
