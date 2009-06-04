@@ -90,7 +90,16 @@ public class SecureChatClient {
             if (line == null) {
                 break;
             }
+
+            // Sends the received line to the server.
             lastWriteFuture = channel.write(line + '\n');
+
+            // If user typed the 'bye' command, wait until the server closes
+            // the connection.
+            if (line.toLowerCase().equals("bye")) {
+                channel.getCloseFuture().awaitUninterruptibly();
+                break;
+            }
         }
 
         // Wait until all messages are flushed before closing the channel.
