@@ -211,7 +211,10 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
      *
      * @param ctx      the context of this handler
      * @param channel  the current channel
-     * @param buffer   the cumulative buffer of received packets so far
+     * @param buffer   the cumulative buffer of received packets so far.
+     *                 Note that the buffer might be empty, which means you
+     *                 should not make an assumption that the buffer contains
+     *                 at least one byte in your decoder implementation.
      *
      * @return the decoded frame if a full frame was received and decoded.
      *         {@code null} if there's not enough data in the buffer to decode a frame.
@@ -225,7 +228,10 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
      *
      * @param ctx      the context of this handler
      * @param channel  the current channel
-     * @param buffer   the cumulative buffer of received packets so far
+     * @param buffer   the cumulative buffer of received packets so far.
+     *                 Note that the buffer might be empty, which means you
+     *                 should not make an assumption that the buffer contains
+     *                 at least one byte in your decoder implementation.
      *
      * @return the decoded frame if a full frame was received and decoded.
      *         {@code null} if there's not enough data in the buffer to decode a frame.
@@ -292,13 +298,14 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
             if (cumulation.readable()) {
                 // Make sure all frames are read before notifying a closed channel.
                 callDecode(ctx, ctx.getChannel(), cumulation, null);
-                if (cumulation.readable()) {
-                    // and send the remainders too if necessary.
-                    Object partialFrame = decodeLast(ctx, ctx.getChannel(), cumulation);
-                    if (partialFrame != null) {
-                        fireMessageReceived(ctx, null, partialFrame);
-                    }
-                }
+            }
+
+            // Call decodeLast() finally.  Please note that decodeLast() is
+            // called even if there's nothing more to read from the buffer to
+            // notify a user that the connection was closed explicitly.
+            Object partialFrame = decodeLast(ctx, ctx.getChannel(), cumulation);
+            if (partialFrame != null) {
+                fireMessageReceived(ctx, null, partialFrame);
             }
         } finally {
             ctx.sendUpstream(e);

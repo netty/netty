@@ -326,7 +326,10 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
      *
      * @param ctx      the context of this handler
      * @param channel  the current channel
-     * @param buffer   the cumulative buffer of received packets so far\
+     * @param buffer   the cumulative buffer of received packets so far.
+     *                 Note that the buffer might be empty, which means you
+     *                 should not make an assumption that the buffer contains
+     *                 at least one byte in your decoder implementation.
      * @param state    the current decoder state ({@code null} if unused)
      *
      * @return the decoded frame
@@ -340,7 +343,10 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
      *
      * @param ctx      the context of this handler
      * @param channel  the current channel
-     * @param buffer   the cumulative buffer of received packets so far
+     * @param buffer   the cumulative buffer of received packets so far.
+     *                 Note that the buffer might be empty, which means you
+     *                 should not make an assumption that the buffer contains
+     *                 at least one byte in your decoder implementation.
      * @param state    the current decoder state ({@code null} if unused)
      *
      * @return the decoded frame
@@ -460,13 +466,14 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             if (cumulation.readable()) {
                 // Make sure all data was read before notifying a closed channel.
                 callDecode(ctx, e.getChannel(), cumulation, null);
-                if (cumulation.readable()) {
-                    // and send the remainders too if necessary.
-                    Object partiallyDecoded = decodeLast(ctx, e.getChannel(), replayable, state);
-                    if (partiallyDecoded != null) {
-                        unfoldAndfireMessageReceived(ctx, partiallyDecoded, null);
-                    }
-                }
+            }
+
+            // Call decodeLast() finally.  Please note that decodeLast() is
+            // called even if there's nothing more to read from the buffer to
+            // notify a user that the connection was closed explicitly.
+            Object partiallyDecoded = decodeLast(ctx, e.getChannel(), replayable, state);
+            if (partiallyDecoded != null) {
+                unfoldAndfireMessageReceived(ctx, partiallyDecoded, null);
             }
         } catch (ReplayError replay) {
             // Ignore
