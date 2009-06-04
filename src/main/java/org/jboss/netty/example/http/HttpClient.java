@@ -90,6 +90,7 @@ public class HttpClient {
         HttpRequest request = new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, uri.toASCIIString());
         request.addHeader(HttpHeaders.Names.HOST, host);
+        request.addHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
         CookieEncoder httpCookieEncoder = new CookieEncoder(false);
         httpCookieEncoder.addCookie("my-cookie", "foo");
         httpCookieEncoder.addCookie("another-cookie", "bar");

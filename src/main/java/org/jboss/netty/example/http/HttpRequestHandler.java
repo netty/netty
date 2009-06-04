@@ -131,7 +131,12 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         response.setContent(buf);
         response.setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8");
-        response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+
+        if (!close) {
+            // There's no need to add 'Content-Length' header
+            // if this is the last response.
+            response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+        }
 
         String cookieString = request.getHeader(HttpHeaders.Names.COOKIE);
         if (cookieString != null) {
