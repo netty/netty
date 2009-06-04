@@ -291,7 +291,12 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
      * Stores the internal cumulative buffer's reader position.
      */
     protected void checkpoint() {
-        checkpoint = cumulation().readerIndex();
+        ChannelBuffer cumulation = this.cumulation.get();
+        if (cumulation != null) {
+            checkpoint = cumulation.readerIndex();
+        } else {
+            checkpoint = -1; // buffer not available (already cleaned up)
+        }
     }
 
     /**
@@ -299,8 +304,8 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
      * the current decoder state.
      */
     protected void checkpoint(T state) {
-        checkpoint = cumulation().readerIndex();
-        this.state = state;
+        checkpoint();
+        setState(state);
     }
 
     /**
@@ -414,7 +419,13 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                 }
             } catch (ReplayError replay) {
                 // Return to the checkpoint (or oldPosition) and retry.
-                cumulation.readerIndex(checkpoint);
+                int checkpoint = this.checkpoint;
+                if (checkpoint >= 0) {
+                    cumulation.readerIndex(checkpoint);
+                } else {
+                    // Called by cleanup() - no need to maintain the readerIndex
+                    // anymore because the buffer has been released already.
+                }
             }
 
             if (result == null) {
@@ -460,9 +471,14 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
 
     private void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
-        ChannelBuffer cumulation = cumulation(ctx);
-        replayable.terminate();
         try {
+            ChannelBuffer cumulation = this.cumulation.getAndSet(null);
+            if (cumulation == null) {
+                return;
+            }
+
+            replayable.terminate();
+
             if (cumulation.readable()) {
                 // Make sure all data was read before notifying a closed channel.
                 callDecode(ctx, e.getChannel(), cumulation, null);
@@ -482,7 +498,6 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
         }
     }
 
-
     private ChannelBuffer cumulation(ChannelHandlerContext ctx) {
         ChannelBuffer buf = cumulation.get();
         if (buf == null) {
@@ -495,14 +510,5 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             }
         }
         return buf;
-    }
-
-    private ChannelBuffer cumulation() {
-        ChannelBuffer cumulation = this.cumulation.get();
-        if (cumulation == null) {
-            throw new IllegalStateException(
-                    "checkpoint() should be called in decode() only");
-        }
-        return cumulation;
     }
 }

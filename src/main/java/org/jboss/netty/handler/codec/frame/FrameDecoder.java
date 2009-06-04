@@ -293,8 +293,12 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
 
     private void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
-        ChannelBuffer cumulation = cumulation(ctx);
         try {
+            ChannelBuffer cumulation = this.cumulation.getAndSet(null);
+            if (cumulation == null) {
+                return;
+            }
+
             if (cumulation.readable()) {
                 // Make sure all frames are read before notifying a closed channel.
                 callDecode(ctx, ctx.getChannel(), cumulation, null);
