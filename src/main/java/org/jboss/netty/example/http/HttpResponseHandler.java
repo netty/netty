@@ -71,7 +71,7 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler {
             HttpChunk chunk = (HttpChunk) e.getMessage();
             if (chunk.isLast()) {
                 readingChunks = false;
-                System.out.println();
+                System.out.println("END OF CHUNK");
             } else {
                 System.out.print(chunk.getContent().toString("UTF-8"));
                 System.out.flush();
