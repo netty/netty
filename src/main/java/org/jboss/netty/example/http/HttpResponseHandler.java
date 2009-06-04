@@ -59,19 +59,20 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler {
 
             if (response.getStatus().getCode() == 200 && response.isChunked()) {
                 readingChunks = true;
-                System.out.println("CHUNKED CONTENT:");
+                System.out.println("CHUNKED CONTENT {");
             } else {
                 ChannelBuffer content = response.getContent();
                 if (content.readable()) {
-                    System.out.println("CONTENT:");
+                    System.out.println("CONTENT {");
                     System.out.println(content.toString("UTF-8"));
+                    System.out.println("} END OF CONTENT");
                 }
             }
         } else {
             HttpChunk chunk = (HttpChunk) e.getMessage();
             if (chunk.isLast()) {
                 readingChunks = false;
-                System.out.println("END OF CHUNK");
+                System.out.println("} END OF CHUNKED CONTENT");
             } else {
                 System.out.print(chunk.getContent().toString("UTF-8"));
                 System.out.flush();
