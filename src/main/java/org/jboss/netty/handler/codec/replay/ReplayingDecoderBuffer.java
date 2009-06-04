@@ -215,7 +215,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public boolean readable() {
-        return true;
+        return terminated? buffer.readable() : true;
     }
 
     public int readableBytes() {
