@@ -89,7 +89,6 @@ public class CompatibleObjectDecoder extends ReplayingDecoder<CompatibleObjectDe
     protected Object decode(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, CompatibleObjectDecoderState state) throws Exception {
         bin.switchStream(new ChannelBufferInputStream(buffer));
-        System.out.println(buffer);
         switch (state) {
         case READ_HEADER:
             oin = newObjectInputStream(bin);
