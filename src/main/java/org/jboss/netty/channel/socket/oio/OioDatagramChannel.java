@@ -54,6 +54,7 @@ final class OioDatagramChannel extends AbstractChannel
                                 implements DatagramChannel {
 
     final MulticastSocket socket;
+    final Object interestOpsLock = new Object();
     private final DatagramChannelConfig config;
     volatile Thread workerThread;
 

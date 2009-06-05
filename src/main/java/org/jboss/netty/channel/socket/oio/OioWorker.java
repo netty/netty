@@ -59,12 +59,12 @@ class OioWorker implements Runnable {
         final PushbackInputStream in = channel.getInputStream();
 
         while (channel.isOpen()) {
-            synchronized (this) {
+            synchronized (channel.interestOpsLock) {
                 while (!channel.isReadable()) {
                     try {
                         // notify() is not called at all.
                         // close() and setInterestOps() calls Thread.interrupt()
-                        this.wait();
+                        channel.interestOpsLock.wait();
                     } catch (InterruptedException e) {
                         if (!channel.isOpen()) {
                             break;
@@ -159,13 +159,15 @@ class OioWorker implements Runnable {
 
             future.setSuccess();
             if (changed) {
-                channel.setInterestOpsNow(interestOps);
+                synchronized (channel.interestOpsLock) {
+                    channel.setInterestOpsNow(interestOps);
 
-                // Notify the worker so it stops or continues reading.
-                Thread currentThread = Thread.currentThread();
-                Thread workerThread = channel.workerThread;
-                if (workerThread != null && currentThread != workerThread) {
-                    workerThread.interrupt();
+                    // Notify the worker so it stops or continues reading.
+                    Thread currentThread = Thread.currentThread();
+                    Thread workerThread = channel.workerThread;
+                    if (workerThread != null && currentThread != workerThread) {
+                        workerThread.interrupt();
+                    }
                 }
 
                 fireChannelInterestChanged(channel);

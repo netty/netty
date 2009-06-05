@@ -50,6 +50,7 @@ abstract class OioSocketChannel extends AbstractChannel
                                 implements SocketChannel {
 
     final Socket socket;
+    final Object interestOpsLock = new Object();
     private final SocketChannelConfig config;
     volatile Thread workerThread;
 
