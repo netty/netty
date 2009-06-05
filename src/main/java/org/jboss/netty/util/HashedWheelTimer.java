@@ -309,12 +309,12 @@ public class HashedWheelTimer implements Timer {
                 List<HashedWheelTimeout> expiredTimeouts,
                 ReusableIterator<HashedWheelTimeout> i) {
 
-            long currentTime = System.currentTimeMillis();
+            long currentDeadline = System.currentTimeMillis() + tickDuration;
             i.rewind();
             while (i.hasNext()) {
                 HashedWheelTimeout timeout = i.next();
                 if (timeout.remainingRounds <= 0) {
-                    if (timeout.deadline <= currentTime) {
+                    if (timeout.deadline < currentDeadline) {
                         i.remove();
                         expiredTimeouts.add(timeout);
                     } else {
