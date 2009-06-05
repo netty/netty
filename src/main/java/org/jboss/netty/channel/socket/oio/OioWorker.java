@@ -159,6 +159,8 @@ class OioWorker implements Runnable {
 
             future.setSuccess();
             if (changed) {
+                channel.setInterestOpsNow(interestOps);
+
                 // Notify the worker so it stops or continues reading.
                 Thread currentThread = Thread.currentThread();
                 Thread workerThread = channel.workerThread;
@@ -166,7 +168,6 @@ class OioWorker implements Runnable {
                     workerThread.interrupt();
                 }
 
-                channel.setInterestOpsNow(interestOps);
                 fireChannelInterestChanged(channel);
             }
         } catch (Throwable t) {
