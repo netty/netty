@@ -41,6 +41,7 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.DefaultObjectSizeEstimator;
@@ -307,7 +308,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         boolean pause = increaseCounter(command);
         doExecute(command);
         if (pause) {
-            //System.out.println("ACQUIRE");
+            //System.out.println("ACQUIRE: " + command);
             semaphore.acquireUninterruptibly();
         }
     }
@@ -399,7 +400,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
         //System.out.println("D: " + totalCounter + ", " + increment);
         if (maxTotalMemorySize != 0 && totalCounter + increment >= maxTotalMemorySize) {
-            //System.out.println("RELEASE");
+            //System.out.println("RELEASE: " + task);
             semaphore.release();
         }
 
@@ -448,9 +449,11 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
     protected boolean shouldCount(Runnable task) {
         if (task instanceof ChannelEventRunnable) {
             ChannelEventRunnable r = (ChannelEventRunnable) task;
-            if (r.getEvent() instanceof ChannelStateEvent) {
-                ChannelStateEvent e = (ChannelStateEvent) r.getEvent();
-                if (e.getState() == ChannelState.INTEREST_OPS) {
+            ChannelEvent e = r.getEvent();
+            if (e instanceof WriteCompletionEvent) {
+                return false;
+            } else if (e instanceof ChannelStateEvent) {
+                if (((ChannelStateEvent) e).getState() == ChannelState.INTEREST_OPS) {
                     return false;
                 }
             }
