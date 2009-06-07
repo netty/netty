@@ -45,11 +45,15 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 /**
  * NioDatagramPipelineSink receives downstream events from a ChannelPipeline.
  * <p/>
+ * A {@link NioDatagramPipelineSink} contains an array of {@link NioUdpWorker}s
  * 
  * @author <a href="mailto:dbevenius@jboss.com">Daniel Bevenius</a>
  */
 public class NioDatagramPipelineSink extends AbstractChannelSink
 {
+    /**
+     * Internal Netty logger.
+     */
     private final InternalLogger logger = InternalLoggerFactory.getInstance(NioDatagramPipelineSink.class);
 
     private static final AtomicInteger nextId = new AtomicInteger();
@@ -72,7 +76,6 @@ public class NioDatagramPipelineSink extends AbstractChannelSink
         {
             workers[i] = new NioUdpWorker(id, i + 1, workerExecutor);
         }
-        
     }
 
     /**
@@ -90,7 +93,6 @@ public class NioDatagramPipelineSink extends AbstractChannelSink
             final ChannelStateEvent stateEvent = (ChannelStateEvent) e;
             final ChannelState state = stateEvent.getState();
             final Object value = stateEvent.getValue();
-
             switch (state)
             {
                 case OPEN:
@@ -116,8 +118,10 @@ public class NioDatagramPipelineSink extends AbstractChannelSink
         } 
         else if (e instanceof MessageEvent)
         {
-            MessageEvent event = (MessageEvent) e;
-            NioUdpWorker.write(channel, future, event.getMessage(), event.getRemoteAddress(), true);
+            final MessageEvent event = (MessageEvent) e;
+            final boolean offered = channel.writeBufferQueue.offer(event);
+            assert offered;
+            NioUdpWorker.write(channel, true);
         }
     }
 
@@ -145,11 +149,10 @@ public class NioDatagramPipelineSink extends AbstractChannelSink
 
     /**
      * Will bind the DatagramSocket to the passed-in address.
-     * Every call bind will spawn a new thread using the  that basically inturn 
+     * Every call bind will spawn a new thread using the that basically inturn 
      */
     private void bind(final NioDatagramChannel channel, final ChannelFuture future, final InetSocketAddress address)
     {
-        logger.debug("bind request for address : " + address);
         boolean bound = false;
         boolean started = false;
         try

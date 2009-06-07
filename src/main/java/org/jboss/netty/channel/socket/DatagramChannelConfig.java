@@ -25,6 +25,8 @@ package org.jboss.netty.channel.socket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
@@ -132,4 +134,31 @@ public interface DatagramChannelConfig extends ChannelConfig {
 
     ReceiveBufferSizePredictor getReceiveBufferSizePredictor();
     void setReceiveBufferSizePredictor(ReceiveBufferSizePredictor predictor);
+    
+    /**
+     * Returns the maximum loop count for a write operation until
+     * {@link WritableByteChannel#write(ByteBuffer)} returns a non-zero value.
+     * It is similar to what a spin lock is used for in concurrency programming.
+     * It improves memory utilization and write throughput depending on
+     * the platform that JVM runs on.  The default value is {@code 16}.
+     */
+    int getWriteSpinCount();
+
+    /**
+     * Sets the maximum loop count for a write operation until
+     * {@link WritableByteChannel#write(ByteBuffer)} returns a non-zero value.
+     * It is similar to what a spin lock is used for in concurrency programming.
+     * It improves memory utilization and write throughput depending on
+     * the platform that JVM runs on.  The default value is {@code 16}.
+     *
+     * @throws IllegalArgumentException
+     *         if the specified value is {@code 0} or less than {@code 0}
+     */
+    void setWriteSpinCount(int writeSpinCount);
+    
+    int getWriteBufferHighWaterMark();
+    void setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
+
+    int getWriteBufferLowWaterMark();
+    void setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
 }

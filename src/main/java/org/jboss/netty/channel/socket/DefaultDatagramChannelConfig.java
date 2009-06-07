@@ -48,8 +48,12 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
                                         implements DatagramChannelConfig {
 
     private final DatagramSocket socket;
-    private volatile ReceiveBufferSizePredictor predictor =
-        new FixedReceiveBufferSizePredictor(768);
+    private volatile ReceiveBufferSizePredictor predictor = new FixedReceiveBufferSizePredictor(768);
+    
+    private volatile int writeBufferHighWaterMark = 64 * 1024;
+    private volatile int writeBufferLowWaterMark  = 32 * 1024;
+    
+    private volatile int writeSpinCount = 16;
 
     /**
      * Creates a new instance.
@@ -269,4 +273,62 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
         this.predictor = predictor;
     }
+
+    public void setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        if (writeBufferHighWaterMark < getWriteBufferLowWaterMark()) {
+            throw new IllegalArgumentException(
+                    "writeBufferHighWaterMark cannot be less than " +
+                    "writeBufferLowWaterMark (" + getWriteBufferLowWaterMark() + "): " +
+                    writeBufferHighWaterMark);
+        }
+        setWriteBufferHighWaterMark0(writeBufferHighWaterMark);
+    }
+
+    private void setWriteBufferHighWaterMark0(int writeBufferHighWaterMark) {
+        if (writeBufferHighWaterMark < 0) {
+            throw new IllegalArgumentException(
+                    "writeBufferHighWaterMark: " + writeBufferHighWaterMark);
+        }
+        this.writeBufferHighWaterMark = writeBufferHighWaterMark;
+    }
+    
+    public int getWriteBufferHighWaterMark()
+    {
+        return writeBufferHighWaterMark;
+    }
+
+    public int getWriteBufferLowWaterMark() {
+        return writeBufferLowWaterMark;
+    }
+
+    public void setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        if (writeBufferLowWaterMark > getWriteBufferHighWaterMark()) {
+            throw new IllegalArgumentException(
+                    "writeBufferLowWaterMark cannot be greater than " +
+                    "writeBufferHighWaterMark (" + getWriteBufferHighWaterMark() + "): " +
+                    writeBufferLowWaterMark);
+        }
+        setWriteBufferLowWaterMark0(writeBufferLowWaterMark);
+    }
+
+    private void setWriteBufferLowWaterMark0(int writeBufferLowWaterMark) {
+        if (writeBufferLowWaterMark < 0) {
+            throw new IllegalArgumentException(
+                    "writeBufferLowWaterMark: " + writeBufferLowWaterMark);
+        }
+        this.writeBufferLowWaterMark = writeBufferLowWaterMark;
+    }
+
+    public int getWriteSpinCount() {
+        return writeSpinCount;
+    }
+
+    public void setWriteSpinCount(int writeSpinCount) {
+        if (writeSpinCount <= 0) {
+            throw new IllegalArgumentException(
+                    "writeSpinCount must be a positive integer.");
+        }
+        this.writeSpinCount = writeSpinCount;
+    }
+
 }

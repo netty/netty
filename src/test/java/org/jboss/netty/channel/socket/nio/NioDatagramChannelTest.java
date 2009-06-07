@@ -20,20 +20,21 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
+import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.ChannelFuture;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -43,52 +44,85 @@ import org.junit.Test;
  */
 public class NioDatagramChannelTest
 {
-    private static final int PORT = 9999;
-    private static final String HOST = "localhost";
+    private static Channel sc;
+    private static InetSocketAddress inetSocketAddress;
+    
+    @BeforeClass
+    public static void setupChannel()
+    {
+        final ServerBootstrap sb = new ServerBootstrap(new NioDatagramChannelFactory(Executors.newCachedThreadPool()));
+        inetSocketAddress = new InetSocketAddress("localhost", 9999);
+        sc = sb.bind(inetSocketAddress);
+        final SimpleHandler handler = new SimpleHandler();
+        sc.getPipeline().addFirst("handler", handler);
+    }
     
     @Test
-    public void sendAndRecivePayload() throws Throwable
+    public void checkBoundPort() throws Throwable
     {
-        final String expectedPayload = "some payload";
-        final ServerBootstrap sb = new ServerBootstrap(new NioDatagramChannelFactory(Executors.newCachedThreadPool()));
-        final Channel sc = sb.bind(new InetSocketAddress(HOST, PORT));
-        
-        // Must add the handlers after binding...this is shorly a bug on my part but I'm not
-        // sure why yet:( /Daniel
-        final TestHandler handler = new TestHandler();
-        sc.getPipeline().addFirst("handler", handler);
-
-        InetSocketAddress socketAddress = (InetSocketAddress) sc.getLocalAddress();
-        assertEquals(PORT, socketAddress.getPort());
-
-        DatagramSocket clientSocket = new DatagramSocket();
-        byte[] payload = expectedPayload.getBytes();
-        
-        DatagramPacket dp = new DatagramPacket(payload, payload.length, socketAddress.getAddress(), PORT);
-        
-        clientSocket.send(dp);
-        
-        // clear the payload just to be sure.
-        dp.setData(new byte[payload.length]);
-        assertFalse(expectedPayload.equals(new String(dp.getData())));
-        
-        clientSocket.receive(dp);
-        byte[] actualPayload = dp.getData();
-        assertEquals(expectedPayload, new String(actualPayload));
-        
-        sc.close().awaitUninterruptibly();
+        final InetSocketAddress socketAddress = (InetSocketAddress) sc.getLocalAddress();
+        assertEquals(9999, socketAddress.getPort());
     }
     
-    @ChannelPipelineCoverage("one")
-    private class TestHandler extends SimpleChannelHandler
+    @Test
+    public void sendReciveOne() throws Throwable
     {
-        @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception
+        final String expectedPayload = "some payload";
+        sendRecive(expectedPayload);
+    }
+    
+    @Test
+    public void sendReciveMultiple() throws Throwable
+    {
+        final String expectedPayload = "some payload";
+        for (int i = 0; i < 1000; i++ )
         {
-            final ChannelBuffer cb = (ChannelBuffer) e.getMessage();
-            final byte[] actual = new byte[cb.readableBytes()];
-            cb.getBytes(0, actual);
-            ctx.sendDownstream(e);
+            sendRecive(expectedPayload);
         }
     }
+    
+    public void clientBootstrap() throws InterruptedException
+    {
+        final ClientBootstrap bootstrap = new ClientBootstrap(new NioDatagramChannelFactory(Executors.newCachedThreadPool()));
+        bootstrap.getPipeline().addLast("test", new SimpleHandler());
+        bootstrap.setOption("tcpNoDelay", true);
+        bootstrap.setOption("keepAlive", true);
+        InetSocketAddress clientAddress = new InetSocketAddress("localhost", 8888);
+        bootstrap.setOption("localAddress", clientAddress);
+        
+        ChannelFuture ccf = bootstrap.connect(inetSocketAddress);
+        ccf.awaitUninterruptibly();
+        
+        
+        Channel cc = ccf.getChannel();
+        final String payload = "client payload";
+        ChannelFuture write = cc.write(ChannelBuffers.wrappedBuffer(payload.getBytes(), 0, payload.length()));
+        write.awaitUninterruptibly();
+    }
+
+    @AfterClass
+    public static void closeChannel()
+    {
+        if (sc != null)
+        {
+            final ChannelFuture future = sc.close();
+            if (future != null)
+                future.awaitUninterruptibly();
+        }
+    }
+    
+    private void sendRecive(final String expectedPayload) throws IOException
+    {
+        final UdpClient udpClient = new UdpClient(inetSocketAddress.getAddress(), inetSocketAddress.getPort());
+        final DatagramPacket dp = udpClient.send(expectedPayload.getBytes());
+        
+        dp.setData(new byte[expectedPayload.length()]);
+        assertFalse("The payload should have been cleared", expectedPayload.equals(new String(dp.getData())));
+        
+        udpClient.receive(dp);
+        
+        assertEquals(expectedPayload, new String(dp.getData()));
+        udpClient.close();
+    }
+    
 }
