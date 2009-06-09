@@ -93,7 +93,7 @@ public class DefaultHttpMessage implements HttpMessage {
             throw new IllegalArgumentException("values is empty.");
         }
 
-        if (values instanceof List) {
+        if (values instanceof List<?>) {
             headers.put(name, (List<String>) values);
         } else {
             List<String> valueList = new LinkedList<String>();

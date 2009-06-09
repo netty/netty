@@ -279,7 +279,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
                 for (int i = 0; i < length; i ++) {
                     Channels.fireMessageReceived(context, Array.get(result, i), remoteAddress);
                 }
-            } else if (result instanceof Iterable) {
+            } else if (result instanceof Iterable<?>) {
                 for (Object r: (Iterable<?>) result) {
                     Channels.fireMessageReceived(context, r, remoteAddress);
                 }

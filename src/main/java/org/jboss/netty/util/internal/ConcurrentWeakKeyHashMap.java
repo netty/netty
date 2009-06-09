@@ -1339,7 +1339,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
 
         @Override
         public boolean equals(Object o) {
-            if (!(o instanceof Map.Entry)) {
+            if (!(o instanceof Map.Entry<?, ?>)) {
                 return false;
             }
             @SuppressWarnings("unchecked")
@@ -1470,7 +1470,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
 
         @Override
         public boolean contains(Object o) {
-            if (!(o instanceof Map.Entry)) {
+            if (!(o instanceof Map.Entry<?, ?>)) {
                 return false;
             }
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
@@ -1480,7 +1480,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
 
         @Override
         public boolean remove(Object o) {
-            if (!(o instanceof Map.Entry)) {
+            if (!(o instanceof Map.Entry<?, ?>)) {
                 return false;
             }
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;

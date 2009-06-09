@@ -83,7 +83,7 @@ public class DefaultObjectSizeEstimator implements ObjectSizeEstimator {
             answer += ((ByteBuffer) o).remaining();
         } else if (o instanceof CharSequence) {
             answer += ((CharSequence) o).length() << 1;
-        } else if (o instanceof Iterable) {
+        } else if (o instanceof Iterable<?>) {
             for (Object m : (Iterable<?>) o) {
                 answer += estimateSize(m);
             }
