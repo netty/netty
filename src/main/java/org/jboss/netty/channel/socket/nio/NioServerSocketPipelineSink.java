@@ -25,10 +25,11 @@ package org.jboss.netty.channel.socket.nio;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
+import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
+import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -208,7 +209,11 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
         public void run() {
             for (;;) {
                 try {
-                    SocketChannel acceptedSocket = channel.socket.accept();
+                    // We do not call ServerSocketChannel.accept() directly
+                    // because SocketTimeoutException is not raised on some
+                    // JDKs.
+                    Socket acceptedSocket = channel.socket.socket().accept();
+
                     try {
                         ChannelPipeline pipeline =
                             channel.getConfig().getPipelineFactory().getPipeline();
@@ -216,7 +221,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                         worker.register(new NioAcceptedSocketChannel(
                                         channel.getFactory(), pipeline, channel,
                                         NioServerSocketPipelineSink.this,
-                                        acceptedSocket, worker), null);
+                                        acceptedSocket.getChannel(), worker), null);
                     } catch (Exception e) {
                         logger.warn(
                                 "Failed to initialize an accepted socket.", e);
@@ -231,6 +236,8 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                 } catch (SocketTimeoutException e) {
                     // Thrown every second to get ClosedChannelException
                     // raised.
+                } catch (CancelledKeyException e) {
+                    // Raised by accept() when the server socket was closed.
                 } catch (ClosedChannelException e) {
                     // Closed as requested.
                     break;
