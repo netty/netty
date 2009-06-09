@@ -184,12 +184,17 @@ class NioProviderMetadata {
                     if (provider.equals("sun.nio.ch.PollSelectorProvider")) {
                         return 1;
                     }
-                } else if (version.equals("1.6") || version.matches("^1\\.6\\D.*$")) {
-                    if (provider.equals("sun.nio.ch.EPollSelectorProvider") ||
-                        provider.equals("sun.nio.ch.PollSelectorProvider")) {
-                        return 2;
-                    }
                 }
+
+                // Commented out - the constraint level of IBM JDK 1.6 is
+                //                 different between versions.
+                //
+                //else if (version.equals("1.6") || version.matches("^1\\.6\\D.*$")) {
+                //    if (provider.equals("sun.nio.ch.EPollSelectorProvider") ||
+                //        provider.equals("sun.nio.ch.PollSelectorProvider")) {
+                //        return 2;
+                //    }
+                //}
 
             // AIX
             } if (os.indexOf("aix") >= 0) {
@@ -197,12 +202,17 @@ class NioProviderMetadata {
                     if (provider.equals("sun.nio.ch.PollSelectorProvider")) {
                         return 1;
                     }
-                } else if (version.equals("1.6") || version.matches("^1\\.6\\D.*$")) {
-                    if (provider.equals("sun.nio.ch.EPollSelectorProvider") ||
-                        provider.equals("sun.nio.ch.PollSelectorProvider")) {
-                        return 2;
-                    }
                 }
+
+                // Commented out - the constraint level of IBM JDK 1.6 is
+                //                 different between versions.
+                //
+                //else if (version.equals("1.6") || version.matches("^1\\.6\\D.*$")) {
+                //    if (provider.equals("sun.nio.ch.EPollSelectorProvider") ||
+                //        provider.equals("sun.nio.ch.PollSelectorProvider")) {
+                //        return 2;
+                //    }
+                //}
             }
         // BEA
         } else if (vendor.indexOf("bea") >= 0 || vendor.indexOf("oracle") >= 0) {
