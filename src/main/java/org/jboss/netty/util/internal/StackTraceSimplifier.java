@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 import org.jboss.netty.channel.DefaultChannelPipeline;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.util.DebugUtil;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 
 /**
  * Simplifies an exception stack trace by removing unnecessary
@@ -47,8 +48,8 @@ public class StackTraceSimplifier {
     private static final Pattern EXCLUDED_STACK_TRACE =
         Pattern.compile(
                 "^org\\.jboss\\.netty\\." +
-                "(util\\.internal\\.(ThreadRenamingRunnable)" +
-                "|channel\\.(SimpleChannelHandler|DefaultChannelPipeline.*))$");
+                "(util\\.(ThreadRenamingRunnable)" +
+                "|channel\\.(SimpleChannel(Upstream|Downstream)?Handler|DefaultChannelPipeline.*))$");
 
     /**
      * Removes unnecessary {@link StackTraceElement}s from the specified

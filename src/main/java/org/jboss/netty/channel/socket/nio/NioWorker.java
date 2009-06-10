@@ -51,9 +51,9 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.IoWorkerRunnable;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
-import org.jboss.netty.util.internal.ThreadRenamingRunnable;
 
 /**
  *

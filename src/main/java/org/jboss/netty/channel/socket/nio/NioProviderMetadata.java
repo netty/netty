@@ -37,8 +37,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.SystemPropertyUtil;
-import org.jboss.netty.util.internal.ThreadRenamingRunnable;
 
 /**
  * Provides information which is specific to a NIO service provider

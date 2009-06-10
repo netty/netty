@@ -35,8 +35,8 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.IoWorkerRunnable;
-import org.jboss.netty.util.internal.ThreadRenamingRunnable;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
