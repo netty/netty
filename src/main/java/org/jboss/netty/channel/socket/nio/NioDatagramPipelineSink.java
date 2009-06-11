@@ -42,7 +42,9 @@ import org.jboss.netty.channel.MessageEvent;
  * A {@link NioDatagramPipelineSink} contains an array of {@link NioUdpWorker}s
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
  * @author Daniel Bevenius (dbevenius@jboss.com)
+ *
  * @version $Rev$, $Date$
  */
 public class NioDatagramPipelineSink extends AbstractChannelSink {

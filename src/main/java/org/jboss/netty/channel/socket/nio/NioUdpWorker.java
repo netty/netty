@@ -59,7 +59,9 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * also manages the select process.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
  * @author Daniel Bevenius (dbevenius@jboss.com)
+ *
  * @version $Rev$, $Date$
  */
 class NioUdpWorker implements Runnable {
@@ -723,9 +725,6 @@ class NioUdpWorker implements Runnable {
     /**
      * RegisterTask is a task responsible for registering a channel with a
      * selector.
-     *
-     * @author <a href="mailto:dbevenius@jboss.com">Daniel Bevenius</a>
-     *
      */
     private final class ChannelRegistionTask implements Runnable {
         private final NioDatagramChannel channel;

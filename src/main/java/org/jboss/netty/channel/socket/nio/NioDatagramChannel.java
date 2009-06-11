@@ -49,10 +49,11 @@ import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 /**
  * NioDatagramChannel provides a connection less NIO UDP channel for Netty.
- * <p/>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
  * @author Daniel Bevenius (dbevenius@jboss.com)
+ *
  * @version $Rev$, $Date$
  */
 public class NioDatagramChannel extends AbstractChannel implements
@@ -218,7 +219,6 @@ public class NioDatagramChannel extends AbstractChannel implements
     /**
      * WriteBuffer is an extension of {@link LinkedTransferQueue} that adds
      * support for highWaterMark checking of the write buffer size.
-     *
      */
     private final class WriteBufferQueue extends
             LinkedTransferQueue<MessageEvent> {

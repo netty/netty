@@ -54,9 +54,10 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  * more {@link Channel}s in a non-blocking mode.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
  * @author Daniel Bevenius (dbevenius@jboss.com)
- * @version $Rev$, $Date$
  *
+ * @version $Rev$, $Date$
  */
 public class NioDatagramChannelFactory implements ChannelFactory,
         ServerChannelFactory {

@@ -52,6 +52,7 @@ import org.jboss.netty.channel.socket.DatagramChannelConfig;
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
+ * @author Daniel Bevenius (dbevenius@jboss.com)
  *
  * @version $Rev$, $Date$
  */
