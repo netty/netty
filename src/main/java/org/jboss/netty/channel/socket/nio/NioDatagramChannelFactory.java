@@ -51,7 +51,9 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  * threads.  A worker thread performs non-blocking read and write for one or
  * more {@link Channel}s in a non-blocking mode.
  *
- * @author <a href="mailto:dbevenius@jboss.com">Daniel Bevenius</a>
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Daniel Bevenius (dbevenius@jboss.com)
+ * @version $Rev$, $Date$
  *
  */
 public class NioDatagramChannelFactory implements ChannelFactory,

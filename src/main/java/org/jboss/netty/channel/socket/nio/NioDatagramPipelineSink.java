@@ -20,38 +20,33 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.*;
+import static org.jboss.netty.channel.Channels.fireChannelBound;
+import static org.jboss.netty.channel.Channels.fireChannelClosed;
+import static org.jboss.netty.channel.Channels.fireChannelUnbound;
+import static org.jboss.netty.channel.Channels.fireExceptionCaught;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * NioDatagramPipelineSink receives downstream events from a ChannelPipeline.
  * <p/>
  * A {@link NioDatagramPipelineSink} contains an array of {@link NioUdpWorker}s
  *
- * @author <a href="mailto:dbevenius@jboss.com">Daniel Bevenius</a>
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Daniel Bevenius (dbevenius@jboss.com)
+ * @version $Rev$, $Date$
  */
 public class NioDatagramPipelineSink extends AbstractChannelSink {
-    /**
-     * Internal Netty logger.
-     */
-    private final InternalLogger logger =
-            InternalLoggerFactory.getInstance(NioDatagramPipelineSink.class);
 
     private static final AtomicInteger nextId = new AtomicInteger();
 
@@ -163,29 +158,4 @@ public class NioDatagramPipelineSink extends AbstractChannelSink {
         return workers[Math.abs(workerIndex.getAndIncrement() % workers.length)];
     }
 
-    /**
-     * The connection sematics of a NioDatagramPipelineSink are different for datagram sockets than they are for stream
-     * sockets. Placing a DatagramChannel into a connected state causes datagrams to be ignored from any source
-     * address other than the one to which the channel is connected. Unwanted packets will be dropped.
-     * Not sure that this makes sense for a server side component.
-     *
-     * @param channel The UdpChannel to connect from.
-     * @param future
-     * @param remoteAddress The remote address to connect to.
-     */
-    @SuppressWarnings("unused")
-    private void connect(final NioDatagramChannel channel,
-            ChannelFuture future, SocketAddress remoteAddress) {
-        try {
-            try {
-                channel.getDatagramChannel().socket().connect(remoteAddress);
-            } catch (final IOException e) {
-                future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-                channel.connectFuture = future;
-            }
-        } catch (final Throwable t) {
-            future.setFailure(t);
-            fireExceptionCaught(channel, t);
-        }
-    }
 }

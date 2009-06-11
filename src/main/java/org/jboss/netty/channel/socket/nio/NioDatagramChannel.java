@@ -49,16 +49,17 @@ import org.jboss.netty.util.internal.ThreadLocalBoolean;
  * NioDatagramChannel provides a connection less NIO UDP channel for Netty.
  * <p/>
  *
- * @author <a href="mailto:dbevenius@jboss.com">Daniel Bevenius</a>
- *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Daniel Bevenius (dbevenius@jboss.com)
+ * @version $Rev$, $Date$
  */
 public class NioDatagramChannel extends AbstractChannel implements
         ServerChannel {
     /**
      * Internal Netty logger.
      */
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(NioDatagramChannel.class);
+    private static final InternalLogger logger = InternalLoggerFactory
+            .getInstance(NioDatagramChannel.class);
 
     /**
      * The {@link DatagramChannelConfig}.
@@ -76,22 +77,17 @@ public class NioDatagramChannel extends AbstractChannel implements
     private final DatagramChannel datagramChannel;
 
     /**
-     *
-     */
-    volatile ChannelFuture connectFuture;
-
-    /**
-     *
+     * Monitor object to synchronize access to InterestedOps.
      */
     final Object interestOpsLock = new Object();
 
     /**
-     *
+     * Monitor object for synchronizing access to the {@link WriteBufferQueue}.
      */
     final Object writeLock = new Object();
 
     /**
-     *
+     * WriteTask that performs write operations.
      */
     final Runnable writeTask = new WriteTask();
 
@@ -101,7 +97,7 @@ public class NioDatagramChannel extends AbstractChannel implements
     final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
 
     /**
-     *
+     * Queue of write {@link MessageEvent}s.
      */
     final Queue<MessageEvent> writeBufferQueue = new WriteBufferQueue();
 
@@ -112,22 +108,22 @@ public class NioDatagramChannel extends AbstractChannel implements
     final AtomicInteger writeBufferSize = new AtomicInteger();
 
     /**
-     *
+     * Keeps track of the highWaterMark.
      */
     final AtomicInteger highWaterMarkCounter = new AtomicInteger();
 
     /**
-     *
+     * The current write {@link MessageEvent}
      */
     MessageEvent currentWriteEvent;
 
     /**
-     *
+     * The current write index.
      */
     int currentWriteIndex;
 
     /**
-     *
+     * Boolean that indicates that write operation is in progress. 
      */
     volatile boolean inWriteNowLoop;
 
@@ -221,7 +217,6 @@ public class NioDatagramChannel extends AbstractChannel implements
      * WriteBuffer is an extension of {@link LinkedTransferQueue} that adds
      * support for highWaterMark checking of the write buffer size.
      *
-     * @author <a href="mailto:dbevenius@jboss.com">Daniel Bevenius</a>
      */
     private final class WriteBufferQueue extends
             LinkedTransferQueue<MessageEvent> {
@@ -240,20 +235,15 @@ public class NioDatagramChannel extends AbstractChannel implements
             final boolean success = super.offer(e);
             assert success;
 
-            final int messageSize =
-                    ((ChannelBuffer) e.getMessage()).readableBytes();
+            final int messageSize = ((ChannelBuffer) e.getMessage())
+                    .readableBytes();
 
-            // Add the ChannelBuffers size to the writeBuffersSize
-            final int newWriteBufferSize =
-                    writeBufferSize.addAndGet(messageSize);
+            final int newWriteBufferSize = writeBufferSize
+                    .addAndGet(messageSize);
 
             final int highWaterMark = getConfig().getWriteBufferHighWaterMark();
-            // Check if the newly calculated buffersize exceeds the highWaterMark limit.
             if (newWriteBufferSize >= highWaterMark) {
-                // Check to see if the messages size we are adding is what will cause the highWaterMark to be breached.
                 if (newWriteBufferSize - messageSize < highWaterMark) {
-                    // Increment the highWaterMarkCounter which track of the fact that the count
-                    // has been reached.
                     highWaterMarkCounter.incrementAndGet();
 
                     if (!notifying.get()) {
@@ -275,16 +265,14 @@ public class NioDatagramChannel extends AbstractChannel implements
         public MessageEvent poll() {
             final MessageEvent e = super.poll();
             if (e != null) {
-                final int messageSize =
-                        ((ChannelBuffer) e.getMessage()).readableBytes();
-                // Subtract the ChannelBuffers size from the writeBuffersSize
-                final int newWriteBufferSize =
-                        writeBufferSize.addAndGet(-messageSize);
+                final int messageSize = ((ChannelBuffer) e.getMessage())
+                        .readableBytes();
+                final int newWriteBufferSize = writeBufferSize
+                        .addAndGet(-messageSize);
 
-                final int lowWaterMark =
-                        getConfig().getWriteBufferLowWaterMark();
+                final int lowWaterMark = getConfig()
+                        .getWriteBufferLowWaterMark();
 
-                // Check if the newly calculated buffersize exceeds the lowhWaterMark limit.
                 if (newWriteBufferSize == 0 ||
                         newWriteBufferSize < lowWaterMark) {
                     if (newWriteBufferSize + messageSize >= lowWaterMark) {
@@ -303,8 +291,6 @@ public class NioDatagramChannel extends AbstractChannel implements
 
     /**
      * WriteTask is a simple runnable performs writes by delegating the {@link NioUdpWorker}.
-     *
-     * @author <a href="mailto:dbevenius@jboss.com">Daniel Bevenius</a>
      *
      */
     private final class WriteTask implements Runnable {

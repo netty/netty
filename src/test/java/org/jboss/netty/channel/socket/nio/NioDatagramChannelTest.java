@@ -39,7 +39,9 @@ import org.junit.Test;
 /**
  * Unit test for {@link NioDatagramChannel}
  *
- * @author <a href="mailto:dbevenius@jboss.com">Daniel Bevenius</a>
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Daniel Bevenius (dbevenius@jboss.com)
+ * @version $Rev$, $Date$
  */
 public class NioDatagramChannelTest {
     private static Channel sc;
@@ -48,9 +50,9 @@ public class NioDatagramChannelTest {
 
     @BeforeClass
     public static void setupChannel() {
-        final ServerBootstrap sb =
-                new ServerBootstrap(new NioDatagramChannelFactory(Executors
-                        .newCachedThreadPool()));
+        final NioDatagramChannelFactory channelFactory = new NioDatagramChannelFactory(
+                Executors.newCachedThreadPool());
+        final ServerBootstrap sb = new ServerBootstrap(channelFactory);
         inetSocketAddress = new InetSocketAddress("localhost", 9999);
         sc = sb.bind(inetSocketAddress);
         final SimpleHandler handler = new SimpleHandler();
@@ -59,8 +61,8 @@ public class NioDatagramChannelTest {
 
     @Test
     public void checkBoundPort() throws Throwable {
-        final InetSocketAddress socketAddress =
-                (InetSocketAddress) sc.getLocalAddress();
+        final InetSocketAddress socketAddress = (InetSocketAddress) sc
+                .getLocalAddress();
         assertEquals(9999, socketAddress.getPort());
     }
 
@@ -79,14 +81,14 @@ public class NioDatagramChannelTest {
     }
 
     public void clientBootstrap() {
-        final ClientBootstrap bootstrap =
-                new ClientBootstrap(new NioDatagramChannelFactory(Executors
-                        .newCachedThreadPool()));
+        final NioDatagramChannelFactory channelFactory = new NioDatagramChannelFactory(
+                Executors.newCachedThreadPool());
+        final ClientBootstrap bootstrap = new ClientBootstrap(channelFactory);
         bootstrap.getPipeline().addLast("test", new SimpleHandler());
         bootstrap.setOption("tcpNoDelay", true);
         bootstrap.setOption("keepAlive", true);
-        InetSocketAddress clientAddress =
-                new InetSocketAddress("localhost", 8888);
+        InetSocketAddress clientAddress = new InetSocketAddress("localhost",
+                8888);
         bootstrap.setOption("localAddress", clientAddress);
 
         ChannelFuture ccf = bootstrap.connect(inetSocketAddress);
@@ -94,9 +96,8 @@ public class NioDatagramChannelTest {
 
         Channel cc = ccf.getChannel();
         final String payload = "client payload";
-        ChannelFuture write =
-                cc.write(ChannelBuffers.wrappedBuffer(payload.getBytes(), 0,
-                        payload.length()));
+        ChannelFuture write = cc.write(ChannelBuffers.wrappedBuffer(payload
+                .getBytes(), 0, payload.length()));
         write.awaitUninterruptibly();
     }
 
@@ -111,9 +112,8 @@ public class NioDatagramChannelTest {
     }
 
     private void sendRecive(final String expectedPayload) throws IOException {
-        final UdpClient udpClient =
-                new UdpClient(inetSocketAddress.getAddress(), inetSocketAddress
-                        .getPort());
+        final UdpClient udpClient = new UdpClient(inetSocketAddress
+                .getAddress(), inetSocketAddress.getPort());
         final DatagramPacket dp = udpClient.send(expectedPayload.getBytes());
 
         dp.setData(new byte[expectedPayload.length()]);

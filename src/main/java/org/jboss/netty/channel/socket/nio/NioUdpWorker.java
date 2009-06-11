@@ -22,7 +22,15 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.*;
+import static org.jboss.netty.channel.Channels.fireChannelClosed;
+import static org.jboss.netty.channel.Channels.fireChannelConnected;
+import static org.jboss.netty.channel.Channels.fireChannelDisconnected;
+import static org.jboss.netty.channel.Channels.fireChannelInterestChanged;
+import static org.jboss.netty.channel.Channels.fireChannelUnbound;
+import static org.jboss.netty.channel.Channels.fireExceptionCaught;
+import static org.jboss.netty.channel.Channels.fireMessageReceived;
+import static org.jboss.netty.channel.Channels.fireWriteComplete;
+import static org.jboss.netty.channel.Channels.succeededFuture;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -55,25 +63,19 @@ import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
- *
+ * NioUdpWorker is responsible for registering channels with selector, and
+ * also manages the select process.
+ * 
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
- *
+ * @author Daniel Bevenius (dbevenius@jboss.com)
  * @version $Rev$, $Date$
- *
  */
 class NioUdpWorker implements Runnable {
     /**
      * Internal Netty logger.
      */
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(NioUdpWorker.class);
-
-    /**
-     *
-     */
-    private static final int CONSTRAINT_LEVEL =
-            NioProviderMetadata.CONSTRAINT_LEVEL;
+    private static final InternalLogger logger = InternalLoggerFactory
+            .getInstance(NioUdpWorker.class);
 
     /**
      * Maximum packate size for UDP packets.
@@ -113,31 +115,39 @@ class NioUdpWorker implements Runnable {
     volatile Selector selector;
 
     /**
-     *
+     * Boolean that controls determines if a blocked Selector.select should
+     * break out of its selection process. In our case we use a timeone for
+     * the select method and the select method will block for that time unless
+     * woken up.
      */
     private final AtomicBoolean wakenUp = new AtomicBoolean();
 
+    /**
+     * Lock for this workers Selector.
+     */
     private final ReadWriteLock selectorGuard = new ReentrantReadWriteLock();
 
+    /**
+     * Monitor object used to synchronize selector open/close. 
+     */
     private final Object startStopLock = new Object();
 
     /**
      * Queue of {@link ChannelRegistionTask}s
      */
-    private final Queue<Runnable> registerTaskQueue =
-            new LinkedTransferQueue<Runnable>();
+    private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
 
     /**
-     * Queue of
+     * Queue of WriteTasks
      */
-    private final Queue<Runnable> writeTaskQueue =
-            new LinkedTransferQueue<Runnable>();
+    private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
 
     /**
-     *
-     * @param bossId
-     * @param id
-     * @param executor
+     * Sole constructor.
+     * 
+     * @param bossId This id of the NioDatagramPipelineSink.
+     * @param id The id of this worker.
+     * @param executor Executor used to exeucte runnables such as {@link ChannelRegistionTask}.
      */
     NioUdpWorker(final int bossId, final int id, final Executor executor) {
         this.bossId = bossId;
@@ -152,8 +162,8 @@ class NioUdpWorker implements Runnable {
      * @param future
      */
     void register(final NioDatagramChannel channel, final ChannelFuture future) {
-        final Runnable channelRegTask =
-                new ChannelRegistionTask(channel, future);
+        final Runnable channelRegTask = new ChannelRegistionTask(channel,
+                future);
         Selector selector;
 
         synchronized (startStopLock) {
@@ -168,6 +178,7 @@ class NioUdpWorker implements Runnable {
 
                 boolean success = false;
                 try {
+                    // Start the main selector loop. See run() for details.
                     executor.execute(new ThreadRenamingRunnable(this,
                             "New I/O server worker #" + bossId + "'-'" + id));
                     success = true;
@@ -201,6 +212,9 @@ class NioUdpWorker implements Runnable {
         }
     }
 
+    /**
+     * Selector loop.
+     */
     public void run() {
         // Store a ref to the current thread.
         thread = Thread.currentThread();
@@ -211,7 +225,8 @@ class NioUdpWorker implements Runnable {
         for (;;) {
             wakenUp.set(false);
 
-            if (CONSTRAINT_LEVEL != 0) {
+            // 
+            if (NioProviderMetadata.CONSTRAINT_LEVEL != 0) {
                 selectorGuard.writeLock().lock();
                 // This empty synchronization block prevents the selector from acquiring its lock.
                 selectorGuard.writeLock().unlock();
@@ -234,7 +249,8 @@ class NioUdpWorker implements Runnable {
                     processSelectedKeys(selector.selectedKeys());
                 }
 
-                // Exit the loop when there's nothing to handle.
+                // Exit the loop when there's nothing to handle (the registered
+                // key set is empty.
                 // The shutdown flag is used to delay the shutdown of this
                 // loop to avoid excessive Selector creation when
                 // connections are registered in a one-by-one manner instead of
@@ -338,8 +354,8 @@ class NioUdpWorker implements Runnable {
      * @param key The selection key which contains the Selector registration information.
      */
     private static void read(final SelectionKey key) {
-        final NioDatagramChannel nioDatagramChannel =
-                (NioDatagramChannel) key.attachment();
+        final NioDatagramChannel nioDatagramChannel = (NioDatagramChannel) key
+                .attachment();
 
         final DatagramChannel datagramChannel = (DatagramChannel) key.channel();
         try {
@@ -351,21 +367,14 @@ class NioUdpWorker implements Runnable {
 
             // Recieve from the channel in a non blocking mode. We have already been notified that
             // the channel is ready to receive.
-            final SocketAddress remoteAddress =
-                    datagramChannel.receive(byteBuffer);
-            /*
-            if (remoteAddress == null)
-            {
-                // No data was available so return false to indicate this.
-                return false;
-            }
-            */
+            final SocketAddress remoteAddress = datagramChannel
+                    .receive(byteBuffer);
 
             // Flip the buffer so that we can wrap it.
             byteBuffer.flip();
             // Create a Netty ChannelByffer by wrapping the ByteBuffer.
-            final ChannelBuffer channelBuffer =
-                    ChannelBuffers.wrappedBuffer(byteBuffer);
+            final ChannelBuffer channelBuffer = ChannelBuffers
+                    .wrappedBuffer(byteBuffer);
 
             logger.debug("ChannelBuffer : " + channelBuffer +
                     ", remoteAdress: " + remoteAddress);
@@ -378,7 +387,6 @@ class NioUdpWorker implements Runnable {
                 fireExceptionCaught(nioDatagramChannel, t);
             }
         }
-        //return true;
     }
 
     private static void close(SelectionKey k) {
@@ -409,11 +417,6 @@ class NioUdpWorker implements Runnable {
         }
     }
 
-    /**
-     *
-     * @param channel
-     * @return
-     */
     private static boolean scheduleWriteIfNecessary(
             final NioDatagramChannel channel) {
         final NioUdpWorker worker = channel.worker;
@@ -422,8 +425,8 @@ class NioUdpWorker implements Runnable {
         if (workerThread == null || Thread.currentThread() != workerThread) {
             if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
                 // "add" the channels writeTask to the writeTaskQueue.
-                boolean offered =
-                        worker.writeTaskQueue.offer(channel.writeTask);
+                boolean offered = worker.writeTaskQueue
+                        .offer(channel.writeTask);
                 assert offered;
             }
 
@@ -452,7 +455,7 @@ class NioUdpWorker implements Runnable {
 
         Queue<MessageEvent> writeBuffer = channel.writeBufferQueue;
         synchronized (channel.writeLock) {
-            // inform the channel that write is inprogres
+            // inform the channel that write is in-progress
             channel.inWriteNowLoop = true;
             // get the write event.
             evt = channel.currentWriteEvent;
@@ -477,11 +480,9 @@ class NioUdpWorker implements Runnable {
                 try {
                     for (int i = writeSpinCount; i > 0; i --) {
                         ChannelBuffer buffer = (ChannelBuffer) evt.getMessage();
-                        int localWrittenBytes =
-                                channel.getDatagramChannel().send(
-                                        buffer.toByteBuffer(),
+                        int localWrittenBytes = channel.getDatagramChannel()
+                                .send(buffer.toByteBuffer(),
                                         evt.getRemoteAddress());
-                        //int localWrittenBytes = buf.getBytes( bufIdx, channel.getDatagramChannel(), buf.writerIndex() - bufIdx);
                         if (localWrittenBytes != 0) {
                             bufIdx += localWrittenBytes;
                             writtenBytes += localWrittenBytes;
@@ -672,10 +673,14 @@ class NioUdpWorker implements Runnable {
                 interestOps &= ~Channel.OP_WRITE;
                 interestOps |= channel.getRawInterestOps() & Channel.OP_WRITE;
 
-                switch (CONSTRAINT_LEVEL) {
+                switch (NioProviderMetadata.CONSTRAINT_LEVEL) {
                 case 0:
                     if (channel.getRawInterestOps() != interestOps) {
+                        // Set the interesteOps on the SelectionKey
                         key.interestOps(interestOps);
+                        // If the worker thread (the one that that might possibly be blocked
+                        // in a select() call) is not the thread executing this method wakeup
+                        // the select() operation.
                         if (Thread.currentThread() != worker.thread &&
                                 worker.wakenUp.compareAndSet(false, true)) {
                             selector.wakeup();
@@ -687,9 +692,13 @@ class NioUdpWorker implements Runnable {
                 case 2:
                     if (channel.getRawInterestOps() != interestOps) {
                         if (Thread.currentThread() == worker.thread) {
+                            // Going to set the interestOps from the same thread.
+                            // Set the interesteOps on the SelectionKey
                             key.interestOps(interestOps);
                             changed = true;
                         } else {
+                            // Going to set the interestOps from a different thread
+                            // and some old provides will need synchronization.
                             worker.selectorGuard.readLock().lock();
                             try {
                                 if (worker.wakenUp.compareAndSet(false, true)) {
@@ -767,8 +776,6 @@ class NioUdpWorker implements Runnable {
                 throw new ChannelException(
                         "Failed to register a socket to the selector.", e);
             }
-
-            //fireChannelBound(channel, localAddress);
             fireChannelConnected(channel, localAddress);
         }
     }
