@@ -47,7 +47,7 @@ import org.jboss.netty.channel.MessageEvent;
  *
  * @version $Rev$, $Date$
  */
-public class NioDatagramPipelineSink extends AbstractChannelSink {
+class NioDatagramPipelineSink extends AbstractChannelSink {
 
     private static final AtomicInteger nextId = new AtomicInteger();
 
@@ -74,8 +74,9 @@ public class NioDatagramPipelineSink extends AbstractChannelSink {
     /**
      * Handle downstream event.
      *
-     * @param pipeline The channelpiple line that passed down the downstream event.
-     * @param event The downstream event.
+     * @param pipeline the {@link ChannelPipeline} that passes down the
+     *                 downstream event.
+     * @param e The downstream event.
      */
     public void eventSunk(final ChannelPipeline pipeline, final ChannelEvent e)
             throws Exception {
@@ -96,6 +97,14 @@ public class NioDatagramPipelineSink extends AbstractChannelSink {
                     bind(channel, future, (InetSocketAddress) value);
                 } else {
                     NioUdpWorker.close(channel, future);
+                }
+                break;
+            case CONNECTED:
+                // TODO Implement me
+                if (value != null) {
+                    //connect(channel, future, (SocketAddress) value);
+                } else {
+                    //NioUdpWorker.disconnect(channel, future);
                 }
                 break;
             case INTEREST_OPS:

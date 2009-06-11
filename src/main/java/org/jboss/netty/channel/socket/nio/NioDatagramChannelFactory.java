@@ -25,14 +25,14 @@ package org.jboss.netty.channel.socket.nio;
 import java.util.concurrent.Executor;
 
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ServerChannelFactory;
+import org.jboss.netty.channel.socket.DatagramChannel;
+import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
  * A {@link NioDatagramChannelFactory} creates a server-side NIO-based
- * {@link  NioDatagramChannel}. It utilizes the non-blocking I/O mode which
+ * {@link  DatagramChannel}. It utilizes the non-blocking I/O mode which
  * was introduced with NIO to serve many number of concurrent connections
  * efficiently.
  *
@@ -59,8 +59,7 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  *
  * @version $Rev$, $Date$
  */
-public class NioDatagramChannelFactory implements ChannelFactory,
-        ServerChannelFactory {
+public class NioDatagramChannelFactory implements DatagramChannelFactory {
     /**
      *
      */
@@ -102,7 +101,7 @@ public class NioDatagramChannelFactory implements ChannelFactory,
         sink = new NioDatagramPipelineSink(workerExecutor, workerCount);
     }
 
-    public NioDatagramChannel newChannel(final ChannelPipeline pipeline) {
+    public DatagramChannel newChannel(final ChannelPipeline pipeline) {
         return new NioDatagramChannel(this, pipeline, sink, sink.nextWorker());
     }
 

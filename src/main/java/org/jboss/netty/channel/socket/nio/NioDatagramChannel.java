@@ -25,7 +25,9 @@ package org.jboss.netty.channel.socket.nio;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.nio.channels.DatagramChannel;
 import java.util.Queue;
@@ -34,16 +36,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.AbstractChannel;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.ServerChannel;
 import org.jboss.netty.channel.socket.DatagramChannelConfig;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
@@ -56,13 +56,8 @@ import org.jboss.netty.util.internal.ThreadLocalBoolean;
  *
  * @version $Rev$, $Date$
  */
-public class NioDatagramChannel extends AbstractChannel implements
-        ServerChannel {
-    /**
-     * Internal Netty logger.
-     */
-    private static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(NioDatagramChannel.class);
+class NioDatagramChannel extends AbstractChannel
+                                implements org.jboss.netty.channel.socket.DatagramChannel {
 
     /**
      * The {@link DatagramChannelConfig}.
@@ -77,7 +72,7 @@ public class NioDatagramChannel extends AbstractChannel implements
     /**
      * The {@link DatagramChannel} that this channel uses.
      */
-    private final DatagramChannel datagramChannel;
+    private final java.nio.channels.DatagramChannel datagramChannel;
 
     /**
      * Monitor object to synchronize access to InterestedOps.
@@ -121,29 +116,16 @@ public class NioDatagramChannel extends AbstractChannel implements
     MessageEvent currentWriteEvent;
 
     /**
-     * The current write index.
-     */
-    int currentWriteIndex;
-
-    /**
      * Boolean that indicates that write operation is in progress.
      */
     volatile boolean inWriteNowLoop;
 
-    /**
-     *
-     * @param factory
-     * @param pipeline
-     * @param sink
-     * @param worker
-     */
-    public NioDatagramChannel(final ChannelFactory factory,
+    NioDatagramChannel(final ChannelFactory factory,
             final ChannelPipeline pipeline, final ChannelSink sink,
             final NioUdpWorker worker) {
         super(null, factory, pipeline, sink);
         this.worker = worker;
         datagramChannel = openNonBlockingChannel();
-        setSoTimeout(1000);
         config = new DefaultNioDatagramChannelConfig(datagramChannel.socket());
 
         fireChannelOpen(this);
@@ -159,27 +141,22 @@ public class NioDatagramChannel extends AbstractChannel implements
         }
     }
 
-    private void setSoTimeout(final int timeout) {
+    public InetSocketAddress getLocalAddress() {
         try {
-            datagramChannel.socket().setSoTimeout(timeout);
-        } catch (final IOException e) {
-            try {
-                datagramChannel.close();
-            } catch (final IOException e2) {
-                logger.warn("Failed to close a partially DatagramSocket.", e2);
-            }
-            throw new ChannelException(
-                    "Failed to set the DatagramSocket timeout.", e);
+            return (InetSocketAddress) datagramChannel.socket().getLocalSocketAddress();
+        } catch (Throwable t) {
+            // Sometimes fails on a closed socket in Windows.
+            return null;
         }
     }
 
-    public InetSocketAddress getLocalAddress() {
-        return (InetSocketAddress) datagramChannel.socket()
-                .getLocalSocketAddress();
-    }
-
-    public SocketAddress getRemoteAddress() {
-        return datagramChannel.socket().getRemoteSocketAddress();
+    public InetSocketAddress getRemoteAddress() {
+        try {
+            return (InetSocketAddress) datagramChannel.socket().getRemoteSocketAddress();
+        } catch (Throwable t) {
+            // Sometimes fails on a closed socket in Windows.
+            return null;
+        }
     }
 
     public boolean isBound() {
@@ -187,17 +164,12 @@ public class NioDatagramChannel extends AbstractChannel implements
     }
 
     public boolean isConnected() {
-        return datagramChannel.socket().isBound();
+        return datagramChannel.socket().isConnected();
     }
 
     @Override
     protected boolean setClosed() {
         return super.setClosed();
-    }
-
-    @Override
-    protected ChannelFuture getSucceededFuture() {
-        return super.getSucceededFuture();
     }
 
     public NioDatagramChannelConfig getConfig() {
@@ -208,12 +180,52 @@ public class NioDatagramChannel extends AbstractChannel implements
         return datagramChannel;
     }
 
+    @Override
+    public int getInterestOps() {
+        if (!isOpen()) {
+            return Channel.OP_WRITE;
+        }
+
+        int interestOps = getRawInterestOps();
+        int writeBufferSize = this.writeBufferSize.get();
+        if (writeBufferSize != 0) {
+            if (highWaterMarkCounter.get() > 0) {
+                int lowWaterMark = getConfig().getWriteBufferLowWaterMark();
+                if (writeBufferSize >= lowWaterMark) {
+                    interestOps |= Channel.OP_WRITE;
+                } else {
+                    interestOps &= ~Channel.OP_WRITE;
+                }
+            } else {
+                int highWaterMark = getConfig().getWriteBufferHighWaterMark();
+                if (writeBufferSize >= highWaterMark) {
+                    interestOps |= Channel.OP_WRITE;
+                } else {
+                    interestOps &= ~Channel.OP_WRITE;
+                }
+            }
+        } else {
+            interestOps &= ~Channel.OP_WRITE;
+        }
+
+        return interestOps;
+    }
+
     int getRawInterestOps() {
         return super.getInterestOps();
     }
 
     void setRawInterestOpsNow(int interestOps) {
         super.setInterestOpsNow(interestOps);
+    }
+
+    @Override
+    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
+        if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
+            return super.write(message, null);
+        } else {
+            return super.write(message, remoteAddress);
+        }
     }
 
     /**
@@ -233,21 +245,17 @@ public class NioDatagramChannel extends AbstractChannel implements
          * adds support for keeping track of the size of the this write buffer.
          */
         @Override
-        public boolean offer(final MessageEvent e) {
-            final boolean success = super.offer(e);
+        public boolean offer(MessageEvent e) {
+            boolean success = super.offer(e);
             assert success;
 
-            final int messageSize = ((ChannelBuffer) e.getMessage())
-                    .readableBytes();
+            int messageSize = ((ChannelBuffer) e.getMessage()).readableBytes();
+            int newWriteBufferSize = writeBufferSize.addAndGet(messageSize);
+            int highWaterMark = getConfig().getWriteBufferHighWaterMark();
 
-            final int newWriteBufferSize = writeBufferSize
-                    .addAndGet(messageSize);
-
-            final int highWaterMark = getConfig().getWriteBufferHighWaterMark();
             if (newWriteBufferSize >= highWaterMark) {
                 if (newWriteBufferSize - messageSize < highWaterMark) {
                     highWaterMarkCounter.incrementAndGet();
-
                     if (!notifying.get()) {
                         notifying.set(Boolean.TRUE);
                         fireChannelInterestChanged(NioDatagramChannel.this);
@@ -255,7 +263,6 @@ public class NioDatagramChannel extends AbstractChannel implements
                     }
                 }
             }
-
             return true;
         }
 
@@ -265,18 +272,13 @@ public class NioDatagramChannel extends AbstractChannel implements
          */
         @Override
         public MessageEvent poll() {
-            final MessageEvent e = super.poll();
+            MessageEvent e = super.poll();
             if (e != null) {
-                final int messageSize = ((ChannelBuffer) e.getMessage())
-                        .readableBytes();
-                final int newWriteBufferSize = writeBufferSize
-                        .addAndGet(-messageSize);
+                int messageSize = ((ChannelBuffer) e.getMessage()).readableBytes();
+                int newWriteBufferSize = writeBufferSize.addAndGet(-messageSize);
+                int lowWaterMark = getConfig().getWriteBufferLowWaterMark();
 
-                final int lowWaterMark = getConfig()
-                        .getWriteBufferLowWaterMark();
-
-                if (newWriteBufferSize == 0 ||
-                        newWriteBufferSize < lowWaterMark) {
+                if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
                     if (newWriteBufferSize + messageSize >= lowWaterMark) {
                         highWaterMarkCounter.decrementAndGet();
                         if (!notifying.get()) {
@@ -304,5 +306,23 @@ public class NioDatagramChannel extends AbstractChannel implements
             writeTaskInTaskQueue.set(false);
             NioUdpWorker.write(NioDatagramChannel.this, false);
         }
+    }
+
+    public void joinGroup(InetAddress multicastAddress) {
+        throw new UnsupportedOperationException();
+    }
+
+    public void joinGroup(InetSocketAddress multicastAddress,
+            NetworkInterface networkInterface) {
+        throw new UnsupportedOperationException();
+    }
+
+    public void leaveGroup(InetAddress multicastAddress) {
+        throw new UnsupportedOperationException();
+    }
+
+    public void leaveGroup(InetSocketAddress multicastAddress,
+            NetworkInterface networkInterface) {
+        throw new UnsupportedOperationException();
     }
 }

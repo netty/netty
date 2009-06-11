@@ -29,8 +29,7 @@ import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -39,8 +38,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
- * Unit test for {@link NioDatagramChannel}
- *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Daniel Bevenius (dbevenius@jboss.com)
  * @version $Rev$, $Date$
@@ -54,7 +51,7 @@ public class NioDatagramChannelTest {
     public static void setupChannel() {
         final NioDatagramChannelFactory channelFactory = new NioDatagramChannelFactory(
                 Executors.newCachedThreadPool());
-        final ServerBootstrap sb = new ServerBootstrap(channelFactory);
+        final ConnectionlessBootstrap sb = new ConnectionlessBootstrap(channelFactory);
         inetSocketAddress = new InetSocketAddress("localhost", 9999);
         sc = sb.bind(inetSocketAddress);
         final SimpleHandler handler = new SimpleHandler();
@@ -85,7 +82,7 @@ public class NioDatagramChannelTest {
     public void clientBootstrap() {
         final NioDatagramChannelFactory channelFactory = new NioDatagramChannelFactory(
                 Executors.newCachedThreadPool());
-        final ClientBootstrap bootstrap = new ClientBootstrap(channelFactory);
+        final ConnectionlessBootstrap bootstrap = new ConnectionlessBootstrap(channelFactory);
         bootstrap.getPipeline().addLast("test", new SimpleHandler());
         bootstrap.setOption("tcpNoDelay", true);
         bootstrap.setOption("keepAlive", true);

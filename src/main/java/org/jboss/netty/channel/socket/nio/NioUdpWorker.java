@@ -49,6 +49,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ThreadRenamingRunnable;
@@ -70,12 +71,6 @@ class NioUdpWorker implements Runnable {
      */
     private static final InternalLogger logger = InternalLoggerFactory
             .getInstance(NioUdpWorker.class);
-
-    /**
-     * Maximum packate size for UDP packets.
-     * 65,536-byte maximum size of an IP datagram minus the 20-byte size of the IP header and the 8-byte size of the UDP header.
-     */
-    private static int MAX_PACKET_SIZE = 65507;
 
     /**
      * This id of this worker.
@@ -321,17 +316,21 @@ class NioUdpWorker implements Runnable {
 
     private static void processSelectedKeys(final Set<SelectionKey> selectedKeys) {
         for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
-            final SelectionKey key = i.next();
+            SelectionKey k = i.next();
             i.remove();
             try {
-                if (key.isReadable()) {
-                    read(key);
+                int readyOps = k.readyOps();
+                if ((readyOps & SelectionKey.OP_READ) != 0) {
+                    if (!read(k)) {
+                        // Connection already closed - no need to handle write.
+                        continue;
+                    }
                 }
-                if (key.isWritable()) {
-                    write(key);
+                if ((readyOps & SelectionKey.OP_WRITE) != 0) {
+                    write(k);
                 }
-            } catch (final CancelledKeyException ignore) {
-                close(key);
+            } catch (CancelledKeyException e) {
+                close(k);
             }
         }
     }
@@ -347,40 +346,57 @@ class NioUdpWorker implements Runnable {
      *
      * @param key The selection key which contains the Selector registration information.
      */
-    private static void read(final SelectionKey key) {
-        final NioDatagramChannel nioDatagramChannel = (NioDatagramChannel) key
-                .attachment();
+    private static boolean read(final SelectionKey key) {
+        final NioDatagramChannel channel = (NioDatagramChannel) key.attachment();
+        ReceiveBufferSizePredictor predictor =
+            channel.getConfig().getReceiveBufferSizePredictor();
 
-        final DatagramChannel datagramChannel = (DatagramChannel) key.channel();
+        final DatagramChannel nioChannel = (DatagramChannel) key.channel();
+
+        // Allocating a non-direct buffer with a max udp packge size.
+        // Would using a direct buffer be more efficient or would this negatively
+        // effect performance, as direct buffer allocation has a higher upfront cost
+        // where as a ByteBuffer is heap allocated.
+        final ByteBuffer byteBuffer = ByteBuffer.allocate(predictor.nextReceiveBufferSize());
+
+        boolean failure = true;
+        SocketAddress remoteAddress = null;
         try {
-            // Allocating a non-direct buffer with a max udp packge size.
-            // Would using a direct buffer be more efficient or would this negatively
-            // effect performance, as direct buffer allocation has a higher upfront cost
-            // where as a ByteBuffer is heap allocated.
-            final ByteBuffer byteBuffer = ByteBuffer.allocate(MAX_PACKET_SIZE);
-
-            // Recieve from the channel in a non blocking mode. We have already been notified that
+            // Receive from the channel in a non blocking mode. We have already been notified that
             // the channel is ready to receive.
-            final SocketAddress remoteAddress = datagramChannel
-                    .receive(byteBuffer);
+            remoteAddress = nioChannel.receive(byteBuffer);
+            failure = false;
+        } catch (AsynchronousCloseException e) {
+            // Can happen, and does not need a user attention.
+        } catch (Throwable t) {
+            fireExceptionCaught(channel, t);
+        }
 
+        if (remoteAddress != null) {
             // Flip the buffer so that we can wrap it.
             byteBuffer.flip();
-            // Create a Netty ChannelByffer by wrapping the ByteBuffer.
-            final ChannelBuffer channelBuffer = ChannelBuffers
-                    .wrappedBuffer(byteBuffer);
 
-            logger.debug("ChannelBuffer : " + channelBuffer +
-                    ", remoteAdress: " + remoteAddress);
+            int readBytes = byteBuffer.remaining();
+            if (readBytes > 0) {
+                // Update the predictor.
+                predictor.previousReceiveBufferSize(readBytes);
 
-            // Notify the interested parties about the newly arrived message (channelBuffer).
-            fireMessageReceived(nioDatagramChannel, channelBuffer,
-                    remoteAddress);
-        } catch (final Throwable t) {
-            if (!nioDatagramChannel.getDatagramChannel().socket().isClosed()) {
-                fireExceptionCaught(nioDatagramChannel, t);
+                // Create a Netty ChannelByffer by wrapping the ByteBuffer.
+                final ChannelBuffer channelBuffer = ChannelBuffers
+                        .wrappedBuffer(byteBuffer);
+
+                // Notify the interested parties about the newly arrived message (channelBuffer).
+                fireMessageReceived(channel, channelBuffer,
+                        remoteAddress);
             }
         }
+
+        if (failure) {
+            close(key);
+            return false;
+        }
+
+        return true;
     }
 
     private static void close(SelectionKey k) {
@@ -393,7 +409,7 @@ class NioUdpWorker implements Runnable {
         /*
          * Note that we are not checking if the channel is connected. Connected has a different
          * meaning in UDP and means that the channels socket is configured to only send and
-         * recieve from a given remote peer.
+         * receive from a given remote peer.
          */
         if (!channel.isOpen()) {
             cleanUpWriteBuffer(channel);
@@ -444,7 +460,6 @@ class NioUdpWorker implements Runnable {
 
         MessageEvent evt;
         ChannelBuffer buf;
-        int bufIdx;
         int writtenBytes = 0;
 
         Queue<MessageEvent> writeBuffer = channel.writeBufferQueue;
@@ -465,33 +480,30 @@ class NioUdpWorker implements Runnable {
                     }
 
                     buf = (ChannelBuffer) evt.getMessage();
-                    bufIdx = buf.readerIndex();
                 } else {
                     buf = (ChannelBuffer) evt.getMessage();
-                    bufIdx = channel.currentWriteIndex;
                 }
 
                 try {
+                    int localWrittenBytes = 0;
                     for (int i = writeSpinCount; i > 0; i --) {
-                        ChannelBuffer buffer = (ChannelBuffer) evt.getMessage();
-                        int localWrittenBytes = channel.getDatagramChannel()
-                                .send(buffer.toByteBuffer(),
-                                        evt.getRemoteAddress());
+                        localWrittenBytes =
+                            channel.getDatagramChannel().send(
+                                    buf.toByteBuffer(),
+                                    evt.getRemoteAddress());
                         if (localWrittenBytes != 0) {
-                            bufIdx += localWrittenBytes;
                             writtenBytes += localWrittenBytes;
                             break;
                         }
                     }
 
-                    if (bufIdx == buf.writerIndex()) {
+                    if (localWrittenBytes > 0) {
                         // Successful write - proceed to the next message.
                         evt.getFuture().setSuccess();
                         evt = null;
                     } else {
-                        // Not written fully - perhaps the kernel buffer is full.
+                        // Not written at all - perhaps the kernel buffer is full.
                         channel.currentWriteEvent = evt;
-                        channel.currentWriteIndex = bufIdx;
                         addOpWrite = true;
                         break;
                     }
@@ -590,7 +602,7 @@ class NioUdpWorker implements Runnable {
             key.cancel();
         }
 
-        boolean connected = channel.isOpen();
+        boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         try {
             channel.getDatagramChannel().close();
@@ -615,33 +627,46 @@ class NioUdpWorker implements Runnable {
     }
 
     private static void cleanUpWriteBuffer(final NioDatagramChannel channel) {
-        // Create the exception only once to avoid the excessive overhead
-        // caused by fillStackTrace.
-        Exception cause;
-        if (channel.isOpen()) {
-            cause = new NotYetConnectedException();
-        } else {
-            cause = new ClosedChannelException();
-        }
+        Exception cause = null;
 
         // Clean up the stale messages in the write buffer.
         synchronized (channel.writeLock) {
             MessageEvent evt = channel.currentWriteEvent;
             if (evt != null) {
                 channel.currentWriteEvent = null;
-                channel.currentWriteIndex = 0;
+
+                // Create the exception only once to avoid the excessive overhead
+                // caused by fillStackTrace.
+                if (channel.isOpen()) {
+                    cause = new NotYetConnectedException();
+                } else {
+                    cause = new ClosedChannelException();
+                }
                 evt.getFuture().setFailure(cause);
+
                 fireExceptionCaught(channel, cause);
             }
 
             Queue<MessageEvent> writeBuffer = channel.writeBufferQueue;
-            for (;;) {
-                evt = writeBuffer.poll();
-                if (evt == null) {
-                    break;
+            if (!writeBuffer.isEmpty()) {
+                // Create the exception only once to avoid the excessive overhead
+                // caused by fillStackTrace.
+                if (cause == null) {
+                    if (channel.isOpen()) {
+                        cause = new NotYetConnectedException();
+                    } else {
+                        cause = new ClosedChannelException();
+                    }
                 }
-                evt.getFuture().setFailure(cause);
-                fireExceptionCaught(channel, cause);
+
+                for (;;) {
+                    evt = writeBuffer.poll();
+                    if (evt == null) {
+                        break;
+                    }
+                    evt.getFuture().setFailure(cause);
+                    fireExceptionCaught(channel, cause);
+                }
             }
         }
     }
@@ -767,6 +792,7 @@ class NioUdpWorker implements Runnable {
                 throw new ChannelException(
                         "Failed to register a socket to the selector.", e);
             }
+            // XXX
             fireChannelConnected(channel, localAddress);
         }
     }
