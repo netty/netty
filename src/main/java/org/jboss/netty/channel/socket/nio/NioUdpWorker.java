@@ -22,15 +22,7 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.fireChannelClosed;
-import static org.jboss.netty.channel.Channels.fireChannelConnected;
-import static org.jboss.netty.channel.Channels.fireChannelDisconnected;
-import static org.jboss.netty.channel.Channels.fireChannelInterestChanged;
-import static org.jboss.netty.channel.Channels.fireChannelUnbound;
-import static org.jboss.netty.channel.Channels.fireExceptionCaught;
-import static org.jboss.netty.channel.Channels.fireMessageReceived;
-import static org.jboss.netty.channel.Channels.fireWriteComplete;
-import static org.jboss.netty.channel.Channels.succeededFuture;
+import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -65,7 +57,7 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
 /**
  * NioUdpWorker is responsible for registering channels with selector, and
  * also manages the select process.
- * 
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Daniel Bevenius (dbevenius@jboss.com)
  * @version $Rev$, $Date$
@@ -128,7 +120,7 @@ class NioUdpWorker implements Runnable {
     private final ReadWriteLock selectorGuard = new ReentrantReadWriteLock();
 
     /**
-     * Monitor object used to synchronize selector open/close. 
+     * Monitor object used to synchronize selector open/close.
      */
     private final Object startStopLock = new Object();
 
@@ -144,7 +136,7 @@ class NioUdpWorker implements Runnable {
 
     /**
      * Sole constructor.
-     * 
+     *
      * @param bossId This id of the NioDatagramPipelineSink.
      * @param id The id of this worker.
      * @param executor Executor used to exeucte runnables such as {@link ChannelRegistionTask}.
@@ -225,7 +217,7 @@ class NioUdpWorker implements Runnable {
         for (;;) {
             wakenUp.set(false);
 
-            // 
+            //
             if (NioProviderMetadata.CONSTRAINT_LEVEL != 0) {
                 selectorGuard.writeLock().lock();
                 // This empty synchronization block prevents the selector from acquiring its lock.
