@@ -28,6 +28,7 @@ import java.io.InterruptedIOException;
 import java.net.DatagramPacket;
 import java.net.MulticastSocket;
 import java.net.SocketAddress;
+import java.nio.ByteOrder;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -89,11 +90,12 @@ class OioDatagramWorker implements Runnable {
             }
 
             ChannelBuffer buffer;
+            ByteOrder endianness = channel.getConfig().getBufferFactory().getDefaultOrder();
             int readBytes = packet.getLength();
             if (readBytes == buf.length) {
-                buffer = ChannelBuffers.wrappedBuffer(buf);
+                buffer = ChannelBuffers.wrappedBuffer(endianness, buf);
             } else {
-                buffer = ChannelBuffers.wrappedBuffer(buf, 0, readBytes);
+                buffer = ChannelBuffers.wrappedBuffer(endianness, buf, 0, readBytes);
             }
 
             fireMessageReceived(channel, buffer, packet.getSocketAddress());
