@@ -138,7 +138,7 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
 
     /**
      * Will bind the DatagramSocket to the passed-in address.
-     * Every call bind will spawn a new thread using the that basically inturn
+     * Every call bind will spawn a new thread using the that basically in turn
      */
     private void bind(final NioDatagramChannel channel,
             final ChannelFuture future, final InetSocketAddress address) {
@@ -152,7 +152,7 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
             future.setSuccess();
             fireChannelBound(channel, address);
 
-            nextWorker().register(channel, null);
+            channel.worker.register(channel, null);
             started = true;
         } catch (final Throwable t) {
             future.setFailure(t);
