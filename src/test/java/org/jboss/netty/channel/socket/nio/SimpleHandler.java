@@ -30,8 +30,9 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
  *
- * @author <a href="mailto:dbevenius@jboss.com">Daniel Bevenius</a>
- *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Daniel Bevenius (dbevenius@jboss.com)
+ * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("all")
 public class SimpleHandler extends SimpleChannelHandler {

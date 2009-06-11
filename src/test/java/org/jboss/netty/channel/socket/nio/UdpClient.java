@@ -30,8 +30,9 @@ import java.net.SocketException;
 
 /**
  *
- * @author <a href="mailto:dbevenius@jboss.com">Daniel Bevenius</a>
- *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Daniel Bevenius (dbevenius@jboss.com)
+ * @version $Rev$, $Date$
  */
 public class UdpClient {
 
