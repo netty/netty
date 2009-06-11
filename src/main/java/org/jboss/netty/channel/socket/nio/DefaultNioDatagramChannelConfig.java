@@ -25,7 +25,6 @@ package org.jboss.netty.channel.socket.nio;
 import java.net.DatagramSocket;
 import java.util.Map;
 
-import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictor;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.channel.socket.DefaultDatagramChannelConfig;
 import org.jboss.netty.logging.InternalLogger;
@@ -51,8 +50,6 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
 
     private volatile int writeBufferHighWaterMark = 64 * 1024;
     private volatile int writeBufferLowWaterMark = 32 * 1024;
-    private volatile ReceiveBufferSizePredictor predictor =
-            new AdaptiveReceiveBufferSizePredictor();
     private volatile int writeSpinCount = 16;
 
     DefaultNioDatagramChannelConfig(DatagramSocket socket) {
@@ -148,19 +145,5 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
                     "writeSpinCount must be a positive integer.");
         }
         this.writeSpinCount = writeSpinCount;
-    }
-
-    @Override
-    public ReceiveBufferSizePredictor getReceiveBufferSizePredictor() {
-        return predictor;
-    }
-
-    @Override
-    public void setReceiveBufferSizePredictor(
-            ReceiveBufferSizePredictor predictor) {
-        if (predictor == null) {
-            throw new NullPointerException("predictor");
-        }
-        this.predictor = predictor;
     }
 }
