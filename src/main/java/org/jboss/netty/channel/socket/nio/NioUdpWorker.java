@@ -44,6 +44,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
@@ -214,7 +215,6 @@ class NioUdpWorker implements Runnable {
         for (;;) {
             wakenUp.set(false);
 
-            //
             if (NioProviderMetadata.CONSTRAINT_LEVEL != 0) {
                 selectorGuard.writeLock().lock();
                 // This empty synchronization block prevents the selector from acquiring its lock.
@@ -350,14 +350,15 @@ class NioUdpWorker implements Runnable {
         final NioDatagramChannel channel = (NioDatagramChannel) key.attachment();
         ReceiveBufferSizePredictor predictor =
             channel.getConfig().getReceiveBufferSizePredictor();
-
+        final ChannelBufferFactory bufferFactory = channel.getConfig().getBufferFactory();
         final DatagramChannel nioChannel = (DatagramChannel) key.channel();
 
         // Allocating a non-direct buffer with a max udp packge size.
         // Would using a direct buffer be more efficient or would this negatively
         // effect performance, as direct buffer allocation has a higher upfront cost
         // where as a ByteBuffer is heap allocated.
-        final ByteBuffer byteBuffer = ByteBuffer.allocate(predictor.nextReceiveBufferSize());
+        final ByteBuffer byteBuffer = ByteBuffer.allocate(
+                predictor.nextReceiveBufferSize()).order(bufferFactory.getDefaultOrder());
 
         boolean failure = true;
         SocketAddress remoteAddress = null;
@@ -386,8 +387,7 @@ class NioUdpWorker implements Runnable {
                         .wrappedBuffer(byteBuffer);
 
                 // Notify the interested parties about the newly arrived message (channelBuffer).
-                fireMessageReceived(channel, channelBuffer,
-                        remoteAddress);
+                fireMessageReceived(channel, channelBuffer, remoteAddress);
             }
         }
 
