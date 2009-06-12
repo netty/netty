@@ -512,10 +512,19 @@ class NioUdpWorker implements Runnable {
                 try {
                     int localWrittenBytes = 0;
                     for (int i = writeSpinCount; i > 0; i --) {
-                        localWrittenBytes =
-                            channel.getDatagramChannel().send(
-                                    buf.toByteBuffer(),
-                                    evt.getRemoteAddress());
+                        if (evt.getRemoteAddress() == null) {
+                            localWrittenBytes =
+                                buf.getBytes(
+                                        buf.readerIndex(),
+                                        channel.getDatagramChannel(),
+                                        buf.readableBytes());
+                        } else {
+                            localWrittenBytes =
+                                channel.getDatagramChannel().send(
+                                        buf.toByteBuffer(),
+                                        evt.getRemoteAddress());
+                        }
+
                         if (localWrittenBytes != 0) {
                             writtenBytes += localWrittenBytes;
                             break;
