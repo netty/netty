@@ -28,6 +28,7 @@ import java.io.InterruptedIOException;
 import java.net.DatagramPacket;
 import java.net.MulticastSocket;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -113,16 +114,26 @@ class OioDatagramWorker implements Runnable {
             OioDatagramChannel channel, ChannelFuture future,
             Object message, SocketAddress remoteAddress) {
         try {
-            // FIXME: Avoid extra copy.
-            ChannelBuffer a = (ChannelBuffer) message;
-            byte[] b = new byte[a.readableBytes()];
-            a.getBytes(0, b);
-            DatagramPacket packet = new DatagramPacket(b, b.length);
+            ChannelBuffer buf = (ChannelBuffer) message;
+            int length = buf.readableBytes();
+            ByteBuffer nioBuf = buf.toByteBuffer();
+            DatagramPacket packet;
+            if (nioBuf.hasArray()) {
+                // Avoid copy if the buffer is backed by an array.
+                packet = new DatagramPacket(
+                        nioBuf.array(), nioBuf.arrayOffset(), length);
+            } else {
+                // Otherwise it will be expensive.
+                byte[] arrayBuf = new byte[length];
+                buf.getBytes(0, arrayBuf);
+                packet = new DatagramPacket(arrayBuf, length);
+            }
+
             if (remoteAddress != null) {
                 packet.setSocketAddress(remoteAddress);
             }
             channel.socket.send(packet);
-            fireWriteComplete(channel, b.length);
+            fireWriteComplete(channel, length);
             future.setSuccess();
         } catch (Throwable t) {
             future.setFailure(t);
