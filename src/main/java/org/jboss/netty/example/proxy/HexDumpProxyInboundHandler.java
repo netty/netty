@@ -80,7 +80,7 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
                     inboundChannel.setReadable(true);
                 } else {
                     // Close the connection if the connection attempt has failed.
-                    future.getChannel().close();
+                    inboundChannel.close();
                 }
             }
         });
