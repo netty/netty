@@ -65,9 +65,9 @@ class NioDatagramChannel extends AbstractChannel
     private final NioDatagramChannelConfig config;
 
     /**
-     * The {@link NioUdpWorker} for this NioDatagramChannnel.
+     * The {@link NioDatagramWorker} for this NioDatagramChannnel.
      */
-    final NioUdpWorker worker;
+    final NioDatagramWorker worker;
 
     /**
      * The {@link DatagramChannel} that this channel uses.
@@ -122,7 +122,7 @@ class NioDatagramChannel extends AbstractChannel
 
     NioDatagramChannel(final ChannelFactory factory,
             final ChannelPipeline pipeline, final ChannelSink sink,
-            final NioUdpWorker worker) {
+            final NioDatagramWorker worker) {
         super(null, factory, pipeline, sink);
         this.worker = worker;
         datagramChannel = openNonBlockingChannel();
@@ -294,7 +294,7 @@ class NioDatagramChannel extends AbstractChannel
     }
 
     /**
-     * WriteTask is a simple runnable performs writes by delegating the {@link NioUdpWorker}.
+     * WriteTask is a simple runnable performs writes by delegating the {@link NioDatagramWorker}.
      *
      */
     private final class WriteTask implements Runnable {
@@ -304,7 +304,7 @@ class NioDatagramChannel extends AbstractChannel
 
         public void run() {
             writeTaskInTaskQueue.set(false);
-            NioUdpWorker.write(NioDatagramChannel.this, false);
+            NioDatagramWorker.write(NioDatagramChannel.this, false);
         }
     }
 

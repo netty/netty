@@ -57,7 +57,7 @@ import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
- * NioUdpWorker is responsible for registering channels with selector, and
+ * NioDatagramWorker is responsible for registering channels with selector, and
  * also manages the select process.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -66,12 +66,12 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  *
  * @version $Rev$, $Date$
  */
-class NioUdpWorker implements Runnable {
+class NioDatagramWorker implements Runnable {
     /**
      * Internal Netty logger.
      */
     private static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(NioUdpWorker.class);
+            .getInstance(NioDatagramWorker.class);
 
     /**
      * This id of this worker.
@@ -139,7 +139,7 @@ class NioUdpWorker implements Runnable {
      * @param id The id of this worker.
      * @param executor Executor used to exeucte runnables such as {@link ChannelRegistionTask}.
      */
-    NioUdpWorker(final int bossId, final int id, final Executor executor) {
+    NioDatagramWorker(final int bossId, final int id, final Executor executor) {
         this.bossId = bossId;
         this.id = id;
         this.executor = executor;
@@ -454,7 +454,7 @@ class NioUdpWorker implements Runnable {
 
     private static boolean scheduleWriteIfNecessary(
             final NioDatagramChannel channel) {
-        final NioUdpWorker worker = channel.worker;
+        final NioDatagramWorker worker = channel.worker;
         final Thread workerThread = worker.thread;
 
         if (workerThread == null || Thread.currentThread() != workerThread) {
@@ -568,7 +568,7 @@ class NioUdpWorker implements Runnable {
     }
 
     private static void setOpWrite(final NioDatagramChannel channel) {
-        NioUdpWorker worker = channel.worker;
+        NioDatagramWorker worker = channel.worker;
         Selector selector = worker.selector;
         SelectionKey key = channel.getDatagramChannel().keyFor(selector);
         if (key == null) {
@@ -598,7 +598,7 @@ class NioUdpWorker implements Runnable {
     }
 
     private static void clearOpWrite(NioDatagramChannel channel) {
-        NioUdpWorker worker = channel.worker;
+        NioDatagramWorker worker = channel.worker;
         Selector selector = worker.selector;
         SelectionKey key = channel.getDatagramChannel().keyFor(selector);
         if (key == null) {
@@ -643,7 +643,7 @@ class NioUdpWorker implements Runnable {
 
     static void close(final NioDatagramChannel channel,
             final ChannelFuture future) {
-        NioUdpWorker worker = channel.worker;
+        NioDatagramWorker worker = channel.worker;
         Selector selector = worker.selector;
         SelectionKey key = channel.getDatagramChannel().keyFor(selector);
         if (key != null) {
@@ -727,7 +727,7 @@ class NioUdpWorker implements Runnable {
             // interestOps can change at any time and by any thread.
             // Acquire a lock to avoid possible race condition.
             synchronized (channel.interestOpsLock) {
-                final NioUdpWorker worker = channel.worker;
+                final NioDatagramWorker worker = channel.worker;
                 final Selector selector = worker.selector;
                 final SelectionKey key = channel.getDatagramChannel().keyFor(selector);
 

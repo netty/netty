@@ -41,7 +41,7 @@ import org.jboss.netty.channel.MessageEvent;
 /**
  * NioDatagramPipelineSink receives downstream events from a ChannelPipeline.
  * <p/>
- * A {@link NioDatagramPipelineSink} contains an array of {@link NioUdpWorker}s
+ * A {@link NioDatagramPipelineSink} contains an array of {@link NioDatagramWorker}s
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -55,21 +55,21 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
 
     private final int id = nextId.incrementAndGet();
 
-    private final NioUdpWorker[] workers;
+    private final NioDatagramWorker[] workers;
 
     private final AtomicInteger workerIndex = new AtomicInteger();
 
     /**
-     * Creates a new {@link NioDatagramPipelineSink} with a the number of {@link NioUdpWorker}s specified in workerCount.
-     * The {@link NioUdpWorker}s take care of reading and writing for the {@link NioDatagramChannel}.
+     * Creates a new {@link NioDatagramPipelineSink} with a the number of {@link NioDatagramWorker}s specified in workerCount.
+     * The {@link NioDatagramWorker}s take care of reading and writing for the {@link NioDatagramChannel}.
      *
      * @param workerExecutor
      * @param workerCount The number of UdpWorkers for this sink.
      */
     NioDatagramPipelineSink(final Executor workerExecutor, final int workerCount) {
-        workers = new NioUdpWorker[workerCount];
+        workers = new NioDatagramWorker[workerCount];
         for (int i = 0; i < workers.length; i ++) {
-            workers[i] = new NioUdpWorker(id, i + 1, workerExecutor);
+            workers[i] = new NioDatagramWorker(id, i + 1, workerExecutor);
         }
     }
 
@@ -91,25 +91,25 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
             switch (state) {
             case OPEN:
                 if (Boolean.FALSE.equals(value)) {
-                    NioUdpWorker.close(channel, future);
+                    NioDatagramWorker.close(channel, future);
                 }
                 break;
             case BOUND:
                 if (value != null) {
                     bind(channel, future, (InetSocketAddress) value);
                 } else {
-                    NioUdpWorker.close(channel, future);
+                    NioDatagramWorker.close(channel, future);
                 }
                 break;
             case CONNECTED:
                 if (value != null) {
                     connect(channel, future, (InetSocketAddress) value);
                 } else {
-                    NioUdpWorker.disconnect(channel, future);
+                    NioDatagramWorker.disconnect(channel, future);
                 }
                 break;
             case INTEREST_OPS:
-                NioUdpWorker.setInterestOps(channel, future, ((Integer) value)
+                NioDatagramWorker.setInterestOps(channel, future, ((Integer) value)
                         .intValue());
                 break;
             }
@@ -117,7 +117,7 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
             final MessageEvent event = (MessageEvent) e;
             final boolean offered = channel.writeBufferQueue.offer(event);
             assert offered;
-            NioUdpWorker.write(channel, true);
+            NioDatagramWorker.write(channel, true);
         }
     }
 
@@ -196,12 +196,12 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
             fireExceptionCaught(channel, t);
         } finally {
             if (connected && !workerStarted) {
-                NioUdpWorker.close(channel, future);
+                NioDatagramWorker.close(channel, future);
             }
         }
     }
 
-    NioUdpWorker nextWorker() {
+    NioDatagramWorker nextWorker() {
         return workers[Math.abs(workerIndex.getAndIncrement() % workers.length)];
     }
 
