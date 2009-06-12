@@ -24,7 +24,6 @@ package org.jboss.netty.util.internal;
 
 import static org.junit.Assert.*;
 
-import org.jboss.netty.util.internal.ImmediateExecutor;
 import org.junit.Test;
 
 
