@@ -139,5 +139,4 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
             e.getChannel().close();
         }
     }
-
 }
