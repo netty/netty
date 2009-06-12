@@ -117,7 +117,11 @@ class OioDatagramWorker implements Runnable {
             ChannelBuffer a = (ChannelBuffer) message;
             byte[] b = new byte[a.readableBytes()];
             a.getBytes(0, b);
-            channel.socket.send(new DatagramPacket(b, b.length, remoteAddress));
+            DatagramPacket packet = new DatagramPacket(b, b.length);
+            if (remoteAddress != null) {
+                packet.setSocketAddress(remoteAddress);
+            }
+            channel.socket.send(packet);
             fireWriteComplete(channel, b.length);
             future.setSuccess();
         } catch (Throwable t) {
