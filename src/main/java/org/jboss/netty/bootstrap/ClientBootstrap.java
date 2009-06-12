@@ -273,10 +273,13 @@ public class ClientBootstrap extends Bootstrap {
         public void channelOpen(
                 ChannelHandlerContext context,
                 ChannelStateEvent event) {
-            context.sendUpstream(event);
 
-            // Apply options.
-            event.getChannel().getConfig().setOptions(bootstrap.getOptions());
+            try {
+                // Apply options.
+                event.getChannel().getConfig().setOptions(bootstrap.getOptions());
+            } finally {
+                context.sendUpstream(event);
+            }
 
             // Bind or connect.
             if (localAddress != null) {

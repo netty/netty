@@ -339,29 +339,33 @@ public class ConnectionlessBootstrap extends Bootstrap {
 
     @ChannelPipelineCoverage("one")
     private final class ConnectionlessBinder extends SimpleChannelUpstreamHandler {
-    
+
         private final SocketAddress localAddress;
         private final BlockingQueue<ChannelFuture> futureQueue;
-    
+
         ConnectionlessBinder(SocketAddress localAddress, BlockingQueue<ChannelFuture> futureQueue) {
             this.localAddress = localAddress;
             this.futureQueue = futureQueue;
         }
-    
+
         @Override
         public void channelOpen(
                 ChannelHandlerContext ctx,
                 ChannelStateEvent evt) {
-            evt.getChannel().getConfig().setPipelineFactory(getPipelineFactory());
-    
-            // Apply options.
-            evt.getChannel().getConfig().setOptions(getOptions());
-    
+
+            try {
+                evt.getChannel().getConfig().setPipelineFactory(getPipelineFactory());
+
+                // Apply options.
+                evt.getChannel().getConfig().setOptions(getOptions());
+            } finally {
+                ctx.sendUpstream(evt);
+            }
+
             boolean finished = futureQueue.offer(evt.getChannel().bind(localAddress));
             assert finished;
-            ctx.sendUpstream(evt);
         }
-    
+
         @Override
         public void exceptionCaught(
                 ChannelHandlerContext ctx, ExceptionEvent e)

@@ -25,12 +25,14 @@ package org.jboss.netty.channel.socket.nio;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -100,11 +102,10 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
                 }
                 break;
             case CONNECTED:
-                // TODO Implement me
                 if (value != null) {
-                    //connect(channel, future, (SocketAddress) value);
+                    connect(channel, future, (InetSocketAddress) value);
                 } else {
-                    //NioUdpWorker.disconnect(channel, future);
+                    NioUdpWorker.disconnect(channel, future);
                 }
                 break;
             case INTEREST_OPS:
@@ -160,6 +161,42 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
         } finally {
             if (!started && bound) {
                 close(channel, future);
+            }
+        }
+    }
+
+    private void connect(
+            NioDatagramChannel channel, ChannelFuture future,
+            SocketAddress remoteAddress) {
+
+        boolean bound = channel.isBound();
+        boolean connected = false;
+        boolean workerStarted = false;
+
+        future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+
+        try {
+            channel.getDatagramChannel().connect(remoteAddress);
+            connected = true;
+
+            // Fire events.
+            future.setSuccess();
+            if (!bound) {
+                fireChannelBound(channel, channel.getLocalAddress());
+            }
+            fireChannelConnected(channel, channel.getRemoteAddress());
+
+            if (!bound) {
+                channel.worker.register(channel, future);
+            }
+
+            workerStarted = true;
+        } catch (Throwable t) {
+            future.setFailure(t);
+            fireExceptionCaught(channel, t);
+        } finally {
+            if (connected && !workerStarted) {
+                NioUdpWorker.close(channel, future);
             }
         }
     }

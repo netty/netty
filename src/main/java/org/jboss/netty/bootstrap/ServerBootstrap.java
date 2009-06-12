@@ -311,27 +311,31 @@ public class ServerBootstrap extends Bootstrap {
         public void channelOpen(
                 ChannelHandlerContext ctx,
                 ChannelStateEvent evt) {
-            evt.getChannel().getConfig().setPipelineFactory(getPipelineFactory());
 
-            // Split options into two categories: parent and child.
-            Map<String, Object> allOptions = getOptions();
-            Map<String, Object> parentOptions = new HashMap<String, Object>();
-            for (Entry<String, Object> e: allOptions.entrySet()) {
-                if (e.getKey().startsWith("child.")) {
-                    childOptions.put(
-                            e.getKey().substring(6),
-                            e.getValue());
-                } else if (!e.getKey().equals("pipelineFactory")) {
-                    parentOptions.put(e.getKey(), e.getValue());
+            try {
+                evt.getChannel().getConfig().setPipelineFactory(getPipelineFactory());
+
+                // Split options into two categories: parent and child.
+                Map<String, Object> allOptions = getOptions();
+                Map<String, Object> parentOptions = new HashMap<String, Object>();
+                for (Entry<String, Object> e: allOptions.entrySet()) {
+                    if (e.getKey().startsWith("child.")) {
+                        childOptions.put(
+                                e.getKey().substring(6),
+                                e.getValue());
+                    } else if (!e.getKey().equals("pipelineFactory")) {
+                        parentOptions.put(e.getKey(), e.getValue());
+                    }
                 }
-            }
 
-            // Apply parent options.
-            evt.getChannel().getConfig().setOptions(parentOptions);
+                // Apply parent options.
+                evt.getChannel().getConfig().setOptions(parentOptions);
+            } finally {
+                ctx.sendUpstream(evt);
+            }
 
             boolean finished = futureQueue.offer(evt.getChannel().bind(localAddress));
             assert finished;
-            ctx.sendUpstream(evt);
         }
 
         @Override

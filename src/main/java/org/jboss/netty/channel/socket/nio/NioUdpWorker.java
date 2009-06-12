@@ -618,6 +618,20 @@ class NioUdpWorker implements Runnable {
         }
     }
 
+    static void disconnect(NioDatagramChannel channel, ChannelFuture future) {
+        boolean connected = channel.isConnected();
+        try {
+            channel.getDatagramChannel().disconnect();
+            future.setSuccess();
+            if (connected) {
+                fireChannelDisconnected(channel);
+            }
+        } catch (Throwable t) {
+            future.setFailure(t);
+            fireExceptionCaught(channel, t);
+        }
+    }
+
     static void close(final NioDatagramChannel channel,
             final ChannelFuture future) {
         NioUdpWorker worker = channel.worker;
@@ -820,8 +834,6 @@ class NioUdpWorker implements Runnable {
                 throw new ChannelException(
                         "Failed to register a socket to the selector.", e);
             }
-            // XXX: Perhaps channelBind?
-            fireChannelConnected(channel, localAddress);
         }
     }
 }
