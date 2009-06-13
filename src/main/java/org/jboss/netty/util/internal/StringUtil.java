@@ -23,12 +23,28 @@
 package org.jboss.netty.util.internal;
 
 /**
+ * String utility class.
+ * 
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
 public class StringUtil {
-
+    
+    private StringUtil() {
+    }
+    
+    /**
+     * Strip an Object of it's ISO control characters. 
+     * 
+     * @param value 
+     *          The Object that should be stripped. This objects toString method will
+     *          called and the result passed to {@link #stripControlCharacters(String)}.
+     * @return {@code String}
+     *          A new String instance with its hexadecimal control characters replaced 
+     *          by a space. Or the unmodified String if it does not contain any ISO 
+     *          controll characters.
+     */
     public static String stripControlCharacters(Object value) {
         if (value == null) {
             return null;
@@ -37,6 +53,16 @@ public class StringUtil {
         return stripControlCharacters(value.toString());
     }
 
+    /**
+     * Strip a String of it's ISO control characters. 
+     * 
+     * @param value 
+     *          The String that should be stripped. 
+     * @return {@code String}
+     *          A new String instance with its hexadecimal control characters replaced 
+     *          by a space. Or the unmodified String if it does not contain any ISO 
+     *          controll characters.
+     */
     public static String stripControlCharacters(String value) {
         if (value == null) {
             return null;
