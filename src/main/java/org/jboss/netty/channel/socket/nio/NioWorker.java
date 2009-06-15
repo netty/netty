@@ -470,7 +470,7 @@ class NioWorker implements Runnable {
         }
     }
 
-    private static MessageEvent consolidateComposite(MessageEvent e) {
+    static MessageEvent consolidateComposite(MessageEvent e) {
         // Convert a composite buffer into a simple buffer to save memory
         // bandwidth on full write buffer.
         // This method should be eliminated once gathering write works.

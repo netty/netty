@@ -504,6 +504,7 @@ class NioDatagramWorker implements Runnable {
                         break;
                     }
 
+                    evt = NioWorker.consolidateComposite(evt);
                     buf = (ChannelBuffer) evt.getMessage();
                 } else {
                     buf = (ChannelBuffer) evt.getMessage();
