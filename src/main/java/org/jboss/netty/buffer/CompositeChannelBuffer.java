@@ -488,7 +488,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
 
         ByteBuffer[] buffers = toByteBuffers(index, length);
-        ByteBuffer merged = ByteBuffer.allocate(length);
+        ByteBuffer merged = ByteBuffer.allocate(length).order(order());
         for (ByteBuffer b: buffers) {
             merged.put(b);
         }
