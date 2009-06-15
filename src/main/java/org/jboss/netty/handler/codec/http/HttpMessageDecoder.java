@@ -356,25 +356,26 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     private State readHeaders(ChannelBuffer buffer) throws TooLongFrameException {
-        message.clearHeaders();
+        final HttpMessage message = this.message;
         String line = readHeader(buffer);
         String lastHeader = null;
-        while (line.length() != 0) {
-            char firstChar = line.charAt(0);
-            switch (firstChar) {
-            case ' ': case '\t':
-                List<String> current = message.getHeaders(lastHeader);
-                int lastPos = current.size() - 1;
-                String newString = current.get(lastPos) + line.trim();
-                current.remove(lastPos);
-                current.add(newString);
-                break;
-            default:
-                String[] header = splitHeader(line);
-                message.addHeader(header[0], header[1]);
-                lastHeader = header[0];
-            }
-            line = readHeader(buffer);
+        if (line.length() != 0) {
+            message.clearHeaders();
+            do {
+                switch (line.charAt(0)) {
+                case ' ': case '\t':
+                    List<String> current = message.getHeaders(lastHeader);
+                    int lastPos = current.size() - 1;
+                    String newString = current.get(lastPos) + line.trim();
+                    current.set(lastPos, newString);
+                    break;
+                default:
+                    String[] header = splitHeader(line);
+                    message.addHeader(header[0], header[1]);
+                    lastHeader = header[0];
+                }
+                line = readHeader(buffer);
+            } while (line.length() != 0);
         }
 
         State nextState;
