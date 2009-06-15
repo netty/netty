@@ -45,8 +45,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     private final int maxChunkSize;
     protected volatile HttpMessage message;
     private volatile ChannelBuffer content;
-    private volatile int headerSize;
     private volatile long chunkSize;
+    private int headerSize;
 
     /**
      * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -120,7 +120,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
 
             message = createMessage(initialLine);
             checkpoint(State.READ_HEADER);
-            headerSize = 0;
         }
         case READ_HEADER: {
             State nextState = readHeaders(buffer);
@@ -356,6 +355,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     private State readHeaders(ChannelBuffer buffer) throws TooLongFrameException {
+        headerSize = 0;
         final HttpMessage message = this.message;
         String line = readHeader(buffer);
         String lastHeader = null;
