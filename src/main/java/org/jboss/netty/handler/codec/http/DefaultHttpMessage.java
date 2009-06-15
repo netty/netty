@@ -60,7 +60,7 @@ public class DefaultHttpMessage implements HttpMessage {
             throw new NullPointerException("value is null");
         }
         if (headers.get(name) == null) {
-            headers.put(name, new ArrayList<String>());
+            headers.put(name, new ArrayList<String>(1));
         }
         headers.get(name).add(value);
     }
