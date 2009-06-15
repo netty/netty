@@ -395,31 +395,37 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     private String readHeader(ChannelBuffer buffer) throws TooLongFrameException {
         StringBuilder sb = new StringBuilder(64);
         int headerSize = this.headerSize;
-        while (true) {
-            byte nextByte = buffer.readByte();
-            if (nextByte == HttpCodecUtil.CR) {
-                nextByte = buffer.readByte();
-                if (nextByte == HttpCodecUtil.LF) {
-                    this.headerSize = headerSize + 2;
-                    return sb.toString();
-                }
-            }
-            else if (nextByte == HttpCodecUtil.LF) {
-                this.headerSize = headerSize + 1;
-                return sb.toString();
-            }
-            else {
-                // Abort decoding if the header part is too large.
-                if (headerSize >= maxHeaderSize) {
-                    throw new TooLongFrameException(
-                            "HTTP header is larger than " +
-                            maxHeaderSize + " bytes.");
 
-                }
+        loop:
+        for (;;) {
+            char nextByte = (char) buffer.readByte();
+            headerSize ++;
+
+            switch (nextByte) {
+            case HttpCodecUtil.CR:
+                nextByte = (char) buffer.readByte();
                 headerSize ++;
-                sb.append((char) nextByte);
+                if (nextByte == HttpCodecUtil.LF) {
+                    break loop;
+                }
+                break;
+            case HttpCodecUtil.LF:
+                break loop;
             }
+
+            // Abort decoding if the header part is too large.
+            if (headerSize >= maxHeaderSize) {
+                throw new TooLongFrameException(
+                        "HTTP header is larger than " +
+                        maxHeaderSize + " bytes.");
+
+            }
+
+            sb.append(nextByte);
         }
+
+        this.headerSize = headerSize;
+        return sb.toString();
     }
 
     protected abstract boolean isDecodingRequest();
