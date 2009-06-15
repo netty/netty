@@ -372,8 +372,9 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                     String[] header = splitHeader(line);
                     message.addHeader(header[0], header[1]);
                     lastHeader = header[0];
-                    line = readHeader(buffer);
                 }
+
+                line = readHeader(buffer);
             } while (line.length() != 0);
         }
 
