@@ -22,8 +22,6 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -41,11 +39,6 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  * @version $Rev$, $Date$
  */
 public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDecoder.State> {
-
-    private static final Pattern INITIAL_PATTERN = Pattern.compile(
-            "^\\s*(\\S+)\\s+(\\S+)\\s+(.*)\\s*$");
-    private static final Pattern HEADER_PATTERN = Pattern.compile(
-            "^\\s*(\\S+)\\s*:\\s*(.*)\\s*$");
 
     private final int maxInitialLineLength;
     private final int maxHeaderSize;
@@ -495,20 +488,85 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     private String[] splitInitialLine(String sb) {
-        Matcher m = INITIAL_PATTERN.matcher(sb);
-        if (m.matches()) {
-            return new String[] { m.group(1), m.group(2), m.group(3) };
-        } else {
-            throw new IllegalArgumentException("Invalid initial line: " + sb);
-        }
+        int aStart;
+        int aEnd;
+        int bStart;
+        int bEnd;
+        int cStart;
+        int cEnd;
+
+        aStart = findNonWhitespace(sb, 0);
+        aEnd = findWhitespace(sb, aStart);
+
+        bStart = findNonWhitespace(sb, aEnd);
+        bEnd = findWhitespace(sb, bStart);
+
+        cStart = findNonWhitespace(sb, bEnd);
+        cEnd = findEndOfString(sb);
+
+        return new String[] {
+                sb.substring(aStart, aEnd),
+                sb.substring(bStart, bEnd),
+                sb.substring(cStart, cEnd) };
     }
 
     private String[] splitHeader(String sb) {
-        Matcher m = HEADER_PATTERN.matcher(sb);
-        if (m.matches()) {
-            return new String[] { m.group(1), m.group(2) };
-        } else {
-            throw new IllegalArgumentException("Invalid header syntax: " + sb);
+        int nameStart;
+        int nameEnd;
+        int colonEnd;
+        int valueStart;
+        int valueEnd;
+
+        nameStart = findNonWhitespace(sb, 0);
+        for (nameEnd = nameStart; nameEnd < sb.length(); nameEnd ++) {
+            char ch = sb.charAt(nameEnd);
+            if (ch == ':' || Character.isWhitespace(ch)) {
+                break;
+            }
         }
+
+        for (colonEnd = nameEnd; colonEnd < sb.length(); colonEnd ++) {
+            if (sb.charAt(colonEnd) == ':') {
+                colonEnd ++;
+                break;
+            }
+        }
+
+        valueStart = findNonWhitespace(sb, colonEnd);
+        valueEnd = findEndOfString(sb);
+
+        return new String[] {
+                sb.substring(nameStart, nameEnd),
+                sb.substring(valueStart, valueEnd) };
+    }
+
+    private int findNonWhitespace(String sb, int offset) {
+        int result;
+        for (result = offset; result < sb.length(); result ++) {
+            if (!Character.isWhitespace(sb.charAt(result))) {
+                break;
+            }
+        }
+        return result;
+    }
+
+    private int findWhitespace(String sb, int offset) {
+        int result;
+        for (result = offset; result < sb.length(); result ++) {
+            if (Character.isWhitespace(sb.charAt(result))) {
+                break;
+            }
+        }
+        return result;
+    }
+
+    private int findEndOfString(String sb) {
+        int result;
+        for (result = sb.length(); result > 0; result --) {
+            if (!Character.isWhitespace(sb.charAt(result - 1))) {
+                break;
+            }
+        }
+        return result;
     }
 }
