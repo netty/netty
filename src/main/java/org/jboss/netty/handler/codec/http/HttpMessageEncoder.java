@@ -24,6 +24,7 @@ package org.jboss.netty.handler.codec.http;
 import static org.jboss.netty.buffer.ChannelBuffers.*;
 import static org.jboss.netty.handler.codec.http.HttpCodecUtil.*;
 
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.Set;
 
@@ -95,16 +96,20 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
      */
     public void encodeHeaders(ChannelBuffer buf, HttpMessage message) {
         Set<String> headers = message.getHeaderNames();
-        for (String header : headers) {
-            List<String> values = message.getHeaders(header);
-            for (String value : values) {
+        try {
+            for (String header : headers) {
+                List<String> values = message.getHeaders(header);
+                for (String value : values) {
 
-                buf.writeBytes(header.getBytes());
-                buf.writeByte(COLON);
-                buf.writeByte(SP);
-                buf.writeBytes(value.getBytes());
-                buf.writeBytes(CRLF);
+                    buf.writeBytes(header.getBytes("ASCII"));
+                    buf.writeByte(COLON);
+                    buf.writeByte(SP);
+                    buf.writeBytes(value.getBytes("ASCII"));
+                    buf.writeBytes(CRLF);
+                }
             }
+        } catch (UnsupportedEncodingException e) {
+            throw (Error) new Error().initCause(e);
         }
     }
 
