@@ -44,9 +44,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.buffer.CompositeChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.logging.InternalLogger;
@@ -408,6 +410,7 @@ class NioWorker implements Runnable {
                         break;
                     }
 
+                    evt = consolidateComposite(evt);
                     buf = (ChannelBuffer) evt.getMessage();
                     bufIdx = buf.readerIndex();
                 } else {
@@ -465,6 +468,20 @@ class NioWorker implements Runnable {
                 clearOpWrite(channel);
             }
         }
+    }
+
+    private static MessageEvent consolidateComposite(MessageEvent e) {
+        // Convert a composite buffer into a simple buffer to save memory
+        // bandwidth on full write buffer.
+        // This method should be eliminated once gathering write works.
+        Object m = e.getMessage();
+        if (m instanceof CompositeChannelBuffer) {
+            e = new DownstreamMessageEvent(
+                    e.getChannel(), e.getFuture(),
+                    ((CompositeChannelBuffer) m).copy(),
+                    e.getRemoteAddress());
+        }
+        return e;
     }
 
     private static void setOpWrite(NioSocketChannel channel) {
