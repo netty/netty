@@ -362,19 +362,18 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         if (line.length() != 0) {
             message.clearHeaders();
             do {
-                switch (line.charAt(0)) {
-                case ' ': case '\t':
+                char firstChar = line.charAt(0);
+                if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
                     List<String> current = message.getHeaders(lastHeader);
                     int lastPos = current.size() - 1;
                     String newString = current.get(lastPos) + line.trim();
                     current.set(lastPos, newString);
-                    break;
-                default:
+                } else {
                     String[] header = splitHeader(line);
                     message.addHeader(header[0], header[1]);
                     lastHeader = header[0];
+                    line = readHeader(buffer);
                 }
-                line = readHeader(buffer);
             } while (line.length() != 0);
         }
 
