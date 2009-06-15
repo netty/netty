@@ -22,7 +22,6 @@
  */
 package org.jboss.netty.handler.codec.replay;
 
-import java.lang.reflect.Array;
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -451,11 +450,6 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             if (result instanceof Object[]) {
                 for (Object r: (Object[]) result) {
                     Channels.fireMessageReceived(context, r, remoteAddress);
-                }
-            } else if (result.getClass().isArray()){
-                int length = Array.getLength(result);
-                for (int i = 0; i < length; i ++) {
-                    Channels.fireMessageReceived(context, Array.get(result, i), remoteAddress);
                 }
             } else if (result instanceof Iterable<?>) {
                 for (Object r: (Iterable<?>) result) {
