@@ -193,7 +193,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 reset();
                 if (!chunk.isLast()) {
                     // Append the last chunk.
-                    return new HttpChunk[] { chunk, HttpChunk.LAST_CHUNK };
+                    return new Object[] { chunk, HttpChunk.LAST_CHUNK };
                 }
             }
             return chunk;
@@ -221,7 +221,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 reset();
                 if (!chunk.isLast()) {
                     // Append the last chunk.
-                    return new HttpChunk[] { chunk, HttpChunk.LAST_CHUNK };
+                    return new Object[] { chunk, HttpChunk.LAST_CHUNK };
                 }
             }
             return chunk;
