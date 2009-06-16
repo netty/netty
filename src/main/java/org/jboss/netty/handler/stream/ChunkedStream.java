@@ -85,8 +85,8 @@ public class ChunkedStream implements ChunkedInput {
             return null;
         }
 
-        int chunkSize = Math.min(this.chunkSize, in.available());
-        byte[] chunk = new byte[chunkSize];
+        final int chunkSize = Math.min(this.chunkSize, in.available());
+        final byte[] chunk = new byte[chunkSize];
         int readBytes = 0;
         for (;;) {
             int localReadBytes = in.read(chunk, readBytes, chunkSize - readBytes);
@@ -95,6 +95,10 @@ public class ChunkedStream implements ChunkedInput {
             }
             readBytes += localReadBytes;
             offset += localReadBytes;
+
+            if (readBytes == chunkSize) {
+                break;
+            }
         }
 
         return wrappedBuffer(chunk, 0, readBytes);
