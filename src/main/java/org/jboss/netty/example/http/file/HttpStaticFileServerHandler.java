@@ -79,6 +79,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         }
         if (!file.isFile()) {
             sendError(ctx, HttpResponseStatus.FORBIDDEN);
+            return;
         }
 
         RandomAccessFile raf;
