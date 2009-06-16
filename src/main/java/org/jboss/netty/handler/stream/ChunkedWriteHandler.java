@@ -48,10 +48,10 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("one")
-public class ChunkStreamWriteHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
+public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
 
     private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(ChunkStreamWriteHandler.class);
+        InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
 
     private final Queue<MessageEvent> queue =
         new LinkedTransferQueue<MessageEvent>();
@@ -101,20 +101,20 @@ public class ChunkStreamWriteHandler implements ChannelUpstreamHandler, ChannelD
             }
 
             Object m = currentEvent.getMessage();
-            if (m instanceof ChunkStream) {
-                ChunkStream stream = (ChunkStream) m;
+            if (m instanceof ChunkedInput) {
+                ChunkedInput chunks = (ChunkedInput) m;
                 Object chunk;
                 boolean last;
                 try {
-                    chunk = stream.readChunk();
-                    last = !stream.available();
+                    chunk = chunks.readChunk();
+                    last = !chunks.available();
                 } catch (Throwable t) {
                     currentEvent.getFuture().setFailure(t);
                     fireExceptionCaught(ctx, t);
                     try {
-                        stream.close();
+                        chunks.close();
                     } catch (Throwable t2) {
-                        logger.warn("Failed to close a stream.", t2);
+                        logger.warn("Failed to close a chunked input.", t2);
                     }
                     break;
                 }
@@ -128,7 +128,7 @@ public class ChunkStreamWriteHandler implements ChannelUpstreamHandler, ChannelD
                         writeFuture.addListener(new ChannelFutureListener() {
                             public void operationComplete(ChannelFuture future)
                                     throws Exception {
-                                ((ChunkStream) currentEvent.getMessage()).close();
+                                ((ChunkedInput) currentEvent.getMessage()).close();
                             }
                         });
 
@@ -139,7 +139,7 @@ public class ChunkStreamWriteHandler implements ChannelUpstreamHandler, ChannelD
                                     throws Exception {
                                 if (!future.isSuccess()) {
                                     currentEvent.getFuture().setFailure(future.getCause());
-                                    ((ChunkStream) currentEvent.getMessage()).close();
+                                    ((ChunkedInput) currentEvent.getMessage()).close();
                                 }
                             }
                         });

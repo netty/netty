@@ -29,7 +29,7 @@ package org.jboss.netty.handler.stream;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public interface ChunkStream {
+public interface ChunkedInput {
     boolean available() throws Exception;
     Object readChunk() throws Exception;
     void close() throws Exception;

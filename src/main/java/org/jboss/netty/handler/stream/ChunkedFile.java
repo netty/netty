@@ -33,7 +33,7 @@ import java.io.RandomAccessFile;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public class FileChunkStream implements ChunkStream {
+public class ChunkedFile implements ChunkedInput {
 
     private static final int DEFAULT_CHUNK_SIZE = 8192;
 
@@ -43,19 +43,19 @@ public class FileChunkStream implements ChunkStream {
     private final int chunkSize;
     private volatile long offset;
 
-    public FileChunkStream(File file) throws IOException {
+    public ChunkedFile(File file) throws IOException {
         this(file, DEFAULT_CHUNK_SIZE);
     }
 
-    public FileChunkStream(File file, int chunkSize) throws IOException {
+    public ChunkedFile(File file, int chunkSize) throws IOException {
         this(new RandomAccessFile(file, "r"), chunkSize);
     }
 
-    public FileChunkStream(RandomAccessFile file, int chunkSize) throws IOException {
+    public ChunkedFile(RandomAccessFile file, int chunkSize) throws IOException {
         this(file, 0, file.length(), chunkSize);
     }
 
-    public FileChunkStream(RandomAccessFile file, long offset, long length, int chunkSize) throws IOException {
+    public ChunkedFile(RandomAccessFile file, long offset, long length, int chunkSize) throws IOException {
         if (file == null) {
             throw new NullPointerException("file");
         }
