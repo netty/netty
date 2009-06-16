@@ -94,7 +94,7 @@ public class ChunkedStream implements ChunkedInput {
                 break;
             }
             readBytes += localReadBytes;
-            offset += readBytes;
+            offset += localReadBytes;
         }
 
         return wrappedBuffer(chunk, 0, readBytes);
