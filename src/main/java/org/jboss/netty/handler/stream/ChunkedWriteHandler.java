@@ -73,20 +73,15 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
 
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
             throws Exception {
-        if (!(e instanceof ChannelStateEvent)) {
-            ctx.sendUpstream(e);
-            return;
+        if (e instanceof ChannelStateEvent) {
+            ChannelStateEvent cse = (ChannelStateEvent) e;
+            if (cse.getState() == ChannelState.INTEREST_OPS &&
+                ctx.getChannel().isWritable()) {
+                // Continue writing when the channel becomes writable.
+                flushWriteEventQueue(ctx);
+            }
         }
-
-        ChannelStateEvent cse = (ChannelStateEvent) e;
-        if (cse.getState() != ChannelState.INTEREST_OPS) {
-            ctx.sendUpstream(e);
-            return;
-        }
-
-        if (ctx.getChannel().isWritable()) {
-            flushWriteEventQueue(ctx);
-        }
+        ctx.sendUpstream(e);
     }
 
     private synchronized void flushWriteEventQueue(ChannelHandlerContext ctx) throws Exception {
