@@ -67,6 +67,11 @@ public class ChunkedFile implements ChunkedInput {
             throw new IllegalArgumentException(
                     "length: " + length + " (expected: 0 or greater)");
         }
+        if (chunkSize <= 0) {
+            throw new IllegalArgumentException(
+                    "chunkSize: " + chunkSize +
+                    " (expected: a positive integer)");
+        }
 
         this.file = file;
         this.offset = startOffset = offset;
