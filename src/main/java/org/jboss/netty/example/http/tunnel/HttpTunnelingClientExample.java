@@ -19,7 +19,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.example.http;
+package org.jboss.netty.example.http.tunnel;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -33,65 +33,73 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.socket.http.HttpTunnelAddress;
 import org.jboss.netty.channel.socket.http.HttpTunnelingClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.http.HttpTunnelingServlet;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 
 /**
- * make sure that the LocalTransportRegister bean is deployed along with the NettyServlet with the following web.xml
+ * Make sure that the {@link LocalTransportRegister} bean is deployed along
+ * with the {@link HttpTunnelingServlet} with the following <tt>web.xml</tt>.
  *
- <?xml version="1.0" encoding="UTF-8"?>
-<web-app xmlns="http://java.sun.com/xml/ns/j2ee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd"
-         version="2.4">
-   <!--the name of the channel, this should be a registered local channel. see LocalTransportRegister-->
-   <context-param>
-      <param-name>serverChannelName</param-name>
-      <param-value>org.jboss.netty.exampleChannel</param-value>
-   </context-param>
-
-    <!--Whether or not we are streaming or just polling using normal http requests-->
-    <context-param>
-      <param-name>streaming</param-name>
-      <param-value>true</param-value>
-   </context-param>
-
-    <!--how long to wait for a client reconnecting in milliseconds-->
-   <context-param>
-      <param-name>reconnectTimeout</param-name>
-      <param-value>3000</param-value>
-   </context-param>
-
-   <listener>
-      <listener-class>org.jboss.netty.servlet.NettySessionListener</listener-class>
-   </listener>
-
-   <listener>
-      <listener-class>org.jboss.netty.servlet.NettyServletContextListener</listener-class>
-   </listener>
-
-   <servlet>
-      <servlet-name>NettyServlet</servlet-name>
-      <servlet-class>org.jboss.netty.servlet.NettyServlet</servlet-class>
-   </servlet>
-
-   <servlet-mapping>
-      <servlet-name>NettyServlet</servlet-name>
-      <url-pattern>/nettyServlet</url-pattern>
-   </servlet-mapping>
-</web-app>
-
+ * <pre>
+ * &lt;?xml version="1.0" encoding="UTF-8"?&gt;
+ * &lt;web-app xmlns="http://java.sun.com/xml/ns/j2ee"
+ *             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ *             xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd"
+ *             version="2.4"&gt;
+ *    &lt;!--the name of the channel, this should be a registered local channel. see LocalTransportRegister--&gt;
+ *    &lt;context-param&gt;
+ *       &lt;param-name&gt;serverChannelName&lt;/param-name&gt;
+ *       &lt;param-value&gt;myLocalServer&lt;/param-value&gt;
+ *    &lt;/context-param&gt;
+ *
+ *     &lt;!--Whether or not we are streaming or just polling using normal HTTP requests--&gt;
+ *     &lt;context-param&gt;
+ *       &lt;param-name&gt;streaming&lt;/param-name&gt;
+ *       &lt;param-value&gt;true&lt;/param-value&gt;
+ *    &lt;/context-param&gt;
+ *
+ *     &lt;!--How long to wait for a client reconnecting in milliseconds--&gt;
+ *    &lt;context-param&gt;
+ *       &lt;param-name&gt;reconnectTimeout&lt;/param-name&gt;
+ *       &lt;param-value&gt;3000&lt;/param-value&gt;
+ *    &lt;/context-param&gt;
+ *
+ *    &lt;listener&gt;
+ *       &lt;listener-class&gt;org.jboss.netty.channel.socket.http.HttpTunnelingSessionListener&lt;/listener-class&gt;
+ *    &lt;/listener&gt;
+ *
+ *    &lt;listener&gt;
+ *       &lt;listener-class&gt;org.jboss.netty.channel.socket.http.HttpTunnelingContextListener&lt;/listener-class&gt;
+ *    &lt;/listener&gt;
+ *
+ *    &lt;servlet&gt;
+ *       &lt;servlet-name&gt;NettyTunnelingServlet&lt;/servlet-name&gt;
+ *       &lt;servlet-class&gt;org.jboss.netty.channel.socket.http.HttpTunnelingServlet&lt;/servlet-class&gt;
+ *    &lt;/servlet&gt;
+ *
+ *    &lt;servlet-mapping&gt;
+ *       &lt;servlet-name&gt;NettyTunnelingServlet&lt;/servlet-name&gt;
+ *       &lt;url-pattern&gt;/netty-tunnel&lt;/url-pattern&gt;
+ *    &lt;/servlet-mapping&gt;
+ * &lt;/web-app&gt;
+ * </pre>
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
 public class HttpTunnelingClientExample {
+
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println(
-                    "Usage: " + HttpClient.class.getSimpleName() +
+                    "Usage: " + HttpTunnelingClientExample.class.getSimpleName() +
                     " <URL>");
+            System.err.println(
+                    "Example: " + HttpTunnelingClientExample.class.getSimpleName() +
+                    " http://localhost:8080/netty-tunnel");
             return;
         }
 

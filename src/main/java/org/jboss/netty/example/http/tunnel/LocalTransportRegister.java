@@ -19,7 +19,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.example.http;
+package org.jboss.netty.example.http.tunnel;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -29,10 +29,12 @@ import org.jboss.netty.channel.local.LocalAddress;
 import org.jboss.netty.example.echo.EchoHandler;
 
 /**
- * you can deploy this in jboss 5 by adding the following bean.
+ * Deploy this in JBossAS 5 by adding the following bean.
  *
- * <bean name="org.jboss.netty.example.servlet.LocalTransportRegister"
-        class="org.jboss.netty.example.servlet.LocalTransportRegister" />
+ * <pre>
+ * &lt;bean name="org.jboss.netty.example.http.tunnel.LocalTransportRegister"
+ *       class="org.jboss.netty.example.http.tunnel.LocalTransportRegister" /&gt;
+ * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -47,7 +49,7 @@ public class LocalTransportRegister {
         ServerBootstrap serverBootstrap = new ServerBootstrap(factory);
         EchoHandler handler = new EchoHandler();
         serverBootstrap.getPipeline().addLast("handler", handler);
-        serverChannel = serverBootstrap.bind(new LocalAddress("localAddress"));
+        serverChannel = serverBootstrap.bind(new LocalAddress("myLocalServer"));
     }
 
     public void stop() {
