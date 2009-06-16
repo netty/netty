@@ -156,8 +156,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         }
 
         // Convert to absolute path.
-        return System.getProperty("user.dir") + File.separator +
-               uri.replace('/', File.separatorChar);
+        return System.getProperty("user.dir") + File.separator + uri;
     }
 
     private void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
