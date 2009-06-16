@@ -31,6 +31,9 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ *
+ * @version $Rev$, $Date$
  */
 public class HttpServer {
     public static void main(String[] args) {
