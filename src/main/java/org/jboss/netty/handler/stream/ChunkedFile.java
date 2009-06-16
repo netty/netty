@@ -35,8 +35,6 @@ import java.io.RandomAccessFile;
  */
 public class ChunkedFile implements ChunkedInput {
 
-    private static final int DEFAULT_CHUNK_SIZE = 8192;
-
     private final RandomAccessFile file;
     private final long startOffset;
     private final long endOffset;
@@ -44,7 +42,7 @@ public class ChunkedFile implements ChunkedInput {
     private volatile long offset;
 
     public ChunkedFile(File file) throws IOException {
-        this(file, DEFAULT_CHUNK_SIZE);
+        this(file, ChunkedStream.DEFAULT_CHUNK_SIZE);
     }
 
     public ChunkedFile(File file, int chunkSize) throws IOException {
