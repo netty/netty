@@ -22,7 +22,7 @@
  */
 
 /**
- * A virtual transport that enables the communication between the entities in
- * the same virtual machine.
+ * A virtual transport that enables the communication between the two
+ * parties in the same virtual machine.
  */
 package org.jboss.netty.channel.local;
