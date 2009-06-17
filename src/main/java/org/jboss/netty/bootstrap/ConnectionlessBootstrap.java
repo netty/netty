@@ -51,6 +51,7 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  *
  * <h3>Only for connectionless transports</h3>
  *
+ * This bootstrap is for connectionless transports only such as UDP/IP.
  * Use {@link ServerBootstrap} instead for connection oriented transports.
  * Do not use this helper if you are using a connection oriented transport such
  * as TCP/IP and local transport which accepts an incoming connection and lets
@@ -100,7 +101,8 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * <p>
  * {@linkplain #setPipelineFactory(ChannelPipelineFactory) The second approach}
  * is to specify a {@link ChannelPipelineFactory} by yourself and have full
- * control over how a new pipeline is created.  This approach is more complex:
+ * control over how a new pipeline is created.  This approach is more complex
+ * than the first approach while it is much more flexible:
  *
  * <pre>
  * ConnectionlessBootstrap b = ...;
@@ -119,8 +121,6 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * {@link ConnectionlessBootstrap}.  Therefore, it is OK to create as
  * many {@link ConnectionlessBootstrap} instances as you want to apply
  * different settings for different {@link Channel}s.
- *
- * TODO: Show how to shut down a service.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

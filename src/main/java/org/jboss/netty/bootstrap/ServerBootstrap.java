@@ -55,10 +55,11 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  *
  * <h3>Only for connection oriented transports</h3>
  *
- * Use {@link ConnectionlessBootstrap} instead for connectionless
- * transports.  Do not use this helper if you are using a connectionless
- * transport such as UDP/IP which does not accept an incoming connection but
- * receives messages by itself without creating a child channel.
+ * This bootstrap is for connection oriented transports only such as TCP/IP
+ * and local transport.  Use {@link ConnectionlessBootstrap} instead for
+ * connectionless transports.  Do not use this helper if you are using a
+ * connectionless transport such as UDP/IP which does not accept an incoming
+ * connection but receives messages by itself without creating a child channel.
  *
  * <h3>Parent channel and its children</h3>
  *
@@ -94,7 +95,7 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  *
  * <h3>Configuring a parent channel pipeline</h3>
  *
- * It is rare to configure the pipeline of a parent channel because what it is
+ * It is rare to customize the pipeline of a parent channel because what it is
  * supposed to do is very typical.  However, you might want to add a handler
  * to deal with some special needs such as degrading the process
  * <a href="http://en.wikipedia.org/wiki/User_identifier_(Unix)">UID</a> from
@@ -132,7 +133,8 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * <p>
  * {@linkplain #setPipelineFactory(ChannelPipelineFactory) The second approach}
  * is to specify a {@link ChannelPipelineFactory} by yourself and have full
- * control over how a new pipeline is created.  This approach is more complex:
+ * control over how a new pipeline is created.  This approach is more complex
+ * than the first approach while it is much more flexible:
  *
  * <pre>
  * ServerBootstrap b = ...;
@@ -151,8 +153,6 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * {@link ServerBootstrap}.  Therefore, it is OK to create as many
  * {@link ServerBootstrap} instances as you want to apply different settings
  * for different {@link Channel}s.
- *
- * TODO: Show how to shut down a service.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

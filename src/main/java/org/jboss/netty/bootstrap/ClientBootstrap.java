@@ -93,7 +93,8 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * <p>
  * {@linkplain #setPipelineFactory(ChannelPipelineFactory) The second approach}
  * is to specify a {@link ChannelPipelineFactory} by yourself and have full
- * control over how a new pipeline is created.  This approach is more complex:
+ * control over how a new pipeline is created.  This approach is more complex
+ * than the first approach while it is much more flexible:
  *
  * <pre>
  * ClientBootstrap b = ...;
@@ -112,8 +113,6 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * {@link ClientBootstrap}.  Therefore, it is OK to create as many
  * {@link ClientBootstrap} instances as you want to apply different settings
  * for different {@link Channel}s.
- *
- * TODO: Show how to shut down a service.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
