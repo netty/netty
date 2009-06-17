@@ -23,10 +23,19 @@
 package org.jboss.netty.util;
 
 /**
+ * A common interface for a class which depends on external resources that
+ * need explicit release or shutdown.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
 public interface ExternalResourceReleasable {
+
+    /**
+     * Releases the external resources that this object depends on.  You should
+     * not call this method if the external resources (e.g. thread pool) are
+     * in use by other objects.
+     */
     void releaseExternalResources();
 }
