@@ -83,7 +83,7 @@ import java.util.NoSuchElementException;
  * starts with {@code read} or {@code skip} will get or skip the data at the
  * current {@link #readerIndex() readerIndex} and increase it by the number of
  * read bytes.  If the argument of the read operation is also a
- * {@link ChannelBuffer} and no start index is specified, the specified
+ * {@link ChannelBuffer} and no destination index is specified, the specified
  * buffer's {@link #readerIndex() readerIndex} is increased together.
  * <p>
  * If there's not enough content left, {@link IndexOutOfBoundsException} is
@@ -104,7 +104,7 @@ import java.util.NoSuchElementException;
  * whose name ends with {@code write} will write the data at the current
  * {@link #writerIndex() writerIndex} and increase it by the number of written
  * bytes.  If the argument of the write operation is also a {@link ChannelBuffer},
- * and no start index is specified, the specified buffer's
+ * and no source index is specified, the specified buffer's
  * {@link #readerIndex() readerIndex} is increased together.
  * <p>
  * If there's not enough writable bytes left, {@link IndexOutOfBoundsException}
@@ -215,7 +215,7 @@ import java.util.NoSuchElementException;
  * <h4>Strings</h4>
  *
  * Various {@link #toString(String)} methods convert a {@link ChannelBuffer}
- * into a {@link String}.  Plesae note that {@link #toString()} is not a
+ * into a {@link String}.  Please note that {@link #toString()} is not a
  * conversion method.
  *
  * <h4>I/O Streams</h4>

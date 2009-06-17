@@ -49,6 +49,7 @@ import java.io.OutputStream;
 public class ChannelBufferOutputStream extends OutputStream implements DataOutput {
 
     private final ChannelBuffer buffer;
+    private final int startIndex;
     private final DataOutputStream utf8out = new DataOutputStream(this);
 
     /**
@@ -59,6 +60,14 @@ public class ChannelBufferOutputStream extends OutputStream implements DataOutpu
             throw new NullPointerException("buffer");
         }
         this.buffer = buffer;
+        startIndex = buffer.writerIndex();
+    }
+
+    /**
+     * Returns the number of written bytes by this stream so far.
+     */
+    public int writtenBytes() {
+        return buffer.writerIndex() - startIndex;
     }
 
     @Override

@@ -24,7 +24,7 @@ package org.jboss.netty.buffer;
 
 
 /**
- * Locates an index of data in {@link ChannelBuffer}.
+ * Locates an index of data in a {@link ChannelBuffer}.
  * <p>
  * This interface enables the sequential search for the data which meets more
  * complex and dynamic condition than just a simple value matching.  Please
