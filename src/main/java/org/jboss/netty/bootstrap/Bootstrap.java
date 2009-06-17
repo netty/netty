@@ -33,16 +33,18 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.internal.MapUtil;
 
 /**
  * A helper class which initializes a {@link Channel}.  This class provides
- * the common data structure for its subclasses which implement an actual
- * channel initialization from the common data structure.  Please refer to
- * {@link ClientBootstrap} and {@link ServerBootstrap} for client side and
- * server-side channel initialization respectively.
+ * the common data structure for its subclasses which actually initialize
+ * {@link Channel}s and their child {@link Channel}s. using the common data
+ * structure.  Please refer to {@link ClientBootstrap}, {@link ServerBootstrap},
+ * and {@link ConnectionlessBootstrap} for client side, server-side, and
+ * connectionless (e.g. UDP) channel initialization respectively.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -113,8 +115,9 @@ public class Bootstrap implements ExternalResourceReleasable {
 
     /**
      * Returns the default {@link ChannelPipeline} which is cloned when a new
-     * {@link Channel} is created.  Bootstrap creates a new pipeline which has
-     * the same entries with the returned pipeline for a new {@link Channel}.
+     * {@link Channel} is created.  {@link Bootstrap} creates a new pipeline
+     * which has the same entries with the returned pipeline for a new
+     * {@link Channel}.
      *
      * @return the default {@link ChannelPipeline}
      *
@@ -134,11 +137,23 @@ public class Bootstrap implements ExternalResourceReleasable {
 
     /**
      * Sets the default {@link ChannelPipeline} which is cloned when a new
-     * {@link Channel} is created.  Bootstrap creates a new pipeline which has
-     * the same entries with the specified pipeline for a new channel. Calling
-     * this method also sets the {@code pipelineFactory} property to an
+     * {@link Channel} is created.  {@link Bootstrap} creates a new pipeline
+     * which has the same entries with the specified pipeline for a new channel.
+     * <p>
+     * Calling this method also sets the {@code pipelineFactory} property to an
      * internal {@link ChannelPipelineFactory} implementation which returns
-     * a copy of the specified pipeline.
+     * a shallow copy of the specified pipeline.
+     * <p>
+     * Please note that this method is a convenience method that works only
+     * when <b>1)</b> you create only one channel from this bootstrap (e.g.
+     * one-time client-side or connectionless channel) or <b>2)</b> the
+     * {@link ChannelPipelineCoverage} of all handlers in the pipeline is
+     * {@code "all"}.  You have to use
+     * {@link #setPipelineFactory(ChannelPipelineFactory)} if <b>1)</b> your
+     * pipeline contains a {@link ChannelHandler} whose
+     * {@link ChannelPipelineCoverage} is {@code "one"} and <b>2)</b> one or
+     * more channels are going to be created by this bootstrap (e.g. server-side
+     * channels).
      */
     public void setPipeline(ChannelPipeline pipeline) {
         if (pipeline == null) {
@@ -149,12 +164,13 @@ public class Bootstrap implements ExternalResourceReleasable {
     }
 
     /**
-     * Convenience method for {@link #getPipeline()} which returns the default
-     * pipeline of this bootstrap as an ordered map.
+     * Dependency injection friendly convenience method for
+     * {@link #getPipeline()} which returns the default pipeline of this
+     * bootstrap as an ordered map.
      *
      * @throws IllegalStateException
-     *         if {@link #setPipelineFactory(ChannelPipelineFactory)} is in
-     *         use to create a new pipeline
+     *         if {@link #setPipelineFactory(ChannelPipelineFactory)} was
+     *         called by a user last time.
      */
     public Map<String, ChannelHandler> getPipelineAsMap() {
         ChannelPipeline pipeline = this.pipeline;
@@ -165,8 +181,9 @@ public class Bootstrap implements ExternalResourceReleasable {
     }
 
     /**
-     * Convenience method for {@link #setPipeline} which sets the default
-     * pipeline of this bootstrap from an ordered map.
+     * Dependency injection friendly convenience method for
+     * {@link #setPipeline(ChannelPipeline)} which sets the default pipeline of
+     * this bootstrap from an ordered map.
      *
      * @throws IllegalArgumentException
      *         if the specified map is not an ordered map
@@ -220,14 +237,18 @@ public class Bootstrap implements ExternalResourceReleasable {
     }
 
     /**
-     * Returns the options which configures a new {@link Channel}.
+     * Returns the options which configures a new {@link Channel} and its
+     * child {@link Channel}s.  The names of the child {@link Channel} options
+     * are prepended with {@code "child."} (e.g. {@code "child.keepAlive"}).
      */
     public Map<String, Object> getOptions() {
         return new TreeMap<String, Object>(options);
     }
 
     /**
-     * Sets the options which configures a new {@link Channel}.
+     * Sets the options which configures a new {@link Channel} and its child
+     * {@link Channel}s.  To set the options of a child {@link Channel}, prepend
+     * {@code "child."} to the option name (e.g. {@code "child.keepAlive"}).
      */
     public void setOptions(Map<String, Object> options) {
         if (options == null) {
@@ -237,7 +258,11 @@ public class Bootstrap implements ExternalResourceReleasable {
     }
 
     /**
-     * Returns the value of the option with the specified key.
+     * Returns the value of the option with the specified key.  To retrieve
+     * the option value of a child {@link Channel}, prepend {@code "child."}
+     * to the option name (e.g. {@code "child.keepAlive"}).
+     *
+     * @param key  the option name
      *
      * @return the option value if the option is found.
      *         {@code null} otherwise.
@@ -253,7 +278,11 @@ public class Bootstrap implements ExternalResourceReleasable {
      * Sets an option with the specified key and value.  If there's already
      * an option with the same key, it is replaced with the new value.  If the
      * specified value is {@code null}, an existing option with the specified
-     * key is removed.
+     * key is removed.  To set the option value of a child {@link Channel},
+     * prepend {@code "child."} to the option name (e.g. {@code "child.keepAlive"}).
+     *
+     * @param key    the option name
+     * @param value  the option value
      */
     public void setOption(String key, Object value) {
         if (key == null) {
@@ -266,6 +295,10 @@ public class Bootstrap implements ExternalResourceReleasable {
         }
     }
 
+    /**
+     * {@inheritDoc}  This method simply delegates the call to
+     * {@link ChannelFactory#releaseExternalResources()}.
+     */
     public void releaseExternalResources() {
         ChannelFactory factory = this.factory;
         if (factory != null) {
