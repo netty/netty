@@ -61,11 +61,11 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * Wrapped buffer is a buffer which is a view of one or more existing
  * byte arrays and byte buffers.  Any changes in the content of the original
- * array or buffer will be reflected in the wrapped buffer.  Various wrapper
+ * array or buffer will be visible in the wrapped buffer.  Various wrapper
  * methods are provided and their name is all {@code wrappedBuffer()}.
- * You might want to take a look at this method closely if you want to create
- * a buffer which is composed of more than one array to reduce the number of
- * memory copy.
+ * You might want to take a look at the methods that accept varargs closely if
+ * you want to create a buffer which is composed of more than one array to
+ * reduce the number of memory copy.
  *
  * <h3>Creating a copied buffer</h3>
  *
