@@ -25,10 +25,11 @@ package org.jboss.netty.buffer;
 import java.nio.ByteOrder;
 
 /**
- * Manages a set of reusable {@link ChannelBuffer}s.
+ * A factory that creates or pools {@link ChannelBuffer}s.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
+ * @version $Rev$, $Date$
  */
 public interface ChannelBufferFactory {
 
