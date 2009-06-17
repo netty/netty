@@ -26,7 +26,7 @@ package org.jboss.netty.channel;
  * An I/O event or I/O request associated with a {@link Channel}.
  * <p>
  * A {@link ChannelEvent} is supposed to be handled by the
- * {@link ChannelPipeline} which is owned by the {@link Channel} that
+ * {@link ChannelPipeline} which is attached to the {@link Channel} that
  * the event belongs to.  Once an event is sent to a {@link ChannelPipeline},
  * it is handled by a list of {@link ChannelHandler}s.
  *
