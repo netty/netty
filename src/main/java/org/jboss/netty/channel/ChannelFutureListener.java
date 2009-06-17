@@ -33,7 +33,9 @@ import java.util.EventListener;
  *
  * {@link #operationComplete(ChannelFuture)} is directly called by an I/O
  * thread.  Therefore, performing a time consuming task or a blocking operation
- * in the handler method can cause an unexpected pause during I/O.
+ * in the handler method can cause an unexpected pause during I/O.  If you need
+ * to perform a blocking operation on I/O completion, try to execute the
+ * operation in a different thread using a thread pool.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

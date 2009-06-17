@@ -23,8 +23,9 @@
 package org.jboss.netty.channel;
 
 /**
- * A {@link RuntimeException} which is thrown when a {@link LifeCycleAwareChannelHandler}
- * throws an {@link Exception} in its handler methods.
+ * A {@link RuntimeException} which is thrown when a
+ * {@link LifeCycleAwareChannelHandler} throws an {@link Exception}
+ * in its handler methods.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

@@ -45,17 +45,17 @@ package org.jboss.netty.channel;
  * <h3>The context object</h3>
  * <p>
  * A {@link ChannelHandler} is provided with a {@link ChannelHandlerContext}
- * object.  The {@link ChannelHandler} is supposed to interact with the
- * {@link ChannelPipeline} it belongs to via the context object.  Using the
+ * object.  A {@link ChannelHandler} is supposed to interact with the
+ * {@link ChannelPipeline} it belongs to via a context object.  Using the
  * context object, the {@link ChannelHandler} can pass events to the next
- * or the previous handler or modify the behavior of the pipeline by adding or
- * removing a handler for example.
+ * or the previous handler or modify the behavior of the pipeline, or store the
+ * information (attachment) which is specific to the handler.
  *
  * <h3>Additional resources worth reading</h3>
  * <p>
- * Please refer to the {@link ChannelEvent} and {@link ChannelPipeline}
- * documentation to find out what a upstream event and a downstream event are,
- * what fundamental differences they have, and how they flow in a pipeline.
+ * Please refer to the {@link ChannelEvent} and {@link ChannelPipeline} to find
+ * out what a upstream event and a downstream event are, what fundamental
+ * differences they have, and how they flow in a pipeline.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

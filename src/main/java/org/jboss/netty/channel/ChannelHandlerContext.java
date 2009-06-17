@@ -23,27 +23,33 @@
 package org.jboss.netty.channel;
 
 /**
- * Provides the properties and operations which are specific to the
+ * Provides the properties and operations which are specific to a
  * {@link ChannelHandler} and the {@link ChannelPipeline} it belongs to.
  * Via a {@link ChannelHandlerContext}, a {@link ChannelHandler} can send
  * an upstream or downstream {@link ChannelEvent} to the next or previous
- * {@link ChannelHandler} in a {@link ChannelPipeline}.
- *
+ * {@link ChannelHandler} in a pipeline, modify the behavior of the pipeline,
+ * or store the information (attachment) which is specific to the handler.
  * <pre>
+ *         <b>n</b> = the number of the handler entries in a pipeline
+ *
  * +---------+ 1 .. 1 +----------+ 1    n +---------+ n    m +---------+
  * | Channel |--------| Pipeline |--------| Context |--------| Handler |
- * +---------+        +----------+        +---------+        +---------+
- *         n = the number of the handler entries in a pipeline
+ * +---------+        +----------+        +----+----+        +----+----+
+ *                                             | 1..1             |
+ *                                       +-----+------+           |
+ *                                       | Attachment |<----------+
+ *                                       +------------+    stores
  * </pre>
- *
  * Please note that a {@link ChannelHandler} instance can be added to more than
  * one {@link ChannelPipeline}.  It means a single {@link ChannelHandler}
  * instance can have more than one {@link ChannelHandlerContext} and therefore
- * can be invoked with different {@link ChannelHandlerContext}s if it is added
- * to one or more {@link ChannelPipeline}s more than once.  For example, the
- * following handler will have as many independent attachments as how many
- * times it is added to pipelines, regardless if it is added to the same
- * pipeline multiple times or added to different pipelines multiple times:
+ * the single instance can be invoked with different
+ * {@link ChannelHandlerContext}s if it is added to one or more
+ * {@link ChannelPipeline}s more than once.
+ * <p>
+ * For example, the following handler will have as many independent attachments
+ * as how many times it is added to pipelines, regardless if it is added to the
+ * same pipeline multiple times or added to different pipelines multiple times:
  * <pre>
  * public class FactorialHandler extends SimpleUpstreamChannelHandler {
  *
@@ -75,6 +81,13 @@ package org.jboss.netty.channel;
  * p2.addLast("f3", fh);
  * p2.addLast("f4", fh);
  * </pre>
+ *
+ * <h3>Additional resources worth reading</h3>
+ * <p>
+ * Please refer to the {@link ChannelHandler}, {@link ChannelEvent}, and
+ * {@link ChannelPipeline} to find out what a upstream event and a downstream
+ * event are, what fundamental differences they have, and how they flow in a
+ * pipeline.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -137,6 +150,19 @@ public interface ChannelHandlerContext {
      */
     void sendDownstream(ChannelEvent e);
 
+    /**
+     * Retrieves an object which is {@link #setAttachment(Object) attached} to
+     * this context.
+     *
+     * @return {@code null} if no object was attached or
+     *                      {@code null} was attached
+     */
     Object getAttachment();
+
+    /**
+     * Attaches an object to this context to store a stateful information
+     * specific to the {@link ChannelHandler} which is associated with this
+     * context.
+     */
     void setAttachment(Object attachment);
 }
