@@ -27,6 +27,14 @@ import java.util.concurrent.ConcurrentMap;
 import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
 
 /**
+ * A global variable that is local to a {@link Channel}.  Think of this as a
+ * variation of {@link ThreadLocal} whose key is a {@link Channel} rather than
+ * a {@link Thread#currentThread()}.  One difference is that you always have to
+ * specify the {@link Channel} to access the variable.
+ * <p>
+ * As an alternative, you might want to use an attachment storage provided by
+ * {@link ChannelHandlerContext}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
@@ -45,10 +53,17 @@ public class ChannelLocal<T> {
         super();
     }
 
+    /**
+     * Returns the initial value of the variable.  By default, it returns
+     * {@code null}.  Override it to change the initial value.
+     */
     protected T initialValue(@SuppressWarnings("unused") Channel channel) {
         return null;
     }
 
+    /**
+     * Returns the value of this variable.
+     */
     public T get(Channel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
@@ -67,6 +82,11 @@ public class ChannelLocal<T> {
         return value;
     }
 
+    /**
+     * Sets the value of this variable.
+     *
+     * @return the old value. {@code null} if there was no old value.
+     */
     public T set(Channel channel, T value) {
         if (value == null) {
             return remove(channel);
@@ -78,6 +98,12 @@ public class ChannelLocal<T> {
         }
     }
 
+    /**
+     * Sets the value of this variable only when no value was set.
+     *
+     * @return {@code null} if the specified value was set.
+     *         An existing value if failed to set.
+     */
     public T setIfAbsent(Channel channel, T value) {
         if (value == null) {
             return get(channel);
@@ -89,6 +115,11 @@ public class ChannelLocal<T> {
         }
     }
 
+    /**
+     * Removes the variable.
+     *
+     * @return the removed value. {@code null} if no value was set.
+     */
     public T remove(Channel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
