@@ -198,7 +198,7 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
     }
 
     public ByteBuffer toByteBuffer(int index, int length) {
-        return ByteBuffer.wrap(array, index, length);
+        return ByteBuffer.wrap(array, index, length).order(order());
     }
 
     public String toString(int index, int length, String charsetName) {

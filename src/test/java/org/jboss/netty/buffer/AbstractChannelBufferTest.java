@@ -1444,6 +1444,11 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
+    public void testSlice() throws Exception {
+        assertEquals(buffer.order(), buffer.slice(1, buffer.capacity() - 1).order());
+    }
+
+    @Test
     public void testEquals() {
         assertFalse(buffer.equals(null));
         assertFalse(buffer.equals(new Object()));
@@ -1559,6 +1564,11 @@ public abstract class AbstractChannelBufferTest {
         for (int i = 0; i < buffer.capacity() - BLOCK_SIZE + 1; i += BLOCK_SIZE) {
             assertEquals(ByteBuffer.wrap(value, i, BLOCK_SIZE), buffer.toByteBuffer(i, BLOCK_SIZE));
         }
+    }
+
+    @Test
+    public void testToByteBuffer3() {
+        assertEquals(buffer.order(), buffer.toByteBuffer().order());
     }
 
     @Test
