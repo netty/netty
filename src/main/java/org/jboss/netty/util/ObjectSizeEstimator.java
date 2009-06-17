@@ -22,8 +22,6 @@
  */
 package org.jboss.netty.util;
 
-import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
-import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 
 /**
  * Estimates the size of an object in bytes.
@@ -32,15 +30,14 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
- *
  */
 public interface ObjectSizeEstimator {
 
     /**
      * Returns the estimated size of the specified object in bytes.
-     * This method must be implemented to return the same value for the same
-     * object.  {@link MemoryAwareThreadPoolExecutor} and
-     * {@link OrderedMemoryAwareThreadPoolExecutor} will malfunction otherwise.
+     *
+     * @return a positive integer which represents the size of the specified
+     *         object in bytes
      */
     int estimateSize(Object o);
 }

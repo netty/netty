@@ -27,8 +27,8 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 
 
 /**
- * Meta {@link Runnable} that changes the current thread name and reverts it
- * back when its execution ends.
+ * A {@link Runnable} that changes the current thread name and reverts it back
+ * when its execution ends.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -50,7 +50,7 @@ public class ThreadRenamingRunnable implements Runnable {
         };
 
     /**
-     * Returns the {@link ThreadNameDeterminer} which is used to determine the
+     * Returns the {@link ThreadNameDeterminer} which overrides the proposed
      * new thread name.
      */
     public static ThreadNameDeterminer getThreadNameDeterminer() {
@@ -58,7 +58,7 @@ public class ThreadRenamingRunnable implements Runnable {
     }
 
     /**
-     * Sets the {@link ThreadNameDeterminer} which is used to determine the new
+     * Sets the {@link ThreadNameDeterminer} which overrides the proposed new
      * thread name.
      */
     public static void setThreadNameDeterminer(ThreadNameDeterminer threadNameDeterminer) {
@@ -117,17 +117,17 @@ public class ThreadRenamingRunnable implements Runnable {
         }
     }
 
-    private String getNewThreadName(String oldThreadName) {
+    private String getNewThreadName(String currentThreadName) {
         String newThreadName = null;
 
         try {
             newThreadName =
                 getThreadNameDeterminer().determineThreadName(
-                        oldThreadName, proposedThreadName);
+                        currentThreadName, proposedThreadName);
         } catch (Throwable t) {
             logger.warn("Failed to determine the thread name", t);
         }
 
-        return newThreadName == null? oldThreadName : newThreadName;
+        return newThreadName == null? currentThreadName : newThreadName;
     }
 }

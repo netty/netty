@@ -23,6 +23,9 @@
 package org.jboss.netty.util;
 
 /**
+ * A utility class that provides the convenient shutdown of
+ * {@link ExternalResourceReleasable}s.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$

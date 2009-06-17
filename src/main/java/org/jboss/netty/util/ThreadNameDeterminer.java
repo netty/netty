@@ -23,10 +23,22 @@
 package org.jboss.netty.util;
 
 /**
+ * Overrides the thread name proposed by {@link ThreadRenamingRunnable}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
 public interface ThreadNameDeterminer {
-    String determineThreadName(String oldThreadName, String proposedThreadName) throws Exception;
+
+    /**
+     * Overrides the thread name proposed by {@link ThreadRenamingRunnable}.
+     *
+     * @param currentThreadName   the current thread name
+     * @param proposedThreadName  the proposed new thread name
+     * @return the actual new thread name.
+     *         If {@code null} is returned, the proposed thread name is
+     *         discarded (i.e. no rename).
+     */
+    String determineThreadName(String currentThreadName, String proposedThreadName) throws Exception;
 }
