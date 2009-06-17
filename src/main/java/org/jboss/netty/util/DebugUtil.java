@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.util;
 
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.util.internal.SystemPropertyUtil;
 
 /**
@@ -29,6 +31,13 @@ import org.jboss.netty.util.internal.SystemPropertyUtil;
  * this is not a Java debug mode.  You can enable Netty debug mode by
  * specifying the {@code "org.jboss.netty.debug"} system property (e.g.
  * {@code java -Dorg.jboss.netty.debug ...})
+ * <p>
+ * If debug mode is disabled (default), the stack trace of the exceptions are
+ * compressed to help debugging a user application.
+ * <p>
+ * If debug mode is enabled, the stack trace of the exceptions raised in
+ * {@link ChannelPipeline} or {@link ChannelSink} are retained as it is to help
+ * debugging Netty.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

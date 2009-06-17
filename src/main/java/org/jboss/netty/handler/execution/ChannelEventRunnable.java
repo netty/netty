@@ -26,6 +26,7 @@ import java.util.concurrent.Executor;
 
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.util.EstimatableObjectWrapper;
 
 /**
  * a {@link Runnable} which sends the specified {@link ChannelEvent} upstream.
@@ -38,7 +39,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  * @version $Rev$, $Date$
  *
  */
-public class ChannelEventRunnable implements Runnable {
+public class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper {
 
     private final ChannelHandlerContext ctx;
     private final ChannelEvent e;
@@ -73,5 +74,9 @@ public class ChannelEventRunnable implements Runnable {
      */
     public void run() {
         ctx.sendUpstream(e);
+    }
+
+    public Object unwrap() {
+        return e;
     }
 }

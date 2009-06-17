@@ -31,7 +31,6 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.execution.ChannelEventRunnable;
 import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
 
 /**
@@ -70,9 +69,8 @@ public class DefaultObjectSizeEstimator implements ObjectSizeEstimator {
 
         int answer = 8 + estimateSize(o.getClass(), null);
 
-        // FIXME: Cyclic dependency
-        if (o instanceof ChannelEventRunnable) {
-            answer += estimateSize(((ChannelEventRunnable) o).getEvent());
+        if (o instanceof EstimatableObjectWrapper) {
+            answer += estimateSize(((EstimatableObjectWrapper) o).unwrap());
         } else if (o instanceof MessageEvent) {
             answer += estimateSize(((MessageEvent) o).getMessage());
         } else if (o instanceof ChannelBuffer) {
