@@ -181,6 +181,13 @@ public class ServerBootstrap extends Bootstrap {
         super(channelFactory);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws IllegalArgumentException
+     *         if the specified {@code factory} is not a
+     *         {@link ServerChannelFactory}
+     */
     @Override
     public void setFactory(ChannelFactory factory) {
         if (factory == null) {
@@ -197,7 +204,7 @@ public class ServerBootstrap extends Bootstrap {
 
     /**
      * Returns an optional {@link ChannelHandler} which intercepts an event
-     * of a new bound server-side channel which accepts incoming connections.
+     * of a newly bound server-side channel which accepts incoming connections.
      *
      * @return the parent channel handler.
      *         {@code null} if no parent channel handler is set.
@@ -208,7 +215,7 @@ public class ServerBootstrap extends Bootstrap {
 
     /**
      * Sets an optional {@link ChannelHandler} which intercepts an event of
-     * a new bound server-side channel which accepts incoming connections.
+     * a newly bound server-side channel which accepts incoming connections.
      *
      * @param parentHandler
      *        the parent channel handler.
