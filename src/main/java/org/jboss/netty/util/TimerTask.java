@@ -22,11 +22,23 @@
  */
 package org.jboss.netty.util;
 
+import java.util.concurrent.TimeUnit;
+
 /**
+ * A task which is executed after the delay specified with
+ * {@link Timer#newTimeout(TimerTask, long, TimeUnit)}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
 public interface TimerTask {
+
+    /**
+     * Executed after the delay specified with
+     * {@link Timer#newTimeout(TimerTask, long, TimeUnit)}.
+     *
+     * @param timeout a handle which is associated with this task
+     */
     void run(Timeout timeout) throws Exception;
 }

@@ -42,6 +42,39 @@ import org.jboss.netty.util.internal.MapBackedSet;
 import org.jboss.netty.util.internal.ReusableIterator;
 
 /**
+ * A {@link Timer} optimized for approximated I/O timeout scheduling.
+ *
+ * <h3>Tick Duration</h3>
+ *
+ * As described with 'approximated', this timer does not execute the scheduled
+ * {@link TimerTask} on time.  {@link HashedWheelTimer}, on every tick, will
+ * check if there are any {@link TimerTask}s behind the schedule and execute
+ * them.
+ * <p>
+ * You can increase or decrease the accuracy of the execution timing by
+ * specifying smaller or larger tick duration in the constructor.  In most
+ * network applications, I/O timeout does not need to be accurate.  Therefore,
+ * the default tick duration is 100 milliseconds and you will not need to try
+ * different configurations in most cases.
+ *
+ * <h3>Ticks per Wheel (Wheel Size)</h3>
+ *
+ * {@link HashedWheelTimer} maintains a data structure called 'wheel'.
+ * To put simply, a wheel is a hash table of {@link TimerTask}s whose hash
+ * function is 'dead line of the task'.  The default number of ticks per wheel
+ * (i.e. the size of the wheel) is 512.  You could specify a larger value
+ * if you are going to schedule a lot of timeouts.
+ *
+ * <h3>Implementation Details</h3>
+ *
+ * {@link HashedWheelTimer} is based on
+ * <a href="http://cseweb.ucsd.edu/users/varghese/>George Varghese</a> and
+ * Tony Lauck's paper,
+ * <a href="http://www-cse.ucsd.edu/users/varghese/PAPERS/twheel.ps.Z">'Hashed
+ * and Hierarchical Timing Wheels: data structures to efficiently implement a
+ * timer facility'</a>.  More comprehensive slides are located
+ * <a href="http://www.cse.wustl.edu/~cdgill/courses/cs6874/TimingWheels.ppt">here</a>.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
@@ -69,27 +102,75 @@ public class HashedWheelTimer implements Timer {
     final ReadWriteLock lock = new ReentrantReadWriteLock();
     volatile int wheelCursor;
 
+    /**
+     * Creates a new timer with the default thread factory
+     * ({@link Executors#defaultThreadFactory()}), default tick duration, and
+     * default number of ticks per wheel.
+     */
     public HashedWheelTimer() {
         this(Executors.defaultThreadFactory());
     }
 
+    /**
+     * Creates a new timer with the default thread factory
+     * ({@link Executors#defaultThreadFactory()}) and default number of ticks
+     * per wheel.
+     *
+     * @param tickDuration   the duration between tick
+     * @param unit           the time unit of the {@code tickDuration}
+     */
     public HashedWheelTimer(long tickDuration, TimeUnit unit) {
         this(Executors.defaultThreadFactory(), tickDuration, unit);
     }
 
+    /**
+     * Creates a new timer with the default thread factory
+     * ({@link Executors#defaultThreadFactory()}).
+     *
+     * @param tickDuration   the duration between tick
+     * @param unit           the time unit of the {@code tickDuration}
+     * @param ticksPerWheel  the size of the wheel
+     */
     public HashedWheelTimer(long tickDuration, TimeUnit unit, int ticksPerWheel) {
         this(Executors.defaultThreadFactory(), tickDuration, unit, ticksPerWheel);
     }
 
+    /**
+     * Creates a new timer with the default tick duration and default number of
+     * ticks per wheel.
+     *
+     * @param threadFactory  a {@link ThreadFactory} that creates a
+     *                       background {@link Thread} which is dedicated to
+     *                       {@link TimerTask} execution.
+     */
     public HashedWheelTimer(ThreadFactory threadFactory) {
         this(threadFactory, 100, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * Creates a new timer with the default number of ticks per wheel.
+     *
+     * @param threadFactory  a {@link ThreadFactory} that creates a
+     *                       background {@link Thread} which is dedicated to
+     *                       {@link TimerTask} execution.
+     * @param tickDuration   the duration between tick
+     * @param unit           the time unit of the {@code tickDuration}
+     */
     public HashedWheelTimer(
             ThreadFactory threadFactory, long tickDuration, TimeUnit unit) {
         this(threadFactory, tickDuration, unit, 512);
     }
 
+    /**
+     * Creates a new timer.
+     *
+     * @param threadFactory  a {@link ThreadFactory} that creates a
+     *                       background {@link Thread} which is dedicated to
+     *                       {@link TimerTask} execution.
+     * @param tickDuration   the duration between tick
+     * @param unit           the time unit of the {@code tickDuration}
+     * @param ticksPerWheel  the size of the wheel
+     */
     public HashedWheelTimer(
             ThreadFactory threadFactory,
             long tickDuration, TimeUnit unit, int ticksPerWheel) {
@@ -179,6 +260,13 @@ public class HashedWheelTimer implements Timer {
         return normalizedTicksPerWheel;
     }
 
+    /**
+     * Starts the background thread explicitly.  The background thread will
+     * start automatically on demand even if you did not call this method.
+     *
+     * @throws IllegalStateException if this timer has been
+     *                               {@linkplain #stop() stopped} already
+     */
     public synchronized void start() {
         if (shutdown.get()) {
             throw new IllegalStateException("cannot be started once stopped");
@@ -380,6 +468,10 @@ public class HashedWheelTimer implements Timer {
             this.deadline = deadline;
             this.stopIndex = stopIndex;
             this.remainingRounds = remainingRounds;
+        }
+
+        public Timer getTimer() {
+            return HashedWheelTimer.this;
         }
 
         public TimerTask getTask() {
