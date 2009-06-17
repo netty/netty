@@ -24,6 +24,16 @@ package org.jboss.netty.channel.local;
 import java.net.SocketAddress;
 
 /**
+ * Represents an endpoint in the local transport.  Each endpoint is identified
+ * by a unique case-insensitive string, except for the pre-defined value called
+ * {@code "ephemeral"}.
+ *
+ * <h3>Ephemeral Address</h3>
+ *
+ * An ephemeral address is an anonymous address which is assigned temporarily
+ * and is released as soon as the connection is closed.  All ephemeral addresses
+ * have the same ID, {@code "ephemeral"}, but they are not equals to each other.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -38,10 +48,16 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
     private final String id;
     private final boolean ephemeral;
 
+    /**
+     * Creates a new instance with the specified ID.
+     */
     public LocalAddress(int id) {
         this(String.valueOf(id));
     }
 
+    /**
+     * Creates a new instance with the specified ID.
+     */
     public LocalAddress(String id) {
         if (id == null) {
             throw new NullPointerException("id");
@@ -54,10 +70,16 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
         ephemeral = id.equals("ephemeral");
     }
 
+    /**
+     * Returns the ID of this address.
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Returns {@code true} if and only if this address is ephemeral.
+     */
     public boolean isEphemeral() {
         return ephemeral;
     }
@@ -85,6 +107,7 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
     }
 
     public int compareTo(LocalAddress o) {
+        // FIXME: Ephemeral port
         return getId().compareTo(o.getId());
     }
 

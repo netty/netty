@@ -25,6 +25,8 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 
 /**
+ * The default {@link LocalClientChannelFactory} implementation.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -34,6 +36,9 @@ public class DefaultLocalClientChannelFactory implements LocalClientChannelFacto
 
     private final ChannelSink sink;
 
+    /**
+     * Creates a new instance.
+     */
     public DefaultLocalClientChannelFactory() {
         sink = new LocalClientChannelSink();
     }
@@ -42,6 +47,10 @@ public class DefaultLocalClientChannelFactory implements LocalClientChannelFacto
         return new DefaultLocalChannel(null, this, pipeline, sink, null);
     }
 
+    /**
+     * Does nothing because this implementation does not require any external
+     * resources.
+     */
     public void releaseExternalResources() {
         // No external resources.
     }
