@@ -22,9 +22,9 @@
  */
 package org.jboss.netty.channel;
 
-
-
 /**
+ * A {@link ChannelFactory} that creates a {@link ServerChannel}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *

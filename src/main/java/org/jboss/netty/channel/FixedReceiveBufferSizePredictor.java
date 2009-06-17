@@ -25,7 +25,7 @@ package org.jboss.netty.channel;
 
 /**
  * The {@link ReceiveBufferSizePredictor} that always yields the same buffer
- * size prediction.
+ * size prediction.  This predictor ignores the feed back from the I/O thread.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

@@ -25,7 +25,7 @@ package org.jboss.netty.channel;
 import static org.jboss.netty.channel.Channels.*;
 
 /**
- * The default {@link ChannelStateEvent} implementation.
+ * The default upstream {@link ChannelStateEvent} implementation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

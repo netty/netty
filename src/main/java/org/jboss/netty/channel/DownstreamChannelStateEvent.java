@@ -23,7 +23,7 @@
 package org.jboss.netty.channel;
 
 /**
- * The default {@link ChannelStateEvent} implementation.
+ * The default downstream {@link ChannelStateEvent} implementation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

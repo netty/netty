@@ -41,8 +41,6 @@ import java.util.Map;
  * <li>{@link #pipelineFactory(ChannelPipeline)}</li>
  * <li>{@link #succeededFuture(Channel)}</li>
  * <li>{@link #failedFuture(Channel, Throwable)}</li>
- * <li>{@link #messageEvent(Channel, ChannelFuture, Object)}</li>
- * <li>{@link #messageEvent(Channel, ChannelFuture, Object, SocketAddress)}</li>
  * </ul>
  *
  * <h3>Upstream and downstream event generation</h3>

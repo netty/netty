@@ -34,8 +34,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * effective the memory utilization will be.
  * <p>
  * Once a read operation is performed and the actual number of read bytes is
- * known, an I/O thread should call {@link #previousReceiveBufferSize(int)} to
- * update the predictor so it can predict more accurately.
+ * known, an I/O thread will call {@link #previousReceiveBufferSize(int)} to
+ * update the predictor so it can predict more accurately next time.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

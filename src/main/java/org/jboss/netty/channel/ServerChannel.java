@@ -22,11 +22,17 @@
  */
 package org.jboss.netty.channel;
 
+import org.jboss.netty.channel.socket.ServerSocketChannel;
+
 /**
+ * A {@link Channel} that accepts an incoming connection attempt and creates
+ * its child {@link Channel}s by accepting them.  {@link ServerSocketChannel} is
+ * a good example.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public interface ServerChannel extends Channel{
+public interface ServerChannel extends Channel {
     // This is a tag interface.
 }

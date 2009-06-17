@@ -26,8 +26,8 @@ package org.jboss.netty.channel;
  * Creates a new {@link ChannelPipeline} for a new {@link Channel}.
  * <p>
  * This interface was introduced to initialize the {@link ChannelPipeline} of
- * the child channel accepted by a server-side, but it is safe to use it for
- * any other purposes.
+ * the child channel accepted by a {@link ServerChannel}, but it is safe to use
+ * it for any other purposes.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
