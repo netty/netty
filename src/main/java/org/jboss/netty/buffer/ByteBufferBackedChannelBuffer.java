@@ -285,9 +285,10 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
 
     public ByteBuffer toByteBuffer(int index, int length) {
         if (index == 0 && length == capacity()) {
-            return buffer.duplicate();
+            return buffer.duplicate().order(order());
         } else {
-            return ((ByteBuffer) buffer.duplicate().position(index).limit(index + length)).slice();
+            return ((ByteBuffer) buffer.duplicate().position(
+                    index).limit(index + length)).slice().order(order());
         }
     }
 
@@ -319,7 +320,8 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
                 return ChannelBuffers.EMPTY_BUFFER;
             }
             return new ByteBufferBackedChannelBuffer(
-                    ((ByteBuffer) buffer.duplicate().position(index).limit(index + length)));
+                    ((ByteBuffer) buffer.duplicate().position(
+                            index).limit(index + length)).order(order()));
         }
     }
 
