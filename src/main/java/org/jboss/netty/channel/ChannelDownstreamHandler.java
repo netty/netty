@@ -33,7 +33,7 @@ import java.net.SocketAddress;
  * <h3>Downstream events</h3>
  * <p>
  * A downstream event is an event which is supposed to be processed from the
- * last handler to the first handler in the {@link ChannelPipeline}.
+ * last handler to the first handler in a {@link ChannelPipeline}.
  * For example, all I/O requests made by a user application are downstream
  * events.
  * <p>
