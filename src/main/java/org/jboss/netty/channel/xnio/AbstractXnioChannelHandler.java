@@ -30,7 +30,7 @@ import org.jboss.xnio.channels.WritableMessageChannel;
  * @version $Rev$, $Date$
  */
 @SuppressWarnings("unchecked")
-public abstract class AbstractXnioChannelHandler implements IoHandler<java.nio.channels.Channel> {
+abstract class AbstractXnioChannelHandler implements IoHandler<java.nio.channels.Channel> {
 
     protected AbstractXnioChannelHandler() {
         super();

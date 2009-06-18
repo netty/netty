@@ -24,8 +24,12 @@ package org.jboss.netty.channel.xnio;
 
 import org.jboss.xnio.IoHandler;
 import org.jboss.xnio.IoHandlerFactory;
+import org.jboss.xnio.channels.BoundServer;
 
 /**
+ * An XNIO {@link IoHandlerFactory} implementation that must be specified when
+ * you create a {@link BoundServer} to integrate XNIO into Netty.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
