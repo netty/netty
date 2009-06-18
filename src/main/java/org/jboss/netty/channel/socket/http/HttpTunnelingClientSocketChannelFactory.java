@@ -31,9 +31,9 @@ import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
- * A {@link ClientSocketChannelFactory} that creates a {@link SocketChannel}
- * which connects to an {@link HttpTunnelingServlet} to communicate with the
- * server application behind the {@link HttpTunnelingServlet}.
+ * Creates a client-side {@link SocketChannel} which connects to an
+ * {@link HttpTunnelingServlet} to communicate with the server application
+ * behind the {@link HttpTunnelingServlet}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)

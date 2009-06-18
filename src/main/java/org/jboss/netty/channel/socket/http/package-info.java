@@ -25,5 +25,8 @@
  * An HTTP-based client-side {@link org.jboss.netty.channel.socket.SocketChannel}
  * and its corresponding server-side Servlet implementation that make your
  * existing server application work in a firewalled network.
+ * <p>
+ * Please refer to the example in the <tt>org.jboss.netty.example.http.tunnel</tt>
+ * package to learn how to configure the HTTP tunneling transport.
  */
 package org.jboss.netty.channel.socket.http;
