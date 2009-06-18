@@ -52,7 +52,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  * +--------------+----------------+      +----------------+
  * </pre>
  *
- * <h3>2 bytes length Field at offset 0, do not strip header</h3>
+ * <h3>2 bytes length field at offset 0, do not strip header</h3>
  * <pre>
  * <b>lengthFieldOffset</b>   = <b>0</b>
  * <b>lengthFieldLength</b>   = <b>2</b>
@@ -66,7 +66,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  * +--------+----------------+      +--------+----------------+
  * </pre>
  *
- * <h3>3 bytes length Field at the end of 5 bytes header, strip header</h3>
+ * <h3>3 bytes length field at the end of 5 bytes header, strip header</h3>
  * <pre>
  * <b>lengthFieldOffset</b>   = <b>2</b> (= 5 - 3)
  * <b>lengthFieldLength</b>   = <b>3</b>
@@ -80,7 +80,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  * +----------+----------+----------------+      +----------------+
  * </pre>
  *
- * <h3>2 bytes length Field at offset 1 in the middle of 4 bytes header,
+ * <h3>2 bytes length field at offset 1 in the middle of 4 bytes header,
  *     strip the first header field and the length field</h3>
  * <pre>
  * <b>lengthFieldOffset</b>   = <b>1</b>
@@ -95,7 +95,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  * +------+--------+------+----------------+      +------+----------------+
  * </pre>
  *
- * <h3>2 bytes length Field at offset 1 in the middle of 4 bytes header,
+ * <h3>2 bytes length field at offset 1 in the middle of 4 bytes header,
  *     strip the first header field and the length field, the length field
  *     includes the header length</h3>
  * <pre>
