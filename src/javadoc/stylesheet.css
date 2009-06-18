@@ -55,13 +55,32 @@ h5 {
 }
 
 /* Tables */
-th { text-align: left; background: #CCCCFF; color:#000000; }
-td { vertical-align: top; }
+th {
+  text-align: left;
+  background: #CCCCFF;
+  color:#000000;
+}
+
+td {
+  vertical-align: top;
+}
 
 /* Table colors */
-.TableHeadingColor     { background: #CCCCFF; color:#000000 } /* Dark mauve */
-.TableSubHeadingColor  { background: #EEEEFF; color:#000000 } /* Light mauve */
-.TableRowColor         { background: #FFFFFF; color:#000000 } /* White */
+.TableHeadingColor {
+  background: #CCCCFF; /* Dark mauve */
+  color:#000000;
+}
+.TableHeadingColor TH * {
+  font-size: 1.2em !important;
+}
+.TableSubHeadingColor {
+  background: #EEEEFF; /* Light mauve */
+  color:#000000
+}
+.TableRowColor {
+  background: #FFFFFF; /* White */
+  color:#000000
+}
 
 /* Font used in left-hand frame lists */
 .FrameTitleFont   { font-size: 100%; color:#000000 }
