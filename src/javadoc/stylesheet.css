@@ -12,7 +12,7 @@ a:link {color:#0033cc;}
 a:visited {color:#0044cc;}
 
 tt, tt *, pre, pre *, code, code * {
-  font-family: Monaco, "Liberation Mono", Consolas, "Lucida Console", "Courier New", monospace;
+  font-family: "Liberation Mono", "DejaVu Sans Mono", Consolas, Monaco, "Lucida Console", "Courier New", monospace;
 }
 
 /* Headings */
