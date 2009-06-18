@@ -42,6 +42,7 @@ import org.jboss.netty.channel.local.LocalAddress;
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
 public class HttpTunnelingSessionListener implements HttpSessionListener, ChannelHandler {
@@ -69,11 +70,6 @@ public class HttpTunnelingSessionListener implements HttpSessionListener, Channe
         }
     }
 
-    /**
-     * @author The Netty Project (netty-dev@lists.jboss.org)
-     * @author Trustin Lee (tlee@redhat.com)
-     * @version $Rev$, $Date$
-     */
     private static final class HttpTunnelingChannelPipelineFactory implements ChannelPipelineFactory {
 
         private final HttpTunnelingChannelHandler handler;

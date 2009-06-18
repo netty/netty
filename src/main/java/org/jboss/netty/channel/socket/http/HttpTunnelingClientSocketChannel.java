@@ -54,6 +54,7 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
 class HttpTunnelingClientSocketChannel extends AbstractChannel
@@ -67,6 +68,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
     volatile boolean awaitingInitialResponse = true;
 
     private final Object writeLock = new Object();
+    final Object interestOpsLock = new Object();
 
     volatile Thread workerThread;
 
@@ -168,7 +170,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         channel.write(ChannelBuffers.copiedBuffer(msg, "ASCII"));
     }
 
-    void sendChunk(ChannelBuffer a) {
+    int sendChunk(ChannelBuffer a) {
         int size = a.readableBytes();
         String hex = Integer.toHexString(size) + HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR;
 
@@ -179,6 +181,8 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
                     ChannelBuffers.copiedBuffer(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR, "ASCII")));
             future.awaitUninterruptibly();
         }
+
+        return size + hex.length() + HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR.length();
     }
 
     byte[] receiveChunk() {

@@ -32,6 +32,7 @@ import org.jboss.netty.channel.ChannelFuture;
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
 final class HttpTunnelWorker implements Runnable {
@@ -46,12 +47,12 @@ final class HttpTunnelWorker implements Runnable {
         channel.workerThread = Thread.currentThread();
 
         while (channel.isOpen()) {
-            synchronized (this) {
+            synchronized (channel.interestOpsLock) {
                 while (!channel.isReadable()) {
                     try {
                         // notify() is not called at all.
                         // close() and setInterestOps() calls Thread.interrupt()
-                        this.wait();
+                        channel.interestOpsLock.wait();
                     }
                     catch (InterruptedException e) {
                         if (!channel.isOpen()) {
@@ -73,7 +74,11 @@ final class HttpTunnelWorker implements Runnable {
             }
 
             if (buf != null) {
-                fireMessageReceived(channel, ChannelBuffers.wrappedBuffer(buf));
+                fireMessageReceived(
+                        channel,
+                        ChannelBuffers.wrappedBuffer(
+                                channel.getConfig().getBufferFactory().getDefaultOrder(),
+                                buf));
             }
         }
 
@@ -90,8 +95,10 @@ final class HttpTunnelWorker implements Runnable {
           Object message) {
 
         try {
-            channel.sendChunk((ChannelBuffer) message);
+            ChannelBuffer buf = (ChannelBuffer) message;
+            int writtenBytes = channel.sendChunk(buf);
             future.setSuccess();
+            fireWriteComplete(channel, writtenBytes);
         }
         catch (Throwable t) {
             future.setFailure(t);
@@ -120,14 +127,17 @@ final class HttpTunnelWorker implements Runnable {
 
             future.setSuccess();
             if (changed) {
-                // Notify the worker so it stops or continues reading.
-                Thread currentThread = Thread.currentThread();
-                Thread workerThread = channel.workerThread;
-                if (workerThread != null && currentThread != workerThread) {
-                    workerThread.interrupt();
+                synchronized (channel.interestOpsLock) {
+                    channel.setInterestOpsNow(interestOps);
+
+                    // Notify the worker so it stops or continues reading.
+                    Thread currentThread = Thread.currentThread();
+                    Thread workerThread = channel.workerThread;
+                    if (workerThread != null && currentThread != workerThread) {
+                        workerThread.interrupt();
+                    }
                 }
 
-                channel.setInterestOpsNow(interestOps);
                 fireChannelInterestChanged(channel);
             }
         }
