@@ -36,7 +36,7 @@ import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.util.internal.ConversionUtil;
 
 /**
- * The default {@link SocketChannelConfig} implementation.
+ * The default {@link DatagramChannelConfig} implementation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

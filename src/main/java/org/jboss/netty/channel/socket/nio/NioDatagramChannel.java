@@ -48,7 +48,7 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 /**
- * NioDatagramChannel provides a connection less NIO UDP channel for Netty.
+ * Provides an NIO based {@link org.jboss.netty.channel.socket.DatagramChannel}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

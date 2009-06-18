@@ -57,8 +57,8 @@ import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
- * NioDatagramWorker is responsible for registering channels with selector, and
- * also manages the select process.
+ * A class responsible for registering channels with {@link Selector}.
+ * It also implements the {@link Selector} loop.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -84,7 +84,8 @@ class NioDatagramWorker implements Runnable {
     private final int bossId;
 
     /**
-     * Executor used to exeucte runnables such as {@link ChannelRegistionTask}.
+     * Executor used to execute {@link Runnable}s such as
+     * {@link ChannelRegistionTask}.
      */
     private final Executor executor;
 
@@ -108,7 +109,7 @@ class NioDatagramWorker implements Runnable {
      * Boolean that controls determines if a blocked Selector.select should
      * break out of its selection process. In our case we use a timeone for
      * the select method and the select method will block for that time unless
-     * woken up.
+     * waken up.
      */
     private final AtomicBoolean wakenUp = new AtomicBoolean();
 
@@ -135,9 +136,10 @@ class NioDatagramWorker implements Runnable {
     /**
      * Sole constructor.
      *
-     * @param bossId This id of the NioDatagramPipelineSink.
-     * @param id The id of this worker.
-     * @param executor Executor used to exeucte runnables such as {@link ChannelRegistionTask}.
+     * @param bossId This id of the NioDatagramPipelineSink
+     * @param id The id of this worker
+     * @param executor the {@link Executor} used to execute {@link Runnable}s
+     *                 such as {@link ChannelRegistionTask}
      */
     NioDatagramWorker(final int bossId, final int id, final Executor executor) {
         this.bossId = bossId;

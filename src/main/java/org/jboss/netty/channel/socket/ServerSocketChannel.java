@@ -24,12 +24,10 @@ package org.jboss.netty.channel.socket;
 
 import java.net.InetSocketAddress;
 
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ServerChannel;
 
 /**
- * A server-side TCP/IP socket {@link Channel} which accepts incoming TCP/IP
- * connections.
+ * A TCP/IP {@link ServerChannel} which accepts incoming TCP/IP connections.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

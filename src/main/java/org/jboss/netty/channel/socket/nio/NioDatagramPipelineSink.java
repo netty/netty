@@ -39,9 +39,8 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 
 /**
- * NioDatagramPipelineSink receives downstream events from a ChannelPipeline.
- * <p/>
- * A {@link NioDatagramPipelineSink} contains an array of {@link NioDatagramWorker}s
+ * Receives downstream events from a {@link ChannelPipeline}.  It contains
+ * an array of I/O workers.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
