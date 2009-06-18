@@ -66,6 +66,17 @@
   </bean>
 
   <bean mode="On Demand"
+        name="org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory"
+        class="org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory">
+    <depends>org.jboss.netty.internal.ChannelFactoryExecutor</depends>
+    <constructor>
+      <parameter class="java.util.concurrent.Executor">
+        <inject bean="org.jboss.netty.internal.ChannelFactoryExecutor"/>
+      </parameter>
+    </constructor>
+  </bean>
+
+  <bean mode="On Demand"
         name="org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory"
         class="org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory">
     <depends>org.jboss.netty.internal.ChannelFactoryExecutor</depends>
