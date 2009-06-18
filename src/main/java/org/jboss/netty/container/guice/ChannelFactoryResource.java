@@ -28,9 +28,14 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.jboss.netty.channel.ChannelFactory;
+
 import com.google.inject.BindingAnnotation;
 
 /**
+ * A parameter or a field annotated with this annotation will be injected with
+ * the resource required to run a {@link ChannelFactory}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$

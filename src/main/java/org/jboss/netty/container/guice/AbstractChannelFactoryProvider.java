@@ -29,6 +29,8 @@ import org.jboss.netty.channel.ChannelFactory;
 import com.google.inject.Provider;
 
 /**
+ * A skeletal {@link Provider} implementation for a {@link ChannelFactory}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$

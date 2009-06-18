@@ -27,8 +27,11 @@ import java.util.concurrent.Executor;
 import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
 
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 
 /**
+ * A {@link Provider} that creates a new {@link OioDatagramChannelFactory}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$

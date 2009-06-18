@@ -26,6 +26,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
 import org.jboss.netty.channel.local.DefaultLocalServerChannelFactory;
 import org.jboss.netty.channel.local.LocalClientChannelFactory;
@@ -43,9 +44,13 @@ import org.jboss.netty.util.internal.ExecutorUtil;
 import org.jboss.netty.util.internal.UnterminatableExecutor;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Module;
 import com.google.inject.Scopes;
 
 /**
+ * A Guice {@link Module} that defines the bindings for all known
+ * {@link ChannelFactory}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
@@ -54,6 +59,9 @@ public class NettyModule extends AbstractModule {
 
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
+    /**
+     * Releases all resources created by this module.
+     */
     public void destroy() {
         ExecutorUtil.terminate(executor);
     }
