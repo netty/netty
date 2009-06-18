@@ -22,6 +22,8 @@
  */
 
 /**
+ * <a href="http://www.springframework.org/">Spring framework</a> integration.
+ *
  * @apiviz.exclude
  */
 package org.jboss.netty.container.spring;

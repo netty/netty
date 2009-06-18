@@ -22,6 +22,8 @@
  */
 
 /**
+ * <a href="http://www.jboss.org/jbossmc/">JBoss Microcontainer</a> integration.
+ *
  * @apiviz.exclude
  */
 package org.jboss.netty.container.microcontainer;

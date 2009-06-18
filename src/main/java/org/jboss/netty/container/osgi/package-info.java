@@ -22,6 +22,8 @@
  */
 
 /**
+ * <a href="http://www.osgi.org/">OSGi framework</a> integration.
+ *
  * @apiviz.exclude
  */
 package org.jboss.netty.container.osgi;

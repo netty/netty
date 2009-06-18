@@ -22,6 +22,8 @@
  */
 
 /**
+ * <a href="http://code.google.com/p/google-guice/">Google Guice</a> integration.
+ *
  * @apiviz.exclude
  */
 package org.jboss.netty.container.guice;
