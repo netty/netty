@@ -115,5 +115,13 @@ public class NettyModule extends AbstractModule {
         bind(LocalServerChannelFactory.class).
             to(DefaultLocalServerChannelFactory.class).
             in(Scopes.SINGLETON);
+
+        bind(DefaultLocalClientChannelFactory.class).
+            to(DefaultLocalClientChannelFactory.class).
+            in(Scopes.SINGLETON);
+
+        bind(DefaultLocalServerChannelFactory.class).
+            to(DefaultLocalServerChannelFactory.class).
+            in(Scopes.SINGLETON);
     }
 }
