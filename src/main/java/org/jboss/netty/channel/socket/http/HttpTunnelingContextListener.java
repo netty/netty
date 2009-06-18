@@ -27,10 +27,12 @@ import javax.servlet.ServletContextListener;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
+import org.jboss.netty.channel.local.LocalClientChannelFactory;
 
 /**
- * A context listener that creates a client bootstrap that uses a local channel factory. The local channel factory should
- * already be registered before the contect is loaded.
+ * A {@link ServletContextListener} that creates a {@link ClientBootstrap}
+ * using a {@link LocalClientChannelFactory}. The factory should be registered
+ * before this context is loaded.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -65,5 +67,4 @@ public class HttpTunnelingContextListener implements ServletContextListener {
     public void contextDestroyed(ServletContextEvent context) {
         // Unused
     }
-
 }

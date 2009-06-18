@@ -34,6 +34,7 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpSession;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -44,7 +45,8 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
- * A channel handler that proxies messages to the servlet output stream
+ * A {@link ChannelHandler} that proxies received messages to the
+ * {@link OutputStream} of the {@link HttpTunnelingServlet}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)

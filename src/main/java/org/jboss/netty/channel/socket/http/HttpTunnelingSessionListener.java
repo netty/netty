@@ -25,6 +25,7 @@ import static org.jboss.netty.channel.Channels.*;
 import static org.jboss.netty.channel.socket.http.HttpTunnelingContextListener.*;
 import static org.jboss.netty.channel.socket.http.HttpTunnelingServlet.*;
 
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSessionListener;
@@ -38,7 +39,9 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.local.LocalAddress;
 
 /**
- * A session listener that uses the client bootstrap to create a channel.
+ * An {@link HttpSessionListener} that creates an outbound connection to the
+ * actual server behind {@link HttpServlet}.  The outbound connection is open
+ * when a new session is created, and closed when the session is destroyed.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)

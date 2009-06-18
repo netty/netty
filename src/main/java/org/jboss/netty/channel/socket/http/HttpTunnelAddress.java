@@ -25,6 +25,9 @@ import java.net.SocketAddress;
 import java.net.URI;
 
 /**
+ * Represents the URI of {@link HttpTunnelingServlet} where
+ * {@link HttpTunnelingClientSocketChannelFactory} connects to.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -36,6 +39,9 @@ public class HttpTunnelAddress extends SocketAddress implements Comparable<HttpT
 
     private final URI uri;
 
+    /**
+     * Creates a new instance with the specified URI.
+     */
     public HttpTunnelAddress(URI uri) {
         if (uri == null) {
             throw new NullPointerException("uri");
@@ -43,6 +49,9 @@ public class HttpTunnelAddress extends SocketAddress implements Comparable<HttpT
         this.uri = uri;
     }
 
+    /**
+     * Returns the {@link URI} where {@link HttpTunnelingServlet} is bound.
+     */
     public URI getUri() {
         return uri;
     }
