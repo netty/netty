@@ -34,6 +34,7 @@ import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
@@ -88,6 +89,10 @@ public class NettyModule extends AbstractModule {
 
         bind(NioServerSocketChannelFactory.class).
             toProvider(NioServerSocketChannelFactoryProvider.class).
+            in(Scopes.SINGLETON);
+
+        bind(NioDatagramChannelFactory.class).
+            toProvider(NioDatagramChannelFactoryProvider.class).
             in(Scopes.SINGLETON);
 
         bind(OioClientSocketChannelFactory.class).
