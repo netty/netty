@@ -27,7 +27,89 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
- * TODO Documentation
+ * A decoder that decodes the received {@link ChannelBuffer}s that contain
+ * a message length field into a meaningfully framed {@link ChannelBuffer}.
+ * It is particularly useful when you decode a binary message which has an
+ * integer header field that represents the length of the message body or the
+ * whole message.
+ * <p>
+ * {@link LengthFieldBasedFrameDecoder} has many configuration parameters so
+ * that it can decode any message with a length field, which is often seen in
+ * proprietary client-server protocols.  Here are some example that will give
+ * you the basic idea on which option does what.
+ *
+ * <h3>4 bytes length field at offset 0, strip header</h3>
+ * <pre>
+ * <b>lengthFieldOffset</b>   = <b>0</b>
+ * <b>lengthFieldLength</b>   = <b>4</b>
+ * <b>lengthAdjustment</b>    = <b>0</b>
+ * <b>initialBytesToStrip</b> = <b>4</b>
+ *
+ * BEFORE DECODE (16 bytes)               AFTER DECODE (12 bytes)
+ * +--------------+----------------+      +----------------+
+ * | Length Field | Actual Content |----->| Actual Content |
+ * |  0x0000000C  | "HELLO, WORLD" |      | "HELLO, WORLD" |
+ * +--------------+----------------+      +----------------+
+ * </pre>
+ *
+ * <h3>2 bytes length Field at offset 0, do not strip header</h3>
+ * <pre>
+ * <b>lengthFieldOffset</b>   = <b>0</b>
+ * <b>lengthFieldLength</b>   = <b>2</b>
+ * <b>lengthAdjustment</b>    = <b>0</b>
+ * <b>initialBytesToStrip</b> = <b>0</b>
+ *
+ * BEFORE DECODE (14 bytes)         AFTER DECODE (14 bytes)
+ * +--------+----------------+      +--------+----------------+
+ * | Length | Actual Content |----->| Length | Actual Content |
+ * | 0x000C | "HELLO, WORLD" |      | 0x000C | "HELLO, WORLD" |
+ * +--------+----------------+      +--------+----------------+
+ * </pre>
+ *
+ * <h3>3 bytes length Field at the end of 5 bytes header, strip header</h3>
+ * <pre>
+ * <b>lengthFieldOffset</b>   = <b>2</b> (= 5 - 3)
+ * <b>lengthFieldLength</b>   = <b>3</b>
+ * <b>lengthAdjustment</b>    = <b>0</b>
+ * <b>initialBytesToStrip</b> = <b>5</b>
+ *
+ * BEFORE DECODE (17 bytes)                      AFTER DECODE (12 bytes)
+ * +----------+----------+----------------+      +----------------+
+ * | Header 1 |  Length  | Actual Content |----->| Actual Content |
+ * |  0xCAFE  | 0x00000C | "HELLO, WORLD" |      | "HELLO, WORLD" |
+ * +----------+----------+----------------+      +----------------+
+ * </pre>
+ *
+ * <h3>2 bytes length Field at offset 1 in the middle of 4 bytes header,
+ *     strip the first header field and the length field</h3>
+ * <pre>
+ * <b>lengthFieldOffset</b>   = <b>1</b>
+ * <b>lengthFieldLength</b>   = <b>2</b>
+ * <b>lengthAdjustment</b>    = <b>1</b> (= the length of HDR2)
+ * <b>initialBytesToStrip</b> = <b>3</b> (= the length of HDR1 + LEN)
+ *
+ * BEFORE DECODE (16 bytes)                       AFTER DECODE (13 bytes)
+ * +------+--------+------+----------------+      +------+----------------+
+ * | HDR1 | Length | HDR2 | Actual Content |----->| HDR2 | Actual Content |
+ * | 0xCA | 0x000C | 0xFE | "HELLO, WORLD" |      | 0xFE | "HELLO, WORLD" |
+ * +------+--------+------+----------------+      +------+----------------+
+ * </pre>
+ *
+ * <h3>2 bytes length Field at offset 1 in the middle of 4 bytes header,
+ *     strip the first header field and the length field, the length field
+ *     includes the header length</h3>
+ * <pre>
+ * <b>lengthFieldOffset</b>   = <b>1</b>
+ * <b>lengthFieldLength</b>   = <b>2</b>
+ * <b>lengthAdjustment</b>    = <b>-3</b> (= the length of HDR1 + LEN, negative)
+ * <b>initialBytesToStrip</b> = <b>3</b>
+ *
+ * BEFORE DECODE (16 bytes)                       AFTER DECODE (13 bytes)
+ * +------+--------+------+----------------+      +------+----------------+
+ * | HDR1 | Length | HDR2 | Actual Content |----->| HDR2 | Actual Content |
+ * | 0xCA | 0x0010 | 0xFE | "HELLO, WORLD" |      | 0xFE | "HELLO, WORLD" |
+ * +------+--------+------+----------------+      +------+----------------+
+ * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -35,6 +117,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  * @version $Rev:231 $, $Date:2008-06-12 16:44:50 +0900 (목, 12 6월 2008) $
  *
  * @apiviz.landmark
+ * @see LengthFieldPrepender
  */
 public class LengthFieldBasedFrameDecoder extends FrameDecoder {
 
@@ -50,6 +133,16 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
 
     /**
      * Creates a new instance.
+     *
+     * @param maxFrameLength
+     *        the maximum length of the frame.  If the length of the frame is
+     *        greater than this value, {@link TooLongFrameException} will be
+     *        thrown.
+     * @param lengthFieldOffset
+     *        the offset of the length field
+     * @param lengthFieldLength
+     *        the length of the length field
+     *
      */
     public LengthFieldBasedFrameDecoder(
             int maxFrameLength,
@@ -59,6 +152,19 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
 
     /**
      * Creates a new instance.
+     *
+     * @param maxFrameLength
+     *        the maximum length of the frame.  If the length of the frame is
+     *        greater than this value, {@link TooLongFrameException} will be
+     *        thrown.
+     * @param lengthFieldOffset
+     *        the offset of the length field
+     * @param lengthFieldLength
+     *        the length of the length field
+     * @param lengthAdjustment
+     *        the compensation value to add to the value of the length field
+     * @param initialBytesToStrip
+     *        the number of first bytes to strip out from the decoded frame
      */
     public LengthFieldBasedFrameDecoder(
             int maxFrameLength,
