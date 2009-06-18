@@ -24,6 +24,6 @@
 /**
  * An HTTP-based client-side {@link org.jboss.netty.channel.socket.SocketChannel}
  * and its corresponding server-side Servlet implementation that make your
- * existing Netty application work in a firewalled network.
+ * existing server application work in a firewalled network.
  */
 package org.jboss.netty.channel.socket.http;
