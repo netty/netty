@@ -42,6 +42,8 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 
 /**
+ * A skeletal {@link CodecEmbedder} implementation.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
@@ -54,6 +56,10 @@ public abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
 
     final Queue<Object> productQueue = new LinkedList<Object>();
 
+    /**
+     * Creates a new embedder whose pipeline is composed of the specified
+     * handlers.
+     */
     protected AbstractCodecEmbedder(ChannelHandler... handlers) {
         pipeline = new EmbeddedChannelPipeline();
         configurePipeline(handlers);
@@ -61,6 +67,13 @@ public abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
         fireInitialEvents();
     }
 
+    /**
+     * Creates a new embedder whose pipeline is composed of the specified
+     * handlers.
+     *
+     * @param bufferFactory the {@link ChannelBufferFactory} to be used when
+     *                      creating a new buffer.
+     */
     protected AbstractCodecEmbedder(ChannelBufferFactory bufferFactory, ChannelHandler... handlers) {
         this(handlers);
         getChannel().getConfig().setBufferFactory(bufferFactory);
@@ -101,10 +114,18 @@ public abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
         return !productQueue.isEmpty();
     }
 
+    /**
+     * Returns the virtual {@link Channel} which will be used as a mock
+     * during encoding and decoding.
+     */
     protected final Channel getChannel() {
         return channel;
     }
 
+    /**
+     * Returns {@code true} if and only if the produce queue is empty and
+     * therefore {@link #poll()} will return {@code null}.
+     */
     protected final boolean isEmpty() {
         return productQueue.isEmpty();
     }

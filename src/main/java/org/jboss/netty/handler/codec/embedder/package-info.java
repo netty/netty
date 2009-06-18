@@ -22,9 +22,8 @@
  */
 
 /**
- * A helper that wraps an encoder or a decoder so that it can be used outside
- * a {@link org.jboss.netty.channel.ChannelPipeline} or inside a
- * {@link org.jboss.netty.channel.ChannelHandler} conveniently.
+ * A helper that wraps an encoder or a decoder so that they can be used without
+ * doing actual I/O in unit tests or higher level codecs.
  */
 package org.jboss.netty.handler.codec.embedder;
 

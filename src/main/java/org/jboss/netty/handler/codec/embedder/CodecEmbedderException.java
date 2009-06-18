@@ -23,6 +23,9 @@
 package org.jboss.netty.handler.codec.embedder;
 
 /**
+ * A {@link RuntimeException} which is thrown when a {@link CodecEmbedder}
+ * failed to encode or decode the specified input.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
@@ -33,18 +36,30 @@ public class CodecEmbedderException extends RuntimeException {
 
     private static final long serialVersionUID = -6283302594160331474L;
 
+    /**
+     * Creates a new instance.
+     */
     public CodecEmbedderException() {
         super();
     }
 
+    /**
+     * Creates a new instance.
+     */
     public CodecEmbedderException(String message, Throwable cause) {
         super(message, cause);
     }
 
+    /**
+     * Creates a new instance.
+     */
     public CodecEmbedderException(String message) {
         super(message);
     }
 
+    /**
+     * Creates a new instance.
+     */
     public CodecEmbedderException(Throwable cause) {
         super(cause);
     }
