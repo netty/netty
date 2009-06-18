@@ -8,13 +8,55 @@ body {
   font-size: 10pt;
 }
 
-a:link {color:#0066cc;}
-a:visited {color:#6699cc;}
+a:link {color:#0033cc;}
+a:visited {color:#0044cc;}
 
-td { vertical-align: top; }
+tt, tt *, pre, pre *, code, code * {
+  font-family: Monaco, "Liberation Mono", Consolas, "Lucida Console", "Courier New", monospace;
+}
 
 /* Headings */
-h1 { font-size: 145% }
+h1, h2, h3, h4, h5, h6 {
+    color:#4a5d75;
+    line-height:130%;
+    margin-top:0em;
+    font-family:'Lucida Grande', Geneva, Verdana, Arial, sans-serif;
+    background-color:transparent;
+}
+
+h1 {
+  font-size:2em;
+  padding: 0em;
+  margin: 0.8em 0em 0.35em 0em;
+}
+
+h2 {
+  font-size:1.6em;
+  padding: 0em;
+  margin: 0.8em 0em 0.35em 0em;
+}
+
+h3 {
+  font-size:1.3em;
+  padding: 0em;
+  margin: 0.8em 0em 0.35em 0em;
+}
+
+h4 {
+  font-size:1.1em;
+  padding: 0em;
+  margin: 0.8em 0em 0.35em 0em;
+}
+
+h5 {
+  font-size:1em;
+  padding: 0em;
+  margin: 0.8em 0em 0.35em 0em;
+}
+
+/* Tables */
+th { text-align: left; background: #CCCCFF; color:#000000; }
+td { vertical-align: top; }
 
 /* Table colors */
 .TableHeadingColor     { background: #CCCCFF; color:#000000 } /* Dark mauve */
