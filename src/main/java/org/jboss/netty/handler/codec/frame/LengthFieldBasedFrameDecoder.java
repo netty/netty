@@ -38,32 +38,32 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  * proprietary client-server protocols.  Here are some example that will give
  * you the basic idea on which option does what.
  *
- * <h3>4 bytes length field at offset 0, strip header</h3>
- * <pre>
- * <b>lengthFieldOffset</b>   = <b>0</b>
- * <b>lengthFieldLength</b>   = <b>4</b>
- * <b>lengthAdjustment</b>    = <b>0</b>
- * <b>initialBytesToStrip</b> = <b>4</b>
- *
- * BEFORE DECODE (16 bytes)               AFTER DECODE (12 bytes)
- * +--------------+----------------+      +----------------+
- * | Length Field | Actual Content |----->| Actual Content |
- * |  0x0000000C  | "HELLO, WORLD" |      | "HELLO, WORLD" |
- * +--------------+----------------+      +----------------+
- * </pre>
- *
  * <h3>2 bytes length field at offset 0, do not strip header</h3>
  * <pre>
  * <b>lengthFieldOffset</b>   = <b>0</b>
  * <b>lengthFieldLength</b>   = <b>2</b>
- * <b>lengthAdjustment</b>    = <b>0</b>
- * <b>initialBytesToStrip</b> = <b>0</b>
+ * <b>lengthAdjustment</b>    = <b>0</b> (default)
+ * <b>initialBytesToStrip</b> = <b>0</b> (default)
  *
  * BEFORE DECODE (14 bytes)         AFTER DECODE (14 bytes)
  * +--------+----------------+      +--------+----------------+
  * | Length | Actual Content |----->| Length | Actual Content |
  * | 0x000C | "HELLO, WORLD" |      | 0x000C | "HELLO, WORLD" |
  * +--------+----------------+      +--------+----------------+
+ * </pre>
+ *
+ * <h3>2 bytes length field at offset 0, strip header</h3>
+ * <pre>
+ * <b>lengthFieldOffset</b>   = <b>0</b>
+ * <b>lengthFieldLength</b>   = <b>2</b>
+ * <b>lengthAdjustment</b>    = <b>0</b>
+ * <b>initialBytesToStrip</b> = <b>2</b>
+ *
+ * BEFORE DECODE (14 bytes)         AFTER DECODE (12 bytes)
+ * +--------+----------------+      +----------------+
+ * | Length | Actual Content |----->| Actual Content |
+ * | 0x000C | "HELLO, WORLD" |      | "HELLO, WORLD" |
+ * +--------+----------------+      +----------------+
  * </pre>
  *
  * <h3>3 bytes length field at the end of 5 bytes header, strip header</h3>
