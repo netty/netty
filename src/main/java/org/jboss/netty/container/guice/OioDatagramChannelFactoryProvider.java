@@ -39,6 +39,10 @@ import com.google.inject.Provider;
 public class OioDatagramChannelFactoryProvider extends
         AbstractChannelFactoryProvider<OioDatagramChannelFactory> {
 
+    /**
+     * Creates a new provider with the {@code executor} injected via the
+     * {@link ChannelFactoryResource} annotation.
+     */
     @Inject
     public OioDatagramChannelFactoryProvider(
             @ChannelFactoryResource Executor executor) {

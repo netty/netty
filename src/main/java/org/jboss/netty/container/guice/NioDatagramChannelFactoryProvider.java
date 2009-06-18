@@ -39,6 +39,10 @@ import com.google.inject.Provider;
 public class NioDatagramChannelFactoryProvider extends
         AbstractChannelFactoryProvider<NioDatagramChannelFactory> {
 
+    /**
+     * Creates a new provider with the {@code executor} injected via the
+     * {@link ChannelFactoryResource} annotation.
+     */
     @Inject
     public NioDatagramChannelFactoryProvider(
             @ChannelFactoryResource Executor executor) {
