@@ -29,7 +29,7 @@ import org.jboss.xnio.Connector;
 
 /**
  * A client-side {@link ChannelFactory} which uses
- * <a href="http://www.jboss.org/xnio/>JBoss XNIO</a> as its I/O provider.
+ * <a href="http://www.jboss.org/xnio/">JBoss XNIO</a> as its I/O provider.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
