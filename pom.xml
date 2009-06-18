@@ -423,6 +423,7 @@
           <windowtitle>${project.name} ${project.version} API Reference</windowtitle>
           <additionalparam>
             -link http://java.sun.com/javase/6/docs/api/
+            -link http://docs.jboss.org/xnio/latest/api/
             -link http://code.google.com/apis/protocolbuffers/docs/reference/java/
             -link http://java.sun.com/products/servlet/2.5/docs/servlet-2_5-mr2/
             -link http://www.osgi.org/javadoc/r4v41/
