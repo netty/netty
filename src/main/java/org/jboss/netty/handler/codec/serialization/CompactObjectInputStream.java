@@ -67,9 +67,9 @@ class CompactObjectInputStream extends ObjectInputStream {
             throw new EOFException();
         }
         switch (type) {
-        case CompactObjectOutputStream.TYPE_PRIMITIVE:
+        case CompactObjectOutputStream.TYPE_FAT_DESCRIPTOR:
             return super.readClassDescriptor();
-        case CompactObjectOutputStream.TYPE_NON_PRIMITIVE:
+        case CompactObjectOutputStream.TYPE_THIN_DESCRIPTOR:
             String className = readUTF();
             Class<?> clazz = loadClass(className);
             return ObjectStreamClass.lookup(clazz);

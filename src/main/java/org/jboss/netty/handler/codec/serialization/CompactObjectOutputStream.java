@@ -36,8 +36,8 @@ import java.io.OutputStream;
  */
 class CompactObjectOutputStream extends ObjectOutputStream {
 
-    static final int TYPE_PRIMITIVE = 0;
-    static final int TYPE_NON_PRIMITIVE = 1;
+    static final int TYPE_FAT_DESCRIPTOR = 0;
+    static final int TYPE_THIN_DESCRIPTOR = 1;
 
     CompactObjectOutputStream(OutputStream out) throws IOException {
         super(out);
@@ -50,11 +50,12 @@ class CompactObjectOutputStream extends ObjectOutputStream {
 
     @Override
     protected void writeClassDescriptor(ObjectStreamClass desc) throws IOException {
-        if (desc.forClass().isPrimitive()) {
-            write(TYPE_PRIMITIVE);
+        Class<?> clazz = desc.forClass();
+        if (clazz.isPrimitive() || clazz.isArray()) {
+            write(TYPE_FAT_DESCRIPTOR);
             super.writeClassDescriptor(desc);
         } else {
-            write(TYPE_NON_PRIMITIVE);
+            write(TYPE_THIN_DESCRIPTOR);
             writeUTF(desc.getName());
         }
     }
