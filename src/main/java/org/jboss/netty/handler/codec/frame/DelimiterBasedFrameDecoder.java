@@ -27,11 +27,11 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
- * A {@link FrameDecoder} which decodes the received {@link ChannelBuffer}s
- * into the {@link ChannelBuffer}s split by one or more delimiters.  It is
- * particularly useful for decoding the frames which ends with a delimiter
- * such as {@link Delimiters#nulDelimiter() NUL} or
- *         {@linkplain Delimiters#lineDelimiter() newline characters}.
+ * A decoder that decodes the received {@link ChannelBuffer}s into the
+ * {@link ChannelBuffer}s split by one or more delimiters.  It is particularly
+ * useful for decoding the frames which ends with a delimiter such as
+ * {@link Delimiters#nulDelimiter() NUL} or
+ * {@linkplain Delimiters#lineDelimiter() newline characters}.
  *
  * <h3>Predefined delimiters</h3>
  * <p>
