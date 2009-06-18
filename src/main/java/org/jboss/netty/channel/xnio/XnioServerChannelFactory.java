@@ -28,7 +28,7 @@ import org.jboss.xnio.channels.BoundServer;
 
 /**
  * A {@link ServerChannelFactory} which uses
- * <a href="http://www.jboss.org/xnio/>JBoss XNIO</a> as its I/O provider.
+ * <a href="http://www.jboss.org/xnio/">JBoss XNIO</a> as its I/O provider.
  * <p>
  * Please note that you must specify an {@link XnioAcceptedChannelHandlerFactory}
  * when you create a {@link BoundServer} to integrate XNIO into Netty.
