@@ -25,12 +25,16 @@ package org.jboss.netty.container.microcontainer;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.logging.JBossLoggerFactory;
 import org.jboss.netty.util.internal.ExecutorUtil;
 import org.jboss.netty.util.internal.UnterminatableExecutor;
 
 /**
+ * A factory bean that provides the common resources required by
+ * {@link ChannelFactory} implementations.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$

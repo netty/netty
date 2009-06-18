@@ -50,6 +50,9 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 
 /**
+ * An OSGi {@link BundleActivator} that configures logging and registered
+ * all {@link ChannelFactory} implementations as OSGi services.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$

@@ -25,6 +25,7 @@ package org.jboss.netty.container.spring;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.logging.CommonsLoggerFactory;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.ExecutorUtil;
@@ -33,6 +34,9 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
 /**
+ * A factory bean that provides the common resources required by
+ * {@link ChannelFactory} implementations.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
