@@ -1,11 +1,17 @@
-/* Javadoc style sheet */
+* {
+  font-family: "Lucida Grande", Geneva, Verdana, "Liberation Sans", Helvetica, Arial, sans-serif;
+}
 
-/* Define colors, fonts and other style attributes here to override the defaults */
+body {
+  background-color: #FFFFFF;
+  color:#000000;
+  font-size: 10pt;
+}
+
+a:link {color:#0066cc;}
+a:visited {color:#6699cc;}
 
 td { vertical-align: top; }
-
-/* Page background color */
-body { background-color: #FFFFFF; color:#000000 }
 
 /* Headings */
 h1 { font-size: 145% }
@@ -16,16 +22,15 @@ h1 { font-size: 145% }
 .TableRowColor         { background: #FFFFFF; color:#000000 } /* White */
 
 /* Font used in left-hand frame lists */
-.FrameTitleFont   { font-size: 100%; font-family: Helvetica, Arial, sans-serif; color:#000000 }
-.FrameHeadingFont { font-size:  90%; font-family: Helvetica, Arial, sans-serif; color:#000000 }
-.FrameItemFont    { font-size:  90%; font-family: Helvetica, Arial, sans-serif; color:#000000 }
+.FrameTitleFont   { font-size: 100%; color:#000000 }
+.FrameHeadingFont { font-size:  90%; color:#000000 }
+.FrameItemFont    { font-size:  90%; color:#000000 }
 
 /* Navigation bar fonts and colors */
 .NavBarCell1    { background-color:#EEEEFF; color:#000000} /* Light mauve */
 .NavBarCell1Rev { background-color:#00008B; color:#FFFFFF} /* Dark Blue */
-.NavBarFont1    { font-family: Arial, Helvetica, sans-serif; color:#000000;color:#000000;}
-.NavBarFont1Rev { font-family: Arial, Helvetica, sans-serif; color:#FFFFFF;color:#FFFFFF;}
+.NavBarFont1    { color:#000000;color:#000000;}
+.NavBarFont1Rev { color:#FFFFFF;color:#FFFFFF;}
 
-.NavBarCell2    { font-family: Arial, Helvetica, sans-serif; background-color:#FFFFFF; color:#000000}
-.NavBarCell3    { font-family: Arial, Helvetica, sans-serif; background-color:#FFFFFF; color:#000000}
-
+.NavBarCell2    { background-color:#FFFFFF; color:#000000}
+.NavBarCell3    { background-color:#FFFFFF; color:#000000}
