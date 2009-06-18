@@ -27,11 +27,10 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
- * A decoder that decodes the received {@link ChannelBuffer}s with a frame
- * length field into a meaningfully framed {@link ChannelBuffer}.  It is
- * particularly useful when you decode a binary message which has an integer
- * header field that represents the length of the message body or the whole
- * message.
+ * A decoder that splits the received {@link ChannelBuffer}s dynamically by the
+ * value of the length field in the message.  It is particularly useful when you
+ * decode a binary message which has an integer header field that represents the
+ * length of the message body or the whole message.
  * <p>
  * {@link LengthFieldBasedFrameDecoder} has many configuration parameters so
  * that it can decode any message with a length field, which is often seen in

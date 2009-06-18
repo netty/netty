@@ -27,9 +27,8 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
- * A decoder that decodes the received {@link ChannelBuffer}s into the
- * {@link ChannelBuffer}s of the fixed length.  For example, if you received
- * the following four fragmented packets:
+ * A decoder that splits the received {@link ChannelBuffer}s by the fixed number
+ * of bytes. For example, if you received the following four fragmented packets:
  * <pre>
  * +---+----+------+----+
  * | A | BC | DEFG | HI |
