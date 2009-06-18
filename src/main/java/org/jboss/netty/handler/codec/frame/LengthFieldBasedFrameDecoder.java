@@ -98,10 +98,10 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  *     strip the first header field and the length field, the length field
  *     includes the header length</h3>
  * <pre>
- * <b>lengthFieldOffset</b>   = <b>1</b>
- * <b>lengthFieldLength</b>   = <b>2</b>
+ * <b>lengthFieldOffset</b>   = <b> 1</b>
+ * <b>lengthFieldLength</b>   = <b> 2</b>
  * <b>lengthAdjustment</b>    = <b>-3</b> (= the length of HDR1 + LEN, negative)
- * <b>initialBytesToStrip</b> = <b>3</b>
+ * <b>initialBytesToStrip</b> = <b> 3</b>
  *
  * BEFORE DECODE (16 bytes)                       AFTER DECODE (13 bytes)
  * +------+--------+------+----------------+      +------+----------------+
