@@ -24,8 +24,8 @@ package org.jboss.netty.channel.local;
 import java.net.SocketAddress;
 
 /**
- * Represents an endpoint in the local transport.  Each endpoint is identified
- * by a unique case-insensitive string, except for the pre-defined value called
+ * An endpoint in the local transport.  Each endpoint is identified by a unique
+ * case-insensitive string, except for the pre-defined value called
  * {@code "ephemeral"}.
  *
  * <h3>Ephemeral Address</h3>

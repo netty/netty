@@ -25,7 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Represents the method of <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>
+ * The method of <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>
  * or its derived protocols, such as
  * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
  * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.

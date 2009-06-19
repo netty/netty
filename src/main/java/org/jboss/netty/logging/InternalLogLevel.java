@@ -23,7 +23,7 @@
 package org.jboss.netty.logging;
 
 /**
- * Represents the log level that {@link InternalLogger} can log at.
+ * The log level that {@link InternalLogger} can log at.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

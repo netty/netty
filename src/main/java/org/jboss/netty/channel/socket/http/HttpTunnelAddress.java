@@ -25,7 +25,7 @@ import java.net.SocketAddress;
 import java.net.URI;
 
 /**
- * Represents the URI of {@link HttpTunnelingServlet} where
+ * The URI of {@link HttpTunnelingServlet} where
  * {@link HttpTunnelingClientSocketChannelFactory} connects to.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)

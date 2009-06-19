@@ -23,8 +23,8 @@
 package org.jboss.netty.util;
 
 /**
- * Represents a type which contains an object that needs to be taken into
- * account by {@link ObjectSizeEstimator} for more accurate object size
+ * Represents an object which contains another object that needs to be taken
+ * into account by {@link ObjectSizeEstimator} for more accurate object size
  * estimation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
