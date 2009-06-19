@@ -55,6 +55,10 @@ h5 {
 }
 
 /* Tables */
+table {
+  border-collapse : collapse;
+}
+
 th {
   text-align: left;
   background: #CCCCFF;
