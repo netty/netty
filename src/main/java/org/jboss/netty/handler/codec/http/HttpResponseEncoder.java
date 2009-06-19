@@ -28,7 +28,8 @@ import java.io.UnsupportedEncodingException;
 import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
- * encodes an http response
+ * Encodes an {@link HttpResponse} or an {@link HttpChunk} into
+ * a {@link ChannelBuffer}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -36,6 +37,13 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * @version $Rev$, $Date$
  */
 public class HttpResponseEncoder extends HttpMessageEncoder {
+
+    /**
+     * Creates a new instance.
+     */
+    public HttpResponseEncoder() {
+        super();
+    }
 
     @Override
     protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message) {
@@ -51,5 +59,4 @@ public class HttpResponseEncoder extends HttpMessageEncoder {
             throw (Error) new Error().initCause(e);
         }
     }
-
 }

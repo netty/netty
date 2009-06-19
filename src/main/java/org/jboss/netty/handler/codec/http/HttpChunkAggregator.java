@@ -26,6 +26,7 @@ import java.util.List;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
@@ -34,6 +35,11 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 
 /**
+ * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
+ * and its following {@link HttpChunk}s into an {@link HttpMessage} with no
+ * following {@link HttpChunk}s.  It is useful when you don't want to take
+ * care of HTTP messages whose transfer encoding is 'chunked'.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
@@ -44,6 +50,14 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
     private final int maxContentLength;
     private volatile HttpMessage currentMessage;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param maxContentLength
+     *        the maximum length of the aggregated content.
+     *        If the length of the aggregated content exceeds this value,
+     *        a {@link TooLongFrameException} will be raised.
+     */
     public HttpChunkAggregator(int maxContentLength) {
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException(

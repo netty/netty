@@ -36,7 +36,17 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
- * encodes an http message
+ * Encodes an {@link HttpMessage} or an {@link HttpChunk} into
+ * a {@link ChannelBuffer}.
+ *
+ * <h3>Extensibility</h3>
+ *
+ * Please note that this encoder is designed to be extended to implement
+ * a protocol derived from HTTP, such as
+ * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
+ * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
+ * To implement the encoder of such a derived protocol, extend this class and
+ * implement all abstract methods properly.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -47,6 +57,13 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
     private static final ChannelBuffer LAST_CHUNK = copiedBuffer("0\r\n\r\n", "ASCII");
+
+    /**
+     * Creates a new instance.
+     */
+    protected HttpMessageEncoder() {
+        super();
+    }
 
     @Override
     protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
@@ -86,15 +103,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
         return msg;
     }
 
-    /**
-     * writes the headers
-     * Header1: value1
-     * Header2: value2
-     *
-     * @param buf
-     * @param message
-     */
-    public void encodeHeaders(ChannelBuffer buf, HttpMessage message) {
+    private void encodeHeaders(ChannelBuffer buf, HttpMessage message) {
         Set<String> headers = message.getHeaderNames();
         try {
             for (String header : headers) {

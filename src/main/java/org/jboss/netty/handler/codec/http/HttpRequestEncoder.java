@@ -26,7 +26,8 @@ import static org.jboss.netty.handler.codec.http.HttpCodecUtil.*;
 import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
- * encodes an http request
+ * Encodes an {@link HttpRequest} or an {@link HttpChunk} into
+ * a {@link ChannelBuffer}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -34,9 +35,14 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * @version $Rev$, $Date$
  */
 public class HttpRequestEncoder extends HttpMessageEncoder {
+
     /**
-     * writes the initial line i.e. 'GET /path/to/file/index.html HTTP/1.0'
+     * Creates a new instance.
      */
+    public HttpRequestEncoder() {
+        super();
+    }
+
     @Override
     protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception {
         HttpRequest request = (HttpRequest) message;
