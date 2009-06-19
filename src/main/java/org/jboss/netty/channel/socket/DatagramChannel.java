@@ -43,10 +43,23 @@ public interface DatagramChannel extends Channel {
     InetSocketAddress getLocalAddress();
     InetSocketAddress getRemoteAddress();
 
+    /**
+     * Joins a multicast group.
+     */
     void joinGroup(InetAddress multicastAddress);
+
+    /**
+     * Joins the specified multicast group at the specified interface.
+     */
     void joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
 
+    /**
+     * Leaves a multicast group.
+     */
     void leaveGroup(InetAddress multicastAddress);
-    void leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
 
+    /**
+     * Leaves a multicast group on a specified local interface.
+     */
+    void leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface);
 }
