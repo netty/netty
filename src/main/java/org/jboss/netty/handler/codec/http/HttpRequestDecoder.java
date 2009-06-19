@@ -30,7 +30,7 @@ import org.jboss.netty.handler.codec.frame.TooLongFrameException;
  * Decodes {@link ChannelBuffer}s into {@link HttpRequest}s and {@link HttpChunk}s.
  *
  * <h3>Parameters that prevents excessive memory consumption</h3>
- * <table>
+ * <table border="1">
  * <tr>
  * <th>Name</th><th>Meaning</th>
  * </tr>

@@ -56,17 +56,22 @@ h5 {
 
 /* Tables */
 table {
-  border-collapse : collapse;
+  border-collapse: collapse;
+  border-color: black;
 }
 
 th {
   text-align: left;
   background: #CCCCFF;
   color:#000000;
+  padding: 3px 6px;
+  border-color: black;
 }
 
 td {
   vertical-align: top;
+  padding: 3px 6px;
+  border-color: black;
 }
 
 /* Table colors */

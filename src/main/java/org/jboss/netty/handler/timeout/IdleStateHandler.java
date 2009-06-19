@@ -45,7 +45,7 @@ import org.jboss.netty.util.TimerTask;
  * read, write, or both operation for a while.
  *
  * <h3>Supported idle states</h3>
- * <table>
+ * <table border="1">
  * <tr>
  * <th>Property</th><th>Meaning</th>
  * </tr>
