@@ -28,6 +28,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
@@ -38,7 +39,17 @@ import org.jboss.netty.handler.codec.frame.TooLongFrameException;
  * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
  * and its following {@link HttpChunk}s into a single {@link HttpMessage} with
  * no following {@link HttpChunk}s.  It is useful when you don't want to take
- * care of HTTP messages whose transfer encoding is 'chunked'.
+ * care of HTTP messages whose transfer encoding is 'chunked'.  Insert this
+ * handler after {@link HttpMessageDecoder} in the {@link ChannelPipeline}:
+ * <pre>
+ * ChannelPipeline p = ...;
+ * ...
+ * p.addLast("decoder", new HttpRequestDecoder());
+ * p.addLast("aggregator", <b>new HttpChunkAggregator(1048576)</b>);
+ * ...
+ * p.addLast("encoder", new HttpResponseEncoder());
+ * p.addLast("handler", new HttpRequestHandler());
+ * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
