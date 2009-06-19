@@ -31,6 +31,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
+ * Decodes an HTTP header value into {@link Cookie}s.  This decoder can decode
+ * the HTTP cookie version 0, 1, and 2.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -43,10 +46,18 @@ public class CookieDecoder {
 
     private final static String COMMA = ",";
 
+    /**
+     * Creates a new decoder.
+     */
     public CookieDecoder() {
         super();
     }
 
+    /**
+     * Decodes the specified HTTP header value into {@link Cookie}s.
+     *
+     * @return the decoded {@link Cookie}s
+     */
     public Set<Cookie> decode(String header) {
         Matcher m = PATTERN.matcher(header);
         List<String> names = new ArrayList<String>(8);

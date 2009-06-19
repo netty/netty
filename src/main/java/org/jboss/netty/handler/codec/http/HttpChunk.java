@@ -26,14 +26,29 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
+ * An <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>
+ * chunk.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
 public interface HttpChunk {
 
+    /**
+     * The 'end of content' maker in chunked encoding.
+     */
     static HttpChunk LAST_CHUNK = new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER);
 
+    /**
+     * Returns {@code true} if and only if this chunk is the 'end of content'
+     * marker.
+     */
     boolean isLast();
+
+    /**
+     * Returns the content of this chunk.  If this is the 'end of content'
+     * maker, {@link ChannelBuffers#EMPTY_BUFFER} will be returned.
+     */
     ChannelBuffer getContent();
 }

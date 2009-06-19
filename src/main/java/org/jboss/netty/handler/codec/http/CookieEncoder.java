@@ -26,6 +26,15 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
+ * Encodes {@link Cookie}s into an HTTP header value.  This encoder can encode
+ * the HTTP cookie version 0, 1, and 2.
+ * <p>
+ * This encoder is stateful.  It maintains an internal data structure that
+ * holds the {@link Cookie}s added by the {@link #addCookie(String, String)}
+ * method.  Once {@link #encode()} is called, all added {@link Cookie}s are
+ * encoded into an HTTP header value and all {@link Cookie}s in the internal
+ * data structure are removed so that the encoder can start over.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -36,24 +45,46 @@ public class CookieEncoder {
     private final Set<Cookie> cookies = new TreeSet<Cookie>();
     private final boolean server;
 
+    /**
+     * Creates a new encoder.
+     *
+     * @param server {@code true} if and only if this encoder is supposed to
+     *               encode server-side cookies.  {@code false} if and only if
+     *               this encoder is supposed to encode client-side cookies.
+     */
     public CookieEncoder(boolean server) {
         this.server = server;
     }
 
+    /**
+     * Adds a new {@link Cookie} created with the specified name and value to
+     * this encoder.
+     */
     public void addCookie(String name, String value) {
         cookies.add(new DefaultCookie(name, value));
     }
 
+    /**
+     * Adds the specified {@link Cookie} to this encoder.
+     */
     public void addCookie(Cookie cookie) {
         cookies.add(cookie);
     }
 
+    /**
+     * Encodes the {@link Cookie}s which were added by {@link #addCookie(Cookie)}
+     * so far into an HTTP header value.  If no {@link Cookie}s were added,
+     * an empty string is returned.
+     */
     public String encode() {
+        String answer;
         if (server) {
-            return encodeServerSide();
+            answer = encodeServerSide();
         } else {
-            return encodeClientSide();
+            answer = encodeClientSide();
         }
+        cookies.clear();
+        return answer;
     }
 
     private String encodeServerSide() {

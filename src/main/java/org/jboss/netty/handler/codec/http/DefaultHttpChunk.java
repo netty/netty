@@ -38,7 +38,7 @@ public class DefaultHttpChunk implements HttpChunk {
 
     /**
      * Creates a new instance with the specified chunk content. If an empty
-     * buffer is specified, this chunk becomes the 'end of chunk' marker.
+     * buffer is specified, this chunk becomes the 'end of content' marker.
      */
     public DefaultHttpChunk(ChannelBuffer content) {
         if (content == null) {

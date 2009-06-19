@@ -33,6 +33,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
+ * Splits an HTTP query string into a path string and key-value parameter pairs.
+ * This decoder is for one time use only.  Create a new instance for each URI.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -49,10 +52,18 @@ public class QueryStringDecoder {
     private String path;
     private final Map<String, List<String>> params = new HashMap<String, List<String>>();
 
+    /**
+     * Creates a new decoder that decodes the specified URI. The decoder will
+     * assume that the query string is encoded in UTF-8.
+     */
     public QueryStringDecoder(String uri) {
         this(uri, HttpCodecUtil.DEFAULT_CHARSET);
     }
 
+    /**
+     * Creates a new decoder that decodes the specified URI encoded in the
+     * specified charset.
+     */
     public QueryStringDecoder(String uri, String charset) {
         if (uri == null) {
             throw new NullPointerException("uri");
@@ -65,10 +76,18 @@ public class QueryStringDecoder {
         this.charset = charset;
     }
 
+    /**
+     * Creates a new decoder that decodes the specified URI. The decoder will
+     * assume that the query string is encoded in UTF-8.
+     */
     public QueryStringDecoder(URI uri) {
         this(uri, HttpCodecUtil.DEFAULT_CHARSET);
     }
 
+    /**
+     * Creates a new decoder that decodes the specified URI encoded in the
+     * specified charset.
+     */
     public QueryStringDecoder(URI uri, String charset){
         if (uri == null) {
             throw new NullPointerException("uri");
@@ -81,6 +100,9 @@ public class QueryStringDecoder {
         this.charset = charset;
     }
 
+    /**
+     * Returns the decoded path string of the URI.
+     */
     public String getPath() {
         //decode lazily
         if(path == null) {
@@ -94,6 +116,9 @@ public class QueryStringDecoder {
         return path;
     }
 
+    /**
+     * Returns the decoded key-value parameter pairs of the URI.
+     */
     public Map<String, List<String>> getParameters() {
         if(path == null){
             if(uri.contains("?")) {
