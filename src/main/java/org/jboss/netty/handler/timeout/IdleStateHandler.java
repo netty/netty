@@ -71,6 +71,9 @@ import org.jboss.netty.util.TimerTask;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @see ReadTimeoutHandler
+ * @see WriteTimeoutHandler
  */
 @ChannelPipelineCoverage("one")
 public class IdleStateHandler extends SimpleChannelUpstreamHandler

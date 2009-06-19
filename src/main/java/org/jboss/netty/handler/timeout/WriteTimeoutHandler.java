@@ -39,9 +39,15 @@ import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
 
 /**
+ * Raises a {@link WriteTimeoutException} when no data was written within a
+ * certain period of time.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @see ReadTimeoutHandler
+ * @see IdleStateHandler
  */
 @ChannelPipelineCoverage("all")
 public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
@@ -52,10 +58,28 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
     private final Timer timer;
     private final long timeoutMillis;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param timer
+     *        the {@link Timer} that is used to trigger the scheduled event
+     * @param timeoutSeconds
+     *        write timeout in seconds
+     */
     public WriteTimeoutHandler(Timer timer, int timeoutSeconds) {
         this(timer, timeoutSeconds, TimeUnit.SECONDS);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param timer
+     *        the {@link Timer} that is used to trigger the scheduled event
+     * @param timeout
+     *        write timeout
+     * @param unit
+     *        the {@link TimeUnit} of {@code timeout}
+     */
     public WriteTimeoutHandler(Timer timer, long timeout, TimeUnit unit) {
         if (timer == null) {
             throw new NullPointerException("timer");

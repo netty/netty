@@ -39,9 +39,15 @@ import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
 
 /**
+ * Raises a {@link ReadTimeoutException} when no data was read within a certain
+ * period of time.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @see WriteTimeoutHandler
+ * @see IdleStateHandler
  */
 @ChannelPipelineCoverage("one")
 public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
@@ -56,10 +62,28 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
     private volatile ReadTimeoutTask task;
     volatile long lastReadTime;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param timer
+     *        the {@link Timer} that is used to trigger the scheduled event
+     * @param timeoutSeconds
+     *        read timeout in seconds
+     */
     public ReadTimeoutHandler(Timer timer, int timeoutSeconds) {
         this(timer, timeoutSeconds, TimeUnit.SECONDS);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param timer
+     *        the {@link Timer} that is used to trigger the scheduled event
+     * @param timeout
+     *        read timeout
+     * @param unit
+     *        the {@link TimeUnit} of {@code timeout}
+     */
     public ReadTimeoutHandler(Timer timer, long timeout, TimeUnit unit) {
         if (timer == null) {
             throw new NullPointerException("timer");
