@@ -33,7 +33,7 @@ import org.osgi.service.log.LogService;
  * @version $Rev$, $Date$
  *
  */
-class OsgiLogger implements InternalLogger {
+class OsgiLogger extends AbstractInternalLogger {
 
     private final OsgiLoggerFactory parent;
     private final InternalLogger fallback;

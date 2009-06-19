@@ -139,6 +139,19 @@ public abstract class InternalLoggerFactory {
                 StackTraceSimplifier.simplify(cause);
                 logger.warn(msg, cause);
             }
+
+            public boolean isEnabled(InternalLogLevel level) {
+                return logger.isEnabled(level);
+            }
+
+            public void log(InternalLogLevel level, String msg) {
+                logger.log(level, msg);
+            }
+
+            public void log(InternalLogLevel level, String msg, Throwable cause) {
+                StackTraceSimplifier.simplify(cause);
+                logger.log(level, msg, cause);
+            }
         };
     }
 

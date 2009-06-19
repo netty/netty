@@ -35,7 +35,7 @@ import java.util.logging.Logger;
  * @version $Rev$, $Date$
  *
  */
-class JdkLogger implements InternalLogger {
+class JdkLogger extends AbstractInternalLogger {
 
     private final Logger logger;
     private final String loggerName;

@@ -34,7 +34,7 @@ import org.apache.log4j.Logger;
  * @version $Rev$, $Date$
  *
  */
-class Log4JLogger implements InternalLogger {
+class Log4JLogger extends AbstractInternalLogger {
 
     private final Logger logger;
 

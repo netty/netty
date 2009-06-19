@@ -33,7 +33,7 @@ import org.slf4j.Logger;
  * @version $Rev$, $Date$
  *
  */
-class Slf4JLogger implements InternalLogger {
+class Slf4JLogger extends AbstractInternalLogger {
 
     private final Logger logger;
 

@@ -34,7 +34,7 @@ import org.jboss.logging.Logger;
  * @version $Rev$, $Date$
  *
  */
-class JBossLogger implements InternalLogger {
+class JBossLogger extends AbstractInternalLogger {
 
     private final Logger logger;
 

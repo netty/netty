@@ -34,7 +34,7 @@ import org.apache.commons.logging.Log;
  * @version $Rev$, $Date$
  *
  */
-class CommonsLogger implements InternalLogger {
+class CommonsLogger extends AbstractInternalLogger {
 
     private final Log logger;
     private final String loggerName;

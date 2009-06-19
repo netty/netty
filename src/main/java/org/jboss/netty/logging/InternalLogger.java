@@ -53,6 +53,11 @@ public interface InternalLogger {
     boolean isErrorEnabled();
 
     /**
+     * Returns {@code true} if the specified log level message is logged.
+     */
+    boolean isEnabled(InternalLogLevel level);
+
+    /**
      * Logs a DEBUG level message.
      */
     void debug(String msg);
@@ -91,4 +96,14 @@ public interface InternalLogger {
      * Logs an ERROR level message.
      */
     void error(String msg, Throwable cause);
+
+    /**
+     * Logs a message.
+     */
+    void log(InternalLogLevel level, String msg);
+
+    /**
+     * Logs a message.
+     */
+    void log(InternalLogLevel level, String msg, Throwable cause);
 }
