@@ -22,7 +22,7 @@
 package org.jboss.netty.handler.codec.http;
 
 /**
- * The constants that is often used in HTTP header names and values.
+ * Standard HTTP header names and values.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -31,7 +31,7 @@ package org.jboss.netty.handler.codec.http;
 public final class HttpHeaders {
 
     /**
-     * The constants that is often used in HTTP header names.
+     * Standard HTTP header names.
      *
      * @author The Netty Project (netty-dev@lists.jboss.org)
      * @author Andy Taylor (andy.taylor@jboss.org)
@@ -241,7 +241,7 @@ public final class HttpHeaders {
     }
 
     /**
-     * The constants that is often used in HTTP header values.
+     * Standard HTTP header values.
      *
      * @author The Netty Project (netty-dev@lists.jboss.org)
      * @author Andy Taylor (andy.taylor@jboss.org)
