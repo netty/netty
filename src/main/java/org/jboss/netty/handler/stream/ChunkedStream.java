@@ -28,6 +28,8 @@ import java.io.InputStream;
 import java.io.PushbackInputStream;
 
 /**
+ * A {@link ChunkedInput} that fetches the chunks from an {@link InputStream}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
@@ -40,10 +42,19 @@ public class ChunkedStream implements ChunkedInput {
     private final int chunkSize;
     private volatile long offset;
 
+    /**
+     * Creates a new instance that fetches the chunks from the specified stream.
+     */
     public ChunkedStream(InputStream in) {
         this(in, DEFAULT_CHUNK_SIZE);
     }
 
+    /**
+     * Creates a new instance that fetches the chunks from the specified stream.
+     *
+     * @param chunkSize the number of bytes to fetch on each
+     *                  {@link #nextChunk()} call
+     */
     public ChunkedStream(InputStream in, int chunkSize) {
         if (in == null) {
             throw new NullPointerException("in");
@@ -62,7 +73,10 @@ public class ChunkedStream implements ChunkedInput {
         this.chunkSize = chunkSize;
     }
 
-    public long getCurrentRelativeOffset() {
+    /**
+     * Returns the number of transferred bytes.
+     */
+    public long getTransferredBytes() {
         return offset;
     }
 

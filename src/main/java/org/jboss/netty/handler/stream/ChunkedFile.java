@@ -29,6 +29,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 /**
+ * A {@link ChunkedInput} that fetches the chunks from a file.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
@@ -41,18 +43,41 @@ public class ChunkedFile implements ChunkedInput {
     private final int chunkSize;
     private volatile long offset;
 
+    /**
+     * Creates a new instance that fetches the chunks from the specified file.
+     */
     public ChunkedFile(File file) throws IOException {
         this(file, ChunkedStream.DEFAULT_CHUNK_SIZE);
     }
 
+    /**
+     * Creates a new instance that fetches the chunks from the specified file.
+     *
+     * @param chunkSize the number of bytes to fetch on each
+     *                  {@link #nextChunk()} call
+     */
     public ChunkedFile(File file, int chunkSize) throws IOException {
         this(new RandomAccessFile(file, "r"), chunkSize);
     }
 
+    /**
+     * Creates a new instance that fetches the chunks from the specified file.
+     *
+     * @param chunkSize the number of bytes to fetch on each
+     *                  {@link #nextChunk()} call
+     */
     public ChunkedFile(RandomAccessFile file, int chunkSize) throws IOException {
         this(file, 0, file.length(), chunkSize);
     }
 
+    /**
+     * Creates a new instance that fetches the chunks from the specified file.
+     *
+     * @param offset the offset of the file where the transfer begins
+     * @param length the number of bytes to transfer
+     * @param chunkSize the number of bytes to fetch on each
+     *                  {@link #nextChunk()} call
+     */
     public ChunkedFile(RandomAccessFile file, long offset, long length, int chunkSize) throws IOException {
         if (file == null) {
             throw new NullPointerException("file");
@@ -79,14 +104,23 @@ public class ChunkedFile implements ChunkedInput {
         file.seek(offset);
     }
 
+    /**
+     * Returns the offset in the file where the transfer began.
+     */
     public long getStartOffset() {
         return startOffset;
     }
 
+    /**
+     * Returns the offset in the file where the transfer will end.
+     */
     public long getEndOffset() {
         return endOffset;
     }
 
+    /**
+     * Returns the offset in the file where the transfer is occuring currently.
+     */
     public long getCurrentOffset() {
         return offset;
     }

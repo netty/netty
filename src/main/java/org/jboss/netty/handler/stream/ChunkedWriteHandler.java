@@ -31,6 +31,7 @@ import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelState;
@@ -43,6 +44,28 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
+ * A {@link ChannelHandler} that adds support for writing a large data stream
+ * asynchronously neither spending a lot of memory nor getting
+ * {@link java.lang.OutOfMemoryError}.  Large data streaming such as file
+ * transfer requires complicated state management in a {@link ChannelHandler}
+ * implementation.  {@link ChunkedWriteHandler} manages such complicated states
+ * so that you can send a large data stream without difficulties.
+ * <p>
+ * To use {@link ChunkedWriteHandler} in your application, you have to insert
+ * a new {@link ChunkedWriteHandler} instance:
+ * <pre>
+ * ChannelPipeline p = ...;
+ * p.addLast("streamer", <b>new ChunkedWriteHandler()</b>);
+ * p.addLast("handler", new MyHandler());
+ * </pre>
+ * Once inserted, you can write a {@link ChunkedInput} so that the
+ * {@link ChunkedWriteHandler} can pick it up and fetch the content of the
+ * stream chunk by chunk and write the fetched chunk downstream:
+ * <pre>
+ * Channel ch = ...;
+ * ch.write(new ChunkedFile(new File("video.mkv"));
+ * </pre>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
@@ -57,6 +80,13 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         new LinkedTransferQueue<MessageEvent>();
 
     private MessageEvent currentEvent;
+
+    /**
+     * Creates a new instance.
+     */
+    public ChunkedWriteHandler() {
+        super();
+    }
 
     public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
             throws Exception {

@@ -22,15 +22,36 @@
  */
 package org.jboss.netty.handler.stream;
 
-
+import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
+ * Represents a large data stream which is consumed by {@link ChunkedWriteHandler}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
 public interface ChunkedInput {
+
+    /**
+     * Returns {@code true} if and only if there is more chunk left in the
+     * stream.
+     */
     boolean hasNextChunk() throws Exception;
+
+    /**
+     * Fetches a chunk from the stream.  The returned chunk is usually
+     * a {@link ChannelBuffer}, but you could extend an existing
+     * {@link ChunkedInput} implementation to convert the {@link ChannelBuffer}
+     * into a different type that your handler or encoder understands.
+     *
+     * @return the fetched chunk, which is usually {@link ChannelBuffer}.
+     *         {@code null} if there is no more chunk left in the stream.
+     */
     Object nextChunk() throws Exception;
+
+    /**
+     * Releases the resources associated with the stream.
+     */
     void close() throws Exception;
 }
