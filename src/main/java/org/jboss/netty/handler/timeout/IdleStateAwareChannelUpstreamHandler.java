@@ -37,6 +37,13 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  */
 public class IdleStateAwareChannelUpstreamHandler extends SimpleChannelUpstreamHandler {
 
+    /**
+     * Creates a new instance.
+     */
+    public IdleStateAwareChannelUpstreamHandler() {
+        super();
+    }
+
     @Override
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
             throws Exception {
