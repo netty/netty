@@ -23,9 +23,12 @@
 package org.jboss.netty.channel;
 
 import java.io.IOException;
+import java.nio.ByteOrder;
 import java.util.Map;
 
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.buffer.HeapChannelBufferFactory;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
@@ -53,6 +56,8 @@ import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
+ * </tr><tr>
+ * <td>{@code "bufferFactory"}</td><td>{@link #setBufferFactory(ChannelBufferFactory)}</td>
  * </tr><tr>
  * <td>{@code "connectTimeoutMillis"}</td><td>{@link #setConnectTimeoutMillis(int)}</td>
  * </tr><tr>
@@ -103,8 +108,20 @@ public interface ChannelConfig {
      */
     boolean setOption(String name, Object value);
 
+    /**
+     * Returns the default {@link ChannelBufferFactory} used to create a new
+     * {@link ChannelBuffer}.  The default is {@link HeapChannelBufferFactory}.
+     * You can specify a different factory to change the default
+     * {@link ByteOrder} for example.
+     */
     ChannelBufferFactory getBufferFactory();
 
+    /**
+     * Sets the default {@link ChannelBufferFactory} used to create a new
+     * {@link ChannelBuffer}.  The default is {@link HeapChannelBufferFactory}.
+     * You can specify a different factory to change the default
+     * {@link ByteOrder} for example.
+     */
     void setBufferFactory(ChannelBufferFactory bufferFactory);
 
     /**
