@@ -28,6 +28,7 @@ import java.util.Map.Entry;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.HeapChannelBufferFactory;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
+import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 
 /**
  * The default {@link SocketChannelConfig} implementation.
@@ -86,6 +87,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         return null;
     }
 
+    /**
+     * @deprecated Use {@link WriteTimeoutHandler} instead.
+     */
     @Deprecated
     public int getWriteTimeoutMillis() {
         return 0;
@@ -102,6 +106,9 @@ public class DefaultChannelConfig implements ChannelConfig {
         // Unused
     }
 
+    /**
+     * @deprecated Use {@link WriteTimeoutHandler} instead.
+     */
     @Deprecated
     public void setWriteTimeoutMillis(int writeTimeoutMillis) {
         // Unused

@@ -160,7 +160,7 @@ public interface ChannelConfig {
     void setConnectTimeoutMillis(int connectTimeoutMillis);
 
     /**
-     * @deprecated Use {@link WriteTimeoutHandler} instead if necessary.
+     * @deprecated Use {@link WriteTimeoutHandler} instead.
      *
      * Returns the write timeout of the channel in milliseconds.  If a write
      * operation is not completed within the write timeout, an
@@ -174,7 +174,7 @@ public interface ChannelConfig {
     int getWriteTimeoutMillis();
 
     /**
-     * @deprecated Use {@link WriteTimeoutHandler} instead if necessary.
+     * @deprecated Use {@link WriteTimeoutHandler} instead.
      *
      * Sets the write timeout of the channel in milliseconds.  If a write
      * operation is not completed within the write timeout, an
