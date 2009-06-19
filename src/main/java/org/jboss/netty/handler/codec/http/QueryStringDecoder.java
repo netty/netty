@@ -34,7 +34,12 @@ import java.util.regex.Pattern;
 
 /**
  * Splits an HTTP query string into a path string and key-value parameter pairs.
- * This decoder is for one time use only.  Create a new instance for each URI.
+ * This decoder is for one time use only.  Create a new instance for each URI:
+ * <pre>
+ * QueryStringDecoder decoder = new QueryStringDecoder("/hello?recipient=world");
+ * assert decoder.getPath().equals("/hello");
+ * assert decoder.getParameters().get("recipient").equals("world");
+ * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -42,6 +47,7 @@ import java.util.regex.Pattern;
  * @version $Rev$, $Date$
  *
  * @apiviz.stereotype utility
+ * @see QueryStringEncoder
  */
 public class QueryStringDecoder {
 

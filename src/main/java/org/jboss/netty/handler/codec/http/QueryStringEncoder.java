@@ -33,12 +33,19 @@ import java.util.List;
  * Creates an URL-encoded URI from a path string and key-value parameter pairs.
  * This encoder is for one time use only.  Create a new instance for each URI.
  *
+ * <pre>
+ * QueryStringEncoder encoder = new QueryStringDecoder("/hello");
+ * encoder.addParam("recipient", "world");
+ * assert encoder.toString().equals("/hello?recipient=world");
+ * </pre>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  *
  * @apiviz.stereotype utility
+ * @see QueryStringDecoder
  */
 public class QueryStringEncoder {
 
