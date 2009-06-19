@@ -22,7 +22,13 @@
  */
 package org.jboss.netty.handler.codec.replay;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+
 /**
+ * An {@link Exception} which is thrown when a user calls an unsupported
+ * operation on a {@link ChannelBuffer} in a {@link ReplayingDecoder}
+ * implementation.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
