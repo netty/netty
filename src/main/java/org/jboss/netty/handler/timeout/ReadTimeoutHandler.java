@@ -72,6 +72,11 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
         timeoutMillis = unit.toMillis(timeout);
     }
 
+    /**
+     * Stops the {@link Timer} which was specified in the constructor of this
+     * handler.  You should not call this method if the {@link Timer} is in use
+     * by other objects.
+     */
     public void releaseExternalResources() {
         timer.stop();
     }

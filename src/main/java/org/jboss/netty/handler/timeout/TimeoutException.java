@@ -25,6 +25,9 @@ package org.jboss.netty.handler.timeout;
 import org.jboss.netty.channel.ChannelException;
 
 /**
+ * A {@link TimeoutException} when no data was either read or written within a
+ * certain period of time.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$

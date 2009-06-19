@@ -22,14 +22,25 @@
  */
 package org.jboss.netty.handler.timeout;
 
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 
 /**
+ * A {@link ChannelEvent} that is triggered when a {@link Channel} has been idle
+ * for a while.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
 public interface IdleStateEvent extends ChannelEvent {
+    /**
+     * Returns the detailed idle state.
+     */
     IdleState getState();
+
+    /**
+     * Returns the last time when I/O occurred in milliseconds.
+     */
     long getLastActivityTimeMillis();
 }

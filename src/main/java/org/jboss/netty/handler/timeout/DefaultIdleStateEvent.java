@@ -32,6 +32,8 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 
 /**
+ * The default {@link IdleStateEvent} implementation.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
@@ -42,6 +44,9 @@ public class DefaultIdleStateEvent implements IdleStateEvent {
     private final IdleState state;
     private final long lastActivityTimeMillis;
 
+    /**
+     * Creates a new instance.
+     */
     public DefaultIdleStateEvent(
             Channel channel, IdleState state, long lastActivityTimeMillis) {
         if (channel == null) {

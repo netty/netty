@@ -26,6 +26,7 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -39,6 +40,34 @@ import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
 
 /**
+ * Triggers an {@link IdleStateEvent} when a {@link Channel} has not performed
+ * read, write, or both operation for a while.
+ *
+ * <h3>Supported idle states</h3>
+ * <table>
+ * <tr>
+ * <th>Property</th><th>Meaning</th>
+ * </tr>
+ * <tr>
+ * <td>{@code readerIdleTime}</td>
+ * <td>an {@link IdleStateEvent} whose state is {@link IdleState#READER_IDLE}
+ *     will be triggered when no read was performed for the specified period of
+ *     time.  Specify {@code 0} to disable.</td>
+ * </tr>
+ * <tr>
+ * <td>{@code writerIdleTime}</td>
+ * <td>an {@link IdleStateEvent} whose state is {@link IdleState#WRITER_IDLE}
+ *     will be triggered when no write was performed for the specified period of
+ *     time.  Specify {@code 0} to disable.</td>
+ * </tr>
+ * <tr>
+ * <td>{@code allIdleTime}</td>
+ * <td>an {@link IdleStateEvent} whose state is {@link IdleState#ALL_IDLE}
+ *     will be triggered when neither read nor write was performed for the
+ *     specified period of time.  Specify {@code 0} to disable.</td>
+ * </tr>
+ * </table>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
@@ -64,6 +93,24 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     volatile Timeout allIdleTimeout;
     private volatile AllIdleTimeoutTask allIdleTimeoutTask;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param timer
+     *        the {@link Timer} that is used to trigger the scheduled event
+     * @param readerIdleTimeSeconds
+     *        an {@link IdleStateEvent} whose state is {@link IdleState#READER_IDLE}
+     *        will be triggered when no read was performed for the specified
+     *        period of time.  Specify {@code 0} to disable.
+     * @param writerIdleTimeSeconds
+     *        an {@link IdleStateEvent} whose state is {@link IdleState#WRITER_IDLE}
+     *        will be triggered when no write was performed for the specified
+     *        period of time.  Specify {@code 0} to disable.
+     * @param allIdleTimeSeconds
+     *        an {@link IdleStateEvent} whose state is {@link IdleState#ALL_IDLE}
+     *        will be triggered when neither read nor write was performed for
+     *        the specified period of time.  Specify {@code 0} to disable.
+     */
     public IdleStateHandler(
             Timer timer,
             int readerIdleTimeSeconds,
@@ -75,6 +122,27 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
              TimeUnit.SECONDS);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param timer
+     *        the {@link Timer} that is used to trigger the scheduled event
+     * @param readerIdleTime
+     *        an {@link IdleStateEvent} whose state is {@link IdleState#READER_IDLE}
+     *        will be triggered when no read was performed for the specified
+     *        period of time.  Specify {@code 0} to disable.
+     * @param writerIdleTime
+     *        an {@link IdleStateEvent} whose state is {@link IdleState#WRITER_IDLE}
+     *        will be triggered when no write was performed for the specified
+     *        period of time.  Specify {@code 0} to disable.
+     * @param allIdleTime
+     *        an {@link IdleStateEvent} whose state is {@link IdleState#ALL_IDLE}
+     *        will be triggered when neither read nor write was performed for
+     *        the specified period of time.  Specify {@code 0} to disable.
+     * @param unit
+     *        the {@link TimeUnit} of {@code readerIdleTime},
+     *        {@code writeIdleTime}, and {@code allIdleTime}
+     */
     public IdleStateHandler(
             Timer timer,
             long readerIdleTime, long writerIdleTime, long allIdleTime,
@@ -93,6 +161,11 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
         allIdleTimeMillis = unit.toMillis(allIdleTime);
     }
 
+    /**
+     * Stops the {@link Timer} which was specified in the constructor of this
+     * handler.  You should not call this method if the {@link Timer} is in use
+     * by other objects.
+     */
     public void releaseExternalResources() {
         timer.stop();
     }

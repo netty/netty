@@ -22,11 +22,15 @@
  */
 package org.jboss.netty.handler.timeout;
 
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
+ * An extended {@link SimpleChannelHandler} that adds the handler method for
+ * an {@link IdleStateEvent}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
@@ -43,6 +47,9 @@ public class IdleStateAwareChannelHandler extends SimpleChannelHandler {
         }
     }
 
+    /**
+     * Invoked when a {@link Channel} has been idle for a while.
+     */
     public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) {
         ctx.sendUpstream(e);
     }

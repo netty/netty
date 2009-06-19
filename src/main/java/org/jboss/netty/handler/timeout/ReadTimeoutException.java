@@ -22,8 +22,10 @@
  */
 package org.jboss.netty.handler.timeout;
 
-
 /**
+ * A {@link TimeoutException} raised by {@link ReadTimeoutHandler} when no data
+ * was read within a certain period of time.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$

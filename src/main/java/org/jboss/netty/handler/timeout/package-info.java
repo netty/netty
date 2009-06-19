@@ -1,7 +1,7 @@
 /*
  * JBoss, Home of Professional Open Source
  *
- * Copyright 2009, Red Hat Middleware LLC, and individual contributors
+ * Copyright 2008, Red Hat Middleware LLC, and individual contributors
  * by the @author tags. See the COPYRIGHT.txt in the distribution for a
  * full listing of individual contributors.
  *
@@ -20,29 +20,9 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.netty.handler.timeout;
-
-import org.jboss.netty.channel.Channel;
-
 
 /**
- * An {@link Enum} that represents the idle state of a {@link Channel}.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
- * @version $Rev$, $Date$
+ * Adds support for read and write timeout and idle connection notification
+ * using a {@link org.jboss.netty.util.Timer}.
  */
-public enum IdleState {
-    /**
-     * No data was received for a while.
-     */
-    READER_IDLE,
-    /**
-     * No data was sent for a while.
-     */
-    WRITER_IDLE,
-    /**
-     * No data was either received or sent for a while.
-     */
-    ALL_IDLE;
-}
+package org.jboss.netty.handler.timeout;
