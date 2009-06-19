@@ -48,7 +48,7 @@ import org.jboss.netty.channel.MessageEvent;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-public abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
+abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
 
     private final Channel channel;
     private final ChannelPipeline pipeline;

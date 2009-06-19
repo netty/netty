@@ -54,6 +54,7 @@ import org.jboss.netty.handler.codec.string.StringDecoder;
  * @version $Rev$, $Date$
  *
  * @apiviz.landmark
+ * @see EncoderEmbedder
  */
 public class DecoderEmbedder<T> extends AbstractCodecEmbedder<T> {
 
