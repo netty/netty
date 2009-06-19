@@ -467,6 +467,7 @@
           <linkJavadoc>true</linkJavadoc>
           <destDir>${project.build.directory}/xref</destDir>
           <javadocDir>${project.build.directory}/api</javadocDir>
+          <stylesheet>${basedir}/src/xref/stylesheet.css</stylesheet>
         </configuration>
       </plugin>
       <plugin>

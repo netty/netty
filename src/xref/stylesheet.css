@@ -1,0 +1,155 @@
+* {
+  font-family: "Lucida Grande", Geneva, Verdana, "Liberation Sans", Helvetica, Arial, sans-serif;
+}
+
+body {
+  background-color: #FFFFFF;
+  color:#000000;
+  font-size: 10pt;
+}
+
+a:link {color:#0033cc;}
+a:visited {color:#0044cc;}
+
+tt, tt *, pre, pre *, code, code * {
+  font-family: "Liberation Mono", "DejaVu Sans Mono", Consolas, Monaco, "Lucida Console", "Courier New", monospace;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+    color:#4a5d75;
+    line-height:130%;
+    margin-top:0em;
+    font-family:'Lucida Grande', Geneva, Verdana, Arial, sans-serif;
+    background-color:transparent;
+}
+
+h1 {
+  font-size:2em;
+  padding: 0em;
+  margin: 0.8em 0em 0.35em 0em;
+}
+
+h2 {
+  font-size:1.6em;
+  padding: 0em;
+  margin: 0.8em 0em 0.35em 0em;
+}
+
+h3 {
+  font-size:1.3em;
+  padding: 0em;
+  margin: 0.8em 0em 0.35em 0em;
+}
+
+h4 {
+  font-size:1.1em;
+  padding: 0em;
+  margin: 0.8em 0em 0.35em 0em;
+}
+
+h5 {
+  font-size:1em;
+  padding: 0em;
+  margin: 0.8em 0em 0.35em 0em;
+}
+
+ul, li {
+  list-style-type:none;
+  margin:0;
+  padding:0;
+}
+
+table td {
+  padding: 3px;
+  border: 1px solid #000;
+}
+
+table {
+  width:100%;
+  border: 1px solid #000;
+  border-collapse: collapse;
+}
+
+div.overview {
+  background-color:#ddd;
+  padding: 4px 4px 4px 0;
+}
+div.overview li, div.framenoframe li {
+  display: inline;
+}
+div.framenoframe {
+  text-align: center;
+  font-size: x-small;
+}
+div.framenoframe li {
+  margin: 0 3px 0 3px;
+}
+div.overview li {
+  margin:3px 3px 0 3px;
+  padding: 4px;
+}
+li.selected {
+  background-color:#888;
+  color: #fff;
+  font-weight: bold;
+}
+
+table.summary {
+  margin-bottom: 20px;
+}
+table.summary td, table.summary th {
+  font-weight: bold;
+  text-align: left;
+  padding: 3px;
+}
+table.summary th {
+  background-color:#CCCCFF;
+  color: #000;
+}
+table.summary td {
+  background-color:#fff;
+  border: 1px solid black;
+}
+
+em {
+  color: rgb(63, 63, 191);
+  font-style: normal;
+}
+em.comment {
+  color: rgb(63, 127, 95);
+  font-style: normal;
+}
+.string {
+  color: rgb(42, 0, 255);
+}
+div#footer {
+  text-align:center;
+}
+#overview {
+  padding:2px;
+}
+
+hr {
+  height: 1px;
+  color: #000;
+}
+
+.jxr_comment {
+  color: rgb(63, 127, 95);
+  font-style: normal;
+}
+
+.jxr_javadoccomment {
+  color: rgb(63, 63, 191);
+  font-style: normal;
+}
+
+.jxr_string {
+  color: rgb(42, 0, 255);
+}
+
+.jxr_keyword {
+  color: rgb(127, 0, 85);
+  font-weight: bold;
+}
