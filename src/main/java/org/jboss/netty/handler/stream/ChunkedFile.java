@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 /**
- * A {@link ChunkedInput} that fetches the chunks from a file.
+ * A {@link ChunkedInput} that fetches data from a file chunk by chunk.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -44,14 +44,14 @@ public class ChunkedFile implements ChunkedInput {
     private volatile long offset;
 
     /**
-     * Creates a new instance that fetches the chunks from the specified file.
+     * Creates a new instance that fetches data from the specified file.
      */
     public ChunkedFile(File file) throws IOException {
         this(file, ChunkedStream.DEFAULT_CHUNK_SIZE);
     }
 
     /**
-     * Creates a new instance that fetches the chunks from the specified file.
+     * Creates a new instance that fetches data from the specified file.
      *
      * @param chunkSize the number of bytes to fetch on each
      *                  {@link #nextChunk()} call
@@ -61,7 +61,7 @@ public class ChunkedFile implements ChunkedInput {
     }
 
     /**
-     * Creates a new instance that fetches the chunks from the specified file.
+     * Creates a new instance that fetches data from the specified file.
      *
      * @param chunkSize the number of bytes to fetch on each
      *                  {@link #nextChunk()} call
@@ -71,7 +71,7 @@ public class ChunkedFile implements ChunkedInput {
     }
 
     /**
-     * Creates a new instance that fetches the chunks from the specified file.
+     * Creates a new instance that fetches data from the specified file.
      *
      * @param offset the offset of the file where the transfer begins
      * @param length the number of bytes to transfer
@@ -119,7 +119,7 @@ public class ChunkedFile implements ChunkedInput {
     }
 
     /**
-     * Returns the offset in the file where the transfer is occuring currently.
+     * Returns the offset in the file where the transfer is happening currently.
      */
     public long getCurrentOffset() {
         return offset;
