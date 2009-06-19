@@ -33,6 +33,7 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.logging.InternalLogLevel;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
@@ -49,7 +50,10 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 @ChannelPipelineCoverage("all")
 public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
 
+    private static final InternalLogLevel DEFAULT_LEVEL = InternalLogLevel.DEBUG;
+
     private final InternalLogger logger;
+    private final InternalLogLevel level;
     private final boolean hexDump;
 
     /**
@@ -69,6 +73,7 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
      */
     public LoggingHandler(boolean hexDump) {
         logger = InternalLoggerFactory.getInstance(getClass());
+        level = DEFAULT_LEVEL;
         this.hexDump = hexDump;
     }
 
@@ -87,10 +92,25 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
      *                message is logged
      */
     public LoggingHandler(Class<?> clazz, boolean hexDump) {
+        this(clazz, DEFAULT_LEVEL, hexDump);
+    }
+
+    /**
+     * Creates a new instance with the specified logger name.
+     *
+     * @param level   the log level
+     * @param hexDump {@code true} if and only if the hex dump of the received
+     *                message is logged
+     */
+    public LoggingHandler(Class<?> clazz, InternalLogLevel level, boolean hexDump) {
         if (clazz == null) {
             throw new NullPointerException("clazz");
         }
+        if (level == null) {
+            throw new NullPointerException("level");
+        }
         logger = InternalLoggerFactory.getInstance(clazz);
+        this.level = level;
         this.hexDump = hexDump;
     }
 
@@ -109,10 +129,25 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
      *                message is logged
      */
     public LoggingHandler(String name, boolean hexDump) {
+        this(name, DEFAULT_LEVEL, hexDump);
+    }
+
+    /**
+     * Creates a new instance with the specified logger name.
+     *
+     * @param level   the log level
+     * @param hexDump {@code true} if and only if the hex dump of the received
+     *                message is logged
+     */
+    public LoggingHandler(String name, InternalLogLevel level, boolean hexDump) {
         if (name == null) {
             throw new NullPointerException("name");
         }
+        if (level == null) {
+            throw new NullPointerException("level");
+        }
         logger = InternalLoggerFactory.getInstance(name);
+        this.level = level;
         this.hexDump = hexDump;
     }
 
@@ -131,7 +166,7 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
      * be logged together.
      */
     public void log(ChannelEvent e) {
-        if (getLogger().isDebugEnabled()) {
+        if (getLogger().isEnabled(level)) {
             String msg = e.toString();
 
             // Append hex dump if necessary.
@@ -145,9 +180,9 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
 
             // Log the message (and exception if available.)
             if (e instanceof ExceptionEvent) {
-                getLogger().debug(msg, ((ExceptionEvent) e).getCause());
+                getLogger().log(level, msg, ((ExceptionEvent) e).getCause());
             } else {
-                getLogger().debug(msg);
+                getLogger().log(level, msg);
             }
         }
     }
