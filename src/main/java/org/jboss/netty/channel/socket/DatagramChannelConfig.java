@@ -27,6 +27,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 
 import org.jboss.netty.channel.ChannelConfig;
+import org.jboss.netty.channel.FixedReceiveBufferSizePredictor;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 
 /**
@@ -112,24 +113,76 @@ public interface DatagramChannelConfig extends ChannelConfig {
      */
     void setReuseAddress(boolean reuseAddress);
 
+    /**
+     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_BROADCAST}</a> option.
+     */
     boolean isBroadcast();
 
+    /**
+     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_BROADCAST}</a> option.
+     */
     void setBroadcast(boolean broadcast);
 
+    /**
+     * Gets the setting for local loopback of multicast datagrams.
+     *
+     * @return {@code true} if and only if the loopback mode has been disabled
+     */
     boolean isLoopbackModeDisabled();
 
+    /**
+     * Sets the setting for local loopback of multicast datagrams.
+     *
+     * @param loopbackModeDisabled
+     *        {@code true} if and only if the loopback mode has been disabled
+     */
     void setLoopbackModeDisabled(boolean loopbackModeDisabled);
 
+    /**
+     * Gets the default time-to-live for multicast packets sent out on the
+     * socket.
+     */
     int getTimeToLive();
 
+    /**
+     * Sets the default time-to-live for multicast packets sent out on the
+     * {@link DatagramChannel} in order to control the scope of the multicasts.
+     */
     void setTimeToLive(int ttl);
 
+    /**
+     * Gets the address of the network interface used for multicast packets.
+     */
     InetAddress getInterface();
+
+    /**
+     * Sets the address of the network interface used for multicast packets.
+     */
     void setInterface(InetAddress interfaceAddress);
 
+    /**
+     * Gets the network interface for outgoing multicast datagrams sent on
+     * the {@link DatagramChannel}.
+     */
     NetworkInterface getNetworkInterface();
+
+    /**
+     * Sets the network interface for outgoing multicast datagrams sent on
+     * the {@link DatagramChannel}.
+     */
     void setNetworkInterface(NetworkInterface networkInterface);
 
+    /**
+     * Returns the {@link ReceiveBufferSizePredictor} which predicts the
+     * number of readable bytes in the socket receive buffer.  The default
+     * predictor is <tt>{@link FixedReceiveBufferSizePredictor}(768)</tt>.
+     */
     ReceiveBufferSizePredictor getReceiveBufferSizePredictor();
+
+    /**
+     * Sets the {@link ReceiveBufferSizePredictor} which predicts the
+     * number of readable bytes in the socket receive buffer.  The default
+     * predictor is <tt>{@link FixedReceiveBufferSizePredictor}(768)</tt>.
+     */
     void setReceiveBufferSizePredictor(ReceiveBufferSizePredictor predictor);
 }

@@ -44,6 +44,10 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
+ * <td>{@code "writeBufferHighWaterMark"}</td><td>{@link #setWriteBufferHighWaterMark(int)}</td>
+ * </tr><tr>
+ * <td>{@code "writeBufferLowWaterMark"}</td><td>{@link #setWriteBufferLowWaterMark(int)}</td>
+ * </tr><tr>
  * <td>{@code "writeSpinCount"}</td><td>{@link #setWriteSpinCount(int)}</td>
  * </tr><tr>
  * <td>{@code "receiveBufferSizePredictor"}</td><td>{@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}</td>
