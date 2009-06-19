@@ -36,8 +36,8 @@ import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 
 /**
  * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
- * and its following {@link HttpChunk}s into an {@link HttpMessage} with no
- * following {@link HttpChunk}s.  It is useful when you don't want to take
+ * and its following {@link HttpChunk}s into a single {@link HttpMessage} with
+ * no following {@link HttpChunk}s.  It is useful when you don't want to take
  * care of HTTP messages whose transfer encoding is 'chunked'.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
