@@ -35,7 +35,7 @@ import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
 import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
- * A {@link NioDatagramChannelFactory} creates a NIO-based connectionless
+ * A {@link DatagramChannelFactory} that creates a NIO-based connectionless
  * {@link DatagramChannel}. It utilizes the non-blocking I/O mode which
  * was introduced with NIO to serve many number of concurrent connections
  * efficiently.
