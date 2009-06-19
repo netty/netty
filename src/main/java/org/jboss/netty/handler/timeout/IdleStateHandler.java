@@ -35,6 +35,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.util.ExternalResourceReleasable;
+import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
@@ -72,6 +73,7 @@ import org.jboss.netty.util.TimerTask;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  *
+ * @see HashedWheelTimer
  * @see ReadTimeoutHandler
  * @see WriteTimeoutHandler
  */
@@ -100,7 +102,8 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
      * Creates a new instance.
      *
      * @param timer
-     *        the {@link Timer} that is used to trigger the scheduled event
+     *        the {@link Timer} that is used to trigger the scheduled event.
+     *        The recommended {@link Timer} implementation is {@link HashedWheelTimer}.
      * @param readerIdleTimeSeconds
      *        an {@link IdleStateEvent} whose state is {@link IdleState#READER_IDLE}
      *        will be triggered when no read was performed for the specified
@@ -129,7 +132,8 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
      * Creates a new instance.
      *
      * @param timer
-     *        the {@link Timer} that is used to trigger the scheduled event
+     *        the {@link Timer} that is used to trigger the scheduled event.
+     *        The recommended {@link Timer} implementation is {@link HashedWheelTimer}.
      * @param readerIdleTime
      *        an {@link IdleStateEvent} whose state is {@link IdleState#READER_IDLE}
      *        will be triggered when no read was performed for the specified

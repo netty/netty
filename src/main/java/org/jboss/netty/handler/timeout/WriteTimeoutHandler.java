@@ -34,6 +34,7 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelDownstreamHandler;
 import org.jboss.netty.util.ExternalResourceReleasable;
+import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
@@ -46,6 +47,7 @@ import org.jboss.netty.util.TimerTask;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  *
+ * @see HashedWheelTimer
  * @see ReadTimeoutHandler
  * @see IdleStateHandler
  */
@@ -62,7 +64,8 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
      * Creates a new instance.
      *
      * @param timer
-     *        the {@link Timer} that is used to trigger the scheduled event
+     *        the {@link Timer} that is used to trigger the scheduled event.
+     *        The recommended {@link Timer} implementation is {@link HashedWheelTimer}.
      * @param timeoutSeconds
      *        write timeout in seconds
      */
@@ -74,7 +77,8 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
      * Creates a new instance.
      *
      * @param timer
-     *        the {@link Timer} that is used to trigger the scheduled event
+     *        the {@link Timer} that is used to trigger the scheduled event.
+     *        The recommended {@link Timer} implementation is {@link HashedWheelTimer}.
      * @param timeout
      *        write timeout
      * @param unit
