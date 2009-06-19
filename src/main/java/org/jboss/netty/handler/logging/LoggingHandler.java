@@ -39,7 +39,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * A {@link ChannelHandler} that logs all events via {@link InternalLogger}.
- * By default, all events are logged in <tt>DEBUG</tt> level.  You can extend
+ * By default, all events are logged at <tt>DEBUG</tt> level.  You can extend
  * this class and override {@link #log(ChannelEvent)} to change the default
  * behavior.
  *
@@ -157,6 +157,14 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
      */
     public InternalLogger getLogger() {
         return logger;
+    }
+
+    /**
+     * Returns the {@link InternalLogLevel} that this handler uses to log
+     * a {@link ChannelEvent}.
+     */
+    public InternalLogLevel getLevel() {
+        return level;
     }
 
     /**
