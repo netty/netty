@@ -23,18 +23,26 @@ package org.jboss.netty.handler.codec.http;
 
 
 /**
- * An http request.
+ * An <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>
+ * request.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  *
+ * @see HttpResponse
  * @see QueryStringEncoder
  * @see QueryStringDecoder
  */
 public interface HttpRequest extends HttpMessage {
 
+    /**
+     * Returns the method of this request.
+     */
     HttpMethod getMethod();
 
+    /**
+     * Returns the URI (or path) of this request.
+     */
     String getUri();
 }

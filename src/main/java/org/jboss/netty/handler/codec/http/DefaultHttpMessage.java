@@ -33,7 +33,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.util.internal.CaseIgnoringComparator;
 
 /**
- * a default Http Message which holds the headers and body.
+ * The default {@link HttpMessage} implementation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -46,6 +46,9 @@ public class DefaultHttpMessage implements HttpMessage {
     private final Map<String, List<String>> headers = new TreeMap<String, List<String>>(CaseIgnoringComparator.INSTANCE);
     private ChannelBuffer content = ChannelBuffers.EMPTY_BUFFER;
 
+    /**
+     * Creates a new instance.
+     */
     protected DefaultHttpMessage(final HttpVersion version) {
         if (version == null) {
             throw new NullPointerException("version");
@@ -172,6 +175,18 @@ public class DefaultHttpMessage implements HttpMessage {
             }
         }
         return false;
+    }
+
+    public boolean isKeepAlive() {
+        if (HttpHeaders.Values.CLOSE.equalsIgnoreCase(getHeader(HttpHeaders.Names.CONNECTION))) {
+            return false;
+        }
+
+        if (getProtocolVersion().equals(HttpVersion.HTTP_1_0) &&
+            !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(getHeader(HttpHeaders.Names.CONNECTION))) {
+            return false;
+        }
+        return true;
     }
 
     public void clearHeaders() {

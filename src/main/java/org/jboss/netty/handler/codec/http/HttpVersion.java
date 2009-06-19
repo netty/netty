@@ -25,7 +25,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * The protocols we support;
+ * Represents the version of <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>
+ * or its derived protocols, such as
+ * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
+ * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -39,9 +42,24 @@ public class HttpVersion implements Comparable<HttpVersion> {
     private static final Pattern VERSION_PATTERN =
         Pattern.compile("(\\S+)/(\\d+)\\.(\\d+)");
 
+    /**
+     * HTTP/1.0
+     */
     public static final HttpVersion HTTP_1_0 = new HttpVersion("HTTP", 1, 0);
+
+    /**
+     * HTTP/1.1
+     */
     public static final HttpVersion HTTP_1_1 = new HttpVersion("HTTP", 1, 1);
 
+    /**
+     * Returns an existing or new {@link HttpVersion} instance which matches to
+     * the specified protocol version string.  If the specified {@code text} is
+     * equal to {@code "HTTP/1.0"}, {@link #HTTP_1_0} will be returned.  If the
+     * specified {@code text} is equal to {@code "HTTP/1.1"}, {@link #HTTP_1_1}
+     * will be returned.  Otherwise, a new {@link HttpVersion} instance will be
+     * returned.
+     */
     public static HttpVersion valueOf(String text) {
         if (text == null) {
             throw new NullPointerException("text");
@@ -62,6 +80,13 @@ public class HttpVersion implements Comparable<HttpVersion> {
     private final int minorVersion;
     private final String text;
 
+    /**
+     * Creates a new HTTP version with the specified version string.  You will
+     * not need to create a new instance unless you are implementing a protocol
+     * derived from HTTP, such as
+     * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
+     * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
+     */
     public HttpVersion(String text) {
         if (text == null) {
             throw new NullPointerException("text");
@@ -83,6 +108,16 @@ public class HttpVersion implements Comparable<HttpVersion> {
         this.text = protocolName + '/' + majorVersion + '.' + minorVersion;
     }
 
+    /**
+     * Creates a new
+     * <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>
+     * version with the specified protocol name and version numbers.  You will
+     * not need to create a new instance unless you are implementing a protocol
+     * derived from <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>,
+     * such as
+     * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
+     * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>
+     */
     public HttpVersion(
             String protocolName, int majorVersion, int minorVersion) {
         if (protocolName == null) {
@@ -114,22 +149,37 @@ public class HttpVersion implements Comparable<HttpVersion> {
         text = protocolName + '/' + majorVersion + '.' + minorVersion;
     }
 
+    /**
+     * Returns the name of the protocol such as {@code "HTTP"} in {@code "HTTP/1.0"}.
+     */
     public String getProtocolName() {
         return protocolName;
     }
 
+    /**
+     * Returns the name of the protocol such as {@code 1} in {@code "HTTP/1.0"}.
+     */
     public int getMajorVersion() {
         return majorVersion;
     }
 
+    /**
+     * Returns the name of the protocol such as {@code 0} in {@code "HTTP/1.0"}.
+     */
     public int getMinorVersion() {
         return minorVersion;
     }
 
+    /**
+     * Returns the full protocol version text such as {@code "HTTP/1.0"}.
+     */
     public String getText() {
         return text;
     }
 
+    /**
+     * Returns the full protocol version text such as {@code "HTTP/1.0"}.
+     */
     @Override
     public String toString() {
         return getText();

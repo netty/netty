@@ -22,7 +22,7 @@
 package org.jboss.netty.handler.codec.http;
 
 /**
- * an http response implementation
+ * The default {@link HttpResponse} implementation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -32,6 +32,12 @@ package org.jboss.netty.handler.codec.http;
 public class DefaultHttpResponse extends DefaultHttpMessage implements HttpResponse {
     private final HttpResponseStatus status;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param version the HTTP version of this response
+     * @param status  the status of this response
+     */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status) {
         super(version);
         if (status == null) {

@@ -29,6 +29,8 @@ import org.jboss.netty.util.internal.CaseIgnoringComparator;
 
 
 /**
+ * The default {@link Cookie} implementation.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -64,6 +66,9 @@ public class DefaultCookie implements Cookie {
     private int version;
     private boolean secure;
 
+    /**
+     * Creates a new cookie with the specified name and value.
+     */
     public DefaultCookie(String name, String value) {
         if (name == null) {
             throw new NullPointerException("name");

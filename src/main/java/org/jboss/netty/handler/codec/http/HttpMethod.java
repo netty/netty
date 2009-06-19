@@ -25,7 +25,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * This defines the methods available via a HTTP Request.
+ * Represents the method of <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>
+ * or its derived protocols, such as
+ * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
+ * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -94,6 +97,11 @@ public class HttpMethod implements Comparable<HttpMethod> {
         methodMap.put(CONNECT.toString(), CONNECT);
     }
 
+    /**
+     * Returns the {@link HttpMethod} represented by the specified name.
+     * If the specified name is a standard HTTP method name, a cached instance
+     * will be returned.  Otherwise, a new instance will be returned.
+     */
     public static HttpMethod valueOf(String name) {
         if (name == null) {
             throw new NullPointerException("name");
@@ -114,6 +122,14 @@ public class HttpMethod implements Comparable<HttpMethod> {
 
     private final String name;
 
+    /**
+     * Creates a new <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>
+     * method with the specified name.  You will not need to create a new method
+     * unless you are implementing a protocol derived from
+     * <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>, such as
+     * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
+     * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>
+     */
     public HttpMethod(String name) {
         if (name == null) {
             throw new NullPointerException("name");
@@ -134,6 +150,9 @@ public class HttpMethod implements Comparable<HttpMethod> {
         this.name = name;
     }
 
+    /**
+     * Returns the name of this method.
+     */
     public String getName() {
         return name;
     }

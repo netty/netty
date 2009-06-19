@@ -25,6 +25,8 @@ package org.jboss.netty.handler.codec.http;
 import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
+ * The default {@link HttpChunk} implementation.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
@@ -34,6 +36,10 @@ public class DefaultHttpChunk implements HttpChunk {
     private final ChannelBuffer content;
     private final boolean last;
 
+    /**
+     * Creates a new instance with the specified chunk content. If an empty
+     * buffer is specified, this chunk becomes the 'end of chunk' marker.
+     */
     public DefaultHttpChunk(ChannelBuffer content) {
         if (content == null) {
             throw new NullPointerException("content");

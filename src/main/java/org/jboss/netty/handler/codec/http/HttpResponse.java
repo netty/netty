@@ -23,13 +23,20 @@ package org.jboss.netty.handler.codec.http;
 
 
 /**
- * an http response.
+ * An <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>
+ * response.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @see HttpRequest
  */
 public interface HttpResponse extends HttpMessage {
+
+    /**
+     * Returns the status of this response.
+     */
     HttpResponseStatus getStatus();
 }

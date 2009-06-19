@@ -21,10 +21,8 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-
-
 /**
- * An http request implementation
+ * The default {@link HttpRequest} implementation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -36,6 +34,13 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
     private final HttpMethod method;
     private final String uri;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param httpVersion the HTTP version of the request
+     * @param method      the HTTP method of the request
+     * @param uri         the URI or path of the request
+     */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
         super(httpVersion);
         if (method == null) {

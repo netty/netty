@@ -25,9 +25,12 @@ import java.util.List;
 import java.util.Set;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
- * Encapsulates an Http message. this will contain the protocol version, headers and the body of a message
+ * An <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>
+ * message which provides common properties for {@link HttpRequest} and
+ * {@link HttpResponse}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -35,34 +38,111 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * @version $Rev$, $Date$
  */
 public interface HttpMessage {
+
+    /**
+     * Returns the header value with the specified header name.  If there are
+     * more than one header value for the specified header name, the first
+     * value is returned.
+     *
+     * @return the header value or {@code null} if there is no such header
+     *
+     */
     String getHeader(String name);
 
+    /**
+     * Returns the header values with the specified header name.
+     *
+     * @return the {@link List} of header values of {@code null} if there is
+     *         no such header
+     */
     List<String> getHeaders(String name);
 
+    /**
+     * Returns {@code true} if and only if there is a header with the specified
+     * header name.
+     */
     boolean containsHeader(String name);
 
+    /**
+     * Returns the {@link Set} of all header names that this message contains.
+     */
     Set<String> getHeaderNames();
 
+    /**
+     * Returns the protocol version of this message.
+     */
     HttpVersion getProtocolVersion();
 
+    /**
+     * Returns the content of this message.  If there is no content, an
+     * {@link ChannelBuffers#EMPTY_BUFFER} is returned.
+     */
     ChannelBuffer getContent();
 
-    void addHeader(String name, String value);
-
-    void setHeader(String name, String value);
-
-    void setHeader(String name, Iterable<String> values);
-
-    void removeHeader(String name);
-
-    long getContentLength();
-
-    long getContentLength(long defaultValue);
-
+    /**
+     * Sets the content of this message.  If {@code null} is specified,
+     * the content of this message will be set to {@link ChannelBuffers#EMPTY_BUFFER}.
+     */
     void setContent(ChannelBuffer content);
 
-    boolean isChunked();
+    /**
+     * Adds a new header with the specified name and value.
+     */
+    void addHeader(String name, String value);
 
+    /**
+     * Sets a new header with the specified name and value.  If there is an
+     * existing header with the same name, the existing header is removed.
+     */
+    void setHeader(String name, String value);
+
+    /**
+     * Sets a new header with the specified name and values.  If there is an
+     * existing header with the same name, the existing header is removed.
+     */
+    void setHeader(String name, Iterable<String> values);
+
+    /**
+     * Removes the header with the specified name.
+     */
+    void removeHeader(String name);
+
+    /**
+     * Removes all headers from this message.
+     */
     void clearHeaders();
 
+    /**
+     * Returns the length of the content.  Please note that this value is
+     * not retrieved from {@link #getContent()} but from the
+     * {@code "Content-Length"} header, and thus they are independent from each
+     * other.
+     *
+     * @return the content length or {@code 0} if this message does not have
+     *         the {@code "Content-Length"} header
+     */
+    long getContentLength();
+
+    /**
+     * Returns the length of the content.  Please note that this value is
+     * not retrieved from {@link #getContent()} but from the
+     * {@code "Content-Length"} header, and thus they are independent from each
+     * other.
+     *
+     * @return the content length or {@code defaultValue} if this message does
+     *         not have the {@code "Content-Length"} header
+     */
+    long getContentLength(long defaultValue);
+
+    /**
+     * Returns {@code true} if and only if the {@code "Transfer-Encoding"} of
+     * this message is {@code "chunked"}.
+     */
+    boolean isChunked();
+
+    /**
+     * Returns {@code true} if and only if the connection can remain open and
+     * thus 'kept alive'.
+     */
+    boolean isKeepAlive();
 }
