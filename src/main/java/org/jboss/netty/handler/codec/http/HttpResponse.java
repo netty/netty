@@ -23,8 +23,7 @@ package org.jboss.netty.handler.codec.http;
 
 
 /**
- * An <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>
- * response.
+ * An HTTP response.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)

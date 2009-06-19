@@ -25,8 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * The method of <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>
- * or its derived protocols, such as
+ * The request method of HTTP or its derived protocols, such as
  * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
  * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  *
@@ -123,10 +122,9 @@ public class HttpMethod implements Comparable<HttpMethod> {
     private final String name;
 
     /**
-     * Creates a new <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>
-     * method with the specified name.  You will not need to create a new method
-     * unless you are implementing a protocol derived from
-     * <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>, such as
+     * Creates a new HTTP method with the specified name.  You will not need to
+     * create a new method unless you are implementing a protocol derived from
+     * HTTP, such as
      * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
      * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>
      */

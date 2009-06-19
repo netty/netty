@@ -26,8 +26,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
- * An <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>
- * chunk which is used for HTTP chunked transfer-encoding.
+ * An HTTP chunk which is used for HTTP chunked transfer-encoding.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

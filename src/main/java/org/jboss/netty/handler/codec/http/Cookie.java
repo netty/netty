@@ -24,7 +24,7 @@ package org.jboss.netty.handler.codec.http;
 import java.util.Set;
 
 /**
- * An <a href="http://en.wikipedia.org/wiki/HTTP_cookie">HTTP Cookie</a>.
+ * An HTTP <a href="http://en.wikipedia.org/wiki/HTTP_cookie">Cookie</a>.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

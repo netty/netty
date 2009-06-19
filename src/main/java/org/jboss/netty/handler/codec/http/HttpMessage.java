@@ -28,8 +28,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
- * An <a href="http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a>
- * message which provides common properties for {@link HttpRequest} and
+ * An HTTP message which provides common properties for {@link HttpRequest} and
  * {@link HttpResponse}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
