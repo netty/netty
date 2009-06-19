@@ -101,8 +101,8 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                 Object chunk;
                 boolean last;
                 try {
-                    chunk = chunks.readChunk();
-                    last = !chunks.available();
+                    chunk = chunks.nextChunk();
+                    last = !chunks.hasNextChunk();
                 } catch (Throwable t) {
                     currentEvent.getFuture().setFailure(t);
                     fireExceptionCaught(ctx, t);

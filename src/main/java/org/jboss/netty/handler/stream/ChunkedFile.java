@@ -91,7 +91,7 @@ public class ChunkedFile implements ChunkedInput {
         return offset;
     }
 
-    public boolean available() throws Exception {
+    public boolean hasNextChunk() throws Exception {
         return offset < endOffset && file.getChannel().isOpen();
     }
 
@@ -99,7 +99,7 @@ public class ChunkedFile implements ChunkedInput {
         file.close();
     }
 
-    public Object readChunk() throws Exception {
+    public Object nextChunk() throws Exception {
         long offset = this.offset;
         if (offset >= endOffset) {
             return null;

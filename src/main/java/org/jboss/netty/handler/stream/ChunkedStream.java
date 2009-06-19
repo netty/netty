@@ -66,7 +66,7 @@ public class ChunkedStream implements ChunkedInput {
         return offset;
     }
 
-    public boolean available() throws Exception {
+    public boolean hasNextChunk() throws Exception {
         int b = in.read();
         if (b < 0) {
             return false;
@@ -80,8 +80,8 @@ public class ChunkedStream implements ChunkedInput {
         in.close();
     }
 
-    public Object readChunk() throws Exception {
-        if (!available()) {
+    public Object nextChunk() throws Exception {
+        if (!hasNextChunk()) {
             return null;
         }
 

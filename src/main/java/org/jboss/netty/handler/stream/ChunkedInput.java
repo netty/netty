@@ -30,7 +30,7 @@ package org.jboss.netty.handler.stream;
  * @version $Rev$, $Date$
  */
 public interface ChunkedInput {
-    boolean available() throws Exception;
-    Object readChunk() throws Exception;
+    boolean hasNextChunk() throws Exception;
+    Object nextChunk() throws Exception;
     void close() throws Exception;
 }
