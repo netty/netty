@@ -26,7 +26,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
- * A set of delimiters for {@link DelimiterBasedFrameDecoder} for common use.
+ * A set of commonly used delimiters for {@link DelimiterBasedFrameDecoder}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
