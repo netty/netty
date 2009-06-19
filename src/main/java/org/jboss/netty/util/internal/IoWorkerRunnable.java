@@ -1,5 +1,9 @@
 /*
- * Copyright (C) 2009  Trustin Heuiseung Lee
+ * JBoss, Home of Professional Open Source
+ *
+ * Copyright 2009, Red Hat Middleware LLC, and individual contributors
+ * by the @author tags. See the COPYRIGHT.txt in the distribution for a
+ * full listing of individual contributors.
  *
  * This is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as
