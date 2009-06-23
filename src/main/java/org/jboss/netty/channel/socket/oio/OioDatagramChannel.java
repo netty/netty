@@ -57,6 +57,7 @@ final class OioDatagramChannel extends AbstractChannel
     final Object interestOpsLock = new Object();
     private final DatagramChannelConfig config;
     volatile Thread workerThread;
+    private volatile InetSocketAddress localAddress;
 
     OioDatagramChannel(
             ChannelFactory factory,
@@ -87,11 +88,26 @@ final class OioDatagramChannel extends AbstractChannel
     }
 
     public InetSocketAddress getLocalAddress() {
-        return (InetSocketAddress) socket.getLocalSocketAddress();
+        InetSocketAddress localAddress = this.localAddress;
+        if (localAddress == null) {
+            try {
+                this.localAddress = localAddress =
+                    (InetSocketAddress) socket.getLocalSocketAddress();
+            } catch (Throwable t) {
+                // Sometimes fails on a closed socket in Windows.
+                return null;
+            }
+        }
+        return localAddress;
     }
 
     public InetSocketAddress getRemoteAddress() {
-        return (InetSocketAddress) socket.getRemoteSocketAddress();
+        try {
+            return (InetSocketAddress) socket.getRemoteSocketAddress();
+        } catch (Throwable t) {
+            // Sometimes fails on a closed socket in Windows.
+            return null;
+        }
     }
 
     public boolean isBound() {

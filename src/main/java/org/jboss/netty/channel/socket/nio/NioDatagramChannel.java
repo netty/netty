@@ -120,6 +120,8 @@ class NioDatagramChannel extends AbstractChannel
      */
     volatile boolean inWriteNowLoop;
 
+    private volatile InetSocketAddress localAddress;
+
     NioDatagramChannel(final ChannelFactory factory,
             final ChannelPipeline pipeline, final ChannelSink sink,
             final NioDatagramWorker worker) {
@@ -142,12 +144,17 @@ class NioDatagramChannel extends AbstractChannel
     }
 
     public InetSocketAddress getLocalAddress() {
-        try {
-            return (InetSocketAddress) datagramChannel.socket().getLocalSocketAddress();
-        } catch (Throwable t) {
-            // Sometimes fails on a closed socket in Windows.
-            return null;
+        InetSocketAddress localAddress = this.localAddress;
+        if (localAddress == null) {
+            try {
+                this.localAddress = localAddress =
+                    (InetSocketAddress) datagramChannel.socket().getLocalSocketAddress();
+            } catch (Throwable t) {
+                // Sometimes fails on a closed socket in Windows.
+                return null;
+            }
         }
+        return localAddress;
     }
 
     public InetSocketAddress getRemoteAddress() {
