@@ -53,6 +53,8 @@ abstract class OioSocketChannel extends AbstractChannel
     final Object interestOpsLock = new Object();
     private final SocketChannelConfig config;
     volatile Thread workerThread;
+    private volatile InetSocketAddress localAddress;
+    private volatile InetSocketAddress remoteAddress;
 
     OioSocketChannel(
             Channel parent,
@@ -72,11 +74,31 @@ abstract class OioSocketChannel extends AbstractChannel
     }
 
     public InetSocketAddress getLocalAddress() {
-        return (InetSocketAddress) socket.getLocalSocketAddress();
+        InetSocketAddress localAddress = this.localAddress;
+        if (localAddress == null) {
+            try {
+                this.localAddress = localAddress =
+                    (InetSocketAddress) socket.getLocalSocketAddress();
+            } catch (Throwable t) {
+                // Sometimes fails on a closed socket in Windows.
+                return null;
+            }
+        }
+        return localAddress;
     }
 
     public InetSocketAddress getRemoteAddress() {
-        return (InetSocketAddress) socket.getRemoteSocketAddress();
+        InetSocketAddress remoteAddress = this.remoteAddress;
+        if (remoteAddress == null) {
+            try {
+                this.remoteAddress = remoteAddress =
+                    (InetSocketAddress) socket.getRemoteSocketAddress();
+            } catch (Throwable t) {
+                // Sometimes fails on a closed socket in Windows.
+                return null;
+            }
+        }
+        return remoteAddress;
     }
 
     public boolean isBound() {

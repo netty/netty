@@ -55,6 +55,8 @@ class BaseXnioChannel extends AbstractChannel implements XnioChannel {
 
     private final XnioChannelConfig config;
     volatile java.nio.channels.Channel xnioChannel;
+    private volatile SocketAddress localAddress;
+    private volatile SocketAddress remoteAddress;
 
     final Object writeLock = new Object();
     final Queue<MessageEvent> writeBuffer = new WriteBuffer();
@@ -76,21 +78,31 @@ class BaseXnioChannel extends AbstractChannel implements XnioChannel {
     }
 
     public SocketAddress getLocalAddress() {
-        java.nio.channels.Channel xnioChannel = this.xnioChannel;
-        if (!isOpen() || !(xnioChannel instanceof BoundChannel)) {
-            return null;
-        }
+        SocketAddress localAddress = this.localAddress;
+        if (localAddress == null) {
+            java.nio.channels.Channel xnioChannel = this.xnioChannel;
+            if (!isOpen() || !(xnioChannel instanceof BoundChannel)) {
+                return null;
+            }
 
-        return (SocketAddress) ((BoundChannel) xnioChannel).getLocalAddress();
+            this.localAddress = localAddress =
+                (SocketAddress) ((BoundChannel) xnioChannel).getLocalAddress();
+        }
+        return localAddress;
     }
 
     public SocketAddress getRemoteAddress() {
-        java.nio.channels.Channel xnioChannel = this.xnioChannel;
-        if (!isOpen() || !(xnioChannel instanceof ConnectedChannel)) {
-            return null;
-        }
+        SocketAddress remoteAddress = this.remoteAddress;
+        if (remoteAddress == null) {
+            java.nio.channels.Channel xnioChannel = this.xnioChannel;
+            if (!isOpen() || !(xnioChannel instanceof ConnectedChannel)) {
+                return null;
+            }
 
-        return (SocketAddress) ((ConnectedChannel) xnioChannel).getPeerAddress();
+            this.remoteAddress = remoteAddress =
+                (SocketAddress) ((ConnectedChannel) xnioChannel).getPeerAddress();
+        }
+        return remoteAddress;
     }
 
     public boolean isBound() {

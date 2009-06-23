@@ -69,15 +69,15 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
     }
 
     public boolean isBound() {
-        return isOpen() && bound.get();
+        return bound.get() && isOpen();
     }
 
     public boolean isConnected() {
-        return localAddress != null && remoteAddress != null;
+        return pairedChannel != null && isOpen();
     }
 
     public LocalAddress getLocalAddress() {
-        return isBound()? localAddress : null;
+        return localAddress;
     }
 
     public LocalAddress getRemoteAddress() {
@@ -95,7 +95,6 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
             DefaultLocalChannel pairedChannel = this.pairedChannel;
             if (pairedChannel != null) {
                 this.pairedChannel = null;
-                this.localAddress = null;
                 fireChannelDisconnected(this);
                 fireChannelUnbound(this);
             }
@@ -109,7 +108,6 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
             DefaultLocalChannel me = pairedChannel.pairedChannel;
             if (me != null) {
                 pairedChannel.pairedChannel = null;
-                pairedChannel.localAddress = null;
                 fireChannelDisconnected(pairedChannel);
                 fireChannelUnbound(pairedChannel);
             }

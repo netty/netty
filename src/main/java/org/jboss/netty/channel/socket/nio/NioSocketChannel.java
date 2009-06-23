@@ -55,6 +55,8 @@ class NioSocketChannel extends AbstractChannel
     final SocketChannel socket;
     final NioWorker worker;
     private final NioSocketChannelConfig config;
+    private volatile InetSocketAddress localAddress;
+    private volatile InetSocketAddress remoteAddress;
 
     final Object interestOpsLock = new Object();
     final Object writeLock = new Object();
@@ -86,21 +88,31 @@ class NioSocketChannel extends AbstractChannel
     }
 
     public InetSocketAddress getLocalAddress() {
-        try {
-            return (InetSocketAddress) socket.socket().getLocalSocketAddress();
-        } catch (Throwable t) {
-            // Sometimes fails on a closed socket in Windows.
-            return null;
+        InetSocketAddress localAddress = this.localAddress;
+        if (localAddress == null) {
+            try {
+                this.localAddress = localAddress =
+                    (InetSocketAddress) socket.socket().getLocalSocketAddress();
+            } catch (Throwable t) {
+                // Sometimes fails on a closed socket in Windows.
+                return null;
+            }
         }
+        return localAddress;
     }
 
     public InetSocketAddress getRemoteAddress() {
-        try {
-            return (InetSocketAddress) socket.socket().getRemoteSocketAddress();
-        } catch (Throwable t) {
-            // Sometimes fails on a closed socket in Windows.
-            return null;
+        InetSocketAddress remoteAddress = this.remoteAddress;
+        if (remoteAddress == null) {
+            try {
+                this.remoteAddress = remoteAddress =
+                    (InetSocketAddress) socket.socket().getRemoteSocketAddress();
+            } catch (Throwable t) {
+                // Sometimes fails on a closed socket in Windows.
+                return null;
+            }
         }
+        return remoteAddress;
     }
 
     public boolean isBound() {
