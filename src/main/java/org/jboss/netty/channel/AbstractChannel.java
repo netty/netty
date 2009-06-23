@@ -257,20 +257,22 @@ public abstract class AbstractChannel implements Channel {
         buf.append("[id: 0x");
         buf.append(getIdString());
 
-        if (connected) {
+        SocketAddress localAddress = getLocalAddress();
+        SocketAddress remoteAddress = getRemoteAddress();
+        if (remoteAddress != null) {
             buf.append(", ");
             if (getParent() == null) {
-                buf.append(getLocalAddress());
+                buf.append(localAddress);
                 buf.append(" => ");
-                buf.append(getRemoteAddress());
+                buf.append(remoteAddress);
             } else {
-                buf.append(getRemoteAddress());
+                buf.append(remoteAddress);
                 buf.append(" => ");
-                buf.append(getLocalAddress());
+                buf.append(localAddress);
             }
-        } else if (isBound()) {
+        } else if (localAddress != null) {
             buf.append(", ");
-            buf.append(getLocalAddress());
+            buf.append(localAddress);
         }
 
         buf.append(']');
