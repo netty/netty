@@ -278,7 +278,9 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-            logger.warn("Unexpected exception", e.getCause());
+            fireExceptionCaught(
+                    HttpTunnelingClientSocketChannel.this,
+                    e.getCause());
             channel.close();
         }
     }

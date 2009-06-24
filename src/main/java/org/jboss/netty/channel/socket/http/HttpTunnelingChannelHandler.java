@@ -134,7 +134,7 @@ class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        logger.warn("Unexpected exception", e.getCause());
+        logger.warn("Unexpected exception while HTTP tunneling", e.getCause());
         invalidateHttpSession();
         e.getChannel().close();
     }
