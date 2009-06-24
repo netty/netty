@@ -239,10 +239,8 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                     // raised.
                 } catch (CancelledKeyException e) {
                     // Raised by accept() when the server socket was closed.
-                    break;
                 } catch (ClosedSelectorException e) {
                     // Raised by accept() when the server socket was closed.
-                    break;
                 } catch (ClosedChannelException e) {
                     // Closed as requested.
                     break;
