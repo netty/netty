@@ -30,6 +30,7 @@ import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ClosedSelectorException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -207,7 +208,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
         }
 
         public void run() {
-            for (;;) {
+            while (channel.isBound()) {
                 try {
                     // We do not call ServerSocketChannel.accept() directly
                     // because SocketTimeoutException is not raised on some
@@ -238,6 +239,10 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                     // raised.
                 } catch (CancelledKeyException e) {
                     // Raised by accept() when the server socket was closed.
+                    break;
+                } catch (ClosedSelectorException e) {
+                    // Raised by accept() when the server socket was closed.
+                    break;
                 } catch (ClosedChannelException e) {
                     // Closed as requested.
                     break;
