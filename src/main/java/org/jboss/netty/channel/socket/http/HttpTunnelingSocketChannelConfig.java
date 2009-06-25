@@ -31,6 +31,7 @@ import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
+import org.jboss.netty.util.internal.ConversionUtil;
 
 /**
  * The {@link ChannelConfig} of a client-side HTTP tunneling
@@ -61,6 +62,9 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
 
     private final HttpTunnelingClientSocketChannel channel;
     private volatile SSLContext sslContext;
+    private volatile String[] enabledSslCipherSuites;
+    private volatile String[] enabledSslProtocols;
+    private volatile boolean enableSslSessionCreation = true;
 
     /**
      * Creates a new instance.
@@ -85,6 +89,48 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
         this.sslContext = sslContext;
     }
 
+    public String[] getEnabledSslCipherSuites() {
+        String[] suites = enabledSslCipherSuites;
+        if (suites == null) {
+            return null;
+        } else {
+            return suites.clone();
+        }
+    }
+
+    public void setEnabledSslCipherSuites(String[] suites) {
+        if (suites == null) {
+            enabledSslCipherSuites = null;
+        } else {
+            enabledSslCipherSuites = suites.clone();
+        }
+    }
+
+    public String[] getEnabledSslProtocols() {
+        String[] protocols = enabledSslProtocols;
+        if (protocols == null) {
+            return null;
+        } else {
+            return protocols.clone();
+        }
+    }
+
+    public void setEnabledSslProtocols(String[] protocols) {
+        if (protocols == null) {
+            enabledSslProtocols = null;
+        } else {
+            enabledSslProtocols = protocols.clone();
+        }
+    }
+
+    public boolean isEnableSslSessionCreation() {
+        return enableSslSessionCreation;
+    }
+
+    public void setEnableSslSessionCreation(boolean flag) {
+        enableSslSessionCreation = flag;
+    }
+
     public void setOptions(Map<String, Object> options) {
         channel.channel.getConfig().setOptions(options);
         SSLContext sslContext = (SSLContext) options.get("sslContext");
@@ -100,6 +146,12 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
 
         if (key.equals("sslContext")) {
             setSslContext((SSLContext) value);
+        } else if (key.equals("enabledSslCipherSuites")){
+            setEnabledSslCipherSuites(ConversionUtil.toStringArray(value));
+        } else if (key.equals("enabledSslProtocols")){
+            setEnabledSslProtocols(ConversionUtil.toStringArray(value));
+        } else if (key.equals("enableSslSessionCreation")){
+            setEnableSslSessionCreation(ConversionUtil.toBoolean(value));
         } else {
             return false;
         }

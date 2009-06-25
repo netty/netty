@@ -22,6 +22,9 @@
  */
 package org.jboss.netty.util.internal;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Conversion utility class to parse a property represented as a string or
  * an object.
@@ -76,5 +79,28 @@ public class ConversionUtil {
 
     private ConversionUtil() {
         // Unused
+    }
+
+    /**
+     * Converts the specified object into an array of strings.
+     */
+    public static String[] toStringArray(Object value) {
+        if (value instanceof String[]) {
+            return (String[]) value;
+        }
+
+        if (value instanceof Iterable<?>) {
+            List<String> answer = new ArrayList<String>();
+            for (Object v: (Iterable<?>) value) {
+                if (v == null) {
+                    answer.add(null);
+                } else {
+                    answer.add(String.valueOf(v));
+                }
+            }
+            return answer.toArray(new String[answer.size()]);
+        }
+
+        return String.valueOf(value).split("[, \\t\\n\\r\\f\\e\\a]");
     }
 }

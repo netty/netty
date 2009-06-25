@@ -254,12 +254,24 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         @Override
         public void channelConnected(ChannelHandlerContext ctx,
                 ChannelStateEvent e) throws Exception {
-            SSLContext sslContext = getConfig().getSslContext();
+            HttpTunnelingSocketChannelConfig config = getConfig();
+            SSLContext sslContext = config.getSslContext();
             if (sslContext != null) {
                 URI uri = remoteAddress.getUri();
                 SSLEngine engine = sslContext.createSSLEngine(
                         uri.getHost(), uri.getPort());
+
+                // Configure the SSLEngine.
                 engine.setUseClientMode(true);
+                engine.setEnableSessionCreation(config.isEnableSslSessionCreation());
+                String[] enabledCipherSuites = config.getEnabledSslCipherSuites();
+                if (enabledCipherSuites != null) {
+                    engine.setEnabledCipherSuites(enabledCipherSuites);
+                }
+                String[] enabledProtocols = config.getEnabledSslProtocols();
+                if (enabledProtocols != null) {
+                    engine.setEnabledProtocols(enabledProtocols);
+                }
 
                 SocketChannel ch = (SocketChannel) e.getChannel();
                 SslHandler sslHandler = new SslHandler(engine);
