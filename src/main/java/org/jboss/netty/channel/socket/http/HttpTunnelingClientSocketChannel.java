@@ -27,6 +27,7 @@ import static org.jboss.netty.channel.Channels.*;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -77,20 +78,20 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
 
     volatile Thread workerThread;
 
-    String sessionId;
+    volatile String sessionId;
 
-    boolean closed = false;
+    volatile boolean closed = false;
 
-    LinkedTransferQueue<byte[]> messages = new LinkedTransferQueue<byte[]>();
+    final BlockingQueue<byte[]> messages = new LinkedTransferQueue<byte[]>();
 
     private final ClientSocketChannelFactory clientSocketChannelFactory;
 
-    SocketChannel channel;
+    volatile SocketChannel channel;
 
     private final DelimiterBasedFrameDecoder decoder = new DelimiterBasedFrameDecoder(8092, ChannelBuffers.wrappedBuffer(new byte[] { '\r', '\n' }));
     private final HttpTunnelingClientSocketChannel.ServletChannelHandler handler = new ServletChannelHandler();
 
-    private HttpTunnelAddress remoteAddress;
+    volatile HttpTunnelAddress remoteAddress;
 
     HttpTunnelingClientSocketChannel(
             ChannelFactory factory,
@@ -255,8 +256,9 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
                 ChannelStateEvent e) throws Exception {
             SSLContext sslContext = getConfig().getSslContext();
             if (sslContext != null) {
-                // FIXME: specify peer host and port.
-                SSLEngine engine = sslContext.createSSLEngine();
+                URI uri = remoteAddress.getUri();
+                SSLEngine engine = sslContext.createSSLEngine(
+                        uri.getHost(), uri.getPort());
                 engine.setUseClientMode(true);
 
                 SocketChannel ch = (SocketChannel) e.getChannel();
