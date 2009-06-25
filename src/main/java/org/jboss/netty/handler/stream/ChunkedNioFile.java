@@ -25,20 +25,24 @@ package org.jboss.netty.handler.stream;
 import static org.jboss.netty.buffer.ChannelBuffers.*;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 /**
- * A {@link ChunkedInput} that fetches data from a file chunk by chunk.
+ * A {@link ChunkedInput} that fetches data from a file chunk by chunk using
+ * NIO {@link FileChannel}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
+ * @author Frederic Bregier
  * @version $Rev$, $Date$
  */
-public class ChunkedFile implements ChunkedInput {
+public class ChunkedNioFile implements ChunkedInput {
 
-    private final RandomAccessFile file;
-    private final long startOffset;
+    private final FileChannel in;
+    private long startOffset;
     private final long endOffset;
     private final int chunkSize;
     private volatile long offset;
@@ -46,8 +50,8 @@ public class ChunkedFile implements ChunkedInput {
     /**
      * Creates a new instance that fetches data from the specified file.
      */
-    public ChunkedFile(File file) throws IOException {
-        this(file, ChunkedStream.DEFAULT_CHUNK_SIZE);
+    public ChunkedNioFile(File in) throws IOException {
+        this(new FileInputStream(in).getChannel());
     }
 
     /**
@@ -56,15 +60,15 @@ public class ChunkedFile implements ChunkedInput {
      * @param chunkSize the number of bytes to fetch on each
      *                  {@link #nextChunk()} call
      */
-    public ChunkedFile(File file, int chunkSize) throws IOException {
-        this(new RandomAccessFile(file, "r"), chunkSize);
+    public ChunkedNioFile(File in, int chunkSize) throws IOException {
+        this(new FileInputStream(in).getChannel(), chunkSize);
     }
 
     /**
      * Creates a new instance that fetches data from the specified file.
      */
-    public ChunkedFile(RandomAccessFile file) throws IOException {
-        this(file, ChunkedStream.DEFAULT_CHUNK_SIZE);
+    public ChunkedNioFile(FileChannel in) throws IOException {
+        this(in, ChunkedStream.DEFAULT_CHUNK_SIZE);
     }
 
     /**
@@ -73,8 +77,8 @@ public class ChunkedFile implements ChunkedInput {
      * @param chunkSize the number of bytes to fetch on each
      *                  {@link #nextChunk()} call
      */
-    public ChunkedFile(RandomAccessFile file, int chunkSize) throws IOException {
-        this(file, 0, file.length(), chunkSize);
+    public ChunkedNioFile(FileChannel in, int chunkSize) throws IOException {
+        this(in, 0, in.size(), chunkSize);
     }
 
     /**
@@ -85,9 +89,10 @@ public class ChunkedFile implements ChunkedInput {
      * @param chunkSize the number of bytes to fetch on each
      *                  {@link #nextChunk()} call
      */
-    public ChunkedFile(RandomAccessFile file, long offset, long length, int chunkSize) throws IOException {
-        if (file == null) {
-            throw new NullPointerException("file");
+    public ChunkedNioFile(FileChannel in, long offset, long length, int chunkSize)
+            throws IOException {
+        if (in == null) {
+            throw new NullPointerException("in");
         }
         if (offset < 0) {
             throw new IllegalArgumentException(
@@ -103,12 +108,13 @@ public class ChunkedFile implements ChunkedInput {
                     " (expected: a positive integer)");
         }
 
-        this.file = file;
+        if (offset != 0) {
+            in.position(offset);
+        }
+        this.in = in;
+        this.chunkSize = chunkSize;
         this.offset = startOffset = offset;
         endOffset = offset + length;
-        this.chunkSize = chunkSize;
-
-        file.seek(offset);
     }
 
     /**
@@ -133,11 +139,11 @@ public class ChunkedFile implements ChunkedInput {
     }
 
     public boolean hasNextChunk() throws Exception {
-        return offset < endOffset && file.getChannel().isOpen();
+        return offset < endOffset && in.isOpen();
     }
 
     public void close() throws Exception {
-        file.close();
+        in.close();
     }
 
     public Object nextChunk() throws Exception {
@@ -147,9 +153,21 @@ public class ChunkedFile implements ChunkedInput {
         }
 
         int chunkSize = (int) Math.min(this.chunkSize, endOffset - offset);
-        byte[] chunk = new byte[chunkSize];
-        file.readFully(chunk);
-        this.offset = offset + chunkSize;
-        return wrappedBuffer(chunk);
+        byte[] chunkArray = new byte[chunkSize];
+        ByteBuffer chunk = ByteBuffer.wrap(chunkArray);
+        int readBytes = 0;
+        for (;;) {
+            int localReadBytes = in.read(chunk);
+            if (localReadBytes < 0) {
+                break;
+            }
+            readBytes += localReadBytes;
+            if (readBytes == chunkSize) {
+                break;
+            }
+        }
+
+        this.offset += readBytes;
+        return wrappedBuffer(chunkArray);
     }
 }
