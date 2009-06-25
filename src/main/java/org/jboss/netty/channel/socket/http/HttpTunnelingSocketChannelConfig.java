@@ -23,6 +23,7 @@
 package org.jboss.netty.channel.socket.http;
 
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.net.ssl.SSLContext;
 
@@ -132,10 +133,8 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
     }
 
     public void setOptions(Map<String, Object> options) {
-        channel.channel.getConfig().setOptions(options);
-        SSLContext sslContext = (SSLContext) options.get("sslContext");
-        if (sslContext != null) {
-            setSslContext(sslContext);
+        for (Entry<String, Object> e: options.entrySet()) {
+            setOption(e.getKey(), e.getValue());
         }
     }
 
