@@ -33,6 +33,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -43,7 +44,6 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.DefaultChannelPipeline;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -147,7 +147,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         }
     }
 
-    void connectAndSendHeaders(boolean reconnect, HttpTunnelAddress remoteAddress) {
+    void connectAndSendHeaders(boolean reconnect, HttpTunnelAddress remoteAddress) throws SSLException {
         this.remoteAddress = remoteAddress;
         URI url = remoteAddress.getUri();
         if (reconnect) {
@@ -156,6 +156,33 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         }
         SocketAddress connectAddress = new InetSocketAddress(url.getHost(), url.getPort());
         channel.connect(connectAddress).awaitUninterruptibly();
+
+        // Configure SSL
+        HttpTunnelingSocketChannelConfig config = getConfig();
+        SSLContext sslContext = config.getSslContext();
+        if (sslContext != null) {
+            URI uri = remoteAddress.getUri();
+            SSLEngine engine = sslContext.createSSLEngine(
+                    uri.getHost(), uri.getPort());
+
+            // Configure the SSLEngine.
+            engine.setUseClientMode(true);
+            engine.setEnableSessionCreation(config.isEnableSslSessionCreation());
+            String[] enabledCipherSuites = config.getEnabledSslCipherSuites();
+            if (enabledCipherSuites != null) {
+                engine.setEnabledCipherSuites(enabledCipherSuites);
+            }
+            String[] enabledProtocols = config.getEnabledSslProtocols();
+            if (enabledProtocols != null) {
+                engine.setEnabledProtocols(enabledProtocols);
+            }
+
+            SslHandler sslHandler = new SslHandler(engine);
+            channel.getPipeline().addFirst("ssl", sslHandler);
+            sslHandler.handshake(channel).awaitUninterruptibly();
+        }
+
+        // Send the HTTP request.
         StringBuilder builder = new StringBuilder();
         builder.append("POST ").append(url.getRawPath()).append(" HTTP/1.1").append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR).
                 append("Host: ").append(url.getHost()).append(":").append(url.getPort()).append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR).
@@ -250,36 +277,6 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
     @ChannelPipelineCoverage("one")
     class ServletChannelHandler extends SimpleChannelUpstreamHandler {
         int nextChunkSize = -1;
-
-        @Override
-        public void channelConnected(ChannelHandlerContext ctx,
-                ChannelStateEvent e) throws Exception {
-            HttpTunnelingSocketChannelConfig config = getConfig();
-            SSLContext sslContext = config.getSslContext();
-            if (sslContext != null) {
-                URI uri = remoteAddress.getUri();
-                SSLEngine engine = sslContext.createSSLEngine(
-                        uri.getHost(), uri.getPort());
-
-                // Configure the SSLEngine.
-                engine.setUseClientMode(true);
-                engine.setEnableSessionCreation(config.isEnableSslSessionCreation());
-                String[] enabledCipherSuites = config.getEnabledSslCipherSuites();
-                if (enabledCipherSuites != null) {
-                    engine.setEnabledCipherSuites(enabledCipherSuites);
-                }
-                String[] enabledProtocols = config.getEnabledSslProtocols();
-                if (enabledProtocols != null) {
-                    engine.setEnabledProtocols(enabledProtocols);
-                }
-
-                SocketChannel ch = (SocketChannel) e.getChannel();
-                SslHandler sslHandler = new SslHandler(engine);
-                ch.getPipeline().addFirst("ssl", sslHandler);
-
-                sslHandler.handshake(channel);
-            }
-        }
 
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
