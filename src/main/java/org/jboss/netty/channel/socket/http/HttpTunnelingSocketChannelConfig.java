@@ -26,6 +26,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSession;
 
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.ChannelConfig;
@@ -51,6 +53,12 @@ import org.jboss.netty.util.internal.ConversionUtil;
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
  * <td>{@code "sslContext"}</td><td>{@link #setSslContext(SSLContext)}</td>
+ * </tr><tr>
+ * <td>{@code "enabledSslCiperSuites"}</td><td>{@link #setEnabledSslCipherSuites(String[])}</td>
+ * </tr><tr>
+ * <td>{@code "enabledSslProtocols"}</td><td>{@link #setEnabledSslProtocols(String[])}</td>
+ * </tr><tr>
+ * <td>{@code "enableSslSessionCreation"}</td><td>{@link #setEnableSslSessionCreation(boolean)}</td>
  * </tr>
  * </table>
  *
@@ -90,6 +98,12 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
         this.sslContext = sslContext;
     }
 
+    /**
+     * Returns the cipher suites enabled for use on an {@link SSLEngine}.
+     * If {@code null}, the default value will be used.
+     *
+     * @see SSLEngine#getEnabledCipherSuites()
+     */
     public String[] getEnabledSslCipherSuites() {
         String[] suites = enabledSslCipherSuites;
         if (suites == null) {
@@ -99,6 +113,12 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
         }
     }
 
+    /**
+     * Sets the cipher suites enabled for use on an {@link SSLEngine}.
+     * If {@code null}, the default value will be used.
+     *
+     * @see SSLEngine#setEnabledCipherSuites(String[])
+     */
     public void setEnabledSslCipherSuites(String[] suites) {
         if (suites == null) {
             enabledSslCipherSuites = null;
@@ -107,6 +127,11 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
         }
     }
 
+    /**
+     * Returns the protocol versions enabled for use on an {@link SSLEngine}.
+     *
+     * @see SSLEngine#getEnabledProtocols()
+     */
     public String[] getEnabledSslProtocols() {
         String[] protocols = enabledSslProtocols;
         if (protocols == null) {
@@ -116,6 +141,11 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
         }
     }
 
+    /**
+     * Sets the protocol versions enabled for use on an {@link SSLEngine}.
+     *
+     * @see SSLEngine#setEnabledProtocols(String[])
+     */
     public void setEnabledSslProtocols(String[] protocols) {
         if (protocols == null) {
             enabledSslProtocols = null;
@@ -124,10 +154,22 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
         }
     }
 
+    /**
+     * Returns {@code true} if new {@link SSLSession}s may be established by
+     * an {@link SSLEngine}.
+     *
+     * @see SSLEngine#getEnableSessionCreation()
+     */
     public boolean isEnableSslSessionCreation() {
         return enableSslSessionCreation;
     }
 
+    /**
+     * Sets whether new {@link SSLSession}s may be established by an
+     * {@link SSLEngine}.
+     *
+     * @see SSLEngine#setEnableSessionCreation(boolean)
+     */
     public void setEnableSslSessionCreation(boolean flag) {
         enableSslSessionCreation = flag;
     }
