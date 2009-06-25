@@ -22,243 +22,154 @@
  */
 package org.jboss.netty.channel.socket.http;
 
-import java.net.Socket;
-import java.net.SocketException;
+import java.util.Map;
 
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.DefaultChannelConfig;
+import javax.net.ssl.SSLContext;
+
+import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
-import org.jboss.netty.util.internal.ConversionUtil;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */
-final class HttpTunnelingSocketChannelConfig extends DefaultChannelConfig
-                                       implements SocketChannelConfig {
+final class HttpTunnelingSocketChannelConfig implements SocketChannelConfig {
 
-    final Socket socket;
-    private Integer trafficClass;
-    private Boolean tcpNoDelay;
-    private Integer soLinger;
-    private Integer sendBufferSize;
-    private Boolean reuseAddress;
-    private Integer receiveBufferSize;
-    private Integer connectionTime;
-    private Integer latency;
-    private Integer bandwidth;
-    private Boolean keepAlive;
+    private final HttpTunnelingClientSocketChannel channel;
+    private volatile SSLContext sslContext;
 
     /**
      * Creates a new instance.
      */
-    HttpTunnelingSocketChannelConfig(Socket socket) {
-        this.socket = socket;
+    HttpTunnelingSocketChannelConfig(HttpTunnelingClientSocketChannel channel) {
+        this.channel = channel;
     }
 
-    @Override
+    public SSLContext getSslContext() {
+        return sslContext;
+    }
+
+    public void setSslContext(SSLContext sslContext) {
+        this.sslContext = sslContext;
+    }
+
+    public void setOptions(Map<String, Object> options) {
+        channel.channel.getConfig().setOptions(options);
+        SSLContext sslContext = (SSLContext) options.get("sslContext");
+        if (sslContext != null) {
+            setSslContext(sslContext);
+        }
+    }
+
     public boolean setOption(String key, Object value) {
-        if (key.equals("receiveBufferSize")) {
-            setReceiveBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("sendBufferSize")) {
-            setSendBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("tcpNoDelay")) {
-            setTcpNoDelay(ConversionUtil.toBoolean(value));
-        } else if (key.equals("keepAlive")) {
-            setKeepAlive(ConversionUtil.toBoolean(value));
-        } else if (key.equals("reuseAddress")) {
-            setReuseAddress(ConversionUtil.toBoolean(value));
-        } else if (key.equals("soLinger")) {
-            setSoLinger(ConversionUtil.toInt(value));
-        } else if (key.equals("trafficClass")) {
-            setTrafficClass(ConversionUtil.toInt(value));
+        if (channel.channel.getConfig().setOption(key, value)) {
+            return true;
+        }
+
+        if (key.equals("sslContext")) {
+            setSslContext((SSLContext) value);
         } else {
             return false;
         }
+
         return true;
     }
 
     public int getReceiveBufferSize() {
-        try {
-            return socket.getReceiveBufferSize();
-        }
-        catch (SocketException e) {
-            throw new ChannelException(e);
-        }
+        return channel.channel.getConfig().getReceiveBufferSize();
     }
 
     public int getSendBufferSize() {
-        try {
-            return socket.getSendBufferSize();
-        }
-        catch (SocketException e) {
-            throw new ChannelException(e);
-        }
+        return channel.channel.getConfig().getSendBufferSize();
     }
 
     public int getSoLinger() {
-        try {
-            return socket.getSoLinger();
-        }
-        catch (SocketException e) {
-            throw new ChannelException(e);
-        }
+        return channel.channel.getConfig().getSoLinger();
     }
 
     public int getTrafficClass() {
-        try {
-            return socket.getTrafficClass();
-        }
-        catch (SocketException e) {
-            throw new ChannelException(e);
-        }
+        return channel.channel.getConfig().getTrafficClass();
     }
 
     public boolean isKeepAlive() {
-        try {
-            return socket.getKeepAlive();
-        }
-        catch (SocketException e) {
-            throw new ChannelException(e);
-        }
+        return channel.channel.getConfig().isKeepAlive();
     }
 
     public boolean isReuseAddress() {
-        try {
-            return socket.getReuseAddress();
-        }
-        catch (SocketException e) {
-            throw new ChannelException(e);
-        }
+        return channel.channel.getConfig().isReuseAddress();
     }
 
     public boolean isTcpNoDelay() {
-        try {
-            return socket.getTcpNoDelay();
-        }
-        catch (SocketException e) {
-            throw new ChannelException(e);
-        }
+        return channel.channel.getConfig().isTcpNoDelay();
     }
 
     public void setKeepAlive(boolean keepAlive) {
-        this.keepAlive = keepAlive;
-        try {
-            socket.setKeepAlive(keepAlive);
-        }
-        catch (SocketException e) {
-            throw new ChannelException(e);
-        }
+        channel.channel.getConfig().setKeepAlive(keepAlive);
     }
 
     public void setPerformancePreferences(
           int connectionTime, int latency, int bandwidth) {
-        this.connectionTime = connectionTime;
-        this.latency = latency;
-        this.bandwidth = bandwidth;
-        socket.setPerformancePreferences(connectionTime, latency, bandwidth);
-
+        channel.channel.getConfig().setPerformancePreferences(connectionTime, latency, bandwidth);
     }
 
     public void setReceiveBufferSize(int receiveBufferSize) {
-        this.receiveBufferSize = receiveBufferSize;
-        try {
-            socket.setReceiveBufferSize(receiveBufferSize);
-        }
-        catch (SocketException e) {
-            throw new ChannelException(e);
-        }
-
+        channel.channel.getConfig().setReceiveBufferSize(receiveBufferSize);
     }
 
     public void setReuseAddress(boolean reuseAddress) {
-        this.reuseAddress = reuseAddress;
-        try {
-            socket.setReuseAddress(reuseAddress);
-        }
-        catch (SocketException e) {
-            throw new ChannelException(e);
-        }
-
+        channel.channel.getConfig().setReuseAddress(reuseAddress);
     }
 
     public void setSendBufferSize(int sendBufferSize) {
-        this.sendBufferSize = sendBufferSize;
-        if (socket != null) {
-            try {
-                socket.setSendBufferSize(sendBufferSize);
-            }
-            catch (SocketException e) {
-                throw new ChannelException(e);
-            }
-        }
+        channel.channel.getConfig().setSendBufferSize(sendBufferSize);
+
     }
 
     public void setSoLinger(int soLinger) {
-        this.soLinger = soLinger;
-        try {
-            if (soLinger < 0) {
-                socket.setSoLinger(false, 0);
-            }
-            else {
-                socket.setSoLinger(true, soLinger);
-            }
-        }
-        catch (SocketException e) {
-            throw new ChannelException(e);
-        }
-
+        channel.channel.getConfig().setSoLinger(soLinger);
     }
 
     public void setTcpNoDelay(boolean tcpNoDelay) {
-        this.tcpNoDelay = tcpNoDelay;
-        try {
-            socket.setTcpNoDelay(tcpNoDelay);
-        }
-        catch (SocketException e) {
-            throw new ChannelException(e);
-        }
+        channel.channel.getConfig().setTcpNoDelay(tcpNoDelay);
     }
 
     public void setTrafficClass(int trafficClass) {
-        this.trafficClass = trafficClass;
-        try {
-            socket.setTrafficClass(trafficClass);
-        }
-        catch (SocketException e) {
-            throw new ChannelException(e);
-        }
-
+        channel.channel.getConfig().setTrafficClass(trafficClass);
     }
 
-    HttpTunnelingSocketChannelConfig copyConfig(Socket socket) {
-        HttpTunnelingSocketChannelConfig config = new HttpTunnelingSocketChannelConfig(socket);
-        config.setConnectTimeoutMillis(getConnectTimeoutMillis());
-        if (trafficClass != null) {
-            config.setTrafficClass(trafficClass);
-        }
-        if (tcpNoDelay != null) {
-            config.setTcpNoDelay(tcpNoDelay);
-        }
-        if (soLinger != null) {
-            config.setSoLinger(soLinger);
-        }
-        if (sendBufferSize != null) {
-            config.setSendBufferSize(sendBufferSize);
-        }
-        if (reuseAddress != null) {
-            config.setReuseAddress(reuseAddress);
-        }
-        if (receiveBufferSize != null) {
-            config.setReceiveBufferSize(receiveBufferSize);
-        }
-        if (keepAlive != null) {
-            config.setKeepAlive(keepAlive);
-        }
-        if (connectionTime != null) {
-            config.setPerformancePreferences(connectionTime, latency, bandwidth);
-        }
-        return config;
+    public ChannelBufferFactory getBufferFactory() {
+        return channel.channel.getConfig().getBufferFactory();
+    }
+
+    public int getConnectTimeoutMillis() {
+        return channel.channel.getConfig().getConnectTimeoutMillis();
+    }
+
+    public ChannelPipelineFactory getPipelineFactory() {
+        return channel.channel.getConfig().getPipelineFactory();
+    }
+
+    @Deprecated
+    public int getWriteTimeoutMillis() {
+        return channel.channel.getConfig().getWriteTimeoutMillis();
+    }
+
+    public void setBufferFactory(ChannelBufferFactory bufferFactory) {
+        channel.channel.getConfig().setBufferFactory(bufferFactory);
+    }
+
+    public void setConnectTimeoutMillis(int connectTimeoutMillis) {
+        channel.channel.getConfig().setConnectTimeoutMillis(connectTimeoutMillis);
+    }
+
+    public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
+        channel.channel.getConfig().setPipelineFactory(pipelineFactory);
+    }
+
+    @Deprecated
+    public void setWriteTimeoutMillis(int writeTimeoutMillis) {
+        channel.channel.getConfig().setWriteTimeoutMillis(writeTimeoutMillis);
     }
 }

@@ -30,6 +30,9 @@ import java.net.URI;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.AbstractChannel;
@@ -39,14 +42,15 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.DefaultChannelPipeline;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
-import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
+import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
@@ -63,6 +67,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(HttpTunnelingClientSocketChannel.class);
 
+    private final HttpTunnelingSocketChannelConfig config;
     private final Lock reconnectLock = new ReentrantLock();
 
     volatile boolean awaitingInitialResponse = true;
@@ -82,9 +87,8 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
 
     SocketChannel channel;
 
-    private final DelimiterBasedFrameDecoder handler = new DelimiterBasedFrameDecoder(8092, ChannelBuffers.wrappedBuffer(new byte[] { '\r', '\n' }));
-
-    private final HttpTunnelingClientSocketChannel.ServletChannelHandler servletHandler = new ServletChannelHandler();
+    private final DelimiterBasedFrameDecoder decoder = new DelimiterBasedFrameDecoder(8092, ChannelBuffers.wrappedBuffer(new byte[] { '\r', '\n' }));
+    private final HttpTunnelingClientSocketChannel.ServletChannelHandler handler = new ServletChannelHandler();
 
     private HttpTunnelAddress remoteAddress;
 
@@ -94,18 +98,16 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
             ChannelSink sink, ClientSocketChannelFactory clientSocketChannelFactory) {
 
         super(null, factory, pipeline, sink);
+
         this.clientSocketChannelFactory = clientSocketChannelFactory;
 
-        DefaultChannelPipeline channelPipeline = new DefaultChannelPipeline();
-        channelPipeline.addLast("DelimiterBasedFrameDecoder", handler);
-        channelPipeline.addLast("servletHandler", servletHandler);
-        channel = clientSocketChannelFactory.newChannel(channelPipeline);
-
+        createSocketChannel();
+        config = new HttpTunnelingSocketChannelConfig(this);
         fireChannelOpen(this);
     }
 
-    public SocketChannelConfig getConfig() {
-        return channel.getConfig();
+    public HttpTunnelingSocketChannelConfig getConfig() {
+        return config;
     }
 
     public InetSocketAddress getLocalAddress() {
@@ -117,7 +119,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
     }
 
     public boolean isBound() {
-        return channel.isOpen();
+        return channel.isBound();
     }
 
     public boolean isConnected() {
@@ -149,10 +151,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         URI url = remoteAddress.getUri();
         if (reconnect) {
             closeSocket();
-            DefaultChannelPipeline channelPipeline = new DefaultChannelPipeline();
-            channelPipeline.addLast("DelimiterBasedFrameDecoder", handler);
-            channelPipeline.addLast("servletHandler", servletHandler);
-            channel = clientSocketChannelFactory.newChannel(channelPipeline);
+            createSocketChannel();
         }
         SocketAddress connectAddress = new InetSocketAddress(url.getHost(), url.getPort());
         channel.connect(connectAddress).awaitUninterruptibly();
@@ -168,6 +167,16 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         builder.append(HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR);
         String msg = builder.toString();
         channel.write(ChannelBuffers.copiedBuffer(msg, "ASCII"));
+    }
+
+    /**
+     *
+     */
+    private void createSocketChannel() {
+        DefaultChannelPipeline channelPipeline = new DefaultChannelPipeline();
+        channelPipeline.addLast("decoder", decoder);
+        channelPipeline.addLast("handler", handler);
+        channel = clientSocketChannelFactory.newChannel(channelPipeline);
     }
 
     int sendChunk(ChannelBuffer a) {
@@ -240,6 +249,23 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
     @ChannelPipelineCoverage("one")
     class ServletChannelHandler extends SimpleChannelUpstreamHandler {
         int nextChunkSize = -1;
+
+        @Override
+        public void channelConnected(ChannelHandlerContext ctx,
+                ChannelStateEvent e) throws Exception {
+            SSLContext sslContext = getConfig().getSslContext();
+            if (sslContext != null) {
+                // FIXME: specify peer host and port.
+                SSLEngine engine = sslContext.createSSLEngine();
+                engine.setUseClientMode(true);
+
+                SocketChannel ch = (SocketChannel) e.getChannel();
+                SslHandler sslHandler = new SslHandler(engine);
+                ch.getPipeline().addFirst("ssl", sslHandler);
+
+                sslHandler.handshake(channel);
+            }
+        }
 
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
