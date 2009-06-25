@@ -117,7 +117,15 @@ class OioWorker implements Runnable {
     static void write(
             OioSocketChannel channel, ChannelFuture future,
             Object message) {
+
         OutputStream out = channel.getOutputStream();
+        if (out == null) {
+            Exception e = new ClosedChannelException();
+            future.setFailure(e);
+            fireExceptionCaught(channel, e);
+            return;
+        }
+
         try {
             ChannelBuffer a = (ChannelBuffer) message;
             int bytes = a.readableBytes();
