@@ -27,15 +27,37 @@ import java.util.Map;
 import javax.net.ssl.SSLContext;
 
 import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 
 /**
+ * The {@link ChannelConfig} of a client-side HTTP tunneling
+ * {@link SocketChannel}.  A {@link SocketChannel} created by
+ * {@link HttpTunnelingClientSocketChannelFactory} will return an instance of
+ * this configuration type for {@link SocketChannel#getConfig()}.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options provided by {@link SocketChannelConfig},
+ * {@link HttpTunnelingSocketChannelConfig} allows the following options in
+ * the option map:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th><th>Associated setter method</th>
+ * </tr><tr>
+ * <td>{@code "sslContext"}</td><td>{@link #setSslContext(SSLContext)}</td>
+ * </tr>
+ * </table>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-final class HttpTunnelingSocketChannelConfig implements SocketChannelConfig {
+public final class HttpTunnelingSocketChannelConfig implements SocketChannelConfig {
 
     private final HttpTunnelingClientSocketChannel channel;
     private volatile SSLContext sslContext;
@@ -47,10 +69,18 @@ final class HttpTunnelingSocketChannelConfig implements SocketChannelConfig {
         this.channel = channel;
     }
 
+    /**
+     * Returns the {@link SSLContext} which is used to establish an HTTPS
+     * connection.  If {@code null}, a plain-text HTTP connection is established.
+     */
     public SSLContext getSslContext() {
         return sslContext;
     }
 
+    /**
+     * Sets the {@link SSLContext} which is used to establish an HTTPS connection.
+     * If {@code null}, a plain-text HTTP connection is established.
+     */
     public void setSslContext(SSLContext sslContext) {
         this.sslContext = sslContext;
     }
