@@ -73,8 +73,18 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
             setReceiveBufferSize(ConversionUtil.toInt(value));
         } else if (key.equals("sendBufferSize")) {
             setSendBufferSize(ConversionUtil.toInt(value));
+        } else if (key.equals("receiveBufferSizePredictor")) {
+            setReceiveBufferSizePredictor((ReceiveBufferSizePredictor) value);
         } else if (key.equals("reuseAddress")) {
             setReuseAddress(ConversionUtil.toBoolean(value));
+        } else if (key.equals("loopbackModeDisabled")) {
+            setLoopbackModeDisabled(ConversionUtil.toBoolean(value));
+        } else if (key.equals("interface")) {
+            setInterface((InetAddress) value);
+        } else if (key.equals("networkInterface")) {
+            setNetworkInterface((NetworkInterface) value);
+        } else if (key.equals("timeToLive")) {
+            setTimeToLive(ConversionUtil.toInt(value));
         } else if (key.equals("trafficClass")) {
             setTrafficClass(ConversionUtil.toInt(value));
         } else {
