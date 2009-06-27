@@ -25,7 +25,6 @@ package org.jboss.netty.channel.socket.nio;
 import java.net.DatagramSocket;
 import java.util.Map;
 
-import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.channel.socket.DefaultDatagramChannelConfig;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -81,8 +80,6 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
             setWriteBufferLowWaterMark0(ConversionUtil.toInt(value));
         } else if (key.equals("writeSpinCount")) {
             setWriteSpinCount(ConversionUtil.toInt(value));
-        } else if (key.equals("receiveBufferSizePredictor")) {
-            setReceiveBufferSizePredictor((ReceiveBufferSizePredictor) value);
         } else {
             return false;
         }
