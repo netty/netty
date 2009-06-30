@@ -22,7 +22,8 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.*;
+import static org.jboss.netty.channel.Channels.fireChannelInterestChanged;
+import static org.jboss.netty.channel.Channels.fireChannelOpen;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -121,6 +122,7 @@ class NioDatagramChannel extends AbstractChannel
     volatile boolean inWriteNowLoop;
 
     private volatile InetSocketAddress localAddress;
+    volatile InetSocketAddress remoteAddress;
 
     NioDatagramChannel(final ChannelFactory factory,
             final ChannelPipeline pipeline, final ChannelSink sink,
@@ -158,12 +160,17 @@ class NioDatagramChannel extends AbstractChannel
     }
 
     public InetSocketAddress getRemoteAddress() {
-        try {
-            return (InetSocketAddress) datagramChannel.socket().getRemoteSocketAddress();
-        } catch (Throwable t) {
-            // Sometimes fails on a closed socket in Windows.
-            return null;
+        InetSocketAddress remoteAddress = this.remoteAddress;
+        if (remoteAddress == null) {
+            try {
+                this.remoteAddress = remoteAddress =
+                    (InetSocketAddress) datagramChannel.socket().getRemoteSocketAddress();
+            } catch (Throwable t) {
+                // Sometimes fails on a closed socket in Windows.
+                return null;
+            }
         }
+        return remoteAddress;
     }
 
     public boolean isBound() {

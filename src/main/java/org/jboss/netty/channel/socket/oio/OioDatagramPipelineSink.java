@@ -22,7 +22,9 @@
  */
 package org.jboss.netty.channel.socket.oio;
 
-import static org.jboss.netty.channel.Channels.*;
+import static org.jboss.netty.channel.Channels.fireChannelBound;
+import static org.jboss.netty.channel.Channels.fireChannelConnected;
+import static org.jboss.netty.channel.Channels.fireExceptionCaught;
 
 import java.net.SocketAddress;
 import java.util.concurrent.Executor;
@@ -134,6 +136,10 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
         boolean workerStarted = false;
 
         future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+
+        // Clear the cached address so that the next getRemoteAddress() call
+        // updates the cache.
+        channel.remoteAddress = null;
 
         try {
             channel.socket.connect(remoteAddress);
