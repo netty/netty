@@ -113,7 +113,7 @@ public class HttpTunnelingClientExample {
             System.err.println("Only HTTP is supported.");
             return;
         }
-        HttpTunnelingClientSocketChannelFactory factory = new HttpTunnelingClientSocketChannelFactory(new OioClientSocketChannelFactory(Executors.newCachedThreadPool()), Executors.newCachedThreadPool());
+        HttpTunnelingClientSocketChannelFactory factory = new HttpTunnelingClientSocketChannelFactory(new OioClientSocketChannelFactory(Executors.newCachedThreadPool()));
         ClientBootstrap bootstrap = new ClientBootstrap(factory);
         bootstrap.getPipeline().addLast("decoder", new StringDecoder());
         bootstrap.getPipeline().addLast("encoder", new StringEncoder());

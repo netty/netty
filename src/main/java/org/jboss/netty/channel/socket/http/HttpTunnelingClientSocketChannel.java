@@ -27,9 +27,6 @@ import static org.jboss.netty.channel.Channels.*;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -43,6 +40,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.DefaultChannelPipeline;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -65,7 +63,6 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -82,7 +79,6 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
     private static final String JSESSIONID = "JSESSIONID";
 
     private final HttpTunnelingSocketChannelConfig config;
-    private final Lock reconnectLock = new ReentrantLock();
 
     volatile boolean awaitingInitialResponse = true;
 
@@ -94,8 +90,6 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
     volatile String sessionId;
 
     volatile boolean closed = false;
-
-    final BlockingQueue<ChannelBuffer> messages = new LinkedTransferQueue<ChannelBuffer>();
 
     private final ClientSocketChannelFactory clientSocketChannelFactory;
 
@@ -138,15 +132,26 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
     public boolean isConnected() {
         return channel.isConnected();
     }
+    
+    @Override
+    public int getInterestOps() {
+        return channel.getInterestOps();
+    }
+    
+    @Override
+    public boolean isWritable() {
+        return channel.isWritable();
+    }
+    
+    @Override
+    public ChannelFuture setInterestOps(int interestOps) {
+        // TODO: Wrap the future.
+        return channel.setInterestOps(interestOps);
+    }
 
     @Override
     protected boolean setClosed() {
         return super.setClosed();
-    }
-
-    @Override
-    protected void setInterestOpsNow(int interestOps) {
-        super.setInterestOpsNow(interestOps);
     }
 
     @Override
@@ -231,38 +236,6 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         return size + hex.length() + HttpTunnelingClientSocketPipelineSink.LINE_TERMINATOR.length();
     }
 
-    ChannelBuffer receiveChunk() {
-        ChannelBuffer buf = null;
-        try {
-            buf = messages.take();
-        }
-        catch (InterruptedException e) {
-            // Ignore
-        }
-        return buf;
-    }
-
-    void reconnect() throws Exception {
-        if (closed) {
-            throw new IllegalStateException("channel closed");
-        }
-        // XXX: What if a user writes something during the connection attempt?
-        if (reconnectLock.tryLock()) {
-            try {
-                awaitingInitialResponse = true;
-                connectAndSendHeaders(true, remoteAddress);
-            } finally {
-                reconnectLock.unlock();
-            }
-        } else {
-            try {
-                reconnectLock.lock();
-            } finally {
-                reconnectLock.unlock();
-            }
-        }
-    }
-
     void closeSocket() {
         if (setClosed()) {
             // Send the end of chunk.
@@ -295,10 +268,6 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
                     newSessionId = getSessionId(res, HttpHeaders.Names.SET_COOKIE2);
                 }
                 
-                if (newSessionId == null) {
-                    // XXX: Server does not support JSESSIONID?
-                }
-                
                 // XXX: Utilize keep-alive if possible to reduce reconnection overhead.
                 // XXX: Consider non-200 status code.
                 //      If the status code is not 200, no more reconnection attempt
@@ -314,19 +283,30 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
                 } else {
                     ChannelBuffer content = res.getContent();
                     if (content.readable()) {
-                        System.out.println("1: " + content.toString("ISO-8859-1"));
-                        messages.offer(content);
+                        fireMessageReceived(channel, content);
                     }
                 }
             } else {
                 HttpChunk chunk = (HttpChunk) e.getMessage();
                 if (!chunk.isLast()) {
-                    System.out.println("2: " + chunk.getContent());
-                    messages.offer(chunk.getContent());
+                    fireMessageReceived(channel, chunk.getContent());
                 } else {
                     readingChunks = false;
                 }
                 
+            }
+        }
+
+        @Override
+        public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
+                throws Exception {
+            if (sessionId != null) {
+                // TODO Reconnect.
+            } else {
+                // sessionId is null if:
+                // 1) A user closed the channel explicitly, or
+                // 2) The server does not support JSESSIONID.
+                channel.close();
             }
         }
 

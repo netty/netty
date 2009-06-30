@@ -25,8 +25,8 @@ package org.jboss.netty.channel.socket.http;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.net.SocketAddress;
-import java.util.concurrent.Executor;
 
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
@@ -35,8 +35,6 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.IoWorkerRunnable;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -47,10 +45,9 @@ import org.jboss.netty.util.internal.IoWorkerRunnable;
 final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
 
     static final String LINE_TERMINATOR = "\r\n";
-    private final Executor workerExecutor;
 
-    HttpTunnelingClientSocketPipelineSink(Executor workerExecutor) {
-        this.workerExecutor = workerExecutor;
+    HttpTunnelingClientSocketPipelineSink() {
+        super();
     }
 
     public void eventSunk(
@@ -64,31 +61,52 @@ final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
             switch (state) {
             case OPEN:
                 if (Boolean.FALSE.equals(value)) {
-                    HttpTunnelWorker.close(channel, future);
+                    close(channel, future);
                 }
                 break;
             case BOUND:
                 if (value != null) {
                     bind(channel, future, (SocketAddress) value);
                 } else {
-                    HttpTunnelWorker.close(channel, future);
+                    close(channel, future);
                 }
                 break;
             case CONNECTED:
                 if (value != null) {
                     connect(channel, future, (HttpTunnelAddress) value);
                 } else {
-                    HttpTunnelWorker.close(channel, future);
+                    close(channel, future);
                 }
                 break;
             case INTEREST_OPS:
-                HttpTunnelWorker.setInterestOps(channel, future, ((Integer) value).intValue());
+                final ChannelFuture actualFuture = future;
+                setInterestOps(channel.channel, ((Integer) value).intValue()).addListener(
+                        new ChannelFutureListener() {
+                            public void operationComplete(ChannelFuture future)
+                                    throws Exception {
+                                if (future.isSuccess()) {
+                                    actualFuture.setSuccess();
+                                } else {
+                                    actualFuture.setFailure(future.getCause());
+                                }
+                            }
+                        });
                 break;
             }
         } else if (e instanceof MessageEvent) {
-            HttpTunnelWorker.write(
-                    channel, future,
-                    ((MessageEvent) e).getMessage());
+            write(channel, (ChannelBuffer) ((MessageEvent) e).getMessage(), future);
+        }
+    }
+
+    private void write(HttpTunnelingClientSocketChannel channel, ChannelBuffer msg, ChannelFuture future) {
+        try {
+            int writtenBytes = channel.sendChunk(msg);
+            future.setSuccess();
+            fireWriteComplete(channel, writtenBytes);
+        }
+        catch (Throwable t) {
+            future.setFailure(t);
+            fireExceptionCaught(channel, t);
         }
     }
 
@@ -110,8 +128,6 @@ final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
             HttpTunnelAddress remoteAddress) {
 
         boolean bound = channel.isBound();
-        boolean connected = false;
-        boolean workerStarted = false;
 
         future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
 
@@ -123,25 +139,36 @@ final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
                 fireChannelBound(channel, channel.getLocalAddress());
             }
             fireChannelConnected(channel, channel.getRemoteAddress());
-
-            // Start the business.
-            workerExecutor.execute(
-                    new IoWorkerRunnable(
-                            new ThreadRenamingRunnable(
-                                    new HttpTunnelWorker(channel),
-                                    "HTTP Tunnel I/O client worker (channelId: " +
-                                    channel.getId() + ", " +
-                                    channel.getLocalAddress() + " => " +
-                                    channel.getRemoteAddress() + ')')));
-            workerStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
             fireExceptionCaught(channel, t);
         } finally {
-            if (connected && !workerStarted) {
-                HttpTunnelWorker.close(channel, future);
-            }
+            // FIXME: Rewrite exception handling.
         }
     }
-
+    
+    private void close(
+            HttpTunnelingClientSocketChannel channel, ChannelFuture future) {
+        boolean connected = channel.isConnected();
+        boolean bound = channel.isBound();  
+        try {
+            channel.closeSocket();
+            if (channel.setClosed()) {
+                future.setSuccess();
+                if (connected) {
+                    fireChannelDisconnected(channel);
+                }
+                if (bound) {
+                    fireChannelUnbound(channel);
+                }
+                fireChannelClosed(channel);
+            } else {
+                future.setSuccess();
+            }
+        }
+        catch (Throwable t) {
+            future.setFailure(t);
+            fireExceptionCaught(channel, t);
+        }
+    }
 }

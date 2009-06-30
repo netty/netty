@@ -22,13 +22,10 @@
  */
 package org.jboss.netty.channel.socket.http;
 
-import java.util.concurrent.Executor;
-
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
-import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
  * Creates a client-side {@link SocketChannel} which connects to an
@@ -42,39 +39,14 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  */
 public class HttpTunnelingClientSocketChannelFactory implements ClientSocketChannelFactory {
 
-    private final Executor workerExecutor;
-    private final ChannelSink sink;
-    ClientSocketChannelFactory clientSocketChannelFactory;
-
-    /**
-     *
-     * @param workerExecutor
-     */
-    public HttpTunnelingClientSocketChannelFactory(ClientSocketChannelFactory clientSocketChannelFactory, Executor workerExecutor) {
-        this(workerExecutor, Runtime.getRuntime().availableProcessors());
-        this.clientSocketChannelFactory = clientSocketChannelFactory;
-    }
+    private final ChannelSink sink = new HttpTunnelingClientSocketPipelineSink();
+    private final ClientSocketChannelFactory clientSocketChannelFactory;
 
     /**
      * Creates a new instance.
-     *
-     *        the {@link java.util.concurrent.Executor} which will execute the boss thread
-     * @param workerExecutor
-     *        the {@link java.util.concurrent.Executor} which will execute the I/O worker threads
-     * @param workerCount
      */
-    public HttpTunnelingClientSocketChannelFactory(Executor workerExecutor, int workerCount) {
-        if (workerExecutor == null) {
-            throw new NullPointerException("workerExecutor");
-        }
-        if (workerCount <= 0) {
-            throw new IllegalArgumentException(
-                    "workerCount (" + workerCount + ") " +
-                    "must be a positive integer.");
-        }
-
-        this.workerExecutor = workerExecutor;
-        sink = new HttpTunnelingClientSocketPipelineSink(workerExecutor);
+    public HttpTunnelingClientSocketChannelFactory(ClientSocketChannelFactory clientSocketChannelFactory) {
+        this.clientSocketChannelFactory = clientSocketChannelFactory;
     }
 
     public SocketChannel newChannel(ChannelPipeline pipeline) {
@@ -83,6 +55,5 @@ public class HttpTunnelingClientSocketChannelFactory implements ClientSocketChan
 
     public void releaseExternalResources() {
         clientSocketChannelFactory.releaseExternalResources();
-        ExecutorUtil.terminate(workerExecutor);
     }
 }
