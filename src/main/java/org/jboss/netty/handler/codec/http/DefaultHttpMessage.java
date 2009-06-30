@@ -23,6 +23,7 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -207,7 +208,12 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public List<String> getHeaders(final String name) {
-        return headers.get(name);
+        List<String> values = headers.get(name);
+        if (values == null) {
+            return Collections.emptyList();
+        } else {
+            return values;
+        }
     }
 
     public boolean containsHeader(final String name) {

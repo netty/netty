@@ -52,8 +52,8 @@ public interface HttpMessage {
     /**
      * Returns the header values with the specified header name.
      *
-     * @return the {@link List} of header values of {@code null} if there is
-     *         no such header
+     * @return the {@link List} of header values.  An empty list if there is no
+     *         such header.
      */
     List<String> getHeaders(String name);
 
