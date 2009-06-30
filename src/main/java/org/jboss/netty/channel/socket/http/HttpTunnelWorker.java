@@ -25,7 +25,6 @@ package org.jboss.netty.channel.socket.http;
 import static org.jboss.netty.channel.Channels.*;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 
@@ -62,7 +61,7 @@ final class HttpTunnelWorker implements Runnable {
                 }
             }
 
-            byte[] buf;
+            ChannelBuffer buf;
             try {
                 buf = channel.receiveChunk();
             }
@@ -74,11 +73,7 @@ final class HttpTunnelWorker implements Runnable {
             }
 
             if (buf != null) {
-                fireMessageReceived(
-                        channel,
-                        ChannelBuffers.wrappedBuffer(
-                                channel.getConfig().getBufferFactory().getDefaultOrder(),
-                                buf));
+                fireMessageReceived(channel, buf);
             }
         }
 
