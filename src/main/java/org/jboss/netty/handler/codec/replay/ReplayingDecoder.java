@@ -435,8 +435,9 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
 
             if (oldReaderIndex == cumulation.readerIndex() && oldState == state) {
                 throw new IllegalStateException(
-                        "decode() method must consume at least one byte "
-                                + "if it returned a decoded message.");
+                        "decode() method must consume at least one byte " +
+                        "if it returned a decoded message (caused by: " +
+                        getClass() + ")");
             }
 
             // A successful decode
