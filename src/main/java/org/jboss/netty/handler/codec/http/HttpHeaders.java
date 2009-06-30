@@ -204,6 +204,10 @@ public final class HttpHeaders {
          */
         public static final String SET_COOKIE = "Set-Cookie";
         /**
+         * {@code "Set-Cookie2"}
+         */
+        public static final String SET_COOKIE2 = "Set-Cookie2";
+        /**
          * {@code "TE"}
          */
         public static final String TE = "TE";
