@@ -73,7 +73,7 @@ final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
                 break;
             case CONNECTED:
                 if (value != null) {
-                    connect(channel, future, (HttpTunnelAddress) value);
+                    channel.connectAndSendHeaders(false, ((HttpTunnelAddress) value), future);
                 } else {
                     close(channel, future);
                 }
@@ -94,19 +94,7 @@ final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
                 break;
             }
         } else if (e instanceof MessageEvent) {
-            write(channel, (ChannelBuffer) ((MessageEvent) e).getMessage(), future);
-        }
-    }
-
-    private void write(HttpTunnelingClientSocketChannel channel, ChannelBuffer msg, ChannelFuture future) {
-        try {
-            int writtenBytes = channel.sendChunk(msg);
-            future.setSuccess();
-            fireWriteComplete(channel, writtenBytes);
-        }
-        catch (Throwable t) {
-            future.setFailure(t);
-            fireExceptionCaught(channel, t);
+            channel.sendChunk(((ChannelBuffer) ((MessageEvent) e).getMessage()), future);
         }
     }
 
@@ -123,30 +111,6 @@ final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
         }
     }
 
-    private void connect(
-            HttpTunnelingClientSocketChannel channel, ChannelFuture future,
-            HttpTunnelAddress remoteAddress) {
-
-        boolean bound = channel.isBound();
-
-        future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-
-        try {
-            channel.connectAndSendHeaders(false, remoteAddress);
-            // Fire events.
-            future.setSuccess();
-            if (!bound) {
-                fireChannelBound(channel, channel.getLocalAddress());
-            }
-            fireChannelConnected(channel, channel.getRemoteAddress());
-        } catch (Throwable t) {
-            future.setFailure(t);
-            fireExceptionCaught(channel, t);
-        } finally {
-            // FIXME: Rewrite exception handling.
-        }
-    }
-    
     private void close(
             HttpTunnelingClientSocketChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
