@@ -96,6 +96,10 @@ public final class HttpHeaders {
          */
         public static final String CONTENT_LOCATION = "Content-Location";
         /**
+         * {@code "Content-Transfer-Encoding"}
+         */
+        public static final String CONTENT_TRANSFER_ENCODING = "Content-Transfer-Encoding";
+        /**
          * {@code "Content-MD5"}
          */
         public static final String CONTENT_MD5 = "Content-MD5";
@@ -250,6 +254,14 @@ public final class HttpHeaders {
      */
     public static final class Values {
         /**
+         * {@code "base64"}
+         */
+        public static final String BASE64 = "base64";
+        /**
+         * {@code "binary"}
+         */
+        public static final String BINARY = "binary";
+        /**
          * {@code "bytes"}
          */
         public static final String BYTES = "bytes";
@@ -337,6 +349,10 @@ public final class HttpHeaders {
          * {@code "public"}
          */
         public static final String PUBLIC = "public";
+        /**
+         * {@code "quoted-printable"}
+         */
+        public static final String QUOTED_PRINTABLE = "quoted-printable";
         /**
          * {@code "s-maxage"}
          */
