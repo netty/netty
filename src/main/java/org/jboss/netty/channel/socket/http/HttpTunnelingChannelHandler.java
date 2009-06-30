@@ -127,11 +127,6 @@ class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
                     // Close the outbound connection.
                     invalidateHttpSession();
                     e.getChannel().close();
-                    // XXX: What happens if the client connects to
-                    //      the server at this point with the old session ID?
-                    //      We have to make sure no new session is created,
-                    //      perhaps by keeping an LRU cache of the destroyed
-                    //      session IDs.
                 }
             } finally {
                 reconnectLock.unlock();
