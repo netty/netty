@@ -292,11 +292,9 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         if (setClosed()) {
             // Send the end of chunk.
             synchronized (writeLock) {
-                channel.write(HttpChunk.LAST_CHUNK).awaitUninterruptibly();
+                channel.write(HttpChunk.LAST_CHUNK).addListener(ChannelFutureListener.CLOSE);
             }
-
             closed = true;
-            channel.close();
         }
     }
 
