@@ -449,8 +449,7 @@ public class Channels {
      * @param interestOps the new interestOps
      */
     @Deprecated
-    public static void fireChannelInterestChanged(
-            Channel channel, @SuppressWarnings("unused") int interestOps) {
+    public static void fireChannelInterestChanged(Channel channel, int interestOps) {
         fireChannelInterestChanged(channel);
     }
 
@@ -474,13 +473,12 @@ public class Channels {
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} where
      * the specified {@link ChannelHandlerContext} belongs.
      *
+     * @param channel     the {@link Channel}
      * @param interestOps the new interestOps
      */
     @Deprecated
     public static void fireChannelInterestChanged(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel,
-            @SuppressWarnings("unused") int interestOps) {
+            ChannelHandlerContext ctx, Channel channel, int interestOps) {
 
         fireChannelInterestChanged(ctx);
     }
@@ -691,8 +689,7 @@ public class Channels {
      */
     @Deprecated
     public static void bind(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel,
+            ChannelHandlerContext ctx, Channel channel,
             ChannelFuture future, SocketAddress localAddress) {
         bind(ctx, future, localAddress);
     }
@@ -725,9 +722,7 @@ public class Channels {
      */
     @Deprecated
     public static void unbind(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel,
-            ChannelFuture future) {
+            ChannelHandlerContext ctx, Channel channel, ChannelFuture future) {
         unbind(ctx, future);
     }
 
@@ -803,8 +798,7 @@ public class Channels {
      */
     @Deprecated
     public static void connect(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel,
+            ChannelHandlerContext ctx, Channel channel,
             ChannelFuture future, SocketAddress remoteAddress) {
         connect(ctx, future, remoteAddress);
     }
@@ -852,8 +846,7 @@ public class Channels {
      */
     @Deprecated
     public static void write(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel,
+            ChannelHandlerContext ctx, Channel channel,
             ChannelFuture future, Object message) {
         write(ctx, future, message, null);
     }
@@ -914,8 +907,7 @@ public class Channels {
      */
     @Deprecated
     public static void write(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel,
+            ChannelHandlerContext ctx, Channel channel,
             ChannelFuture future, Object message, SocketAddress remoteAddress) {
         write(ctx, future, message, remoteAddress);
     }
@@ -975,8 +967,7 @@ public class Channels {
      */
     @Deprecated
     public static void setInterestOps(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel,
+            ChannelHandlerContext ctx, Channel channel,
             ChannelFuture future, int interestOps) {
         setInterestOps(ctx, future, interestOps);
     }
@@ -1024,8 +1015,7 @@ public class Channels {
      */
     @Deprecated
     public static void disconnect(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel, ChannelFuture future) {
+            ChannelHandlerContext ctx, Channel channel, ChannelFuture future) {
         disconnect(ctx, future);
     }
 
@@ -1072,8 +1062,7 @@ public class Channels {
      */
     @Deprecated
     public static void close(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel, ChannelFuture future) {
+            ChannelHandlerContext ctx, Channel channel, ChannelFuture future) {
         close(ctx, future);
     }
 
