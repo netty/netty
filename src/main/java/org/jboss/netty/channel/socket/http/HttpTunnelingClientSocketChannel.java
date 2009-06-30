@@ -22,7 +22,8 @@
  */
 package org.jboss.netty.channel.socket.http;
 
-import static org.jboss.netty.channel.Channels.*;
+import static org.jboss.netty.channel.Channels.fireChannelOpen;
+import static org.jboss.netty.channel.Channels.fireExceptionCaught;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -237,6 +238,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         if (closed) {
             throw new IllegalStateException("channel closed");
         }
+        // XXX: What if a user writes something during the connection attempt?
         if (reconnectLock.tryLock()) {
             try {
                 awaitingInitialResponse = true;
@@ -284,8 +286,17 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
             byte[] bytes = new byte[buf.readableBytes()];
             buf.getBytes(0, bytes);
             if (awaitingInitialResponse) {
+                // XXX: This is fragile - should use HTTP codec.
+                // XXX: Utilize keep-alive if possible to reduce reconnection overhead.
+                // XXX: Consider non-200 status code.
+                //      If the status code is not 200, no more reconnection attempt
+                //      should be made.
                 String line = new String(bytes);
                 if (line.contains("Set-Cookie")) {
+                    // XXX: Session ID length can be different between containers.
+                    // XXX: If the session ID in the response is different from
+                    //      the session ID specified in the request, then it means
+                    //      the session has timed out.  If so, channel must be closed.
                     int start = line.indexOf("JSESSIONID=") + 11;
                     int end = line.indexOf(";", start);
                     sessionId = line.substring(start, end);

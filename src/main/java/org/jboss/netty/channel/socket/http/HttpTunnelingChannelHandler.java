@@ -106,7 +106,14 @@ class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
             } catch (Exception ex) {
                 success = false;
                 cause = ex;
+                // If the inbound connection was closed before
+                // forwarding the received message, wait for
+                // a while (reconnectTimeoutMillis) so that the
+                // client can recover from the disconnection.
                 if (awaitReconnect()) {
+                    // Write again if the client reconnected.
+                    // XXX: What if failed consecutively?
+                    //      We need a loop instead of nested exception handling.
                     try {
                         outputStream.write(b);
                         outputStream.flush();
@@ -116,8 +123,15 @@ class HttpTunnelingChannelHandler extends SimpleChannelUpstreamHandler {
                         cause = ex2;
                     }
                 } else {
+                    // Client did not reconnect within the reconnect timeout.
+                    // Close the outbound connection.
                     invalidateHttpSession();
                     e.getChannel().close();
+                    // XXX: What happens if the client connects to
+                    //      the server at this point with the old session ID?
+                    //      We have to make sure no new session is created,
+                    //      perhaps by keeping an LRU cache of the destroyed
+                    //      session IDs.
                 }
             } finally {
                 reconnectLock.unlock();
