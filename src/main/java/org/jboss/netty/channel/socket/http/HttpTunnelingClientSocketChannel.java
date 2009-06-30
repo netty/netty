@@ -146,8 +146,20 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
     
     @Override
     public ChannelFuture setInterestOps(int interestOps) {
-        // TODO: Wrap the future.
-        return channel.setInterestOps(interestOps);
+        final ChannelFuture future = future(this);
+        channel.setInterestOps(interestOps).addListener(new ChannelFutureListener() {
+            public void operationComplete(ChannelFuture f)
+                    throws Exception {
+                if (f.isSuccess()) {
+                    future.setSuccess();
+                    fireChannelInterestChanged(HttpTunnelingClientSocketChannel.this);
+                } else {
+                    future.setFailure(f.getCause());
+                    fireExceptionCaught(HttpTunnelingClientSocketChannel.this, f.getCause());
+                }
+            }
+        });
+        return future;
     }
 
     @Override
