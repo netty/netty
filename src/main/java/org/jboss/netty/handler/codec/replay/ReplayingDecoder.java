@@ -324,7 +324,21 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
         state = newState;
         return oldState;
     }
-
+    
+    /**
+     * Returns the actual number of readable bytes in the cumulative buffer
+     * of this decoder.  You do not need to rely on this value to write a
+     * decoder.  Use it only when necessary.
+     */
+    protected int actualReadableBytes() {
+        ChannelBuffer buf = cumulation.get();
+        if (buf == null) {
+            return 0;
+        }
+        
+        return buf.readableBytes();
+    }
+    
     /**
      * Decodes the received packets so far into a frame.
      *
