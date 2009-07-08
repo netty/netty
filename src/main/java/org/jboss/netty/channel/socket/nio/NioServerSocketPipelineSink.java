@@ -227,13 +227,14 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                 try {
                     if (selector.select(1000) > 0) {
                         selector.selectedKeys().clear();
-                        for (;;) {
-                            SocketChannel acceptedSocket = channel.socket.accept();
-                            if (acceptedSocket != null) {
-                                registerAcceptedChannel(acceptedSocket);
-                            } else {
-                                break;
-                            }
+                    }
+
+                    for (;;) {
+                        SocketChannel acceptedSocket = channel.socket.accept();
+                        if (acceptedSocket != null) {
+                            registerAcceptedChannel(acceptedSocket);
+                        } else {
+                            break;
                         }
                     }
                 } catch (SocketTimeoutException e) {
