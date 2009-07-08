@@ -257,6 +257,12 @@ class NioProviderMetadata {
             }, "NIO constraint level detector");
 
             Thread detectorThread = new Thread(detector);
+            try {
+                detectorThread.setDaemon(true);
+            } catch (Exception e) {
+                logger.warn(
+                        "Failed to set the daemon flag of the autodetector thread.", e);
+            }
             detectorThread.start();
 
             for (;;) {
