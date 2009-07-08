@@ -112,7 +112,7 @@ public class DefaultServerSocketChannelConfig extends DefaultServerChannelConfig
     }
 
     public void setBacklog(int backlog) {
-        if (backlog < 1) {
+        if (backlog < 0) {
             throw new IllegalArgumentException("backlog: " + backlog);
         }
         this.backlog = backlog;
