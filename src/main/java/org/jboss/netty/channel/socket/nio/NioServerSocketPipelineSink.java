@@ -160,6 +160,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
 
             Executor bossExecutor =
                 ((NioServerSocketChannelFactory) channel.getFactory()).bossExecutor;
+            for (int i = 0; i < 2; i ++) {
             bossExecutor.execute(
                     new IoWorkerRunnable(
                             new ThreadRenamingRunnable(
@@ -167,6 +168,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                                     "New I/O server boss #" + id +
                                     " (channelId: " + channel.getId() +
                                     ", " + channel.getLocalAddress() + ')')));
+            }
             bossStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
@@ -229,13 +231,9 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                         selector.selectedKeys().clear();
                     }
 
-                    for (;;) {
-                        SocketChannel acceptedSocket = channel.socket.accept();
-                        if (acceptedSocket != null) {
-                            registerAcceptedChannel(acceptedSocket);
-                        } else {
-                            break;
-                        }
+                    SocketChannel acceptedSocket = channel.socket.accept();
+                    if (acceptedSocket != null) {
+                        registerAcceptedChannel(acceptedSocket);
                     }
                 } catch (SocketTimeoutException e) {
                     // Thrown every second to get ClosedChannelException
