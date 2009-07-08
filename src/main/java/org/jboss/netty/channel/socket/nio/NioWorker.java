@@ -716,6 +716,10 @@ class NioWorker implements Runnable {
             }
 
             try {
+                if (server) {
+                    channel.socket.configureBlocking(false);
+                }
+
                 synchronized (channel.interestOpsLock) {
                     channel.socket.register(
                             selector, channel.getRawInterestOps(), channel);
@@ -723,7 +727,7 @@ class NioWorker implements Runnable {
                 if (future != null) {
                     future.setSuccess();
                 }
-            } catch (ClosedChannelException e) {
+            } catch (IOException e) {
                 if (future != null) {
                     future.setFailure(e);
                 }
