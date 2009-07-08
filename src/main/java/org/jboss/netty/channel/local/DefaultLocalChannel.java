@@ -114,7 +114,7 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
             fireChannelClosed(pairedChannel);
         } finally {
             future.setSuccess();
-            if (localAddress != null) {
+            if (localAddress != null && getParent() == null) {
                 LocalChannelRegistry.unregister(localAddress);
             }
         }
