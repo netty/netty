@@ -70,7 +70,7 @@ class NioServerSocketChannel extends AbstractServerChannel
         }
 
         try {
-            socket.socket().setSoTimeout(1000);
+            socket.configureBlocking(false);
         } catch (IOException e) {
             try {
                 socket.close();
@@ -78,8 +78,8 @@ class NioServerSocketChannel extends AbstractServerChannel
                 logger.warn(
                         "Failed to close a partially initialized socket.", e2);
             }
-            throw new ChannelException(
-                    "Failed to set the server socket timeout.", e);
+            
+            throw new ChannelException("Failed to enter non-blocking mode.", e);
         }
 
         config = new DefaultServerSocketChannelConfig(socket.socket());

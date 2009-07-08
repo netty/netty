@@ -25,12 +25,14 @@ package org.jboss.netty.channel.socket.nio;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
-import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ClosedSelectorException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -201,37 +203,37 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
     }
 
     private final class Boss implements Runnable {
+        private final Selector selector;
         private final NioServerSocketChannel channel;
 
-        Boss(NioServerSocketChannel channel) {
+        Boss(NioServerSocketChannel channel) throws IOException {
             this.channel = channel;
+            
+            selector = Selector.open();
+            
+            boolean registered = false;
+            try {
+                channel.socket.register(selector, SelectionKey.OP_ACCEPT);
+                registered = true;
+            } finally {
+                if (!registered) {
+                    closeSelector();
+                }
+            }
         }
 
         public void run() {
-            while (channel.isBound()) {
+            for (;;) {
                 try {
-                    // We do not call ServerSocketChannel.accept() directly
-                    // because SocketTimeoutException is not raised on some
-                    // JDKs.
-                    Socket acceptedSocket = channel.socket.socket().accept();
-
-                    try {
-                        ChannelPipeline pipeline =
-                            channel.getConfig().getPipelineFactory().getPipeline();
-                        NioWorker worker = nextWorker();
-                        worker.register(new NioAcceptedSocketChannel(
-                                        channel.getFactory(), pipeline, channel,
-                                        NioServerSocketPipelineSink.this,
-                                        acceptedSocket.getChannel(), worker), null);
-                    } catch (Exception e) {
-                        logger.warn(
-                                "Failed to initialize an accepted socket.", e);
-                        try {
-                            acceptedSocket.close();
-                        } catch (IOException e2) {
-                            logger.warn(
-                                    "Failed to close a partially accepted socket.",
-                                    e2);
+                    if (selector.select(1000) > 0) {
+                        selector.selectedKeys().clear();
+                        for (;;) {
+                            SocketChannel acceptedSocket = channel.socket.accept();
+                            if (acceptedSocket != null) {
+                                registerAcceptedChannel(acceptedSocket);
+                            } else {
+                                break;
+                            }
                         }
                     }
                 } catch (SocketTimeoutException e) {
@@ -253,6 +255,38 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                         // Ignore
                     }
                 }
+            }
+            
+            closeSelector();
+        }
+
+        private void registerAcceptedChannel(SocketChannel acceptedSocket) {
+            try {
+                ChannelPipeline pipeline =
+                    channel.getConfig().getPipelineFactory().getPipeline();
+                NioWorker worker = nextWorker();
+                worker.register(new NioAcceptedSocketChannel(
+                        channel.getFactory(), pipeline, channel,
+                        NioServerSocketPipelineSink.this, acceptedSocket,
+                        worker), null);
+            } catch (Exception e) {
+                logger.warn(
+                        "Failed to initialize an accepted socket.", e);
+                try {
+                    acceptedSocket.close();
+                } catch (IOException e2) {
+                    logger.warn(
+                            "Failed to close a partially accepted socket.",
+                            e2);
+                }
+            }
+        }
+
+        private void closeSelector() {
+            try {
+                selector.close();
+            } catch (Exception e) {
+                logger.warn("Failed to close a selector.", e);
             }
         }
     }
