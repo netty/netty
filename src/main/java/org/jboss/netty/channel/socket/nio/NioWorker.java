@@ -363,23 +363,38 @@ class NioWorker implements Runnable {
         } else {
             writeNow(channel, channel.getConfig().getWriteSpinCount());
         }
-
     }
 
-    private static boolean scheduleWriteIfNecessary(NioSocketChannel channel) {
-        NioWorker worker = channel.worker;
-        Thread workerThread = worker.thread;
-        if (workerThread == null || Thread.currentThread() != workerThread) {
+    private static boolean scheduleWriteIfNecessary(final NioSocketChannel channel) {
+        final NioWorker worker = channel.worker;
+        final Thread currentThread = Thread.currentThread();
+        final Thread workerThread = worker.thread;
+        if (workerThread == null || currentThread != workerThread) {
             if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
                 boolean offered = worker.writeTaskQueue.offer(channel.writeTask);
                 assert offered;
             }
-            Selector workerSelector = worker.selector;
-            if (workerSelector != null) {
-                if (worker.wakenUp.compareAndSet(false, true)) {
-                    workerSelector.wakeup();
+            
+            if (!(channel instanceof NioAcceptedSocketChannel) ||
+                ((NioAcceptedSocketChannel) channel).bossThread != currentThread) {
+                final Selector workerSelector = worker.selector;
+                if (workerSelector != null) {
+                    if (worker.wakenUp.compareAndSet(false, true)) {
+                        workerSelector.wakeup();
+                    }
                 }
+            } else {
+                // A write request can be made from an acceptor thread (boss)
+                // when a user attempted to write something in:
+                //
+                //   * channelOpen()
+                //   * channelBound()
+                //   * channelConnected().
+                //
+                // In this case, there's no need to wake up the selector because
+                // the channel is not even registered yet at this moment.
             }
+            
             return true;
         }
 

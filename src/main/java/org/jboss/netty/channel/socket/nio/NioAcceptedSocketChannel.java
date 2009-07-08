@@ -41,13 +41,17 @@ import org.jboss.netty.channel.ChannelSink;
  */
 final class NioAcceptedSocketChannel extends NioSocketChannel {
 
+    final Thread bossThread;
+    
     NioAcceptedSocketChannel(
             ChannelFactory factory, ChannelPipeline pipeline,
             Channel parent, ChannelSink sink,
-            SocketChannel socket, NioWorker worker) {
+            SocketChannel socket, NioWorker worker, Thread bossThread) {
 
         super(parent, factory, pipeline, sink, socket, worker);
 
+        this.bossThread = bossThread;
+        
         fireChannelOpen(this);
         fireChannelBound(this, getLocalAddress());
         fireChannelConnected(this, getRemoteAddress());

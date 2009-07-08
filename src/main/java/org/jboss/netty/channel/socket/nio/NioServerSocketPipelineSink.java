@@ -223,6 +223,8 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
         }
 
         public void run() {
+            final Thread currentThread = Thread.currentThread();
+            
             for (;;) {
                 try {
                     if (selector.select(1000) > 0) {
@@ -231,7 +233,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
 
                     SocketChannel acceptedSocket = channel.socket.accept();
                     if (acceptedSocket != null) {
-                        registerAcceptedChannel(acceptedSocket);
+                        registerAcceptedChannel(acceptedSocket, currentThread);
                     }
                 } catch (SocketTimeoutException e) {
                     // Thrown every second to get ClosedChannelException
@@ -257,7 +259,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
             closeSelector();
         }
 
-        private void registerAcceptedChannel(SocketChannel acceptedSocket) {
+        private void registerAcceptedChannel(SocketChannel acceptedSocket, Thread currentThread) {
             try {
                 ChannelPipeline pipeline =
                     channel.getConfig().getPipelineFactory().getPipeline();
@@ -265,7 +267,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                 worker.register(new NioAcceptedSocketChannel(
                         channel.getFactory(), pipeline, channel,
                         NioServerSocketPipelineSink.this, acceptedSocket,
-                        worker), null);
+                        worker, currentThread), null);
             } catch (Exception e) {
                 logger.warn(
                         "Failed to initialize an accepted socket.", e);
