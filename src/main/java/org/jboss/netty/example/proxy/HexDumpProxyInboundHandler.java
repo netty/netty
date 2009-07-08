@@ -98,7 +98,7 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         if (outboundChannel != null) {
-            outboundChannel.close();
+            closeOnFlush(outboundChannel);
         }
     }
 
@@ -106,7 +106,7 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
             throws Exception {
         e.getCause().printStackTrace();
-        e.getChannel().close();
+        closeOnFlush(e.getChannel());
     }
 
     @ChannelPipelineCoverage("one")
@@ -129,14 +129,23 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
         @Override
         public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
                 throws Exception {
-            inboundChannel.close();
+            closeOnFlush(inboundChannel);
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
             e.getCause().printStackTrace();
-            e.getChannel().close();
+            closeOnFlush(e.getChannel());
+        }
+    }
+    
+    /**
+     * Closes the specified channel after all queued write requests are flushed.
+     */
+    static void closeOnFlush(Channel ch) {
+        if (ch.isConnected()) {
+            ch.write(ChannelBuffers.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
         }
     }
 }
