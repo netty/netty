@@ -134,11 +134,11 @@ class NioProviderMetadata {
         os = os.toLowerCase();
         vendor = vendor.toLowerCase();
 
-        System.out.println(version);
-        System.out.println(vminfo);
-        System.out.println(os);
-        System.out.println(vendor);
-        System.out.println(provider);
+//        System.out.println(version);
+//        System.out.println(vminfo);
+//        System.out.println(os);
+//        System.out.println(vendor);
+//        System.out.println(provider);
 
         // Sun JVM
         if (vendor.indexOf("sun") >= 0) {
