@@ -679,6 +679,7 @@ class NioDatagramWorker implements Runnable {
 
     private static void cleanUpWriteBuffer(final NioDatagramChannel channel) {
         Exception cause = null;
+        boolean fireExceptionCaught = false;
 
         // Clean up the stale messages in the write buffer.
         synchronized (channel.writeLock) {
@@ -694,8 +695,7 @@ class NioDatagramWorker implements Runnable {
                     cause = new ClosedChannelException();
                 }
                 evt.getFuture().setFailure(cause);
-
-                fireExceptionCaught(channel, cause);
+                fireExceptionCaught = true;
             }
 
             Queue<MessageEvent> writeBuffer = channel.writeBufferQueue;
@@ -716,9 +716,13 @@ class NioDatagramWorker implements Runnable {
                         break;
                     }
                     evt.getFuture().setFailure(cause);
-                    fireExceptionCaught(channel, cause);
+                    fireExceptionCaught = true;
                 }
             }
+        }
+
+        if (fireExceptionCaught) {
+            fireExceptionCaught(channel, cause);
         }
     }
 
