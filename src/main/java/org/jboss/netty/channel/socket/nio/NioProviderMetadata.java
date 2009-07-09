@@ -29,11 +29,14 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -56,8 +59,6 @@ class NioProviderMetadata {
 
     private static final String CONSTRAINT_LEVEL_PROPERTY =
         "java.nio.channels.spi.constraintLevel";
-
-    private static final long AUTODETECTION_TIMEOUT = 7000L;
 
     /**
      * 0 - no need to wake up to get / set interestOps (most cases)
@@ -88,25 +89,10 @@ class NioProviderMetadata {
             constraintLevel = detectConstraintLevelFromSystemProperties();
 
             if (constraintLevel < 0) {
-                logger.debug(
-                        "Couldn't get the NIO constraint level from the system properties.");
-                ConstraintLevelAutodetector autodetector =
-                    new ConstraintLevelAutodetector();
-
-                try {
-                    constraintLevel = autodetector.autodetectWithTimeout();
-                } catch (Exception e) {
-                    // Probably because of security manager - try again without
-                    // creating a new thread directly.
-                    constraintLevel = autodetector.autodetectWithoutTimeout();
-                }
-            }
-
-            if (constraintLevel < 0) {
                 constraintLevel = 2;
-                logger.warn(
-                        "Failed to autodetect the NIO constraint level; " +
-                        "using the safest level (2)");
+                logger.debug(
+                        "Couldn't determine the NIO constraint level from " +
+                        "the system properties; using the safest level (2)");
             } else if (constraintLevel != 0) {
                 logger.info(
                         "Using the autodetected NIO constraint level: " +
@@ -130,6 +116,7 @@ class NioProviderMetadata {
 
     private static int detectConstraintLevelFromSystemProperties() {
         String version = SystemPropertyUtil.get("java.specification.version");
+        String vminfo = SystemPropertyUtil.get("java.vm.info", "");
         String os = SystemPropertyUtil.get("os.name");
         String vendor = SystemPropertyUtil.get("java.vm.vendor");
         String provider;
@@ -146,6 +133,12 @@ class NioProviderMetadata {
 
         os = os.toLowerCase();
         vendor = vendor.toLowerCase();
+
+        System.out.println(version);
+        System.out.println(vminfo);
+        System.out.println(os);
+        System.out.println(vendor);
+        System.out.println(provider);
 
         // Sun JVM
         if (vendor.indexOf("sun") >= 0) {
@@ -178,41 +171,39 @@ class NioProviderMetadata {
             }
         // IBM
         } else if (vendor.indexOf("ibm") >= 0) {
-            // Linux
-            if (os.indexOf("linux") >= 0) {
+            // Linux or AIX
+            if (os.indexOf("linux") >= 0 || os.indexOf("aix") >= 0) {
                 if (version.equals("1.5") || version.matches("^1\\.5\\D.*$")) {
                     if (provider.equals("sun.nio.ch.PollSelectorProvider")) {
                         return 1;
                     }
-                }
+                } else if (version.equals("1.6") || version.matches("^1\\.6\\D.*$")) {
+                    // IBM JDK 1.6 has different constraint level for different
+                    // version.  The exact version can be determined only by its
+                    // build date.
+                    Pattern datePattern = Pattern.compile(
+                            "(?:^|[^0-9])(" +
+                            "[2-9][0-9]{3}" +              // year
+                            "(?:0[1-9]|1[0-2])" +          // month
+                            "(?:0[1-9]|[12][0-9]|3[01])" + // day of month
+                            ")(?:$|[^0-9])");
 
-                // Commented out - the constraint level of IBM JDK 1.6 is
-                //                 different between versions.
-                //
-                //else if (version.equals("1.6") || version.matches("^1\\.6\\D.*$")) {
-                //    if (provider.equals("sun.nio.ch.EPollSelectorProvider") ||
-                //        provider.equals("sun.nio.ch.PollSelectorProvider")) {
-                //        return 2;
-                //    }
-                //}
-
-            // AIX
-            } if (os.indexOf("aix") >= 0) {
-                if (version.equals("1.5") || version.matches("^1\\.5\\D.*$")) {
-                    if (provider.equals("sun.nio.ch.PollSelectorProvider")) {
-                        return 1;
+                    Matcher dateMatcher = datePattern.matcher(vminfo);
+                    if (dateMatcher.find()) {
+                        long dateValue = Long.parseLong(dateMatcher.group(1));
+                        if (dateValue < 20081105L) {
+                            // SR0, 1, and 2
+                            return 2;
+                        } else {
+                            // SR3 and later
+                            if (provider.equals("sun.nio.ch.EPollSelectorProvider")) {
+                                return 0;
+                            } else if (provider.equals("sun.nio.ch.PollSelectorProvider")) {
+                                return 1;
+                            }
+                        }
                     }
                 }
-
-                // Commented out - the constraint level of IBM JDK 1.6 is
-                //                 different between versions.
-                //
-                //else if (version.equals("1.6") || version.matches("^1\\.6\\D.*$")) {
-                //    if (provider.equals("sun.nio.ch.EPollSelectorProvider") ||
-                //        provider.equals("sun.nio.ch.PollSelectorProvider")) {
-                //        return 2;
-                //    }
-                //}
             }
         // BEA
         } else if (vendor.indexOf("bea") >= 0 || vendor.indexOf("oracle") >= 0) {
@@ -229,12 +220,16 @@ class NioProviderMetadata {
                     return 0;
                 }
             }
+        // Apache Software Foundation
+        } else if (vendor.indexOf("apache") >= 0) {
+            if (provider.equals("org.apache.harmony.nio.internal.SelectorProviderImpl")) {
+                return 1;
+            }
         }
 
         // Others (untested)
         return -1;
     }
-
 
     private static final class ConstraintLevelAutodetector {
 
@@ -267,7 +262,7 @@ class NioProviderMetadata {
 
             for (;;) {
                 try {
-                    Integer result = resultQueue.poll(AUTODETECTION_TIMEOUT, TimeUnit.MILLISECONDS);
+                    Integer result = resultQueue.poll(10000, TimeUnit.MILLISECONDS);
                     if (result == null) {
                         logger.warn("NIO constraint level autodetection timed out.");
                         return -1;
@@ -472,5 +467,20 @@ class NioProviderMetadata {
                 }
             }
         }
+    }
+
+    public static void main(String[] args) throws Exception {
+        for (Entry<Object, Object> e: System.getProperties().entrySet()) {
+            System.out.println(e.getKey() + ": " + e.getValue());
+        }
+        System.out.println();
+        System.out.println("Hard-coded Constraint Level: " + CONSTRAINT_LEVEL);
+        System.out.println(
+                "Auto-detected Constraint Level: " + 
+                new ConstraintLevelAutodetector().autodetectWithoutTimeout());
+    }
+
+    private NioProviderMetadata() {
+        // Unused
     }
 }
