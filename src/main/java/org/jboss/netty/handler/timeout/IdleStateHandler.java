@@ -86,17 +86,14 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
 
     final long readerIdleTimeMillis;
     volatile Timeout readerIdleTimeout;
-    private volatile ReaderIdleTimeoutTask readerIdleTimeoutTask;
     volatile long lastReadTime;
 
     final long writerIdleTimeMillis;
     volatile Timeout writerIdleTimeout;
-    private volatile WriterIdleTimeoutTask writerIdleTimeoutTask;
     volatile long lastWriteTime;
 
     final long allIdleTimeMillis;
     volatile Timeout allIdleTimeout;
-    private volatile AllIdleTimeoutTask allIdleTimeoutTask;
 
     /**
      * Creates a new instance.
@@ -225,39 +222,36 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
 
     private void initialize(ChannelHandlerContext ctx) {
         lastReadTime = lastWriteTime = System.currentTimeMillis();
-        readerIdleTimeoutTask = new ReaderIdleTimeoutTask(ctx);
-        writerIdleTimeoutTask = new WriterIdleTimeoutTask(ctx);
-        allIdleTimeoutTask = new AllIdleTimeoutTask(ctx);
         if (readerIdleTimeMillis > 0) {
             readerIdleTimeout = timer.newTimeout(
-                    readerIdleTimeoutTask, readerIdleTimeMillis, TimeUnit.MILLISECONDS);
+                    new ReaderIdleTimeoutTask(ctx),
+                    readerIdleTimeMillis, TimeUnit.MILLISECONDS);
         }
         if (writerIdleTimeMillis > 0) {
             writerIdleTimeout = timer.newTimeout(
-                    writerIdleTimeoutTask, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
+                    new WriterIdleTimeoutTask(ctx),
+                    writerIdleTimeMillis, TimeUnit.MILLISECONDS);
         }
         if (allIdleTimeMillis > 0) {
             allIdleTimeout = timer.newTimeout(
-                    allIdleTimeoutTask, allIdleTimeMillis, TimeUnit.MILLISECONDS);
+                    new AllIdleTimeoutTask(ctx),
+                    allIdleTimeMillis, TimeUnit.MILLISECONDS);
         }
     }
 
     private void destroy() {
         if (readerIdleTimeout != null) {
             readerIdleTimeout.cancel();
+            readerIdleTimeout = null;
         }
         if (writerIdleTimeout != null) {
             writerIdleTimeout.cancel();
+            writerIdleTimeout = null;
         }
         if (allIdleTimeout != null) {
             allIdleTimeout.cancel();
+            allIdleTimeout = null;
         }
-        readerIdleTimeout = null;
-        readerIdleTimeoutTask = null;
-        writerIdleTimeout = null;
-        writerIdleTimeoutTask = null;
-        allIdleTimeout = null;
-        allIdleTimeoutTask = null;
     }
 
     protected void channelIdle(
