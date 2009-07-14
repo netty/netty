@@ -139,7 +139,7 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
             closeOnFlush(e.getChannel());
         }
     }
-    
+
     /**
      * Closes the specified channel after all queued write requests are flushed.
      */

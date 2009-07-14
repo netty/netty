@@ -22,7 +22,7 @@
  */
 package org.jboss.netty.channel.socket.oio;
 
-import static org.jboss.netty.channel.Channels.fireChannelOpen;
+import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.InetAddress;

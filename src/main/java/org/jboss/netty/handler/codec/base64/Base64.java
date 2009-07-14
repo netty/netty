@@ -373,7 +373,7 @@ public class Base64 {
                          DECODABET[src[srcOffset + 3]] & 0xFF;
             } catch (IndexOutOfBoundsException e) {
                 throw new IllegalArgumentException("not encoded in Base64");
-            }            	
+            }
 
             dest.setByte(destOffset    , (byte) (outBuff >> 16));
             dest.setByte(destOffset + 1, (byte) (outBuff >>  8));

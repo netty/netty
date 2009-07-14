@@ -28,7 +28,6 @@ import java.util.logging.Logger;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -80,22 +79,11 @@ public class EchoHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void handleUpstream(
-            ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        if (e instanceof ChannelStateEvent) {
-            logger.info(e.toString());
-        }
-
-        // Let SimpleChannelHandler call actual event handler methods below.
-        super.handleUpstream(ctx, e);
-    }
-
-    @Override
     public void channelConnected(
             ChannelHandlerContext ctx, ChannelStateEvent e) {
         // Send the first message.  Server will not send anything here
         // because the firstMessage's capacity is 0.
-        e.getChannel().write(firstMessage);
+        //e.getChannel().write(firstMessage);
     }
 
     @Override

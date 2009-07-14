@@ -476,7 +476,7 @@ class NioProviderMetadata {
         System.out.println();
         System.out.println("Hard-coded Constraint Level: " + CONSTRAINT_LEVEL);
         System.out.println(
-                "Auto-detected Constraint Level: " + 
+                "Auto-detected Constraint Level: " +
                 new ConstraintLevelAutodetector().autodetectWithoutTimeout());
     }
 

@@ -51,13 +51,12 @@ public class EchoServer {
         EchoHandler handler = new EchoHandler();
 
         bootstrap.getPipeline().addLast("handler", handler);
-        bootstrap.setOption("child.tcpNoDelay", true);
-        bootstrap.setOption("child.keepAlive", true);
+        bootstrap.setOption("backlog", 4096);
 
         // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress(8080));
 
         // Start performance monitor.
-        new ThroughputMonitor(handler).start();
+        //new ThroughputMonitor(handler).start();
     }
 }

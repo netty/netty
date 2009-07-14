@@ -208,9 +208,9 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
 
         Boss(NioServerSocketChannel channel) throws IOException {
             this.channel = channel;
-            
+
             selector = Selector.open();
-            
+
             boolean registered = false;
             try {
                 channel.socket.register(selector, SelectionKey.OP_ACCEPT);
@@ -224,7 +224,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
 
         public void run() {
             final Thread currentThread = Thread.currentThread();
-            
+
             for (;;) {
                 try {
                     if (selector.select(1000) > 0) {
@@ -255,7 +255,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                     }
                 }
             }
-            
+
             closeSelector();
         }
 

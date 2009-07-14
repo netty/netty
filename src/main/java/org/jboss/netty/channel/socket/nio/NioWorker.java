@@ -374,7 +374,7 @@ class NioWorker implements Runnable {
                 boolean offered = worker.writeTaskQueue.offer(channel.writeTask);
                 assert offered;
             }
-            
+
             if (!(channel instanceof NioAcceptedSocketChannel) ||
                 ((NioAcceptedSocketChannel) channel).bossThread != currentThread) {
                 final Selector workerSelector = worker.selector;
@@ -394,7 +394,7 @@ class NioWorker implements Runnable {
                 // In this case, there's no need to wake up the selector because
                 // the channel is not even registered yet at this moment.
             }
-            
+
             return true;
         }
 

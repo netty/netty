@@ -78,7 +78,7 @@ class NioServerSocketChannel extends AbstractServerChannel
                 logger.warn(
                         "Failed to close a partially initialized socket.", e2);
             }
-            
+
             throw new ChannelException("Failed to enter non-blocking mode.", e);
         }
 
