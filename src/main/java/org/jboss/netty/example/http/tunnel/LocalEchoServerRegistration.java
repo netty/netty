@@ -50,6 +50,8 @@ public class LocalEchoServerRegistration {
         ServerBootstrap serverBootstrap = new ServerBootstrap(factory);
         EchoHandler handler = new EchoHandler();
         serverBootstrap.getPipeline().addLast("handler", handler);
+
+        // Note that "myLocalServer" is the endpoint which was specified in web.xml.
         serverChannel = serverBootstrap.bind(new LocalAddress("myLocalServer"));
     }
 
