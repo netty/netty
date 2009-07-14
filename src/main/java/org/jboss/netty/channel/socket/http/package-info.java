@@ -64,7 +64,7 @@
  * (see {@link org.jboss.netty.channel.local.LocalServerChannelFactory}.)
  * You can use your favorite IoC framework such as JBoss Microcontainer, Guice,
  * and Spring to do this.  The following example shows how to bind an echo
- * erver to the endpoint specifed above (<tt>web.xml</tt>) in JBossAS 5:
+ * server to the endpoint specifed above (<tt>web.xml</tt>) in JBossAS 5:
  *
  * <pre>
  * &lt;bean name="my-local-echo-server"
