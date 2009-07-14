@@ -33,7 +33,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -48,12 +47,8 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
-import org.jboss.netty.channel.local.DefaultLocalServerChannelFactory;
 import org.jboss.netty.channel.local.LocalAddress;
-import org.jboss.netty.example.echo.EchoHandler;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.logging.LoggingHandler;
-import org.jboss.netty.logging.InternalLogLevel;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
@@ -102,12 +97,6 @@ public class HttpTunnelingServlet extends HttpServlet {
         } catch (Exception e) {
             throw new ServletException("Failed to create a channel factory.", e);
         }
-
-        ServerBootstrap b = new ServerBootstrap(new DefaultLocalServerChannelFactory());
-        // TODO Add more constructor params for LoggingHandler
-        b.getPipeline().addLast("logger", new LoggingHandler(getClass(), InternalLogLevel.INFO, true));
-        b.getPipeline().addLast("handler", new EchoHandler());
-        b.bind(remoteAddress);
     }
 
     protected SocketAddress parseEndpoint(String endpoint) throws Exception {
