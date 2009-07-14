@@ -23,20 +23,39 @@
 package org.jboss.netty.channel.socket.http;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PushbackInputStream;
-import java.util.List;
+import java.net.SocketAddress;
 
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
+import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
+import org.jboss.netty.channel.local.DefaultLocalServerChannelFactory;
+import org.jboss.netty.channel.local.LocalAddress;
+import org.jboss.netty.example.echo.EchoHandler;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.logging.LoggingHandler;
+import org.jboss.netty.logging.InternalLogLevel;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * An {@link HttpServlet} that proxies an incoming data to the actual server
@@ -49,62 +68,126 @@ import org.jboss.netty.channel.MessageEvent;
  */
 public class HttpTunnelingServlet extends HttpServlet {
 
-    private static final long serialVersionUID = -872309493835745385L;
+    private static final long serialVersionUID = -2396314792027814020L;
 
-    final static String CHANNEL_PROP = "channel";
-    final static String HANDLER_PROP = "handler";
+    private static final String ENDPOINT = "endpoint";
 
-    protected void doRequest(
-            HttpServletRequest request,
-            HttpServletResponse response) throws IOException {
-        HttpSession session = request.getSession();
-        Channel channel = (Channel) session.getAttribute(CHANNEL_PROP);
-        HttpTunnelingChannelHandler handler =
-                (HttpTunnelingChannelHandler) session.getAttribute(HANDLER_PROP);
-        if (handler.isStreaming()) {
-            streamResponse(request, response, session, handler, channel);
-        } else {
-            pollResponse(channel, request, response, session, handler);
+    static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpTunnelingServlet.class);
+
+    private volatile SocketAddress remoteAddress;
+    private volatile ChannelFactory channelFactory;
+
+    @Override
+    public void init() throws ServletException {
+        ServletConfig config = getServletConfig();
+        String endpoint = config.getInitParameter(ENDPOINT);
+        if (endpoint == null) {
+            throw new ServletException("init-param '" + ENDPOINT + "' must be specified.");
         }
-    }
-
-    private void streamResponse(
-            final HttpServletRequest request,
-            final HttpServletResponse response, HttpSession session,
-            HttpTunnelingChannelHandler handler, Channel channel) throws IOException {
 
         try {
-            response.setHeader("JSESSIONID", session.getId());
-            response.setHeader("Content-Type", "application/octet-stream");
-            response.setStatus(HttpServletResponse.SC_OK);
+            remoteAddress = parseEndpoint(endpoint.trim());
+        } catch (ServletException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ServletException("Failed to parse an endpoint.", e);
+        }
+
+        try {
+            channelFactory = createChannelFactory(remoteAddress);
+        } catch (ServletException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ServletException("Failed to create a channel factory.", e);
+        }
+
+        ServerBootstrap b = new ServerBootstrap(new DefaultLocalServerChannelFactory());
+        // TODO Add more constructor params for LoggingHandler
+        b.getPipeline().addLast("logger", new LoggingHandler(getClass(), InternalLogLevel.INFO, true));
+        b.getPipeline().addLast("handler", new EchoHandler());
+        b.bind(remoteAddress);
+    }
+
+    protected SocketAddress parseEndpoint(String endpoint) throws Exception {
+        if (endpoint.startsWith("local:")) {
+            return new LocalAddress(endpoint.substring(6).trim());
+        } else {
+            throw new ServletException(
+                    "Invalid or unknown endpoint: " + endpoint);
+        }
+    }
+
+    protected ChannelFactory createChannelFactory(SocketAddress remoteAddress) throws Exception {
+        if (remoteAddress instanceof LocalAddress) {
+            return new DefaultLocalClientChannelFactory();
+        } else {
+            throw new ServletException(
+                    "Unsupported remote address type: " +
+                    remoteAddress.getClass().getName());
+        }
+    }
+
+    @Override
+    public void destroy() {
+        try {
+            destroyChannelFactory(channelFactory);
+        } catch (Exception e) {
+            logger.warn("Failed to destroy a channel factory.", e);
+        }
+    }
+
+    protected void destroyChannelFactory(ChannelFactory factory) throws Exception {
+        factory.releaseExternalResources();
+    }
+
+    @Override
+    protected void service(HttpServletRequest req, HttpServletResponse res)
+            throws ServletException, IOException {
+        if (!"POST".equalsIgnoreCase(req.getMethod())) {
+            res.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED, "Method not allowed");
+            return;
+        }
+
+        final ChannelPipeline pipeline = Channels.pipeline();
+        final ServletOutputStream out = res.getOutputStream();
+        final OutboundConnectionHandler handler = new OutboundConnectionHandler(out);
+        pipeline.addLast("handler", handler);
+
+        Channel channel = channelFactory.newChannel(pipeline);
+        ChannelFuture future = channel.connect(remoteAddress).awaitUninterruptibly();
+        if (!future.isSuccess()) {
+            res.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Endpoint unavailable: " + future.getCause().getMessage());
+            return;
+        }
+
+        ChannelFuture lastWriteFuture = null;
+        try {
+            res.setStatus(HttpServletResponse.SC_OK);
+            res.setHeader(HttpHeaders.Names.CONTENT_TYPE, "application/octet-stream");
+            res.setHeader(HttpHeaders.Names.CONTENT_TRANSFER_ENCODING, HttpHeaders.Values.BINARY);
 
             // Initiate chunked encoding by flushing the headers.
-            response.getOutputStream().flush();
-            handler.setOutputStream(response.getOutputStream());
+            out.flush();
 
             PushbackInputStream in =
-                    new PushbackInputStream(request.getInputStream());
+                    new PushbackInputStream(req.getInputStream());
             for (;;) {
-                try {
-                    ChannelBuffer buffer = read(in);
-                    if (buffer == null) {
-                        break;
-                    }
-                    channel.write(buffer);
-                } catch (IOException e) {
-                    // this is ok, the client can reconnect.
+                ChannelBuffer buffer = read(in);
+                if (buffer == null) {
                     break;
                 }
+                lastWriteFuture = channel.write(buffer);
             }
         } finally {
-            // Mark the channel as closed if the client didn't reconnect in time.
-            if (!handler.awaitReconnect()) {
+            if (lastWriteFuture == null) {
                 channel.close();
+            } else {
+                lastWriteFuture.addListener(ChannelFutureListener.CLOSE);
             }
         }
     }
 
-    private ChannelBuffer read(PushbackInputStream in) throws IOException {
+    private static ChannelBuffer read(PushbackInputStream in) throws IOException {
         byte[] buf;
         int readBytes;
 
@@ -140,61 +223,26 @@ public class HttpTunnelingServlet extends HttpServlet {
         return buffer;
     }
 
-    private void pollResponse(
-            Channel channel,
-            HttpServletRequest request,
-            HttpServletResponse response, HttpSession session,
-            HttpTunnelingChannelHandler handler) throws IOException {
+    @ChannelPipelineCoverage("one")
+    private final class OutboundConnectionHandler extends SimpleChannelUpstreamHandler {
 
-        InputStream in = request.getInputStream();
-        if (in != null) {
-            ChannelBuffer requestContent = ChannelBuffers.dynamicBuffer();
-            for (;;) {
-                int writtenBytes = requestContent.writeBytes(in, 4096);
-                if (writtenBytes < 0) {
-                    break;
-                }
-            }
-            if (requestContent.readable()) {
-                channel.write(requestContent);
-            }
+        private final ServletOutputStream out;
+
+        public OutboundConnectionHandler(ServletOutputStream out) {
+            this.out = out;
         }
 
-        handler.setOutputStream(response.getOutputStream());
-        List<MessageEvent> buffers = handler.getAwaitingEvents();
-        int length = 0;
-        if (buffers.size() > 0) {
-            for (MessageEvent buffer: buffers) {
-                length += ((ChannelBuffer) buffer.getMessage()).readableBytes();
-            }
+        @Override
+        public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+            ChannelBuffer buffer = (ChannelBuffer) e.getMessage();
+            buffer.readBytes(out, buffer.readableBytes());
+            out.flush();
         }
-        response.setHeader("JSESSIONID", session.getId());
-        response.setContentLength(length);
-        response.setStatus(HttpServletResponse.SC_OK);
-        for (MessageEvent event: buffers) {
-            ChannelBuffer buffer = (ChannelBuffer) event.getMessage();
-            byte[] b = new byte[buffer.readableBytes()];
-            buffer.readBytes(b);
-            try {
-                response.getOutputStream().write(b);
-                event.getFuture().setSuccess();
-            } catch (IOException e) {
-                event.getFuture().setFailure(e);
-            }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+            logger.warn("Unexpected exception while HTTP tunneling", e.getCause());
+            e.getChannel().close();
         }
-    }
-
-    @Override
-    protected void doGet(
-            HttpServletRequest httpServletRequest,
-            HttpServletResponse httpServletResponse) throws ServletException, IOException {
-        doRequest(httpServletRequest, httpServletResponse);
-    }
-
-    @Override
-    protected void doPost(
-            HttpServletRequest httpServletRequest,
-            HttpServletResponse httpServletResponse) throws ServletException, IOException {
-        doRequest(httpServletRequest, httpServletResponse);
     }
 }

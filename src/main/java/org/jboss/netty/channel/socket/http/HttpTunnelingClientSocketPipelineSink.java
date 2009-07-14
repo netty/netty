@@ -22,15 +22,12 @@
  */
 package org.jboss.netty.channel.socket.http;
 
-import static org.jboss.netty.channel.Channels.*;
-
 import java.net.SocketAddress;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -43,8 +40,6 @@ import org.jboss.netty.channel.MessageEvent;
  * @version $Rev$, $Date$
  */
 final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
-
-    static final String LINE_TERMINATOR = "\r\n";
 
     HttpTunnelingClientSocketPipelineSink() {
         super();
@@ -61,78 +56,29 @@ final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
             switch (state) {
             case OPEN:
                 if (Boolean.FALSE.equals(value)) {
-                    close(channel, future);
+                    channel.closeReal(future);
                 }
                 break;
             case BOUND:
                 if (value != null) {
-                    bind(channel, future, (SocketAddress) value);
+                    channel.bindReal((SocketAddress) value, future);
                 } else {
-                    close(channel, future);
+                    channel.unbindReal(future);
                 }
                 break;
             case CONNECTED:
                 if (value != null) {
-                    channel.connectAndSendHeaders(false, ((HttpTunnelAddress) value), future);
+                    channel.connectReal((SocketAddress) value, future);
                 } else {
-                    close(channel, future);
+                    channel.closeReal(future);
                 }
                 break;
             case INTEREST_OPS:
-                final ChannelFuture actualFuture = future;
-                setInterestOps(channel.channel, ((Integer) value).intValue()).addListener(
-                        new ChannelFutureListener() {
-                            public void operationComplete(ChannelFuture future)
-                                    throws Exception {
-                                if (future.isSuccess()) {
-                                    actualFuture.setSuccess();
-                                } else {
-                                    actualFuture.setFailure(future.getCause());
-                                }
-                            }
-                        });
+                channel.setInterestOpsReal(((Integer) value).intValue(), future);
                 break;
             }
         } else if (e instanceof MessageEvent) {
-            channel.sendChunk(((ChannelBuffer) ((MessageEvent) e).getMessage()), future);
-        }
-    }
-
-    private void bind(
-            HttpTunnelingClientSocketChannel channel, ChannelFuture future,
-            SocketAddress localAddress) {
-        try {
-            channel.bindSocket(localAddress);
-            future.setSuccess();
-            fireChannelBound(channel, channel.getLocalAddress());
-        } catch (Throwable t) {
-            future.setFailure(t);
-            fireExceptionCaught(channel, t);
-        }
-    }
-
-    private void close(
-            HttpTunnelingClientSocketChannel channel, ChannelFuture future) {
-        boolean connected = channel.isConnected();
-        boolean bound = channel.isBound();  
-        try {
-            channel.closeSocket();
-            if (channel.setClosed()) {
-                future.setSuccess();
-                if (connected) {
-                    fireChannelDisconnected(channel);
-                }
-                if (bound) {
-                    fireChannelUnbound(channel);
-                }
-                fireChannelClosed(channel);
-            } else {
-                future.setSuccess();
-            }
-        }
-        catch (Throwable t) {
-            future.setFailure(t);
-            fireExceptionCaught(channel, t);
+            channel.writeReal(((ChannelBuffer) ((MessageEvent) e).getMessage()), future);
         }
     }
 }

@@ -24,6 +24,7 @@ package org.jboss.netty.example.http.tunnel;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.concurrent.Executors;
 
@@ -32,61 +33,18 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.socket.http.HttpTunnelAddress;
 import org.jboss.netty.channel.socket.http.HttpTunnelingClientSocketChannelFactory;
-import org.jboss.netty.channel.socket.http.HttpTunnelingServlet;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 
 /**
- * Make sure that the {@link LocalTransportRegister} bean is deployed along
- * with the {@link HttpTunnelingServlet} with the following <tt>web.xml</tt>.
+ * An HTTP tunneled version of the telnet client example.  Please refer to the
+ * API documentation of the <tt>org.jboss.netty.channel.socket.http</tt> package
+ * for the detailed instruction on how to deploy the server-side HTTP tunnel in
+ * your Servlet container.
  *
- * <pre>
- * &lt;?xml version="1.0" encoding="UTF-8"?&gt;
- * &lt;web-app xmlns="http://java.sun.com/xml/ns/j2ee"
- *             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
- *             xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd"
- *             version="2.4"&gt;
- *    &lt;!--the name of the channel, this should be a registered local channel. see LocalTransportRegister--&gt;
- *    &lt;context-param&gt;
- *       &lt;param-name&gt;serverChannelName&lt;/param-name&gt;
- *       &lt;param-value&gt;myLocalServer&lt;/param-value&gt;
- *    &lt;/context-param&gt;
- *
- *     &lt;!--Whether or not we are streaming or just polling using normal HTTP requests--&gt;
- *     &lt;context-param&gt;
- *       &lt;param-name&gt;streaming&lt;/param-name&gt;
- *       &lt;param-value&gt;true&lt;/param-value&gt;
- *    &lt;/context-param&gt;
- *
- *     &lt;!--How long to wait for a client reconnecting in milliseconds--&gt;
- *    &lt;context-param&gt;
- *       &lt;param-name&gt;reconnectTimeout&lt;/param-name&gt;
- *       &lt;param-value&gt;3000&lt;/param-value&gt;
- *    &lt;/context-param&gt;
- *
- *    &lt;listener&gt;
- *       &lt;listener-class&gt;org.jboss.netty.channel.socket.http.HttpTunnelingSessionListener&lt;/listener-class&gt;
- *    &lt;/listener&gt;
- *
- *    &lt;listener&gt;
- *       &lt;listener-class&gt;org.jboss.netty.channel.socket.http.HttpTunnelingContextListener&lt;/listener-class&gt;
- *    &lt;/listener&gt;
- *
- *    &lt;servlet&gt;
- *       &lt;servlet-name&gt;NettyTunnelingServlet&lt;/servlet-name&gt;
- *       &lt;servlet-class&gt;org.jboss.netty.channel.socket.http.HttpTunnelingServlet&lt;/servlet-class&gt;
- *    &lt;/servlet&gt;
- *
- *    &lt;servlet-mapping&gt;
- *       &lt;servlet-name&gt;NettyTunnelingServlet&lt;/servlet-name&gt;
- *       &lt;url-pattern&gt;/netty-tunnel&lt;/url-pattern&gt;
- *    &lt;/servlet-mapping&gt;
- * &lt;/web-app&gt;
- * </pre>
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
@@ -108,19 +66,25 @@ public class HttpTunnelingClientExample {
         String scheme = uri.getScheme() == null? "http" : uri.getScheme();
 
         if (!scheme.equals("http")) {
-            // We can actually support HTTPS fairly easily by inserting
-            // an SslHandler to the pipeline - left as an exercise.
+            // We can actually support HTTPS fairly easily by setting
+            // "sslContext" option in the bootstrap, as explained in
+            // {@link HttpTunnelingSocketChannelConfig}.
             System.err.println("Only HTTP is supported.");
             return;
         }
+
         HttpTunnelingClientSocketChannelFactory factory = new HttpTunnelingClientSocketChannelFactory(new OioClientSocketChannelFactory(Executors.newCachedThreadPool()));
         ClientBootstrap bootstrap = new ClientBootstrap(factory);
         bootstrap.getPipeline().addLast("decoder", new StringDecoder());
         bootstrap.getPipeline().addLast("encoder", new StringEncoder());
         bootstrap.getPipeline().addLast("handler", new PrintHandler());
-        ChannelFuture channelFuture = bootstrap.connect(new HttpTunnelAddress(uri));
+
+        bootstrap.setOption("serverName", uri.getHost());
+        bootstrap.setOption("serverPath", uri.getRawPath());
+
+        ChannelFuture channelFuture = bootstrap.connect(new InetSocketAddress(uri.getHost(), uri.getPort()));
         channelFuture.awaitUninterruptibly();
-        System.out.println("Enter text (quit to end)");
+        System.out.println("Enter text ('quit' to exit)");
         // Read commands from the stdin.
         ChannelFuture lastWriteFuture = null;
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));

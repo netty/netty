@@ -70,6 +70,8 @@ import org.jboss.netty.util.internal.ConversionUtil;
 public final class HttpTunnelingSocketChannelConfig implements SocketChannelConfig {
 
     private final HttpTunnelingClientSocketChannel channel;
+    private volatile String serverName;
+    private volatile String serverPath = "/netty-tunnel";
     private volatile SSLContext sslContext;
     private volatile String[] enabledSslCipherSuites;
     private volatile String[] enabledSslProtocols;
@@ -80,6 +82,22 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
      */
     HttpTunnelingSocketChannelConfig(HttpTunnelingClientSocketChannel channel) {
         this.channel = channel;
+    }
+
+    public String getServerName() {
+        return serverName;
+    }
+
+    public void setServerName(String serverName) {
+        this.serverName = serverName;
+    }
+
+    public String getServerPath() {
+        return serverPath;
+    }
+
+    public void setServerPath(String serverPath) {
+        this.serverPath = serverPath;
     }
 
     /**
@@ -181,11 +199,15 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
     }
 
     public boolean setOption(String key, Object value) {
-        if (channel.channel.getConfig().setOption(key, value)) {
+        if (channel.realChannel.getConfig().setOption(key, value)) {
             return true;
         }
 
-        if (key.equals("sslContext")) {
+        if (key.equals("serverName")){
+            setServerName(String.valueOf(value));
+        } else if (key.equals("serverPath")){
+            setServerPath(String.valueOf(value));
+        } else if (key.equals("sslContext")) {
             setSslContext((SSLContext) value);
         } else if (key.equals("enabledSslCipherSuites")){
             setEnabledSslCipherSuites(ConversionUtil.toStringArray(value));
@@ -201,98 +223,98 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
     }
 
     public int getReceiveBufferSize() {
-        return channel.channel.getConfig().getReceiveBufferSize();
+        return channel.realChannel.getConfig().getReceiveBufferSize();
     }
 
     public int getSendBufferSize() {
-        return channel.channel.getConfig().getSendBufferSize();
+        return channel.realChannel.getConfig().getSendBufferSize();
     }
 
     public int getSoLinger() {
-        return channel.channel.getConfig().getSoLinger();
+        return channel.realChannel.getConfig().getSoLinger();
     }
 
     public int getTrafficClass() {
-        return channel.channel.getConfig().getTrafficClass();
+        return channel.realChannel.getConfig().getTrafficClass();
     }
 
     public boolean isKeepAlive() {
-        return channel.channel.getConfig().isKeepAlive();
+        return channel.realChannel.getConfig().isKeepAlive();
     }
 
     public boolean isReuseAddress() {
-        return channel.channel.getConfig().isReuseAddress();
+        return channel.realChannel.getConfig().isReuseAddress();
     }
 
     public boolean isTcpNoDelay() {
-        return channel.channel.getConfig().isTcpNoDelay();
+        return channel.realChannel.getConfig().isTcpNoDelay();
     }
 
     public void setKeepAlive(boolean keepAlive) {
-        channel.channel.getConfig().setKeepAlive(keepAlive);
+        channel.realChannel.getConfig().setKeepAlive(keepAlive);
     }
 
     public void setPerformancePreferences(
           int connectionTime, int latency, int bandwidth) {
-        channel.channel.getConfig().setPerformancePreferences(connectionTime, latency, bandwidth);
+        channel.realChannel.getConfig().setPerformancePreferences(connectionTime, latency, bandwidth);
     }
 
     public void setReceiveBufferSize(int receiveBufferSize) {
-        channel.channel.getConfig().setReceiveBufferSize(receiveBufferSize);
+        channel.realChannel.getConfig().setReceiveBufferSize(receiveBufferSize);
     }
 
     public void setReuseAddress(boolean reuseAddress) {
-        channel.channel.getConfig().setReuseAddress(reuseAddress);
+        channel.realChannel.getConfig().setReuseAddress(reuseAddress);
     }
 
     public void setSendBufferSize(int sendBufferSize) {
-        channel.channel.getConfig().setSendBufferSize(sendBufferSize);
+        channel.realChannel.getConfig().setSendBufferSize(sendBufferSize);
 
     }
 
     public void setSoLinger(int soLinger) {
-        channel.channel.getConfig().setSoLinger(soLinger);
+        channel.realChannel.getConfig().setSoLinger(soLinger);
     }
 
     public void setTcpNoDelay(boolean tcpNoDelay) {
-        channel.channel.getConfig().setTcpNoDelay(tcpNoDelay);
+        channel.realChannel.getConfig().setTcpNoDelay(tcpNoDelay);
     }
 
     public void setTrafficClass(int trafficClass) {
-        channel.channel.getConfig().setTrafficClass(trafficClass);
+        channel.realChannel.getConfig().setTrafficClass(trafficClass);
     }
 
     public ChannelBufferFactory getBufferFactory() {
-        return channel.channel.getConfig().getBufferFactory();
+        return channel.realChannel.getConfig().getBufferFactory();
     }
 
     public int getConnectTimeoutMillis() {
-        return channel.channel.getConfig().getConnectTimeoutMillis();
+        return channel.realChannel.getConfig().getConnectTimeoutMillis();
     }
 
     public ChannelPipelineFactory getPipelineFactory() {
-        return channel.channel.getConfig().getPipelineFactory();
+        return channel.realChannel.getConfig().getPipelineFactory();
     }
 
     @Deprecated
     public int getWriteTimeoutMillis() {
-        return channel.channel.getConfig().getWriteTimeoutMillis();
+        return channel.realChannel.getConfig().getWriteTimeoutMillis();
     }
 
     public void setBufferFactory(ChannelBufferFactory bufferFactory) {
-        channel.channel.getConfig().setBufferFactory(bufferFactory);
+        channel.realChannel.getConfig().setBufferFactory(bufferFactory);
     }
 
     public void setConnectTimeoutMillis(int connectTimeoutMillis) {
-        channel.channel.getConfig().setConnectTimeoutMillis(connectTimeoutMillis);
+        channel.realChannel.getConfig().setConnectTimeoutMillis(connectTimeoutMillis);
     }
 
     public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
-        channel.channel.getConfig().setPipelineFactory(pipelineFactory);
+        channel.realChannel.getConfig().setPipelineFactory(pipelineFactory);
     }
 
     @Deprecated
     public void setWriteTimeoutMillis(int writeTimeoutMillis) {
-        channel.channel.getConfig().setWriteTimeoutMillis(writeTimeoutMillis);
+        channel.realChannel.getConfig().setWriteTimeoutMillis(writeTimeoutMillis);
     }
 }
