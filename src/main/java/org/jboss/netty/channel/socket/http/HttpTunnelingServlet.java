@@ -173,7 +173,7 @@ public class HttpTunnelingServlet extends HttpServlet {
 
             PushbackInputStream in =
                     new PushbackInputStream(req.getInputStream());
-            for (;;) {
+            while (channel.isConnected()) {
                 ChannelBuffer buffer = read(in);
                 if (buffer == null) {
                     break;
@@ -205,6 +205,7 @@ public class HttpTunnelingServlet extends HttpServlet {
                     return null;
                 }
                 if (b == 13) {
+                    // XXX Why do we do this?
                     in.read();
                 } else {
                     in.unread(b);
