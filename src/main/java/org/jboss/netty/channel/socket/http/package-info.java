@@ -102,14 +102,15 @@
  *
  * <pre>
  * ClientBootstrap b = new ClientBootstrap(
- *         <b>new HttpTunnelingClientSocketChannelFactory(new NioClientSocketChannelFactory(...))</b>);
+ *         <b>new HttpTunnelingClientSocketChannelFactory(
+ *                 new NioClientSocketChannelFactory(...))</b>);
  *
  * // Configure the pipeline (or pipeline factory) here.
  * ...
  *
- * // The host name of the HTTP server.
+ * // The host name of the HTTP server
  * b.setOption(<b>"serverName"</b>, "example.com");
- * // The path to the HTTP tunneling Servlet (set to <b>/netty-tunnel</b> in web.xml)
+ * // The path to the HTTP tunneling Servlet, which was specified in in web.xml
  * b.setOption(<b>"serverPath"</b>, "contextPath<b>/netty-tunnel</b>");
  * b.connect(new InetSocketAddress("example.com", 80);
  * </pre>
