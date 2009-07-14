@@ -30,7 +30,9 @@ import org.jboss.netty.channel.socket.SocketChannel;
 /**
  * Creates a client-side {@link SocketChannel} which connects to an
  * {@link HttpTunnelingServlet} to communicate with the server application
- * behind the {@link HttpTunnelingServlet}.
+ * behind the {@link HttpTunnelingServlet}.  Please refer to the
+ * <a href="package-summary.html#package_description">package summary</a> for
+ * the detailed usage.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)

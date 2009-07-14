@@ -59,7 +59,9 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * An {@link HttpServlet} that proxies an incoming data to the actual server
- * and vice versa.
+ * and vice versa.  Please refer to the
+ * <a href="package-summary.html#package_description">package summary</a> for
+ * the detailed usage.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
