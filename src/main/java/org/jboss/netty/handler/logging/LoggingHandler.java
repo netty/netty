@@ -68,12 +68,38 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
      * Creates a new instance whose logger name is the fully qualified class
      * name of the instance.
      *
+     * @param level   the log level
+     */
+    public LoggingHandler(InternalLogLevel level) {
+        this(level, true);
+    }
+
+    /**
+     * Creates a new instance whose logger name is the fully qualified class
+     * name of the instance.
+     *
      * @param hexDump {@code true} if and only if the hex dump of the received
      *                message is logged
      */
     public LoggingHandler(boolean hexDump) {
+        this(DEFAULT_LEVEL, hexDump);
+    }
+
+    /**
+     * Creates a new instance whose logger name is the fully qualified class
+     * name of the instance.
+     *
+     * @param level   the log level
+     * @param hexDump {@code true} if and only if the hex dump of the received
+     *                message is logged
+     */
+    public LoggingHandler(InternalLogLevel level, boolean hexDump) {
+        if (level == null) {
+            throw new NullPointerException("level");
+        }
+
         logger = InternalLoggerFactory.getInstance(getClass());
-        level = DEFAULT_LEVEL;
+        this.level = level;
         this.hexDump = hexDump;
     }
 
@@ -93,6 +119,15 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
      */
     public LoggingHandler(Class<?> clazz, boolean hexDump) {
         this(clazz, DEFAULT_LEVEL, hexDump);
+    }
+
+    /**
+     * Creates a new instance with the specified logger name.
+     *
+     * @param level   the log level
+     */
+    public LoggingHandler(Class<?> clazz, InternalLogLevel level) {
+        this(clazz, level, true);
     }
 
     /**
