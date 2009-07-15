@@ -757,7 +757,11 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
                 // current thread, calling wrap() will lead to a dead lock
                 // i.e. pendingUnencryptedWrites -> handshakeLock vs.
                 //      handshakeLock -> pendingUnencryptedLock -> handshakeLock
-                if (!Thread.holdsLock(handshakeLock)) {
+                //
+                // There is also a same issue between pendingEncryptedWrites
+                // and pendingUnencryptedWrites.
+                if (!Thread.holdsLock(handshakeLock) &&
+                    !Thread.holdsLock(pendingEncryptedWrites)) {
                     wrap(ctx, channel);
                 }
             }
