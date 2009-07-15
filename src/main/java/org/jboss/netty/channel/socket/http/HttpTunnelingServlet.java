@@ -65,7 +65,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  */
 public class HttpTunnelingServlet extends HttpServlet {
 
-    private static final long serialVersionUID = -2396314792027814020L;
+    private static final long serialVersionUID = 4259910275899756070L;
 
     private static final String ENDPOINT = "endpoint";
 
