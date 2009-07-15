@@ -6,37 +6,41 @@
   <xsl:import href="classpath:/xslt/org/jboss/pdf.xsl" />
   <xsl:import href="classpath:/xslt/org/jboss/xslt/fonts/pdf/fonts.xsl" />
 
+  <!-- Override the default font settings -->
+  <xsl:template name="pickfont-serif">
+    <xsl:variable name="font">
+      <xsl:call-template name="pickfont"/>
+    </xsl:variable>
+    <xsl:copy-of select="$font"/>
+    <xsl:text>Liberation Serif,serif</xsl:text>
+  </xsl:template>
   <xsl:param name="title.font.family">
     <xsl:variable name="font">
-      <xsl:call-template name="pickfont-sans"/>
+      <xsl:call-template name="pickfont-serif"/>
     </xsl:variable>
     <xsl:message>
       <xsl:text>Setting 'title.font.family' param=</xsl:text><xsl:copy-of select="$font"/>
     </xsl:message>
     <xsl:copy-of select="$font"/>
   </xsl:param>
-
   <xsl:param name="body.font.family">
     <xsl:variable name="font">
-      <xsl:call-template name="pickfont-sans"/>
+      <xsl:call-template name="pickfont-serif"/>
     </xsl:variable>
     <xsl:message>
       <xsl:text>Setting 'body.font.family' param=</xsl:text><xsl:copy-of select="$font"/>
     </xsl:message>
     <xsl:copy-of select="$font"/>
   </xsl:param>
-
   <xsl:param name="monospace.font.family">
     <xsl:variable name="font">
       <xsl:call-template name="pickfont-mono"/>
     </xsl:variable>
     <xsl:message>
       <xsl:text>Setting 'monospace.font.family' param=</xsl:text><xsl:copy-of select="$font"/>
-
     </xsl:message>
     <xsl:copy-of select="$font"/>
   </xsl:param>
-
   <xsl:param name="sans.font.family">
     <xsl:variable name="font">
       <xsl:call-template name="pickfont-sans"/>
@@ -46,16 +50,16 @@
     </xsl:message>
     <xsl:copy-of select="$font"/>
   </xsl:param>
-
-  <!-- Override the default font settings -->
-  <!--
-  <xsl:param name="body.font.family" select="&quot;Times New Roman, serif&quot;" />
-  <xsl:param name="monospace.font.family" select="&quot;DejaVu Sans Mono, monospace&quot;" />
-  <xsl:param name="sans.font.family" select="&quot;Arial, sans-serif&quot;" />
-  <xsl:param name="title.font.family" select="$body.font.family" />
-  <xsl:param name="programlisting.font" select="$monospace.font.family" />
-  -->
-  <xsl:param name="programlisting.font.size" select="'75%'" />
+  <xsl:param name="programlisting.font">
+    <xsl:variable name="font">
+      <xsl:call-template name="pickfont-mono"/>
+    </xsl:variable>
+    <xsl:message>
+      <xsl:text>Setting 'programlisting.font' param=</xsl:text><xsl:copy-of select="$font"/>
+    </xsl:message>
+    <xsl:copy-of select="$font"/>
+  </xsl:param>
+  <xsl:param name="programlisting.font.size" select="'85%'" />
 
   <!-- Remove the blank pages between the chapters -->
   <xsl:param name="double.sided" select="0" />
@@ -75,11 +79,9 @@
   <!-- Decrease the link font size in the program listing -->
   <xsl:attribute-set name="monospace.properties">
     <xsl:attribute name="font-size">1em</xsl:attribute>
-    <!--
     <xsl:attribute name="font-family">
         <xsl:value-of select="$monospace.font.family"/>
     </xsl:attribute>
-    -->
   </xsl:attribute-set>
   
   <!-- Add some spacing between callout listing items -->

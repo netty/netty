@@ -563,6 +563,7 @@
             <xmlTransformerType>saxon</xmlTransformerType>
             <docbookVersion>1.72.0</docbookVersion>
             <localeSeparator>-</localeSeparator>
+            <autoDetectFonts>true</autoDetectFonts>
           </options>
         </configuration>
       </plugin>
