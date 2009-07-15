@@ -22,6 +22,7 @@
  */
 package org.jboss.netty.channel.socket.http;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.PushbackInputStream;
 import java.net.SocketAddress;
@@ -172,7 +173,12 @@ public class HttpTunnelingServlet extends HttpServlet {
             PushbackInputStream in =
                     new PushbackInputStream(req.getInputStream());
             while (channel.isConnected()) {
-                ChannelBuffer buffer = read(in);
+                ChannelBuffer buffer;
+                try {
+                    buffer = read(in);
+                } catch (EOFException e) {
+                    break;
+                }
                 if (buffer == null) {
                     break;
                 }

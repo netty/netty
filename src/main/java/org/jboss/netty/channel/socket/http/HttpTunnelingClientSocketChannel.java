@@ -220,6 +220,8 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
                         sslHandshakeFuture.addListener(new ChannelFutureListener() {
                             public void operationComplete(ChannelFuture f) {
                                 if (f.isSuccess()) {
+                                    realChannel.write(req);
+                                    requestHeaderWritten = true;
                                     future.setSuccess();
                                     fireChannelConnected(virtualChannel, remoteAddress);
                                 } else {

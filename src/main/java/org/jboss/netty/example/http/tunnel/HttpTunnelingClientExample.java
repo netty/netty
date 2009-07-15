@@ -29,15 +29,14 @@ import java.net.URI;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.socket.http.HttpTunnelingClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
-import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
+import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
+import org.jboss.netty.handler.logging.LoggingHandler;
+import org.jboss.netty.logging.InternalLogLevel;
 
 /**
  * An HTTP tunneled version of the telnet client example.  Please refer to the
@@ -65,22 +64,23 @@ public class HttpTunnelingClientExample {
         URI uri = new URI(args[0]);
         String scheme = uri.getScheme() == null? "http" : uri.getScheme();
 
-        if (!scheme.equals("http")) {
-            // We can actually support HTTPS fairly easily by setting
-            // "sslContext" option in the bootstrap, as explained in
-            // {@link HttpTunnelingSocketChannelConfig}.
-            System.err.println("Only HTTP is supported.");
-            return;
-        }
-
         HttpTunnelingClientSocketChannelFactory factory = new HttpTunnelingClientSocketChannelFactory(new OioClientSocketChannelFactory(Executors.newCachedThreadPool()));
         ClientBootstrap bootstrap = new ClientBootstrap(factory);
         bootstrap.getPipeline().addLast("decoder", new StringDecoder());
         bootstrap.getPipeline().addLast("encoder", new StringEncoder());
-        bootstrap.getPipeline().addLast("handler", new PrintHandler());
+        bootstrap.getPipeline().addLast("handler", new LoggingHandler(InternalLogLevel.INFO));
 
         bootstrap.setOption("serverName", uri.getHost());
         bootstrap.setOption("serverPath", uri.getRawPath());
+
+        // Configure SSL if necessary
+        if (scheme.equals("https")) {
+            bootstrap.setOption("sslContext", SecureChatSslContextFactory.getClientContext());
+        } else if (!scheme.equals("http")) {
+            // Only HTTP and HTTPS are supported.
+            System.err.println("Only HTTP(S) is supported.");
+            return;
+        }
 
         ChannelFuture channelFuture = bootstrap.connect(new InetSocketAddress(uri.getHost(), uri.getPort()));
         channelFuture.awaitUninterruptibly();
@@ -102,20 +102,11 @@ public class HttpTunnelingClientExample {
         if (lastWriteFuture != null) {
             lastWriteFuture.awaitUninterruptibly();
         }
+
         channelFuture.getChannel().close();
         // Wait until the connection is closed or the connection attempt fails.
         channelFuture.getChannel().getCloseFuture().awaitUninterruptibly();
 
         factory.releaseExternalResources();
-    }
-
-    @ChannelPipelineCoverage("all")
-    static class PrintHandler extends OneToOneDecoder {
-        @Override
-        protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-            String message = (String) msg;
-            System.out.println("received message back '" + message + "'");
-            return message;
-        }
     }
 }
