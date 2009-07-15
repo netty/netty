@@ -257,6 +257,9 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
             public void operationComplete(ChannelFuture f) {
                 if (f.isSuccess()) {
                     future.setSuccess();
+                    if (size != 0) {
+                        fireWriteComplete(HttpTunnelingClientSocketChannel.this, size);
+                    }
                 } else {
                     future.setFailure(f.getCause());
                 }
