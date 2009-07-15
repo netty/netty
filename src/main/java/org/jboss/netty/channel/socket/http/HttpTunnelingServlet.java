@@ -97,6 +97,12 @@ public class HttpTunnelingServlet extends HttpServlet {
         } catch (Exception e) {
             throw new ServletException("Failed to create a channel factory.", e);
         }
+
+        // Stuff for testing purpose
+        //ServerBootstrap b = new ServerBootstrap(new DefaultLocalServerChannelFactory());
+        //b.getPipeline().addLast("logger", new LoggingHandler(getClass(), InternalLogLevel.INFO, true));
+        //b.getPipeline().addLast("handler", new EchoHandler());
+        //b.bind(remoteAddress);
     }
 
     protected SocketAddress parseEndpoint(String endpoint) throws Exception {
@@ -182,28 +188,24 @@ public class HttpTunnelingServlet extends HttpServlet {
         byte[] buf;
         int readBytes;
 
-        for (;;) {
-            int bytesToRead = in.available();
-            if (bytesToRead > 0) {
-                buf = new byte[bytesToRead];
-                readBytes = in.read(buf);
-                break;
-            } else if (bytesToRead == 0) {
-                int b = in.read();
-                if (b < 0 || in.available() < 0) {
-                    return null;
-                }
-                if (b == 13) {
-                    // XXX Why do we do this?
-                    in.read();
-                } else {
-                    in.unread(b);
-                }
-
-            } else {
+        int bytesToRead = in.available();
+        if (bytesToRead > 0) {
+            buf = new byte[bytesToRead];
+            readBytes = in.read(buf);
+        } else if (bytesToRead == 0) {
+            int b = in.read();
+            if (b < 0 || in.available() < 0) {
                 return null;
             }
+            in.unread(b);
+            bytesToRead = in.available();
+            buf = new byte[bytesToRead];
+            readBytes = in.read(buf);
+        } else {
+            return null;
         }
+
+        assert readBytes > 0;
 
         ChannelBuffer buffer;
         if (readBytes == buf.length) {
