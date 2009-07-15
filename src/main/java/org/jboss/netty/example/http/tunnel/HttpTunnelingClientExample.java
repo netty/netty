@@ -64,25 +64,26 @@ public class HttpTunnelingClientExample {
         URI uri = new URI(args[0]);
         String scheme = uri.getScheme() == null? "http" : uri.getScheme();
 
-        HttpTunnelingClientSocketChannelFactory factory = new HttpTunnelingClientSocketChannelFactory(new OioClientSocketChannelFactory(Executors.newCachedThreadPool()));
-        ClientBootstrap bootstrap = new ClientBootstrap(factory);
-        bootstrap.getPipeline().addLast("decoder", new StringDecoder());
-        bootstrap.getPipeline().addLast("encoder", new StringEncoder());
-        bootstrap.getPipeline().addLast("handler", new LoggingHandler(InternalLogLevel.INFO));
+        ClientBootstrap b = new ClientBootstrap(
+                new HttpTunnelingClientSocketChannelFactory(
+                        new OioClientSocketChannelFactory(Executors.newCachedThreadPool())));
+        b.getPipeline().addLast("decoder", new StringDecoder());
+        b.getPipeline().addLast("encoder", new StringEncoder());
+        b.getPipeline().addLast("handler", new LoggingHandler(InternalLogLevel.INFO));
 
-        bootstrap.setOption("serverName", uri.getHost());
-        bootstrap.setOption("serverPath", uri.getRawPath());
+        b.setOption("serverName", uri.getHost());
+        b.setOption("serverPath", uri.getRawPath());
 
         // Configure SSL if necessary
         if (scheme.equals("https")) {
-            bootstrap.setOption("sslContext", SecureChatSslContextFactory.getClientContext());
+            b.setOption("sslContext", SecureChatSslContextFactory.getClientContext());
         } else if (!scheme.equals("http")) {
             // Only HTTP and HTTPS are supported.
             System.err.println("Only HTTP(S) is supported.");
             return;
         }
 
-        ChannelFuture channelFuture = bootstrap.connect(new InetSocketAddress(uri.getHost(), uri.getPort()));
+        ChannelFuture channelFuture = b.connect(new InetSocketAddress(uri.getHost(), uri.getPort()));
         channelFuture.awaitUninterruptibly();
         System.out.println("Enter text ('quit' to exit)");
         // Read commands from the stdin.
@@ -107,6 +108,6 @@ public class HttpTunnelingClientExample {
         // Wait until the connection is closed or the connection attempt fails.
         channelFuture.getChannel().getCloseFuture().awaitUninterruptibly();
 
-        factory.releaseExternalResources();
+        b.releaseExternalResources();
     }
 }
