@@ -3,15 +3,58 @@
                 xmlns:fo="http://www.w3.org/1999/XSL/Format"
                 version="1.0">
 
-  <xsl:import href="http://docbook.sourceforge.net/release/xsl/1.72.0/fo/docbook.xsl" />
   <xsl:import href="classpath:/xslt/org/jboss/pdf.xsl" />
+  <xsl:import href="classpath:/xslt/org/jboss/xslt/fonts/pdf/fonts.xsl" />
+
+  <xsl:param name="title.font.family">
+    <xsl:variable name="font">
+      <xsl:call-template name="pickfont-sans"/>
+    </xsl:variable>
+    <xsl:message>
+      <xsl:text>Setting 'title.font.family' param=</xsl:text><xsl:copy-of select="$font"/>
+    </xsl:message>
+    <xsl:copy-of select="$font"/>
+  </xsl:param>
+
+  <xsl:param name="body.font.family">
+    <xsl:variable name="font">
+      <xsl:call-template name="pickfont-sans"/>
+    </xsl:variable>
+    <xsl:message>
+      <xsl:text>Setting 'body.font.family' param=</xsl:text><xsl:copy-of select="$font"/>
+    </xsl:message>
+    <xsl:copy-of select="$font"/>
+  </xsl:param>
+
+  <xsl:param name="monospace.font.family">
+    <xsl:variable name="font">
+      <xsl:call-template name="pickfont-mono"/>
+    </xsl:variable>
+    <xsl:message>
+      <xsl:text>Setting 'monospace.font.family' param=</xsl:text><xsl:copy-of select="$font"/>
+
+    </xsl:message>
+    <xsl:copy-of select="$font"/>
+  </xsl:param>
+
+  <xsl:param name="sans.font.family">
+    <xsl:variable name="font">
+      <xsl:call-template name="pickfont-sans"/>
+    </xsl:variable>
+    <xsl:message>
+      <xsl:text>Setting 'sans.font.family' param=</xsl:text><xsl:copy-of select="$font"/>
+    </xsl:message>
+    <xsl:copy-of select="$font"/>
+  </xsl:param>
 
   <!-- Override the default font settings -->
-  <xsl:param name="body.font.family" select="'Times New Roman, serif'" />
-  <xsl:param name="monospace.font.family" select="'DejaVu Sans Mono, monospace'" />
-  <xsl:param name="sans.font.family" select="'Arial, sans-serif'" />
+  <!--
+  <xsl:param name="body.font.family" select="&quot;Times New Roman, serif&quot;" />
+  <xsl:param name="monospace.font.family" select="&quot;DejaVu Sans Mono, monospace&quot;" />
+  <xsl:param name="sans.font.family" select="&quot;Arial, sans-serif&quot;" />
   <xsl:param name="title.font.family" select="$body.font.family" />
   <xsl:param name="programlisting.font" select="$monospace.font.family" />
+  -->
   <xsl:param name="programlisting.font.size" select="'75%'" />
 
   <!-- Remove the blank pages between the chapters -->
@@ -32,9 +75,11 @@
   <!-- Decrease the link font size in the program listing -->
   <xsl:attribute-set name="monospace.properties">
     <xsl:attribute name="font-size">1em</xsl:attribute>
+    <!--
     <xsl:attribute name="font-family">
         <xsl:value-of select="$monospace.font.family"/>
     </xsl:attribute>
+    -->
   </xsl:attribute-set>
   
   <!-- Add some spacing between callout listing items -->
