@@ -141,7 +141,8 @@ public class HttpTunnelingServlet extends HttpServlet {
     protected void service(HttpServletRequest req, HttpServletResponse res)
             throws ServletException, IOException {
         if (!"POST".equalsIgnoreCase(req.getMethod())) {
-            res.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED, "Method not allowed");
+            logger.warn("Unallowed method: " + req.getMethod());
+            res.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
             return;
         }
 
@@ -153,7 +154,9 @@ public class HttpTunnelingServlet extends HttpServlet {
         Channel channel = channelFactory.newChannel(pipeline);
         ChannelFuture future = channel.connect(remoteAddress).awaitUninterruptibly();
         if (!future.isSuccess()) {
-            res.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Endpoint unavailable: " + future.getCause().getMessage());
+            Throwable cause = future.getCause();
+            logger.warn("Endpoint unavailable: " + cause.getMessage(), cause);
+            res.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
             return;
         }
 
