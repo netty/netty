@@ -84,19 +84,38 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
         this.channel = channel;
     }
 
+    /**
+     * Returns the host name of the HTTP server.  If {@code null}, the
+     * {@code "Host"} header is not sent by the HTTP tunneling client.
+     */
     public String getServerName() {
         return serverName;
     }
 
+    /**
+     * Sets the host name of the HTTP server.  If {@code null}, the
+     * {@code "Host"} header is not sent by the HTTP tunneling client.
+     */
     public void setServerName(String serverName) {
         this.serverName = serverName;
     }
 
+    /**
+     * Returns the path where the {@link HttpTunnelingServlet} is mapped to.
+     * The default value is {@code "/netty-tunnel"}.
+     */
     public String getServerPath() {
         return serverPath;
     }
 
+    /**
+     * Sets the path where the {@link HttpTunnelingServlet} is mapped to.
+     * The default value is {@code "/netty-tunnel"}.
+     */
     public void setServerPath(String serverPath) {
+        if (serverPath == null) {
+            throw new NullPointerException("serverPath");
+        }
         this.serverPath = serverPath;
     }
 
