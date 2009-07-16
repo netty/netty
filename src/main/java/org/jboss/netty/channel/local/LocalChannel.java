@@ -23,7 +23,6 @@
 package org.jboss.netty.channel.local;
 
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelConfig;
 
 /**
  * A {@link Channel} for the local transport.
@@ -34,7 +33,6 @@ import org.jboss.netty.channel.ChannelConfig;
  * @version $Rev$, $Date$
  */
 public interface LocalChannel extends Channel {
-    ChannelConfig getConfig();
     LocalAddress getLocalAddress();
     LocalAddress getRemoteAddress();
 }

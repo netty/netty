@@ -22,7 +22,6 @@
  */
 package org.jboss.netty.channel.local;
 
-import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ServerChannel;
 
 /**
@@ -34,7 +33,6 @@ import org.jboss.netty.channel.ServerChannel;
  * @version $Rev$, $Date$
  */
 public interface LocalServerChannel extends ServerChannel {
-    ChannelConfig getConfig();
     LocalAddress getLocalAddress();
     LocalAddress getRemoteAddress();
 }
