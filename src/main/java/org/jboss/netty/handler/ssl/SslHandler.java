@@ -66,9 +66,9 @@ import org.jboss.netty.util.internal.ImmediateExecutor;
  *
  * <h3>Beginning the handshake</h3>
  * <p>
- * A user should make sure not to write a message while the
- * {@linkplain #handshake(Channel) handshake} is in progress unless it is a
- * renegotiation.  You will be notified by the {@link ChannelFuture} which is
+ * You must make sure not to write a message while the
+ * {@linkplain #handshake(Channel) handshake} is in progress unless you are
+ * renegotiating.  You will be notified by the {@link ChannelFuture} which is
  * returned by the {@link #handshake(Channel)} method when the handshake
  * process succeeds or fails.
  *
@@ -94,6 +94,36 @@ import org.jboss.netty.util.internal.ImmediateExecutor;
  * {@link SslHandler} from the {@link ChannelPipeline}, insert a new
  * {@link SslHandler} with a new {@link SSLEngine} into the pipeline,
  * and start the handshake process as described in the first section.
+ *
+ * <h3>Implementing StartTLS</h3>
+ * <p>
+ * Typically, StartTLS is composed of three steps.
+ * <ol>
+ * <li>Client sends a StartTLS request to server.</li>
+ * <li>Server sends a StartTLS response to client.</li>
+ * <li>Client begins SSL handshake.</li>
+ * </ol>
+ * If you implement a server, you need to:
+ * <ol>
+ * <li>create a new {@link SslHandler} instance with {@code startTls} flag set
+ *     to {@code true},</li>
+ * <li>insert the {@link SslHandler} to the {@link ChannelPipeline}, and</li>
+ * <li>write a StartTLS response.</li>
+ * </ol>
+ * Please note that you must insert {@link SslHandler} <em>before</em> sending
+ * the StartTLS response.  Otherwise the client can send begin SSL handshake
+ * before {@link SslHandler} is inserted to the {@link ChannelPipeline}, causing
+ * data corruption.
+ * <p>
+ * The client-side implementation is much simpler.
+ * <ol>
+ * <li>Write a StartTLS request,</li>
+ * <li>wait for the StartTLS response,</li>
+ * <li>create a new {@link SslHandler} instance with {@code startTls} flag set
+ *     to {@code false},</li>
+ * <li>insert the {@link SslHandler} to the {@link ChannelPipeline}, and</li>
+ * <li>Initiate SSL handshake by calling {@link SslHandler#handshake(Channel)}.</li>
+ * </ol>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
