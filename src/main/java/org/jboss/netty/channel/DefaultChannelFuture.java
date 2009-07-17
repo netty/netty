@@ -50,6 +50,29 @@ public class DefaultChannelFuture implements ChannelFuture {
 
     private static final Throwable CANCELLED = new Throwable();
 
+    private static volatile boolean useDeadLockChecker = true;
+
+    /**
+     * Returns {@code true} if and only if the dead lock checker is enabled.
+     */
+    public static boolean isUseDeadLockChecker() {
+        return useDeadLockChecker;
+    }
+
+    /**
+     * Enables or disables the dead lock checker.  It is not recommended to
+     * disable the dead lock checker.  Disable it at your own risk!
+     */
+    public static void setUseDeadLockChecker(boolean useDeadLockChecker) {
+        if (!useDeadLockChecker) {
+            logger.debug(
+                    "The dead lock checker in " +
+                    DefaultChannelFuture.class.getSimpleName() +
+                    " has been disabled as requested at your own risk.");
+        }
+        DefaultChannelFuture.useDeadLockChecker = useDeadLockChecker;
+    }
+
     private final Channel channel;
     private final boolean cancellable;
 
@@ -239,7 +262,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     }
 
     private void checkDeadLock() {
-        if (IoWorkerRunnable.IN_IO_THREAD.get()) {
+        if (isUseDeadLockChecker() && IoWorkerRunnable.IN_IO_THREAD.get()) {
             throw new IllegalStateException(
                     "await*() in I/O thread causes a dead lock or " +
                     "sudden performance drop. Use addListener() instead or " +
