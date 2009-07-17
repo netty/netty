@@ -314,10 +314,11 @@ public void messageReceived(&ChannelHandlerContext; ctx, &MessageEvent; e) {
   <section>
     <title>Writing a Time Server</title>
     <para>
-      The protocol to implement in this section is the <ulink url="">TIME</ulink>
-      protocol.  It is different from the previous examples in that it sends a
-      message, which contains a 32-bit integer, without receiving any requests
-      and closes the connection once the message is sent.  In this example, you
+      The protocol to implement in this section is the
+      <ulink url="http://tools.ietf.org/html/rfc868">TIME</ulink> protocol.
+      It is different from the previous examples in that it sends a message,
+      which contains a 32-bit integer, without receiving any requests and 
+      loses the connection once the message is sent.  In this example, you
       will learn how to construct and send a message, and to close the
       connection on completion.
     </para>
