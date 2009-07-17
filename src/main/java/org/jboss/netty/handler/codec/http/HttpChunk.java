@@ -24,13 +24,21 @@ package org.jboss.netty.handler.codec.http;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelPipeline;
 
 /**
  * An HTTP chunk which is used for HTTP chunked transfer-encoding.
+ * {@link HttpMessageDecoder} generates {@link HttpChunk} after
+ * {@link HttpMessage} when the content is large or the encoding of the content
+ * is 'chunked.  If you prefer not to receive {@link HttpChunk} in your handler,
+ * please {@link HttpChunkAggregator} after {@link HttpMessageDecoder} in the
+ * {@link ChannelPipeline}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @see HttpChunkAggregator
  */
 public interface HttpChunk {
 

@@ -25,5 +25,10 @@
  * Extensible decoder and its common implementations which deal with the
  * packet fragmentation and reassembly issue found in a stream-based transport
  * such as TCP/IP.
+ *
+ * @apiviz.exclude OneToOne(Encoder|Decoder)$
+ * @apiviz.exclude \.(Simple)?Channel[A-Za-z]*Handler$
+ * @apiviz.exclude \.codec\.serialization\.
+ * @apiviz.exclude \.ssl\.
  */
 package org.jboss.netty.handler.codec.frame;

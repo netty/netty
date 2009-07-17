@@ -36,6 +36,7 @@ import org.jboss.netty.channel.Channel;
  *
  * @version $Rev$, $Date$
  *
+ * @apiviz.landmark
  * @apiviz.composedOf org.jboss.netty.channel.socket.DatagramChannelConfig
  */
 public interface DatagramChannel extends Channel {

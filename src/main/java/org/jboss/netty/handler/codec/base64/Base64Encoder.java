@@ -47,6 +47,8 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.uses org.jboss.netty.handler.codec.base64.Base64
  */
 public class Base64Encoder extends OneToOneEncoder {
 

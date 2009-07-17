@@ -25,6 +25,6 @@
  * An alternative channel API implementation which uses
  * <a href="http://www.jboss.org/xnio/">JBoss XNIO</a> as its I/O provider.
  *
- * @apiviz.exclude \.(Abstract|Default).*$
+ * @apiviz.exclude Channel$
  */
 package org.jboss.netty.channel.xnio;

@@ -41,6 +41,8 @@ import org.jboss.netty.buffer.HeapChannelBufferFactory;
  * @author Robert Harder (rob@iharder.net)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.uses org.jboss.netty.handler.codec.base64.Base64Dialect
  */
 public class Base64 {
 

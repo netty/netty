@@ -24,7 +24,10 @@
 /**
  * Encoder, decoder and their related message types for HTTP.
  *
- * @apiviz.exclude \.HttpHeaders.*$
- * @apiviz.exclude \.QueryString.*$
+ * @apiviz.exclude HttpHeaders\.
+ * @apiviz.exclude ^java\.lang\.
+ * @apiviz.exclude OneToOne(Encoder|Decoder)$
+ * @apiviz.exclude \.codec\.replay\.
+ * @apiviz.exclude \.(Simple)?Channel[A-Za-z]*Handler$
  */
 package org.jboss.netty.handler.codec.http;

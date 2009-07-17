@@ -135,6 +135,7 @@
  * as well as {@link java.nio.ByteBuffer}.
  *
  * @apiviz.landmark
+ * @apiviz.exclude ^java\.lang\.
  * @apiviz.exclude ^java\.io\.[^\.]+Stream$
  */
 package org.jboss.netty.buffer;

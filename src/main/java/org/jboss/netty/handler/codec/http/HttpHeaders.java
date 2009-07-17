@@ -28,6 +28,8 @@ package org.jboss.netty.handler.codec.http;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.stereotype static
  */
 public final class HttpHeaders {
 
@@ -37,6 +39,8 @@ public final class HttpHeaders {
      * @author The Netty Project (netty-dev@lists.jboss.org)
      * @author Andy Taylor (andy.taylor@jboss.org)
      * @version $Rev$, $Date$
+     *
+     * @apiviz.stereotype static
      */
     public static final class Names {
         /**
@@ -255,6 +259,8 @@ public final class HttpHeaders {
      * @author The Netty Project (netty-dev@lists.jboss.org)
      * @author Andy Taylor (andy.taylor@jboss.org)
      * @version $Rev$, $Date$
+     *
+     * @apiviz.stereotype static
      */
     public static final class Values {
         /**

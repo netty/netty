@@ -41,6 +41,9 @@ import java.util.TreeSet;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  * @see CookieDecoder
+ *
+ * @apiviz.stereotype utility
+ * @apiviz.has        org.jboss.netty.handler.codec.http.Cookie oneway - - encodes
  */
 public class CookieEncoder {
 

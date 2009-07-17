@@ -54,6 +54,8 @@ import org.jboss.netty.handler.codec.frame.TooLongFrameException;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.has org.jboss.netty.handler.codec.http.HttpChunk oneway - - filters out
  */
 @ChannelPipelineCoverage("one")
 public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {

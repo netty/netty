@@ -26,5 +26,7 @@
  * <a href="http://en.wikipedia.org/wiki/Base64">Base64</a>-encoded
  * {@link java.lang.String} or {@link org.jboss.netty.buffer.ChannelBuffer}
  * into a decoded {@link org.jboss.netty.buffer.ChannelBuffer} and vice versa.
+ *
+ * @apiviz.exclude OneToOne(Encoder|Decoder)$
  */
 package org.jboss.netty.handler.codec.base64;

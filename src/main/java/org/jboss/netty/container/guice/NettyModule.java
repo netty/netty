@@ -54,6 +54,8 @@ import com.google.inject.Scopes;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 public class NettyModule extends AbstractModule {
 

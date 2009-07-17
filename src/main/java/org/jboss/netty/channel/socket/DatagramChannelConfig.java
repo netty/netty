@@ -68,8 +68,6 @@ import org.jboss.netty.channel.ReceiveBufferSizePredictor;
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
- *
- * @apiviz.landmark
  */
 public interface DatagramChannelConfig extends ChannelConfig {
 

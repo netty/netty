@@ -84,6 +84,8 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  * @author Daniel Bevenius (dbevenius@jboss.com)
  *
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 public class NioDatagramChannelFactory implements DatagramChannelFactory {
 

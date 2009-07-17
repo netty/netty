@@ -24,5 +24,8 @@
 /**
  * A virtual transport that enables the communication between the two
  * parties in the same virtual machine.
+ *
+ * @apiviz.exclude ^java\.lang\.
+ * @apiviz.exclude Channel$
  */
 package org.jboss.netty.channel.local;

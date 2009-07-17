@@ -40,6 +40,9 @@ import java.util.regex.Pattern;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  * @see CookieEncoder
+ *
+ * @apiviz.stereotype utility
+ * @apiviz.has        org.jboss.netty.handler.codec.http.Cookie oneway - - decodes
  */
 public class CookieDecoder {
 
