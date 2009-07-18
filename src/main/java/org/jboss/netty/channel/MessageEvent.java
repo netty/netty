@@ -45,10 +45,7 @@ public interface MessageEvent extends ChannelEvent {
     Object getMessage();
 
     /**
-     * Returns the remote address.
-     *
-     * @return the remote address.  {@code null} if the remote address is
-     *         same with the default remote address returned by {@link Channel#getRemoteAddress()}.
+     * Returns the remote address of the message.
      */
     SocketAddress getRemoteAddress();
 }

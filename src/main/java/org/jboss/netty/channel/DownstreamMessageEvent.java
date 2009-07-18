@@ -77,7 +77,11 @@ public class DownstreamMessageEvent implements MessageEvent {
     }
 
     public SocketAddress getRemoteAddress() {
-        return remoteAddress;
+        if (remoteAddress != null) {
+            return remoteAddress;
+        } else {
+            return getChannel().getRemoteAddress();
+        }
     }
 
     @Override
