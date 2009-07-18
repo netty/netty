@@ -25,6 +25,8 @@ package org.jboss.netty.channel;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
+import org.jboss.netty.channel.socket.DatagramChannel;
+
 
 /**
  * A nexus to a network socket or a component which is capable of I/O
@@ -157,6 +159,11 @@ public interface Channel extends Comparable<Channel>{
      *
      * @return the remote address of this channel.
      *         {@code null} if this channel is not connected.
+     *         If this channel is not connected but it can receive messages
+     *         from arbitrary remote addresses (e.g. {@link DatagramChannel},
+     *         use {@link MessageEvent#getRemoteAddress()} to determine
+     *         the origination of the received message as this method will
+     *         return {@code null}.
      */
     SocketAddress getRemoteAddress();
 
