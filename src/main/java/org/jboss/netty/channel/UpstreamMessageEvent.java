@@ -57,7 +57,12 @@ public class UpstreamMessageEvent implements MessageEvent {
         }
         this.channel = channel;
         this.message = message;
-        this.remoteAddress = remoteAddress;
+
+        if (remoteAddress != null) {
+            this.remoteAddress = remoteAddress;
+        } else {
+            this.remoteAddress = channel.getRemoteAddress();
+        }
     }
 
     public Channel getChannel() {
@@ -78,12 +83,13 @@ public class UpstreamMessageEvent implements MessageEvent {
 
     @Override
     public String toString() {
-        if (getRemoteAddress() == null) {
+        // It's safe to use identity comparison in this case.
+        if (getRemoteAddress() == getChannel().getRemoteAddress()) {
             return getChannel().toString() + " RECEIVED: " +
                    StringUtil.stripControlCharacters(getMessage());
         } else {
             return getChannel().toString() + " RECEIVED: " +
-                   StringUtil.stripControlCharacters(getMessage()) + ", " +
+                   StringUtil.stripControlCharacters(getMessage()) + " from " +
                    getRemoteAddress();
         }
     }
