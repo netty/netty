@@ -86,7 +86,7 @@ public class DownstreamMessageEvent implements MessageEvent {
 
     @Override
     public String toString() {
-        if (getRemoteAddress() == null) {
+        if (getRemoteAddress() == getChannel().getRemoteAddress()) {
             return getChannel().toString() + " WRITE: " +
                    StringUtil.stripControlCharacters(getMessage());
         } else {
