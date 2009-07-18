@@ -57,7 +57,11 @@ public class UpstreamMessageEvent implements MessageEvent {
         }
         this.channel = channel;
         this.message = message;
-        this.remoteAddress = remoteAddress;
+        if (remoteAddress != null) {
+            this.remoteAddress = remoteAddress;
+        } else {
+            this.remoteAddress = channel.getRemoteAddress();
+        }
     }
 
     public Channel getChannel() {
@@ -73,11 +77,7 @@ public class UpstreamMessageEvent implements MessageEvent {
     }
 
     public SocketAddress getRemoteAddress() {
-        if (remoteAddress != null) {
-            return remoteAddress;
-        } else {
-            return getChannel().getRemoteAddress();
-        }
+        return remoteAddress;
     }
 
     @Override
