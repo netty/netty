@@ -73,7 +73,6 @@ import org.jboss.netty.util.TimerTask;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  *
- * @see HashedWheelTimer
  * @see ReadTimeoutHandler
  * @see WriteTimeoutHandler
  *

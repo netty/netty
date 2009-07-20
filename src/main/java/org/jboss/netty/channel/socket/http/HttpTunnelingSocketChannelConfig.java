@@ -66,6 +66,8 @@ import org.jboss.netty.util.internal.ConversionUtil;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 public final class HttpTunnelingSocketChannelConfig implements SocketChannelConfig {
 

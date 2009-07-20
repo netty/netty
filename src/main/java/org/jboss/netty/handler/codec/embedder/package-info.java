@@ -24,6 +24,8 @@
 /**
  * A helper that wraps an encoder or a decoder so that they can be used without
  * doing actual I/O in unit tests or higher level codecs.
+ *
+ * @apiviz.exclude CodecEmbedder$
  */
 package org.jboss.netty.handler.codec.embedder;
 

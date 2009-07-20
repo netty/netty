@@ -86,7 +86,7 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * @version $Rev$, $Date$
  *
  * @apiviz.has org.jboss.netty.util.ObjectSizeEstimator oneway - -
- * @apiviz.has org.jboss.netty.handler.execution.ChannelEventRunnable - - executes
+ * @apiviz.has org.jboss.netty.handler.execution.ChannelEventRunnable oneway - - executes
  */
 public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 

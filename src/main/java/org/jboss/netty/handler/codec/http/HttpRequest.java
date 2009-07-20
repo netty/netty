@@ -38,8 +38,6 @@ package org.jboss.netty.handler.codec.http;
  * @version $Rev$, $Date$
  *
  * @see HttpResponse
- * @see QueryStringEncoder
- * @see QueryStringDecoder
  * @see CookieEncoder
  * @see CookieDecoder
  */

@@ -38,8 +38,6 @@ import org.jboss.netty.channel.ChannelPipeline;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  *
- * @see HttpChunkAggregator
- *
  * @apiviz.landmark
  */
 public interface HttpChunk {
