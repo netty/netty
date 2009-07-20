@@ -24,5 +24,9 @@
 /**
  * Adds support for read and write timeout and idle connection notification
  * using a {@link org.jboss.netty.util.Timer}.
+ *
+ * @apiviz.exclude \.channel\.
+ * @apiviz.exclude \.DefaultIdleStateEvent$
+ * @apiviz.exclude \.ExternalResourceReleasable$
  */
 package org.jboss.netty.handler.timeout;

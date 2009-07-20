@@ -29,6 +29,8 @@ package org.jboss.netty.util;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 public interface ExternalResourceReleasable {
 

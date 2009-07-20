@@ -24,5 +24,7 @@
 /**
  * <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL &middot;
  * TLS</a> implementation based on {@link javax.net.ssl.SSLEngine}
+ *
+ * @apiviz.exclude \.(channel|codec)\.
  */
 package org.jboss.netty.handler.ssl;

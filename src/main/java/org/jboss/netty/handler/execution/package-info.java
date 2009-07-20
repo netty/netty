@@ -26,5 +26,9 @@
  * thread models and memory overload prevention mechanisms.
  *
  * @apiviz.exclude ^java\.lang\.
+ * @apiviz.exclude \.netty\.channel\.
+ * @apiviz.exclude \.ExternalResourceReleasable$
+ * @apiviz.exclude \.ChannelEventRunnable$
+ *
  */
 package org.jboss.netty.handler.execution;

@@ -46,6 +46,8 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 @ChannelPipelineCoverage("all")
 public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {

@@ -26,5 +26,6 @@
  * using an {@link org.jboss.netty.logging.InternalLogger}.
  *
  * @apiviz.hidden
+ * @apiviz.exclude \.channel\.
  */
 package org.jboss.netty.handler.logging;

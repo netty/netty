@@ -80,6 +80,8 @@ import org.jboss.netty.util.internal.MapBackedSet;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 public class VirtualExecutorService extends AbstractExecutorService {
 

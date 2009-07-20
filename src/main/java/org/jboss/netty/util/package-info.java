@@ -25,5 +25,9 @@
  * Utility classes used across multiple packages.
  *
  * @apiviz.exclude
+ * @apiviz.exclude ^java\.(lang|util)\.
+ * @apiviz.exclude \.netty\.(?!util)[a-z0-9]+\.
+ * @apiviz.exclude Util$
+ * @apiviz.exclude \.EstimatableObjectWrapper$
  */
 package org.jboss.netty.util;

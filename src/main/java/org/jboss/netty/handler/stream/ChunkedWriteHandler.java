@@ -69,6 +69,9 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
+ * @apiviz.has org.jboss.netty.handler.stream.ChunkedInput oneway - - reads from
  */
 @ChannelPipelineCoverage("one")
 public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {

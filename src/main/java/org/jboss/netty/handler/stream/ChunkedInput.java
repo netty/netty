@@ -30,6 +30,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 public interface ChunkedInput {
 

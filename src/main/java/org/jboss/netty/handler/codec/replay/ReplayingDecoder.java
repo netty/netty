@@ -250,6 +250,7 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  *        the state type; use {@link VoidEnum} if state management is unused
  *
  * @apiviz.landmark
+ * @apiviz.has org.jboss.netty.handler.codec.replay.UnreplayableOperationException oneway - - throws
  */
 @ChannelPipelineCoverage("one")
 public abstract class ReplayingDecoder<T extends Enum<T>>

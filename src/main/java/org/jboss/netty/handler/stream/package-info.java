@@ -25,5 +25,7 @@
  * Writes very large data stream asynchronously neither spending a lot of
  * memory nor getting {@link java.lang.OutOfMemoryError}.  For a detailed
  * example, please refer to {@code org.jboss.netty.example.http.file}.
+ *
+ * @apiviz.exclude \.channel\.
  */
 package org.jboss.netty.handler.stream;

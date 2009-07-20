@@ -35,6 +35,9 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  *
  * @version $Rev$, $Date$
  *
+ * @apiviz.landmark
+ * @apiviz.has org.jboss.netty.util.ThreadNameDeterminer oneway - -
+ *
  */
 public class ThreadRenamingRunnable implements Runnable {
 

@@ -26,5 +26,7 @@
  * <a href="http://code.google.com/p/protobuf/">Google Protocol Buffers</a>
  * {@link com.google.protobuf.Message} into a {@link org.jboss.netty.buffer.ChannelBuffer}
  * and vice versa.
+ *
+ * @apiviz.exclude \.oneone\.
  */
 package org.jboss.netty.handler.codec.protobuf;

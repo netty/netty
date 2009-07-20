@@ -50,6 +50,10 @@ import org.jboss.netty.util.TimerTask;
  * @see HashedWheelTimer
  * @see ReadTimeoutHandler
  * @see IdleStateHandler
+ *
+ * @apiviz.landmark
+ * @apiviz.uses org.jboss.netty.util.HashedWheelTimer
+ * @apiviz.has org.jboss.netty.handler.timeout.TimeoutException oneway - - raises
  */
 @ChannelPipelineCoverage("all")
 public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler

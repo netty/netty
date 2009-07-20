@@ -34,6 +34,8 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.uses org.jboss.netty.handler.timeout.IdleStateEvent
  */
 public class IdleStateAwareChannelHandler extends SimpleChannelHandler {
 

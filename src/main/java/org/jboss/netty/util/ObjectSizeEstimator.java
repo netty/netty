@@ -30,6 +30,9 @@ package org.jboss.netty.util;
  * @author Trustin Lee (tlee@redhat.com)
  *
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
+ * @apiviz.uses org.jboss.netty.util.EstimatableObjectWrapper
  */
 public interface ObjectSizeEstimator {
 

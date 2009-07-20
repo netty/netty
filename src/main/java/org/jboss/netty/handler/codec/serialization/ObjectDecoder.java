@@ -46,6 +46,7 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * @version $Rev$, $Date$
  *
  * @apiviz.landmark
+ * @apiviz.has org.jboss.netty.handler.codec.serialization.ObjectDecoderInputStream - - - compatible with
  */
 public class ObjectDecoder extends FrameDecoder {
 

@@ -32,6 +32,10 @@ import java.util.concurrent.TimeUnit;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
+ * @apiviz.has org.jboss.netty.util.TimerTask oneway - - executes
+ * @apiviz.has org.jboss.netty.util.Timeout oneway - - creates
  */
 public interface Timer {
 

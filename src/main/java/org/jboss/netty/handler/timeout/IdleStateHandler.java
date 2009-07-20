@@ -76,6 +76,10 @@ import org.jboss.netty.util.TimerTask;
  * @see HashedWheelTimer
  * @see ReadTimeoutHandler
  * @see WriteTimeoutHandler
+ *
+ * @apiviz.landmark
+ * @apiviz.uses org.jboss.netty.util.HashedWheelTimer
+ * @apiviz.has org.jboss.netty.handler.timeout.IdleStateEvent oneway - - triggers
  */
 @ChannelPipelineCoverage("one")
 public class IdleStateHandler extends SimpleChannelUpstreamHandler

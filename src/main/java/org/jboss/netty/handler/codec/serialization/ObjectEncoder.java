@@ -48,6 +48,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * @version $Rev:231 $, $Date:2008-06-12 16:44:50 +0900 (목, 12 6월 2008) $
  *
  * @apiviz.landmark
+ * @apiviz.has org.jboss.netty.handler.codec.serialization.ObjectEncoderOutputStream - - - compatible with
  */
 @ChannelPipelineCoverage("all")
 public class ObjectEncoder extends OneToOneEncoder {

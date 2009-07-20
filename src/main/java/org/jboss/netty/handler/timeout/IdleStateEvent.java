@@ -32,6 +32,9 @@ import org.jboss.netty.channel.ChannelEvent;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
+ * @apiviz.has org.jboss.netty.handler.timeout.IdleState oneway - -
  */
 public interface IdleStateEvent extends ChannelEvent {
     /**
