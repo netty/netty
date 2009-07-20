@@ -1,11 +1,11 @@
 * {
-  font-family: "Lucida Grande", Geneva, Verdana, "Liberation Sans", Helvetica, Arial, sans-serif;
+  font-family: "Liberation Sans", "DejaVu Sans", "Lucida Grande", Geneva, Verdana, Helvetica, Arial, sans-serif;
 }
 
 body {
   background-color: #FFFFFF;
   color:#000000;
-  font-size: 10pt;
+  font-size: 11pt;
 }
 
 a:link {color:#0033cc;}
