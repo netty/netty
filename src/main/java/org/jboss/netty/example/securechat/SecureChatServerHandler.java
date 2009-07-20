@@ -100,6 +100,8 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
             if (c != e.getChannel()) {
                 c.write("[" + e.getChannel().getRemoteAddress() + "] " +
                         request + '\n');
+            } else {
+                c.write("[you] " + request + '\n');
             }
         }
 
