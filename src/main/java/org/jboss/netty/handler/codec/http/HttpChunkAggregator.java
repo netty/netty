@@ -55,6 +55,7 @@ import org.jboss.netty.handler.codec.frame.TooLongFrameException;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  *
+ * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.codec.http.HttpChunk oneway - - filters out
  */
 @ChannelPipelineCoverage("one")

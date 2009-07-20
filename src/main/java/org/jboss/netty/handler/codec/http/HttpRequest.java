@@ -26,6 +26,13 @@ package org.jboss.netty.handler.codec.http;
 /**
  * An HTTP request.
  *
+ * <h3>Accessing Query Parameters and Cookie</h3>
+ * <p>
+ * Unlike the Servlet API, a query string is constructed and decomposed by
+ * {@link QueryStringEncoder} and {@link QueryStringDecoder}.  {@link Cookie}
+ * support is also provided separately via {@link CookieEncoder} and
+ * {@link CookieDecoder}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
@@ -33,6 +40,8 @@ package org.jboss.netty.handler.codec.http;
  * @see HttpResponse
  * @see QueryStringEncoder
  * @see QueryStringDecoder
+ * @see CookieEncoder
+ * @see CookieDecoder
  */
 public interface HttpRequest extends HttpMessage {
 

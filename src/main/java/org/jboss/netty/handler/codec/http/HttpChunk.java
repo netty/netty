@@ -39,6 +39,8 @@ import org.jboss.netty.channel.ChannelPipeline;
  * @version $Rev$, $Date$
  *
  * @see HttpChunkAggregator
+ *
+ * @apiviz.landmark
  */
 public interface HttpChunk {
 

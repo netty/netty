@@ -35,6 +35,19 @@ import java.util.TreeSet;
  * method.  Once {@link #encode()} is called, all added {@link Cookie}s are
  * encoded into an HTTP header value and all {@link Cookie}s in the internal
  * data structure are removed so that the encoder can start over.
+ * <pre>
+ * // Client-side example
+ * HttpRequest req = ...;
+ * CookieEncoder encoder = new CookieEncoder(false);
+ * encoder.addCookie("JSESSIONID", "1234");
+ * res.setHeader("Cookie", encoder.encode());
+ *
+ * // Server-side example
+ * HttpResponse res = ...;
+ * CookieEncoder encoder = new CookieEncoder(true);
+ * encoder.addCookie("JSESSIONID", "1234");
+ * res.setHeader("Set-Cookie", encoder.encode());
+ * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)

@@ -26,12 +26,19 @@ package org.jboss.netty.handler.codec.http;
 /**
  * An HTTP response.
  *
+ * <h3>Accessing Cookie</h3>
+ * <p>
+ * Unlike the Servlet API, {@link Cookie} support is provided separately via
+ * {@link CookieEncoder} and {@link CookieDecoder}.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  *
  * @see HttpRequest
+ * @see CookieEncoder
+ * @see CookieDecoder
  */
 public interface HttpResponse extends HttpMessage {
 

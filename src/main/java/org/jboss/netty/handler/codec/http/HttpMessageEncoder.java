@@ -53,6 +53,8 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 @ChannelPipelineCoverage("all")
 public abstract class HttpMessageEncoder extends OneToOneEncoder {

@@ -79,6 +79,8 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDecoder.State> {
 

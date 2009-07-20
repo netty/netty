@@ -47,8 +47,10 @@ import java.util.regex.Pattern;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  *
- * @apiviz.stereotype utility
  * @see QueryStringEncoder
+ *
+ * @apiviz.stereotype utility
+ * @apiviz.has        org.jboss.netty.handler.codec.http.HttpRequest oneway - - decodes
  */
 public class QueryStringDecoder {
 

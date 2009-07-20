@@ -37,8 +37,10 @@ import org.jboss.netty.buffer.ChannelBuffers;
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  *
+ * @see HttpHeaders
+ *
+ * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.codec.http.HttpChunk oneway - - is followed by
- * @apiviz.uses org.jboss.netty.handler.codec.http.HttpHeaders - - useful
  */
 public interface HttpMessage {
 
