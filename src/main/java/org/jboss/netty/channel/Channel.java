@@ -168,7 +168,11 @@ public interface Channel extends Comparable<Channel>{
     SocketAddress getRemoteAddress();
 
     /**
-     * Sends a message to this channel asynchronously.
+     * Sends a message to this channel asynchronously.    If this channel was
+     * created by a connectionless transport (e.g. {@link DatagramChannel})
+     * and is not connected yet, you call {@link #write(Object, SocketAddress)}
+     * instead.  Otherwise, the write request will fail and an
+     * {@code 'exceptionCaught'} event will be triggered.
      *
      * @param message the message to write
      *
@@ -182,7 +186,11 @@ public interface Channel extends Comparable<Channel>{
     /**
      * Sends a message to this channel asynchronously.  It has an additional
      * parameter that allows a user to specify where to send the specified
-     * message instead of this channel's current remote address.
+     * message instead of this channel's current remote address.  If this
+     * channel was created by a connectionless transport (e.g. {@link DatagramChannel})
+     * and is not connected yet, you must specify non-null address.  Otherwise,
+     * the write request will fail and an {@code 'exceptionCaught'} will be
+     * triggered.
      *
      * @param message       the message to write
      * @param remoteAddress where to send the specified message.
