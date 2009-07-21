@@ -24,6 +24,7 @@ package org.jboss.netty.handler.execution;
 
 import java.util.LinkedList;
 import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -104,7 +105,7 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  * ends (e.g. all connections from the same IP were closed.)  Also, please
  * keep in mind that the key can appear again after calling {@link #removeChildExecutor(Object)}
  * (e.g. a new connection could come in from the old IP.)  If in doubt, prune
- * the old unused keys from the child executor map periodically:
+ * the old unused or stall keys from the child executor map periodically:
  *
  * <pre>
  * RemoteAddressBasedOMATPE executor = ...;
@@ -119,6 +120,11 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  *       }
  *   }
  * </pre>
+ *
+ * If the expected maximum number of keys is small and deterministic, you could
+ * use a weak key map such as <a href="http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/src/jsr166y/ConcurrentWeakHashMap.java?view=markup">ConcurrentWeakHashMap</a>
+ * or synchronized {@link WeakHashMap} instead of managing the life cycle of the
+ * keys by yourself.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
