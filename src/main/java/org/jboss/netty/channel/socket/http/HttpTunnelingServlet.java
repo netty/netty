@@ -240,8 +240,10 @@ public class HttpTunnelingServlet extends HttpServlet {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
             ChannelBuffer buffer = (ChannelBuffer) e.getMessage();
-            buffer.readBytes(out, buffer.readableBytes());
-            out.flush();
+            synchronized (this) {
+                buffer.readBytes(out, buffer.readableBytes());
+                out.flush();
+            }
         }
 
         @Override
