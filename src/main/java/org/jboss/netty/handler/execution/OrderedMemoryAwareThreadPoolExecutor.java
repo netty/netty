@@ -107,8 +107,9 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  * call {@link #removeChildExecutor(Object)} when the life cycle of the key
  * ends (e.g. all connections from the same IP were closed.)  Also, please
  * keep in mind that the key can appear again after calling {@link #removeChildExecutor(Object)}
- * (e.g. a new connection could come in from the old IP.)  If in doubt, prune
- * the old unused or stall keys from the child executor map periodically:
+ * (e.g. a new connection could come in from the same old IP after removal.)
+ * If in doubt, prune the old unused or stall keys from the child executor map
+ * periodically:
  *
  * <pre>
  * RemoteAddressBasedOMATPE executor = ...;
