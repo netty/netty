@@ -111,12 +111,11 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  *
  * on every 3 seconds:
  *
- *     for (Object key: executor.getChildExecutorKeySet()) {
- *         InetAddress ip = (InetAddress) key;
+ *     for (Iterator&lt;Object&gt; i = executor.getChildExecutorKeySet().iterator; i.hasNext();) {
+ *         InetAddress ip = (InetAddress) i.next();
  *         if (there is no active connection from 'ip' now &&
  *             there has been no incoming connection from 'ip' for last 10 minutes) {
- *
- *             executor.removeChildExecutor(key);
+ *             i.remove();
  *         }
  *     }
  * </pre>
