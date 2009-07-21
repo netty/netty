@@ -23,6 +23,7 @@
 package org.jboss.netty.handler.execution;
 
 import java.util.LinkedList;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -67,6 +68,58 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  * <p>
  * If you want the events associated with the same channel to be executed
  * simultaneously, please use {@link MemoryAwareThreadPoolExecutor} instead.
+ *
+ * <h3>Using a different key other than {@link Channel} to maintain event order</h3>
+ * <p>
+ * {@link OrderedMemoryAwareThreadPoolExecutor} uses a {@link Channel} as a key
+ * that is used for maintaining the event execution order, as explained in the
+ * previous section.  Alternatively, you can extend it to change its behavior.
+ * For example, you can change the key to the remote IP of the peer:
+ *
+ * <pre>
+ * public class RemoteAddressBasedOMATPE extends OrderedMemoryAwareThreadPoolExecutor {
+ *     ... Constructors ...
+ *
+ *     protected ConcurrentMap&lt;Object, Executor&gt; new ChildExecutorMap() {
+ *         // The default implementation returns a special ConcurrentMap that
+ *         // is optimized for the case where the key is Channel, so we need to
+ *         // provide more generic implementation.
+ *         return new ConcurrentHashMap&lt;Object, Executor&gt;
+ *     }
+ *
+ *     protected Object getChildExecutorKey(ChannelEvent e) {
+ *         // Use the IP of the remote peer as a key.
+ *         return ((InetSocketAddress) e.getChannel().getRemoteAddress()).getAddress();
+ *     }
+ *
+ *     // Make public so that you can call from anywhere.
+ *     public boolean removeChildExecutor(Object key) {
+ *         super.removeChildExecutor(key);
+ *     }
+ * }
+ * </pre>
+ *
+ * Please be very careful of memory leak of the child executor map.  You must
+ * call {@link #removeChildExecutor(Object)} when the life cycle of the key
+ * ends (e.g. all connections from the same IP were closed.)  Also, please
+ * keep in mind that the key can appear again after calling {@link #removeChildExecutor(Object)}
+ * (e.g. a new connection could come in from the old IP.)  If in doubt, prune
+ * the old unused keys from the child executor map periodically:
+ *
+ * <pre>
+ * RemoteAddressBasedOMATPE executor = ...;
+ *
+ * on every 3 seconds:
+ *
+ *     for (Object key: executor.getChildExecutorKeySet()) {
+ *         InetAddress ip = (InetAddress) key;
+ *         if (there is no active connection from 'ip' now &&
+ *             there has been no incoming connection from 'ip' for last 10 minutes) {
+ *
+ *             executor.removeChildExecutor(key);
+ *         }
+ *     }
+ * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -159,6 +212,10 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
 
     protected Object getChildExecutorKey(ChannelEvent e) {
         return e.getChannel();
+    }
+
+    protected Set<Object> getChildExecutorKeySet() {
+        return childExecutors.keySet();
     }
 
     protected boolean removeChildExecutor(Object key) {
