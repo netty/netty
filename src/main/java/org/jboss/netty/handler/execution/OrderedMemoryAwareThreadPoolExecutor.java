@@ -22,6 +22,7 @@
  */
 package org.jboss.netty.handler.execution;
 
+import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -79,12 +80,14 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  *
  * <pre>
  * public class RemoteAddressBasedOMATPE extends OrderedMemoryAwareThreadPoolExecutor {
+ *
  *     ... Constructors ...
  *
  *     protected ConcurrentMap&lt;Object, Executor&gt; new ChildExecutorMap() {
  *         // The default implementation returns a special ConcurrentMap that
- *         // is optimized for the case where the key is Channel, so we need to
- *         // provide more generic implementation.
+ *         // uses identity comparison only (see {@link IdentityHashMap}).
+ *         // Because SocketAddress does not work with identity comparison,
+ *         // we need to employ more generic implementation.
  *         return new ConcurrentHashMap&lt;Object, Executor&gt;
  *     }
  *
