@@ -26,6 +26,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import org.jboss.netty.channel.socket.DatagramChannel;
+import org.jboss.netty.channel.socket.ServerSocketChannel;
+import org.jboss.netty.channel.socket.SocketChannel;
 
 
 /**
@@ -42,12 +44,25 @@ import org.jboss.netty.channel.socket.DatagramChannel;
  * </ul>
  *
  * <h3>All I/O operations are asynchronous.</h3>
- *
+ * <p>
  * All I/O operations in Netty are asynchronous.  It means any I/O calls will
  * return immediately with no guarantee that the requested I/O operation has
  * been completed at the end of the call.  Instead, you will be returned with
- * a {@link ChannelFuture} instance which tells you when the requested I/O
+ * a {@link ChannelFuture} instance which will notify you when the requested I/O
  * operation has succeeded, failed, or canceled.
+ *
+ * <h3>Channels are hierarchical</h3>
+ * <p>
+ * A {@link Channel} can have a {@linkplain #getParent() parent} depending on
+ * how it was created.  For instance, a {@link SocketChannel}, that was accepted
+ * by {@link ServerSocketChannel}, will return the {@link ServerSocketChannel}
+ * as its parent on {@link #getParent()}.
+ * <p>
+ * The semantics of the hierarchical structure depends on the transport
+ * implementation where the {@link Channel} belongs to.  For example, you could
+ * write a new {@link Channel} implementation that creates the sub-channels that
+ * share one socket connection, as <a href="http://beepcore.org/">BEEP</a> and
+ * <a href="http://en.wikipedia.org/wiki/Secure_Shell">SSH</a> do.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
