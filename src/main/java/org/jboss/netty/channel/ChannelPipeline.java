@@ -166,6 +166,26 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * {@link SslHandler} when sensitive information is about to be exchanged,
  * and remove it after the exchange.
  *
+ * <h3>Pitfall</h3>
+ * <p>
+ * Due to the internal implementation detail of the current default
+ * {@link ChannelPipeline}, the following code does not work as expected if
+ * <tt>FirstHandler</tt> is the last handler in the pipeline:
+ * <pre>
+ * public class FirstHandler extends SimpleChannelUpstreamHandler {
+ *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ *         // Remove this handler from the pipeline,
+ *         ctx.getPipeline().remove(this);
+ *         // And let SecondHandler handle the current event.
+ *         ctx.getPipeline().addLast("2nd", new SecondHandler());
+ *         ctx.sendUpstream(e);
+ *     }
+ * }
+ * </pre>
+ * To implement the expected behavior, you have to add <tt>SecondHandler</tt>
+ * before the removal or make sure there is at least one more handler between
+ * <tt>FirstHandler</tt> and <tt>SecondHandler</tt>.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
