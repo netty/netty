@@ -48,6 +48,7 @@ public class BigIntegerDecoder extends FrameDecoder {
         if (buffer.readableBytes() < 4) {
             return null;
         }
+
         int dataLength = buffer.getInt(buffer.readerIndex());
 
         // Wait until the whole data is available.

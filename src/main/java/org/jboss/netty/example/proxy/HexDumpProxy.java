@@ -60,6 +60,8 @@ public class HexDumpProxy {
         Executor executor = Executors.newCachedThreadPool();
         ServerBootstrap sb = new ServerBootstrap(
                 new NioServerSocketChannelFactory(executor, executor));
+
+        // Set up the event pipeline factory.
         ClientSocketChannelFactory cf =
                 new NioClientSocketChannelFactory(executor, executor);
 

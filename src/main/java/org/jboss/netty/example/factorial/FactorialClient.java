@@ -27,7 +27,6 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 
@@ -59,17 +58,14 @@ public class FactorialClient {
             throw new IllegalArgumentException("count must be a positive integer.");
         }
 
-        // Set up.
-        ChannelFactory factory =
-            new NioClientSocketChannelFactory(
-                    Executors.newCachedThreadPool(),
-                    Executors.newCachedThreadPool());
+        // Configure the client.
+        ClientBootstrap bootstrap = new ClientBootstrap(
+                new NioClientSocketChannelFactory(
+                        Executors.newCachedThreadPool(),
+                        Executors.newCachedThreadPool()));
 
-        ClientBootstrap bootstrap = new ClientBootstrap(factory);
-
+        // Set up the event pipeline factory.
         bootstrap.setPipelineFactory(new FactorialClientPipelineFactory(count));
-        bootstrap.setOption("tcpNoDelay", true);
-        bootstrap.setOption("keepAlive", true);
 
         // Make a new connection.
         ChannelFuture connectFuture =
@@ -83,10 +79,10 @@ public class FactorialClient {
             (FactorialClientHandler) channel.getPipeline().getLast();
 
         // Print out the answer.
-        System.out.format(
+        System.err.format(
                 "Factorial of %,d is: %,d", count, handler.getFactorial());
 
         // Shut down all thread pools to exit.
-        factory.releaseExternalResources();
+        bootstrap.releaseExternalResources();
     }
 }

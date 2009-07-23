@@ -22,6 +22,8 @@
  */
 package org.jboss.netty.example.local;
 
+import java.util.concurrent.Executor;
+
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -34,24 +36,26 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.handler.execution.ExecutionHandler;
-import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 
 /**
- * @author frederic
- *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Andy Taylor (andy.taylor@jboss.org)
+ * @author Frederic Bregier (fredbregier@free.fr)
+ * @version $Rev$, $Date$
  */
 public class LocalServerPipelineFactory implements ChannelPipelineFactory {
-    OrderedMemoryAwareThreadPoolExecutor orderedMemoryAwareThreadPoolExecutor;
-    public LocalServerPipelineFactory(OrderedMemoryAwareThreadPoolExecutor orderedMemoryAwareThreadPoolExecutor) {
-        this.orderedMemoryAwareThreadPoolExecutor =
-            orderedMemoryAwareThreadPoolExecutor;
+
+    private final Executor eventExecutor;
+
+    public LocalServerPipelineFactory(Executor eventExecutor) {
+        this.eventExecutor = eventExecutor;
     }
+
     public ChannelPipeline getPipeline() throws Exception {
         final ChannelPipeline pipeline = Channels.pipeline();
         pipeline.addLast("decoder", new StringDecoder());
         pipeline.addLast("encoder", new StringEncoder());
-        pipeline.addLast("pipelineExecutor", new ExecutionHandler(
-                orderedMemoryAwareThreadPoolExecutor));
+        pipeline.addLast("executor", new ExecutionHandler(eventExecutor));
         pipeline.addLast("handler", new EchoCloseServerHandler());
         return pipeline;
     }
@@ -64,7 +68,6 @@ public class LocalServerPipelineFactory implements ChannelPipelineFactory {
                 final MessageEvent evt = (MessageEvent) e;
                 String msg = (String) evt.getMessage();
                 if (msg.equalsIgnoreCase("quit")) {
-                    // TRY COMMENT HERE, then it works
                     Channels.close(e.getChannel());
                     return;
                 }
@@ -72,13 +75,11 @@ public class LocalServerPipelineFactory implements ChannelPipelineFactory {
             ctx.sendUpstream(e);
         }
 
-        public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
-                throws Exception {
+        public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e) {
             if (e instanceof MessageEvent) {
                 final MessageEvent evt = (MessageEvent) e;
                 String msg = (String) evt.getMessage();
                 if (msg.equalsIgnoreCase("quit")) {
-                    // COMMENT OR NOT, NO PROBLEM
                     Channels.close(e.getChannel());
                     return;
                 }

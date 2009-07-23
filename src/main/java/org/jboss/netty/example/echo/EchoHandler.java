@@ -83,7 +83,7 @@ public class EchoHandler extends SimpleChannelUpstreamHandler {
             ChannelHandlerContext ctx, ChannelStateEvent e) {
         // Send the first message.  Server will not send anything here
         // because the firstMessage's capacity is 0.
-        //e.getChannel().write(firstMessage);
+        e.getChannel().write(firstMessage);
     }
 
     @Override

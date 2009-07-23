@@ -64,13 +64,17 @@ public class HttpTunnelingClientExample {
         URI uri = new URI(args[0]);
         String scheme = uri.getScheme() == null? "http" : uri.getScheme();
 
+        // Configure the client.
         ClientBootstrap b = new ClientBootstrap(
                 new HttpTunnelingClientSocketChannelFactory(
                         new OioClientSocketChannelFactory(Executors.newCachedThreadPool())));
+
+        // Set up the default event pipeline.
         b.getPipeline().addLast("decoder", new StringDecoder());
         b.getPipeline().addLast("encoder", new StringEncoder());
         b.getPipeline().addLast("handler", new LoggingHandler(InternalLogLevel.INFO));
 
+        // Set additional options required by the HTTP tunneling transport.
         b.setOption("serverName", uri.getHost());
         b.setOption("serverPath", uri.getRawPath());
 
@@ -83,10 +87,13 @@ public class HttpTunnelingClientExample {
             return;
         }
 
-        ChannelFuture channelFuture = b.connect(new InetSocketAddress(uri.getHost(), uri.getPort()));
+        // Make the connection attempt.
+        ChannelFuture channelFuture = b.connect(
+                new InetSocketAddress(uri.getHost(), uri.getPort()));
         channelFuture.awaitUninterruptibly();
-        System.out.println("Enter text ('quit' to exit)");
+
         // Read commands from the stdin.
+        System.out.println("Enter text ('quit' to exit)");
         ChannelFuture lastWriteFuture = null;
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
         for (; ;) {
@@ -108,6 +115,7 @@ public class HttpTunnelingClientExample {
         // Wait until the connection is closed or the connection attempt fails.
         channelFuture.getChannel().getCloseFuture().awaitUninterruptibly();
 
+        // Shut down all threads.
         b.releaseExternalResources();
     }
 }

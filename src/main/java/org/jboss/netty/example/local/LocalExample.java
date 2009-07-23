@@ -27,19 +27,15 @@ import java.io.InputStreamReader;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.ChannelDownstreamHandler;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
 import org.jboss.netty.channel.local.DefaultLocalServerChannelFactory;
 import org.jboss.netty.channel.local.LocalAddress;
 import org.jboss.netty.example.echo.EchoHandler;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
+import org.jboss.netty.handler.logging.LoggingHandler;
+import org.jboss.netty.logging.InternalLogLevel;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -48,24 +44,35 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
  */
 public class LocalExample {
     public static void main(String[] args) throws Exception {
-        ChannelFactory factory = new DefaultLocalServerChannelFactory();
-        ServerBootstrap bootstrap = new ServerBootstrap(factory);
-        EchoHandler handler = new EchoHandler();
+        // Address to bind on / connect to.
         LocalAddress socketAddress = new LocalAddress("1");
-        bootstrap.getPipeline().addLast("handler", handler);
-        bootstrap.bind(socketAddress);
 
-        ChannelFactory channelFactory = new DefaultLocalClientChannelFactory();
-        ClientBootstrap clientBootstrap = new ClientBootstrap(channelFactory);
-        clientBootstrap.getPipeline().addLast("decoder", new StringDecoder());
-        clientBootstrap.getPipeline().addLast("encoder", new StringEncoder());
-        clientBootstrap.getPipeline().addLast("handler", new PrintHandler());
-        ChannelFuture channelFuture = clientBootstrap.connect(socketAddress);
+        // Configure the server.
+        ServerBootstrap sb = new ServerBootstrap(
+                new DefaultLocalServerChannelFactory());
+
+        // Set up the default server-side event pipeline.
+        EchoHandler handler = new EchoHandler();
+        sb.getPipeline().addLast("handler", handler);
+
+        // Start up the server.
+        sb.bind(socketAddress);
+
+        // Configure the client.
+        ClientBootstrap cb = new ClientBootstrap(
+                new DefaultLocalClientChannelFactory());
+
+        // Set up the default client-side event pipeline.
+        cb.getPipeline().addLast("decoder", new StringDecoder());
+        cb.getPipeline().addLast("encoder", new StringEncoder());
+        cb.getPipeline().addLast("handler", new LoggingHandler(InternalLogLevel.INFO));
+
+        // Make the connection attempt to the server.
+        ChannelFuture channelFuture = cb.connect(socketAddress);
         channelFuture.awaitUninterruptibly();
 
-        System.out.println("Enter text (quit to end)");
-
         // Read commands from the stdin.
+        System.out.println("Enter text (quit to end)");
         ChannelFuture lastWriteFuture = null;
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
         for (; ;) {
@@ -83,22 +90,12 @@ public class LocalExample {
             lastWriteFuture.awaitUninterruptibly();
         }
         channelFuture.getChannel().close();
+
         // Wait until the connection is closed or the connection attempt fails.
         channelFuture.getChannel().getCloseFuture().awaitUninterruptibly();
-    }
 
-    @ChannelPipelineCoverage("all")
-    static class PrintHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
-        public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
-                throws Exception {
-            System.err.println(e);
-            ctx.sendUpstream(e);
-        }
-
-        public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
-                throws Exception {
-            System.err.println(e);
-            ctx.sendDownstream(e);
-        }
+        // Release all resources used by the local transport.
+        cb.releaseExternalResources();
+        sb.releaseExternalResources();
     }
 }

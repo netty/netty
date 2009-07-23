@@ -26,50 +26,50 @@ import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.ChannelDownstreamHandler;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
 import org.jboss.netty.channel.local.DefaultLocalServerChannelFactory;
 import org.jboss.netty.channel.local.LocalAddress;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+import org.jboss.netty.handler.logging.LoggingHandler;
+import org.jboss.netty.logging.InternalLogLevel;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
- * @version $Rev: 1482 $, $Date: 2009-06-19 19:48:17 +0200 (ven., 19 juin 2009) $
+ * @author Frederic Bregier (fredbregier@free.fr)
+ * @version $Rev$, $Date$
  */
-public class LocalExampleMultiple {
+public class LocalExampleMultthreaded {
+
     public static void main(String[] args) throws Exception {
-        OrderedMemoryAwareThreadPoolExecutor orderedMemoryAwareThreadPoolExecutor =
+        LocalAddress socketAddress = new LocalAddress("1");
+
+        OrderedMemoryAwareThreadPoolExecutor eventExecutor =
             new OrderedMemoryAwareThreadPoolExecutor(
                     5, 1000000, 10000000, 100,
                     TimeUnit.MILLISECONDS);
-        ChannelFactory factory = new DefaultLocalServerChannelFactory();
-        ServerBootstrap bootstrap = new ServerBootstrap(factory);
-        bootstrap.setPipelineFactory(new LocalServerPipelineFactory(orderedMemoryAwareThreadPoolExecutor));
-        LocalAddress socketAddress = new LocalAddress("1");
-        bootstrap.bind(socketAddress);
 
-        ChannelFactory channelFactory = new DefaultLocalClientChannelFactory();
-        ClientBootstrap clientBootstrap = new ClientBootstrap(channelFactory);
-        clientBootstrap.getPipeline().addLast("decoder", new StringDecoder());
-        clientBootstrap.getPipeline().addLast("encoder", new StringEncoder());
-        clientBootstrap.getPipeline().addLast("handler", new PrintHandler());
+        ServerBootstrap sb = new ServerBootstrap(
+                new DefaultLocalServerChannelFactory());
+
+        sb.setPipelineFactory(new LocalServerPipelineFactory(eventExecutor));
+        sb.bind(socketAddress);
+
+        ClientBootstrap cb = new ClientBootstrap(
+                new DefaultLocalClientChannelFactory());
+
+        cb.getPipeline().addLast("decoder", new StringDecoder());
+        cb.getPipeline().addLast("encoder", new StringEncoder());
+        cb.getPipeline().addLast("handler", new LoggingHandler(InternalLogLevel.INFO));
 
         // Read commands from array
-        String []commands = {
-                "First", "Second", "Third", "quit"
-        };
+        String[] commands = { "First", "Second", "Third", "quit" };
         for (int j = 0; j < 5 ; j++) {
             System.err.println("Start "+j);
-            ChannelFuture channelFuture = clientBootstrap.connect(socketAddress);
+            ChannelFuture channelFuture = cb.connect(socketAddress);
             channelFuture.awaitUninterruptibly();
             if (! channelFuture.isSuccess()) {
                 System.err.println("CANNOT CONNECT");
@@ -91,24 +91,10 @@ public class LocalExampleMultiple {
             channelFuture.getChannel().getCloseFuture().awaitUninterruptibly();
             System.err.println("End "+j);
         }
-        clientBootstrap.releaseExternalResources();
-        bootstrap.releaseExternalResources();
-        orderedMemoryAwareThreadPoolExecutor.shutdownNow();
+
+        // Release all resources
+        cb.releaseExternalResources();
+        sb.releaseExternalResources();
+        eventExecutor.shutdownNow();
     }
-
-    @ChannelPipelineCoverage("all")
-    static class PrintHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
-        public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
-                throws Exception {
-            System.err.println(e);
-            ctx.sendUpstream(e);
-        }
-
-        public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
-                throws Exception {
-            System.err.println(e);
-            ctx.sendDownstream(e);
-        }
-    }
-
 }

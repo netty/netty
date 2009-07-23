@@ -26,7 +26,6 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 /**
@@ -42,21 +41,19 @@ public class EchoServer {
 
     public static void main(String[] args) throws Exception {
         // Configure the server.
-        ChannelFactory factory =
-            new NioServerSocketChannelFactory(
-                    Executors.newCachedThreadPool(),
-                    Executors.newCachedThreadPool());
+        ServerBootstrap bootstrap = new ServerBootstrap(
+                new NioServerSocketChannelFactory(
+                        Executors.newCachedThreadPool(),
+                        Executors.newCachedThreadPool()));
 
-        ServerBootstrap bootstrap = new ServerBootstrap(factory);
+        // Set up the default event pipeline.
         EchoHandler handler = new EchoHandler();
-
         bootstrap.getPipeline().addLast("handler", handler);
-        bootstrap.setOption("backlog", 4096);
 
         // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress(8080));
 
         // Start performance monitor.
-        //new ThroughputMonitor(handler).start();
+        new ThroughputMonitor(handler).start();
     }
 }

@@ -26,7 +26,6 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 
@@ -53,7 +52,6 @@ public class DiscardClient {
         String host = args[0];
         int port = Integer.parseInt(args[1]);
         int firstMessageSize;
-
         if (args.length == 3) {
             firstMessageSize = Integer.parseInt(args[2]);
         } else {
@@ -61,19 +59,14 @@ public class DiscardClient {
         }
 
         // Configure the client.
-        ChannelFactory factory =
-            new NioClientSocketChannelFactory(
-                    Executors.newCachedThreadPool(),
-                    Executors.newCachedThreadPool());
+        ClientBootstrap bootstrap = new ClientBootstrap(
+                new NioClientSocketChannelFactory(
+                        Executors.newCachedThreadPool(),
+                        Executors.newCachedThreadPool()));
 
-        ClientBootstrap bootstrap = new ClientBootstrap(factory);
+        // Set up the default event pipeline.
         DiscardClientHandler handler = new DiscardClientHandler(firstMessageSize);
-
-        //bootstrap.getPipeline().addLast("executor", new ExecutionHandler(new OrderedMemoryAwareThreadPoolExecutor(16, 0, 0)));
         bootstrap.getPipeline().addLast("handler", handler);
-        bootstrap.setOption("tcpNoDelay", true);
-        bootstrap.setOption("keepAlive", true);
-        //bootstrap.setOption("bufferFactory", DirectChannelBufferFactory.getInstance());
 
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
@@ -82,6 +75,6 @@ public class DiscardClient {
         future.getChannel().getCloseFuture().awaitUninterruptibly();
 
         // Shut down thread pools to exit.
-        factory.releaseExternalResources();
+        bootstrap.releaseExternalResources();
     }
 }

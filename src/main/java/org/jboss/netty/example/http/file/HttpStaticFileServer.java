@@ -40,6 +40,7 @@ public class HttpStaticFileServer {
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
+        // Set up the event pipeline factory.
         bootstrap.setPipelineFactory(new HttpStaticFileServerPipelineFactory());
 
         // Bind and start to accept incoming connections.

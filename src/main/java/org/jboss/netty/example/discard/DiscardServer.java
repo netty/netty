@@ -26,7 +26,6 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 /**
@@ -41,18 +40,14 @@ public class DiscardServer {
 
     public static void main(String[] args) throws Exception {
         // Configure the server.
-        ChannelFactory factory =
-            new NioServerSocketChannelFactory(
-                    Executors.newCachedThreadPool(),
-                    Executors.newCachedThreadPool());
+        ServerBootstrap bootstrap = new ServerBootstrap(
+                new NioServerSocketChannelFactory(
+                        Executors.newCachedThreadPool(),
+                        Executors.newCachedThreadPool()));
 
-        ServerBootstrap bootstrap = new ServerBootstrap(factory);
+        // Set up the default event pipeline.
         DiscardServerHandler handler = new DiscardServerHandler();
-
         bootstrap.getPipeline().addLast("handler", handler);
-        bootstrap.setOption("child.tcpNoDelay", true);
-        bootstrap.setOption("child.keepAlive", true);
-        //bootstrap.setOption("child.bufferFactory", DirectChannelBufferFactory.getInstance());
 
         // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress(8080));

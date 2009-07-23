@@ -29,7 +29,6 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 
@@ -57,17 +56,13 @@ public class TelnetClient {
         int port = Integer.parseInt(args[1]);
 
         // Configure the client.
-        ChannelFactory factory =
-            new NioClientSocketChannelFactory(
-                    Executors.newCachedThreadPool(),
-                    Executors.newCachedThreadPool());
+        ClientBootstrap bootstrap = new ClientBootstrap(
+                new NioClientSocketChannelFactory(
+                        Executors.newCachedThreadPool(),
+                        Executors.newCachedThreadPool()));
 
-        ClientBootstrap bootstrap = new ClientBootstrap(factory);
         TelnetClientHandler handler = new TelnetClientHandler();
-
         bootstrap.setPipelineFactory(new TelnetPipelineFactory(handler));
-        bootstrap.setOption("tcpNoDelay", true);
-        bootstrap.setOption("keepAlive", true);
 
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
@@ -76,7 +71,7 @@ public class TelnetClient {
         Channel channel = future.awaitUninterruptibly().getChannel();
         if (!future.isSuccess()) {
             future.getCause().printStackTrace();
-            factory.releaseExternalResources();
+            bootstrap.releaseExternalResources();
             return;
         }
 
@@ -110,6 +105,6 @@ public class TelnetClient {
         channel.close().awaitUninterruptibly();
 
         // Shut down all thread pools to exit.
-        factory.releaseExternalResources();
+        bootstrap.releaseExternalResources();
     }
 }

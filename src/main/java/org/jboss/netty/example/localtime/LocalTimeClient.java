@@ -31,7 +31,6 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 
@@ -62,16 +61,13 @@ public class LocalTimeClient {
         }
 
         // Set up.
-        ChannelFactory factory =
-            new NioClientSocketChannelFactory(
-                    Executors.newCachedThreadPool(),
-                    Executors.newCachedThreadPool());
+        ClientBootstrap bootstrap = new ClientBootstrap(
+                new NioClientSocketChannelFactory(
+                        Executors.newCachedThreadPool(),
+                        Executors.newCachedThreadPool()));
 
-        ClientBootstrap bootstrap = new ClientBootstrap(factory);
-
+        // Configure the event pipeline factory.
         bootstrap.setPipelineFactory(new LocalTimeClientPipelineFactory());
-        bootstrap.setOption("tcpNoDelay", true);
-        bootstrap.setOption("keepAlive", true);
 
         // Make a new connection.
         ChannelFuture connectFuture =
@@ -90,7 +86,7 @@ public class LocalTimeClient {
         channel.close().awaitUninterruptibly();
 
         // Shut down all thread pools to exit.
-        factory.releaseExternalResources();
+        bootstrap.releaseExternalResources();
 
         // Print the response at last but not least.
         Iterator<String> i1 = cities.iterator();

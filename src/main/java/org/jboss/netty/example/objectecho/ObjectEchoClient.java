@@ -26,7 +26,6 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.example.echo.EchoClient;
 
@@ -61,17 +60,14 @@ public class ObjectEchoClient {
         }
 
         // Configure the client.
-        ChannelFactory factory =
-            new NioClientSocketChannelFactory(
-                    Executors.newCachedThreadPool(),
-                    Executors.newCachedThreadPool());
+        ClientBootstrap bootstrap = new ClientBootstrap(
+                new NioClientSocketChannelFactory(
+                        Executors.newCachedThreadPool(),
+                        Executors.newCachedThreadPool()));
 
-        ClientBootstrap bootstrap = new ClientBootstrap(factory);
+        // Set up the default event pipeline.
         ObjectEchoHandler handler = new ObjectEchoHandler(firstMessageSize);
-
         bootstrap.getPipeline().addLast("handler", handler);
-        bootstrap.setOption("tcpNoDelay", true);
-        bootstrap.setOption("keepAlive", true);
 
         // Start the connection attempt.
         bootstrap.connect(new InetSocketAddress(host, port));
