@@ -28,7 +28,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
@@ -36,6 +38,7 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 
 /**
  * Decodes the received {@link ChannelBuffer}s into a meaningful frame object.
@@ -136,6 +139,43 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * <a href="http://en.wikipedia.org/wiki/POJO">POJO</a> so that the next
  * {@link ChannelUpstreamHandler} receives a {@link MessageEvent} which
  * contains a POJO rather than a {@link ChannelBuffer}.
+ *
+ * <h3>Replacing a decoder with another decoder in a pipeline</h3>
+ * <p>
+ * If you are going to write a protocol multiplexer, you will probably want to
+ * replace a {@link FrameDecoder} (protocol detector) with another
+ * {@link FrameDecoder} or {@link ReplayingDecoder} (actual protocol decoder).
+ * It is not possible to achieve this simply by calling
+ * {@link ChannelPipeline#replace(ChannelHandler, String, ChannelHandler)}, but
+ * some additional steps are required:
+ * <pre>
+ * public class FirstDecoder extends FrameDecoder {
+ *
+ *     public FirstDecoder() {
+ *         super(true); // Enable unfold
+ *     }
+ *
+ *     protected Object decode(ChannelHandlerContext ctx, Channel ch, ChannelBuffer buf) {
+ *         ...
+ *         // Decode the first message
+ *         Object firstMessage = ...;
+ *
+ *         // Add the second decoder
+ *         ctx.getPipeline().addLast("second", new SecondDecoder());
+ *
+ *         // Remove the first decoder (me)
+ *         ctx.getPipeline().remove(this);
+ *
+ *         if (buf.readable()) {
+ *             // Hand off the remaining data to the second decoder
+ *             return new Object[] { firstMessage, buf.readBytes(buf.readableBytes()) };
+ *         } else {
+ *             // Nothing to hand off
+ *             return firstMessage;
+ *         }
+ *     }
+ * }
+ * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)

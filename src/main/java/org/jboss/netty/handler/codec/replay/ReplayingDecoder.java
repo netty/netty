@@ -28,7 +28,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
@@ -239,6 +241,42 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  *     }
  *   }
  * }
+ * </pre>
+ *
+ * <h3>Replacing a decoder with another decoder in a pipeline</h3>
+ * <p>
+ * If you are going to write a protocol multiplexer, you will probably want to
+ * replace a {@link ReplayingDecoder} (protocol detector) with another
+ * {@link ReplayingDecoder} or {@link FrameDecoder} (actual protocol decoder).
+ * It is not possible to achieve this simply by calling
+ * {@link ChannelPipeline#replace(ChannelHandler, String, ChannelHandler)}, but
+ * some additional steps are required:
+ * <pre>
+ * public class FirstDecoder extends ReplayingDecoder&lt;VoidEnum&gt; {
+ *
+ *     public FirstDecoder() {
+ *         super(true); // Enable unfold
+ *     }
+ *
+ *     protected Object decode(ChannelHandlerContext ctx, Channel ch, ChannelBuffer buf, VoidEnum state) {
+ *         ...
+ *         // Decode the first message
+ *         Object firstMessage = ...;
+ *
+ *         // Add the second decoder
+ *         ctx.getPipeline().addLast("second", new SecondDecoder());
+ *
+ *         // Remove the first decoder (me)
+ *         ctx.getPipeline().remove(this);
+ *
+ *         if (buf.readable()) {
+ *             // Hand off the remaining data to the second decoder
+ *             return new Object[] { firstMessage, buf.readBytes(<b>super.actualReadableBytes()</b>) };
+ *         } else {
+ *             // Nothing to hand off
+ *             return firstMessage;
+ *         }
+ *     }
  * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
