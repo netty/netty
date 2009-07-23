@@ -251,12 +251,30 @@
         </configuration>
       </plugin>
       <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>buildnumber-maven-plugin</artifactId>
+        <version>1.0-beta-3</version>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>create</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <doCheck>false</doCheck>
+          <doUpdate>true</doUpdate>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
         <version>2.0.0</version>
         <extensions>true</extensions>
         <configuration>
           <instructions>
+            <SCM-Revision>${buildNumber}</SCM-Revision>
             <Bundle-SymbolicName>${project.groupId}</Bundle-SymbolicName>
             <Bundle-DocURL>${project.url}</Bundle-DocURL>
             <Bundle-Activator>
@@ -305,7 +323,8 @@
             </goals>
             <configuration>
               <tasks>
-                <echo message="${project.version}" file="${project.build.directory}/version.txt" />
+                <echo message="${project.version}, r${buildNumber}"
+                      file="${project.build.directory}/version.txt" />
               </tasks>
             </configuration>
           </execution>
@@ -418,8 +437,8 @@
           <author>true</author>
           <keywords>true</keywords>
           <overview>${basedir}/src/javadoc/overview.html</overview>
-          <doctitle>${project.name} ${project.version} API Reference</doctitle>
-          <windowtitle>${project.name} ${project.version} API Reference</windowtitle>
+          <doctitle>${project.name} API Reference (${project.version}, r${buildNumber})</doctitle>
+          <windowtitle>${project.name} API Reference (${project.version}, r${buildNumber})</windowtitle>
           <additionalparam>
             -link http://java.sun.com/javase/6/docs/api/
             -link http://docs.jboss.org/xnio/latest/api/
@@ -466,6 +485,8 @@
           <destDir>${project.build.directory}/xref</destDir>
           <javadocDir>${project.build.directory}/api</javadocDir>
           <stylesheet>${basedir}/src/xref/stylesheet.css</stylesheet>
+          <docTitle>${project.name} Source Xref (${project.version}, r${buildNumber})</docTitle>
+          <windowTitle>${project.name} Source Xref (${project.version}, r${buildNumber})</windowTitle>
         </configuration>
       </plugin>
       <plugin>
