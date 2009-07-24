@@ -51,6 +51,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     private static final Throwable CANCELLED = new Throwable();
 
     private static volatile boolean useDeadLockChecker = true;
+    private static boolean disabledDeadLockCheckerOnce;
 
     /**
      * Returns {@code true} if and only if the dead lock checker is enabled.
@@ -64,7 +65,8 @@ public class DefaultChannelFuture implements ChannelFuture {
      * disable the dead lock checker.  Disable it at your own risk!
      */
     public static void setUseDeadLockChecker(boolean useDeadLockChecker) {
-        if (!useDeadLockChecker) {
+        if (!useDeadLockChecker && !disabledDeadLockCheckerOnce) {
+            disabledDeadLockCheckerOnce = true;
             logger.debug(
                     "The dead lock checker in " +
                     DefaultChannelFuture.class.getSimpleName() +
