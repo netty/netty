@@ -26,7 +26,7 @@
   <groupId>org.jboss.netty</groupId>
   <artifactId>netty</artifactId>
   <packaging>bundle</packaging>
-  <version>3.1.0.GA-SNAPSHOT</version>
+  <version>3.1.0.GA</version>
 
   <name>The Netty Project</name>
   <url>http://www.jboss.org/netty/</url>
@@ -53,8 +53,8 @@
   <inceptionYear>2008</inceptionYear>
 
   <scm>
-    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/trunk</connection>
-    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/trunk</developerConnection>
+    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/tags/netty-3.1.0.GA</connection>
+    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/tags/netty-3.1.0.GA</developerConnection>
   </scm>
 
   <dependencies>
@@ -323,8 +323,7 @@
             </goals>
             <configuration>
               <tasks>
-                <echo message="${project.version}, r${buildNumber}"
-                      file="${project.build.directory}/version.txt" />
+                <echo message="${project.version}, r${buildNumber}" file="${project.build.directory}/version.txt" />
               </tasks>
             </configuration>
           </execution>
