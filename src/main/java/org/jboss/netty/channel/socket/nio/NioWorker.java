@@ -751,8 +751,10 @@ class NioWorker implements Runnable {
                     future.setFailure(e);
                 }
                 close(channel, succeededFuture(channel));
-                throw new ChannelException(
-                        "Failed to register a socket to the selector.", e);
+                if (!(e instanceof ClosedChannelException)) {
+                    throw new ChannelException(
+                            "Failed to register a socket to the selector.", e);
+                }
             }
 
             if (!server) {
