@@ -93,6 +93,6 @@ public class StringEncoder extends OneToOneEncoder {
         if (!(msg instanceof String)) {
             return msg;
         }
-        return copiedBuffer(String.valueOf(msg), charsetName);
+        return copiedBuffer((String) msg, charsetName);
     }
 }
