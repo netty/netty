@@ -72,6 +72,7 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
 
     /**
      * Creates a new instance with the specified {@link Executor}.
+     * Specify an {@link OrderedMemoryAwareThreadPoolExecutor} if unsure.
      */
     public ExecutionHandler(Executor executor) {
         if (executor == null) {
