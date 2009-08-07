@@ -379,8 +379,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                 channel.socket.register(
                         boss.selector, SelectionKey.OP_CONNECT, channel);
             } catch (ClosedChannelException e) {
-                throw new ChannelException(
-                        "Failed to register a socket to the selector.", e);
+                NioWorker.close(channel, succeededFuture(channel));
             }
         }
     }
