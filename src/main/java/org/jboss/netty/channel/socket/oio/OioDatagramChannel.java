@@ -75,6 +75,7 @@ final class OioDatagramChannel extends AbstractChannel
 
         try {
             socket.setSoTimeout(10);
+            socket.setBroadcast(false);
         } catch (SocketException e) {
             throw new ChannelException(
                     "Failed to configure the datagram socket timeout.", e);
