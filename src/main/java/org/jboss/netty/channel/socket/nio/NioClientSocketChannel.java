@@ -80,6 +80,9 @@ final class NioClientSocketChannel extends NioSocketChannel {
     volatile ChannelFuture connectFuture;
     volatile boolean boundManually;
 
+    // Does not need to be volatile as it's accessed by only one thread.
+    long connectDeadlineNanos;
+
     NioClientSocketChannel(
             ChannelFactory factory, ChannelPipeline pipeline,
             ChannelSink sink, NioWorker worker) {

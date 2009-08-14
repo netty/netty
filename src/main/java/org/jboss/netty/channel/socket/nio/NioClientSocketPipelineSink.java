@@ -25,6 +25,7 @@ package org.jboss.netty.channel.socket.nio;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
@@ -173,7 +174,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             super();
         }
 
-        void register(NioSocketChannel channel) {
+        void register(NioClientSocketChannel channel) {
             Runnable registerTask = new RegisterTask(this, channel);
             Selector selector;
 
@@ -227,6 +228,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         public void run() {
             boolean shutdown = false;
             Selector selector = this.selector;
+            long lastConnectTimeoutCheckTimeNanos = System.nanoTime();
             for (;;) {
                 wakenUp.set(false);
 
@@ -269,6 +271,13 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
 
                     if (selectedKeyCount > 0) {
                         processSelectedKeys(selector.selectedKeys());
+                    }
+
+                    // Handle connection timeout every 0.5 seconds approximately.
+                    long currentTimeNanos = System.nanoTime();
+                    if (currentTimeNanos - lastConnectTimeoutCheckTimeNanos >= 500 * 1000000L) {
+                        lastConnectTimeoutCheckTimeNanos = currentTimeNanos;
+                        processConnectTimeout(selector.keys(), currentTimeNanos);
                     }
 
                     // Exit the loop when there's nothing to handle.
@@ -344,6 +353,34 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             }
         }
 
+        private void processConnectTimeout(Set<SelectionKey> keys, long currentTimeNanos) {
+            ConnectException cause = null;
+            for (SelectionKey k: keys) {
+                if (!k.isValid()) {
+                    close(k);
+                    continue;
+                }
+
+                if (k.isConnectable()) {
+                    connect(k);
+                    continue;
+                }
+
+                NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
+                if (ch.connectDeadlineNanos > 0 &&
+                        currentTimeNanos >= ch.connectDeadlineNanos) {
+
+                    if (cause == null) {
+                        cause = new ConnectException("connection timed out");
+                    }
+
+                    ch.connectFuture.setFailure(cause);
+                    fireExceptionCaught(ch, cause);
+                    close(k);
+                }
+            }
+        }
+
         private void connect(SelectionKey k) {
             NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
             try {
@@ -367,9 +404,9 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
 
     private static final class RegisterTask implements Runnable {
         private final Boss boss;
-        private final NioSocketChannel channel;
+        private final NioClientSocketChannel channel;
 
-        RegisterTask(Boss boss, NioSocketChannel channel) {
+        RegisterTask(Boss boss, NioClientSocketChannel channel) {
             this.boss = boss;
             this.channel = channel;
         }
@@ -380,6 +417,11 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                         boss.selector, SelectionKey.OP_CONNECT, channel);
             } catch (ClosedChannelException e) {
                 NioWorker.close(channel, succeededFuture(channel));
+            }
+
+            int connectTimeout = channel.getConfig().getConnectTimeoutMillis();
+            if (connectTimeout > 0) {
+                channel.connectDeadlineNanos = System.nanoTime() + connectTimeout * 1000000L;
             }
         }
     }
