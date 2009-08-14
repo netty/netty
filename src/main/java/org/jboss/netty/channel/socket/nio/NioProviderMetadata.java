@@ -30,17 +30,14 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.Set;
 import java.util.Map.Entry;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.SystemPropertyUtil;
 
 /**
@@ -237,45 +234,7 @@ class NioProviderMetadata {
             super();
         }
 
-        int autodetectWithTimeout() {
-            final BlockingQueue<Integer> resultQueue = new LinkedBlockingQueue<Integer>();
-            Runnable detector = new ThreadRenamingRunnable(new Runnable() {
-                public void run() {
-                    int level = -1;
-                    try {
-                        level = autodetectWithoutTimeout();
-                    } finally {
-                        boolean finished = resultQueue.offer(Integer.valueOf(level));
-                        assert finished;
-                    }
-                }
-            }, "NIO constraint level detector");
-
-            Thread detectorThread = new Thread(detector);
-            try {
-                detectorThread.setDaemon(true);
-            } catch (Exception e) {
-                logger.warn(
-                        "Failed to set the daemon flag of the autodetector thread.", e);
-            }
-            detectorThread.start();
-
-            for (;;) {
-                try {
-                    Integer result = resultQueue.poll(10000, TimeUnit.MILLISECONDS);
-                    if (result == null) {
-                        logger.warn("NIO constraint level autodetection timed out.");
-                        return -1;
-                    } else {
-                        return result.intValue();
-                    }
-                } catch (InterruptedException e) {
-                    // Ignored
-                }
-            }
-        }
-
-        int autodetectWithoutTimeout() {
+        int autodetect() {
             final int constraintLevel;
             ExecutorService executor = Executors.newCachedThreadPool();
             boolean success;
@@ -477,7 +436,7 @@ class NioProviderMetadata {
         System.out.println("Hard-coded Constraint Level: " + CONSTRAINT_LEVEL);
         System.out.println(
                 "Auto-detected Constraint Level: " +
-                new ConstraintLevelAutodetector().autodetectWithoutTimeout());
+                new ConstraintLevelAutodetector().autodetect());
     }
 
     private NioProviderMetadata() {
