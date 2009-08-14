@@ -97,7 +97,11 @@ import org.jboss.netty.util.internal.ImmediateExecutor;
  *
  * <h3>Implementing StartTLS</h3>
  * <p>
- * Typically, StartTLS is composed of three steps.
+ * <a href="http://en.wikipedia.org/wiki/STARTTLS">StartTLS</a> is the
+ * communication pattern that secures the wire in the middle of the plaintext
+ * connection.  Please note that it is different from SSL &middot; TLS, that
+ * secures the wire from the beginning of the connection.  Typically, StartTLS
+ * is composed of three steps:
  * <ol>
  * <li>Client sends a StartTLS request to server.</li>
  * <li>Server sends a StartTLS response to client.</li>
