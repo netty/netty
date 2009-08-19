@@ -26,6 +26,7 @@ import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.Executor;
@@ -109,8 +110,12 @@ public abstract class AbstractSocketServerBootstrapTest {
     public void testFailedBindAttempt() throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap();
         bootstrap.setFactory(newServerSocketChannelFactory(executor));
-        bootstrap.setOption("localAddress", new InetSocketAddress("255.255.255.255", 0));
-        bootstrap.bind();
+        bootstrap.setOption(
+                "localAddress",
+                new InetSocketAddress(
+                        InetAddress.getByAddress(new byte[] { -1, -1, -1, -1 }),
+                        0));
+        bootstrap.bind().close().awaitUninterruptibly();
     }
 
     @Test(timeout = 30000)
