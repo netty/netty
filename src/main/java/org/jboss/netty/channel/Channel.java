@@ -24,10 +24,12 @@ package org.jboss.netty.channel;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.SelectionKey;
 
 import org.jboss.netty.channel.socket.DatagramChannel;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.SocketChannel;
+import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
 
 
 /**
@@ -64,6 +66,39 @@ import org.jboss.netty.channel.socket.SocketChannel;
  * share one socket connection, as <a href="http://beepcore.org/">BEEP</a> and
  * <a href="http://en.wikipedia.org/wiki/Secure_Shell">SSH</a> do.
  *
+ * <h3>InterestOps</h3>
+ * <p>
+ * A {@link Channel} has a property called {@link #getInterestOps() interestOps}
+ * which is similar to that of {@link SelectionKey#interestOps()}.  It is
+ * represented as an integer value which is composed of two flags by bitwise-OR
+ * operation.
+ * <ul>
+ * <li>{@link #OP_READ} - If set, a message sent by a remote peer will be read
+ *     immediately.  If unset, the message from the remote peer will not be read
+ *     until the {@link #OP_READ} flag is set again (i.e. read suspension).</li>
+ * <li>{@link #OP_WRITE} - If set, a write request will not be sent to a remote
+ *     peer until the {@link #OP_WRITE} flag is cleared and the write request
+ *     will be pending in a queue.  If unset, the write request will be flushed
+ *     out as soon as possible from the queue.</li>
+ * <li>{@link #OP_READ_WRITE} - This is a combination of {@link #OP_READ} and
+ *     {@link #OP_WRITE}, which means only write requests are suspended.</li>
+ * <li>{@link #OP_NONE} - This is a combination of (NOT {@link #OP_READ}) and
+ *     (NOT {@link #OP_WRITE}), which means only read operation is suspended.</li>
+ * </ul>
+ * </p><p>
+ * You can set or clear the {@link #OP_READ} flag to suspend and resume read
+ * operation via {@link #setReadable(boolean)}.
+ * </p><p>
+ * Please note that you cannot suspend or resume write operation just like you
+ * can set or clear {@link #OP_READ}. The {@link #OP_WRITE} flag is read only
+ * and provided simply as a mean to tell you if the size of pending write
+ * requests exceeded a certain threshold or not so that you don't issue too many
+ * pending writes that lead to an {@link OutOfMemoryError}.  For example, the
+ * NIO socket transport uses the {@code writeBufferLowWaterMark} and
+ * {@code writeBufferHighWaterMark} properties in {@link NioSocketChannelConfig}
+ * to determine when to set or clear the {@link #OP_WRITE} flag.
+ * </p>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  *
@@ -75,37 +110,29 @@ import org.jboss.netty.channel.socket.SocketChannel;
  *
  * @apiviz.exclude ^org\.jboss\.netty\.channel\.([a-z]+\.)+[^\.]+Channel$
  */
-public interface Channel extends Comparable<Channel>{
+public interface Channel extends Comparable<Channel> {
 
     /**
-     * The {@link #getInterestOps() interestOps} value which tells that the
-     * I/O thread will not read a message from the channel but will perform
-     * the requested write operation immediately.
+     * The {@link #getInterestOps() interestOps} value which tells that only
+     * read operation has been suspended.
      */
     static int OP_NONE = 0;
 
     /**
-     * The {@link #getInterestOps() interestOps} value which tells that the
-     * I/O thread will read a message from the channel and will perform the
-     * requested write operation immediately.
+     * The {@link #getInterestOps() interestOps} value which tells that neither
+     * read nor write operation has been suspended.
      */
     static int OP_READ = 1;
 
     /**
-     * The {@link #getInterestOps() interestOps} value which tells that the
-     * I/O thread will not read a message from the channel and will not perform
-     * the requested write operation immediately.  Any write requests made when
-     * {@link #OP_WRITE} flag is set are queued until the I/O thread is ready
-     * to process the queued write requests.
+     * The {@link #getInterestOps() interestOps} value which tells that both
+     * read and write operation has been suspended.
      */
     static int OP_WRITE = 4;
 
     /**
-     * The {@link #getInterestOps() interestOps} value which tells that the
-     * I/O thread will read a message from the channel but will not perform
-     * the requested write operation immediately.  Any write requests made when
-     * {@link #OP_WRITE} flag is set are queued until the I/O thread is ready
-     * to process the queued write requests.
+     * The {@link #getInterestOps() interestOps} value which tells that only
+     * write operation has been suspended.
      */
     static int OP_READ_WRITE = OP_READ | OP_WRITE;
 
