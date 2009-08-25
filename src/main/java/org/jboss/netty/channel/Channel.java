@@ -69,9 +69,9 @@ import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
  * <h3>InterestOps</h3>
  * <p>
  * A {@link Channel} has a property called {@link #getInterestOps() interestOps}
- * which is similar to that of {@link SelectionKey#interestOps()}.  It is
- * represented as an integer value which is composed of two flags by bitwise-OR
- * operation.
+ * which is similar to that of {@link SelectionKey#interestOps() NIO SelectionKey}.
+ * It is represented as a <a href="http://en.wikipedia.org/wiki/Bit_field">bit
+ * field</a> which is composed of the two flags.
  * <ul>
  * <li>{@link #OP_READ} - If set, a message sent by a remote peer will be read
  *     immediately.  If unset, the message from the remote peer will not be read
