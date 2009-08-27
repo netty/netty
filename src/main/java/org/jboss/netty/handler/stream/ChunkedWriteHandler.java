@@ -139,11 +139,13 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                 } catch (Throwable t) {
                     currentEvent.getFuture().setFailure(t);
                     fireExceptionCaught(ctx, t);
+
                     try {
                         chunks.close();
                     } catch (Throwable t2) {
                         logger.warn("Failed to close a chunked input.", t2);
                     }
+                    currentEvent = null;
                     break;
                 }
 
