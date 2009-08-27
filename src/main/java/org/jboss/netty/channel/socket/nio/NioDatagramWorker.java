@@ -648,15 +648,18 @@ class NioDatagramWorker implements Runnable {
             final ChannelFuture future) {
         NioDatagramWorker worker = channel.worker;
         Selector selector = worker.selector;
-        SelectionKey key = channel.getDatagramChannel().keyFor(selector);
-        if (key != null) {
-            key.cancel();
-        }
 
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         try {
-            channel.getDatagramChannel().close();
+            synchronized (channel.interestOpsLock) {
+                SelectionKey key = channel.getDatagramChannel().keyFor(selector);
+                if (key != null) {
+                    key.cancel();
+                }
+                channel.getDatagramChannel().close();
+            }
+
             if (channel.setClosed()) {
                 future.setSuccess();
                 if (connected) {

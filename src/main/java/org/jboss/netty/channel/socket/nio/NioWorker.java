@@ -562,15 +562,18 @@ class NioWorker implements Runnable {
     static void close(NioSocketChannel channel, ChannelFuture future) {
         NioWorker worker = channel.worker;
         Selector selector = worker.selector;
-        SelectionKey key = channel.socket.keyFor(selector);
-        if (key != null) {
-            key.cancel();
-        }
 
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         try {
-            channel.socket.close();
+            synchronized (channel.interestOpsLock) {
+                SelectionKey key = channel.socket.keyFor(selector);
+                if (key != null) {
+                    key.cancel();
+                }
+                channel.socket.close();
+            }
+
             if (channel.setClosed()) {
                 future.setSuccess();
                 if (connected) {
