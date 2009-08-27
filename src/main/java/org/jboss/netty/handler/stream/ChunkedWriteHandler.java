@@ -191,7 +191,6 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                         this.currentEvent = null;
 
                         currentEvent.getFuture().setFailure(t);
-                        t.printStackTrace();
                         fireExceptionCaught(ctx, t);
 
                         closeInput(chunks);
