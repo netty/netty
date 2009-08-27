@@ -39,6 +39,8 @@ final class CookieHeaderNames {
 
     static final String SECURE = "Secure";
 
+    static final String HTTPONLY = "HTTPOnly";
+
     static final String COMMENT = "Comment";
 
     static final String COMMENTURL = "CommentURL";

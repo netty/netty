@@ -115,6 +115,20 @@ public interface Cookie extends Comparable<Cookie> {
     void setSecure(boolean secure);
 
     /**
+     * Returns if this cookie cannot be accessed through client side script.
+     * This flag works only if the browser supports it.  For more information,
+     * see <a href="http://www.owasp.org/index.php/HTTPOnly">here</a>.
+     */
+    boolean isHttpOnly();
+
+    /**
+     * Sets if this cookie cannot be accessed through client side script.
+     * This flag works only if the browser supports it.  For more information,
+     * see <a href="http://www.owasp.org/index.php/HTTPOnly">here</a>.
+     */
+    void setHttpOnly(boolean httpOnly);
+
+    /**
      * Returns the comment URL of this cookie.
      */
     String getCommentUrl();

@@ -52,6 +52,7 @@ public class DefaultCookie implements Cookie {
         RESERVED_NAMES.add("Expires");
         RESERVED_NAMES.add("Version");
         RESERVED_NAMES.add("Secure");
+        RESERVED_NAMES.add("HTTPOnly");
     }
 
     private final String name;
@@ -66,6 +67,7 @@ public class DefaultCookie implements Cookie {
     private int maxAge = -1;
     private int version;
     private boolean secure;
+    private boolean httpOnly;
 
     /**
      * Creates a new cookie with the specified name and value.
@@ -233,6 +235,14 @@ public class DefaultCookie implements Cookie {
         this.secure = secure;
     }
 
+    public boolean isHttpOnly() {
+        return httpOnly;
+    }
+
+    public void setHttpOnly(boolean httpOnly) {
+        this.httpOnly = httpOnly;
+    }
+
     @Override
     public int hashCode() {
         return getName().hashCode();
@@ -321,6 +331,9 @@ public class DefaultCookie implements Cookie {
         }
         if (isSecure()) {
             buf.append(", secure");
+        }
+        if (isHttpOnly()) {
+            buf.append(", HTTPOnly");
         }
         return buf.toString();
     }

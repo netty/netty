@@ -141,6 +141,10 @@ public class CookieEncoder {
                 sb.append(CookieHeaderNames.SECURE);
                 sb.append((char) HttpCodecUtil.SEMICOLON);
             }
+            if (cookie.isHttpOnly()) {
+                sb.append(CookieHeaderNames.HTTPONLY);
+                sb.append((char) HttpCodecUtil.SEMICOLON);
+            }
             if (cookie.getVersion() >= 1) {
                 if (cookie.getComment() != null) {
                     add(sb, CookieHeaderNames.COMMENT, cookie.getComment());

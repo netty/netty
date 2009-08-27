@@ -139,6 +139,7 @@ public class CookieDecoder {
 
             boolean discard = false;
             boolean secure = false;
+            boolean httpOnly = false;
             String comment = null;
             String commentURL = null;
             String domain = null;
@@ -154,6 +155,8 @@ public class CookieDecoder {
                     discard = true;
                 } else if (CookieHeaderNames.SECURE.equalsIgnoreCase(name)) {
                     secure = true;
+                } else if (CookieHeaderNames.HTTPONLY.equalsIgnoreCase(name)) {
+                   httpOnly = true;
                 } else if (CookieHeaderNames.COMMENT.equalsIgnoreCase(name)) {
                     comment = value;
                 } else if (CookieHeaderNames.COMMENTURL.equalsIgnoreCase(name)) {
@@ -199,6 +202,7 @@ public class CookieDecoder {
             c.setPath(path);
             c.setDomain(domain);
             c.setSecure(secure);
+            c.setHttpOnly(httpOnly);
             if (version > 0) {
                 c.setComment(comment);
             }
