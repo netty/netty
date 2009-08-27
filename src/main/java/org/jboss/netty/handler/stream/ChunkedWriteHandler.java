@@ -168,55 +168,61 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                 break;
             }
 
-            Object m = currentEvent.getMessage();
-            if (m instanceof ChunkedInput) {
-                ChunkedInput chunks = (ChunkedInput) m;
-                Object chunk;
-                boolean last;
-                try {
-                    chunk = chunks.nextChunk();
-                    if (chunk == null) {
-                        chunk = ChannelBuffers.EMPTY_BUFFER;
-                        last = true;
-                    } else {
-                        last = !chunks.hasNextChunk();
-                    }
-                } catch (Throwable t) {
-                    MessageEvent currentEvent = this.currentEvent;
-                    this.currentEvent = null;
-
-                    currentEvent.getFuture().setFailure(t);
-                    t.printStackTrace();
-                    fireExceptionCaught(ctx, t);
-
-                    closeInput(chunks);
-                    break;
-                }
-
-                ChannelFuture writeFuture;
-                final MessageEvent currentEvent = this.currentEvent;
-                if (last) {
-                    this.currentEvent = null;
-                    closeInput(chunks);
-                    writeFuture = currentEvent.getFuture();
-                } else {
-                    writeFuture = future(channel);
-                    writeFuture.addListener(new ChannelFutureListener() {
-                        public void operationComplete(ChannelFuture future)
-                                throws Exception {
-                            if (!future.isSuccess()) {
-                                currentEvent.getFuture().setFailure(future.getCause());
-                            }
-                        }
-                    });
-                }
-
-                Channels.write(
-                        ctx, writeFuture, chunk,
-                        currentEvent.getRemoteAddress());
-            } else {
-                ctx.sendDownstream(currentEvent);
+            if (currentEvent.getFuture().isDone()) {
+                // Previous write attempt has been failed for this write request.
                 currentEvent = null;
+            } else {
+                Object m = currentEvent.getMessage();
+                if (m instanceof ChunkedInput) {
+                    ChunkedInput chunks = (ChunkedInput) m;
+                    Object chunk;
+                    boolean last;
+                    try {
+                        chunk = chunks.nextChunk();
+                        if (chunk == null) {
+                            chunk = ChannelBuffers.EMPTY_BUFFER;
+                            last = true;
+                        } else {
+                            last = !chunks.hasNextChunk();
+                        }
+                    } catch (Throwable t) {
+                        MessageEvent currentEvent = this.currentEvent;
+                        this.currentEvent = null;
+
+                        currentEvent.getFuture().setFailure(t);
+                        t.printStackTrace();
+                        fireExceptionCaught(ctx, t);
+
+                        closeInput(chunks);
+                        break;
+                    }
+
+                    ChannelFuture writeFuture;
+                    final MessageEvent currentEvent = this.currentEvent;
+                    if (last) {
+                        this.currentEvent = null;
+                        closeInput(chunks);
+                        writeFuture = currentEvent.getFuture();
+                    } else {
+                        writeFuture = future(channel);
+                        writeFuture.addListener(new ChannelFutureListener() {
+                            public void operationComplete(ChannelFuture future)
+                                    throws Exception {
+                                if (!future.isSuccess()) {
+                                    currentEvent.getFuture().setFailure(future.getCause());
+                                    closeInput((ChunkedInput) currentEvent.getMessage());
+                                }
+                            }
+                        });
+                    }
+
+                    Channels.write(
+                            ctx, writeFuture, chunk,
+                            currentEvent.getRemoteAddress());
+                } else {
+                    ctx.sendDownstream(currentEvent);
+                    currentEvent = null;
+                }
             }
 
             if (!channel.isConnected()) {
@@ -226,11 +232,11 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         }
     }
 
-    private void closeInput(ChunkedInput chunks) {
+    static void closeInput(ChunkedInput chunks) {
         try {
             chunks.close();
-        } catch (Throwable t2) {
-            logger.warn("Failed to close a chunked input.", t2);
+        } catch (Throwable t) {
+            logger.warn("Failed to close a chunked input.", t);
         }
     }
 }
