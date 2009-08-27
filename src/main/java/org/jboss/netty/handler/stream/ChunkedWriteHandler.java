@@ -169,7 +169,8 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
             }
 
             if (currentEvent.getFuture().isDone()) {
-                // Previous write attempt has been failed for this write request.
+                // Skip the current request because the previous partial write
+                // attempt for the current request has been failed.
                 currentEvent = null;
             } else {
                 Object m = currentEvent.getMessage();
