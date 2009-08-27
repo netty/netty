@@ -324,7 +324,7 @@
             <configuration>
               <tasks>
                 <echo message="${project.version}, r${buildNumber}" file="${project.build.directory}/version.txt" />
-                <echo message="// DO NOT MODIFY - WILL BE OVERWRITTEN DURING THE BUILD PROCESS${line.separator}package org.jboss.netty.util;${line.separator}/** Provides the version information of Netty. */${line.separator}public final class Version {${line.separator}    /** The version identifier. */${line.separator}    public static final String ID = &quot;${project.version}-r${buildNumber}&quot;;${line.separator}    private Version() { super(); }${line.separator}}${line.separator}" file="${basedir}/src/main/java/org/jboss/netty/util/Version.java" />
+                <echo message="// DO NOT MODIFY - WILL BE OVERWRITTEN DURING THE BUILD PROCESS${line.separator}package org.jboss.netty.util;${line.separator}/** Provides the version information of Netty. */${line.separator}public final class Version {${line.separator}    /** The version identifier. */${line.separator}    public static final String ID = &quot;${project.version}-r${buildNumber}&quot;;${line.separator}    /** Prints out the version identifier to stdout. */${line.separator}    public static void main(String[] args) { System.out.println(ID); }${line.separator}    private Version() { super(); }${line.separator}}${line.separator}" file="${basedir}/src/main/java/org/jboss/netty/util/Version.java" />
               </tasks>
             </configuration>
           </execution>
