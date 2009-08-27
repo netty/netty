@@ -139,12 +139,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
 
             Object m = currentEvent.getMessage();
             if (m instanceof ChunkedInput) {
-                ChunkedInput chunks = (ChunkedInput) m;
-                try {
-                    chunks.close();
-                } catch (Throwable t2) {
-                    logger.warn("Failed to close a chunked input.", t2);
-                }
+                closeInput((ChunkedInput) m);
 
                 // Trigger a ClosedChannelException
                 Channels.write(
@@ -194,11 +189,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                     t.printStackTrace();
                     fireExceptionCaught(ctx, t);
 
-                    try {
-                        chunks.close();
-                    } catch (Throwable t2) {
-                        logger.warn("Failed to close a chunked input.", t2);
-                    }
+                    closeInput(chunks);
                     break;
                 }
 
@@ -206,14 +197,8 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                 final MessageEvent currentEvent = this.currentEvent;
                 if (last) {
                     this.currentEvent = null;
+                    closeInput(chunks);
                     writeFuture = currentEvent.getFuture();
-                    writeFuture.addListener(new ChannelFutureListener() {
-                        public void operationComplete(ChannelFuture future)
-                                throws Exception {
-                            ((ChunkedInput) currentEvent.getMessage()).close();
-                        }
-                    });
-
                 } else {
                     writeFuture = future(channel);
                     writeFuture.addListener(new ChannelFutureListener() {
@@ -238,6 +223,14 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                 discard(ctx);
                 break;
             }
+        }
+    }
+
+    private void closeInput(ChunkedInput chunks) {
+        try {
+            chunks.close();
+        } catch (Throwable t2) {
+            logger.warn("Failed to close a chunked input.", t2);
         }
     }
 }
