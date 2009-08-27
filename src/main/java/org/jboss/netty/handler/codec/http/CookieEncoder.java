@@ -138,9 +138,9 @@ public class CookieEncoder {
                 }
             }
             if (cookie.isSecure()) {
-                    sb.append(CookieHeaderNames.SECURE);
-                    sb.append((char) HttpCodecUtil.SEMICOLON);
-                }
+                sb.append(CookieHeaderNames.SECURE);
+                sb.append((char) HttpCodecUtil.SEMICOLON);
+            }
             if (cookie.getVersion() >= 1) {
                 if (cookie.getComment() != null) {
                     add(sb, CookieHeaderNames.COMMENT, cookie.getComment());
