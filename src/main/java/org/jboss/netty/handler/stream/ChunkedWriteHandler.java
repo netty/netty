@@ -221,7 +221,6 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                                 throws Exception {
                             if (!future.isSuccess()) {
                                 currentEvent.getFuture().setFailure(future.getCause());
-                                ((ChunkedInput) currentEvent.getMessage()).close();
                             }
                         }
                     });
@@ -233,6 +232,11 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
             } else {
                 ctx.sendDownstream(currentEvent);
                 currentEvent = null;
+            }
+
+            if (!channel.isConnected()) {
+                discard(ctx);
+                break;
             }
         }
     }
