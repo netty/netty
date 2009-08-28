@@ -1336,7 +1336,8 @@ public abstract class AbstractChannelBufferTest {
         assertEquals(0, buffer.readerIndex());
         assertEquals(CAPACITY / 2 - 1, buffer.writerIndex());
         assertEquals(copy.slice(1, CAPACITY / 2 - 1), buffer.slice(0, CAPACITY / 2 - 1));
-        assertEquals(copy.slice(CAPACITY / 2, CAPACITY / 2), buffer.slice(CAPACITY / 2, CAPACITY / 2));
+        // If writable bytes were copied, the test should fail to avoid unnecessary memory bandwidth consumption.
+        assertFalse(copy.slice(CAPACITY / 2, CAPACITY / 2).equals(buffer.slice(CAPACITY / 2 - 1, CAPACITY / 2)));
 
         // Marks also should be relocated.
         buffer.resetReaderIndex();
