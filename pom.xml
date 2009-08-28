@@ -40,8 +40,8 @@
   </organization>
   <licenses>
     <license>
-      <name>GNU Lesser General Public License</name>
-      <url>http://www.gnu.org/licenses/lgpl.html</url>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0</url>
     </license>
   </licenses>
   <inceptionYear>2008</inceptionYear>
