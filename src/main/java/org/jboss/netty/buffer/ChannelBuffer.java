@@ -148,6 +148,11 @@ import java.util.NoSuchElementException;
  * readerIndex (0) <= writerIndex (decreased)        <=        capacity
  * </pre>
  *
+ * Please note that there is no guarantee about the content of writable bytes
+ * after calling {@link #discardReadBytes()}.  The writable bytes will not be
+ * moved in most cases and could even be filled with completely different data
+ * depending on the underlying buffer implementation.
+ *
  * <h4>Clearing the buffer indexes</h4>
  *
  * You can set both {@link #readerIndex() readerIndex} and
