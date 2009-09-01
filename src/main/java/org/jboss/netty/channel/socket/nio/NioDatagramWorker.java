@@ -647,9 +647,9 @@ class NioDatagramWorker implements Runnable {
         try {
             // It is necessary to cancel all keys before closing a socket
             // because the shutdown flag in the Selector loop is set only when
-            // all keys are cancelled.  Thus, SocketChannel.close() and
+            // all keys are cancelled.  Thus, DatagramChannel.close() and
             // SelectionKey.cancel() must be placed in a synchronized block.
-            // Otherwise SocketChannel.register() in RegisterTask can be called
+            // Otherwise DatagramChannel.register() in RegisterTask can be called
             // after cancel(), but before close(), resulting in the infinite
             // Selector loop that refuses to shut down due to the dangling keys.
             synchronized (channel.interestOpsLock) {
