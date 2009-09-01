@@ -321,7 +321,7 @@ public interface Channel extends Comparable<Channel> {
      * ready to process the queued write requests.  This method is a shortcut
      * to the following code:
      * <pre>
-     * return (getInterestOps() & OP_WRITE) != 0;
+     * return (getInterestOps() & OP_WRITE) == 0;
      * </pre>
      */
     boolean isWritable();
