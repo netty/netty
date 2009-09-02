@@ -74,6 +74,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
  *  |   .             /|\                         .                .   |
  *  |   .              .                          .                .   |
  *  |   .      [ Going UPSTREAM ]        [ Going DOWNSTREAM ]      .   |
+ *  |   .      [ + INBOUND data ]        [ + OUTBOUND data  ]      .   |
  *  |   .              .                          .                .   |
  *  |   .              .                         \|/               .   |
  *  |   .   +----------+-----------+  +-----------+------------+   .   |
@@ -88,13 +89,20 @@ import org.jboss.netty.handler.ssl.SslHandler;
  *  +------------------+--------------------------+--------------------+
  *                     |                         \|/
  *  +------------------+--------------------------+--------------------+
- *  |             I/O Threads (Transport Implementation)               |
+ *  |       Netty Internal I/O Threads (Transport Implementation)      |
  *  +------------------------------------------------------------------+
  * </pre>
- * Please note that an upstream event flows from the first upstream handler
- * to the last upstream handler (i.e. to the next) and a downstream event
- * flows from the last downstream handler to the first downstream handler
- * (i.e. to the previous).
+ * An upstream event flows from the first upstream handler to the last upstream
+ * handler as shown on the left side of the diagram.  An upstream handler
+ * usually handles the inbound data received from the I/O thread on the bottom
+ * of the diagram.  If an upstream event goes beyond the last upstream handler,
+ * it is discarded silently.
+ * <p>
+ * A downstream event flows from the last downstream handler to the first
+ * downstream handler as shown on the right side of the diagram.  A downstream
+ * handler usually generates or transforms the outbound traffic such as write
+ * requests.  If a downstream event goes beyond the first downstream handler,
+ * it is handled by an I/O thread associated with the {@link Channel}.
  * <p>
  * For example, let us assume that we created the following pipeline:
  * <pre>
