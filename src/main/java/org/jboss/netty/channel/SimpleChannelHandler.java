@@ -134,7 +134,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
                 channelInterestChanged(ctx, evt);
                 break;
             default:
-                ctx.sendDownstream(e);
+                ctx.sendUpstream(e);
             }
         } else if (e instanceof ExceptionEvent) {
             exceptionCaught(ctx, (ExceptionEvent) e);
