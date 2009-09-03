@@ -165,7 +165,7 @@ class NioDatagramWorker implements Runnable {
                 try {
                     // Start the main selector loop. See run() for details.
                     executor.execute(new ThreadRenamingRunnable(this,
-                            "New I/O server worker #" + bossId + "'-'" + id));
+                            "New I/O datagram worker #" + bossId + "'-'" + id));
                     success = true;
                 } finally {
                     if (!success) {
