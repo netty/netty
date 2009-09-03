@@ -19,9 +19,9 @@ package org.jboss.netty.channel;
  * Provides the properties and operations which are specific to a
  * {@link ChannelHandler} and the {@link ChannelPipeline} it belongs to.
  * Via a {@link ChannelHandlerContext}, a {@link ChannelHandler} can send
- * an upstream or downstream {@link ChannelEvent} to the next or previous
- * {@link ChannelHandler} in a pipeline, modify the behavior of the pipeline,
- * or store the information (attachment) which is specific to the handler.
+ * a {@link ChannelEvent} upstream or downstream, modify the behavior of the
+ * pipeline, or store the information (attachment) which is specific to the
+ * handler.
  * <pre>
  *         <b>n</b> = the number of the handler entries in a pipeline
  *
@@ -128,18 +128,20 @@ public interface ChannelHandlerContext {
     boolean canHandleDownstream();
 
     /**
-     * Sends the specified {@link ChannelEvent} to the next
-     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline}.  It is
-     * recommended to use the event generation methods in {@link Channels}
-     * rather than calling this method directly.
+     * Sends the specified {@link ChannelEvent} to the
+     * {@link ChannelUpstreamHandler} which is placed in the closest upstream
+     * from the handler associated with this context.  It is recommended to use
+     * the shortcut methods in {@link Channels} rather than calling this method
+     * directly.
      */
     void sendUpstream(ChannelEvent e);
 
     /**
-     * Sends the specified {@link ChannelEvent} to the previous
-     * {@link ChannelDownstreamHandler} in the {@link ChannelPipeline}.  It is
-     * recommended to use the event generation methods in {@link Channels}
-     * rather than calling this method directly.
+     * Sends the specified {@link ChannelEvent} to the
+     * {@link ChannelDownstreamHandler} which is placed in the closest
+     * downstream from the handler associated with this context.  It is
+     * recommended to use the shortcut methods in {@link Channels} rather than
+     * calling this method directly.
      */
     void sendDownstream(ChannelEvent e);
 

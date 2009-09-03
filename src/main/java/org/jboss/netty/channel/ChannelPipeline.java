@@ -47,62 +47,60 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * The following diagram describes how {@link ChannelEvent}s are processed by
  * {@link ChannelHandler}s in a {@link ChannelPipeline} typically.
  * A {@link ChannelEvent} can be handled by either a {@link ChannelUpstreamHandler}
- * or a {@link ChannelDownstreamHandler} and be forwarded to the next or
- * previous handler by calling {@link ChannelHandlerContext#sendUpstream(ChannelEvent)}
+ * or a {@link ChannelDownstreamHandler} and be forwarded to the closest
+ * handler by calling {@link ChannelHandlerContext#sendUpstream(ChannelEvent)}
  * or {@link ChannelHandlerContext#sendDownstream(ChannelEvent)}.  The meaning
  * of the event is interpreted somewhat differently depending on whether it is
  * going upstream or going downstream. Please refer to {@link ChannelEvent} for
  * more information.
- *
  * <pre>
- *
- *                                            I/O Request
- *                                          via {@link Channel} or
- *                                      {@link ChannelHandlerContext}
- *                                                |
- *  +---------------------------------------------+--------------------+
- *  |                       ChannelPipeline       |                    |
- *  |                                            \|/                   |
- *  |       +----------------------+  +-----------+------------+       |
- *  |  LAST | Upstream Handler  N  |  | Downstream Handler  M  | LAST  |
- *  |   .   +----------+-----------+  +-----------+------------+   .   |
- *  |   .             /|\                         |                .   |
- *  |   .              |                         \|/               .   |
- *  |   .   +----------+-----------+  +-----------+------------+   .   |
- *  |   .   | Upstream Handler N-1 |  | Downstream Handler M-1 |   .   |
- *  |   .   +----------+-----------+  +-----------+------------+   .   |
- *  |   .             /|\                         .                .   |
- *  |   .              .                          .                .   |
- *  |   .      [ Going UPSTREAM ]        [ Going DOWNSTREAM ]      .   |
- *  |   .      [ + INBOUND data ]        [ + OUTBOUND data  ]      .   |
- *  |   .              .                          .                .   |
- *  |   .              .                         \|/               .   |
- *  |   .   +----------+-----------+  +-----------+------------+   .   |
- *  |   .   | Upstream Handler  2  |  | Downstream Handler  2  |   .   |
- *  |   .   +----------+-----------+  +-----------+------------+   .   |
- *  |   .             /|\                         |                .   |
- *  |   .              |                         \|/               .   |
- *  |   .   +----------+-----------+  +-----------+------------+   .   |
- *  | FIRST | Upstream Handler  1  |  | Downstream Handler  1  | FIRST |
- *  |       +----------+-----------+  +-----------+------------+       |
- *  |                 /|\                         |                    |
- *  +------------------+--------------------------+--------------------+
- *                     |                         \|/
- *  +------------------+--------------------------+--------------------+
- *  |       Netty Internal I/O Threads (Transport Implementation)      |
- *  +------------------------------------------------------------------+
+ *                                       I/O Request
+ *                                     via {@link Channel} or
+ *                                 {@link ChannelHandlerContext}
+ *                                           |
+ *  +----------------------------------------+---------------+
+ *  |                  ChannelPipeline       |               |
+ *  |                                       \|/              |
+ *  |  +----------------------+  +-----------+------------+  |
+ *  |  | Upstream Handler  N  |  | Downstream Handler  1  |  |
+ *  |  +----------+-----------+  +-----------+------------+  |
+ *  |            /|\                         |               |
+ *  |             |                         \|/              |
+ *  |  +----------+-----------+  +-----------+------------+  |
+ *  |  | Upstream Handler N-1 |  | Downstream Handler  2  |  |
+ *  |  +----------+-----------+  +-----------+------------+  |
+ *  |            /|\                         .               |
+ *  |             .                          .               |
+ *  |     [ sendUpstream() ]        [ sendDownstream() ]     |
+ *  |     [ + INBOUND data ]        [ + OUTBOUND data  ]     |
+ *  |             .                          .               |
+ *  |             .                         \|/              |
+ *  |  +----------+-----------+  +-----------+------------+  |
+ *  |  | Upstream Handler  2  |  | Downstream Handler M-1 |  |
+ *  |  +----------+-----------+  +-----------+------------+  |
+ *  |            /|\                         |               |
+ *  |             |                         \|/              |
+ *  |  +----------+-----------+  +-----------+------------+  |
+ *  |  | Upstream Handler  1  |  | Downstream Handler  M  |  |
+ *  |  +----------+-----------+  +-----------+------------+  |
+ *  |            /|\                         |               |
+ *  +-------------+--------------------------+---------------+
+ *                |                         \|/
+ *  +-------------+--------------------------+---------------+
+ *  |  Netty Internal I/O Threads (Transport Implementation) |
+ *  +--------------------------------------------------------+
  * </pre>
- * An upstream event flows from the first upstream handler to the last upstream
- * handler as shown on the left side of the diagram.  An upstream handler
+ * An upstream event is handled by the upstream handlers in the bottom-up
+ * direction as shown on the left side of the diagram.  An upstream handler
  * usually handles the inbound data received from the I/O thread on the bottom
- * of the diagram.  If an upstream event goes beyond the last upstream handler,
+ * of the diagram.  If an upstream event goes beyond the top upstream handler,
  * it is discarded silently.
  * <p>
- * A downstream event flows from the last downstream handler to the first
- * downstream handler as shown on the right side of the diagram.  A downstream
- * handler usually generates or transforms the outbound traffic such as write
- * requests.  If a downstream event goes beyond the first downstream handler,
- * it is handled by an I/O thread associated with the {@link Channel}.
+ * A downstream event is handled by the downstream handler in the top-down
+ * direction as shown on the right side of the diagram.  A downstream handler
+ * usually generates or transforms the outbound traffic such as write requests.
+ * If a downstream event goes beyond the bottom downstream handler, it is
+ * handled by an I/O thread associated with the {@link Channel}.
  * <p>
  * For example, let us assume that we created the following pipeline:
  * <pre>

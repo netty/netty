@@ -20,15 +20,13 @@ import java.net.SocketAddress;
 
 /**
  * Handles or intercepts a downstream {@link ChannelEvent}, and sends a
- * {@link ChannelEvent} to the previous or next handler in a
- * {@link ChannelPipeline}.
+ * {@link ChannelEvent} to the next handler in a {@link ChannelPipeline}.
  *
  * <h3>Downstream events</h3>
  * <p>
- * A downstream event is an event which is supposed to be processed from the
- * last handler to the first handler in a {@link ChannelPipeline}.
- * For example, all I/O requests made by a user application are downstream
- * events.
+ * A downstream event is an event which is supposed to be processed by
+ * a series of downstream handlers in the {@link ChannelPipeline}.  It is often
+ * an I/O request made by a user application.
  * <p>
  * The most common use case of this interface is to intercept an I/O request
  * such as {@link Channel#write(Object)} and {@link Channel#close()}.  The
@@ -83,22 +81,21 @@ import java.net.SocketAddress;
  * out what an upstream event and a downstream event are, what fundamental
  * differences they have, and how they flow in a pipeline.
  *
- * <h3>Firing an event to the previous or next handler</h3>
+ * <h3>Firing an event to the next handler</h3>
  * <p>
  * You can forward the received event downstream or upstream.  In most cases,
- * {@link ChannelDownstreamHandler} will pass the event to the previous
- * handler (downstream) although it is legal to pass the event to the next
- * handler (upstream):
+ * {@link ChannelDownstreamHandler} will send the event downstream
+ * (i.e. outbound) although it is legal to send the event upstream (i.e. inbound):
  *
  * <pre>
- * // Sending the event forward (downstream)
+ * // Sending the event downstream (outbound)
  * void handleDownstream({@link ChannelHandlerContext} ctx, {@link ChannelEvent} e) throws Exception {
  *     ...
  *     ctx.sendDownstream(e);
  *     ...
  * }
  *
- * // Sending the event backward (upstream)
+ * // Sending the event upstream (inbound)
  * void handleDownstream({@link ChannelHandlerContext} ctx, {@link ChannelEvent} e) throws Exception {
  *     ...
  *     ctx.sendUpstream(new DefaultChannelStateEvent(...));

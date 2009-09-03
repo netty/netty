@@ -25,13 +25,13 @@ package org.jboss.netty.channel;
  *
  * <h3>Upstream events and downstream events, and their interpretation</h3>
  * <p>
- * Every event can be either an upstream event or a downstream event.
- * If an event flows from the first handler to the last handler in a
+ * Every event is either an upstream event or a downstream event.
+ * If an event flows forward from the first handler to the last handler in a
  * {@link ChannelPipeline}, we call it an upstream event and say <strong>"an
- * event goes upstream."</strong>  If an event flows from the last handler to
- * the first handler in a {@link ChannelPipeline}, we call it a downstream
- * event and say <strong>"an event goes downstream."</strong>  (Please refer
- * to the diagram in {@link ChannelPipeline} for more explanation.)
+ * event goes upstream."</strong>  If an event flows backward from the last
+ * handler to the first handler in a {@link ChannelPipeline}, we call it a
+ * downstream event and say <strong>"an event goes downstream."</strong>
+ * (Please refer to the diagram in {@link ChannelPipeline} for more explanation.)
  * <p>
  * A {@link ChannelEvent} is interpreted differently by a {@link ChannelHandler}
  * depending on whether the event is an upstream event or a downstream event.
