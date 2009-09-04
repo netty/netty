@@ -199,15 +199,20 @@ public class ConnectionlessBootstrap extends Bootstrap {
 
         // Wait until the future is available.
         ChannelFuture future = null;
+        boolean interrupted = false;
         do {
             try {
                 future = futureQueue.poll(Integer.MAX_VALUE, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
-                // Ignore
+                interrupted = true;
             }
         } while (future == null);
 
         pipeline.remove("binder");
+
+        if (interrupted) {
+            Thread.currentThread().interrupt();
+        }
 
         // Wait for the future.
         future.awaitUninterruptibly();
@@ -317,15 +322,20 @@ public class ConnectionlessBootstrap extends Bootstrap {
 
         // Wait until the future is available.
         ChannelFuture future = null;
+        boolean interrupted = false;
         do {
             try {
                 future = futureQueue.poll(Integer.MAX_VALUE, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
-                // Ignore
+                interrupted = true;
             }
         } while (future == null);
 
         pipeline.remove("connector");
+
+        if (interrupted) {
+            Thread.currentThread().interrupt();
+        }
 
         return future;
     }

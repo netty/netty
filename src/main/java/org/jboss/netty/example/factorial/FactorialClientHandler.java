@@ -63,11 +63,16 @@ public class FactorialClientHandler extends SimpleChannelUpstreamHandler {
     }
 
     public BigInteger getFactorial() {
+        boolean interrupted = false;
         for (;;) {
             try {
-                return answer.take();
+                BigInteger factorial = answer.take();
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
+                }
+                return factorial;
             } catch (InterruptedException e) {
-                // Ignore.
+                interrupted = true;
             }
         }
     }

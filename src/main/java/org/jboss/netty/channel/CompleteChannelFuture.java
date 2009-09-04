@@ -63,14 +63,23 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
     }
 
     public ChannelFuture await() throws InterruptedException {
+        if (Thread.interrupted()) {
+            throw new InterruptedException();
+        }
         return this;
     }
 
     public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
+        if (Thread.interrupted()) {
+            throw new InterruptedException();
+        }
         return true;
     }
 
     public boolean await(long timeoutMillis) throws InterruptedException {
+        if (Thread.interrupted()) {
+            throw new InterruptedException();
+        }
         return true;
     }
 

@@ -276,13 +276,18 @@ public class ServerBootstrap extends Bootstrap {
 
         // Wait until the future is available.
         ChannelFuture future = null;
+        boolean interrupted = false;
         do {
             try {
                 future = futureQueue.poll(Integer.MAX_VALUE, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
-                // Ignore
+                interrupted = true;
             }
         } while (future == null);
+
+        if (interrupted) {
+            Thread.currentThread().interrupt();
+        }
 
         // Wait for the future.
         future.awaitUninterruptibly();

@@ -67,13 +67,18 @@ public class LocalTimeClientHandler extends SimpleChannelUpstreamHandler {
         channel.write(builder.build());
 
         LocalTimes localTimes;
+        boolean interrupted = false;
         for (;;) {
             try {
                 localTimes = answer.take();
                 break;
             } catch (InterruptedException e) {
-                // Ignore.
+                interrupted = true;
             }
+        }
+
+        if (interrupted) {
+            Thread.currentThread().interrupt();
         }
 
         List<String> result = new ArrayList<String>();

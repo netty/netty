@@ -202,6 +202,10 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     }
 
     public ChannelGroupFuture await() throws InterruptedException {
+        if (Thread.interrupted()) {
+            throw new InterruptedException();
+        }
+
         synchronized (this) {
             while (!done) {
                 checkDeadLock();
@@ -226,6 +230,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     }
 
     public ChannelGroupFuture awaitUninterruptibly() {
+        boolean interrupted = false;
         synchronized (this) {
             while (!done) {
                 checkDeadLock();
@@ -233,11 +238,15 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
                 try {
                     this.wait();
                 } catch (InterruptedException e) {
-                    // Ignore.
+                    interrupted = true;
                 } finally {
                     waiters--;
                 }
             }
+        }
+
+        if (interrupted) {
+            Thread.currentThread().interrupt();
         }
 
         return this;
@@ -260,39 +269,52 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     }
 
     private boolean await0(long timeoutNanos, boolean interruptable) throws InterruptedException {
+        if (interruptable && Thread.interrupted()) {
+            throw new InterruptedException();
+        }
+
         long startTime = timeoutNanos <= 0 ? 0 : System.nanoTime();
         long waitTime = timeoutNanos;
+        boolean interrupted = false;
 
-        synchronized (this) {
-            if (done) {
-                return done;
-            } else if (waitTime <= 0) {
-                return done;
-            }
-
-            checkDeadLock();
-            waiters++;
-            try {
-                for (;;) {
-                    try {
-                        this.wait(waitTime / 1000000, (int) (waitTime % 1000000));
-                    } catch (InterruptedException e) {
-                        if (interruptable) {
-                            throw e;
-                        }
-                    }
-
-                    if (done) {
-                        return true;
-                    } else {
-                        waitTime = timeoutNanos - (System.nanoTime() - startTime);
-                        if (waitTime <= 0) {
-                            return done;
-                        }
-                    }
+        try {
+            synchronized (this) {
+                if (done) {
+                    return done;
+                } else if (waitTime <= 0) {
+                    return done;
                 }
-            } finally {
-                waiters--;
+
+                checkDeadLock();
+                waiters++;
+                try {
+                    for (;;) {
+                        try {
+                            this.wait(waitTime / 1000000, (int) (waitTime % 1000000));
+                        } catch (InterruptedException e) {
+                            if (interruptable) {
+                                throw e;
+                            } else {
+                                interrupted = true;
+                            }
+                        }
+
+                        if (done) {
+                            return true;
+                        } else {
+                            waitTime = timeoutNanos - (System.nanoTime() - startTime);
+                            if (waitTime <= 0) {
+                                return done;
+                            }
+                        }
+                    }
+                } finally {
+                    waiters--;
+                }
+            }
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
             }
         }
     }

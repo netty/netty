@@ -275,13 +275,18 @@ public class HashedWheelTimer implements Timer {
             return Collections.emptySet();
         }
 
+        boolean interrupted = false;
         while (workerThread.isAlive()) {
             workerThread.interrupt();
             try {
                 workerThread.join(100);
             } catch (InterruptedException e) {
-                // Ignore
+                interrupted = true;
             }
+        }
+
+        if (interrupted) {
+            Thread.currentThread().interrupt();
         }
 
         activeInstances.decrementAndGet();

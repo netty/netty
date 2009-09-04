@@ -58,6 +58,7 @@ public class ExecutorUtil {
             executorsCopy[i] = executors[i];
         }
 
+        boolean interrupted = false;
         for (Executor e: executorsCopy) {
             if (!(e instanceof ExecutorService)) {
                 continue;
@@ -87,9 +88,13 @@ public class ExecutorUtil {
                         break;
                     }
                 } catch (InterruptedException ex) {
-                    // Ignore.
+                    interrupted = true;
                 }
             }
+        }
+
+        if (interrupted) {
+            Thread.currentThread().interrupt();
         }
     }
 
