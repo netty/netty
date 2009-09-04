@@ -711,6 +711,11 @@ class NioWorker implements Runnable {
                 channel.setRawInterestOpsNow(interestOps);
                 fireChannelInterestChanged(channel);
             }
+        } catch (CancelledKeyException e) {
+            // setInterestOps() was called on a closed channel.
+            ClosedChannelException cce = new ClosedChannelException();
+            future.setFailure(cce);
+            fireExceptionCaught(channel, cce);
         } catch (Throwable t) {
             future.setFailure(t);
             fireExceptionCaught(channel, t);

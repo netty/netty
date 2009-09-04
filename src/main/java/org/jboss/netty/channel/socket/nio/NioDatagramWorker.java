@@ -803,6 +803,11 @@ class NioDatagramWorker implements Runnable {
                 channel.setRawInterestOpsNow(interestOps);
                 fireChannelInterestChanged(channel);
             }
+        } catch (final CancelledKeyException e) {
+            // setInterestOps() was called on a closed channel.
+            ClosedChannelException cce = new ClosedChannelException();
+            future.setFailure(cce);
+            fireExceptionCaught(channel, cce);
         } catch (final Throwable t) {
             future.setFailure(t);
             fireExceptionCaught(channel, t);
