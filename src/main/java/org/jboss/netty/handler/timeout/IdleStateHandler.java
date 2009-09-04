@@ -62,6 +62,24 @@ import org.jboss.netty.util.TimerTask;
  * </tr>
  * </table>
  *
+ * <pre>
+ * // An example that sends a ping message when there is no traffic
+ * // (either inbound or outbound) for 30 seconds.
+ * ChannelPipeline p = ...;
+ * Timer timer = new HashedWheelTimer();
+ * p.addLast("timeout", new IdleStateHandler(timer, 30, 30, 0));
+ * p.addLast("handler", new MyHandler());
+ *
+ * // Handler should handle the IdleStateEvent triggered by IdleStateHandler.
+ * public class MyHandler extends IdleStateAwareChannelHandler {
+ *     public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) {
+ *         ctx.getChannel().write(new PingMessage());
+ *     }
+ * }
+ *
+ * // To shut down, call {@link #releaseExternalResources()} or {@link Timer#stop()}.
+ * </pre>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$

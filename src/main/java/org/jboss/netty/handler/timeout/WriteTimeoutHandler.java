@@ -36,6 +36,16 @@ import org.jboss.netty.util.TimerTask;
  * Raises a {@link WriteTimeoutException} when no data was written within a
  * certain period of time.
  *
+ * <pre>
+ * // An example configuration that implements 30-second write timeout:
+ * ChannelPipeline p = ...;
+ * Timer timer = new HashedWheelTimer();
+ * p.addLast("timeout", new WriteTimeoutHandler(timer, 30));
+ * p.addLast("handler", new MyHandler());
+ *
+ * // To shut down, call {@link #releaseExternalResources()} or {@link Timer#stop()}.
+ * </pre>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
