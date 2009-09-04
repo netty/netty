@@ -40,7 +40,7 @@ public class EchoServer {
                         Executors.newCachedThreadPool()));
 
         // Set up the default event pipeline.
-        EchoHandler handler = new EchoHandler();
+        EchoServerHandler handler = new EchoServerHandler();
         bootstrap.getPipeline().addLast("handler", handler);
 
         // Bind and start to accept incoming connections.

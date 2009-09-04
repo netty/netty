@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.example.echo;
 
+import org.jboss.netty.channel.ChannelHandler;
+
 /**
  * Measures and prints the current throughput every 3 seconds.
  *
@@ -25,15 +27,19 @@ package org.jboss.netty.example.echo;
  */
 public class ThroughputMonitor extends Thread {
 
-    private final EchoHandler handler;
+    private final ChannelHandler handler;
 
-    public ThroughputMonitor(EchoHandler handler) {
+    public ThroughputMonitor(EchoClientHandler handler) {
+        this.handler = handler;
+    }
+
+    public ThroughputMonitor(EchoServerHandler handler) {
         this.handler = handler;
     }
 
     @Override
     public void run() {
-        long oldCounter = handler.getTransferredBytes();
+        long oldCounter = getTransferredBytes();
         long startTime = System.currentTimeMillis();
         for (;;) {
             try {
@@ -43,13 +49,21 @@ public class ThroughputMonitor extends Thread {
             }
 
             long endTime = System.currentTimeMillis();
-            long newCounter = handler.getTransferredBytes();
+            long newCounter = getTransferredBytes();
             System.err.format(
                     "%4.3f MiB/s%n",
                     (newCounter - oldCounter) * 1000.0 / (endTime - startTime) /
                     1048576.0);
             oldCounter = newCounter;
             startTime = endTime;
+        }
+    }
+
+    private long getTransferredBytes() {
+        if (handler instanceof EchoClientHandler) {
+            return ((EchoClientHandler) handler).getTransferredBytes();
+        } else {
+            return ((EchoServerHandler) handler).getTransferredBytes();
         }
     }
 }

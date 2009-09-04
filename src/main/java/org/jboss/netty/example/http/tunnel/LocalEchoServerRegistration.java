@@ -20,7 +20,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.local.DefaultLocalServerChannelFactory;
 import org.jboss.netty.channel.local.LocalAddress;
-import org.jboss.netty.example.echo.EchoHandler;
+import org.jboss.netty.example.echo.EchoServerHandler;
 
 /**
  * Deploy this in JBossAS 5 or other IoC container by adding the following bean.
@@ -41,7 +41,7 @@ public class LocalEchoServerRegistration {
 
     public void start() {
         ServerBootstrap serverBootstrap = new ServerBootstrap(factory);
-        EchoHandler handler = new EchoHandler();
+        EchoServerHandler handler = new EchoServerHandler();
         serverBootstrap.getPipeline().addLast("handler", handler);
 
         // Note that "myLocalServer" is the endpoint which was specified in web.xml.

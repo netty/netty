@@ -24,7 +24,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
 import org.jboss.netty.channel.local.DefaultLocalServerChannelFactory;
 import org.jboss.netty.channel.local.LocalAddress;
-import org.jboss.netty.example.echo.EchoHandler;
+import org.jboss.netty.example.echo.EchoServerHandler;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.handler.logging.LoggingHandler;
@@ -45,7 +45,7 @@ public class LocalExample {
                 new DefaultLocalServerChannelFactory());
 
         // Set up the default server-side event pipeline.
-        EchoHandler handler = new EchoHandler();
+        EchoServerHandler handler = new EchoServerHandler();
         sb.getPipeline().addLast("handler", handler);
 
         // Start up the server.

@@ -29,8 +29,9 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
- * Handles both client-side and server-side handler depending on which
- * constructor was called.
+ * Handler implementation for the echo client.  It initiates the ping-pong
+ * traffic between the echo client and server by sending the first message to
+ * the server.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -38,25 +39,18 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("all")
-public class EchoHandler extends SimpleChannelUpstreamHandler {
+public class EchoClientHandler extends SimpleChannelUpstreamHandler {
 
     private static final Logger logger = Logger.getLogger(
-            EchoHandler.class.getName());
+            EchoClientHandler.class.getName());
 
     private final ChannelBuffer firstMessage;
     private final AtomicLong transferredBytes = new AtomicLong();
 
     /**
-     * Creates a server-side handler.
-     */
-    public EchoHandler() {
-        firstMessage = ChannelBuffers.EMPTY_BUFFER;
-    }
-
-    /**
      * Creates a client-side handler.
      */
-    public EchoHandler(int firstMessageSize) {
+    public EchoClientHandler(int firstMessageSize) {
         if (firstMessageSize <= 0) {
             throw new IllegalArgumentException(
                     "firstMessageSize: " + firstMessageSize);

@@ -60,7 +60,7 @@ public class EchoClient {
                         Executors.newCachedThreadPool()));
 
         // Set up the default event pipeline.
-        EchoHandler handler = new EchoHandler(firstMessageSize);
+        EchoClientHandler handler = new EchoClientHandler(firstMessageSize);
         bootstrap.getPipeline().addLast("handler", handler);
 
         // Start the connection attempt.
