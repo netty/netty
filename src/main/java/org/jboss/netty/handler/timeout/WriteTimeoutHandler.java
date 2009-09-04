@@ -97,13 +97,13 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
         if (unit == null) {
             throw new NullPointerException("unit");
         }
-        if (timeout <= 0) {
-            throw new IllegalArgumentException(
-                    "timeout: " + timeout + " (expected: a positive integer)");
-        }
 
         this.timer = timer;
-        timeoutMillis = Math.max(unit.toMillis(timeout), 1);
+        if (timeout <= 0) {
+            timeoutMillis = 0;
+        } else {
+            timeoutMillis = Math.max(unit.toMillis(timeout), 1);
+        }
     }
 
     /**
