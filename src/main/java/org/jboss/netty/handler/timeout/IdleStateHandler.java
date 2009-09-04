@@ -174,9 +174,21 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
         }
 
         this.timer = timer;
-        readerIdleTimeMillis = unit.toMillis(readerIdleTime);
-        writerIdleTimeMillis = unit.toMillis(writerIdleTime);
-        allIdleTimeMillis = unit.toMillis(allIdleTime);
+        if (readerIdleTime <= 0) {
+            readerIdleTimeMillis = 0;
+        } else {
+            readerIdleTimeMillis = Math.max(unit.toMillis(readerIdleTime), 1);
+        }
+        if (writerIdleTime <= 0) {
+            writerIdleTimeMillis = 0;
+        } else {
+            writerIdleTimeMillis = Math.max(unit.toMillis(writerIdleTime), 1);
+        }
+        if (allIdleTime <= 0) {
+            allIdleTimeMillis = 0;
+        } else {
+            allIdleTimeMillis = Math.max(unit.toMillis(allIdleTime), 1);
+        }
     }
 
     /**
