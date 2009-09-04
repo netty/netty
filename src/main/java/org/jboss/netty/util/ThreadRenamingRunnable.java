@@ -38,12 +38,7 @@ public class ThreadRenamingRunnable implements Runnable {
         InternalLoggerFactory.getInstance(ThreadRenamingRunnable.class);
 
     private static volatile ThreadNameDeterminer threadNameDeterminer =
-        new ThreadNameDeterminer() {
-            public String determineThreadName(
-                    String oldThreadName, String newThreadName) throws Exception {
-                return newThreadName;
-            }
-        };
+        ThreadNameDeterminer.PROPOSED;
 
     /**
      * Returns the {@link ThreadNameDeterminer} which overrides the proposed
