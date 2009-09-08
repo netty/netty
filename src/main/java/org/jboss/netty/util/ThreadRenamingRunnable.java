@@ -51,7 +51,7 @@ public class ThreadRenamingRunnable implements Runnable {
 
     /**
      * Sets the {@link ThreadNameDeterminer} which overrides the proposed new
-     * thread name.  Please note that the new {@link ThreadNameDeterminer}
+     * thread name.  Please note that the specified {@link ThreadNameDeterminer}
      * affects only new {@link ThreadRenamingRunnable}s; the existing instances
      * are not affected at all.  Therefore, you should make sure to call this
      * method at the earliest possible point for consistent thread naming.
