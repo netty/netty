@@ -57,7 +57,7 @@ public class ThreadRenamingRunnable implements Runnable {
      * method at the earliest possible point (i.e. before any Netty worker
      * thread starts) for consistent thread naming.  Otherwise, you might see
      * the default thread names and the new names appear at the same time in
-     * your full thread dump.
+     * the full thread dump.
      */
     public static void setThreadNameDeterminer(ThreadNameDeterminer threadNameDeterminer) {
         if (threadNameDeterminer == null) {
