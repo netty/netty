@@ -54,7 +54,10 @@ public class ThreadRenamingRunnable implements Runnable {
      * thread name.  Please note that the specified {@link ThreadNameDeterminer}
      * affects only new {@link ThreadRenamingRunnable}s; the existing instances
      * are not affected at all.  Therefore, you should make sure to call this
-     * method at the earliest possible point for consistent thread naming.
+     * method at the earliest possible point (i.e. before any Netty worker
+     * thread starts) for consistent thread naming.  Otherwise, you might see
+     * the default thread names and the new names appear at the same time in
+     * your full thread dump.
      */
     public static void setThreadNameDeterminer(ThreadNameDeterminer threadNameDeterminer) {
         if (threadNameDeterminer == null) {
