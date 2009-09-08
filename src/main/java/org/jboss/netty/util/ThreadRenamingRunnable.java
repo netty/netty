@@ -21,7 +21,8 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * A {@link Runnable} that changes the current thread name and reverts it back
- * when its execution ends.
+ * when its execution ends.  To change the default thread names set by Netty,
+ * use {@link #setThreadNameDeterminer(ThreadNameDeterminer)}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
@@ -50,7 +51,10 @@ public class ThreadRenamingRunnable implements Runnable {
 
     /**
      * Sets the {@link ThreadNameDeterminer} which overrides the proposed new
-     * thread name.
+     * thread name.  Please note that the new {@link ThreadNameDeterminer}
+     * affects only new {@link ThreadRenamingRunnable}s; the existing instances
+     * are not affected at all.  Therefore, you should make sure to call this
+     * method at the earliest possible point for consistent thread naming.
      */
     public static void setThreadNameDeterminer(ThreadNameDeterminer threadNameDeterminer) {
         if (threadNameDeterminer == null) {
