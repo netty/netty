@@ -25,8 +25,9 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  * a {@link Thread#currentThread()}.  One difference is that you always have to
  * specify the {@link Channel} to access the variable.
  * <p>
- * As an alternative, you might want to use an attachment storage provided by
- * {@link ChannelHandlerContext}.
+ * Alternatively, you might want to use the
+ * {@link ChannelHandlerContext#setAttachment(Object) ChannelHandlerContext.attachment}
+ * property, which performs better.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
