@@ -21,6 +21,7 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Specifies if the same instance of the annotated {@link ChannelHandler} type
@@ -60,6 +61,16 @@ import java.lang.annotation.Target;
  *     }
  *     ...
  * }
+ * </pre>
+ *
+ * Please note that the handler annotated with {@code "all"} can even be added
+ * to the same pipeline more than once:
+ *
+ * <pre>
+ * ChannelPipeline p = ...;
+ * StatelessHandler h = ...;
+ * p.addLast("handler1", h);
+ * p.addLast("handler2", h);
  * </pre>
  *
  * <h3>{@code ChannelPipelineCoverage("one")}</h3>
@@ -104,6 +115,91 @@ import java.lang.annotation.Target;
  *     }
  * }
  * </pre>
+ *
+ * <h3>Writing a stateful handler with the {@code "all"} coverage</h3>
+ *
+ * Although it's recommended to write a stateful handler with the {@code "one"}
+ * coverage, you might sometimes want to write it with the {@code "all"}
+ * coverage for some reason.  In such a case, you need to use either
+ * {@link ChannelHandlerContext#setAttachment(Object) ChannelHandlerContext.attachment}
+ * property or a {@link ConcurrentMap} whose key is {@link ChannelHandlerContext}.
+ * <p>
+ * The following is an example that uses the context attachment:
+ * <pre>
+ * public class StatefulHandler extends SimpleChannelHandler {
+ *
+ *     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) {
+ *         // Initialize the message ID counter.
+ *         // Please note that the attachment (the counter in this case) will be
+ *         // dereferenced and marked for garbage collection automatically on
+ *         // disconnection.
+ *         <strong>ctx.setAttachment(Integer.valueOf(0));</strong>
+ *     }
+ *
+ *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ *         // Fetch the current message ID.
+ *         <strong>int messageId = ((Integer) ctx.getAttachment()).intValue();</strong>
+ *
+ *         // Prepend a message ID and length field to the message.
+ *         ChannelBuffer body = (ChannelBuffer) e.getMessage();
+ *         ChannelBuffer header = ChannelBuffers.buffer(8);
+ *         header.writeInt(messageId);
+ *         header.writeInt(body.readableBytes());
+ *
+ *         // Update the stateful property.
+ *         <strong>ctx.setAttachment(Integer.valueOf(messageId + 1));</strong>
+ *
+ *         // Create a message prepended with the header and send a new event.
+ *         ChannelBuffer message = ChannelBuffers.wrappedBuffer(header, body);
+ *         Channels.fireMessageReceived(ctx, message, e.getRemoteAddress());
+ *     }
+ *     ...
+ * }
+ * </pre>
+ *
+ * and here's another example that uses a map:
+ * <pre>
+ * public class StatefulHandler extends SimpleChannelHandler {
+ *
+ *     <strong>private final ConcurrentMap&lt;ChannelHandlerContext, Integer&gt; messageIds =
+ *             new ConcurrentHashMap&lt;ChannelHandlerContext, Integer&gt;();</strong>
+ *
+ *     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) {
+ *         // Initialize the message ID counter.
+ *         <strong>messageIds.put(ctx, Integer.valueOf(0));</strong>
+ *     }
+ *
+ *     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
+ *         // Remove the message ID counter from the map.
+ *         // Please note that the context attachment does not need this step.
+ *         <strong>messageIds.remove(ctx);</strong>
+ *     }
+ *
+ *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ *         // Fetch the current message ID.
+ *         <strong>int messageId = messageIds.get(ctx).intValue();</strong>
+ *
+ *         // Prepend a message ID and length field to the message.
+ *         ChannelBuffer body = (ChannelBuffer) e.getMessage();
+ *         ChannelBuffer header = ChannelBuffers.buffer(8);
+ *         header.writeInt(messageId);
+ *         header.writeInt(body.readableBytes());
+ *
+ *         // Update the stateful property.
+ *         <strong>messageIds.put(ctx, Integer.valueOf(messageId + 1));</strong>
+ *
+ *         // Create a message prepended with the header and send a new event.
+ *         ChannelBuffer message = ChannelBuffers.wrappedBuffer(header, body);
+ *         Channels.fireMessageReceived(ctx, message, e.getRemoteAddress());
+ *     }
+ *     ...
+ * }
+ * </pre>
+ *
+ * Please note that the examples above in this section assume that the handlers
+ * are added before the {@code channelOpen} event and removed after the
+ * {@code channelClosed} event.  The initialization and removal of the message
+ * ID property could have been more complicated otherwise.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
