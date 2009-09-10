@@ -26,7 +26,9 @@ import org.jboss.netty.util.Timer;
 
 
 /**
- * Connects to a server periodically to measure the uptime of the server.
+ * Connects to a server periodically to measure and print the uptime of the
+ * server.  This example demonstrates how to implement reliable reconnection
+ * mechanism in Netty.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
