@@ -566,6 +566,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     private String[] splitHeader(String sb) {
+        final int length = sb.length();
         int nameStart;
         int nameEnd;
         int colonEnd;
@@ -573,14 +574,14 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         int valueEnd;
 
         nameStart = findNonWhitespace(sb, 0);
-        for (nameEnd = nameStart; nameEnd < sb.length(); nameEnd ++) {
+        for (nameEnd = nameStart; nameEnd < length; nameEnd ++) {
             char ch = sb.charAt(nameEnd);
             if (ch == ':' || Character.isWhitespace(ch)) {
                 break;
             }
         }
 
-        for (colonEnd = nameEnd; colonEnd < sb.length(); colonEnd ++) {
+        for (colonEnd = nameEnd; colonEnd < length; colonEnd ++) {
             if (sb.charAt(colonEnd) == ':') {
                 colonEnd ++;
                 break;
@@ -588,11 +589,18 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
 
         valueStart = findNonWhitespace(sb, colonEnd);
-        valueEnd = findEndOfString(sb);
+        if (valueStart == length) {
+            return new String[] {
+                    sb.substring(nameStart, nameEnd),
+                    ""
+            };
+        }
 
+        valueEnd = findEndOfString(sb);
         return new String[] {
                 sb.substring(nameStart, nameEnd),
-                sb.substring(valueStart, valueEnd) };
+                sb.substring(valueStart, valueEnd)
+        };
     }
 
     private int findNonWhitespace(String sb, int offset) {
