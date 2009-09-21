@@ -342,11 +342,6 @@ class NioWorker implements Runnable {
     }
 
     static void write(final NioSocketChannel channel, boolean mightNeedWakeup) {
-        if (!channel.isConnected()) {
-            cleanUpWriteBuffer(channel);
-            return;
-        }
-
         if (mightNeedWakeup && scheduleWriteIfNecessary(channel)) {
             return;
         }
@@ -452,7 +447,9 @@ class NioWorker implements Runnable {
                         addOpWrite = true;
                         break;
                     }
-                } catch (AsynchronousCloseException e) {
+                } catch (ClosedChannelException e) {
+                    cleanUpWriteBuffer(channel);
+
                     // Doesn't need a user attention - ignore.
                     channel.currentWriteEvent = evt;
                     channel.currentWriteIndex = bufIdx;
