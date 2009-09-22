@@ -686,8 +686,8 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
 
                 switch (result.getHandshakeStatus()) {
                 case FINISHED:
-                    runDelegatedTasks();
                     setHandshakeSuccess(channel);
+                    runDelegatedTasks();
                     break;
                 case NEED_TASK:
                     runDelegatedTasks();
