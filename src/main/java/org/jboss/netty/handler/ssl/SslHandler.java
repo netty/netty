@@ -474,9 +474,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
 
         final int packetOffset = buffer.readerIndex();
         buffer.skipBytes(packetLength);
-        ChannelBuffer frame = unwrap(ctx, channel, buffer, packetOffset, packetLength);
-
-        return frame;
+        return unwrap(ctx, channel, buffer, packetOffset, packetLength);
     }
 
     private ChannelFuture wrap(ChannelHandlerContext context, Channel channel)
