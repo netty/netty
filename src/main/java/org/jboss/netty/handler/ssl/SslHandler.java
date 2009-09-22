@@ -472,6 +472,20 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
             return null;
         }
 
+        // We advance the buffer's readerIndex before calling unwrap() because
+        // unwrap() can trigger FrameDecoder call decode(), this method, recursively.
+        // The recursive call results in decoding the same packet twice if
+        // the readerIndex is advanced *after* decode().
+        //
+        // Here's an example:
+        // 1) An SSL packet is received from the wire.
+        // 2) SslHandler.decode() deciphers the packet and calls the user code.
+        // 3) The user closes the channel in the same thread.
+        // 4) The same thread triggers a channelDisconnected() event.
+        // 5) FrameDecoder.cleanup() is called, and it calls SslHandler.decode().
+        // 6) SslHandler.decode() will feed the same packet with what was
+        //    deciphered at the step 2 again if the readerIndex was not advanced
+        //    before calling the user code.
         final int packetOffset = buffer.readerIndex();
         buffer.skipBytes(packetLength);
         return unwrap(ctx, channel, buffer, packetOffset, packetLength);
