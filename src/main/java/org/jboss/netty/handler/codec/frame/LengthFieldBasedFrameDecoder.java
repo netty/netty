@@ -55,7 +55,8 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  * Because we can get the length of the content by calling
  * {@link ChannelBuffer#readableBytes()}, you might want to strip the length
  * field by specifying <tt>initialBytesToStrip</tt>.  In this example, we
- * specified <tt>2</tt>, that is same with the length of the length field.
+ * specified <tt>2</tt>, that is same with the length of the length field, to
+ * strip the first two bytes.
  * <pre>
  * lengthFieldOffset   = 0
  * lengthFieldLength   = 2
@@ -96,8 +97,8 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  *
  * The following message is a simple variation of the first example.  An extra
  * header value is prepended to the message.  <tt>lengthAdjustment</tt> is zero
- * again because the decoder always counts the length of the prepended data into
- * frame length calculation.
+ * again because the decoder always takes the length of the prepended data into
+ * account during frame length calculation.
  * <pre>
  * <b>lengthFieldOffset</b>   = <b>2</b> (= the length of Header 1)
  * <b>lengthFieldLength</b>   = <b>3</b>
@@ -113,8 +114,8 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  *
  * <h3>3 bytes length field at the beginning of 5 bytes header, do not strip header</h3>
  *
- * This is an advanced example that shows a case where there is an extra header
- * between the length field and the message body.  You have to specify a
+ * This is an advanced example that shows the case where there is an extra
+ * header between the length field and the message body.  You have to specify a
  * positive <tt>lengthAdjustment</tt> so that the decoder counts the extra
  * header into the frame length calculation.
  * <pre>
