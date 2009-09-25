@@ -32,7 +32,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  *
  * <h3>2 bytes length field at offset 0, do not strip header</h3>
  *
- * The value of the length field in this example is <tt>10 (0x0C)</tt> which
+ * The value of the length field in this example is <tt>12 (0x0C)</tt> which
  * represents the length of "HELLO, WORLD".  By default, the decoder assumes
  * that the length field represents the number of the bytes that follows the
  * length field.  Therefore, it can be decoded with the simplistic parameter
