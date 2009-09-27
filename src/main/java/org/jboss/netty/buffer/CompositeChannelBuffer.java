@@ -41,43 +41,138 @@ import java.util.List;
  */
 public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
-    private final ChannelBuffer[] slices;
-    private final ByteOrder order;
-    private final int[] indices;
+    private ChannelBuffer[] slices;
+    private ByteOrder order;
+    private int[] indices;
     private int lastSliceId;
 
     public CompositeChannelBuffer(ChannelBuffer... buffers) {
         if (buffers.length == 0) {
             throw new IllegalArgumentException("buffers should not be empty.");
         }
-
         ByteOrder expectedEndianness = null;
-        for (ChannelBuffer buffer : buffers) {
-            if (buffer.capacity() != 0) {
+        // compute the real number of valid slices
+        ArrayList<ChannelBuffer> bufferList = new ArrayList<ChannelBuffer>(
+                buffers.length);
+        for (ChannelBuffer buffer: buffers) {
+            if (buffer.readableBytes() > 0) {
+                expectedEndianness = buffer.order();
+                if (buffer instanceof CompositeChannelBuffer) {
+                    CompositeChannelBuffer aggregate = (CompositeChannelBuffer) buffer;
+                    ArrayList<ChannelBuffer> subList = aggregate.getBufferList(
+                            aggregate.readerIndex(), aggregate.readableBytes());
+                    bufferList.addAll(subList);
+                    // now List contains all buffers from Aggregate
+                } else {
+                    // not an aggregate one
+                    ChannelBuffer other = buffer.slice(buffer.readerIndex(),
+                            buffer.readableBytes());
+                    bufferList.add(other);
+                }
+            } else if (buffer.capacity() != 0) {
                 expectedEndianness = buffer.order();
             }
         }
 
         if (expectedEndianness == null) {
-            throw new IllegalArgumentException("buffers have only empty buffers.");
+            throw new IllegalArgumentException(
+                    "buffers have only empty buffers.");
         }
-
-        order = expectedEndianness;
-        slices = new ChannelBuffer[buffers.length];
-        for (int i = 0; i < buffers.length; i ++) {
-            if (buffers[i].capacity() != 0 && buffers[i].order() != expectedEndianness) {
-                throw new IllegalArgumentException(
-                        "All buffers must have the same endianness.");
-            }
-            slices[i] = buffers[i].slice();
-        }
-        indices = new int[buffers.length + 1];
-        for (int i = 1; i <= buffers.length; i ++) {
-            indices[i] = indices[i - 1] + slices[i - 1].capacity();
-        }
-        writerIndex(capacity());
+        setFromList(bufferList, expectedEndianness);
     }
 
+    /**
+    *
+    * @param index
+    * @param length
+    * @return the list of valid buffers from index and length, slicing contents
+    */
+   private ArrayList<ChannelBuffer> getBufferList(int index, int length) {
+       int localReaderIndex = index;
+       int localWriterIndex = this.writerIndex();
+       int sliceId = sliceId(localReaderIndex);
+       // some slices from sliceId must be kept
+       int maxlength = localWriterIndex - localReaderIndex;
+       if (maxlength < length) {
+           // check then if maxlength is compatible with the capacity
+           maxlength = capacity() - localReaderIndex;
+           if (maxlength < length) {
+               // too big
+               throw new IllegalArgumentException(
+                       "Length is bigger than available.");
+           }
+           // use capacity (discardReadBytes method)
+       }
+       ArrayList<ChannelBuffer> bufferList = new ArrayList<ChannelBuffer>(
+               slices.length);
+       // first one is not complete
+       // each slice will be duplicated before assign to the list (maintain original indexes)
+       ChannelBuffer buf = slices[sliceId].duplicate();
+       buf.readerIndex(localReaderIndex - indices[sliceId]);
+       buf.writerIndex(slices[sliceId].writerIndex());
+       // as writerIndex can be less than capacity, check too for the end
+       int newlength = length;
+       while (newlength > 0) {
+           int leftInBuffer = buf.capacity() - buf.readerIndex();
+           if (newlength <= leftInBuffer) {
+               // final buffer
+               buf.writerIndex(buf.readerIndex() + newlength);
+               bufferList.add(buf);
+               newlength = 0;
+               break;
+           } else {
+               // not final buffer
+               bufferList.add(buf);
+               newlength -= leftInBuffer;
+               sliceId ++;
+               buf = slices[sliceId].duplicate();
+               buf.readerIndex(0);
+               buf.writerIndex(slices[sliceId].writerIndex());
+               // length is > 0
+           }
+       }
+       return bufferList;
+   }
+
+   /**
+    * Setup this ChannelBuffer from the list and the Endianness
+    * @param listBuf
+    * @param expectedEndianness
+    */
+   private void setFromList(ArrayList<ChannelBuffer> listBuf,
+           ByteOrder expectedEndianness) {
+       int number = listBuf.size();
+       if (number == 0) {
+           order = expectedEndianness;
+           slices = new ChannelBuffer[1];
+           // to prevent remove too early
+           slices[0] = ChannelBuffers.EMPTY_BUFFER.slice();
+           indices = new int[2];
+           indices[1] = indices[0] + slices[0].capacity();
+           readerIndex(0);
+           writerIndex(capacity());
+           return;
+       }
+       order = expectedEndianness;
+       slices = new ChannelBuffer[number];
+       int i = 0;
+       for (ChannelBuffer buffer: listBuf) {
+           if (buffer.order() != expectedEndianness) {
+               throw new IllegalArgumentException(
+                       "All buffers must have the same endianness.");
+           }
+           slices[i] = buffer;
+           i ++;
+       }
+       indices = new int[number + 1];
+       indices[0] = 0;
+       for (i = 1; i <= number; i ++) {
+           indices[i] = indices[i - 1] + slices[i - 1].capacity();
+       }
+       writerIndex(capacity());
+       readerIndex(listBuf.get(0).readerIndex());
+   }
+   
     private CompositeChannelBuffer(CompositeChannelBuffer buffer) {
         order = buffer.order;
         slices = buffer.slices.clone();
@@ -464,14 +559,26 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             if (length == 0) {
                 return ChannelBuffers.EMPTY_BUFFER;
             } else {
-                return new TruncatedChannelBuffer(this, length);
+                CompositeChannelBuffer newbuf = new CompositeChannelBuffer(this);
+                newbuf.readerIndex(index);// FIX
+                newbuf.writerIndex(length);
+                return newbuf; // instead of Truncated one
             }
         } else if (index < 0 || index > capacity() - length) {
             throw new IndexOutOfBoundsException();
         } else if (length == 0) {
             return ChannelBuffers.EMPTY_BUFFER;
         } else {
-            return new SlicedChannelBuffer(this, index, length);
+            // Try to do better than using Sliced here
+            // copy all slices from index to capacity
+            ArrayList<ChannelBuffer> listBuffer = this.getBufferList(index, this.capacity()-index);
+            // create the AggregateChannelBuffer
+            ChannelBuffer [] buffers = new ChannelBuffer[listBuffer.size()];
+            listBuffer.toArray(buffers);
+            CompositeChannelBuffer newbuf = new CompositeChannelBuffer(buffers);
+            // make the correct writerIndex
+            newbuf.writerIndex(length);
+            return newbuf;
         }
     }
 
@@ -566,5 +673,75 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
 
         throw new IndexOutOfBoundsException();
+    }
+    
+    public void discardReadBytes() {
+        // only bytes between readerIndex and writerIndex will be kept and
+        // new readerIndex and writerIndex will be respectively
+        // 0 and (previous WriterIndex - previous ReaderIndex)
+        int localReaderIndex = this.readerIndex();
+        if (localReaderIndex == 0) {
+            return;
+        }
+        int localWriterIndex = this.writerIndex();
+        // Local Length to copy (move)
+        
+        // FIXME if copy concerns only readeable then use
+        // int localLength = localWriterIndex - localReaderIndex;
+        int localLength = capacity() - localReaderIndex;
+        
+        ArrayList<ChannelBuffer> list = getBufferList(localReaderIndex,
+                localLength);
+        // First buffer must be really truncated to preserve capacity
+        ChannelBuffer first = list.get(0);
+        int firstCapacity = first.writerIndex() - first.readerIndex();
+        ChannelBuffer firstbuf = ChannelBuffers.buffer(order,
+                firstCapacity);
+        firstbuf.writeBytes(first);
+        list.set(0, firstbuf);
+        // add a buffer to maintain capacity equivalent to discarded read bytes
+        // some internal buffers can be removed due to readerIndex
+        
+        // FIXME if copy concerns only readeable then use
+        // ChannelBuffer buffer = ChannelBuffers.buffer(this.capacity - firstCapacity);
+        ChannelBuffer buffer = ChannelBuffers.buffer(order, localReaderIndex);
+        
+        list.add(buffer);
+        // reset markedReader and markedWriter Indexes in order to get values
+        int localMarkedReaderIndex = localReaderIndex;
+        try {
+            resetReaderIndex();
+            localMarkedReaderIndex = this.readerIndex();
+        } catch (IndexOutOfBoundsException e) {
+            // ignore
+        }
+        int localMarkedWriterIndex = localWriterIndex;
+        try {
+            resetWriterIndex();
+            localMarkedWriterIndex = this.writerIndex();
+        } catch (IndexOutOfBoundsException e) {
+            // ignore
+        }
+        setFromList(list, order);
+        // reset marked Indexes
+        localMarkedReaderIndex = Math.max(localMarkedReaderIndex -
+                localReaderIndex, 0);
+        localMarkedWriterIndex = Math.max(localMarkedWriterIndex -
+                localReaderIndex, 0);
+        this.readerIndex(localMarkedReaderIndex);
+        this.writerIndex(localMarkedWriterIndex);
+        markReaderIndex();
+        markWriterIndex();
+        // reset real indexes
+        localWriterIndex = Math.max(localWriterIndex - localReaderIndex, 0);
+        localReaderIndex = 0;
+        this.readerIndex(localReaderIndex);
+        this.writerIndex(localWriterIndex);
+    }
+    
+    public String toString() {
+        String result = super.toString();
+        result = result.substring(0, result.length() - 1);
+        return result + ", slices=" + slices.length + ")";
     }
 }
