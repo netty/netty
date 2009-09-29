@@ -453,7 +453,7 @@ class NioWorker implements Runnable {
                     channel.currentWriteIndex = bufIdx;
 
                     // But we still need to clean up the pending writes.
-                    cleanUpWriteBuffer(channel);
+                    cleanUpWriteBuffer(channel, e);
                     break;
                 } catch (Throwable t) {
                     channel.currentWriteEvent = null;
@@ -586,7 +586,7 @@ class NioWorker implements Runnable {
                     fireChannelUnbound(channel);
                 }
 
-                cleanUpWriteBuffer(channel);
+                cleanUpWriteBuffer(channel, null);
                 fireChannelClosed(channel);
             } else {
                 future.setSuccess();
@@ -597,8 +597,7 @@ class NioWorker implements Runnable {
         }
     }
 
-    private static void cleanUpWriteBuffer(NioSocketChannel channel) {
-        Exception cause = null;
+    private static void cleanUpWriteBuffer(NioSocketChannel channel, Exception cause) {
         boolean fireExceptionCaught = false;
 
         // Clean up the stale messages in the write buffer.
@@ -610,10 +609,12 @@ class NioWorker implements Runnable {
 
                 // Create the exception only once to avoid the excessive overhead
                 // caused by fillStackTrace.
-                if (channel.isOpen()) {
-                    cause = new NotYetConnectedException();
-                } else {
-                    cause = new ClosedChannelException();
+                if (cause == null) {
+                    if (channel.isOpen()) {
+                        cause = new NotYetConnectedException();
+                    } else {
+                        cause = new ClosedChannelException();
+                    }
                 }
                 evt.getFuture().setFailure(cause);
                 fireExceptionCaught = true;
