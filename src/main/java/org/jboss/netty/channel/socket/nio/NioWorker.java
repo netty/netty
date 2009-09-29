@@ -448,11 +448,12 @@ class NioWorker implements Runnable {
                         break;
                     }
                 } catch (ClosedChannelException e) {
-                    cleanUpWriteBuffer(channel);
-
                     // Doesn't need a user attention - ignore.
                     channel.currentWriteEvent = evt;
                     channel.currentWriteIndex = bufIdx;
+
+                    // But we still need to clean up the pending writes.
+                    cleanUpWriteBuffer(channel);
                 } catch (Throwable t) {
                     channel.currentWriteEvent = null;
                     evt.getFuture().setFailure(t);
