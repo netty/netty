@@ -454,6 +454,7 @@ class NioWorker implements Runnable {
 
                     // But we still need to clean up the pending writes.
                     cleanUpWriteBuffer(channel);
+                    break;
                 } catch (Throwable t) {
                     channel.currentWriteEvent = null;
                     evt.getFuture().setFailure(t);
