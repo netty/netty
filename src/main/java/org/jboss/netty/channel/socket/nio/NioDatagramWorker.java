@@ -540,8 +540,10 @@ class NioDatagramWorker implements Runnable {
                 } catch (final AsynchronousCloseException e) {
                     // Doesn't need a user attention - ignore.
                     channel.currentWriteEvent = evt;
+                    channel.inWriteNowLoop = false;
                 } catch (final Throwable t) {
                     channel.currentWriteEvent = null;
+                    channel.inWriteNowLoop = false;
                     evt.getFuture().setFailure(t);
                     evt = null;
                     fireExceptionCaught(channel, t);
