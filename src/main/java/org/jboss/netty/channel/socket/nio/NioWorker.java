@@ -342,6 +342,11 @@ class NioWorker implements Runnable {
     }
 
     static void write(final NioSocketChannel channel, boolean mightNeedWakeup) {
+        if (!channel.isConnected()) {
+            cleanUpWriteBuffer(channel);
+            return;
+        }
+
         if (mightNeedWakeup && scheduleWriteIfNecessary(channel)) {
             return;
         }
@@ -447,25 +452,18 @@ class NioWorker implements Runnable {
                         addOpWrite = true;
                         break;
                     }
-                } catch (ClosedChannelException e) {
+                } catch (AsynchronousCloseException e) {
                     // Doesn't need a user attention - ignore.
                     channel.currentWriteEvent = evt;
                     channel.currentWriteIndex = bufIdx;
-                    channel.inWriteNowLoop = false;
-
-                    // But we still need to clean up the pending writes.
-                    cleanUpWriteBuffer(channel, e);
-                    break;
                 } catch (Throwable t) {
                     channel.currentWriteEvent = null;
-                    channel.inWriteNowLoop = false;
                     evt.getFuture().setFailure(t);
                     evt = null;
                     fireExceptionCaught(channel, t);
                     if (t instanceof IOException) {
                         open = false;
                         close(channel, succeededFuture(channel));
-                        break;
                     }
                 }
             }
@@ -588,7 +586,7 @@ class NioWorker implements Runnable {
                     fireChannelUnbound(channel);
                 }
 
-                cleanUpWriteBuffer(channel, null);
+                cleanUpWriteBuffer(channel);
                 fireChannelClosed(channel);
             } else {
                 future.setSuccess();
@@ -599,7 +597,8 @@ class NioWorker implements Runnable {
         }
     }
 
-    private static void cleanUpWriteBuffer(NioSocketChannel channel, Exception cause) {
+    private static void cleanUpWriteBuffer(NioSocketChannel channel) {
+        Exception cause = null;
         boolean fireExceptionCaught = false;
 
         // Clean up the stale messages in the write buffer.
@@ -611,12 +610,10 @@ class NioWorker implements Runnable {
 
                 // Create the exception only once to avoid the excessive overhead
                 // caused by fillStackTrace.
-                if (cause == null) {
-                    if (channel.isOpen()) {
-                        cause = new NotYetConnectedException();
-                    } else {
-                        cause = new ClosedChannelException();
-                    }
+                if (channel.isOpen()) {
+                    cause = new NotYetConnectedException();
+                } else {
+                    cause = new ClosedChannelException();
                 }
                 evt.getFuture().setFailure(cause);
                 fireExceptionCaught = true;
