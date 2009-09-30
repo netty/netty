@@ -306,8 +306,12 @@ public class ChannelBuffers {
      */
     public static ChannelBuffer wrappedBuffer(ChannelBuffer buffer) {
         if (buffer.readable()) {
-            ChannelBuffer[] buffers = { buffer };
-            return new CompositeChannelBuffer(buffers);
+            if (buffer instanceof CompositeChannelBuffer) {
+                ChannelBuffer[] buffers = { buffer };
+                return new CompositeChannelBuffer(buffers);
+            } else {
+                return buffer.slice();
+            }
         } else {
             return EMPTY_BUFFER;
         }
@@ -364,7 +368,7 @@ public class ChannelBuffers {
             break;
         case 1:
             if (buffers[0].readable()) {
-                return new CompositeChannelBuffer(buffers);
+                return wrappedBuffer(buffers[0]);
             }
             break;
         default:
