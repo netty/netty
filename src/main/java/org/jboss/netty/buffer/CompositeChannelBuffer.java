@@ -559,8 +559,15 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             if (length == 0) {
                 return ChannelBuffers.EMPTY_BUFFER;
             } else {
-                CompositeChannelBuffer newbuf = new CompositeChannelBuffer(this);
+                // Try to do better than using Sliced here
+                // copy all slices from index to length
+                ArrayList<ChannelBuffer> listBuffer = this.getBufferList(index, length);
+                // create the AggregateChannelBuffer
+                ChannelBuffer [] buffers = new ChannelBuffer[listBuffer.size()];
+                listBuffer.toArray(buffers);
+                CompositeChannelBuffer newbuf = new CompositeChannelBuffer(buffers);
                 newbuf.readerIndex(index);// FIX
+                // make the correct writerIndex
                 newbuf.writerIndex(length);
                 return newbuf; // instead of Truncated one
             }
@@ -570,8 +577,8 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             return ChannelBuffers.EMPTY_BUFFER;
         } else {
             // Try to do better than using Sliced here
-            // copy all slices from index to capacity
-            ArrayList<ChannelBuffer> listBuffer = this.getBufferList(index, this.capacity()-index);
+            // copy all slices from index to length
+            ArrayList<ChannelBuffer> listBuffer = this.getBufferList(index, length);
             // create the AggregateChannelBuffer
             ChannelBuffer [] buffers = new ChannelBuffer[listBuffer.size()];
             listBuffer.toArray(buffers);
@@ -703,7 +710,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         // some internal buffers can be removed due to readerIndex
         
         // FIXME if copy concerns only readeable then use
-        // ChannelBuffer buffer = ChannelBuffers.buffer(this.capacity - firstCapacity);
+        // ChannelBuffer buffer = ChannelBuffers.buffer(this.capacity() - firstCapacity);
         ChannelBuffer buffer = ChannelBuffers.buffer(order, localReaderIndex);
         
         list.add(buffer);

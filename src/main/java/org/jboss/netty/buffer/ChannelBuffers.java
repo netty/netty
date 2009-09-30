@@ -306,12 +306,7 @@ public class ChannelBuffers {
      */
     public static ChannelBuffer wrappedBuffer(ChannelBuffer buffer) {
         if (buffer.readable()) {
-            if (buffer instanceof CompositeChannelBuffer) {
-                ChannelBuffer[] buffers = { buffer };
-                return new CompositeChannelBuffer(buffers);
-            } else {
-                return buffer.slice();
-            }
+            return buffer.slice();
         } else {
             return EMPTY_BUFFER;
         }
@@ -354,7 +349,7 @@ public class ChannelBuffers {
     }
 
     /**
-     * Creates a new composite buffer which wraps the specified buffers without
+     * Creates a new composite buffer which wraps the specified buffers' readable bytes without
      * copying them.  A modification on the specified buffers' content will be
      * visible to the returned buffer.
      *
