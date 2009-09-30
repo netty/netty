@@ -170,7 +170,7 @@ class NioDatagramChannel extends AbstractChannel
     }
 
     public boolean isConnected() {
-        return datagramChannel.socket().isConnected();
+        return datagramChannel.isConnected();
     }
 
     @Override
