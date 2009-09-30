@@ -542,7 +542,6 @@ class NioDatagramWorker implements Runnable {
                     channel.currentWriteEvent = evt;
                 } catch (final Throwable t) {
                     channel.currentWriteEvent = null;
-                    channel.inWriteNowLoop = false;
                     evt.getFuture().setFailure(t);
                     evt = null;
                     fireExceptionCaught(channel, t);
