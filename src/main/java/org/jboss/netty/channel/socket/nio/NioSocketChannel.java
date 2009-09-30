@@ -113,7 +113,7 @@ class NioSocketChannel extends AbstractChannel
     }
 
     public boolean isConnected() {
-        return isOpen() && socket.socket().isConnected();
+        return isOpen() && socket.isConnected();
     }
 
     @Override
