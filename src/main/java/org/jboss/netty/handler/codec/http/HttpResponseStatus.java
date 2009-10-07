@@ -336,7 +336,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             reasonPhrase = "Unknown Status";
         }
 
-        return new HttpResponseStatus(code, reasonPhrase);
+        return new HttpResponseStatus(code, reasonPhrase + " (" + code + ')');
     }
 
     private final int code;
