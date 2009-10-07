@@ -24,7 +24,7 @@ public final class LocalTimeProtocol {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
-  public static enum Continent
+  public enum Continent
       implements com.google.protobuf.ProtocolMessageEnum {
     AFRICA(0, 0),
     AMERICA(1, 1),
@@ -58,6 +58,18 @@ public final class LocalTimeProtocol {
         default: return null;
       }
     }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<Continent>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static com.google.protobuf.Internal.EnumLiteMap<Continent>
+        internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<Continent>() {
+            public Continent findValueByNumber(int number) {
+              return Continent.valueOf(number)
+    ;        }
+          };
 
     public final com.google.protobuf.Descriptors.EnumValueDescriptor
         getValueDescriptor() {
@@ -95,7 +107,7 @@ public final class LocalTimeProtocol {
     }
   }
 
-  public static enum DayOfWeek
+  public enum DayOfWeek
       implements com.google.protobuf.ProtocolMessageEnum {
     SUNDAY(0, 1),
     MONDAY(1, 2),
@@ -121,6 +133,18 @@ public final class LocalTimeProtocol {
         default: return null;
       }
     }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<DayOfWeek>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static com.google.protobuf.Internal.EnumLiteMap<DayOfWeek>
+        internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<DayOfWeek>() {
+            public DayOfWeek findValueByNumber(int number) {
+              return DayOfWeek.valueOf(number)
+    ;        }
+          };
 
     public final com.google.protobuf.Descriptors.EnumValueDescriptor
         getValueDescriptor() {
@@ -177,7 +201,6 @@ public final class LocalTimeProtocol {
       return org.jboss.netty.example.localtime.LocalTimeProtocol.internal_static_org_jboss_netty_example_localtime_Location_descriptor;
     }
 
-    @Override
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return org.jboss.netty.example.localtime.LocalTimeProtocol.internal_static_org_jboss_netty_example_localtime_Location_fieldAccessorTable;
@@ -197,7 +220,6 @@ public final class LocalTimeProtocol {
     public boolean hasCity() { return hasCity; }
     public java.lang.String getCity() { return city_; }
 
-    @Override
     public final boolean isInitialized() {
       if (!hasContinent) {
         return false;
@@ -208,7 +230,6 @@ public final class LocalTimeProtocol {
       return true;
     }
 
-    @Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       if (hasContinent()) {
@@ -221,7 +242,6 @@ public final class LocalTimeProtocol {
     }
 
     private int memoizedSerializedSize = -1;
-    @Override
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) {
@@ -249,7 +269,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.Location parseFrom(
         com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
@@ -260,7 +280,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.Location parseFrom(
         byte[] data,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
@@ -271,7 +291,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.Location parseFrom(
         java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
@@ -282,7 +302,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.Location parseDelimitedFrom(
         java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeDelimitedFrom(input, extensionRegistry)
                .buildParsed();
@@ -294,43 +314,49 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.Location parseFrom(
         com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
     }
 
-    public static Builder newBuilder() { return new Builder(); }
-    public Builder newBuilderForType() { return new Builder(); }
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.jboss.netty.example.localtime.LocalTimeProtocol.Location prototype) {
-      return new Builder().mergeFrom(prototype);
+      return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
 
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder> {
+      private org.jboss.netty.example.localtime.LocalTimeProtocol.Location result;
+
       // Construct using org.jboss.netty.example.localtime.LocalTimeProtocol.Location.newBuilder()
       private Builder() {}
 
-      org.jboss.netty.example.localtime.LocalTimeProtocol.Location result = new org.jboss.netty.example.localtime.LocalTimeProtocol.Location();
+      private static Builder create() {
+        Builder builder = new Builder();
+        builder.result = new org.jboss.netty.example.localtime.LocalTimeProtocol.Location();
+        return builder;
+      }
 
-      @Override
       protected org.jboss.netty.example.localtime.LocalTimeProtocol.Location internalGetResult() {
         return result;
       }
 
-      @Override
       public Builder clear() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "Cannot call clear() after build().");
+        }
         result = new org.jboss.netty.example.localtime.LocalTimeProtocol.Location();
         return this;
       }
 
-      @Override
       public Builder clone() {
-        return new Builder().mergeFrom(result);
+        return create().mergeFrom(result);
       }
 
-      @Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
         return org.jboss.netty.example.localtime.LocalTimeProtocol.Location.getDescriptor();
@@ -340,10 +366,12 @@ public final class LocalTimeProtocol {
         return org.jboss.netty.example.localtime.LocalTimeProtocol.Location.getDefaultInstance();
       }
 
+      public boolean isInitialized() {
+        return result.isInitialized();
+      }
       public org.jboss.netty.example.localtime.LocalTimeProtocol.Location build() {
         if (result != null && !isInitialized()) {
-          throw new com.google.protobuf.UninitializedMessageException(
-            result);
+          throw newUninitializedMessageException(result);
         }
         return buildPartial();
       }
@@ -351,7 +379,7 @@ public final class LocalTimeProtocol {
       private org.jboss.netty.example.localtime.LocalTimeProtocol.Location buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
         if (!isInitialized()) {
-          throw new com.google.protobuf.UninitializedMessageException(
+          throw newUninitializedMessageException(
             result).asInvalidProtocolBufferException();
         }
         return buildPartial();
@@ -360,13 +388,13 @@ public final class LocalTimeProtocol {
       public org.jboss.netty.example.localtime.LocalTimeProtocol.Location buildPartial() {
         if (result == null) {
           throw new IllegalStateException(
-            "build() has already been called on this Builder.");  }
+            "build() has already been called on this Builder.");
+        }
         org.jboss.netty.example.localtime.LocalTimeProtocol.Location returnMe = result;
         result = null;
         return returnMe;
       }
 
-      @Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.jboss.netty.example.localtime.LocalTimeProtocol.Location) {
           return mergeFrom((org.jboss.netty.example.localtime.LocalTimeProtocol.Location)other);
@@ -390,18 +418,9 @@ public final class LocalTimeProtocol {
         return this;
       }
 
-      @Override
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input)
-          throws java.io.IOException {
-        return mergeFrom(input,
-          com.google.protobuf.ExtensionRegistry.getEmptyRegistry());
-      }
-
-      @Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistry extensionRegistry)
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder(
@@ -477,13 +496,17 @@ public final class LocalTimeProtocol {
       }
       public Builder clearCity() {
         result.hasCity = false;
-        result.city_ = "";
+        result.city_ = getDefaultInstance().getCity();
         return this;
       }
     }
 
     static {
       org.jboss.netty.example.localtime.LocalTimeProtocol.getDescriptor();
+    }
+
+    static {
+      org.jboss.netty.example.localtime.LocalTimeProtocol.internalForceInit();
     }
   }
 
@@ -506,7 +529,6 @@ public final class LocalTimeProtocol {
       return org.jboss.netty.example.localtime.LocalTimeProtocol.internal_static_org_jboss_netty_example_localtime_Locations_descriptor;
     }
 
-    @Override
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return org.jboss.netty.example.localtime.LocalTimeProtocol.internal_static_org_jboss_netty_example_localtime_Locations_fieldAccessorTable;
@@ -524,7 +546,6 @@ public final class LocalTimeProtocol {
       return location_.get(index);
     }
 
-    @Override
     public final boolean isInitialized() {
       for (org.jboss.netty.example.localtime.LocalTimeProtocol.Location element : getLocationList()) {
         if (!element.isInitialized()) {
@@ -534,7 +555,6 @@ public final class LocalTimeProtocol {
       return true;
     }
 
-    @Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       for (org.jboss.netty.example.localtime.LocalTimeProtocol.Location element : getLocationList()) {
@@ -544,7 +564,6 @@ public final class LocalTimeProtocol {
     }
 
     private int memoizedSerializedSize = -1;
-    @Override
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) {
@@ -568,7 +587,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.Locations parseFrom(
         com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
@@ -579,7 +598,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.Locations parseFrom(
         byte[] data,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
@@ -590,7 +609,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.Locations parseFrom(
         java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
@@ -601,7 +620,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.Locations parseDelimitedFrom(
         java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeDelimitedFrom(input, extensionRegistry)
                .buildParsed();
@@ -613,43 +632,49 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.Locations parseFrom(
         com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
     }
 
-    public static Builder newBuilder() { return new Builder(); }
-    public Builder newBuilderForType() { return new Builder(); }
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.jboss.netty.example.localtime.LocalTimeProtocol.Locations prototype) {
-      return new Builder().mergeFrom(prototype);
+      return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
 
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder> {
+      private org.jboss.netty.example.localtime.LocalTimeProtocol.Locations result;
+
       // Construct using org.jboss.netty.example.localtime.LocalTimeProtocol.Locations.newBuilder()
       private Builder() {}
 
-      org.jboss.netty.example.localtime.LocalTimeProtocol.Locations result = new org.jboss.netty.example.localtime.LocalTimeProtocol.Locations();
+      private static Builder create() {
+        Builder builder = new Builder();
+        builder.result = new org.jboss.netty.example.localtime.LocalTimeProtocol.Locations();
+        return builder;
+      }
 
-      @Override
       protected org.jboss.netty.example.localtime.LocalTimeProtocol.Locations internalGetResult() {
         return result;
       }
 
-      @Override
       public Builder clear() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "Cannot call clear() after build().");
+        }
         result = new org.jboss.netty.example.localtime.LocalTimeProtocol.Locations();
         return this;
       }
 
-      @Override
       public Builder clone() {
-        return new Builder().mergeFrom(result);
+        return create().mergeFrom(result);
       }
 
-      @Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
         return org.jboss.netty.example.localtime.LocalTimeProtocol.Locations.getDescriptor();
@@ -659,10 +684,12 @@ public final class LocalTimeProtocol {
         return org.jboss.netty.example.localtime.LocalTimeProtocol.Locations.getDefaultInstance();
       }
 
+      public boolean isInitialized() {
+        return result.isInitialized();
+      }
       public org.jboss.netty.example.localtime.LocalTimeProtocol.Locations build() {
         if (result != null && !isInitialized()) {
-          throw new com.google.protobuf.UninitializedMessageException(
-            result);
+          throw newUninitializedMessageException(result);
         }
         return buildPartial();
       }
@@ -670,7 +697,7 @@ public final class LocalTimeProtocol {
       private org.jboss.netty.example.localtime.LocalTimeProtocol.Locations buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
         if (!isInitialized()) {
-          throw new com.google.protobuf.UninitializedMessageException(
+          throw newUninitializedMessageException(
             result).asInvalidProtocolBufferException();
         }
         return buildPartial();
@@ -679,7 +706,8 @@ public final class LocalTimeProtocol {
       public org.jboss.netty.example.localtime.LocalTimeProtocol.Locations buildPartial() {
         if (result == null) {
           throw new IllegalStateException(
-            "build() has already been called on this Builder.");  }
+            "build() has already been called on this Builder.");
+        }
         if (result.location_ != java.util.Collections.EMPTY_LIST) {
           result.location_ =
             java.util.Collections.unmodifiableList(result.location_);
@@ -689,7 +717,6 @@ public final class LocalTimeProtocol {
         return returnMe;
       }
 
-      @Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.jboss.netty.example.localtime.LocalTimeProtocol.Locations) {
           return mergeFrom((org.jboss.netty.example.localtime.LocalTimeProtocol.Locations)other);
@@ -713,18 +740,9 @@ public final class LocalTimeProtocol {
         return this;
       }
 
-      @Override
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input)
-          throws java.io.IOException {
-        return mergeFrom(input,
-          com.google.protobuf.ExtensionRegistry.getEmptyRegistry());
-      }
-
-      @Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistry extensionRegistry)
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder(
@@ -809,6 +827,10 @@ public final class LocalTimeProtocol {
     static {
       org.jboss.netty.example.localtime.LocalTimeProtocol.getDescriptor();
     }
+
+    static {
+      org.jboss.netty.example.localtime.LocalTimeProtocol.internalForceInit();
+    }
   }
 
   public static final class LocalTime extends
@@ -830,7 +852,6 @@ public final class LocalTimeProtocol {
       return org.jboss.netty.example.localtime.LocalTimeProtocol.internal_static_org_jboss_netty_example_localtime_LocalTime_descriptor;
     }
 
-    @Override
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return org.jboss.netty.example.localtime.LocalTimeProtocol.internal_static_org_jboss_netty_example_localtime_LocalTime_fieldAccessorTable;
@@ -885,7 +906,6 @@ public final class LocalTimeProtocol {
     public boolean hasSecond() { return hasSecond; }
     public int getSecond() { return second_; }
 
-    @Override
     public final boolean isInitialized() {
       if (!hasYear) {
         return false;
@@ -911,7 +931,6 @@ public final class LocalTimeProtocol {
       return true;
     }
 
-    @Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       if (hasYear()) {
@@ -939,7 +958,6 @@ public final class LocalTimeProtocol {
     }
 
     private int memoizedSerializedSize = -1;
-    @Override
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) {
@@ -987,7 +1005,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime parseFrom(
         com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
@@ -998,7 +1016,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime parseFrom(
         byte[] data,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
@@ -1009,7 +1027,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime parseFrom(
         java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
@@ -1020,7 +1038,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime parseDelimitedFrom(
         java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeDelimitedFrom(input, extensionRegistry)
                .buildParsed();
@@ -1032,43 +1050,49 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime parseFrom(
         com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
     }
 
-    public static Builder newBuilder() { return new Builder(); }
-    public Builder newBuilderForType() { return new Builder(); }
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime prototype) {
-      return new Builder().mergeFrom(prototype);
+      return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
 
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder> {
+      private org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime result;
+
       // Construct using org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime.newBuilder()
       private Builder() {}
 
-      org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime result = new org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime();
+      private static Builder create() {
+        Builder builder = new Builder();
+        builder.result = new org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime();
+        return builder;
+      }
 
-      @Override
       protected org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime internalGetResult() {
         return result;
       }
 
-      @Override
       public Builder clear() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "Cannot call clear() after build().");
+        }
         result = new org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime();
         return this;
       }
 
-      @Override
       public Builder clone() {
-        return new Builder().mergeFrom(result);
+        return create().mergeFrom(result);
       }
 
-      @Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
         return org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime.getDescriptor();
@@ -1078,10 +1102,12 @@ public final class LocalTimeProtocol {
         return org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime.getDefaultInstance();
       }
 
+      public boolean isInitialized() {
+        return result.isInitialized();
+      }
       public org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime build() {
         if (result != null && !isInitialized()) {
-          throw new com.google.protobuf.UninitializedMessageException(
-            result);
+          throw newUninitializedMessageException(result);
         }
         return buildPartial();
       }
@@ -1089,7 +1115,7 @@ public final class LocalTimeProtocol {
       private org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
         if (!isInitialized()) {
-          throw new com.google.protobuf.UninitializedMessageException(
+          throw newUninitializedMessageException(
             result).asInvalidProtocolBufferException();
         }
         return buildPartial();
@@ -1098,13 +1124,13 @@ public final class LocalTimeProtocol {
       public org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime buildPartial() {
         if (result == null) {
           throw new IllegalStateException(
-            "build() has already been called on this Builder.");  }
+            "build() has already been called on this Builder.");
+        }
         org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime returnMe = result;
         result = null;
         return returnMe;
       }
 
-      @Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime) {
           return mergeFrom((org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime)other);
@@ -1143,18 +1169,9 @@ public final class LocalTimeProtocol {
         return this;
       }
 
-      @Override
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input)
-          throws java.io.IOException {
-        return mergeFrom(input,
-          com.google.protobuf.ExtensionRegistry.getEmptyRegistry());
-      }
-
-      @Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistry extensionRegistry)
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder(
@@ -1345,6 +1362,10 @@ public final class LocalTimeProtocol {
     static {
       org.jboss.netty.example.localtime.LocalTimeProtocol.getDescriptor();
     }
+
+    static {
+      org.jboss.netty.example.localtime.LocalTimeProtocol.internalForceInit();
+    }
   }
 
   public static final class LocalTimes extends
@@ -1366,7 +1387,6 @@ public final class LocalTimeProtocol {
       return org.jboss.netty.example.localtime.LocalTimeProtocol.internal_static_org_jboss_netty_example_localtime_LocalTimes_descriptor;
     }
 
-    @Override
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
       return org.jboss.netty.example.localtime.LocalTimeProtocol.internal_static_org_jboss_netty_example_localtime_LocalTimes_fieldAccessorTable;
@@ -1384,7 +1404,6 @@ public final class LocalTimeProtocol {
       return localTime_.get(index);
     }
 
-    @Override
     public final boolean isInitialized() {
       for (org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime element : getLocalTimeList()) {
         if (!element.isInitialized()) {
@@ -1394,7 +1413,6 @@ public final class LocalTimeProtocol {
       return true;
     }
 
-    @Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       for (org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime element : getLocalTimeList()) {
@@ -1404,7 +1422,6 @@ public final class LocalTimeProtocol {
     }
 
     private int memoizedSerializedSize = -1;
-    @Override
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) {
@@ -1428,7 +1445,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes parseFrom(
         com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
@@ -1439,7 +1456,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes parseFrom(
         byte[] data,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
@@ -1450,7 +1467,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes parseFrom(
         java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
@@ -1461,7 +1478,7 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes parseDelimitedFrom(
         java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeDelimitedFrom(input, extensionRegistry)
                .buildParsed();
@@ -1473,43 +1490,49 @@ public final class LocalTimeProtocol {
     }
     public static org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes parseFrom(
         com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
     }
 
-    public static Builder newBuilder() { return new Builder(); }
-    public Builder newBuilderForType() { return new Builder(); }
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes prototype) {
-      return new Builder().mergeFrom(prototype);
+      return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
 
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder> {
+      private org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes result;
+
       // Construct using org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes.newBuilder()
       private Builder() {}
 
-      org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes result = new org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes();
+      private static Builder create() {
+        Builder builder = new Builder();
+        builder.result = new org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes();
+        return builder;
+      }
 
-      @Override
       protected org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes internalGetResult() {
         return result;
       }
 
-      @Override
       public Builder clear() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "Cannot call clear() after build().");
+        }
         result = new org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes();
         return this;
       }
 
-      @Override
       public Builder clone() {
-        return new Builder().mergeFrom(result);
+        return create().mergeFrom(result);
       }
 
-      @Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
         return org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes.getDescriptor();
@@ -1519,10 +1542,12 @@ public final class LocalTimeProtocol {
         return org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes.getDefaultInstance();
       }
 
+      public boolean isInitialized() {
+        return result.isInitialized();
+      }
       public org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes build() {
         if (result != null && !isInitialized()) {
-          throw new com.google.protobuf.UninitializedMessageException(
-            result);
+          throw newUninitializedMessageException(result);
         }
         return buildPartial();
       }
@@ -1530,7 +1555,7 @@ public final class LocalTimeProtocol {
       private org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
         if (!isInitialized()) {
-          throw new com.google.protobuf.UninitializedMessageException(
+          throw newUninitializedMessageException(
             result).asInvalidProtocolBufferException();
         }
         return buildPartial();
@@ -1539,7 +1564,8 @@ public final class LocalTimeProtocol {
       public org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes buildPartial() {
         if (result == null) {
           throw new IllegalStateException(
-            "build() has already been called on this Builder.");  }
+            "build() has already been called on this Builder.");
+        }
         if (result.localTime_ != java.util.Collections.EMPTY_LIST) {
           result.localTime_ =
             java.util.Collections.unmodifiableList(result.localTime_);
@@ -1549,7 +1575,6 @@ public final class LocalTimeProtocol {
         return returnMe;
       }
 
-      @Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes) {
           return mergeFrom((org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes)other);
@@ -1573,18 +1598,9 @@ public final class LocalTimeProtocol {
         return this;
       }
 
-      @Override
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input)
-          throws java.io.IOException {
-        return mergeFrom(input,
-          com.google.protobuf.ExtensionRegistry.getEmptyRegistry());
-      }
-
-      @Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistry extensionRegistry)
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder(
@@ -1669,6 +1685,10 @@ public final class LocalTimeProtocol {
     static {
       org.jboss.netty.example.localtime.LocalTimeProtocol.getDescriptor();
     }
+
+    static {
+      org.jboss.netty.example.localtime.LocalTimeProtocol.internalForceInit();
+    }
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
@@ -1699,26 +1719,28 @@ public final class LocalTimeProtocol {
   private static com.google.protobuf.Descriptors.FileDescriptor
       descriptor;
   static {
-    java.lang.String descriptorData =
-      "\n\027LocalTimeProtocol.proto\022!org.jboss.net" +
-      "ty.example.localtime\"Y\n\010Location\022?\n\tcont" +
-      "inent\030\001 \002(\0162,.org.jboss.netty.example.lo" +
-      "caltime.Continent\022\014\n\004city\030\002 \002(\t\"J\n\tLocat" +
-      "ions\022=\n\010location\030\001 \003(\0132+.org.jboss.netty" +
-      ".example.localtime.Location\"\253\001\n\tLocalTim" +
-      "e\022\014\n\004year\030\001 \002(\r\022\r\n\005month\030\002 \002(\r\022\022\n\ndayOfM" +
-      "onth\030\004 \002(\r\022?\n\tdayOfWeek\030\005 \002(\0162,.org.jbos" +
-      "s.netty.example.localtime.DayOfWeek\022\014\n\004h" +
-      "our\030\006 \002(\r\022\016\n\006minute\030\007 \002(\r\022\016\n\006second\030\010 \002(" +
-      "\r\"M\n\nLocalTimes\022?\n\tlocalTime\030\001 \003(\0132,.org" +
-      ".jboss.netty.example.localtime.LocalTime" +
-      "*\231\001\n\tContinent\022\n\n\006AFRICA\020\000\022\013\n\007AMERICA\020\001\022" +
-      "\016\n\nANTARCTICA\020\002\022\n\n\006ARCTIC\020\003\022\010\n\004ASIA\020\004\022\014\n" +
-      "\010ATLANTIC\020\005\022\r\n\tAUSTRALIA\020\006\022\n\n\006EUROPE\020\007\022\n" +
-      "\n\006INDIAN\020\010\022\013\n\007MIDEAST\020\t\022\013\n\007PACIFIC\020\n*g\n\t" +
-      "DayOfWeek\022\n\n\006SUNDAY\020\001\022\n\n\006MONDAY\020\002\022\013\n\007TUE" +
-      "SDAY\020\003\022\r\n\tWEDNESDAY\020\004\022\014\n\010THURSDAY\020\005\022\n\n\006F" +
-      "RIDAY\020\006\022\014\n\010SATURDAY\020\007B\002H\001";
+    java.lang.String[] descriptorData = {
+      "\nGsrc/main/java/org/jboss/netty/example/" +
+      "localtime/LocalTimeProtocol.proto\022!org.j" +
+      "boss.netty.example.localtime\"Y\n\010Location" +
+      "\022?\n\tcontinent\030\001 \002(\0162,.org.jboss.netty.ex" +
+      "ample.localtime.Continent\022\014\n\004city\030\002 \002(\t\"" +
+      "J\n\tLocations\022=\n\010location\030\001 \003(\0132+.org.jbo" +
+      "ss.netty.example.localtime.Location\"\253\001\n\t" +
+      "LocalTime\022\014\n\004year\030\001 \002(\r\022\r\n\005month\030\002 \002(\r\022\022" +
+      "\n\ndayOfMonth\030\004 \002(\r\022?\n\tdayOfWeek\030\005 \002(\0162,." +
+      "org.jboss.netty.example.localtime.DayOfW",
+      "eek\022\014\n\004hour\030\006 \002(\r\022\016\n\006minute\030\007 \002(\r\022\016\n\006sec" +
+      "ond\030\010 \002(\r\"M\n\nLocalTimes\022?\n\tlocalTime\030\001 \003" +
+      "(\0132,.org.jboss.netty.example.localtime.L" +
+      "ocalTime*\231\001\n\tContinent\022\n\n\006AFRICA\020\000\022\013\n\007AM" +
+      "ERICA\020\001\022\016\n\nANTARCTICA\020\002\022\n\n\006ARCTIC\020\003\022\010\n\004A" +
+      "SIA\020\004\022\014\n\010ATLANTIC\020\005\022\r\n\tAUSTRALIA\020\006\022\n\n\006EU" +
+      "ROPE\020\007\022\n\n\006INDIAN\020\010\022\013\n\007MIDEAST\020\t\022\013\n\007PACIF" +
+      "IC\020\n*g\n\tDayOfWeek\022\n\n\006SUNDAY\020\001\022\n\n\006MONDAY\020" +
+      "\002\022\013\n\007TUESDAY\020\003\022\r\n\tWEDNESDAY\020\004\022\014\n\010THURSDA" +
+      "Y\020\005\022\n\n\006FRIDAY\020\006\022\014\n\010SATURDAY\020\007B\002H\001"
+    };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
@@ -1764,4 +1786,6 @@ public final class LocalTimeProtocol {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
   }
+
+  public static void internalForceInit() {}
 }
