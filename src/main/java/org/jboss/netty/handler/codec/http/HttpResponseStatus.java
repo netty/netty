@@ -229,6 +229,116 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
      */
     public static final HttpResponseStatus HTTP_VERSION_NOT_SUPPORTED = new HttpResponseStatus(505, "HTTP Version Not Supported");
 
+    /**
+     * Returns the {@link HttpResponseStatus} represented by the specified code.
+     * If the specified code is a standard HTTP status code, a cached instance
+     * will be returned.  Otherwise, a new instance will be returned.
+     */
+    public static final HttpResponseStatus valueOf(int code) {
+        switch (code) {
+        case 100:
+            return CONTINUE;
+        case 101:
+            return SWITCHING_PROTOCOLS;
+        case 200:
+            return OK;
+        case 201:
+            return CREATED;
+        case 202:
+            return ACCEPTED;
+        case 203:
+            return NON_AUTHORITATIVE_INFORMATION;
+        case 204:
+            return NO_CONTENT;
+        case 205:
+            return RESET_CONTENT;
+        case 206:
+            return PARTIAL_CONTENT;
+        case 300:
+            return MULTIPLE_CHOICES;
+        case 301:
+            return MOVED_PERMANENTLY;
+        case 302:
+            return FOUND;
+        case 303:
+            return SEE_OTHER;
+        case 304:
+            return NOT_MODIFIED;
+        case 305:
+            return USE_PROXY;
+        case 307:
+            return TEMPORARY_REDIRECT;
+        case 400:
+            return BAD_REQUEST;
+        case 401:
+            return UNUATHORIZED;
+        case 402:
+            return PAYMENT_REQUIRED;
+        case 403:
+            return FORBIDDEN;
+        case 404:
+            return NOT_FOUND;
+        case 405:
+            return METHOD_NOT_ALLOWED;
+        case 406:
+            return NOT_ACCEPTABLE;
+        case 407:
+            return PROXY_AUTHENTICATION_REQUIRED;
+        case 408:
+            return REQUEST_TIMEOUT;
+        case 409:
+            return CONFLICT;
+        case 410:
+            return GONE;
+        case 411:
+            return LENGTH_REQUIRED;
+        case 412:
+            return PRECONDITION_FAILED;
+        case 413:
+            return REQUEST_ENTITY_TOO_LARGE;
+        case 414:
+            return REQUEST_URI_TOO_LONG;
+        case 415:
+            return UNSUPPORTED_MEDIA_TYPE;
+        case 416:
+            return REQUESTED_RANGE_NOT_SATISFIABLE;
+        case 417:
+            return EXPECTATION_FAILED;
+        case 500:
+            return INTERNAL_SERVER_ERROR;
+        case 501:
+            return NOT_IMPLEMENTED;
+        case 502:
+            return BAD_GATEWAY;
+        case 503:
+            return SERVICE_UNAVAILABLE;
+        case 504:
+            return GATEWAY_TIMEOUT;
+        case 505:
+            return HTTP_VERSION_NOT_SUPPORTED;
+        }
+
+        final String reasonPhrase;
+
+        if (code < 100) {
+            reasonPhrase = "Unknown Status";
+        } else if (code < 200) {
+            reasonPhrase = "Informational";
+        } else if (code < 300) {
+            reasonPhrase = "Successful";
+        } else if (code < 400) {
+            reasonPhrase = "Redirection";
+        } else if (code < 500) {
+            reasonPhrase = "Client Error";
+        } else if (code < 600) {
+            reasonPhrase = "Server Error";
+        } else {
+            reasonPhrase = "Unknown Status";
+        }
+
+        return new HttpResponseStatus(code, reasonPhrase);
+    }
+
     private final int code;
 
     private final String reasonPhrase;
