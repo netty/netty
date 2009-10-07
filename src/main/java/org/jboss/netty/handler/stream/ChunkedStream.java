@@ -93,7 +93,13 @@ public class ChunkedStream implements ChunkedInput {
             return null;
         }
 
-        final int chunkSize = Math.min(this.chunkSize, in.available());
+        final int availableBytes = in.available();
+        final int chunkSize;
+        if (availableBytes <= 0) {
+            chunkSize = this.chunkSize;
+        } else {
+            chunkSize = Math.min(this.chunkSize, in.available());
+        }
         final byte[] chunk = new byte[chunkSize];
         int readBytes = 0;
         for (;;) {
