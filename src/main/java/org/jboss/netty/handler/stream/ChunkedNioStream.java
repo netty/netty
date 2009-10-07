@@ -42,7 +42,7 @@ public class ChunkedNioStream implements ChunkedInput {
     /**
      * Associated ByteBuffer
      */
-    private ByteBuffer byteBuffer = null;
+    private final ByteBuffer byteBuffer;
 
     /**
      * Creates a new instance that fetches data from the specified channel.
@@ -68,14 +68,7 @@ public class ChunkedNioStream implements ChunkedInput {
         this.in = in;
         offset = 0;
         this.chunkSize = chunkSize;
-        if (byteBuffer != null) {
-            if (byteBuffer.capacity() != chunkSize) {
-                byteBuffer = null;
-                byteBuffer = ByteBuffer.allocate(chunkSize);
-            }
-        } else {
-            byteBuffer = ByteBuffer.allocate(chunkSize);
-        }
+        byteBuffer = ByteBuffer.allocate(chunkSize);
     }
 
     /**
