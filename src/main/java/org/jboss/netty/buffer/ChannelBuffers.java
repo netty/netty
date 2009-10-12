@@ -285,8 +285,8 @@ public class ChannelBuffers {
 
     /**
      * Creates a new buffer which wraps the specified NIO buffer's current
-     * slice.  A modification on the specified buffer's content and endianness
-     * will be visible to the returned buffer.
+     * slice.  A modification on the specified buffer's content will be
+     * visible to the returned buffer.
      */
     public static ChannelBuffer wrappedBuffer(ByteBuffer buffer) {
         if (!buffer.hasRemaining()) {

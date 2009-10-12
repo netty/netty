@@ -40,6 +40,7 @@ import java.nio.charset.UnsupportedCharsetException;
 public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
 
     private final ByteBuffer buffer;
+    private final ByteOrder order;
     private final int capacity;
 
     /**
@@ -50,13 +51,15 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
             throw new NullPointerException("buffer");
         }
 
-        this.buffer = buffer.slice().order(buffer.order());
+        order = buffer.order();
+        this.buffer = buffer.slice().order(order);
         capacity = buffer.remaining();
         writerIndex(capacity);
     }
 
     private ByteBufferBackedChannelBuffer(ByteBufferBackedChannelBuffer buffer) {
         this.buffer = buffer.buffer;
+        order = buffer.order;
         capacity = buffer.capacity;
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
@@ -70,7 +73,7 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     }
 
     public ByteOrder order() {
-        return buffer.order();
+        return order;
     }
 
     public int capacity() {
