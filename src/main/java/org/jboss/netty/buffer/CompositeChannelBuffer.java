@@ -148,10 +148,6 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
            assert c.readerIndex() == 0;
            assert c.writerIndex() == c.capacity();
-           if (c.writerIndex() != c.capacity()) {
-               System.err.println(c);
-               throw new Error();
-           }
 
            components[i] = c;
        }
@@ -675,7 +671,9 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         // Add a new buffer so that the capacity of this composite buffer does
         // not decrease due to the discarded components.
         // XXX Might create too many components if discarded by small amount.
-        list.add(ChannelBuffers.buffer(order(), localReaderIndex));
+        final ChannelBuffer padding = ChannelBuffers.buffer(order(), localReaderIndex);
+        padding.writerIndex(localReaderIndex);
+        list.add(padding);
 
         // Reset the index markers to get the index marker values.
         int localMarkedReaderIndex = localReaderIndex;
