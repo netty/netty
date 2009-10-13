@@ -349,9 +349,9 @@ public class ChannelBuffers {
     }
 
     /**
-     * Creates a new composite buffer which wraps the specified buffers without
-     * copying them.  A modification on the specified buffers' content will be
-     * visible to the returned buffer.
+     * Creates a new composite buffer which wraps the readable bytes of the
+     * specified buffers without copying them.  A modification on the content
+     * of the specified buffers will be visible to the returned buffer.
      *
      * @throws IllegalArgumentException
      *         if the specified buffers' endianness are different from each
@@ -377,9 +377,9 @@ public class ChannelBuffers {
     }
 
     /**
-     * Creates a new composite buffer which wraps the specified NIO buffers
-     * without copying them.  A modification on the specified buffers' content
-     * will be visible to the returned buffer.
+     * Creates a new composite buffer which wraps the slices of the specified
+     * NIO buffers without copying them.  A modification on the content of the
+     * specified buffers will be visible to the returned buffer.
      *
      * @throws IllegalArgumentException
      *         if the specified buffers' endianness are different from each
