@@ -78,7 +78,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
 
         order = expectedEndianness;
-        setFromList(newComponents);
+        setComponents(newComponents);
     }
 
    /**
@@ -131,7 +131,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
    /**
     * Setup this ChannelBuffer from the list
     */
-   private void setFromList(List<ChannelBuffer> newComponents) {
+   private void setComponents(List<ChannelBuffer> newComponents) {
        assert !newComponents.isEmpty();
 
        // Clear the cache.
@@ -148,6 +148,10 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
            assert c.readerIndex() == 0;
            assert c.writerIndex() == c.capacity();
+           if (c.writerIndex() != c.capacity()) {
+               System.err.println(c);
+               throw new Error();
+           }
 
            components[i] = c;
        }
@@ -689,7 +693,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             // ignore
         }
 
-        setFromList(list);
+        setComponents(list);
 
         // reset marked Indexes
         localMarkedReaderIndex = Math.max(localMarkedReaderIndex - localReaderIndex, 0);
