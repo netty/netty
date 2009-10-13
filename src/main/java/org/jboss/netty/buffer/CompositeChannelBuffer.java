@@ -25,6 +25,7 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 
@@ -61,7 +62,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
                     // Expand nested composition.
                     CompositeChannelBuffer child = (CompositeChannelBuffer) buffer;
                     bufferList.addAll(
-                            child.getBufferList(child.readerIndex(), child.readableBytes()));
+                            child.slice0(child.readerIndex(), child.readableBytes()));
                 } else {
                     // An ordinary buffer (non-composite)
                     bufferList.add(buffer.slice());
@@ -81,45 +82,38 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     }
 
    /**
-    * Returns the list of valid buffers from index and length, slicing contents
+    * Same with {@link #slice(int, int)} except that this method returns a list.
     */
-   private List<ChannelBuffer> getBufferList(int index, int length) {
-       int localReaderIndex = index;
-       int localWriterIndex = this.writerIndex();
-       int sliceId = sliceId(localReaderIndex);
-       // some slices from sliceId must be kept
-       int maxlength = localWriterIndex - localReaderIndex;
-       if (maxlength < length) {
-           // check then if maxlength is compatible with the capacity
-           maxlength = capacity() - localReaderIndex;
-           if (maxlength < length) {
-               // too big
-               throw new IllegalArgumentException(
-                       "Length is bigger than available.");
-           }
-           // use capacity (discardReadBytes method)
+   private List<ChannelBuffer> slice0(int index, int length) {
+       if (length == 0) {
+           return Collections.emptyList();
        }
 
+       if (index + length > capacity()) {
+           throw new IndexOutOfBoundsException();
+       }
+
+       int sliceId = sliceId(index);
        List<ChannelBuffer> bufferList = new ArrayList<ChannelBuffer>(slices.length);
        // first one is not complete
        // each slice will be duplicated before assign to the list (maintain original indexes)
        ChannelBuffer buf = slices[sliceId].duplicate();
-       buf.readerIndex(localReaderIndex - indices[sliceId]);
+       buf.readerIndex(index - indices[sliceId]);
        buf.writerIndex(slices[sliceId].writerIndex());
        // as writerIndex can be less than capacity, check too for the end
-       int newlength = length;
-       while (newlength > 0) {
+       int bytesToSlice = length;
+       while (bytesToSlice > 0) {
            int leftInBuffer = buf.capacity() - buf.readerIndex();
-           if (newlength <= leftInBuffer) {
+           if (bytesToSlice <= leftInBuffer) {
                // final buffer
-               buf.writerIndex(buf.readerIndex() + newlength);
+               buf.writerIndex(buf.readerIndex() + bytesToSlice);
                bufferList.add(buf);
-               newlength = 0;
+               bytesToSlice = 0;
                break;
            } else {
                // not final buffer
                bufferList.add(buf);
-               newlength -= leftInBuffer;
+               bytesToSlice -= leftInBuffer;
                sliceId ++;
                buf = slices[sliceId].duplicate();
                buf.readerIndex(0);
@@ -561,7 +555,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             return ChannelBuffers.EMPTY_BUFFER;
         }
 
-        List<ChannelBuffer> listBuffer = getBufferList(index, length);
+        List<ChannelBuffer> listBuffer = slice0(index, length);
         ChannelBuffer[] buffers = listBuffer.toArray(new ChannelBuffer[listBuffer.size()]);
         return new CompositeChannelBuffer(buffers);
     }
@@ -672,7 +666,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         int localWriterIndex = this.writerIndex();
 
         final int bytesToMove = capacity() - localReaderIndex;
-        List<ChannelBuffer> list = getBufferList(localReaderIndex, bytesToMove);
+        List<ChannelBuffer> list = slice0(localReaderIndex, bytesToMove);
 
         // Truncate the discardable bytes of the first buffer.
         list.set(0, list.get(0).slice());
