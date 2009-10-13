@@ -15,10 +15,6 @@
  */
 package org.jboss.netty.buffer;
 
-import static org.junit.Assert.*;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  *
@@ -27,48 +23,8 @@ import java.util.List;
  *
  * @version $Rev$, $Date$
  */
-public class LittleEndianCompositeChannelBufferTest extends AbstractChannelBufferTest {
-
-    private List<ChannelBuffer> buffers;
-    private ChannelBuffer buffer;
-
-    @Override
-    protected ChannelBuffer newBuffer(int length) {
-        buffers = new ArrayList<ChannelBuffer>();
-        for (int i = 0; i < length; i += 10) {
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(ChannelBuffers.LITTLE_ENDIAN, new byte[1]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(ChannelBuffers.LITTLE_ENDIAN, new byte[2]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(ChannelBuffers.LITTLE_ENDIAN, new byte[3]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(ChannelBuffers.LITTLE_ENDIAN, new byte[4]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(ChannelBuffers.LITTLE_ENDIAN, new byte[5]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(ChannelBuffers.LITTLE_ENDIAN, new byte[6]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(ChannelBuffers.LITTLE_ENDIAN, new byte[7]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(ChannelBuffers.LITTLE_ENDIAN, new byte[8]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-            buffers.add(ChannelBuffers.wrappedBuffer(ChannelBuffers.LITTLE_ENDIAN, new byte[9]));
-            buffers.add(ChannelBuffers.EMPTY_BUFFER);
-        }
-
-        buffer = ChannelBuffers.wrappedBuffer(buffers.toArray(new ChannelBuffer[buffers.size()]));
-        buffer.writerIndex(length);
-        buffer = ChannelBuffers.wrappedBuffer(buffer);
-        assertEquals(length, buffer.capacity());
-        assertEquals(length, buffer.readableBytes());
-        assertFalse(buffer.writable());
-        buffer.writerIndex(0);
-        return buffer;
-    }
-
-    @Override
-    protected ChannelBuffer[] components() {
-        return buffers.toArray(new ChannelBuffer[buffers.size()]);
+public class LittleEndianCompositeChannelBufferTest extends AbstractCompositeChannelBufferTest {
+    public LittleEndianCompositeChannelBufferTest() {
+        super(ChannelBuffers.LITTLE_ENDIAN);
     }
 }

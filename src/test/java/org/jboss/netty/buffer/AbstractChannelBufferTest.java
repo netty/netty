@@ -51,6 +51,11 @@ public abstract class AbstractChannelBufferTest {
     protected abstract ChannelBuffer newBuffer(int capacity);
     protected abstract ChannelBuffer[] components();
 
+    protected boolean discardReadBytesDoesNotMoveWritableBytes() {
+        return true;
+    }
+
+
     @Before
     public void init() {
         buffer = newBuffer(CAPACITY);
@@ -1329,14 +1334,41 @@ public abstract class AbstractChannelBufferTest {
         assertEquals(0, buffer.readerIndex());
         assertEquals(CAPACITY / 2 - 1, buffer.writerIndex());
         assertEquals(copy.slice(1, CAPACITY / 2 - 1), buffer.slice(0, CAPACITY / 2 - 1));
-        // If writable bytes were copied, the test should fail to avoid unnecessary memory bandwidth consumption.
-        assertFalse(copy.slice(CAPACITY / 2, CAPACITY / 2).equals(buffer.slice(CAPACITY / 2 - 1, CAPACITY / 2)));
+
+        if (discardReadBytesDoesNotMoveWritableBytes()) {
+            // If writable bytes were copied, the test should fail to avoid unnecessary memory bandwidth consumption.
+            assertFalse(copy.slice(CAPACITY / 2, CAPACITY / 2).equals(buffer.slice(CAPACITY / 2 - 1, CAPACITY / 2)));
+        } else {
+            assertEquals(copy.slice(CAPACITY / 2, CAPACITY / 2), buffer.slice(CAPACITY / 2 - 1, CAPACITY / 2));
+        }
 
         // Marks also should be relocated.
         buffer.resetReaderIndex();
         assertEquals(CAPACITY / 4 - 1, buffer.readerIndex());
         buffer.resetWriterIndex();
         assertEquals(CAPACITY / 3 - 1, buffer.writerIndex());
+    }
+
+    /**
+     * The similar test case with {@link #testDiscardReadBytes()} but this one
+     * discards a large chunk at once.
+     */
+    @Test
+    public void testDiscardReadBytes2() {
+        buffer.writerIndex(0);
+        for (int i = 0; i < buffer.capacity(); i ++) {
+            buffer.writeByte((byte) i);
+        }
+        ChannelBuffer copy = copiedBuffer(buffer);
+
+        // Discard the first (CAPACITY / 2 - 1) bytes.
+        buffer.setIndex(CAPACITY / 2 - 1, CAPACITY - 1);
+        buffer.discardReadBytes();
+        assertEquals(0, buffer.readerIndex());
+        assertEquals(CAPACITY / 2, buffer.writerIndex());
+        for (int i = 0; i < CAPACITY / 2; i ++) {
+            assertEquals(copy.slice(CAPACITY / 2 - 1 + i, CAPACITY / 2 - i), buffer.slice(i, CAPACITY / 2 - i));
+        }
     }
 
     @Test
