@@ -57,7 +57,7 @@ import com.google.protobuf.Message;
  * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev:231 $, $Date:2008-06-12 16:44:50 +0900 (목, 12 6월 2008) $
  *

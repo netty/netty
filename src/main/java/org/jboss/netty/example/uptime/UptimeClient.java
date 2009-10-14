@@ -31,7 +31,7 @@ import org.jboss.netty.util.Timer;
  * mechanism in Netty.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev: 1685 $, $Date: 2009-08-28 16:15:49 +0900 (Fri, 28 Aug 2009) $
  */

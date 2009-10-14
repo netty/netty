@@ -42,7 +42,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Doug Lea
  * @author Jason T. Greene
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  *
  * @param <K> the type of keys maintained by this map

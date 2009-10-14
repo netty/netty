@@ -24,7 +24,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
  * Creates a newly configured {@link ChannelPipeline} for a server-side channel.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

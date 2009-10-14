@@ -25,7 +25,7 @@ import org.jboss.netty.channel.Channel;
  * A UDP/IP {@link Channel} which is created by {@link DatagramChannelFactory}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

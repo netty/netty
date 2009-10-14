@@ -21,7 +21,7 @@ import java.util.Set;
  * An HTTP <a href="http://en.wikipedia.org/wiki/HTTP_cookie">Cookie</a>.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  *

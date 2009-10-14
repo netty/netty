@@ -21,7 +21,7 @@ package org.jboss.netty.handler.codec.embedder;
  * to {@link EncoderEmbedder} and {@link DecoderEmbedder} for more information.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
 public interface CodecEmbedder<T> {

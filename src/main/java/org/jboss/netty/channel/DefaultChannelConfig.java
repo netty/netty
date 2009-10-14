@@ -28,7 +28,7 @@ import org.jboss.netty.util.internal.ConversionUtil;
  * The default {@link SocketChannelConfig} implementation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

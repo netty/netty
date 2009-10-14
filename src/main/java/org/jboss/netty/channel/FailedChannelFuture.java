@@ -21,7 +21,7 @@ package org.jboss.netty.channel;
  * instead of calling the constructor of this future.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  */

@@ -22,7 +22,7 @@ import org.jboss.netty.channel.ChannelPipeline;
  * A {@link ChannelFactory} which creates a {@link DatagramChannel}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

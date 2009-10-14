@@ -25,7 +25,7 @@ import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  */
 public class HttpStaticFileServerPipelineFactory implements ChannelPipelineFactory {
     public ChannelPipeline getPipeline() throws Exception {

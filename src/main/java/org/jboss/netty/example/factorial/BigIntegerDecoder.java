@@ -28,7 +28,7 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * { 0, 0, 0, 1, 42 } will be decoded into new BigInteger("42").
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  */

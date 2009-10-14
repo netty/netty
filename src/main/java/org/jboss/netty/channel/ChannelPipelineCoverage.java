@@ -202,7 +202,7 @@ import java.util.concurrent.ConcurrentMap;
  * ID property could have been more complicated otherwise.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

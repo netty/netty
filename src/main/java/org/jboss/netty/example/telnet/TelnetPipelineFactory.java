@@ -29,7 +29,7 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
  * Creates a newly configured {@link ChannelPipeline} for a new channel.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

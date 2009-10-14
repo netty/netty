@@ -29,7 +29,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * prefix.  For example, 42 will be encoded to { 0, 0, 0, 1, 42 }.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

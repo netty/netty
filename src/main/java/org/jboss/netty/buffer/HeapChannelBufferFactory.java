@@ -24,7 +24,7 @@ import java.nio.ByteOrder;
  * which is highly optimized for heap allocation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
 public class HeapChannelBufferFactory extends AbstractChannelBufferFactory {

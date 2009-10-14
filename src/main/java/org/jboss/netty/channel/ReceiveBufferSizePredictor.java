@@ -31,7 +31,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * update the predictor so it can predict more accurately next time.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

@@ -27,7 +27,7 @@ import org.jboss.netty.util.EstimatableObjectWrapper;
  * {@link Executor} implementors only
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

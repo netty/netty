@@ -30,7 +30,7 @@ import java.nio.channels.ScatteringByteChannel;
  * calling the constructor explicitly.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

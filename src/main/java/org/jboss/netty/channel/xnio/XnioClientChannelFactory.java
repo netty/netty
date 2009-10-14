@@ -25,7 +25,7 @@ import org.jboss.xnio.Connector;
  * <a href="http://www.jboss.org/xnio/">JBoss XNIO</a> as its I/O provider.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
 @SuppressWarnings("unchecked")

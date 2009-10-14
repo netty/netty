@@ -21,7 +21,7 @@ import java.util.concurrent.Executor;
  * Disables shutdown of an {@link Executor} by wrapping the {@link Executor}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
 public class UnterminatableExecutor implements Executor {

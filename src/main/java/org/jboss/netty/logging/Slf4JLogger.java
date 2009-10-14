@@ -21,7 +21,7 @@ import org.slf4j.Logger;
  * <a href="http://www.slf4j.org/">SLF4J</a> logger.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

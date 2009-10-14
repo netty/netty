@@ -19,7 +19,7 @@ package org.jboss.netty.util.internal;
  * Accesses the system property swallowing a {@link SecurityException}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

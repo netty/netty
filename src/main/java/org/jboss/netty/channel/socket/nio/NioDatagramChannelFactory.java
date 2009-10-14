@@ -73,7 +73,7 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  * instead.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @author Daniel Bevenius (dbevenius@jboss.com)
  *
  * @version $Rev$, $Date$

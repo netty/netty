@@ -30,7 +30,7 @@ import org.jboss.netty.example.telnet.TelnetClient;
  * Simple SSL chat client modified from {@link TelnetClient}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

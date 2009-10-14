@@ -28,7 +28,7 @@ import java.nio.channels.FileChannel;
  * NIO {@link FileChannel}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @author Frederic Bregier
  * @version $Rev$, $Date$
  */

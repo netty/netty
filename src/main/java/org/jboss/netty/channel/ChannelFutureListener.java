@@ -31,7 +31,7 @@ import java.util.EventListener;
  * operation in a different thread using a thread pool.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  */

@@ -22,7 +22,7 @@ package org.jboss.netty.channel;
  * event and a downstream event are and what fundamental differences they have.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  */

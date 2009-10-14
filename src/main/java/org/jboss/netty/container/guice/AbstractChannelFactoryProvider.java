@@ -25,7 +25,7 @@ import com.google.inject.Provider;
  * A skeletal {@link Provider} implementation for a {@link ChannelFactory}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
 public abstract class AbstractChannelFactoryProvider<T extends ChannelFactory> implements Provider<T> {

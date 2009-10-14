@@ -148,7 +148,7 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * for different {@link Channel}s.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

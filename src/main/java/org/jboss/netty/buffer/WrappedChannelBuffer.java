@@ -20,7 +20,7 @@ package org.jboss.netty.buffer;
  * need to use this interface.  It is used internally in most cases.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

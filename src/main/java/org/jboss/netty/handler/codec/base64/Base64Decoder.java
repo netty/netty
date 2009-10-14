@@ -44,7 +44,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
  * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  *
  * @apiviz.uses org.jboss.netty.handler.codec.base64.Base64

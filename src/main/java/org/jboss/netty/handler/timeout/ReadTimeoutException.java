@@ -20,7 +20,7 @@ package org.jboss.netty.handler.timeout;
  * was read within a certain period of time.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
 public class ReadTimeoutException extends TimeoutException {

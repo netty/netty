@@ -19,7 +19,7 @@ package org.jboss.netty.channel;
  * A {@link RuntimeException} which is thrown when an I/O operation fails.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

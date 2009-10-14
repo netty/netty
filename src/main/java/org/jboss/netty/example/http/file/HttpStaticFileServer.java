@@ -23,7 +23,7 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  */
 public class HttpStaticFileServer {
     public static void main(String[] args) {

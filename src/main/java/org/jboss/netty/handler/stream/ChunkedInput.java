@@ -21,7 +21,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * A large data stream which is consumed by {@link ChunkedWriteHandler}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  *
  * @apiviz.landmark

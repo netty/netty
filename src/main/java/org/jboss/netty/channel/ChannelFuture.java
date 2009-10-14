@@ -93,7 +93,7 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  * {@link IllegalStateException} will be raised to prevent a dead lock.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

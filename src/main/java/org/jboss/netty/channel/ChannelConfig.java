@@ -63,7 +63,7 @@ import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
  * socket as explained in {@link SocketChannelConfig} or {@link NioSocketChannelConfig}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

@@ -38,7 +38,7 @@ import org.jboss.netty.util.internal.MapBackedSet;
  * Handles a server-side channel.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  */
@@ -116,7 +116,7 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
 
     /**
      * @author The Netty Project (netty-dev@lists.jboss.org)
-     * @author Trustin Lee (tlee@redhat.com)
+     * @author Trustin Lee (trustin@gmail.com)
      * @version $Rev$, $Date$
      */
     private static final class Greeter implements ChannelFutureListener {

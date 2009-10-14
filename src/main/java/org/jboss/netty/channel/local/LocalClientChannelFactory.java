@@ -22,7 +22,7 @@ import org.jboss.netty.channel.ChannelPipeline;
  * A {@link ChannelFactory} that creates a client-side {@link LocalChannel}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
 public interface LocalClientChannelFactory extends ChannelFactory {

@@ -45,7 +45,7 @@ import java.util.Map;
  * {@link ChannelHandlerContext#sendDownstream(ChannelEvent)} by yourself.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @apiviz.landmark
  *

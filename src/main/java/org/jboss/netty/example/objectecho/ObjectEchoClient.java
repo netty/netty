@@ -26,7 +26,7 @@ import org.jboss.netty.example.echo.EchoClient;
  * Modification of {@link EchoClient} which utilizes Java object serialization.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  */

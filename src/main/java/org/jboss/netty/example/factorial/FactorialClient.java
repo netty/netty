@@ -28,7 +28,7 @@ import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
  * the factorial of the specified integer.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  */

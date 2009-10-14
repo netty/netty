@@ -58,7 +58,7 @@ import java.util.concurrent.locks.LockSupport;
  *
  * @author Doug Lea
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @param <E> the type of elements held in this collection
  *

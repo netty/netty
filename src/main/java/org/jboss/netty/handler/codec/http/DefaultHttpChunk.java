@@ -21,7 +21,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * The default {@link HttpChunk} implementation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
 public class DefaultHttpChunk implements HttpChunk {

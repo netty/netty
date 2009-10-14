@@ -24,7 +24,7 @@ import org.jboss.netty.channel.Channel;
  * {@link ServerSocketChannel} or created by {@link ClientSocketChannelFactory}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

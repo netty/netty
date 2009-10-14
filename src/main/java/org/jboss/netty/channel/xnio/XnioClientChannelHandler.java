@@ -19,7 +19,7 @@ import static org.jboss.netty.channel.Channels.*;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
 final class XnioClientChannelHandler extends AbstractXnioChannelHandler {

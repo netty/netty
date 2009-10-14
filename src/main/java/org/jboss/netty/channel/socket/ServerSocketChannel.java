@@ -23,7 +23,7 @@ import org.jboss.netty.channel.ServerChannel;
  * A TCP/IP {@link ServerChannel} which accepts incoming TCP/IP connections.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

@@ -25,7 +25,7 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * Echoes back any received data from a client.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

@@ -47,7 +47,7 @@ import org.jboss.netty.util.TimerTask;
  * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  *
  * @see ReadTimeoutHandler
@@ -174,7 +174,7 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
 
     /**
      * @author The Netty Project (netty-dev@lists.jboss.org)
-     * @author Trustin Lee (tlee@redhat.com)
+     * @author Trustin Lee (trustin@gmail.com)
      * @version $Rev$, $Date$
      */
     private static final class TimeoutCanceller implements ChannelFutureListener {

@@ -31,7 +31,7 @@ import org.springframework.beans.factory.InitializingBean;
  * {@link ChannelFactory} implementations.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
 public class NettyResourceFactory implements InitializingBean, DisposableBean {

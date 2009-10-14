@@ -25,7 +25,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * an {@link IdleStateEvent}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  *
  * @apiviz.uses org.jboss.netty.handler.timeout.IdleStateEvent

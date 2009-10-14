@@ -35,7 +35,7 @@ import java.util.List;
  * instead of calling the constructor explicitly.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @author Frederic Bregier (fredbregier@free.fr)
  *
  * @version $Rev$, $Date$

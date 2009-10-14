@@ -44,7 +44,7 @@ import org.jboss.netty.util.internal.ThreadLocalBoolean;
  * Provides an NIO based {@link org.jboss.netty.channel.socket.DatagramChannel}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @author Daniel Bevenius (dbevenius@jboss.com)
  *
  * @version $Rev$, $Date$

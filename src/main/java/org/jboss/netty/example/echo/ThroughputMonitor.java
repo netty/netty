@@ -21,7 +21,7 @@ import org.jboss.netty.channel.ChannelHandler;
  * Measures and prints the current throughput every 3 seconds.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  */

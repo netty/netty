@@ -51,7 +51,7 @@ package org.jboss.netty.channel;
  * documentation to find out how an event flows in a pipeline.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

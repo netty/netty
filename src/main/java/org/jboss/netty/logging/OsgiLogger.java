@@ -21,7 +21,7 @@ import org.osgi.service.log.LogService;
  * <a href="http://www.osgi.org/">OSGi</a> {@link LogService} logger.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *

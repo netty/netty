@@ -186,7 +186,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * <tt>FirstHandler</tt> and <tt>SecondHandler</tt>.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  *
  * @version $Rev$, $Date$
  *
