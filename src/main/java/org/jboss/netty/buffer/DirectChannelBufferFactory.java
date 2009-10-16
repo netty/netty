@@ -150,7 +150,7 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
     }
 
     public ChannelBuffer getBuffer(ByteBuffer nioBuffer) {
-        if (nioBuffer.isDirect()) {
+        if (!nioBuffer.isReadOnly() && nioBuffer.isDirect()) {
             return ChannelBuffers.wrappedBuffer(nioBuffer);
         }
 
