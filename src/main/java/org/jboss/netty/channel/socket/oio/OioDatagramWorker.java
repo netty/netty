@@ -22,10 +22,9 @@ import java.net.DatagramPacket;
 import java.net.MulticastSocket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
@@ -67,6 +66,9 @@ class OioDatagramWorker implements Runnable {
 
             ReceiveBufferSizePredictor predictor =
                 channel.getConfig().getReceiveBufferSizePredictor();
+            ChannelBufferFactory bufferFactory =
+                channel.getConfig().getBufferFactory();
+
 
             byte[] buf = new byte[predictor.nextReceiveBufferSize()];
             DatagramPacket packet = new DatagramPacket(buf, buf.length);
@@ -83,16 +85,10 @@ class OioDatagramWorker implements Runnable {
                 break;
             }
 
-            ChannelBuffer buffer;
-            ByteOrder endianness = channel.getConfig().getBufferFactory().getDefaultOrder();
-            int readBytes = packet.getLength();
-            if (readBytes == buf.length) {
-                buffer = ChannelBuffers.wrappedBuffer(endianness, buf);
-            } else {
-                buffer = ChannelBuffers.wrappedBuffer(endianness, buf, 0, readBytes);
-            }
-
-            fireMessageReceived(channel, buffer, packet.getSocketAddress());
+            fireMessageReceived(
+                    channel,
+                    bufferFactory.getBuffer(buf, 0, packet.getLength()),
+                    packet.getSocketAddress());
         }
 
         // Setting the workerThread to null will prevent any channel
