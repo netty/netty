@@ -38,7 +38,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
@@ -402,12 +401,9 @@ class NioDatagramWorker implements Runnable {
                 // Update the predictor.
                 predictor.previousReceiveBufferSize(readBytes);
 
-                // Create a Netty ChannelByffer by wrapping the ByteBuffer.
-                final ChannelBuffer channelBuffer = ChannelBuffers
-                        .wrappedBuffer(byteBuffer);
-
-                // Notify the interested parties about the newly arrived message (channelBuffer).
-                fireMessageReceived(channel, channelBuffer, remoteAddress);
+                // Notify the interested parties about the newly arrived message.
+                fireMessageReceived(
+                        channel, bufferFactory.getBuffer(byteBuffer), remoteAddress);
             }
         }
 
