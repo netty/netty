@@ -44,10 +44,15 @@ public class ProtobufVarint32LengthFieldPrepender extends OneToOneEncoder {
     @Override
     protected Object encode(ChannelHandlerContext ctx, Channel channel,
             Object msg) throws Exception {
+        if (!(msg instanceof ChannelBuffer)) {
+            return msg;
+        }
+
         ChannelBuffer body = (ChannelBuffer) msg;
         int length = body.readableBytes();
         ChannelBuffer header =
             channel.getConfig().getBufferFactory().getBuffer(
+                    body.order(),
                     CodedOutputStream.computeRawVarint32Size(length));
         CodedOutputStream codedOutputStream = CodedOutputStream
                 .newInstance(new ChannelBufferOutputStream(header));

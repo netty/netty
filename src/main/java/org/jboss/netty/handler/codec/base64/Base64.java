@@ -167,6 +167,7 @@ public class Base64 {
 
         int len43 = len * 4 / 3;
         ChannelBuffer dest = bufferFactory.getBuffer(
+                src.order(),
                 len43 +
                 (len % 3 > 0? 4 : 0) + // Account for padding
                 (breakLines? len43 / MAX_LINE_LENGTH : 0)); // New lines
@@ -292,7 +293,7 @@ public class Base64 {
         byte[] DECODABET = decodabet(dialect);
 
         int len34 = len * 3 / 4;
-        ChannelBuffer dest = bufferFactory.getBuffer(len34); // Upper limit on size of output
+        ChannelBuffer dest = bufferFactory.getBuffer(src.order(), len34); // Upper limit on size of output
         int outBuffPosn = 0;
 
         byte[] b4 = new byte[4];

@@ -107,8 +107,12 @@ public class LengthFieldPrepender extends OneToOneEncoder {
     @Override
     protected Object encode(
             ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        ChannelBuffer header = channel.getConfig().getBufferFactory().getBuffer(lengthFieldLength);
+        if (!(msg instanceof ChannelBuffer)) {
+            return msg;
+        }
+
         ChannelBuffer body = (ChannelBuffer) msg;
+        ChannelBuffer header = channel.getConfig().getBufferFactory().getBuffer(body.order(), lengthFieldLength);
 
         int length = lengthIncludesLengthFieldLength?
                 body.readableBytes() + lengthFieldLength : body.readableBytes();
