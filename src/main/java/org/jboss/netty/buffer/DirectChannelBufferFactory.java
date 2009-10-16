@@ -16,6 +16,7 @@
 package org.jboss.netty.buffer;
 
 import java.lang.ref.ReferenceQueue;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /**
@@ -127,6 +128,37 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
         }
         slice.clear();
         return slice;
+    }
+
+    public ChannelBuffer getBuffer(ByteOrder order, byte[] array, int offset, int length) {
+        if (array == null) {
+            throw new NullPointerException("array");
+        }
+        if (offset < 0) {
+            throw new IndexOutOfBoundsException("offset: " + offset);
+        }
+        if (length == 0) {
+            return ChannelBuffers.EMPTY_BUFFER;
+        }
+        if (offset + length > array.length) {
+            throw new IndexOutOfBoundsException("length: " + length);
+        }
+
+        ChannelBuffer buf = getBuffer(order, length);
+        buf.writeBytes(array, offset, length);
+        return buf;
+    }
+
+    public ChannelBuffer getBuffer(ByteBuffer nioBuffer) {
+        if (nioBuffer.isDirect()) {
+            return ChannelBuffers.wrappedBuffer(nioBuffer);
+        }
+
+        ChannelBuffer buf = getBuffer(nioBuffer.order(), nioBuffer.remaining());
+        int pos = nioBuffer.position();
+        buf.writeBytes(nioBuffer);
+        nioBuffer.position(pos);
+        return buf;
     }
 
     private ChannelBuffer allocateBigEndianBuffer(int capacity) {

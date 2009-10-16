@@ -53,6 +53,10 @@ public abstract class AbstractChannelBufferFactory implements ChannelBufferFacto
         return getBuffer(getDefaultOrder(), capacity);
     }
 
+    public ChannelBuffer getBuffer(byte[] array, int offset, int length) {
+        return getBuffer(getDefaultOrder(), array, offset, length);
+    }
+
     public ByteOrder getDefaultOrder() {
         return defaultOrder;
     }

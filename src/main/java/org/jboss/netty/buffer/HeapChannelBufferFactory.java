@@ -15,6 +15,7 @@
  */
 package org.jboss.netty.buffer;
 
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /**
@@ -70,5 +71,21 @@ public class HeapChannelBufferFactory extends AbstractChannelBufferFactory {
 
     public ChannelBuffer getBuffer(ByteOrder order, int capacity) {
         return ChannelBuffers.buffer(order, capacity);
+    }
+
+    public ChannelBuffer getBuffer(ByteOrder order, byte[] array, int offset, int length) {
+        return ChannelBuffers.wrappedBuffer(order, array, offset, length);
+    }
+
+    public ChannelBuffer getBuffer(ByteBuffer nioBuffer) {
+        if (!nioBuffer.isReadOnly() && nioBuffer.hasArray()) {
+            return ChannelBuffers.wrappedBuffer(nioBuffer);
+        }
+
+        ChannelBuffer buf = getBuffer(nioBuffer.order(), nioBuffer.remaining());
+        int pos = nioBuffer.position();
+        buf.writeBytes(nioBuffer);
+        nioBuffer.position(pos);
+        return buf;
     }
 }
