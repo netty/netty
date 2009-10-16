@@ -77,6 +77,15 @@
       <optional>true</optional>
     </dependency>
 
+    <!-- JCraft JZlib - completely optional -->
+    <dependency>
+      <groupId>com.jcraft</groupId>
+      <artifactId>jzlib</artifactId>
+      <version>1.0.7</version>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+
     <!-- Servlet API - completely optional -->
     <dependency>
       <groupId>javax.servlet</groupId>

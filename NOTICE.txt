@@ -57,6 +57,14 @@ interchange format, which can be obtained at:
   * HOMEPAGE:
     * http://code.google.com/p/protobuf/
 
+This product optionally depends on 'JZlib', a re-implementation of zlib in pure
+Java, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.jzlib.txt (BSD Style License)
+  * HOMEPAGE:
+    * http://www.jcraft.com/jzlib/
+
 This product optionally depends on 'SLF4J', a simple logging facade for Java,
 which can be obtained at:
 

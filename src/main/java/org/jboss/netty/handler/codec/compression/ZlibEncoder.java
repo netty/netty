@@ -1,0 +1,111 @@
+/*
+ * Copyright 2009 Red Hat, Inc.
+ *
+ * Red Hat licenses this file to you under the Apache License, version 2.0
+ * (the "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at:
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package org.jboss.netty.handler.codec.compression;
+
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
+
+import com.jcraft.jzlib.JZlib;
+import com.jcraft.jzlib.ZStream;
+import com.jcraft.jzlib.ZStreamException;
+
+/**
+ * Compresses a {@link ChannelBuffer} using the deflate algorithm.
+ *
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author Trustin Lee (tlee@redhat.com)
+ * @version $Rev$, $Date$
+ */
+@ChannelPipelineCoverage("one")
+public class ZlibEncoder extends OneToOneEncoder {
+
+    private final ZStream z = new ZStream();
+
+    // TODO 'do not compress' once option
+    // TODO support three wrappers - zlib (default), gzip (unsupported by jzlib, but easy to implement), nowrap
+
+    /**
+     * Creates a new GZip encoder with the default compression level
+     * ({@link JZlib#Z_DEFAULT_COMPRESSION}).
+     */
+    public ZlibEncoder() {
+        this(JZlib.Z_DEFAULT_COMPRESSION);
+    }
+
+    /**
+     * Creates a new GZip encoder with the specified {@code compressionLevel}.
+     *
+     * @param compressionLevel
+     *        the compression level, as specified in {@link JZlib}.
+     *        The common values are
+     *        {@link JZlib#Z_BEST_COMPRESSION},
+     *        {@link JZlib#Z_BEST_SPEED},
+     *        {@link JZlib#Z_DEFAULT_COMPRESSION}, and
+     *        {@link JZlib#Z_NO_COMPRESSION}.
+     */
+    public ZlibEncoder(int compressionLevel) {
+        z.deflateInit(compressionLevel, false); // Default: ZLIB format
+    }
+
+    @Override
+    protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
+        if (!(msg instanceof ChannelBuffer)) {
+            return msg;
+        }
+
+        try {
+            // Configure input.
+            ChannelBuffer uncompressed = (ChannelBuffer) msg;
+            byte[] in = new byte[uncompressed.readableBytes()];
+            uncompressed.readBytes(in);
+            z.next_in = in;
+            z.next_in_index = 0;
+            z.avail_in = in.length;
+
+            // Configure output.
+            byte[] out = new byte[(int) Math.ceil(in.length * 1.001) + 12];
+            z.next_out = out;
+            z.next_out_index = 0;
+            z.avail_out = out.length;
+
+            // Note that Z_PARTIAL_FLUSH has been deprecated.
+            int resultCode = z.deflate(JZlib.Z_SYNC_FLUSH);
+            if (resultCode != JZlib.Z_OK) {
+                throw new ZStreamException(
+                        "compression failure (" + resultCode + ")" +
+                        (z.msg != null? ": " + z.msg : ""));
+            }
+
+            if (z.next_out_index != 0) {
+                return ctx.getChannel().getConfig().getBufferFactory().getBuffer(
+                        uncompressed.order(), out, 0, z.next_out_index);
+            } else {
+                return ChannelBuffers.EMPTY_BUFFER;
+            }
+        } finally {
+            // Deference the external references explicitly to tell the VM that
+            // the allocated byte arrays are temporary so that the call stack
+            // can be utilized.
+            // I'm not sure if the modern VMs do this optimization though.
+            z.next_in = null;
+            z.next_out = null;
+        }
+    }
+}
