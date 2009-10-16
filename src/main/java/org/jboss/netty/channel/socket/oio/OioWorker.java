@@ -24,7 +24,6 @@ import java.nio.channels.ClosedChannelException;
 import java.util.regex.Pattern;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 
@@ -88,15 +87,9 @@ class OioWorker implements Runnable {
                 break;
             }
 
-            ChannelBuffer buffer;
-            if (readBytes == buf.length) {
-                buffer = ChannelBuffers.wrappedBuffer(buf);
-            } else {
-                // A rare case, but it sometimes happen.
-                buffer = ChannelBuffers.wrappedBuffer(buf, 0, readBytes);
-            }
-
-            fireMessageReceived(channel, buffer);
+            fireMessageReceived(
+                    channel,
+                    channel.getConfig().getBufferFactory().getBuffer(buf, 0, readBytes));
         }
 
         // Setting the workerThread to null will prevent any channel

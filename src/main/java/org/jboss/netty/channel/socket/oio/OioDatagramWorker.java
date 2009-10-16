@@ -24,7 +24,6 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
@@ -66,9 +65,6 @@ class OioDatagramWorker implements Runnable {
 
             ReceiveBufferSizePredictor predictor =
                 channel.getConfig().getReceiveBufferSizePredictor();
-            ChannelBufferFactory bufferFactory =
-                channel.getConfig().getBufferFactory();
-
 
             byte[] buf = new byte[predictor.nextReceiveBufferSize()];
             DatagramPacket packet = new DatagramPacket(buf, buf.length);
@@ -87,7 +83,7 @@ class OioDatagramWorker implements Runnable {
 
             fireMessageReceived(
                     channel,
-                    bufferFactory.getBuffer(buf, 0, packet.getLength()),
+                    channel.getConfig().getBufferFactory().getBuffer(buf, 0, packet.getLength()),
                     packet.getSocketAddress());
         }
 
