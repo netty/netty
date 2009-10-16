@@ -50,7 +50,7 @@ public interface ChannelBufferFactory {
     ChannelBuffer getBuffer(ByteOrder endianness, int capacity);
 
     /**
-     * Returns a {@link ChannelBuffer} whose content is equals to the sub-region
+     * Returns a {@link ChannelBuffer} whose content is equal to the sub-region
      * of the specified {@code array}.  Depending on the factory implementation,
      * the returned buffer could wrap the {@code array} or create a new copy of
      * the {@code array}.
@@ -67,7 +67,7 @@ public interface ChannelBufferFactory {
     ChannelBuffer getBuffer(byte[] array, int offset, int length);
 
     /**
-     * Returns a {@link ChannelBuffer} whose content is equals to the sub-region
+     * Returns a {@link ChannelBuffer} whose content is equal to the sub-region
      * of the specified {@code array}.  Depending on the factory implementation,
      * the returned buffer could wrap the {@code array} or create a new copy of
      * the {@code array}.
@@ -84,7 +84,7 @@ public interface ChannelBufferFactory {
     ChannelBuffer getBuffer(ByteOrder endianness, byte[] array, int offset, int length);
 
     /**
-     * Returns a {@link ChannelBuffer} whose content is equals to the sub-region
+     * Returns a {@link ChannelBuffer} whose content is equal to the sub-region
      * of the specified {@code nioBuffer}.  Depending on the factory
      * implementation, the returned buffer could wrap the {@code nioBuffer} or
      * create a new copy of the {@code nioBuffer}.
