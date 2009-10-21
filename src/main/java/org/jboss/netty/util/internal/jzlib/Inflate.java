@@ -67,25 +67,24 @@ final class Inflate {
     private static final int DONE = 12; // finished check, done
     private static final int BAD = 13; // got an error--stay here
 
-    private static final int GZIP_CHECK8 = 14;
-    private static final int GZIP_CHECK7 = 15;
-    private static final int GZIP_CHECK6 = 16;
-    private static final int GZIP_CHECK5 = 17;
-    private static final int GZIP_CHECK4 = 18;
-    private static final int GZIP_CHECK3 = 19;
-    private static final int GZIP_CHECK2 = 20;
-    private static final int GZIP_CHECK1 = 21;
-
-    private static final int GZIP_ID1 = 22;
-    private static final int GZIP_ID2 = 23;
-    private static final int GZIP_CM = 24;
-    private static final int GZIP_FLG = 25;
-    private static final int GZIP_MTIME_XFL_OS = 26;
-    private static final int GZIP_XLEN = 27;
-    private static final int GZIP_FEXTRA = 28;
-    private static final int GZIP_FNAME = 29;
-    private static final int GZIP_FCOMMENT = 30;
-    private static final int GZIP_FHCRC = 31;
+    private static final int GZIP_ID1 = 14;
+    private static final int GZIP_ID2 = 15;
+    private static final int GZIP_CM = 16;
+    private static final int GZIP_FLG = 17;
+    private static final int GZIP_MTIME_XFL_OS = 18;
+    private static final int GZIP_XLEN = 19;
+    private static final int GZIP_FEXTRA = 20;
+    private static final int GZIP_FNAME = 21;
+    private static final int GZIP_FCOMMENT = 22;
+    private static final int GZIP_FHCRC = 23;
+    private static final int GZIP_CHECK8 = 24;
+    private static final int GZIP_CHECK7 = 25;
+    private static final int GZIP_CHECK6 = 26;
+    private static final int GZIP_CHECK5 = 27;
+    private static final int GZIP_CHECK4 = 28;
+    private static final int GZIP_CHECK3 = 29;
+    private static final int GZIP_CHECK2 = 30;
+    private static final int GZIP_CHECK1 = 31;
 
     private int mode; // current inflate mode
     // mode dependent information
