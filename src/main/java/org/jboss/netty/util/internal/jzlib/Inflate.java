@@ -429,7 +429,7 @@ final class Inflate {
                         r = f;
                         z.avail_in --;
                         z.total_in ++;
-                        gzipXLen = gzipXLen << 8 | z.next_in[z.next_in_index ++] & 0xff;
+                        gzipXLen |= (z.next_in[z.next_in_index ++] & 0xff) << (1 - gzipBytesToRead) * 8;
                         gzipBytesToRead --;
                     }
                     gzipBytesToRead = gzipXLen;
