@@ -21,6 +21,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.compression.ZlibDecoder;
 import org.jboss.netty.handler.codec.compression.ZlibEncoder;
+import org.jboss.netty.handler.codec.compression.ZlibWrapper;
 
 /**
  * Creates a newly configured {@link ChannelPipeline} for a client-side channel.
@@ -42,8 +43,9 @@ public class FactorialClientPipelineFactory implements
     public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline pipeline = pipeline();
 
-        pipeline.addLast("a", new ZlibEncoder());
-        pipeline.addLast("b", new ZlibDecoder());
+        // Enable stream compression (you can comment out if unnecessary)
+        pipeline.addLast("deflater", new ZlibEncoder(ZlibWrapper.GZIP));
+        pipeline.addLast("inflater", new ZlibDecoder(ZlibWrapper.GZIP));
 
         // Add the number codec first,
         pipeline.addLast("decoder", new BigIntegerDecoder());
