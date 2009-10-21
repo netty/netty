@@ -43,7 +43,7 @@ public class FactorialClientPipelineFactory implements
     public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline pipeline = pipeline();
 
-        // Enable stream compression (you can comment out if unnecessary)
+        // Enable stream compression (you can remove these two if unnecessary)
         pipeline.addLast("deflater", new ZlibEncoder(ZlibWrapper.GZIP));
         pipeline.addLast("inflater", new ZlibDecoder(ZlibWrapper.GZIP));
 
