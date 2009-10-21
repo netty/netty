@@ -37,6 +37,7 @@ import com.jcraft.jzlib.ZStreamException;
 public class ZlibDecoder extends OneToOneDecoder {
 
     private final ZStream z = new ZStream();
+    private volatile boolean finished;
 
     // TODO Auto-detect wrappers (zlib, gzip, nowrapper as a fallback)
 
@@ -74,9 +75,17 @@ public class ZlibDecoder extends OneToOneDecoder {
         }
     }
 
+    /**
+     * Returns {@code true} if and only if the end of the compressed stream
+     * has been reached.
+     */
+    public boolean isClosed() {
+        return finished;
+    }
+
     @Override
     protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof ChannelBuffer)) {
+        if (!(msg instanceof ChannelBuffer) || finished) {
             return msg;
         }
 
@@ -103,7 +112,7 @@ public class ZlibDecoder extends OneToOneDecoder {
                 int resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);
                 switch (resultCode) {
                 case JZlib.Z_STREAM_END:
-                    // TODO: Remove myself from the pipeline
+                    finished = true; // Do not decode anymore.
                 case JZlib.Z_OK:
                 case JZlib.Z_BUF_ERROR:
                     decompressed.writeBytes(out, 0, z.next_out_index);
