@@ -1656,10 +1656,14 @@ final class Deflate {
             break;
         case GZIP:
             // Write the gzip trailer (CRC32 & ISIZE)
-            putShortMSB(strm.crc32 >>> 16);
-            putShortMSB(strm.crc32 & 0xFFFF);
-            putShortMSB(gzipUncompressedBytes >>> 16);   // ISIZE 1
-            putShortMSB(gzipUncompressedBytes & 0xFFFF); // ISIZE 2
+            put_byte((byte) (strm.crc32 & 0xFF));
+            put_byte((byte) (strm.crc32 >>> 8 & 0xFF));
+            put_byte((byte) (strm.crc32 >>> 16 & 0xFF));
+            put_byte((byte) (strm.crc32 >>> 24 & 0xFF));
+            put_byte((byte) (gzipUncompressedBytes & 0xFF));
+            put_byte((byte) (gzipUncompressedBytes >>> 8 & 0xFF));
+            put_byte((byte) (gzipUncompressedBytes >>> 16 & 0xFF));
+            put_byte((byte) (gzipUncompressedBytes >>> 24 & 0xFF));
             break;
         }
 

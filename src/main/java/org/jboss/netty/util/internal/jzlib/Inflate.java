@@ -499,7 +499,7 @@ final class Inflate {
                     z.avail_in --;
                     z.total_in ++;
                     gzipBytesToRead --;
-                    z.istate.gzipCRC32 = z.istate.gzipCRC32 << 8 | z.next_in[z.next_in_index ++] & 0xff;
+                    z.istate.gzipCRC32 |= (z.next_in[z.next_in_index ++] & 0xff) << (3 - gzipBytesToRead) * 8;
                 }
 
                 if (z.crc32 != z.istate.gzipCRC32) {
@@ -519,7 +519,7 @@ final class Inflate {
                     z.avail_in --;
                     z.total_in ++;
                     gzipBytesToRead --;
-                    z.istate.gzipISize = z.istate.gzipISize << 8 | z.next_in[z.next_in_index ++] & 0xff;
+                    z.istate.gzipISize |= (z.next_in[z.next_in_index ++] & 0xff) << (3 - gzipBytesToRead) * 8;
                 }
 
                 if (gzipUncompressedBytes != z.istate.gzipISize) {
