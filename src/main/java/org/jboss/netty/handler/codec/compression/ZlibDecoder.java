@@ -135,7 +135,7 @@ public class ZlibDecoder extends OneToOneDecoder {
                 if (decompressed.writerIndex() != 0) { // readerIndex is always 0
                     return decompressed;
                 } else {
-                    return ChannelBuffers.EMPTY_BUFFER;
+                    return null;
                 }
             } finally {
                 // Deference the external references explicitly to tell the VM that
