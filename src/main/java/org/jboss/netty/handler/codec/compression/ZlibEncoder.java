@@ -28,10 +28,9 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
+import org.jboss.netty.util.internal.jzlib.JZlib;
+import org.jboss.netty.util.internal.jzlib.ZStream;
 
-import com.jcraft.jzlib.JZlib;
-import com.jcraft.jzlib.ZStream;
-import com.jcraft.jzlib.ZStreamException;
 
 /**
  * Compresses a {@link ChannelBuffer} using the deflate algorithm.
@@ -53,29 +52,29 @@ public class ZlibEncoder extends OneToOneEncoder {
     // TODO Disallow preset dictionary for gzip
 
     /**
-     * Creates a new zlib encoder with the default compression level
-     * ({@link JZlib#Z_DEFAULT_COMPRESSION}).
+     * Creates a new zlib encoder with the default compression level ({@code 6}).
      *
-     * @throws ZStreamException if failed to initialize zlib
+     * @throws CompressionException if failed to initialize zlib
      */
-    public ZlibEncoder() throws ZStreamException {
-        this(JZlib.Z_DEFAULT_COMPRESSION);
+    public ZlibEncoder() {
+        this(6);
     }
 
     /**
      * Creates a new zlib encoder with the specified {@code compressionLevel}.
      *
      * @param compressionLevel
-     *        the compression level, as specified in {@link JZlib}.
-     *        The common values are
-     *        {@link JZlib#Z_BEST_COMPRESSION},
-     *        {@link JZlib#Z_BEST_SPEED},
-     *        {@link JZlib#Z_DEFAULT_COMPRESSION}, and
-     *        {@link JZlib#Z_NO_COMPRESSION}.
+     *        {@code 1} yields the fastest compression and {@code 9} yields the
+     *        best compression.  {@code 0} means no compression.  The default
+     *        compression level is {@code 6}.
      *
-     * @throws ZStreamException if failed to initialize zlib
+     * @throws CompressionException if failed to initialize zlib
      */
-    public ZlibEncoder(int compressionLevel) throws ZStreamException {
+    public ZlibEncoder(int compressionLevel) {
+        if (compressionLevel < 0 || compressionLevel > 9) {
+            throw new IllegalArgumentException("compressionLevel: " + compressionLevel + " (expected: 0-9)");
+        }
+
         synchronized (z) {
             int resultCode = z.deflateInit(compressionLevel, false); // Default: ZLIB format
             if (resultCode != JZlib.Z_OK) {
@@ -85,16 +84,15 @@ public class ZlibEncoder extends OneToOneEncoder {
     }
 
     /**
-     * Creates a new zlib encoder with the default compression level
-     * ({@link JZlib#Z_DEFAULT_COMPRESSION}) and the specified preset
-     * dictionary.
+     * Creates a new zlib encoder with the default compression level ({@code 6})
+     * and the specified preset dictionary.
      *
      * @param dictionary  the preset dictionary
      *
-     * @throws ZStreamException if failed to initialize zlib
+     * @throws CompressionException if failed to initialize zlib
      */
-    public ZlibEncoder(byte[] dictionary) throws ZStreamException {
-        this(JZlib.Z_DEFAULT_COMPRESSION, dictionary);
+    public ZlibEncoder(byte[] dictionary) {
+        this(6, dictionary);
     }
 
     /**
@@ -102,17 +100,18 @@ public class ZlibEncoder extends OneToOneEncoder {
      * and the specified preset dictionary.
      *
      * @param compressionLevel
-     *        the compression level, as specified in {@link JZlib}.
-     *        The common values are
-     *        {@link JZlib#Z_BEST_COMPRESSION},
-     *        {@link JZlib#Z_BEST_SPEED},
-     *        {@link JZlib#Z_DEFAULT_COMPRESSION}, and
-     *        {@link JZlib#Z_NO_COMPRESSION}.
+     *        {@code 1} yields the fastest compression and {@code 9} yields the
+     *        best compression.  {@code 0} means no compression.  The default
+     *        compression level is {@code 6}.
      * @param dictionary  the preset dictionary
      *
-     * @throws ZStreamException if failed to initialize zlib
+     * @throws CompressionException if failed to initialize zlib
      */
-    public ZlibEncoder(int compressionLevel, byte[] dictionary) throws ZStreamException {
+    public ZlibEncoder(int compressionLevel, byte[] dictionary) {
+        if (compressionLevel < 0 || compressionLevel > 9) {
+            throw new IllegalArgumentException("compressionLevel: " + compressionLevel + " (expected: 0-9)");
+        }
+
         if (dictionary == null) {
             throw new NullPointerException("dictionary");
         }

@@ -15,27 +15,45 @@
  */
 package org.jboss.netty.handler.codec.compression;
 
-import org.jboss.netty.util.internal.jzlib.ZStream;
+import java.io.IOException;
 
 /**
- * Utility methods used by {@link ZlibEncoder} and {@link ZlibDecoder}.
+ * An {@link IOException} that is raised when compression or decompression
+ * failed.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (tlee@redhat.com)
  * @version $Rev$, $Date$
  */
-final class ZlibUtil {
+public class CompressionException extends RuntimeException {
 
-    static void fail(ZStream z, String message, int resultCode) {
-        throw exception(z, message, resultCode);
-    }
+    private static final long serialVersionUID = 5603413481274811897L;
 
-    static CompressionException exception(ZStream z, String message, int resultCode) {
-        return new CompressionException(message + " (" + resultCode + ")" +
-                (z.msg != null? ": " + z.msg : ""));
-    }
-
-    private ZlibUtil() {
+    /**
+     * Creates a new instance.
+     */
+    public CompressionException() {
         super();
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public CompressionException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public CompressionException(String message) {
+        super(message);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public CompressionException(Throwable cause) {
+        super(cause);
     }
 }

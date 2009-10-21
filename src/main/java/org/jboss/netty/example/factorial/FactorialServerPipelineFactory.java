@@ -19,6 +19,10 @@ import static org.jboss.netty.channel.Channels.*;
 
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.handler.codec.compression.ZlibDecoder;
+import org.jboss.netty.handler.codec.compression.ZlibEncoder;
+import org.jboss.netty.handler.logging.LoggingHandler;
+import org.jboss.netty.logging.InternalLogLevel;
 
 /**
  * Creates a newly configured {@link ChannelPipeline} for a server-side channel.
@@ -34,6 +38,11 @@ public class FactorialServerPipelineFactory implements
 
     public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline pipeline = pipeline();
+
+        pipeline.addLast("l", new LoggingHandler(InternalLogLevel.INFO, true));
+
+        pipeline.addLast("a", new ZlibEncoder());
+        pipeline.addLast("b", new ZlibDecoder());
 
         // Add the number codec first,
         pipeline.addLast("decoder", new BigIntegerDecoder());

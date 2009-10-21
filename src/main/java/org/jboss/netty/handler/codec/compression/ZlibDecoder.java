@@ -21,10 +21,9 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
+import org.jboss.netty.util.internal.jzlib.JZlib;
+import org.jboss.netty.util.internal.jzlib.ZStream;
 
-import com.jcraft.jzlib.JZlib;
-import com.jcraft.jzlib.ZStream;
-import com.jcraft.jzlib.ZStreamException;
 
 /**
  * Decompresses a {@link ChannelBuffer} using the deflate algorithm.
@@ -44,9 +43,9 @@ public class ZlibDecoder extends OneToOneDecoder {
     /**
      * Creates a new instance.
      *
-     * @throws ZStreamException if failed to initialize zlib
+     * @throws CompressionException if failed to initialize zlib
      */
-    public ZlibDecoder() throws ZStreamException {
+    public ZlibDecoder() {
         synchronized (z) {
             int resultCode = z.inflateInit();
             if (resultCode != JZlib.Z_OK) {
@@ -58,9 +57,9 @@ public class ZlibDecoder extends OneToOneDecoder {
     /**
      * Creates a new instance with the specified preset dictionary.
      *
-     * @throws ZStreamException if failed to initialize zlib
+     * @throws CompressionException if failed to initialize zlib
      */
-    public ZlibDecoder(byte[] dictionary) throws ZStreamException {
+    public ZlibDecoder(byte[] dictionary) {
         if (dictionary == null) {
             throw new NullPointerException("dictionary");
         }
