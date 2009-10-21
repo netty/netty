@@ -17,6 +17,7 @@ package org.jboss.netty.handler.codec.oneone;
 
 import static org.jboss.netty.channel.Channels.*;
 
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
@@ -27,7 +28,7 @@ import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
 
 /**
- * Transforms a received message into another message.  A typical setup for
+ * Transforms a write request into another write request.  A typical setup for
  * TCP/IP would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
@@ -70,6 +71,12 @@ public abstract class OneToOneEncoder implements ChannelDownstreamHandler {
         }
     }
 
+    /**
+     * Transforms the specified message into another message and return the
+     * transformed message.  Note that you can not return {@code null}, unlike
+     * you can in {@link OneToOneDecoder#decode(ChannelHandlerContext, Channel, Object)};
+     * you must return something, at least {@link ChannelBuffers#EMPTY_BUFFER}.
+     */
     protected abstract Object encode(
             ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception;
 }
