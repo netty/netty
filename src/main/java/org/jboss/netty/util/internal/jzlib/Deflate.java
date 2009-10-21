@@ -253,12 +253,6 @@ final class Deflate {
     private void lm_init() {
         window_size = 2 * w_size;
 
-        // TODO No need to clear the head if called from deflateInit2
-        head[hash_size - 1] = 0;
-        for (int i = 0; i < hash_size - 1; i ++) {
-            head[i] = 0;
-        }
-
         // Set the default configuration parameters:
         max_lazy_match = Deflate.config_table[level].max_lazy;
         good_match = Deflate.config_table[level].good_length;
