@@ -48,6 +48,8 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package org.jboss.netty.util.internal.jzlib;
 
+import org.jboss.netty.util.internal.jzlib.JZlib.WrapperType;
+
 final class Deflate {
 
     private static final class Config {
@@ -133,7 +135,8 @@ final class Deflate {
     int pending_buf_size; // size of pending_buf
     int pending_out; // next pending byte to output to the stream
     int pending; // nb of bytes in the pending buffer
-    int noheader; // suppress zlib header and adler32
+    WrapperType wrapperType;
+    private boolean wroteTrailer;
     byte data_type; // UNKNOWN, BINARY or ASCII
     byte method; // STORED (for zip only) or DEFLATED
     int last_flush; // value of flush param for previous deflate call
@@ -1296,18 +1299,13 @@ final class Deflate {
         return lookahead;
     }
 
-    int deflateInit(ZStream strm, int level, int bits) {
+    int deflateInit(ZStream strm, int level, int bits, WrapperType wrapperType) {
         return deflateInit2(strm, level, JZlib.Z_DEFLATED, bits,
-                JZlib.DEF_MEM_LEVEL, JZlib.Z_DEFAULT_STRATEGY);
-    }
-
-    int deflateInit(ZStream strm, int level) {
-        return deflateInit(strm, level, JZlib.MAX_WBITS);
+                JZlib.DEF_MEM_LEVEL, JZlib.Z_DEFAULT_STRATEGY, wrapperType);
     }
 
     private int deflateInit2(ZStream strm, int level, int method, int windowBits,
-            int memLevel, int strategy) {
-        int noheader = 0;
+            int memLevel, int strategy, WrapperType wrapperType) {
         //    byte[] my_version=ZLIB_VERSION;
 
         //
@@ -1323,8 +1321,7 @@ final class Deflate {
         }
 
         if (windowBits < 0) { // undocumented feature: suppress zlib header
-            noheader = 1;
-            windowBits = -windowBits;
+            throw new IllegalArgumentException("windowBits: " + windowBits);
         }
 
         if (memLevel < 1 || memLevel > JZlib.MAX_MEM_LEVEL ||
@@ -1336,7 +1333,7 @@ final class Deflate {
 
         strm.dstate = this;
 
-        this.noheader = noheader;
+        this.wrapperType = wrapperType;
         w_bits = windowBits;
         w_size = 1 << w_bits;
         w_mask = w_size - 1;
@@ -1378,10 +1375,8 @@ final class Deflate {
         pending = 0;
         pending_out = 0;
 
-        if (noheader < 0) {
-            noheader = 0; // was set to -1 by deflate(..., Z_FINISH);
-        }
-        status = noheader != 0? BUSY_STATE : INIT_STATE;
+        wroteTrailer = false;
+        status = wrapperType == WrapperType.NONE? BUSY_STATE : INIT_STATE;
         strm.adler = Adler32.adler32(0, null, 0, 0);
 
         last_flush = JZlib.Z_NO_FLUSH;
@@ -1605,7 +1600,8 @@ final class Deflate {
         if (flush != JZlib.Z_FINISH) {
             return JZlib.Z_OK;
         }
-        if (noheader != 0) {
+
+        if (wrapperType == WrapperType.NONE || wroteTrailer) {
             return JZlib.Z_STREAM_END;
         }
 
@@ -1616,7 +1612,7 @@ final class Deflate {
 
         // If avail_out is zero, the application will call deflate again
         // to flush the rest.
-        noheader = -1; // write the trailer only once!
+        wroteTrailer = true; // write the trailer only once!
         return pending != 0? JZlib.Z_OK : JZlib.Z_STREAM_END;
     }
 }

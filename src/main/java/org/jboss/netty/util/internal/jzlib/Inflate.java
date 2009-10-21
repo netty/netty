@@ -48,6 +48,8 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package org.jboss.netty.util.internal.jzlib;
 
+import org.jboss.netty.util.internal.jzlib.JZlib.WrapperType;
+
 final class Inflate {
 
     private static final int METHOD = 0; // waiting for method byte
@@ -74,7 +76,7 @@ final class Inflate {
     // if BAD, inflateSync's marker bytes count
     private int marker;
     // mode independent information
-    private int nowrap; // flag for no wrapper
+    private WrapperType wrapperType;
     private int wbits; // log2(window size)  (8..15, defaults to 15)
     private InfBlocks blocks; // current inflate_blocks state
 
@@ -85,7 +87,7 @@ final class Inflate {
 
         z.total_in = z.total_out = 0;
         z.msg = null;
-        z.istate.mode = z.istate.nowrap != 0? BLOCKS : METHOD;
+        z.istate.mode = z.istate.wrapperType == WrapperType.NONE? BLOCKS : METHOD;
         z.istate.blocks.reset(z, null);
         return JZlib.Z_OK;
     }
@@ -99,15 +101,14 @@ final class Inflate {
         return JZlib.Z_OK;
     }
 
-    int inflateInit(ZStream z, int w) {
+    int inflateInit(ZStream z, int w, WrapperType wrapperType) {
         z.msg = null;
         blocks = null;
 
-        // handle undocumented nowrap option (no zlib header or check)
-        nowrap = 0;
+        this.wrapperType = wrapperType;
+
         if (w < 0) {
-            w = -w;
-            nowrap = 1;
+            throw new IllegalArgumentException("w: " + w);
         }
 
         // set window size
@@ -117,7 +118,8 @@ final class Inflate {
         }
         wbits = w;
 
-        z.istate.blocks = new InfBlocks(z, z.istate.nowrap != 0? null : this,
+        z.istate.blocks = new InfBlocks(
+                z, z.istate.wrapperType == WrapperType.NONE? null : this,
                 1 << w);
 
         // reset state
@@ -249,7 +251,7 @@ final class Inflate {
                 }
                 r = f;
                 z.istate.blocks.reset(z, z.istate.was);
-                if (z.istate.nowrap != 0) {
+                if (z.istate.wrapperType == WrapperType.NONE) {
                     z.istate.mode = DONE;
                     break;
                 }

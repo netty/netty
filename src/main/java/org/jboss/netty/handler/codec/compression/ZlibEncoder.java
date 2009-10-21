@@ -76,7 +76,7 @@ public class ZlibEncoder extends OneToOneEncoder {
         }
 
         synchronized (z) {
-            int resultCode = z.deflateInit(compressionLevel, false); // Default: ZLIB format
+            int resultCode = z.deflateInit(compressionLevel, JZlib.W_ZLIB); // Default: ZLIB format
             if (resultCode != JZlib.Z_OK) {
                 ZlibUtil.fail(z, "initialization failure", resultCode);
             }
@@ -118,7 +118,7 @@ public class ZlibEncoder extends OneToOneEncoder {
 
         synchronized (z) {
             int resultCode;
-            resultCode = z.deflateInit(compressionLevel, false); // Default: ZLIB format
+            resultCode = z.deflateInit(compressionLevel, JZlib.W_ZLIB); // Default: ZLIB format
             if (resultCode != JZlib.Z_OK) {
                 ZlibUtil.fail(z, "initialization failure", resultCode);
             } else {

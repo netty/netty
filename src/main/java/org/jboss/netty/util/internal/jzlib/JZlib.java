@@ -50,10 +50,10 @@ package org.jboss.netty.util.internal.jzlib;
 
 public final class JZlib {
 
-    // Wrappers
-    public static final int W_NONE = 0;
-    public static final int W_ZLIB = 1;
-    public static final int W_GZIP = 2;
+    // wrapper types
+    public static final Enum<?> W_NONE = WrapperType.NONE;
+    public static final Enum<?> W_ZLIB = WrapperType.ZLIB;
+    public static final Enum<?> W_GZIP = WrapperType.GZIP;
 
     // compression levels
     public static final int Z_NO_COMPRESSION = 0;
@@ -102,4 +102,7 @@ public final class JZlib {
     // Bit length codes must not exceed MAX_BL_BITS bits
     static final int MAX_BL_BITS = 7;
 
+    static enum WrapperType {
+        NONE, ZLIB, GZIP;
+    }
 }

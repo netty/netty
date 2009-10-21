@@ -48,6 +48,8 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package org.jboss.netty.util.internal.jzlib;
 
+import org.jboss.netty.util.internal.jzlib.JZlib.WrapperType;
+
 public final class ZStream {
 
     public byte[] next_in; // next input byte
@@ -68,17 +70,17 @@ public final class ZStream {
         return inflateInit(JZlib.DEF_WBITS);
     }
 
-    public int inflateInit(boolean nowrap) {
-        return inflateInit(JZlib.DEF_WBITS, nowrap);
+    public int inflateInit(Enum<?> wrapperType) {
+        return inflateInit(JZlib.DEF_WBITS, wrapperType);
     }
 
     public int inflateInit(int w) {
-        return inflateInit(w, false);
+        return inflateInit(w, WrapperType.ZLIB);
     }
 
-    public int inflateInit(int w, boolean nowrap) {
+    public int inflateInit(int w, Enum<?> wrapperType) {
         istate = new Inflate();
-        return istate.inflateInit(this, nowrap? -w : w);
+        return istate.inflateInit(this, w, (WrapperType) wrapperType);
     }
 
     public int inflate(int f) {
@@ -115,17 +117,17 @@ public final class ZStream {
         return deflateInit(level, JZlib.MAX_WBITS);
     }
 
-    public int deflateInit(int level, boolean nowrap) {
-        return deflateInit(level, JZlib.MAX_WBITS, nowrap);
+    public int deflateInit(int level, Enum<?> wrapperType) {
+        return deflateInit(level, JZlib.MAX_WBITS, wrapperType);
     }
 
     public int deflateInit(int level, int bits) {
-        return deflateInit(level, bits, false);
+        return deflateInit(level, bits, WrapperType.ZLIB);
     }
 
-    public int deflateInit(int level, int bits, boolean nowrap) {
+    public int deflateInit(int level, int bits, Enum<?> wrapperType) {
         dstate = new Deflate();
-        return dstate.deflateInit(this, level, nowrap? -bits : bits);
+        return dstate.deflateInit(this, level, bits, (WrapperType) wrapperType);
     }
 
     public int deflate(int flush) {
@@ -212,7 +214,7 @@ public final class ZStream {
 
         avail_in -= len;
 
-        if (dstate.noheader == 0) {
+        if (dstate.wrapperType == WrapperType.ZLIB) {
             adler = Adler32.adler32(adler, next_in, next_in_index, len);
         }
         System.arraycopy(next_in, next_in_index, buf, start, len);
