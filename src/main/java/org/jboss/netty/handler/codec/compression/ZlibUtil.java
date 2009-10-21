@@ -15,6 +15,7 @@
  */
 package org.jboss.netty.handler.codec.compression;
 
+import org.jboss.netty.util.internal.jzlib.JZlib;
 import org.jboss.netty.util.internal.jzlib.ZStream;
 
 /**
@@ -33,6 +34,24 @@ final class ZlibUtil {
     static CompressionException exception(ZStream z, String message, int resultCode) {
         return new CompressionException(message + " (" + resultCode + ")" +
                 (z.msg != null? ": " + z.msg : ""));
+    }
+
+    static Enum<?> convertWrapperType(ZlibWrapper wrapper) {
+        Enum<?> convertedWrapperType;
+        switch (wrapper) {
+        case NONE:
+            convertedWrapperType = JZlib.W_NONE;
+            break;
+        case ZLIB:
+            convertedWrapperType = JZlib.W_ZLIB;
+            break;
+        case GZIP:
+            convertedWrapperType = JZlib.W_GZIP;
+            break;
+        default:
+            throw new Error();
+        }
+        return convertedWrapperType;
     }
 
     private ZlibUtil() {

@@ -38,16 +38,27 @@ public class ZlibDecoder extends OneToOneDecoder {
     private final ZStream z = new ZStream();
     private volatile boolean finished;
 
-    // TODO Auto-detect wrappers (zlib, gzip, nowrapper as a fallback)
-
     /**
-     * Creates a new instance.
+     * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB}).
      *
      * @throws CompressionException if failed to initialize zlib
      */
     public ZlibDecoder() {
+        this(ZlibWrapper.ZLIB);
+    }
+
+    /**
+     * Creates a new instance with the specified wrapper.
+     *
+     * @throws CompressionException if failed to initialize zlib
+     */
+    public ZlibDecoder(ZlibWrapper wrapper) {
+        if (wrapper == null) {
+            throw new NullPointerException("wrapper");
+        }
+
         synchronized (z) {
-            int resultCode = z.inflateInit(JZlib.W_ZLIB);
+            int resultCode = z.inflateInit(ZlibUtil.convertWrapperType(wrapper));
             if (resultCode != JZlib.Z_OK) {
                 ZlibUtil.fail(z, "initialization failure", resultCode);
             }
@@ -55,7 +66,9 @@ public class ZlibDecoder extends OneToOneDecoder {
     }
 
     /**
-     * Creates a new instance with the specified preset dictionary.
+     * Creates a new instance with the specified preset dictionary. The wrapper
+     * is always {@link ZlibWrapper#ZLIB} because it is the only format that
+     * supports the preset dictionary.
      *
      * @throws CompressionException if failed to initialize zlib
      */

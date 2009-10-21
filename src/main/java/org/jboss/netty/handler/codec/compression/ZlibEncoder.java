@@ -47,12 +47,9 @@ public class ZlibEncoder extends OneToOneEncoder {
     private final ZStream z = new ZStream();
     private final AtomicBoolean finished = new AtomicBoolean();
 
-    // TODO 'do not compress' once option
-    // TODO support three wrappers - zlib (default), gzip (unsupported by jzlib, but easy to implement), nowrap
-    // TODO Disallow preset dictionary for gzip
-
     /**
-     * Creates a new zlib encoder with the default compression level ({@code 6}).
+     * Creates a new zlib encoder with the default compression level ({@code 6})
+     * and the default wrapper ({@link ZlibWrapper#ZLIB}).
      *
      * @throws CompressionException if failed to initialize zlib
      */
@@ -61,7 +58,8 @@ public class ZlibEncoder extends OneToOneEncoder {
     }
 
     /**
-     * Creates a new zlib encoder with the specified {@code compressionLevel}.
+     * Creates a new zlib encoder with the specified {@code compressionLevel}
+     * and the default wrapper ({@link ZlibWrapper#ZLIB}).
      *
      * @param compressionLevel
      *        {@code 1} yields the fastest compression and {@code 9} yields the
@@ -71,12 +69,42 @@ public class ZlibEncoder extends OneToOneEncoder {
      * @throws CompressionException if failed to initialize zlib
      */
     public ZlibEncoder(int compressionLevel) {
+        this(compressionLevel, ZlibWrapper.ZLIB);
+    }
+
+    /**
+     * Creates a new zlib encoder with the default compression level ({@code 6})
+     * and the specified wrapper.
+     *
+     * @throws CompressionException if failed to initialize zlib
+     */
+    public ZlibEncoder(ZlibWrapper wrapper) {
+        this(6, wrapper);
+    }
+
+    /**
+     * Creates a new zlib encoder with the specified {@code compressionLevel}
+     * and the specified wrapper.
+     *
+     * @param compressionLevel
+     *        {@code 1} yields the fastest compression and {@code 9} yields the
+     *        best compression.  {@code 0} means no compression.  The default
+     *        compression level is {@code 6}.
+     *
+     * @throws CompressionException if failed to initialize zlib
+     */
+    public ZlibEncoder(int compressionLevel, ZlibWrapper wrapper) {
         if (compressionLevel < 0 || compressionLevel > 9) {
-            throw new IllegalArgumentException("compressionLevel: " + compressionLevel + " (expected: 0-9)");
+            throw new IllegalArgumentException(
+                    "compressionLevel: " + compressionLevel +
+                    " (expected: 0-9)");
+        }
+        if (wrapper == null) {
+            throw new NullPointerException("wrapper");
         }
 
         synchronized (z) {
-            int resultCode = z.deflateInit(compressionLevel, JZlib.W_ZLIB); // Default: ZLIB format
+            int resultCode = z.deflateInit(compressionLevel, ZlibUtil.convertWrapperType(wrapper));
             if (resultCode != JZlib.Z_OK) {
                 ZlibUtil.fail(z, "initialization failure", resultCode);
             }
@@ -85,7 +113,9 @@ public class ZlibEncoder extends OneToOneEncoder {
 
     /**
      * Creates a new zlib encoder with the default compression level ({@code 6})
-     * and the specified preset dictionary.
+     * and the specified preset dictionary.  The wrapper is always
+     * {@link ZlibWrapper#ZLIB} because it is the only format that supports
+     * the preset dictionary.
      *
      * @param dictionary  the preset dictionary
      *
@@ -97,7 +127,9 @@ public class ZlibEncoder extends OneToOneEncoder {
 
     /**
      * Creates a new zlib encoder with the specified {@code compressionLevel}
-     * and the specified preset dictionary.
+     * and the specified preset dictionary.  The wrapper is always
+     * {@link ZlibWrapper#ZLIB} because it is the only format that supports
+     * the preset dictionary.
      *
      * @param compressionLevel
      *        {@code 1} yields the fastest compression and {@code 9} yields the
