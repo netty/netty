@@ -51,7 +51,6 @@ public class ZlibEncoder extends OneToOneEncoder {
     // TODO 'do not compress' once option
     // TODO support three wrappers - zlib (default), gzip (unsupported by jzlib, but easy to implement), nowrap
     // TODO Disallow preset dictionary for gzip
-    // TODO add close() method
 
     /**
      * Creates a new zlib encoder with the default compression level
