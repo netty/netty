@@ -75,6 +75,8 @@ public class ZlibDecoder extends OneToOneDecoder {
                 // Decompress 'in' into 'out'
                 int resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);
                 switch (resultCode) {
+                case JZlib.Z_STREAM_END:
+                    // TODO: Remove myself from the pipeline
                 case JZlib.Z_OK:
                 case JZlib.Z_BUF_ERROR:
                     decompressed.writeBytes(out, 0, z.next_out_index);
