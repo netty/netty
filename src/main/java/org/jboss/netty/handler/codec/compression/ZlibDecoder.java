@@ -47,9 +47,11 @@ public class ZlibDecoder extends OneToOneDecoder {
      * @throws ZStreamException if failed to initialize zlib
      */
     public ZlibDecoder() throws ZStreamException {
-        int resultCode = z.inflateInit();
-        if (resultCode != JZlib.Z_OK) {
-            ZlibUtil.fail(z, "initialization failure", resultCode);
+        synchronized (z) {
+            int resultCode = z.inflateInit();
+            if (resultCode != JZlib.Z_OK) {
+                ZlibUtil.fail(z, "initialization failure", resultCode);
+            }
         }
     }
 
@@ -63,14 +65,16 @@ public class ZlibDecoder extends OneToOneDecoder {
             throw new NullPointerException("dictionary");
         }
 
-        int resultCode;
-        resultCode = z.inflateInit();
-        if (resultCode != JZlib.Z_OK) {
-            ZlibUtil.fail(z, "initialization failure", resultCode);
-        } else {
-            resultCode = z.inflateSetDictionary(dictionary, dictionary.length);
+        synchronized (z) {
+            int resultCode;
+            resultCode = z.inflateInit();
             if (resultCode != JZlib.Z_OK) {
-                ZlibUtil.fail(z, "failed to set the dictionary", resultCode);
+                ZlibUtil.fail(z, "initialization failure", resultCode);
+            } else {
+                resultCode = z.inflateSetDictionary(dictionary, dictionary.length);
+                if (resultCode != JZlib.Z_OK) {
+                    ZlibUtil.fail(z, "failed to set the dictionary", resultCode);
+                }
             }
         }
     }
@@ -89,53 +93,58 @@ public class ZlibDecoder extends OneToOneDecoder {
             return msg;
         }
 
-        try {
-            // Configure input.
-            ChannelBuffer compressed = (ChannelBuffer) msg;
-            byte[] in = new byte[compressed.readableBytes()];
-            compressed.readBytes(in);
-            z.next_in = in;
-            z.next_in_index = 0;
-            z.avail_in = in.length;
+        synchronized (z) {
+            try {
+                // Configure input.
+                ChannelBuffer compressed = (ChannelBuffer) msg;
+                byte[] in = new byte[compressed.readableBytes()];
+                compressed.readBytes(in);
+                z.next_in = in;
+                z.next_in_index = 0;
+                z.avail_in = in.length;
 
-            // Configure output.
-            byte[] out = new byte[in.length << 1];
-            ChannelBuffer decompressed = ChannelBuffers.dynamicBuffer(
-                    compressed.order(), out.length,
-                    ctx.getChannel().getConfig().getBufferFactory());
-            z.next_out = out;
-            z.next_out_index = 0;
-            z.avail_out = out.length;
+                // Configure output.
+                byte[] out = new byte[in.length << 1];
+                ChannelBuffer decompressed = ChannelBuffers.dynamicBuffer(
+                        compressed.order(), out.length,
+                        ctx.getChannel().getConfig().getBufferFactory());
+                z.next_out = out;
+                z.next_out_index = 0;
+                z.avail_out = out.length;
 
-            do {
-                // Decompress 'in' into 'out'
-                int resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);
-                switch (resultCode) {
-                case JZlib.Z_STREAM_END:
-                    finished = true; // Do not decode anymore.
-                case JZlib.Z_OK:
-                case JZlib.Z_BUF_ERROR:
-                    decompressed.writeBytes(out, 0, z.next_out_index);
-                    z.next_out_index = 0;
-                    z.avail_out = out.length;
-                    break;
-                default:
-                    ZlibUtil.fail(z, "decompression failure", resultCode);
+                do {
+                    // Decompress 'in' into 'out'
+                    int resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);
+                    switch (resultCode) {
+                    case JZlib.Z_STREAM_END:
+                    case JZlib.Z_OK:
+                    case JZlib.Z_BUF_ERROR:
+                        decompressed.writeBytes(out, 0, z.next_out_index);
+                        z.next_out_index = 0;
+                        z.avail_out = out.length;
+                        if (resultCode == JZlib.Z_STREAM_END) {
+                            finished = true; // Do not decode anymore.
+                            z.inflateEnd();
+                        }
+                        break;
+                    default:
+                        ZlibUtil.fail(z, "decompression failure", resultCode);
+                    }
+                } while (z.avail_in > 0);
+
+                if (decompressed.writerIndex() != 0) { // readerIndex is always 0
+                    return decompressed;
+                } else {
+                    return ChannelBuffers.EMPTY_BUFFER;
                 }
-            } while (z.avail_in > 0);
-
-            if (decompressed.writerIndex() != 0) { // readerIndex is always 0
-                return decompressed;
-            } else {
-                return ChannelBuffers.EMPTY_BUFFER;
+            } finally {
+                // Deference the external references explicitly to tell the VM that
+                // the allocated byte arrays are temporary so that the call stack
+                // can be utilized.
+                // I'm not sure if the modern VMs do this optimization though.
+                z.next_in = null;
+                z.next_out = null;
             }
-        } finally {
-            // Deference the external references explicitly to tell the VM that
-            // the allocated byte arrays are temporary so that the call stack
-            // can be utilized.
-            // I'm not sure if the modern VMs do this optimization though.
-            z.next_in = null;
-            z.next_out = null;
         }
     }
 }
