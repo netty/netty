@@ -404,6 +404,13 @@ final class Inflate {
                 z.avail_in --;
                 z.total_in ++;
                 gzipFlag = z.next_in[z.next_in_index ++] & 0xff;
+
+                if ((gzipFlag & 0xE2) != 0) {
+                    z.istate.mode = BAD;
+                    z.msg = "unsupported flag";
+                    z.istate.marker = 5; // can't try inflateSync
+                    break;
+                }
                 gzipBytesToRead = 6;
                 z.istate.mode = GZIP_MTIME_XFL_OS;
             case GZIP_MTIME_XFL_OS:
