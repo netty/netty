@@ -79,7 +79,7 @@ public class ZlibEncoder extends OneToOneEncoder {
     public ZlibEncoder(int compressionLevel) throws ZStreamException {
         int resultCode = z.deflateInit(compressionLevel, false); // Default: ZLIB format
         if (resultCode != JZlib.Z_OK) {
-            fail(z, "initialization failure", resultCode);
+            ZlibUtil.fail(z, "initialization failure", resultCode);
         }
     }
 
@@ -119,11 +119,11 @@ public class ZlibEncoder extends OneToOneEncoder {
         int resultCode;
         resultCode = z.deflateInit(compressionLevel, false); // Default: ZLIB format
         if (resultCode != JZlib.Z_OK) {
-            fail(z, "initialization failure", resultCode);
+            ZlibUtil.fail(z, "initialization failure", resultCode);
         } else {
             resultCode = z.deflateSetDictionary(dictionary, dictionary.length);
             if (resultCode != JZlib.Z_OK){
-                fail(z, "failed to set the dictionary", resultCode);
+                ZlibUtil.fail(z, "failed to set the dictionary", resultCode);
             }
         }
     }
@@ -152,7 +152,7 @@ public class ZlibEncoder extends OneToOneEncoder {
             // Note that Z_PARTIAL_FLUSH has been deprecated.
             int resultCode = z.deflate(JZlib.Z_SYNC_FLUSH);
             if (resultCode != JZlib.Z_OK) {
-                fail(z, "compression failure", resultCode);
+                ZlibUtil.fail(z, "compression failure", resultCode);
             }
 
             if (z.next_out_index != 0) {
@@ -216,7 +216,7 @@ public class ZlibEncoder extends OneToOneEncoder {
             if (resultCode != JZlib.Z_OK && resultCode != JZlib.Z_STREAM_END) {
                 future = Channels.failedFuture(
                         ctx.getChannel(),
-                        exception(z, "compression failure", resultCode));
+                        ZlibUtil.exception(z, "compression failure", resultCode));
             } else if (z.next_out_index != 0) {
                 future = Channels.future(ctx.getChannel());
                 Channels.write(
@@ -249,14 +249,5 @@ public class ZlibEncoder extends OneToOneEncoder {
             z.next_in = null;
             z.next_out = null;
         }
-    }
-
-    static void fail(ZStream z, String message, int resultCode) throws ZStreamException {
-        throw exception(z, message, resultCode);
-    }
-
-    static ZStreamException exception(ZStream z, String message, int resultCode) {
-        return new ZStreamException(message + " (" + resultCode + ")" +
-                (z.msg != null? ": " + z.msg : ""));
     }
 }

@@ -48,7 +48,7 @@ public class ZlibDecoder extends OneToOneDecoder {
     public ZlibDecoder() throws ZStreamException {
         int resultCode = z.inflateInit();
         if (resultCode != JZlib.Z_OK) {
-            ZlibEncoder.fail(z, "initialization failure", resultCode);
+            ZlibUtil.fail(z, "initialization failure", resultCode);
         }
     }
 
@@ -65,11 +65,11 @@ public class ZlibDecoder extends OneToOneDecoder {
         int resultCode;
         resultCode = z.inflateInit();
         if (resultCode != JZlib.Z_OK) {
-            ZlibEncoder.fail(z, "initialization failure", resultCode);
+            ZlibUtil.fail(z, "initialization failure", resultCode);
         } else {
             resultCode = z.inflateSetDictionary(dictionary, dictionary.length);
             if (resultCode != JZlib.Z_OK) {
-                ZlibEncoder.fail(z, "failed to set the dictionary", resultCode);
+                ZlibUtil.fail(z, "failed to set the dictionary", resultCode);
             }
         }
     }
@@ -111,9 +111,7 @@ public class ZlibDecoder extends OneToOneDecoder {
                     z.avail_out = out.length;
                     break;
                 default:
-                    throw new ZStreamException(
-                            "decompression failure (" + resultCode + ")" +
-                            (z.msg != null? ": " + z.msg : ""));
+                    ZlibUtil.fail(z, "decompression failure", resultCode);
                 }
             } while (z.avail_in > 0);
 
