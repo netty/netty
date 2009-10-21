@@ -16,11 +16,10 @@
 
 /**
  * Encoder and decoder which compresses and decompresses {@link ChannelBuffer}s
- * in a compression format such as <a href="http://en.wikipedia.org/wiki/Zlib">zlib</a>,
- * <a href="http://en.wikipedia.org/wiki/Gzip">gzip</a>, and
- * <a href="http://en.wikipedia.org/wiki/Bzip2">bzip2</a>.
+ * in a compression format such as <a href="http://en.wikipedia.org/wiki/Zlib">zlib</a>
+ * and <a href="http://en.wikipedia.org/wiki/Gzip">gzip</a>.
  *
  * @apiviz.exclude \.codec\.(?!compression)[a-z0-9]+\.
  */
 package org.jboss.netty.handler.codec.compression;
-// TODO Implement bzip2 handlers
+// TODO Implement bzip2 and lzma handlers
