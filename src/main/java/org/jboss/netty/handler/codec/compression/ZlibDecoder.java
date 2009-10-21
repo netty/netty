@@ -47,7 +47,7 @@ public class ZlibDecoder extends OneToOneDecoder {
      */
     public ZlibDecoder() {
         synchronized (z) {
-            int resultCode = z.inflateInit();
+            int resultCode = z.inflateInit(JZlib.W_ZLIB);
             if (resultCode != JZlib.Z_OK) {
                 ZlibUtil.fail(z, "initialization failure", resultCode);
             }
@@ -66,7 +66,7 @@ public class ZlibDecoder extends OneToOneDecoder {
 
         synchronized (z) {
             int resultCode;
-            resultCode = z.inflateInit();
+            resultCode = z.inflateInit(JZlib.W_ZLIB);
             if (resultCode != JZlib.Z_OK) {
                 ZlibUtil.fail(z, "initialization failure", resultCode);
             } else {

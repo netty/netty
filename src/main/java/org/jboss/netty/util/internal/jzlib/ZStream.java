@@ -65,6 +65,7 @@ public final class ZStream {
     Inflate istate;
     int data_type; // best guess about the data type: ascii or binary
     long adler;
+    long crc32;
 
     public int inflateInit() {
         return inflateInit(JZlib.DEF_WBITS);
@@ -214,9 +215,15 @@ public final class ZStream {
 
         avail_in -= len;
 
-        if (dstate.wrapperType == WrapperType.ZLIB) {
+        switch (dstate.wrapperType) {
+        case ZLIB:
             adler = Adler32.adler32(adler, next_in, next_in_index, len);
+            break;
+        case GZIP:
+            crc32 = CRC32.crc32(crc32, next_in, next_in_index, len);
+            break;
         }
+
         System.arraycopy(next_in, next_in_index, buf, start, len);
         next_in_index += len;
         total_in += len;

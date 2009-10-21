@@ -67,6 +67,26 @@ final class Inflate {
     private static final int DONE = 12; // finished check, done
     private static final int BAD = 13; // got an error--stay here
 
+    private static final int GZIP_CHECK8 = 14;
+    private static final int GZIP_CHECK7 = 15;
+    private static final int GZIP_CHECK6 = 16;
+    private static final int GZIP_CHECK5 = 17;
+    private static final int GZIP_CHECK4 = 18;
+    private static final int GZIP_CHECK3 = 19;
+    private static final int GZIP_CHECK2 = 20;
+    private static final int GZIP_CHECK1 = 21;
+
+    private static final int GZIP_ID1 = 22;
+    private static final int GZIP_ID2 = 23;
+    private static final int GZIP_CM = 24;
+    private static final int GZIP_FLG = 25;
+    private static final int GZIP_MTIME_XFL_OS = 26;
+    private static final int GZIP_XLEN = 27;
+    private static final int GZIP_FEXTRA = 28;
+    private static final int GZIP_FNAME = 29;
+    private static final int GZIP_FCOMMENT = 30;
+    private static final int GZIP_FHCRC = 31;
+
     private int mode; // current inflate mode
     // mode dependent information
     private int method; // if FLAGS, method byte
@@ -79,6 +99,9 @@ final class Inflate {
     private WrapperType wrapperType;
     private int wbits; // log2(window size)  (8..15, defaults to 15)
     private InfBlocks blocks; // current inflate_blocks state
+    private int gzipFlag;
+    private int gzipBytesToRead;
+    private int gzipXLen;
 
     private int inflateReset(ZStream z) {
         if (z == null || z.istate == null) {
@@ -87,7 +110,17 @@ final class Inflate {
 
         z.total_in = z.total_out = 0;
         z.msg = null;
-        z.istate.mode = z.istate.wrapperType == WrapperType.NONE? BLOCKS : METHOD;
+        switch (wrapperType) {
+        case NONE:
+            z.istate.mode = BLOCKS;
+            break;
+        case ZLIB:
+            z.istate.mode = METHOD;
+            break;
+        case GZIP:
+            z.istate.mode = GZIP_ID1;
+            break;
+        }
         z.istate.blocks.reset(z, null);
         return JZlib.Z_OK;
     }
@@ -254,8 +287,12 @@ final class Inflate {
                 if (z.istate.wrapperType == WrapperType.NONE) {
                     z.istate.mode = DONE;
                     break;
+                } else if (z.istate.wrapperType == WrapperType.ZLIB) {
+                    z.istate.mode = CHECK4;
+                } else {
+                    z.istate.mode = GZIP_CHECK8;
+                    break;
                 }
-                z.istate.mode = CHECK4;
             case CHECK4:
 
                 if (z.avail_in == 0) {
@@ -312,6 +349,218 @@ final class Inflate {
                 return JZlib.Z_STREAM_END;
             case BAD:
                 return JZlib.Z_DATA_ERROR;
+            case GZIP_ID1:
+                if (z.avail_in == 0) {
+                    return r;
+                }
+                r = f;
+                z.avail_in --;
+                z.total_in ++;
+
+                if ((z.next_in[z.next_in_index ++] & 0xff) != 31) {
+                    z.istate.mode = BAD;
+                    z.msg = "not a gzip stream";
+                    z.istate.marker = 5; // can't try inflateSync
+                    break;
+                }
+                z.istate.mode = GZIP_ID2;
+            case GZIP_ID2:
+                if (z.avail_in == 0) {
+                    return r;
+                }
+                r = f;
+                z.avail_in --;
+                z.total_in ++;
+
+                if ((z.next_in[z.next_in_index ++] & 0xff) != 139) {
+                    z.istate.mode = BAD;
+                    z.msg = "not a gzip stream";
+                    z.istate.marker = 5; // can't try inflateSync
+                    break;
+                }
+                z.istate.mode = GZIP_CM;
+            case GZIP_CM:
+                if (z.avail_in == 0) {
+                    return r;
+                }
+                r = f;
+                z.avail_in --;
+                z.total_in ++;
+
+                if ((z.next_in[z.next_in_index ++] & 0xff) != JZlib.Z_DEFLATED) {
+                    z.istate.mode = BAD;
+                    z.msg = "unknown compression method";
+                    z.istate.marker = 5; // can't try inflateSync
+                    break;
+                }
+                z.istate.mode = GZIP_FLG;
+            case GZIP_FLG:
+                if (z.avail_in == 0) {
+                    return r;
+                }
+                r = f;
+                z.avail_in --;
+                z.total_in ++;
+                gzipFlag = z.next_in[z.next_in_index ++] & 0xff;
+                gzipBytesToRead = 6;
+                z.istate.mode = GZIP_MTIME_XFL_OS;
+            case GZIP_MTIME_XFL_OS:
+                while (gzipBytesToRead > 0) {
+                    if (z.avail_in == 0) {
+                        return r;
+                    }
+                    r = f;
+                    z.avail_in --;
+                    z.total_in ++;
+                    z.next_in_index ++;
+                    gzipBytesToRead --;
+                }
+                z.istate.mode = GZIP_XLEN;
+                gzipXLen = 0;
+                gzipBytesToRead = 2;
+            case GZIP_XLEN:
+                if ((gzipFlag & 4) != 0) {
+                    while (gzipBytesToRead > 0) {
+                        if (z.avail_in == 0) {
+                            return r;
+                        }
+                        r = f;
+                        z.avail_in --;
+                        z.total_in ++;
+                        gzipXLen = gzipXLen << 8 | z.next_in[z.next_in_index ++] & 0xff;
+                        gzipBytesToRead --;
+                    }
+                    gzipBytesToRead = gzipXLen;
+                    z.istate.mode = GZIP_FEXTRA;
+                } else {
+                    z.istate.mode = GZIP_FNAME;
+                    break;
+                }
+            case GZIP_FEXTRA:
+                while (gzipBytesToRead > 0) {
+                    if (z.avail_in == 0) {
+                        return r;
+                    }
+                    r = f;
+                    z.avail_in --;
+                    z.total_in ++;
+                    z.next_in_index ++;
+                    gzipBytesToRead --;
+                }
+                z.istate.mode = GZIP_FNAME;
+            case GZIP_FNAME:
+                if ((gzipFlag & 8) != 0) {
+                    do {
+                        if (z.avail_in == 0) {
+                            return r;
+                        }
+                        r = f;
+                        z.avail_in --;
+                        z.total_in ++;
+                    } while (z.next_in[z.next_in_index ++] == 0);
+                }
+                z.istate.mode = GZIP_FCOMMENT;
+            case GZIP_FCOMMENT:
+                if ((gzipFlag & 16) != 0) {
+                    do {
+                        if (z.avail_in == 0) {
+                            return r;
+                        }
+                        r = f;
+                        z.avail_in --;
+                        z.total_in ++;
+                    } while (z.next_in[z.next_in_index ++] == 0);
+                }
+                gzipBytesToRead = 2;
+                z.istate.mode = GZIP_FHCRC;
+            case GZIP_FHCRC:
+                if ((gzipFlag & 2) != 0) {
+                    while (gzipBytesToRead > 0) {
+                        if (z.avail_in == 0) {
+                            return r;
+                        }
+                        r = f;
+                        z.avail_in --;
+                        z.total_in ++;
+                        z.next_in_index ++;
+                        gzipBytesToRead --;
+                    }
+                }
+                z.istate.mode = BLOCKS;
+                break;
+            case GZIP_CHECK8:
+                if (z.avail_in == 0) {
+                    return r;
+                }
+                r = f;
+                z.avail_in --;
+                z.total_in ++;
+                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
+                z.istate.mode = GZIP_CHECK7;
+            case GZIP_CHECK7:
+                if (z.avail_in == 0) {
+                    return r;
+                }
+                r = f;
+                z.avail_in --;
+                z.total_in ++;
+                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
+                z.istate.mode = GZIP_CHECK6;
+            case GZIP_CHECK6:
+                if (z.avail_in == 0) {
+                    return r;
+                }
+                r = f;
+                z.avail_in --;
+                z.total_in ++;
+                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
+                z.istate.mode = GZIP_CHECK5;
+            case GZIP_CHECK5:
+                if (z.avail_in == 0) {
+                    return r;
+                }
+                r = f;
+                z.avail_in --;
+                z.total_in ++;
+                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
+                z.istate.mode = GZIP_CHECK4;
+            case GZIP_CHECK4:
+                if (z.avail_in == 0) {
+                    return r;
+                }
+                r = f;
+                z.avail_in --;
+                z.total_in ++;
+                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
+                z.istate.mode = GZIP_CHECK3;
+            case GZIP_CHECK3:
+                if (z.avail_in == 0) {
+                    return r;
+                }
+                r = f;
+                z.avail_in --;
+                z.total_in ++;
+                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
+                z.istate.mode = GZIP_CHECK2;
+            case GZIP_CHECK2:
+                if (z.avail_in == 0) {
+                    return r;
+                }
+                r = f;
+                z.avail_in --;
+                z.total_in ++;
+                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
+                z.istate.mode = GZIP_CHECK1;
+            case GZIP_CHECK1:
+                if (z.avail_in == 0) {
+                    return r;
+                }
+                r = f;
+                z.avail_in --;
+                z.total_in ++;
+                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
+                z.istate.mode = DONE;
+                break;
             default:
                 return JZlib.Z_STREAM_ERROR;
             }

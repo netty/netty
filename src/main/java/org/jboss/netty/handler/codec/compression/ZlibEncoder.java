@@ -223,7 +223,7 @@ public class ZlibEncoder extends OneToOneEncoder {
                 z.avail_in = 0;
 
                 // Configure output.
-                byte[] out = new byte[8]; // Minimum room for ADLER32 + ZLIB header
+                byte[] out = new byte[32]; // room for ADLER32 + ZLIB / CRC32 + GZIP header
                 z.next_out = out;
                 z.next_out_index = 0;
                 z.avail_out = out.length;

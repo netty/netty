@@ -1378,6 +1378,7 @@ final class Deflate {
         wroteTrailer = false;
         status = wrapperType == WrapperType.NONE? BUSY_STATE : INIT_STATE;
         strm.adler = Adler32.adler32(0, null, 0, 0);
+        strm.crc32 = CRC32.crc32(0, null, 0, 0);
 
         last_flush = JZlib.Z_NO_FLUSH;
 
@@ -1490,27 +1491,62 @@ final class Deflate {
 
         // Write the zlib header
         if (status == INIT_STATE) {
-            int header = JZlib.Z_DEFLATED + (w_bits - 8 << 4) << 8;
-            int level_flags = (level - 1 & 0xff) >> 1;
+            switch (wrapperType) {
+            case ZLIB:
+                int header = JZlib.Z_DEFLATED + (w_bits - 8 << 4) << 8;
+                int level_flags = (level - 1 & 0xff) >> 1;
 
-            if (level_flags > 3) {
-                level_flags = 3;
+                if (level_flags > 3) {
+                    level_flags = 3;
+                }
+                header |= level_flags << 6;
+                if (strstart != 0) {
+                    header |= JZlib.PRESET_DICT;
+                }
+                header += 31 - header % 31;
+
+                putShortMSB(header);
+
+                // Save the adler32 of the preset dictionary:
+                if (strstart != 0) {
+                    putShortMSB((int) (strm.adler >>> 16));
+                    putShortMSB((int) (strm.adler & 0xffff));
+                }
+                strm.adler = Adler32.adler32(0, null, 0, 0);
+                break;
+            case GZIP:
+                // Identification
+                put_byte((byte) 0x1f);
+                put_byte((byte) 0x8b);
+                // Compression method: DEFLATE
+                put_byte((byte) 8);
+                // Flags
+                put_byte((byte) 0);
+                // MTIME
+                put_byte((byte) 0);
+                put_byte((byte) 0);
+                put_byte((byte) 0);
+                put_byte((byte) 0);
+                // XFL
+                switch (config_table[level].func) {
+                case FAST:
+                    put_byte((byte) 4);
+                    break;
+                case SLOW:
+                    put_byte((byte) 2);
+                    break;
+                default:
+                    put_byte((byte) 0);
+                    break;
+                }
+                // OS
+                put_byte((byte) 255);
+
+                strm.crc32 = CRC32.crc32(0, null, 0, 0);
+                break;
             }
-            header |= level_flags << 6;
-            if (strstart != 0) {
-                header |= JZlib.PRESET_DICT;
-            }
-            header += 31 - header % 31;
 
             status = BUSY_STATE;
-            putShortMSB(header);
-
-            // Save the adler32 of the preset dictionary:
-            if (strstart != 0) {
-                putShortMSB((int) (strm.adler >>> 16));
-                putShortMSB((int) (strm.adler & 0xffff));
-            }
-            strm.adler = Adler32.adler32(0, null, 0, 0);
         }
 
         // Flush as much pending output as possible
@@ -1605,11 +1641,23 @@ final class Deflate {
             return JZlib.Z_STREAM_END;
         }
 
-        // Write the zlib trailer (adler32)
-        putShortMSB((int) (strm.adler >>> 16));
-        putShortMSB((int) (strm.adler & 0xffff));
-        strm.flush_pending();
+        switch (wrapperType) {
+        case ZLIB:
+            // Write the zlib trailer (adler32)
+            putShortMSB((int) (strm.adler >>> 16));
+            putShortMSB((int) (strm.adler & 0xffff));
+            break;
+        case GZIP:
+            // Write the gzip trailer (crc32)
+            putShortMSB((int) (strm.crc32 >>> 16));
+            putShortMSB((int) (strm.crc32 & 0xffff));
+            // FIXME implement me
+            putShortMSB(0); // ISIZE 1
+            putShortMSB(0); // ISIZE 2
+            break;
+        }
 
+        strm.flush_pending();
         // If avail_out is zero, the application will call deflate again
         // to flush the rest.
         wroteTrailer = true; // write the trailer only once!
