@@ -459,7 +459,7 @@ final class Inflate {
                         r = f;
                         z.avail_in --;
                         z.total_in ++;
-                    } while (z.next_in[z.next_in_index ++] == 0);
+                    } while (z.next_in[z.next_in_index ++] != 0);
                 }
                 z.istate.mode = GZIP_FCOMMENT;
             case GZIP_FCOMMENT:
@@ -471,7 +471,7 @@ final class Inflate {
                         r = f;
                         z.avail_in --;
                         z.total_in ++;
-                    } while (z.next_in[z.next_in_index ++] == 0);
+                    } while (z.next_in[z.next_in_index ++] != 0);
                 }
                 gzipBytesToRead = 2;
                 z.istate.mode = GZIP_FHCRC;
