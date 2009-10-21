@@ -246,6 +246,7 @@ final class Deflate {
     // Number of valid bits in bi_buf.  All bits above the last valid bit
     // are always zero.
     int bi_valid;
+    private int gzipUncompressedBytes;
 
     Deflate() {
         dyn_ltree = new short[JZlib.HEAP_SIZE * 2];
@@ -1378,7 +1379,8 @@ final class Deflate {
         wroteTrailer = false;
         status = wrapperType == WrapperType.NONE? BUSY_STATE : INIT_STATE;
         strm.adler = Adler32.adler32(0, null, 0, 0);
-        strm.crc32 = CRC32.crc32(0, null, 0, 0);
+        strm.crc32 = 0;
+        gzipUncompressedBytes = 0;
 
         last_flush = JZlib.Z_NO_FLUSH;
 
@@ -1542,7 +1544,7 @@ final class Deflate {
                 // OS
                 put_byte((byte) 255);
 
-                strm.crc32 = CRC32.crc32(0, null, 0, 0);
+                strm.crc32 = 0;
                 break;
             }
 
@@ -1579,58 +1581,63 @@ final class Deflate {
         }
 
         // Start a new block or continue the current one.
-        if (strm.avail_in != 0 || lookahead != 0 || flush != JZlib.Z_NO_FLUSH &&
-                status != FINISH_STATE) {
-            int bstate = -1;
-            switch (config_table[level].func) {
-            case STORED:
-                bstate = deflate_stored(flush);
-                break;
-            case FAST:
-                bstate = deflate_fast(flush);
-                break;
-            case SLOW:
-                bstate = deflate_slow(flush);
-                break;
-            default:
-            }
-
-            if (bstate == FinishStarted || bstate == FinishDone) {
-                status = FINISH_STATE;
-            }
-            if (bstate == NeedMore || bstate == FinishStarted) {
-                if (strm.avail_out == 0) {
-                    last_flush = -1; // avoid BUF_ERROR next call, see above
+        int old_next_in_index = strm.next_in_index;
+        try {
+            if (strm.avail_in != 0 || lookahead != 0 || flush != JZlib.Z_NO_FLUSH &&
+                    status != FINISH_STATE) {
+                int bstate = -1;
+                switch (config_table[level].func) {
+                case STORED:
+                    bstate = deflate_stored(flush);
+                    break;
+                case FAST:
+                    bstate = deflate_fast(flush);
+                    break;
+                case SLOW:
+                    bstate = deflate_slow(flush);
+                    break;
+                default:
                 }
-                return JZlib.Z_OK;
-                // If flush != Z_NO_FLUSH && avail_out == 0, the next call
-                // of deflate should use the same flush parameter to make sure
-                // that the flush is complete. So we don't have to output an
-                // empty block here, this will be done at next call. This also
-                // ensures that for a very small output buffer, we emit at most
-                // one empty block.
-            }
 
-            if (bstate == BlockDone) {
-                if (flush == JZlib.Z_PARTIAL_FLUSH) {
-                    _tr_align();
-                } else { // FULL_FLUSH or SYNC_FLUSH
-                    _tr_stored_block(0, 0, false);
-                    // For a full flush, this empty block will be recognized
-                    // as a special marker by inflate_sync().
-                    if (flush == JZlib.Z_FULL_FLUSH) {
-                        //state.head[s.hash_size-1]=0;
-                        for (int i = 0; i < hash_size/*-1*/; i ++) {
-                            head[i] = 0;
+                if (bstate == FinishStarted || bstate == FinishDone) {
+                    status = FINISH_STATE;
+                }
+                if (bstate == NeedMore || bstate == FinishStarted) {
+                    if (strm.avail_out == 0) {
+                        last_flush = -1; // avoid BUF_ERROR next call, see above
+                    }
+                    return JZlib.Z_OK;
+                    // If flush != Z_NO_FLUSH && avail_out == 0, the next call
+                    // of deflate should use the same flush parameter to make sure
+                    // that the flush is complete. So we don't have to output an
+                    // empty block here, this will be done at next call. This also
+                    // ensures that for a very small output buffer, we emit at most
+                    // one empty block.
+                }
+
+                if (bstate == BlockDone) {
+                    if (flush == JZlib.Z_PARTIAL_FLUSH) {
+                        _tr_align();
+                    } else { // FULL_FLUSH or SYNC_FLUSH
+                        _tr_stored_block(0, 0, false);
+                        // For a full flush, this empty block will be recognized
+                        // as a special marker by inflate_sync().
+                        if (flush == JZlib.Z_FULL_FLUSH) {
+                            //state.head[s.hash_size-1]=0;
+                            for (int i = 0; i < hash_size/*-1*/; i ++) {
+                                head[i] = 0;
+                            }
                         }
                     }
-                }
-                strm.flush_pending();
-                if (strm.avail_out == 0) {
-                    last_flush = -1; // avoid BUF_ERROR at next call, see above
-                    return JZlib.Z_OK;
+                    strm.flush_pending();
+                    if (strm.avail_out == 0) {
+                        last_flush = -1; // avoid BUF_ERROR at next call, see above
+                        return JZlib.Z_OK;
+                    }
                 }
             }
+        } finally {
+            gzipUncompressedBytes += strm.next_in_index - old_next_in_index;
         }
 
         if (flush != JZlib.Z_FINISH) {
@@ -1648,12 +1655,11 @@ final class Deflate {
             putShortMSB((int) (strm.adler & 0xffff));
             break;
         case GZIP:
-            // Write the gzip trailer (crc32)
-            putShortMSB((int) (strm.crc32 >>> 16));
-            putShortMSB((int) (strm.crc32 & 0xffff));
-            // FIXME implement me
-            putShortMSB(0); // ISIZE 1
-            putShortMSB(0); // ISIZE 2
+            // Write the gzip trailer (CRC32 & ISIZE)
+            putShortMSB(strm.crc32 >>> 16);
+            putShortMSB(strm.crc32 & 0xFFFF);
+            putShortMSB(gzipUncompressedBytes >>> 16);   // ISIZE 1
+            putShortMSB(gzipUncompressedBytes & 0xFFFF); // ISIZE 2
             break;
         }
 

@@ -77,14 +77,8 @@ final class Inflate {
     private static final int GZIP_FNAME = 21;
     private static final int GZIP_FCOMMENT = 22;
     private static final int GZIP_FHCRC = 23;
-    private static final int GZIP_CHECK8 = 24;
-    private static final int GZIP_CHECK7 = 25;
-    private static final int GZIP_CHECK6 = 26;
-    private static final int GZIP_CHECK5 = 27;
-    private static final int GZIP_CHECK4 = 28;
-    private static final int GZIP_CHECK3 = 29;
-    private static final int GZIP_CHECK2 = 30;
-    private static final int GZIP_CHECK1 = 31;
+    private static final int GZIP_CRC32= 24;
+    private static final int GZIP_ISIZE = 25;
 
     private int mode; // current inflate mode
     // mode dependent information
@@ -101,6 +95,9 @@ final class Inflate {
     private int gzipFlag;
     private int gzipBytesToRead;
     private int gzipXLen;
+    private int gzipUncompressedBytes;
+    private int gzipCRC32;
+    private int gzipISize;
 
     private int inflateReset(ZStream z) {
         if (z == null || z.istate == null) {
@@ -121,6 +118,7 @@ final class Inflate {
             break;
         }
         z.istate.blocks.reset(z, null);
+        gzipUncompressedBytes = 0;
         return JZlib.Z_OK;
     }
 
@@ -268,32 +266,40 @@ final class Inflate {
                 z.istate.marker = 0; // can try inflateSync
                 return JZlib.Z_STREAM_ERROR;
             case BLOCKS:
-
-                r = z.istate.blocks.proc(z, r);
-                if (r == JZlib.Z_DATA_ERROR) {
-                    z.istate.mode = BAD;
-                    z.istate.marker = 0; // can try inflateSync
-                    break;
-                }
-                if (r == JZlib.Z_OK) {
+                int old_next_out_index = z.next_out_index;
+                try {
+                    r = z.istate.blocks.proc(z, r);
+                    if (r == JZlib.Z_DATA_ERROR) {
+                        z.istate.mode = BAD;
+                        z.istate.marker = 0; // can try inflateSync
+                        break;
+                    }
+                    if (r == JZlib.Z_OK) {
+                        r = f;
+                    }
+                    if (r != JZlib.Z_STREAM_END) {
+                        return r;
+                    }
                     r = f;
+                    z.istate.blocks.reset(z, z.istate.was);
+                } finally {
+                    int decompressedBytes = z.next_out_index - old_next_out_index;
+                    gzipUncompressedBytes += decompressedBytes;
+                    z.crc32 = CRC32.crc32(z.crc32, z.next_out, old_next_out_index, decompressedBytes);
                 }
-                if (r != JZlib.Z_STREAM_END) {
-                    return r;
-                }
-                r = f;
-                z.istate.blocks.reset(z, z.istate.was);
                 if (z.istate.wrapperType == WrapperType.NONE) {
                     z.istate.mode = DONE;
                     break;
                 } else if (z.istate.wrapperType == WrapperType.ZLIB) {
                     z.istate.mode = CHECK4;
                 } else {
-                    z.istate.mode = GZIP_CHECK8;
+                    gzipCRC32 = 0;
+                    gzipISize = 0;
+                    gzipBytesToRead = 4;
+                    z.istate.mode = GZIP_CRC32;
                     break;
                 }
             case CHECK4:
-
                 if (z.avail_in == 0) {
                     return r;
                 }
@@ -304,7 +310,6 @@ final class Inflate {
                 z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
                 z.istate.mode = CHECK3;
             case CHECK3:
-
                 if (z.avail_in == 0) {
                     return r;
                 }
@@ -315,7 +320,6 @@ final class Inflate {
                 z.istate.need += (z.next_in[z.next_in_index ++] & 0xff) << 16 & 0xff0000L;
                 z.istate.mode = CHECK2;
             case CHECK2:
-
                 if (z.avail_in == 0) {
                     return r;
                 }
@@ -326,7 +330,6 @@ final class Inflate {
                 z.istate.need += (z.next_in[z.next_in_index ++] & 0xff) << 8 & 0xff00L;
                 z.istate.mode = CHECK1;
             case CHECK1:
-
                 if (z.avail_in == 0) {
                     return r;
                 }
@@ -487,77 +490,45 @@ final class Inflate {
                 }
                 z.istate.mode = BLOCKS;
                 break;
-            case GZIP_CHECK8:
-                if (z.avail_in == 0) {
-                    return r;
+            case GZIP_CRC32:
+                while (gzipBytesToRead > 0) {
+                    if (z.avail_in == 0) {
+                        return r;
+                    }
+                    r = f;
+                    z.avail_in --;
+                    z.total_in ++;
+                    gzipBytesToRead --;
+                    z.istate.gzipCRC32 = z.istate.gzipCRC32 << 8 | z.next_in[z.next_in_index ++] & 0xff;
                 }
-                r = f;
-                z.avail_in --;
-                z.total_in ++;
-                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
-                z.istate.mode = GZIP_CHECK7;
-            case GZIP_CHECK7:
-                if (z.avail_in == 0) {
-                    return r;
+
+                if (z.crc32 != z.istate.gzipCRC32) {
+                    z.istate.mode = BAD;
+                    z.msg = "incorrect CRC32 checksum";
+                    z.istate.marker = 5; // can't try inflateSync
+                    break;
                 }
-                r = f;
-                z.avail_in --;
-                z.total_in ++;
-                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
-                z.istate.mode = GZIP_CHECK6;
-            case GZIP_CHECK6:
-                if (z.avail_in == 0) {
-                    return r;
+                gzipBytesToRead = 4;
+                z.istate.mode = GZIP_ISIZE;
+            case GZIP_ISIZE:
+                while (gzipBytesToRead > 0) {
+                    if (z.avail_in == 0) {
+                        return r;
+                    }
+                    r = f;
+                    z.avail_in --;
+                    z.total_in ++;
+                    gzipBytesToRead --;
+                    z.istate.gzipISize = z.istate.gzipISize << 8 | z.next_in[z.next_in_index ++] & 0xff;
                 }
-                r = f;
-                z.avail_in --;
-                z.total_in ++;
-                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
-                z.istate.mode = GZIP_CHECK5;
-            case GZIP_CHECK5:
-                if (z.avail_in == 0) {
-                    return r;
+
+                if (gzipUncompressedBytes != z.istate.gzipISize) {
+                    z.istate.mode = BAD;
+                    z.msg = "incorrect ISIZE checksum";
+                    z.istate.marker = 5; // can't try inflateSync
+                    break;
                 }
-                r = f;
-                z.avail_in --;
-                z.total_in ++;
-                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
-                z.istate.mode = GZIP_CHECK4;
-            case GZIP_CHECK4:
-                if (z.avail_in == 0) {
-                    return r;
-                }
-                r = f;
-                z.avail_in --;
-                z.total_in ++;
-                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
-                z.istate.mode = GZIP_CHECK3;
-            case GZIP_CHECK3:
-                if (z.avail_in == 0) {
-                    return r;
-                }
-                r = f;
-                z.avail_in --;
-                z.total_in ++;
-                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
-                z.istate.mode = GZIP_CHECK2;
-            case GZIP_CHECK2:
-                if (z.avail_in == 0) {
-                    return r;
-                }
-                r = f;
-                z.avail_in --;
-                z.total_in ++;
-                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
-                z.istate.mode = GZIP_CHECK1;
-            case GZIP_CHECK1:
-                if (z.avail_in == 0) {
-                    return r;
-                }
-                r = f;
-                z.avail_in --;
-                z.total_in ++;
-                z.istate.need = (z.next_in[z.next_in_index ++] & 0xff) << 24 & 0xff000000L;
+
                 z.istate.mode = DONE;
                 break;
             default:

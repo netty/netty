@@ -65,7 +65,7 @@ public final class ZStream {
     Inflate istate;
     int data_type; // best guess about the data type: ascii or binary
     long adler;
-    long crc32;
+    int crc32;
 
     public int inflateInit() {
         return inflateInit(JZlib.DEF_WBITS);
