@@ -42,9 +42,36 @@ public class ZlibDecoder extends OneToOneDecoder {
 
     /**
      * Creates a new instance.
+     *
+     * @throws ZStreamException if failed to initialize zlib
      */
-    public ZlibDecoder() {
-        z.inflateInit();
+    public ZlibDecoder() throws ZStreamException {
+        int resultCode = z.inflateInit();
+        if (resultCode != JZlib.Z_OK) {
+            ZlibEncoder.fail(z, "initialization failure", resultCode);
+        }
+    }
+
+    /**
+     * Creates a new instance with the specified preset dictionary.
+     *
+     * @throws ZStreamException if failed to initialize zlib
+     */
+    public ZlibDecoder(byte[] dictionary) throws ZStreamException {
+        if (dictionary == null) {
+            throw new NullPointerException("dictionary");
+        }
+
+        int resultCode;
+        resultCode = z.inflateInit();
+        if (resultCode != JZlib.Z_OK) {
+            ZlibEncoder.fail(z, "initialization failure", resultCode);
+        } else {
+            resultCode = z.inflateSetDictionary(dictionary, dictionary.length);
+            if (resultCode != JZlib.Z_OK) {
+                ZlibEncoder.fail(z, "failed to set the dictionary", resultCode);
+            }
+        }
     }
 
     @Override
