@@ -311,6 +311,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
             if (handshaking) {
                 return this.handshakeFuture;
             } else {
+                handshaking = true;
                 try {
                     engine.beginHandshake();
                     runDelegatedTasks();
@@ -318,7 +319,6 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
                 } catch (SSLException e) {
                     handshakeFuture = this.handshakeFuture = failedFuture(channel, e);
                 }
-                handshaking = true;
             }
         }
 
