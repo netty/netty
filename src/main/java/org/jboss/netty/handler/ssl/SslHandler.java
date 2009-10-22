@@ -305,21 +305,28 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
      * @return a {@link ChannelFuture} which is notified when the handshake
      *         succeeds or fails.
      */
-    public ChannelFuture handshake(Channel channel) throws SSLException {
-        // FIXME do not throw SSLException - return a failed future.
+    public ChannelFuture handshake(Channel channel) {
         ChannelFuture handshakeFuture;
         synchronized (handshakeLock) {
             if (handshaking) {
                 return this.handshakeFuture;
             } else {
-                engine.beginHandshake();
-                runDelegatedTasks();
-                handshakeFuture = this.handshakeFuture = future(channel);
+                try {
+                    engine.beginHandshake();
+                    runDelegatedTasks();
+                    handshakeFuture = this.handshakeFuture = future(channel);
+                } catch (SSLException e) {
+                    handshakeFuture = this.handshakeFuture = failedFuture(channel, e);
+                }
                 handshaking = true;
             }
         }
 
-        wrapNonAppData(context(channel), channel);
+        try {
+            wrapNonAppData(context(channel), channel);
+        } catch (SSLException e) {
+            handshakeFuture.setFailure(e);
+        }
         return handshakeFuture;
     }
 
@@ -327,11 +334,14 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
      * Sends an SSL {@code close_notify} message to the specified channel and
      * destroys the underlying {@link SSLEngine}.
      */
-    public ChannelFuture close(Channel channel) throws SSLException {
-        // FIXME do not throw SSLException - return a failed future.
-        ChannelHandlerContext ctx = context(channel);
-        engine.closeOutbound();
-        return wrapNonAppData(ctx, channel);
+    public ChannelFuture close(Channel channel) {
+        try {
+            ChannelHandlerContext ctx = context(channel);
+            engine.closeOutbound();
+            return wrapNonAppData(ctx, channel);
+        } catch (SSLException e) {
+            return failedFuture(channel, e);
+        }
     }
 
     private ChannelHandlerContext context(Channel channel) {
