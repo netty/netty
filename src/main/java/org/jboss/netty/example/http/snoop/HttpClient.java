@@ -87,6 +87,7 @@ public class HttpClient {
                 HttpVersion.HTTP_1_1, HttpMethod.GET, uri.toASCIIString());
         request.setHeader(HttpHeaders.Names.HOST, host);
         request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+        request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
         CookieEncoder httpCookieEncoder = new CookieEncoder(false);
         httpCookieEncoder.addCookie("my-cookie", "foo");
         httpCookieEncoder.addCookie("another-cookie", "bar");
