@@ -23,7 +23,6 @@ import java.nio.channels.NotYetConnectedException;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -184,13 +183,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
 
                         SslHandler sslHandler = new SslHandler(engine);
                         realChannel.getPipeline().addFirst("ssl", sslHandler);
-                        try {
-                            sslHandshakeFuture = sslHandler.handshake(realChannel);
-                        } catch (SSLException e) {
-                            future.setFailure(e);
-                            fireExceptionCaught(virtualChannel, e);
-                            return;
-                        }
+                        sslHandshakeFuture = sslHandler.handshake(realChannel);
                     }
 
                     // Send the HTTP request.
