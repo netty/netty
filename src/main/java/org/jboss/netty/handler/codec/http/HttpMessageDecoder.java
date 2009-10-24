@@ -217,10 +217,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
         case READ_VARIABLE_LENGTH_CONTENT: {
             if (content == null) {
-                content = ChannelBuffers.dynamicBuffer(channel.getConfig().getBufferFactory());
+                content = ChannelBuffers.EMPTY_BUFFER;
             }
             //this will cause a replay error until the channel is closed where this will read what's left in the buffer
-            content.writeBytes(buffer.readBytes(buffer.readableBytes()));
+            content = ChannelBuffers.wrappedBuffer(content, buffer);
             return reset();
         }
         case READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS: {
@@ -399,6 +399,8 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             content = buffer.readBytes((int) length);
         } else {
             content.writeBytes(buffer.readBytes((int) length));
+            content = ChannelBuffers.wrappedBuffer(content,
+                    buffer.readBytes((int) length));
         }
     }
 
@@ -550,13 +552,13 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         int cStart;
         int cEnd;
 
-        aStart = findNonWhitespace(sb, 0);
+        aStart = HttpPostBodyUtil.findNonWhitespace(sb, 0);
         aEnd = findWhitespace(sb, aStart);
 
-        bStart = findNonWhitespace(sb, aEnd);
+        bStart = HttpPostBodyUtil.findNonWhitespace(sb, aEnd);
         bEnd = findWhitespace(sb, bStart);
 
-        cStart = findNonWhitespace(sb, bEnd);
+        cStart = HttpPostBodyUtil.findNonWhitespace(sb, bEnd);
         cEnd = findEndOfString(sb);
 
         return new String[] {
@@ -573,7 +575,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         int valueStart;
         int valueEnd;
 
-        nameStart = findNonWhitespace(sb, 0);
+        nameStart = HttpPostBodyUtil.findNonWhitespace(sb, 0);
         for (nameEnd = nameStart; nameEnd < length; nameEnd ++) {
             char ch = sb.charAt(nameEnd);
             if (ch == ':' || Character.isWhitespace(ch)) {
@@ -588,7 +590,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             }
         }
 
-        valueStart = findNonWhitespace(sb, colonEnd);
+        valueStart = HttpPostBodyUtil.findNonWhitespace(sb, colonEnd);
         if (valueStart == length) {
             return new String[] {
                     sb.substring(nameStart, nameEnd),
@@ -601,16 +603,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 sb.substring(nameStart, nameEnd),
                 sb.substring(valueStart, valueEnd)
         };
-    }
-
-    private int findNonWhitespace(String sb, int offset) {
-        int result;
-        for (result = offset; result < sb.length(); result ++) {
-            if (!Character.isWhitespace(sb.charAt(result))) {
-                break;
-            }
-        }
-        return result;
     }
 
     private int findWhitespace(String sb, int offset) {

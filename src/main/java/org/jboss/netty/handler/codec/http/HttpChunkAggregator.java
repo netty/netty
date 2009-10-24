@@ -94,7 +94,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
                 if (encodings.isEmpty()) {
                     m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
                 }
-                m.setContent(ChannelBuffers.dynamicBuffer(e.getChannel().getConfig().getBufferFactory()));
+                m.setContent(ChannelBuffers.EMPTY_BUFFER);
                 this.currentMessage = m;
             } else {
                 // Not a chunked message - pass through.
@@ -111,7 +111,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
                         " bytes.");
             }
 
-            content.writeBytes(chunk.getContent());
+            currentMessage.setContent(ChannelBuffers.wrappedBuffer(content, chunk.getContent()));
             if (chunk.isLast()) {
                 this.currentMessage = null;
                 currentMessage.setHeader(
