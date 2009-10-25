@@ -465,20 +465,20 @@ public abstract class AbstractTrafficShapingHandler extends
             long size = objectSizeEstimator.estimateSize(arg1.getMessage());
             if (trafficCounter != null) {
                 trafficCounter.bytesWriteFlowControl(size);
-            }
-            if (writeLimit == 0) {
-                return;
-            }
-            // compute the number of ms to wait before continue with the channel
-            long wait = getTimeToWait(writeLimit, trafficCounter
-                    .getCurrentWrittenBytes(), trafficCounter.getLastTime(),
-                    curtime);
-            if (wait > MINIMAL_WAIT) {
-                // Global or Channel
-                if (release.get()) {
+                if (writeLimit == 0) {
                     return;
                 }
-                Thread.sleep(wait);
+                // compute the number of ms to wait before continue with the channel
+                long wait = getTimeToWait(writeLimit, trafficCounter
+                        .getCurrentWrittenBytes(), trafficCounter.getLastTime(),
+                        curtime);
+                if (wait > MINIMAL_WAIT) {
+                    // Global or Channel
+                    if (release.get()) {
+                        return;
+                    }
+                    Thread.sleep(wait);
+                }
             }
         } finally {
             // The message is then just passed to the next handler
