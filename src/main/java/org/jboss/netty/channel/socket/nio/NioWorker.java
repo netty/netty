@@ -271,7 +271,7 @@ class NioWorker implements Runnable {
             i.remove();
             try {
                 int readyOps = k.readyOps();
-                if ((readyOps & SelectionKey.OP_READ) != 0) {
+                if ((readyOps & SelectionKey.OP_READ) != 0 || readyOps == 0) {
                     if (!read(k)) {
                         // Connection already closed - no need to handle write.
                         continue;
