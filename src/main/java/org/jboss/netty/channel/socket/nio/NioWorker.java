@@ -22,7 +22,6 @@ import java.net.SocketAddress;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.SelectionKey;
@@ -587,13 +586,15 @@ class NioWorker implements Runnable {
                     // Otherwise the process will experience sudden spike
                     // in the number of open files, with high chance of getting
                     // the 'too many open files' error.
-                    try {
+                    if (Thread.currentThread() == worker.thread) {
                         selector.selectNow();
                         if (worker.wakenUp.get()) {
                             selector.wakeup();
                         }
-                    } catch (ClosedSelectorException e) {
-                        // Can happen - ignore.
+                    } else {
+                        if (worker.wakenUp.compareAndSet(false, true)) {
+                            selector.wakeup();
+                        }
                     }
                 }
             }
