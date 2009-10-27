@@ -76,6 +76,7 @@ class NioWorker implements Runnable {
     private final Object startStopLock = new Object();
     private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
     private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
+    private volatile int cancelledKeys;
 
     NioWorker(int bossId, int id, Executor executor) {
         this.bossId = bossId;
@@ -189,6 +190,7 @@ class NioWorker implements Runnable {
                     selector.wakeup();
                 }
 
+                cancelledKeys = 0;
                 processRegisterTaskQueue();
                 processWriteTaskQueue();
                 processSelectedKeys(selector.selectedKeys());
@@ -570,6 +572,15 @@ class NioWorker implements Runnable {
                 SelectionKey key = channel.socket.keyFor(selector);
                 if (key != null) {
                     key.cancel();
+                    int cancelledKeys = (++ worker.cancelledKeys);
+                    if (cancelledKeys >= 128) { // FIXME hardcoded value
+                        worker.cancelledKeys = 0;
+                        // Reclaim the associated file descriptors immediately.
+                        // Otherwise the process will experience sudden spike
+                        // in the number of open files, with high chance of getting
+                        // the 'too many open files' error.
+                        selector.selectNow();
+                    }
                 }
                 channel.socket.close();
             }
