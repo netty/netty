@@ -242,7 +242,7 @@ class NioWorker implements Runnable {
         }
     }
 
-    private void processRegisterTaskQueue() {
+    private void processRegisterTaskQueue() throws IOException {
         for (;;) {
             final Runnable task = registerTaskQueue.poll();
             if (task == null) {
@@ -250,10 +250,11 @@ class NioWorker implements Runnable {
             }
 
             task.run();
+            cleanUpCancelledKeys();
         }
     }
 
-    private void processWriteTaskQueue() {
+    private void processWriteTaskQueue() throws IOException {
         for (;;) {
             final Runnable task = writeTaskQueue.poll();
             if (task == null) {
@@ -261,10 +262,11 @@ class NioWorker implements Runnable {
             }
 
             task.run();
+            cleanUpCancelledKeys();
         }
     }
 
-    private void processSelectedKeys(Set<SelectionKey> selectedKeys) {
+    private void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException {
         for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
             SelectionKey k = i.next();
             i.remove();
@@ -283,10 +285,19 @@ class NioWorker implements Runnable {
                 close(k);
             }
 
-            if (cancelledKeys >= 128) { // FIXME hardcoded value
-                break;
+            if (cleanUpCancelledKeys()) { 
+                break; // break the loop to avoid ConcurrentModificationException
             }
         }
+    }
+    
+    private boolean cleanUpCancelledKeys() throws IOException {
+    	if (cancelledKeys >= 128) { // FIXME hardcoded value
+    		cancelledKeys = 0;
+    		selector.selectNow();
+    		return true;
+    	}
+    	return false;
     }
 
     private static boolean read(SelectionKey k) {

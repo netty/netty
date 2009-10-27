@@ -308,7 +308,7 @@ class NioDatagramWorker implements Runnable {
      * Will go through all the {@link ChannelRegistionTask}s in the
      * task queue and run them (registering them).
      */
-    private void processRegisterTaskQueue() {
+    private void processRegisterTaskQueue() throws IOException {
         for (;;) {
             final Runnable task = registerTaskQueue.poll();
             if (task == null) {
@@ -316,13 +316,14 @@ class NioDatagramWorker implements Runnable {
             }
 
             task.run();
+            cleanUpCancelledKeys();
         }
     }
 
     /**
      * Will go through all the WriteTasks and run them.
      */
-    private void processWriteTaskQueue() {
+    private void processWriteTaskQueue() throws IOException {
         for (;;) {
             final Runnable task = writeTaskQueue.poll();
             if (task == null) {
@@ -330,10 +331,11 @@ class NioDatagramWorker implements Runnable {
             }
 
             task.run();
+            cleanUpCancelledKeys();
         }
     }
 
-    private void processSelectedKeys(final Set<SelectionKey> selectedKeys) {
+    private void processSelectedKeys(final Set<SelectionKey> selectedKeys) throws IOException {
         for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
             SelectionKey k = i.next();
             i.remove();
@@ -352,10 +354,19 @@ class NioDatagramWorker implements Runnable {
                 close(k);
             }
 
-            if (cancelledKeys >= 128) { // FIXME hardcoded value
-                break;
+            if (cleanUpCancelledKeys()) {
+                break; // Break the loop to avoid ConcurrentModificationException
             }
         }
+    }
+
+    private boolean cleanUpCancelledKeys() throws IOException {
+    	if (cancelledKeys >= 128) { // FIXME hardcoded value
+    		cancelledKeys = 0;
+    		selector.selectNow();
+    		return true;
+    	}
+    	return false;
     }
 
     private static void write(SelectionKey k) {
