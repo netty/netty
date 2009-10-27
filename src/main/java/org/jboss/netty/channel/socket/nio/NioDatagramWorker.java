@@ -125,6 +125,8 @@ class NioDatagramWorker implements Runnable {
      */
     private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
 
+    private volatile int cancelledKeys;
+
     /**
      * Sole constructor.
      *
@@ -250,6 +252,7 @@ class NioDatagramWorker implements Runnable {
                     selector.wakeup();
                 }
 
+                cancelledKeys = 0;
                 processRegisterTaskQueue();
                 processWriteTaskQueue();
                 processSelectedKeys(selector.selectedKeys());
@@ -647,12 +650,35 @@ class NioDatagramWorker implements Runnable {
             // Otherwise DatagramChannel.register() in RegisterTask can be called
             // after cancel(), but before close(), resulting in the infinite
             // Selector loop that refuses to shut down due to the dangling keys.
+            boolean cancelled = false;
             synchronized (channel.interestOpsLock) {
                 SelectionKey key = channel.getDatagramChannel().keyFor(selector);
                 if (key != null) {
                     key.cancel();
+                    cancelled = true;
                 }
                 channel.getDatagramChannel().close();
+            }
+
+            if (cancelled) {
+                int cancelledKeys = ++ worker.cancelledKeys;
+                if (cancelledKeys >= 128) { // FIXME hardcoded value
+                    worker.cancelledKeys = 0;
+                    // Reclaim the associated file descriptors immediately.
+                    // Otherwise the process will experience sudden spike
+                    // in the number of open files, with high chance of getting
+                    // the 'too many open files' error.
+                    if (Thread.currentThread() == worker.thread) {
+                        selector.selectNow();
+                        if (worker.wakenUp.get()) {
+                            selector.wakeup();
+                        }
+                    } else {
+                        if (worker.wakenUp.compareAndSet(false, true)) {
+                            selector.wakeup();
+                        }
+                    }
+                }
             }
 
             if (channel.setClosed()) {
