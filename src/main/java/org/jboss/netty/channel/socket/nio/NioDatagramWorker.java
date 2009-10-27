@@ -125,7 +125,7 @@ class NioDatagramWorker implements Runnable {
      */
     private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
 
-    private volatile int cancelledKeys;
+    private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
     /**
      * Sole constructor.

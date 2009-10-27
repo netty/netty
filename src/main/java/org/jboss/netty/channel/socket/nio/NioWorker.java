@@ -76,7 +76,7 @@ class NioWorker implements Runnable {
     private final Object startStopLock = new Object();
     private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
     private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
-    private volatile int cancelledKeys;
+    private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
     NioWorker(int bossId, int id, Executor executor) {
         this.bossId = bossId;
