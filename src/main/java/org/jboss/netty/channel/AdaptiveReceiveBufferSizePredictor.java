@@ -37,6 +37,9 @@ import java.util.List;
 public class AdaptiveReceiveBufferSizePredictor implements
         ReceiveBufferSizePredictor {
 
+    // FIXME There's no easy way to configure receiveBufferSizePredictor
+    //       via Bootstrap.setOption() because it works for only one channel.
+
     private static final int INDEX_INCREMENT = 4;
     private static final int INDEX_DECREMENT = 1;
 
