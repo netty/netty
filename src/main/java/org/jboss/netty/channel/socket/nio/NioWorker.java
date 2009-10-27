@@ -285,19 +285,19 @@ class NioWorker implements Runnable {
                 close(k);
             }
 
-            if (cleanUpCancelledKeys()) { 
+            if (cleanUpCancelledKeys()) {
                 break; // break the loop to avoid ConcurrentModificationException
             }
         }
     }
-    
+
     private boolean cleanUpCancelledKeys() throws IOException {
-    	if (cancelledKeys >= 128) { // FIXME hardcoded value
-    		cancelledKeys = 0;
-    		selector.selectNow();
-    		return true;
-    	}
-    	return false;
+        if (cancelledKeys >= 128) { // FIXME hardcoded value
+            cancelledKeys = 0;
+            selector.selectNow();
+            return true;
+        }
+        return false;
     }
 
     private static boolean read(SelectionKey k) {
