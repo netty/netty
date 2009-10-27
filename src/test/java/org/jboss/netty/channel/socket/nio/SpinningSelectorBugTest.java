@@ -30,7 +30,7 @@ import org.junit.Test;
  * <a href="http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6403933">'spinning selector' bug</a>.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Daniel Bevenius (dbevenius@jboss.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
 public class SpinningSelectorBugTest {
