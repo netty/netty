@@ -572,7 +572,7 @@ class NioWorker implements Runnable {
                 SelectionKey key = channel.socket.keyFor(selector);
                 if (key != null) {
                     key.cancel();
-                    int cancelledKeys = (++ worker.cancelledKeys);
+                    int cancelledKeys = ++ worker.cancelledKeys;
                     if (cancelledKeys >= 128) { // FIXME hardcoded value
                         worker.cancelledKeys = 0;
                         // Reclaim the associated file descriptors immediately.
