@@ -216,7 +216,7 @@ class NioDatagramWorker implements Runnable {
             }
 
             try {
-                int selectedKeyCount = selector.select(500);
+                selector.select(500);
 
                 // 'wakenUp.compareAndSet(false, true)' is always evaluated
                 // before calling 'selector.wakeup()' to reduce the wake-up
@@ -252,10 +252,7 @@ class NioDatagramWorker implements Runnable {
 
                 processRegisterTaskQueue();
                 processWriteTaskQueue();
-
-                if (selectedKeyCount > 0) {
-                    processSelectedKeys(selector.selectedKeys());
-                }
+                processSelectedKeys(selector.selectedKeys());
 
                 // Exit the loop when there's nothing to handle (the registered
                 // key set is empty.
