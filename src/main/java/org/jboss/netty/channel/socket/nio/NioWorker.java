@@ -361,7 +361,7 @@ class NioWorker implements Runnable {
         final NioWorker worker = channel.worker;
         final Thread currentThread = Thread.currentThread();
         final Thread workerThread = worker.thread;
-        if (workerThread == null || currentThread != workerThread) {
+        if (currentThread != workerThread) {
             if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
                 boolean offered = worker.writeTaskQueue.offer(channel.writeTask);
                 assert offered;
