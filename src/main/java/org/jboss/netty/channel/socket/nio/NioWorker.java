@@ -22,6 +22,7 @@ import java.net.SocketAddress;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.SelectionKey;
@@ -568,21 +569,33 @@ class NioWorker implements Runnable {
             // Otherwise SocketChannel.register() in RegisterTask can be called
             // after cancel(), but before close(), resulting in the infinite
             // Selector loop that refuses to shut down due to the dangling keys.
+            boolean cancelled = false;
             synchronized (channel.interestOpsLock) {
                 SelectionKey key = channel.socket.keyFor(selector);
                 if (key != null) {
                     key.cancel();
-                    int cancelledKeys = ++ worker.cancelledKeys;
-                    if (cancelledKeys >= 128) { // FIXME hardcoded value
-                        worker.cancelledKeys = 0;
-                        // Reclaim the associated file descriptors immediately.
-                        // Otherwise the process will experience sudden spike
-                        // in the number of open files, with high chance of getting
-                        // the 'too many open files' error.
-                        selector.selectNow();
-                    }
+                    cancelled = true;
                 }
                 channel.socket.close();
+            }
+
+            if (cancelled) {
+                int cancelledKeys = ++ worker.cancelledKeys;
+                if (cancelledKeys >= 128) { // FIXME hardcoded value
+                    worker.cancelledKeys = 0;
+                    // Reclaim the associated file descriptors immediately.
+                    // Otherwise the process will experience sudden spike
+                    // in the number of open files, with high chance of getting
+                    // the 'too many open files' error.
+                    try {
+                        selector.selectNow();
+                        if (worker.wakenUp.get()) {
+                            selector.wakeup();
+                        }
+                    } catch (ClosedSelectorException e) {
+                        // Can happen - ignore.
+                    }
+                }
             }
 
             if (channel.setClosed()) {
