@@ -78,7 +78,9 @@ public class HttpDecompressionHandler extends SimpleChannelUpstreamHandler {
             // Decompress the content and remove or replace the existing headers
             // so that the message looks like an uncompressed message.
             if (encoding != 0) {
-                m.removeHeader(HttpHeaders.Names.CONTENT_ENCODING);
+                if (contentEncoding != null) {
+                    m.setHeader(HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Values.IDENTITY);
+                }
                 ChannelBuffer content = m.getContent();
                 if (content.readable()) {
                     beginDecompression(encoding);
