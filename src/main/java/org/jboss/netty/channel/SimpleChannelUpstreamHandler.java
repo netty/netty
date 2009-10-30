@@ -25,8 +25,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * for each event type.  This handler down-casts the received upstream event
  * into more meaningful sub-type event and calls an appropriate handler method
  * with the down-cast event.  The names of the methods are identical to the
- * upstream event names, as introduced in the {@link ChannelUpstreamHandler}
- * documentation.
+ * upstream event names, as introduced in the {@link ChannelEvent} documentation.
  * <p>
  * Please use {@link SimpleChannelHandler} if you need to implement both
  * {@link ChannelUpstreamHandler} and {@link ChannelDownstreamHandler}.
