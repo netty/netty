@@ -81,8 +81,8 @@ import java.util.concurrent.ConcurrentMap;
  * <p>
  * Please refer to the {@link ChannelHandler}, {@link ChannelEvent}, and
  * {@link ChannelPipeline} to find out what a upstream event and a downstream
- * event are, what fundamental differences they have, and how they flow in a
- * pipeline.
+ * event are, what fundamental differences they have, how they flow in a
+ * pipeline,  and how to handle the event in your application.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
