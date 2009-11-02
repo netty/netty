@@ -65,6 +65,8 @@ class NioWorker implements Runnable {
 
     private static final int CONSTRAINT_LEVEL = NioProviderMetadata.CONSTRAINT_LEVEL;
 
+    static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
+
     private final int bossId;
     private final int id;
     private final Executor executor;
@@ -292,7 +294,7 @@ class NioWorker implements Runnable {
     }
 
     private boolean cleanUpCancelledKeys() throws IOException {
-        if (cancelledKeys >= 128) { // FIXME hardcoded value
+        if (cancelledKeys >= CLEANUP_INTERVAL) {
             cancelledKeys = 0;
             selector.selectNow();
             return true;

@@ -361,7 +361,7 @@ class NioDatagramWorker implements Runnable {
     }
 
     private boolean cleanUpCancelledKeys() throws IOException {
-        if (cancelledKeys >= 128) { // FIXME hardcoded value
+        if (cancelledKeys >= NioWorker.CLEANUP_INTERVAL) {
             cancelledKeys = 0;
             selector.selectNow();
             return true;
