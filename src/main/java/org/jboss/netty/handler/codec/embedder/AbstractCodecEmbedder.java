@@ -18,6 +18,7 @@ package org.jboss.netty.handler.codec.embedder;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.lang.reflect.Array;
+import java.util.ConcurrentModificationException;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -135,7 +136,16 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
     }
 
     public final Object[] pollAll() {
-        return pollAll(new Object[size()]);
+        final int size = size();
+        Object[] a = new Object[size];
+        for (int i = 0; i < size; i ++) {
+            E product = poll();
+            if (product == null) {
+                throw new ConcurrentModificationException();
+            }
+            a[i] = product;
+        }
+        return a;
     }
 
     @SuppressWarnings("unchecked")
