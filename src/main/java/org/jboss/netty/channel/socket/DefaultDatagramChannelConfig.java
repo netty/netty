@@ -24,8 +24,9 @@ import java.net.SocketException;
 
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.DefaultChannelConfig;
-import org.jboss.netty.channel.FixedReceiveBufferSizePredictor;
+import org.jboss.netty.channel.FixedReceiveBufferSizePredictorFactory;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import org.jboss.netty.channel.ReceiveBufferSizePredictorFactory;
 import org.jboss.netty.util.internal.ConversionUtil;
 
 /**
@@ -40,9 +41,12 @@ import org.jboss.netty.util.internal.ConversionUtil;
 public class DefaultDatagramChannelConfig extends DefaultChannelConfig
                                         implements DatagramChannelConfig {
 
+    private static final ReceiveBufferSizePredictorFactory DEFAULT_PREDICTOR_FACTORY =
+        new FixedReceiveBufferSizePredictorFactory(768);
+
     private final DatagramSocket socket;
-    private volatile ReceiveBufferSizePredictor predictor =
-        new FixedReceiveBufferSizePredictor(768);
+    private volatile ReceiveBufferSizePredictor predictor;
+    private volatile ReceiveBufferSizePredictorFactory predictorFactory = DEFAULT_PREDICTOR_FACTORY;
 
     /**
      * Creates a new instance.
@@ -263,13 +267,36 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
     }
 
     public ReceiveBufferSizePredictor getReceiveBufferSizePredictor() {
+        ReceiveBufferSizePredictor predictor = this.predictor;
+        if (predictor == null) {
+            try {
+                this.predictor = predictor = getReceiveBufferSizePredictorFactory().getPredictor();
+            } catch (Exception e) {
+                throw new ChannelException(
+                        "Failed to create a new " +
+                        ReceiveBufferSizePredictor.class.getSimpleName() + '.',
+                        e);
+            }
+        }
         return predictor;
     }
 
-    public void setReceiveBufferSizePredictor(ReceiveBufferSizePredictor predictor) {
+    public void setReceiveBufferSizePredictor(
+            ReceiveBufferSizePredictor predictor) {
         if (predictor == null) {
             throw new NullPointerException("predictor");
         }
         this.predictor = predictor;
+    }
+
+    public ReceiveBufferSizePredictorFactory getReceiveBufferSizePredictorFactory() {
+        return predictorFactory;
+    }
+
+    public void setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory predictorFactory) {
+        if (predictorFactory == null) {
+            throw new NullPointerException("predictorFactory");
+        }
+        this.predictorFactory = predictorFactory;
     }
 }

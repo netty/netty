@@ -37,8 +37,9 @@ import java.util.List;
 public class AdaptiveReceiveBufferSizePredictor implements
         ReceiveBufferSizePredictor {
 
-    // FIXME There's no easy way to configure receiveBufferSizePredictor
-    //       via Bootstrap.setOption() because it works for only one channel.
+    static final int DEFAULT_MINIMUM = 64;
+    static final int DEFAULT_INITIAL = 1024;
+    static final int DEFAULT_MAXIMUM = 65536;
 
     private static final int INDEX_INCREMENT = 4;
     private static final int INDEX_DECREMENT = 1;
@@ -96,10 +97,6 @@ public class AdaptiveReceiveBufferSizePredictor implements
 
         throw new Error("shouldn't reach here; please file a bug report.");
     }
-
-    private static final int DEFAULT_MINIMUM = 64;
-    private static final int DEFAULT_INITIAL = 1024;
-    private static final int DEFAULT_MAXIMUM = 65536;
 
     private final int minIndex;
     private final int maxIndex;

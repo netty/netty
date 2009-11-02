@@ -19,9 +19,11 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictor;
+import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictorFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import org.jboss.netty.channel.ReceiveBufferSizePredictorFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 
@@ -45,6 +47,8 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  * <td>{@code "writeSpinCount"}</td><td>{@link #setWriteSpinCount(int)}</td>
  * </tr><tr>
  * <td>{@code "receiveBufferSizePredictor"}</td><td>{@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}</td>
+ * </tr><tr>
+ * <td>{@code "receiveBufferSizePredictorFactory"}</td><td>{@link #setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory)}</td>
  * </tr><tr>
  * <td>{@code "readWriteFair"}</td><td>{@link #setReadWriteFair(boolean)}</td>
  * </tr>
@@ -113,16 +117,36 @@ public interface NioSocketChannelConfig extends SocketChannelConfig {
     /**
      * Returns the {@link ReceiveBufferSizePredictor} which predicts the
      * number of readable bytes in the socket receive buffer.  The default
-     * predictor is {@link AdaptiveReceiveBufferSizePredictor}.
+     * predictor is <tt>{@link AdaptiveReceiveBufferSizePredictor}(64, 1024, 65536)</tt>.
      */
     ReceiveBufferSizePredictor getReceiveBufferSizePredictor();
 
     /**
      * Sets the {@link ReceiveBufferSizePredictor} which predicts the
      * number of readable bytes in the socket receive buffer.  The default
-     * predictor is {@link AdaptiveReceiveBufferSizePredictor}.
+     * predictor is <tt>{@link AdaptiveReceiveBufferSizePredictor}(64, 1024, 65536)</tt>.
      */
     void setReceiveBufferSizePredictor(ReceiveBufferSizePredictor predictor);
+
+    /**
+     * Returns the {@link ReceiveBufferSizePredictorFactory} which creates a new
+     * {@link ReceiveBufferSizePredictor} when a new channel is created and
+     * no {@link ReceiveBufferSizePredictor} was set.  If no predictor was set
+     * for the channel, {@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}
+     * will be called with the new predictor.  The default factory is
+     * <tt>{@link AdaptiveReceiveBufferSizePredictorFactory}(64, 1024, 65536)</tt>.
+     */
+    ReceiveBufferSizePredictorFactory getReceiveBufferSizePredictorFactory();
+
+    /**
+     * Sets the {@link ReceiveBufferSizePredictor} which creates a new
+     * {@link ReceiveBufferSizePredictor} when a new channel is created and
+     * no {@link ReceiveBufferSizePredictor} was set.  If no predictor was set
+     * for the channel, {@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}
+     * will be called with the new predictor.  The default factory is
+     * <tt>{@link AdaptiveReceiveBufferSizePredictorFactory}(64, 1024, 65536)</tt>.
+     */
+    void setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory predictorFactory);
 
     /**
      * @deprecated This property has been replaced by the

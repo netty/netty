@@ -18,8 +18,10 @@ package org.jboss.netty.channel.socket.nio;
 import java.net.Socket;
 import java.util.Map;
 
-import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictor;
+import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictorFactory;
+import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import org.jboss.netty.channel.ReceiveBufferSizePredictorFactory;
 import org.jboss.netty.channel.socket.DefaultSocketChannelConfig;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -40,10 +42,13 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(DefaultNioSocketChannelConfig.class);
 
+    private static final ReceiveBufferSizePredictorFactory DEFAULT_PREDICTOR_FACTORY =
+        new AdaptiveReceiveBufferSizePredictorFactory();
+
     private volatile int writeBufferHighWaterMark = 64 * 1024;
     private volatile int writeBufferLowWaterMark  = 32 * 1024;
-    private volatile ReceiveBufferSizePredictor predictor =
-        new AdaptiveReceiveBufferSizePredictor();
+    private volatile ReceiveBufferSizePredictor predictor;
+    private volatile ReceiveBufferSizePredictorFactory predictorFactory = DEFAULT_PREDICTOR_FACTORY;
     private volatile int writeSpinCount = 16;
 
     DefaultNioSocketChannelConfig(Socket socket) {
@@ -143,6 +148,17 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
     }
 
     public ReceiveBufferSizePredictor getReceiveBufferSizePredictor() {
+        ReceiveBufferSizePredictor predictor = this.predictor;
+        if (predictor == null) {
+            try {
+                this.predictor = predictor = getReceiveBufferSizePredictorFactory().getPredictor();
+            } catch (Exception e) {
+                throw new ChannelException(
+                        "Failed to create a new " +
+                        ReceiveBufferSizePredictor.class.getSimpleName() + '.',
+                        e);
+            }
+        }
         return predictor;
     }
 
@@ -152,6 +168,17 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
             throw new NullPointerException("predictor");
         }
         this.predictor = predictor;
+    }
+
+    public ReceiveBufferSizePredictorFactory getReceiveBufferSizePredictorFactory() {
+        return predictorFactory;
+    }
+
+    public void setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory predictorFactory) {
+        if (predictorFactory == null) {
+            throw new NullPointerException("predictorFactory");
+        }
+        this.predictorFactory = predictorFactory;
     }
 
     public boolean isReadWriteFair() {
