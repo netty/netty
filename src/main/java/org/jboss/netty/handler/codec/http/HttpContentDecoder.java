@@ -78,7 +78,9 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
             if (contentEncoding != null && (decoder = newDecoder(contentEncoding)) != null) {
                 // Decode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
-                m.setHeader(HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Values.IDENTITY);
+                m.setHeader(
+                        HttpHeaders.Names.CONTENT_ENCODING,
+                        getTargetEncoding(contentEncoding));
 
                 if (!m.isChunked()) {
                     ChannelBuffer content = m.getContent();
@@ -164,6 +166,18 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
      *         to block unknown encoding).
      */
     protected abstract DecoderEmbedder<ChannelBuffer> newDecoder(String contentEncoding) throws Exception;
+
+    /**
+     * Returns the expected content encoding of the decoded content.
+     * This method returns {@code "identity"} by default, which is the case for
+     * most decoders.
+     *
+     * @param contentEncoding the content encoding of the original content
+     * @return the expected content encoding of the new content
+     */
+    protected String getTargetEncoding(String contentEncoding) throws Exception {
+        return HttpHeaders.Values.IDENTITY;
+    }
 
     private ChannelBuffer decode(ChannelBuffer buf) {
         decoder.offer(buf);
