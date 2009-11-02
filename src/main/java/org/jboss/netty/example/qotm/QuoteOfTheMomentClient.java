@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.FixedReceiveBufferSizePredictorFactory;
 import org.jboss.netty.channel.socket.DatagramChannel;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
@@ -43,12 +44,21 @@ public class QuoteOfTheMomentClient {
             new OioDatagramChannelFactory(Executors.newCachedThreadPool());
 
         ConnectionlessBootstrap b = new ConnectionlessBootstrap(f);
+
+        // Configure the pipeline.
         ChannelPipeline p = b.getPipeline();
         p.addLast("encoder", new StringEncoder("UTF-8"));
         p.addLast("decoder", new StringDecoder("UTF-8"));
         p.addLast("handler", new QuoteOfTheMomentClientHandler());
 
+        // Enable broadcast
         b.setOption("broadcast", "true");
+
+        // Allow packets as large as up to 1024 bytes (default is 768).
+        b.setOption(
+                "receiveBufferSizePredictorFactory",
+                new FixedReceiveBufferSizePredictorFactory(1024));
+
         DatagramChannel c = (DatagramChannel) b.bind(new InetSocketAddress(0));
 
         // Broadcast the QOTM request to port 8080.

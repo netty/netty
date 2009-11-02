@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.FixedReceiveBufferSizePredictorFactory;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
 import org.jboss.netty.handler.codec.string.StringDecoder;
@@ -42,12 +43,22 @@ public class QuoteOfTheMomentServer {
             new OioDatagramChannelFactory(Executors.newCachedThreadPool());
 
         ConnectionlessBootstrap b = new ConnectionlessBootstrap(f);
+
+        // Configure the pipeline.
         ChannelPipeline p = b.getPipeline();
         p.addLast("encoder", new StringEncoder("UTF-8"));
         p.addLast("decoder", new StringDecoder("UTF-8"));
         p.addLast("handler", new QuoteOfTheMomentServerHandler());
 
+        // Enable broadcast
         b.setOption("broadcast", "false");
+
+        // Allow packets as large as up to 1024 bytes (default is 768).
+        b.setOption(
+                "receiveBufferSizePredictorFactory",
+                new FixedReceiveBufferSizePredictorFactory(1024));
+
+        // Bind to the port and start the service.
         b.bind(new InetSocketAddress(8080));
     }
 }
