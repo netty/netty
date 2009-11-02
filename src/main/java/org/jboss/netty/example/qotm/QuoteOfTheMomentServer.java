@@ -54,6 +54,8 @@ public class QuoteOfTheMomentServer {
         b.setOption("broadcast", "false");
 
         // Allow packets as large as up to 1024 bytes (default is 768).
+        // You could increase or decrease this value to avoid truncated packets
+        // or to improve memory footprint respectively.
         b.setOption(
                 "receiveBufferSizePredictorFactory",
                 new FixedReceiveBufferSizePredictorFactory(1024));
