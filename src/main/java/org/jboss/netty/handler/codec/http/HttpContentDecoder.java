@@ -28,15 +28,15 @@ import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
  * Decodes the content of the received {@link HttpMessage} and {@link HttpChunk}.
  * The original content ({@link HttpMessage#getContent()} or {@link HttpChunk#getContent()})
  * is replaced with the new content decoded by the {@link DecoderEmbedder},
- * which is created by {@link #beginDecode(String)}.  Once decoding is finished,
+ * which is created by {@link #newDecoder(String)}.  Once decoding is finished,
  * the value of the <tt>'Content-Encoding'</tt> header is set to <tt>'identity'</tt>
  * and the <tt>'Content-Length'</tt> header is updated to the length of the
  * decoded content.  If the content encoding of the original is not supported
- * by the decoder, {@link #beginDecode(String)} returns {@code null} and no
+ * by the decoder, {@link #newDecoder(String)} returns {@code null} and no
  * decoding occurs (i.e. pass-through).
  * <p>
  * Please note that this is an abstract class.  You have to extend this class
- * and implement {@link #beginDecode(String)} properly to make this class
+ * and implement {@link #newDecoder(String)} properly to make this class
  * functional.  For example, refer to the source code of {@link HttpContentDecompressor}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -75,7 +75,7 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
                 contentEncoding = contentEncoding.trim();
             }
 
-            if (contentEncoding != null && (decoder = beginDecode(contentEncoding)) != null) {
+            if (contentEncoding != null && (decoder = newDecoder(contentEncoding)) != null) {
                 // Decode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
                 m.setHeader(HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Values.IDENTITY);
@@ -163,7 +163,7 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
      *         {@code null} otherwise (alternatively, you can throw an exception
      *         to block unknown encoding).
      */
-    protected abstract DecoderEmbedder<ChannelBuffer> beginDecode(String contentEncoding) throws Exception;
+    protected abstract DecoderEmbedder<ChannelBuffer> newDecoder(String contentEncoding) throws Exception;
 
     private ChannelBuffer decode(ChannelBuffer buf) {
         decoder.offer(buf);

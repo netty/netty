@@ -43,7 +43,7 @@ import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
 @ChannelPipelineCoverage("one")
 public class HttpContentDecompressor extends HttpContentDecoder {
     @Override
-    protected DecoderEmbedder<ChannelBuffer> beginDecode(String contentEncoding) throws Exception {
+    protected DecoderEmbedder<ChannelBuffer> newDecoder(String contentEncoding) throws Exception {
         if ("gzip".equalsIgnoreCase(contentEncoding) || "x-gzip".equalsIgnoreCase(contentEncoding)) {
             return new DecoderEmbedder<ChannelBuffer>(new ZlibDecoder(ZlibWrapper.GZIP));
         } else if ("deflate".equalsIgnoreCase(contentEncoding) || "x-deflate".equalsIgnoreCase(contentEncoding)) {
