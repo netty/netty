@@ -16,25 +16,17 @@
 package org.jboss.netty.handler.codec.http;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.compression.ZlibEncoder;
 import org.jboss.netty.handler.codec.compression.ZlibWrapper;
 import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
 
 /**
- * Decompresses an {@link HttpMessage} and an {@link HttpChunk} compressed in
- * {@code gzip} or {@code deflate} encoding.  Insert this handler after
- * {@link HttpMessageDecoder} in the {@link ChannelPipeline}:
- * <pre>
- * ChannelPipeline p = ...;
- * ...
- * p.addLast("decoder", new HttpRequestDecoder());
- * p.addLast("inflater", <b>new HttpContentDecomperssor()</b>);
- * ...
- * p.addLast("encoder", new HttpResponseEncoder());
- * p.addLast("handler", new HttpRequestHandler());
- * </pre>
+ * Compresses an {@link HttpMessage} and an {@link HttpChunk} in {@code gzip} or
+ * {@code deflate} encoding while respecting the {@code "Accept-Encoding"} header.
+ * If there is no matching encoding, no compression is done.  For more
+ * information on how this handler modifies the message, please refer to
+ * {@link HttpContentEncoder}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
@@ -45,10 +37,21 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
     private final int compressionLevel;
 
+    /**
+     * Creates a new handler with the default compression level (<tt>6</tt>).
+     */
     public HttpContentCompressor() {
         this(6);
     }
 
+    /**
+     * Creates a new handler with the specified compression level.
+     *
+     * @param compressionLevel
+     *        {@code 1} yields the fastest compression and {@code 9} yields the
+     *        best compression.  {@code 0} means no compression.  The default
+     *        compression level is {@code 6}.
+     */
     public HttpContentCompressor(int compressionLevel) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(

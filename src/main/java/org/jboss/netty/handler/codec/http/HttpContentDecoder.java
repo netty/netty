@@ -25,19 +25,23 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
 
 /**
- * Decodes the content of the received {@link HttpMessage} and {@link HttpChunk}.
- * The original content ({@link HttpMessage#getContent()} or {@link HttpChunk#getContent()})
- * is replaced with the new content decoded by the {@link DecoderEmbedder},
- * which is created by {@link #newContentDecoder(String)}.  Once decoding is finished,
- * the value of the <tt>'Content-Encoding'</tt> header is set to <tt>'identity'</tt>
- * and the <tt>'Content-Length'</tt> header is updated to the length of the
+ * Decodes the content of the received {@link HttpRequest} and {@link HttpChunk}.
+ * The original content is replaced with the new content decoded by the
+ * {@link DecoderEmbedder}, which is created by {@link #newContentDecoder(String)}.
+ * Once decoding is finished, the value of the <tt>'Content-Encoding'</tt>
+ * header is set to the target content encoding, as returned by {@link #getTargetContentEncoding(String)}.
+ * Also, the <tt>'Content-Length'</tt> header is updated to the length of the
  * decoded content.  If the content encoding of the original is not supported
- * by the decoder, {@link #newContentDecoder(String)} returns {@code null} and no
- * decoding occurs (i.e. pass-through).
+ * by the decoder, {@link #newContentDecoder(String)} should return {@code null}
+ * so that no decoding occurs (i.e. pass-through).
  * <p>
  * Please note that this is an abstract class.  You have to extend this class
  * and implement {@link #newContentDecoder(String)} properly to make this class
  * functional.  For example, refer to the source code of {@link HttpContentDecompressor}.
+ * <p>
+ * This handler must be placed after {@link HttpMessageDecoder} in the pipeline
+ * so that this handler can intercept HTTP requests after {@link HttpMessageDecoder}
+ * converts {@link ChannelBuffer}s into HTTP requests.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
@@ -147,7 +151,7 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
      * This method returns {@code "identity"} by default, which is the case for
      * most decoders.
      *
-     * @param contentEncoding the content encoding of the original content
+     * @param contentEncoding the value of the {@code "Content-Encoding"} header
      * @return the expected content encoding of the new content
      */
     protected String getTargetContentEncoding(String contentEncoding) throws Exception {

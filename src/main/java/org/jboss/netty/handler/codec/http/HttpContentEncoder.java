@@ -23,11 +23,29 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
 import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
+ * Encodes the content of the outbound {@link HttpResponse} and {@link HttpChunk}.
+ * The original content is replaced with the new content encoded by the
+ * {@link EncoderEmbedder}, which is created by {@link #newContentEncoder(String)}.
+ * Once encoding is finished, the value of the <tt>'Content-Encoding'</tt> header
+ * is set to the target content encoding, as returned by {@link #getTargetContentEncoding(String)}.
+ * Also, the <tt>'Content-Length'</tt> header is updated to the length of the
+ * encoded content.  If there is no supported encoding in the
+ * corresponding {@link HttpRequest}'s {@code "Accept-Encoding"} header,
+ * {@link #newContentEncoder(String)} should return {@code null} so that no
+ * encoding occurs (i.e. pass-through).
+ * <p>
+ * Please note that this is an abstract class.  You have to extend this class
+ * and implement {@link #newContentEncoder(String)} and {@link #getTargetContentEncoding(String)}
+ * properly to make this class functional.  For example, refer to the source
+ * code of {@link HttpContentCompressor}.
+ * <p>
+ * This handler must be placed after {@link HttpMessageEncoder} in the pipeline
+ * so that this handler can intercept HTTP responses before {@link HttpMessageEncoder}
+ * converts them into {@link ChannelBuffer}s.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
@@ -145,18 +163,17 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
      * content.
      *
      * @param acceptEncoding
-     *        the value of the {@code "Accept-Encoding"} header.
+     *        the value of the {@code "Accept-Encoding"} header
      *
-     * @return a new {@link DecoderEmbedder} if the specified encoding is supported.
-     *         {@code null} otherwise (alternatively, you can throw an exception
-     *         to block unknown encoding).
+     * @return a new {@link EncoderEmbedder} if there is a supported encoding
+     *         in {@code acceptEncoding}.  {@code null} otherwise.
      */
     protected abstract EncoderEmbedder<ChannelBuffer> newContentEncoder(String acceptEncoding) throws Exception;
 
     /**
      * Returns the expected content encoding of the encoded content.
      *
-     * @param contentEncoding the content encoding of the original content
+     * @param acceptEncoding the value of the {@code "Accept-Encoding"} header
      * @return the expected content encoding of the new content
      */
     protected abstract String getTargetContentEncoding(String acceptEncoding) throws Exception;

@@ -16,7 +16,6 @@
 package org.jboss.netty.handler.codec.http;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.compression.ZlibDecoder;
 import org.jboss.netty.handler.codec.compression.ZlibWrapper;
@@ -24,17 +23,8 @@ import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
 
 /**
  * Decompresses an {@link HttpMessage} and an {@link HttpChunk} compressed in
- * {@code gzip} or {@code deflate} encoding.  Insert this handler after
- * {@link HttpMessageDecoder} in the {@link ChannelPipeline}:
- * <pre>
- * ChannelPipeline p = ...;
- * ...
- * p.addLast("decoder", new HttpRequestDecoder());
- * p.addLast("inflater", <b>new HttpContentDecomperssor()</b>);
- * ...
- * p.addLast("encoder", new HttpResponseEncoder());
- * p.addLast("handler", new HttpRequestHandler());
- * </pre>
+ * {@code gzip} or {@code deflate} encoding.  For more information on how this
+ * handler modifies the message, please refer to {@link HttpContentDecoder}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
