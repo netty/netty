@@ -69,7 +69,7 @@ public class ZlibEncoder extends OneToOneEncoder {
      * @throws CompressionException if failed to initialize zlib
      */
     public ZlibEncoder(int compressionLevel) {
-        this(compressionLevel, ZlibWrapper.ZLIB);
+        this(ZlibWrapper.ZLIB, compressionLevel);
     }
 
     /**
@@ -79,13 +79,12 @@ public class ZlibEncoder extends OneToOneEncoder {
      * @throws CompressionException if failed to initialize zlib
      */
     public ZlibEncoder(ZlibWrapper wrapper) {
-        this(6, wrapper);
+        this(wrapper, 6);
     }
 
     /**
      * Creates a new zlib encoder with the specified {@code compressionLevel}
      * and the specified wrapper.
-     *
      * @param compressionLevel
      *        {@code 1} yields the fastest compression and {@code 9} yields the
      *        best compression.  {@code 0} means no compression.  The default
@@ -93,7 +92,7 @@ public class ZlibEncoder extends OneToOneEncoder {
      *
      * @throws CompressionException if failed to initialize zlib
      */
-    public ZlibEncoder(int compressionLevel, ZlibWrapper wrapper) {
+    public ZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel +
