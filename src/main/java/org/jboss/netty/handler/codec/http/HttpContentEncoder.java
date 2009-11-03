@@ -77,7 +77,8 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
         if (acceptedEncoding == null) {
             acceptedEncoding = HttpHeaders.Values.IDENTITY;
         }
-        acceptEncodingQueue.offer(acceptedEncoding);
+        boolean offered = acceptEncodingQueue.offer(acceptedEncoding);
+        assert offered;
 
         ctx.sendUpstream(e);
     }

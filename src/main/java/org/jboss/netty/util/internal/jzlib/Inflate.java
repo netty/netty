@@ -252,7 +252,6 @@ final class Inflate {
                 if (z.avail_in == 0) {
                     return r;
                 }
-                r = f;
 
                 z.avail_in --;
                 z.total_in ++;

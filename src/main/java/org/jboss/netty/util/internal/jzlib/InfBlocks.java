@@ -566,7 +566,6 @@ final class InfBlocks {
                 write = q;
                 r = inflate_flush(z, r);
                 q = write;
-                m = q < read? read - q - 1 : end - q;
                 if (read != write) {
                     bitb = b;
                     bitk = k;

@@ -222,7 +222,7 @@ public class HttpTunnelingServlet extends HttpServlet {
     }
 
     @ChannelPipelineCoverage("one")
-    private final class OutboundConnectionHandler extends SimpleChannelUpstreamHandler {
+    private static final class OutboundConnectionHandler extends SimpleChannelUpstreamHandler {
 
         private final ServletOutputStream out;
 

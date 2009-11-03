@@ -241,7 +241,7 @@ public class ZlibEncoder extends OneToOneEncoder {
             if (evt != null) {
                 ctx.sendDownstream(evt);
             }
-            return Channels.succeededFuture(evt.getChannel());
+            return Channels.succeededFuture(ctx.getChannel());
         }
 
         ChannelBuffer footer;
