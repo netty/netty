@@ -19,6 +19,8 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.UnsupportedCharsetException;
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -338,14 +340,32 @@ public class ChannelBuffers {
             }
             break;
         default:
-            ChannelBuffer[] wrappedBuffers = new ChannelBuffer[arrays.length];
-            for (int i = 0; i < arrays.length; i ++) {
-                wrappedBuffers[i] = wrappedBuffer(endianness, arrays[i]);
+            // Get the list of the component, while guessing the byte order.
+            final List<ChannelBuffer> components = new ArrayList<ChannelBuffer>(arrays.length);
+            for (byte[] a: arrays) {
+                if (a == null) {
+                    break;
+                }
+                if (a.length > 0) {
+                    components.add(wrappedBuffer(endianness, a));
+                }
             }
-            return wrappedBuffer(wrappedBuffers);
+            return compositeBuffer(endianness, components);
         }
 
         return EMPTY_BUFFER;
+    }
+
+    private static ChannelBuffer compositeBuffer(
+            ByteOrder endianness, List<ChannelBuffer> components) {
+        switch (components.size()) {
+        case 0:
+            return EMPTY_BUFFER;
+        case 1:
+            return components.get(0);
+        default:
+            return new CompositeChannelBuffer(endianness, components);
+        }
     }
 
     /**
@@ -367,11 +387,33 @@ public class ChannelBuffers {
             }
             break;
         default:
-            for (ChannelBuffer b: buffers) {
-                if (b.readable()) {
-                    return new CompositeChannelBuffer(buffers);
+            ByteOrder order = null;
+            final List<ChannelBuffer> components = new ArrayList<ChannelBuffer>(buffers.length);
+            for (ChannelBuffer c: buffers) {
+                if (c == null) {
+                    break;
+                }
+                if (c.readable()) {
+                    if (order != null) {
+                        if (!order.equals(c.order())) {
+                            throw new IllegalArgumentException(
+                                    "inconsistent byte order");
+                        }
+                    } else {
+                        order = c.order();
+                    }
+                    if (c instanceof CompositeChannelBuffer) {
+                        // Expand nested composition.
+                        components.addAll(
+                                ((CompositeChannelBuffer) c).decompose(
+                                        c.readerIndex(), c.readableBytes()));
+                    } else {
+                        // An ordinary buffer (non-composite)
+                        components.add(c.slice());
+                    }
                 }
             }
+            return compositeBuffer(order, components);
         }
         return EMPTY_BUFFER;
     }
@@ -395,11 +437,25 @@ public class ChannelBuffers {
             }
             break;
         default:
-            ChannelBuffer[] wrappedBuffers = new ChannelBuffer[buffers.length];
-            for (int i = 0; i < buffers.length; i ++) {
-                wrappedBuffers[i] = wrappedBuffer(buffers[i]);
+            ByteOrder order = null;
+            final List<ChannelBuffer> components = new ArrayList<ChannelBuffer>(buffers.length);
+            for (ByteBuffer b: buffers) {
+                if (b == null) {
+                    break;
+                }
+                if (b.hasRemaining()) {
+                    if (order != null) {
+                        if (!order.equals(b.order())) {
+                            throw new IllegalArgumentException(
+                                    "inconsistent byte order");
+                        }
+                    } else {
+                        order = b.order();
+                    }
+                    components.add(wrappedBuffer(b));
+                }
             }
-            return wrappedBuffer(wrappedBuffers);
+            return compositeBuffer(order, components);
         }
 
         return EMPTY_BUFFER;

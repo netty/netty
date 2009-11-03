@@ -48,44 +48,15 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
     private int[] indices;
     private int lastAccessedComponentId;
 
-    public CompositeChannelBuffer(ChannelBuffer... buffers) {
-        if (buffers.length == 0) {
-            throw new IllegalArgumentException("buffers should not be empty.");
-        }
-
-        // Get the list of the component, while guessing the byte order.
-        ByteOrder expectedEndianness = null;
-        final List<ChannelBuffer> newComponents = new ArrayList<ChannelBuffer>(buffers.length);
-        for (ChannelBuffer c: buffers) {
-            if (c.readableBytes() > 0) {
-                expectedEndianness = c.order();
-                if (c instanceof CompositeChannelBuffer) {
-                    // Expand nested composition.
-                    newComponents.addAll(
-                            ((CompositeChannelBuffer) c).slice0(
-                                    c.readerIndex(), c.readableBytes()));
-                } else {
-                    // An ordinary buffer (non-composite)
-                    newComponents.add(c.slice());
-                }
-            } else if (c.capacity() != 0) {
-                expectedEndianness = c.order();
-            }
-        }
-
-        if (expectedEndianness == null) {
-            throw new IllegalArgumentException(
-                    "buffers have only empty buffers.");
-        }
-
-        order = expectedEndianness;
-        setComponents(newComponents);
+    public CompositeChannelBuffer(ByteOrder endianness, List<ChannelBuffer> buffers) {
+        order = endianness;
+        setComponents(buffers);
     }
 
    /**
     * Same with {@link #slice(int, int)} except that this method returns a list.
     */
-   private List<ChannelBuffer> slice0(int index, int length) {
+   public List<ChannelBuffer> decompose(int index, int length) {
        if (length == 0) {
            return Collections.emptyList();
        }
@@ -556,9 +527,15 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             return ChannelBuffers.EMPTY_BUFFER;
         }
 
-        List<ChannelBuffer> listBuffer = slice0(index, length);
-        ChannelBuffer[] buffers = listBuffer.toArray(new ChannelBuffer[listBuffer.size()]);
-        return new CompositeChannelBuffer(buffers);
+        List<ChannelBuffer> components = decompose(index, length);
+        switch (components.size()) {
+        case 0:
+            return ChannelBuffers.EMPTY_BUFFER;
+        case 1:
+            return components.get(0);
+        default:
+            return new CompositeChannelBuffer(order(), components);
+        }
     }
 
     public ByteBuffer toByteBuffer(int index, int length) {
@@ -667,7 +644,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         int localWriterIndex = this.writerIndex();
 
         final int bytesToMove = capacity() - localReaderIndex;
-        List<ChannelBuffer> list = slice0(localReaderIndex, bytesToMove);
+        List<ChannelBuffer> list = decompose(localReaderIndex, bytesToMove);
 
         // Add a new buffer so that the capacity of this composite buffer does
         // not decrease due to the discarded components.
