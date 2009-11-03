@@ -73,9 +73,11 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
             String contentEncoding = m.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
             if (contentEncoding != null) {
                 contentEncoding = contentEncoding.trim();
+            } else {
+                contentEncoding = HttpHeaders.Values.IDENTITY;
             }
 
-            if (contentEncoding != null && (decoder = newDecoder(contentEncoding)) != null) {
+            if ((decoder = newDecoder(contentEncoding)) != null) {
                 // Decode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
                 m.setHeader(
@@ -85,21 +87,9 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
                 if (!m.isChunked()) {
                     ChannelBuffer content = m.getContent();
                     if (content.readable()) {
-                        content = decode(content);
-
-                        // Finish decoding.
-                        ChannelBuffer lastProduct = finishDecode();
-
-                        // Merge the last product into the content.
-                        if (content == null) {
-                            if (lastProduct != null) {
-                                content = lastProduct;
-                            }
-                        } else {
-                            if (lastProduct != null) {
-                                content = ChannelBuffers.wrappedBuffer(content, lastProduct);
-                            }
-                        }
+                        // Decode the content
+                        content = ChannelBuffers.wrappedBuffer(
+                                decode(content), finishDecode());
 
                         // Replace the content if necessary.
                         if (content != null) {
@@ -126,10 +116,11 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
             if (decoder != null) {
                 if (!c.isLast()) {
                     content = decode(content);
-                    if (content != null) {
+                    if (content.readable()) {
                         // Note that HttpChunk is immutable unlike HttpMessage.
                         // XXX API inconsistency? I can live with it though.
-                        Channels.fireMessageReceived(ctx, new DefaultHttpChunk(content), e.getRemoteAddress());
+                        Channels.fireMessageReceived(
+                                ctx, new DefaultHttpChunk(content), e.getRemoteAddress());
                     }
                 } else {
                     ChannelBuffer lastProduct = finishDecode();
@@ -138,11 +129,9 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
 
                     // Generate an additional chunk if the decoder produced
                     // the last product on closure,
-                    if (lastProduct != null) {
+                    if (lastProduct.readable()) {
                         Channels.fireMessageReceived(
-                                ctx,
-                                new DefaultHttpChunk(lastProduct),
-                                e.getRemoteAddress());
+                                ctx, new DefaultHttpChunk(lastProduct), e.getRemoteAddress());
                     }
 
                     // Emit the last chunk.
@@ -181,33 +170,14 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
 
     private ChannelBuffer decode(ChannelBuffer buf) {
         decoder.offer(buf);
-        return pollDecodeResult();
+        return ChannelBuffers.wrappedBuffer(decoder.pollAll(new ChannelBuffer[decoder.size()]));
     }
 
     private ChannelBuffer finishDecode() {
         if (decoder.finish()) {
-            return pollDecodeResult();
+            return ChannelBuffers.wrappedBuffer(decoder.pollAll(new ChannelBuffer[decoder.size()]));
         } else {
-            return null;
-        }
-    }
-
-    private ChannelBuffer pollDecodeResult() {
-        ChannelBuffer result = decoder.poll();
-        if (result != null) {
-            for (;;) {
-                ChannelBuffer moreResult = decoder.poll();
-                if (moreResult == null) {
-                    break;
-                }
-                result = ChannelBuffers.wrappedBuffer(result, moreResult);
-            }
-        }
-
-        if (result.readable()) {
-            return result;
-        } else {
-            return null;
+            return ChannelBuffers.EMPTY_BUFFER;
         }
     }
 }
