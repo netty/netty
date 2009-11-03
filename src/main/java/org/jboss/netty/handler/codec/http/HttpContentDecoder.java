@@ -40,7 +40,7 @@ import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
  * functional.  For example, refer to the source code of {@link HttpContentDecompressor}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("one")

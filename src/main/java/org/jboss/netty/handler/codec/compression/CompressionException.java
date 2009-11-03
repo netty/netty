@@ -22,7 +22,7 @@ import java.io.IOException;
  * failed.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (tlee@redhat.com)
+ * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
 public class CompressionException extends RuntimeException {
