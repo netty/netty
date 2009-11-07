@@ -138,7 +138,6 @@ final class Deflate {
     WrapperType wrapperType;
     private boolean wroteTrailer;
     byte data_type; // UNKNOWN, BINARY or ASCII
-    byte method; // STORED (for zip only) or DEFLATED
     int last_flush; // value of flush param for previous deflate call
     int w_size; // LZ77 window size (32K by default)
     int w_bits; // log2(w_size)  (8..16)
@@ -1196,7 +1195,7 @@ final class Deflate {
         }
 
         if (match_available != 0) {
-            bflush = _tr_tally(0, window[strstart - 1] & 0xff);
+            _tr_tally(0, window[strstart - 1] & 0xff);
             match_available = 0;
         }
         flush_block_only(flush == JZlib.Z_FINISH);
@@ -1363,7 +1362,6 @@ final class Deflate {
         //System.out.println("level="+level);
 
         this.strategy = strategy;
-        this.method = (byte) method;
 
         return deflateReset(strm);
     }
@@ -1371,7 +1369,6 @@ final class Deflate {
     private int deflateReset(ZStream strm) {
         strm.total_in = strm.total_out = 0;
         strm.msg = null; //
-        strm.data_type = Z_UNKNOWN;
 
         pending = 0;
         pending_out = 0;

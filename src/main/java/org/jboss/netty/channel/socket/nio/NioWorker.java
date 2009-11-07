@@ -65,6 +65,8 @@ class NioWorker implements Runnable {
 
     private static final int CONSTRAINT_LEVEL = NioProviderMetadata.CONSTRAINT_LEVEL;
 
+    static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
+
     private final int bossId;
     private final int id;
     private final Executor executor;
@@ -76,6 +78,7 @@ class NioWorker implements Runnable {
     private final Object startStopLock = new Object();
     private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
     private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
+    private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
     NioWorker(int bossId, int id, Executor executor) {
         this.bossId = bossId;
@@ -155,7 +158,7 @@ class NioWorker implements Runnable {
             }
 
             try {
-                int selectedKeyCount = selector.select(500);
+                selector.select(500);
 
                 // 'wakenUp.compareAndSet(false, true)' is always evaluated
                 // before calling 'selector.wakeup()' to reduce the wake-up
@@ -189,12 +192,10 @@ class NioWorker implements Runnable {
                     selector.wakeup();
                 }
 
+                cancelledKeys = 0;
                 processRegisterTaskQueue();
                 processWriteTaskQueue();
-
-                if (selectedKeyCount > 0) {
-                    processSelectedKeys(selector.selectedKeys());
-                }
+                processSelectedKeys(selector.selectedKeys());
 
                 // Exit the loop when there's nothing to handle.
                 // The shutdown flag is used to delay the shutdown of this
@@ -243,7 +244,7 @@ class NioWorker implements Runnable {
         }
     }
 
-    private void processRegisterTaskQueue() {
+    private void processRegisterTaskQueue() throws IOException {
         for (;;) {
             final Runnable task = registerTaskQueue.poll();
             if (task == null) {
@@ -251,10 +252,11 @@ class NioWorker implements Runnable {
             }
 
             task.run();
+            cleanUpCancelledKeys();
         }
     }
 
-    private void processWriteTaskQueue() {
+    private void processWriteTaskQueue() throws IOException {
         for (;;) {
             final Runnable task = writeTaskQueue.poll();
             if (task == null) {
@@ -262,16 +264,17 @@ class NioWorker implements Runnable {
             }
 
             task.run();
+            cleanUpCancelledKeys();
         }
     }
 
-    private static void processSelectedKeys(Set<SelectionKey> selectedKeys) {
+    private void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException {
         for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
             SelectionKey k = i.next();
             i.remove();
             try {
                 int readyOps = k.readyOps();
-                if ((readyOps & SelectionKey.OP_READ) != 0) {
+                if ((readyOps & SelectionKey.OP_READ) != 0 || readyOps == 0) {
                     if (!read(k)) {
                         // Connection already closed - no need to handle write.
                         continue;
@@ -283,7 +286,20 @@ class NioWorker implements Runnable {
             } catch (CancelledKeyException e) {
                 close(k);
             }
+
+            if (cleanUpCancelledKeys()) {
+                break; // break the loop to avoid ConcurrentModificationException
+            }
         }
+    }
+
+    private boolean cleanUpCancelledKeys() throws IOException {
+        if (cancelledKeys >= CLEANUP_INTERVAL) {
+            cancelledKeys = 0;
+            selector.selectNow();
+            return true;
+        }
+        return false;
     }
 
     private static boolean read(SelectionKey k) {
@@ -362,7 +378,7 @@ class NioWorker implements Runnable {
         final NioWorker worker = channel.worker;
         final Thread currentThread = Thread.currentThread();
         final Thread workerThread = worker.thread;
-        if (workerThread == null || currentThread != workerThread) {
+        if (currentThread != workerThread) {
             if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
                 boolean offered = worker.writeTaskQueue.offer(channel.writeTask);
                 assert offered;
@@ -573,6 +589,7 @@ class NioWorker implements Runnable {
                 SelectionKey key = channel.socket.keyFor(selector);
                 if (key != null) {
                     key.cancel();
+                    worker.cancelledKeys ++;
                 }
                 channel.socket.close();
             }

@@ -49,7 +49,7 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
  * @apiviz.landmark
  * @see DecoderEmbedder
  */
-public class EncoderEmbedder<T> extends AbstractCodecEmbedder<T> {
+public class EncoderEmbedder<E> extends AbstractCodecEmbedder<E> {
 
     /**
      * Creates a new embedder whose pipeline is composed of the specified

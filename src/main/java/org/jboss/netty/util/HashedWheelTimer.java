@@ -61,9 +61,9 @@ import org.jboss.netty.util.internal.ReusableIterator;
  * <h3>Implementation Details</h3>
  *
  * {@link HashedWheelTimer} is based on
- * <a href="http://cseweb.ucsd.edu/users/varghese/>George Varghese</a> and
+ * <a href="http://cseweb.ucsd.edu/users/varghese/">George Varghese</a> and
  * Tony Lauck's paper,
- * <a href="http://www-cse.ucsd.edu/users/varghese/PAPERS/twheel.ps.Z">'Hashed
+ * <a href="http://cseweb.ucsd.edu/users/varghese/PAPERS/twheel.ps.Z">'Hashed
  * and Hierarchical Timing Wheels: data structures to efficiently implement a
  * timer facility'</a>.  More comprehensive slides are located
  * <a href="http://www.cse.wustl.edu/~cdgill/courses/cs6874/TimingWheels.ppt">here</a>.

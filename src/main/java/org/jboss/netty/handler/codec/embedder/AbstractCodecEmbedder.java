@@ -17,6 +17,8 @@ package org.jboss.netty.handler.codec.embedder;
 
 import static org.jboss.netty.channel.Channels.*;
 
+import java.lang.reflect.Array;
+import java.util.ConcurrentModificationException;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -41,7 +43,7 @@ import org.jboss.netty.channel.MessageEvent;
  * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
-abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
+abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
 
     private final Channel channel;
     private final ChannelPipeline pipeline;
@@ -124,13 +126,59 @@ abstract class AbstractCodecEmbedder<T> implements CodecEmbedder<T> {
     }
 
     @SuppressWarnings("unchecked")
-    public final T poll() {
-        return (T) productQueue.poll();
+    public final E poll() {
+        return (E) productQueue.poll();
     }
 
     @SuppressWarnings("unchecked")
-    public final T peek() {
-        return (T) productQueue.peek();
+    public final E peek() {
+        return (E) productQueue.peek();
+    }
+
+    public final Object[] pollAll() {
+        final int size = size();
+        Object[] a = new Object[size];
+        for (int i = 0; i < size; i ++) {
+            E product = poll();
+            if (product == null) {
+                throw new ConcurrentModificationException();
+            }
+            a[i] = product;
+        }
+        return a;
+    }
+
+    @SuppressWarnings("unchecked")
+    public final <T> T[] pollAll(T[] a) {
+        if (a == null) {
+            throw new NullPointerException("a");
+        }
+
+        final int size = size();
+
+        // Create a new array if the specified one is too small.
+        if (a.length < size) {
+            a = (T[]) Array.newInstance(a.getClass().getComponentType(), size);
+        }
+
+        for (int i = 0;; i ++) {
+            T product = (T) poll();
+            if (product == null) {
+                break;
+            }
+            a[i] = product;
+        }
+
+        // Put the terminator if necessary.
+        if (a.length > size) {
+            a[size] = null;
+        }
+
+        return a;
+    }
+
+    public final int size() {
+        return productQueue.size();
     }
 
     @ChannelPipelineCoverage("all")

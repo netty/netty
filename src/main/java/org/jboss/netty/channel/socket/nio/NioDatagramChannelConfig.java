@@ -18,10 +18,8 @@ package org.jboss.netty.channel.socket.nio;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
-import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictor;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.channel.socket.DatagramChannel;
 import org.jboss.netty.channel.socket.DatagramChannelConfig;
 
@@ -43,8 +41,6 @@ import org.jboss.netty.channel.socket.DatagramChannelConfig;
  * <td>{@code "writeBufferLowWaterMark"}</td><td>{@link #setWriteBufferLowWaterMark(int)}</td>
  * </tr><tr>
  * <td>{@code "writeSpinCount"}</td><td>{@link #setWriteSpinCount(int)}</td>
- * </tr><tr>
- * <td>{@code "receiveBufferSizePredictor"}</td><td>{@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}</td>
  * </tr><tr>
  * </table>
  *
@@ -108,18 +104,4 @@ public interface NioDatagramChannelConfig extends DatagramChannelConfig {
      *         if the specified value is {@code 0} or less than {@code 0}
      */
     void setWriteSpinCount(int writeSpinCount);
-
-    /**
-     * Returns the {@link ReceiveBufferSizePredictor} which predicts the
-     * number of readable bytes in the socket receive buffer.  The default
-     * predictor is {@link AdaptiveReceiveBufferSizePredictor}.
-     */
-    ReceiveBufferSizePredictor getReceiveBufferSizePredictor();
-
-    /**
-     * Sets the {@link ReceiveBufferSizePredictor} which predicts the
-     * number of readable bytes in the socket receive buffer.  The default
-     * predictor is {@link AdaptiveReceiveBufferSizePredictor}.
-     */
-    void setReceiveBufferSizePredictor(ReceiveBufferSizePredictor predictor);
 }

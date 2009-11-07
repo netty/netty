@@ -72,9 +72,7 @@ import java.net.SocketAddress;
  * </tr>
  * </table>
  * <p>
- * To see how a {@link ChannelEvent} is interpreted further, please refer to
- * {@link ChannelUpstreamHandler} and {@link ChannelDownstreamHandler}.
- *
+ * To see how an event is interpreted further, please refer to {@link ChannelEvent}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)

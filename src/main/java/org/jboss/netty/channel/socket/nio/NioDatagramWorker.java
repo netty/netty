@@ -125,6 +125,8 @@ class NioDatagramWorker implements Runnable {
      */
     private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
 
+    private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
+
     /**
      * Sole constructor.
      *
@@ -216,7 +218,7 @@ class NioDatagramWorker implements Runnable {
             }
 
             try {
-                int selectedKeyCount = selector.select(500);
+                selector.select(500);
 
                 // 'wakenUp.compareAndSet(false, true)' is always evaluated
                 // before calling 'selector.wakeup()' to reduce the wake-up
@@ -250,12 +252,10 @@ class NioDatagramWorker implements Runnable {
                     selector.wakeup();
                 }
 
+                cancelledKeys = 0;
                 processRegisterTaskQueue();
                 processWriteTaskQueue();
-
-                if (selectedKeyCount > 0) {
-                    processSelectedKeys(selector.selectedKeys());
-                }
+                processSelectedKeys(selector.selectedKeys());
 
                 // Exit the loop when there's nothing to handle (the registered
                 // key set is empty.
@@ -308,7 +308,7 @@ class NioDatagramWorker implements Runnable {
      * Will go through all the {@link ChannelRegistionTask}s in the
      * task queue and run them (registering them).
      */
-    private void processRegisterTaskQueue() {
+    private void processRegisterTaskQueue() throws IOException {
         for (;;) {
             final Runnable task = registerTaskQueue.poll();
             if (task == null) {
@@ -316,13 +316,14 @@ class NioDatagramWorker implements Runnable {
             }
 
             task.run();
+            cleanUpCancelledKeys();
         }
     }
 
     /**
      * Will go through all the WriteTasks and run them.
      */
-    private void processWriteTaskQueue() {
+    private void processWriteTaskQueue() throws IOException {
         for (;;) {
             final Runnable task = writeTaskQueue.poll();
             if (task == null) {
@@ -330,16 +331,17 @@ class NioDatagramWorker implements Runnable {
             }
 
             task.run();
+            cleanUpCancelledKeys();
         }
     }
 
-    private static void processSelectedKeys(final Set<SelectionKey> selectedKeys) {
+    private void processSelectedKeys(final Set<SelectionKey> selectedKeys) throws IOException {
         for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
             SelectionKey k = i.next();
             i.remove();
             try {
                 int readyOps = k.readyOps();
-                if ((readyOps & SelectionKey.OP_READ) != 0) {
+                if ((readyOps & SelectionKey.OP_READ) != 0 || readyOps == 0) {
                     if (!read(k)) {
                         // Connection already closed - no need to handle write.
                         continue;
@@ -351,7 +353,20 @@ class NioDatagramWorker implements Runnable {
             } catch (CancelledKeyException e) {
                 close(k);
             }
+
+            if (cleanUpCancelledKeys()) {
+                break; // Break the loop to avoid ConcurrentModificationException
+            }
         }
+    }
+
+    private boolean cleanUpCancelledKeys() throws IOException {
+        if (cancelledKeys >= NioWorker.CLEANUP_INTERVAL) {
+            cancelledKeys = 0;
+            selector.selectNow();
+            return true;
+        }
+        return false;
     }
 
     private static void write(SelectionKey k) {
@@ -654,6 +669,7 @@ class NioDatagramWorker implements Runnable {
                 SelectionKey key = channel.getDatagramChannel().keyFor(selector);
                 if (key != null) {
                     key.cancel();
+                    worker.cancelledKeys ++;
                 }
                 channel.getDatagramChannel().close();
             }

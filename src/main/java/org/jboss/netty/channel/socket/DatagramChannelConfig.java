@@ -21,7 +21,9 @@ import java.net.NetworkInterface;
 
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.FixedReceiveBufferSizePredictor;
+import org.jboss.netty.channel.FixedReceiveBufferSizePredictorFactory;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import org.jboss.netty.channel.ReceiveBufferSizePredictorFactory;
 
 /**
  * A {@link ChannelConfig} for a {@link DatagramChannel}.
@@ -48,6 +50,8 @@ import org.jboss.netty.channel.ReceiveBufferSizePredictor;
  * <td>{@code "receiveBufferSize"}</td><td>{@link #setReceiveBufferSize(int)}</td>
  * </tr><tr>
  * <td>{@code "receiveBufferSizePredictor"}</td><td>{@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}</td>
+ * </tr><tr>
+ * <td>{@code "receiveBufferSizePredictorFactory"}</td><td>{@link #setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory)}</td>
  * </tr><tr>
  * <td>{@code "sendBufferSize"}</td><td>{@link #setSendBufferSize(int)}</td>
  * </tr><tr>
@@ -176,4 +180,24 @@ public interface DatagramChannelConfig extends ChannelConfig {
      * predictor is <tt>{@link FixedReceiveBufferSizePredictor}(768)</tt>.
      */
     void setReceiveBufferSizePredictor(ReceiveBufferSizePredictor predictor);
+
+    /**
+     * Returns the {@link ReceiveBufferSizePredictorFactory} which creates a new
+     * {@link ReceiveBufferSizePredictor} when a new channel is created and
+     * no {@link ReceiveBufferSizePredictor} was set.  If no predictor was set
+     * for the channel, {@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}
+     * will be called with the new predictor.  The default factory is
+     * <tt>{@link FixedReceiveBufferSizePredictorFactory}(768)</tt>.
+     */
+    ReceiveBufferSizePredictorFactory getReceiveBufferSizePredictorFactory();
+
+    /**
+     * Sets the {@link ReceiveBufferSizePredictor} which creates a new
+     * {@link ReceiveBufferSizePredictor} when a new channel is created and
+     * no {@link ReceiveBufferSizePredictor} was set.  If no predictor was set
+     * for the channel, {@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}
+     * will be called with the new predictor.  The default factory is
+     * <tt>{@link FixedReceiveBufferSizePredictorFactory}(768)</tt>.
+     */
+    void setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory predictorFactory);
 }

@@ -409,7 +409,6 @@ final class InfCodes {
                 s.write = q;
                 r = s.inflate_flush(z, r);
                 q = s.write;
-                m = q < s.read? s.read - q - 1 : s.end - q;
 
                 if (s.read != s.write) {
                     s.bitb = b;

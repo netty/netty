@@ -15,71 +15,20 @@
  */
 package org.jboss.netty.channel;
 
-import java.net.SocketAddress;
-
-
 /**
  * Handles or intercepts a downstream {@link ChannelEvent}, and sends a
  * {@link ChannelEvent} to the next handler in a {@link ChannelPipeline}.
- *
- * <h3>Downstream events</h3>
- * <p>
- * A downstream event is an event which is supposed to be processed by
- * a series of downstream handlers in the {@link ChannelPipeline}.  It is often
- * an I/O request made by a user application.
  * <p>
  * The most common use case of this interface is to intercept an I/O request
- * such as {@link Channel#write(Object)} and {@link Channel#close()}.  The
- * received {@link ChannelEvent} object is interpreted as described in the
- * following table:
+ * such as {@link Channel#write(Object)} and {@link Channel#close()}.
  *
- * <table border="1" cellspacing="0" cellpadding="6">
- * <tr>
- * <th>Event name</th><th>Event type and condition</th><th>Meaning</th>
- * </tr>
- * <tr>
- * <td>{@code "write"}</td>
- * <td>{@link MessageEvent}</td><td>Send a message to the {@link Channel}.</td>
- * </tr>
- * <tr>
- * <td>{@code "bind"}</td>
- * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#BOUND BOUND}, value = {@link SocketAddress})</td>
- * <td>Bind the {@link Channel} to the specified local address.</td>
- * </tr>
- * <tr>
- * <td>{@code "unbind"}</td>
- * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#BOUND BOUND}, value = {@code null})</td>
- * <td>Unbind the {@link Channel} from the current local address.</td>
- * </tr>
- * <tr>
- * <td>{@code "connect"}</td>
- * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#CONNECTED CONNECTED}, value = {@link SocketAddress})</td>
- * <td>Connect the {@link Channel} to the specified remote address.</td>
- * </tr>
- * <tr>
- * <td>{@code "disconnect"}</td>
- * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#CONNECTED CONNECTED}, value = {@code null})</td>
- * <td>Disconnect the {@link Channel} from the current remote address.</td>
- * </tr>
- * <tr>
- * <td>{@code "close"}</td>
- * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#OPEN OPEN}, value = {@code false})</td>
- * <td>Close the {@link Channel}.</td>
- * </tr>
- * </table>
+ * <h3>{@link SimpleChannelDownstreamHandler}</h3>
  * <p>
- * Other event types and conditions which were not addressed here will be
- * ignored and discarded.  Please note that there's no {@code "open"} in the
- * table.  It is because a {@link Channel} is always open when it is created
- * by a {@link ChannelFactory}.
- *
- * <h4>Additional resources worth reading</h4>
- * <p>
- * You might want to refer to {@link ChannelUpstreamHandler} to see how a
- * {@link ChannelEvent} is interpreted when going upstream.  Also, please refer
- * to the {@link ChannelEvent} and {@link ChannelPipeline} documentation to find
- * out what an upstream event and a downstream event are, what fundamental
- * differences they have, and how they flow in a pipeline.
+ * In most cases, you will get to use a {@link SimpleChannelDownstreamHandler}
+ * to implement a downstream handler because it provides an individual handler
+ * method for each event type.  You might want to implement this interface
+ * directly though if you want to handle various types of events in more
+ * generic way.
  *
  * <h3>Firing an event to the next handler</h3>
  * <p>

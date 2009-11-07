@@ -13,27 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.compression;
+package org.jboss.netty.channel;
 
 /**
- * The container file formats that wrap the stream compressed by the DEFLATE
- * algorithm.
+ * Creates a new {@link ReceiveBufferSizePredictor}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
+ *
  * @version $Rev$, $Date$
  */
-public enum ZlibWrapper {
+public interface ReceiveBufferSizePredictorFactory {
+
     /**
-     * The ZLIB wrapper as specified in <a href="http://tools.ietf.org/html/rfc1950">RFC 1950</a>.
+     * Returns a newly created {@link ReceiveBufferSizePredictor}.
      */
-    ZLIB,
-    /**
-     * The GZIP wrapper as specified in <a href="http://tools.ietf.org/html/rfc1950">RFC 1952</a>.
-     */
-    GZIP,
-    /**
-     * Raw DEFLATE stream only (no header and no footer).
-     */
-    NONE;
+    ReceiveBufferSizePredictor getPredictor() throws Exception;
 }

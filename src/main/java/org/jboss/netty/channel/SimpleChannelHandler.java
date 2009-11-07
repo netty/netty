@@ -28,7 +28,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * or downstream event into more meaningful sub-type event and calls an
  * appropriate handler method with the down-cast event.  For an upstream
  * event, the names of the methods are identical to the upstream event names,
- * as introduced in the {@link ChannelUpstreamHandler} documentation.  For a
+ * as introduced in the {@link ChannelEvent} documentation.  For a
  * downstream event, the names of the methods starts with the name of the
  * operation and ends with {@code "Requested"}
  * (e.g. {@link #writeRequested(ChannelHandlerContext, MessageEvent) writeRequested}.)

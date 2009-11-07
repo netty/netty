@@ -103,7 +103,7 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
     }
 
     @ChannelPipelineCoverage("one")
-    private class OutboundHandler extends SimpleChannelUpstreamHandler {
+    private static class OutboundHandler extends SimpleChannelUpstreamHandler {
 
         private final Channel inboundChannel;
 
