@@ -133,19 +133,25 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
     }
 
     private void connect(
-            final NioClientSocketChannel channel, ChannelFuture future,
+            final NioClientSocketChannel channel, final ChannelFuture cf,
             SocketAddress remoteAddress) {
         try {
             if (channel.socket.connect(remoteAddress)) {
-                channel.worker.register(channel, future);
+                channel.worker.register(channel, cf);
             } else {
-                future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-                channel.connectFuture = future;
+                channel.getCloseFuture().addListener(new ChannelFutureListener() {
+                    public void operationComplete(ChannelFuture f)
+                            throws Exception {
+                        cf.setFailure(new ClosedChannelException());
+                    }
+                });
+                cf.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+                channel.connectFuture = cf;
                 boss.register(channel);
             }
 
         } catch (Throwable t) {
-            future.setFailure(t);
+            cf.setFailure(t);
             fireExceptionCaught(channel, t);
         }
     }
@@ -363,7 +369,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
 
                     ch.connectFuture.setFailure(cause);
                     fireExceptionCaught(ch, cause);
-                    close(k);
+                    NioWorker.close(ch, succeededFuture(ch));
                 }
             }
         }
@@ -378,13 +384,12 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             } catch (Throwable t) {
                 ch.connectFuture.setFailure(t);
                 fireExceptionCaught(ch, t);
-                close(k);
+                NioWorker.close(ch, succeededFuture(ch));
             }
         }
 
         private void close(SelectionKey k) {
-            k.cancel();
-            NioSocketChannel ch = (NioSocketChannel) k.attachment();
+            NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
             NioWorker.close(ch, succeededFuture(ch));
         }
     }
