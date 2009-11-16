@@ -142,7 +142,9 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                 channel.getCloseFuture().addListener(new ChannelFutureListener() {
                     public void operationComplete(ChannelFuture f)
                             throws Exception {
-                        cf.setFailure(new ClosedChannelException());
+                        if (!cf.isDone()) {
+                            cf.setFailure(new ClosedChannelException());
+                        }
                     }
                 });
                 cf.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
@@ -153,6 +155,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         } catch (Throwable t) {
             cf.setFailure(t);
             fireExceptionCaught(channel, t);
+            NioWorker.close(channel, succeededFuture(channel));
         }
     }
 
