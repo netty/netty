@@ -179,12 +179,12 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
             }
 
             if (stripDelimiter) {
-                frame = buffer.slice(buffer.readerIndex(), minFrameLength);
+                frame = buffer.readBytes(minFrameLength);
+                buffer.skipBytes(minDelimLength);
             } else {
-                frame = buffer.slice(buffer.readerIndex(), minFrameLength + minDelimLength);
+                frame = buffer.readBytes(minFrameLength + minDelimLength);
             }
 
-            buffer.skipBytes(minFrameLength + minDelimLength);
             return frame;
         } else {
             if (buffer.readableBytes() > maxFrameLength) {

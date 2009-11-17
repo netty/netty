@@ -55,11 +55,7 @@ public class ProtobufVarint32FrameDecoder extends FrameDecoder {
                     break;
                 }
 
-                // TODO Extract (ChannelBuffer.slice(int, int) + skipBytes(int))
-                //      into a new method in ChannelBuffer
-                ChannelBuffer frame = buffer.slice(buffer.readerIndex(), messageSize);
-                buffer.skipBytes(messageSize);
-                return frame;
+                return buffer.readBytes(messageSize);
             }
         }
 
