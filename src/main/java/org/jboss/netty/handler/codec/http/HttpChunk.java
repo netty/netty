@@ -38,7 +38,15 @@ public interface HttpChunk {
     /**
      * The 'end of content' marker in chunked encoding.
      */
-    static HttpChunk LAST_CHUNK = new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER);
+    static HttpChunk LAST_CHUNK = new HttpChunk() {
+        public ChannelBuffer getContent() {
+            return ChannelBuffers.EMPTY_BUFFER;
+        }
+
+        public boolean isLast() {
+            return true;
+        }
+    };
 
     /**
      * Returns {@code true} if and only if this chunk is the 'end of content'
