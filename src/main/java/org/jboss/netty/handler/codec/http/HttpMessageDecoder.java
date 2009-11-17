@@ -453,7 +453,13 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
 
         if (isContentAlwaysEmpty(message)) {
             nextState = State.SKIP_CONTROL_CHARS;
-        } else if (isChunked(message)) {
+        } else if (message.isChunked()) {
+            // HttpMessage.isChunked() returns true when either:
+            // 1) HttpMessage.setChunked(true) was called or
+            // 2) 'Transfer-Encoding' is 'chunked'.
+            // Because this decoder did not call HttpMessage.setChunked(true)
+            // yet, HttpMessage.isChunked() should return true only when
+            // 'Transfer-Encoding' is 'chunked'.
             nextState = State.READ_CHUNK_SIZE;
         } else if (message.getContentLength(-1) >= 0) {
             nextState = State.READ_FIXED_LENGTH_CONTENT;
@@ -461,20 +467,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             nextState = State.READ_VARIABLE_LENGTH_CONTENT;
         }
         return nextState;
-    }
-
-    private static boolean isChunked(HttpMessage message) {
-        List<String> chunked = message.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
-        if (chunked.isEmpty()) {
-            return false;
-        }
-
-        for (String v: chunked) {
-            if (v.equalsIgnoreCase(HttpHeaders.Values.CHUNKED)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private HttpChunkTrailer readTrailingHeaders(ChannelBuffer buffer) throws TooLongFrameException {
