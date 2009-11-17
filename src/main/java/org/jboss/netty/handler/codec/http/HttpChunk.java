@@ -15,6 +15,10 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -38,13 +42,49 @@ public interface HttpChunk {
     /**
      * The 'end of content' marker in chunked encoding.
      */
-    static HttpChunk LAST_CHUNK = new HttpChunk() {
+    static HttpChunkTrailer LAST_CHUNK = new HttpChunkTrailer() {
         public ChannelBuffer getContent() {
             return ChannelBuffers.EMPTY_BUFFER;
         }
 
         public boolean isLast() {
             return true;
+        }
+
+        public void addHeader(String name, String value) {
+            throw new IllegalStateException("read-only");
+        }
+
+        public void clearHeaders() {
+            // NOOP
+        }
+
+        public boolean containsHeader(String name) {
+            return false;
+        }
+
+        public String getHeader(String name) {
+            return null;
+        }
+
+        public Set<String> getHeaderNames() {
+            return Collections.emptySet();
+        }
+
+        public List<String> getHeaders(String name) {
+            return Collections.emptyList();
+        }
+
+        public void removeHeader(String name) {
+            // NOOP
+        }
+
+        public void setHeader(String name, String value) {
+            throw new IllegalStateException("read-only");
+        }
+
+        public void setHeader(String name, Iterable<String> values) {
+            throw new IllegalStateException("read-only");
         }
     };
 
