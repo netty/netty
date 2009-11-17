@@ -28,31 +28,23 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.util.internal.CaseIgnoringComparator;
 
 /**
- * The default {@link HttpMessage} implementation.
+ * The default {@link HttpChunkTrailer} implementation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
-public class DefaultHttpMessage implements HttpMessage {
+public class DefaultHttpChunkTrailer implements HttpChunkTrailer {
 
-    private final HttpVersion version;
+    // FIXME Lots of code duplication with DefaultHttpMessage
     private final Map<String, List<String>> headers = new TreeMap<String, List<String>>(CaseIgnoringComparator.INSTANCE);
-    private ChannelBuffer content = ChannelBuffers.EMPTY_BUFFER;
 
-    /**
-     * Creates a new instance.
-     */
-    protected DefaultHttpMessage(final HttpVersion version) {
-        if (version == null) {
-            throw new NullPointerException("version");
-        }
-        this.version = version;
+    public boolean isLast() {
+        return true;
     }
 
     public void addHeader(final String name, final String value) {
-        HttpCodecUtil.validateHeaderName(name);
+        validateHeaderName(name);
         HttpCodecUtil.validateHeaderValue(value);
         if (headers.get(name) == null) {
             headers.put(name, new ArrayList<String>(1));
@@ -61,7 +53,7 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public void setHeader(final String name, final String value) {
-        HttpCodecUtil.validateHeaderName(name);
+        validateHeaderName(name);
         HttpCodecUtil.validateHeaderValue(value);
         List<String> values = new ArrayList<String>(1);
         values.add(value);
@@ -69,7 +61,7 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public void setHeader(final String name, final Iterable<String> values) {
-        HttpCodecUtil.validateHeaderName(name);
+        validateHeaderName(name);
         if (values == null) {
             throw new NullPointerException("values");
         }
@@ -95,57 +87,22 @@ public class DefaultHttpMessage implements HttpMessage {
         }
     }
 
+    private static void validateHeaderName(String name) {
+        HttpCodecUtil.validateHeaderName(name);
+        if (name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) ||
+            name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) ||
+            name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
+            throw new IllegalArgumentException(
+                    "prohibited trailing header: " + name);
+        }
+    }
+
     public void removeHeader(final String name) {
         headers.remove(name);
     }
 
-    public long getContentLength() {
-        return getContentLength(0);
-    }
-
-    public long getContentLength(long defaultValue) {
-        List<String> contentLength = headers.get(HttpHeaders.Names.CONTENT_LENGTH);
-        if (contentLength != null && contentLength.size() > 0) {
-            return Long.parseLong(contentLength.get(0));
-        }
-        return defaultValue;
-    }
-
-    public boolean isChunked() {
-        List<String> chunked = headers.get(HttpHeaders.Names.TRANSFER_ENCODING);
-        if (chunked == null || chunked.isEmpty()) {
-            return false;
-        }
-
-        for (String v: chunked) {
-            if (v.equalsIgnoreCase(HttpHeaders.Values.CHUNKED)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public boolean isKeepAlive() {
-        if (HttpHeaders.Values.CLOSE.equalsIgnoreCase(getHeader(HttpHeaders.Names.CONNECTION))) {
-            return false;
-        }
-
-        if (getProtocolVersion().equals(HttpVersion.HTTP_1_0) &&
-            !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(getHeader(HttpHeaders.Names.CONNECTION))) {
-            return false;
-        }
-        return true;
-    }
-
     public void clearHeaders() {
         headers.clear();
-    }
-
-    public void setContent(ChannelBuffer content) {
-        if (content == null) {
-            content = ChannelBuffers.EMPTY_BUFFER;
-        }
-        this.content = content;
     }
 
     public String getHeader(final String name) {
@@ -170,11 +127,7 @@ public class DefaultHttpMessage implements HttpMessage {
         return headers.keySet();
     }
 
-    public HttpVersion getProtocolVersion() {
-        return version;
-    }
-
     public ChannelBuffer getContent() {
-        return content;
+        return ChannelBuffers.EMPTY_BUFFER;
     }
 }
