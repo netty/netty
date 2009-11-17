@@ -15,6 +15,7 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -327,22 +328,15 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             }
         }
         case READ_CHUNK_FOOTER: {
-            // Skip the footer; does anyone use it?
-            try {
-                if (!skipLine(buffer)) {
-                    if (maxChunkSize == 0) {
-                        // Chunked encoding disabled.
-                        return reset();
-                    } else {
-                        reset();
-                        // The last chunk, which is empty
-                        return HttpChunk.LAST_CHUNK;
-                    }
-                }
-            } finally {
-                checkpoint();
+            readTrailingHeaders(buffer);
+            if (maxChunkSize == 0) {
+                // Chunked encoding disabled.
+                return reset();
+            } else {
+                reset();
+                // The last chunk, which is empty
+                return HttpChunk.LAST_CHUNK;
             }
-            return null;
         }
         default: {
             throw new Error("Shouldn't reach here.");
@@ -440,6 +434,51 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return nextState;
     }
 
+    private void readTrailingHeaders(ChannelBuffer buffer) throws TooLongFrameException {
+        headerSize = 0;
+        String line = readHeader(buffer);
+        String lastHeader = null;
+        if (line.length() != 0) {
+            List<String> names = new ArrayList<String>(4);
+            List<String> values = new ArrayList<String>(4);
+            do {
+                char firstChar = line.charAt(0);
+                if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
+                    int lastPos = values.size() - 1;
+                    String newString = values.get(lastPos) + line.trim();
+                    values.set(lastPos, newString);
+                } else {
+                    String[] header = splitHeader(line);
+                    names.add(header[0]);
+                    values.add(header[1]);
+                    lastHeader = header[0];
+                }
+
+                line = readHeader(buffer);
+            } while (line.length() != 0);
+
+            // Merge the trailing headers into the message.
+            HttpMessage message = this.message;
+            for (int i = 0; i < names.size(); i ++) {
+                String name = names.get(i);
+                String value = values.get(i);
+
+                // Discard the prohibited headers.
+                if (name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH)) {
+                    continue;
+                }
+                if (name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING)) {
+                    continue;
+                }
+                if (name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
+                    continue;
+                }
+
+                message.addHeader(name, value);
+            }
+        }
+    }
+
     private String readHeader(ChannelBuffer buffer) throws TooLongFrameException {
         StringBuilder sb = new StringBuilder(64);
         int headerSize = this.headerSize;
@@ -514,30 +553,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 }
                 lineLength ++;
                 sb.append((char) nextByte);
-            }
-        }
-    }
-
-    /**
-     * Returns {@code true} if only if the skipped line was not empty.
-     * Please note that an empty line is also skipped, while {@code} false is
-     * returned.
-     */
-    private boolean skipLine(ChannelBuffer buffer) {
-        int lineLength = 0;
-        while (true) {
-            byte nextByte = buffer.readByte();
-            if (nextByte == HttpCodecUtil.CR) {
-                nextByte = buffer.readByte();
-                if (nextByte == HttpCodecUtil.LF) {
-                    return lineLength != 0;
-                }
-            }
-            else if (nextByte == HttpCodecUtil.LF) {
-                return lineLength != 0;
-            }
-            else if (!Character.isWhitespace((char) nextByte)) {
-                lineLength ++;
             }
         }
     }
