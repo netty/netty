@@ -36,7 +36,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 public interface HttpChunk {
 
     /**
-     * The 'end of content' maker in chunked encoding.
+     * The 'end of content' marker in chunked encoding.
      */
     static HttpChunk LAST_CHUNK = new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER);
 
