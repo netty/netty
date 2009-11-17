@@ -49,8 +49,6 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  * <td>{@code "receiveBufferSizePredictor"}</td><td>{@link #setReceiveBufferSizePredictor(ReceiveBufferSizePredictor)}</td>
  * </tr><tr>
  * <td>{@code "receiveBufferSizePredictorFactory"}</td><td>{@link #setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory)}</td>
- * </tr><tr>
- * <td>{@code "readWriteFair"}</td><td>{@link #setReadWriteFair(boolean)}</td>
  * </tr>
  * </table>
  *
@@ -147,32 +145,4 @@ public interface NioSocketChannelConfig extends SocketChannelConfig {
      * <tt>{@link AdaptiveReceiveBufferSizePredictorFactory}(64, 1024, 65536)</tt>.
      */
     void setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory predictorFactory);
-
-    /**
-     * @deprecated This property has been replaced by the
-     * {@code writeBufferHighWaterMark} and {@code writeBufferLowWaterMark}.
-     *
-     * Returns {@code true} if and only if an I/O thread should do its effort
-     * to balance the ratio of read and write operations.  Assuring
-     * the read-write fairness is sometimes necessary in a high speed network
-     * because a certain channel can spend too much time on flushing the
-     * large number of write requests not giving enough time for other channels
-     * to perform I/O.  The default value is {@code false}.
-     */
-    @Deprecated
-    boolean isReadWriteFair();
-
-    /**
-     * @deprecated This property has been replaced by the
-     * {@code writeBufferHighWaterMark} and {@code writeBufferLowWaterMark}.
-     *
-     * Sets if an I/O thread should balance the ratio of read and write
-     * operations.  Assuring the read-write fairness is sometimes necessary
-     * in a high speed network because a certain channel can spend too much
-     * time on flushing the large number of write requests not giving enough
-     * time for other channels to perform I/O.  The default value is
-     * {@code false}.
-     */
-    @Deprecated
-    void setReadWriteFair(boolean fair);
 }

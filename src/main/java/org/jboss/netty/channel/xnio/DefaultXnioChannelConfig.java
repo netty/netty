@@ -213,14 +213,4 @@ final class DefaultXnioChannelConfig implements XnioChannelConfig {
     public void setConnectTimeoutMillis(int connectTimeoutMillis) {
         // Preconfigured by XNIO.
     }
-
-    @Deprecated
-    public int getWriteTimeoutMillis() {
-        return 0;
-    }
-
-    @Deprecated
-    public void setWriteTimeoutMillis(int writeTimeoutMillis) {
-        // Unused.
-    }
 }

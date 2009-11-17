@@ -21,7 +21,6 @@ import java.util.Map.Entry;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.HeapChannelBufferFactory;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
-import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.internal.ConversionUtil;
 
 /**
@@ -83,14 +82,6 @@ public class DefaultChannelConfig implements ChannelConfig {
         return null;
     }
 
-    /**
-     * @deprecated Use {@link WriteTimeoutHandler} instead.
-     */
-    @Deprecated
-    public int getWriteTimeoutMillis() {
-        return 0;
-    }
-
     public void setConnectTimeoutMillis(int connectTimeoutMillis) {
         if (connectTimeoutMillis < 0) {
             throw new IllegalArgumentException("connectTimeoutMillis: " + connectTimeoutMillis);
@@ -99,14 +90,6 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
-        // Unused
-    }
-
-    /**
-     * @deprecated Use {@link WriteTimeoutHandler} instead.
-     */
-    @Deprecated
-    public void setWriteTimeoutMillis(int writeTimeoutMillis) {
         // Unused
     }
 }
