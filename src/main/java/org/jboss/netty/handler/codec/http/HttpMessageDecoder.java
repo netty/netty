@@ -49,15 +49,42 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  * <tr>
  * <td>{@code maxChunkSize}</td>
  * <td>The maximum length of the content or each chunk.  If the content length
- *     exceeds this value, the transfer encoding of the decoded message will be
- *     converted to 'chunked' and the content will be split into multiple
- *     {@link HttpChunk}s.  If the transfer encoding of the HTTP message is
- *     'chunked' already, each chunk will be split into smaller chunks if the
- *     length of the chunk exceeds this value.  If you prefer not to handle
- *     {@link HttpChunk}s in your handler, insert {@link HttpChunkAggregator}
- *     after this decoder in the {@link ChannelPipeline}.</td>
+ *     (or the length of each chunk) exceeds this value, the content or chunk
+ *     will be split into multiple {@link HttpChunk}s whose length is
+ *     {@code maxChunkSize} at maximum.</td>
  * </tr>
  * </table>
+ *
+ * <h3>Chunked Content</h3>
+ *
+ * If the content of an HTTP message is greater than {@code maxChunkSize} or
+ * the transfer encoding of the HTTP message is 'chunked', this decoder
+ * generates one {@link HttpMessage} instance and its following
+ * {@link HttpChunk}s per single HTTP message to avoid excessive memory
+ * consumption. For example, the following HTTP message:
+ * <pre>
+ * GET / HTTP/1.1
+ * Transfer-Encoding: chunked
+ *
+ * 1a
+ * abcdefghijklmnopqrstuvwxyz
+ * 10
+ * 1234567890abcdef
+ * 0
+ * </pre>.
+ * triggers {@link HttpRequestDecoder} to generate 4 objects:
+ * <ol>
+ * <li>An {@link HttpRequest} whose {@link HttpMessage#isChunked() chunked}
+ *     property is {@code true},<li>
+ * <li>The first {@link HttpChunk} whose content is {@code 'abcdefghijklmnopqrstuvwxyz'},</li>
+ * <li>The second {@link HttpChunk} whose content is {@code '1234567890abcdef'}, and</li>
+ * <li>An {@link HttpChunkTrailer} which marks the end of the content.</li>
+ * </ol>
+ *
+ * If you prefer not to handle {@link HttpChunk}s by yourself for your
+ * convenience, insert {@link HttpChunkAggregator} after this decoder in the
+ * {@link ChannelPipeline}.  However, please note that your server might not
+ * be as memory efficient as without the aggregator.
  *
  * <h3>Extensibility</h3>
  *
