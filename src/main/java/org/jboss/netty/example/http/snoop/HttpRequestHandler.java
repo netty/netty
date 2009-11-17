@@ -34,6 +34,7 @@ import org.jboss.netty.handler.codec.http.CookieDecoder;
 import org.jboss.netty.handler.codec.http.CookieEncoder;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunk;
+import org.jboss.netty.handler.codec.http.HttpChunkTrailer;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -106,6 +107,18 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
             if (chunk.isLast()) {
                 readingChunks = false;
                 responseContent.append("END OF CONTENT\r\n");
+
+                HttpChunkTrailer trailer = (HttpChunkTrailer) chunk;
+                if (!trailer.getHeaderNames().isEmpty()) {
+                    responseContent.append("\r\n");
+                    for (String name: trailer.getHeaderNames()) {
+                        for (String value: trailer.getHeaders(name)) {
+                            responseContent.append("TRAILING HEADER: " + name + " = " + value + "\r\n");
+                        }
+                    }
+                    responseContent.append("\r\n");
+                }
+
                 writeResponse(e);
             } else {
                 responseContent.append("CHUNK: " + chunk.getContent().toString("UTF-8") + "\r\n");

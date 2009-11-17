@@ -15,7 +15,6 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -328,14 +327,14 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             }
         }
         case READ_CHUNK_FOOTER: {
-            readTrailingHeaders(buffer);
+            HttpChunkTrailer trailer = readTrailingHeaders(buffer);
             if (maxChunkSize == 0) {
                 // Chunked encoding disabled.
                 return reset();
             } else {
                 reset();
                 // The last chunk, which is empty
-                return HttpChunk.LAST_CHUNK;
+                return trailer;
             }
         }
         default: {
@@ -434,49 +433,41 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return nextState;
     }
 
-    private void readTrailingHeaders(ChannelBuffer buffer) throws TooLongFrameException {
+    private HttpChunkTrailer readTrailingHeaders(ChannelBuffer buffer) throws TooLongFrameException {
         headerSize = 0;
         String line = readHeader(buffer);
         String lastHeader = null;
         if (line.length() != 0) {
-            List<String> names = new ArrayList<String>(4);
-            List<String> values = new ArrayList<String>(4);
+            HttpChunkTrailer trailer = new DefaultHttpChunkTrailer();
             do {
                 char firstChar = line.charAt(0);
                 if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
-                    int lastPos = values.size() - 1;
-                    String newString = values.get(lastPos) + line.trim();
-                    values.set(lastPos, newString);
+                    List<String> current = trailer.getHeaders(lastHeader);
+                    if (current.size() != 0) {
+                        int lastPos = current.size() - 1;
+                        String newString = current.get(lastPos) + line.trim();
+                        current.set(lastPos, newString);
+                    } else {
+                        // Content-Length, Transfer-Encoding, or Trailer
+                    }
                 } else {
                     String[] header = splitHeader(line);
-                    names.add(header[0]);
-                    values.add(header[1]);
-                    lastHeader = header[0];
+                    String name = header[0];
+                    if (!name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) &&
+                        !name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) &&
+                        !name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
+                        trailer.addHeader(name, header[1]);
+                    }
+                    lastHeader = name;
                 }
 
                 line = readHeader(buffer);
             } while (line.length() != 0);
 
-            // Merge the trailing headers into the message.
-            HttpMessage message = this.message;
-            for (int i = 0; i < names.size(); i ++) {
-                String name = names.get(i);
-                String value = values.get(i);
-
-                // Discard the prohibited headers.
-                if (name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH)) {
-                    continue;
-                }
-                if (name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING)) {
-                    continue;
-                }
-                if (name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
-                    continue;
-                }
-
-                message.addHeader(name, value);
-            }
+            return trailer;
         }
+
+        return HttpChunk.LAST_CHUNK;
     }
 
     private String readHeader(ChannelBuffer buffer) throws TooLongFrameException {
