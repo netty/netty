@@ -83,6 +83,14 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
             HttpChunk chunk = (HttpChunk) msg;
             if (chunk == HttpChunk.LAST_CHUNK) {
                 return LAST_CHUNK.duplicate();
+            } else if (chunk instanceof HttpChunkTrailer) {
+                ChannelBuffer trailer = ChannelBuffers.dynamicBuffer(
+                        channel.getConfig().getBufferFactory());
+                trailer.writeByte((byte) '0');
+                trailer.writeBytes(CRLF);
+                encodeTrailingHeaders(trailer, (HttpChunkTrailer) chunk);
+                trailer.writeBytes(CRLF);
+                return trailer;
             } else {
                 ChannelBuffer content = chunk.getContent();
                 int contentLength = content.readableBytes();
@@ -105,17 +113,35 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
             for (String header : headers) {
                 List<String> values = message.getHeaders(header);
                 for (String value : values) {
-
-                    buf.writeBytes(header.getBytes("ASCII"));
-                    buf.writeByte(COLON);
-                    buf.writeByte(SP);
-                    buf.writeBytes(value.getBytes("ASCII"));
-                    buf.writeBytes(CRLF);
+                    encodeHeader(buf, header, value);
                 }
             }
         } catch (UnsupportedEncodingException e) {
             throw (Error) new Error().initCause(e);
         }
+    }
+
+    private void encodeTrailingHeaders(ChannelBuffer buf, HttpChunkTrailer trailer) {
+        Set<String> headers = trailer.getHeaderNames();
+        try {
+            for (String header : headers) {
+                List<String> values = trailer.getHeaders(header);
+                for (String value : values) {
+                    encodeHeader(buf, header, value);
+                }
+            }
+        } catch (UnsupportedEncodingException e) {
+            throw (Error) new Error().initCause(e);
+        }
+    }
+
+    private void encodeHeader(ChannelBuffer buf, String header, String value)
+            throws UnsupportedEncodingException {
+        buf.writeBytes(header.getBytes("ASCII"));
+        buf.writeByte(COLON);
+        buf.writeByte(SP);
+        buf.writeBytes(value.getBytes("ASCII"));
+        buf.writeBytes(CRLF);
     }
 
     protected abstract void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception;
