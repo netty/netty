@@ -71,6 +71,8 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  * 10
  * 1234567890abcdef
  * 0
+ * Content-MD5: ...
+ * <i>[blank line]</i>
  * </pre>.
  * triggers {@link HttpRequestDecoder} to generate 4 objects:
  * <ol>
@@ -201,6 +203,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             checkpoint(nextState);
             if (nextState == State.READ_CHUNK_SIZE) {
                 // Chunked encoding
+                message.setChunked(true);
                 // Generate HttpMessage first.  HttpChunks will follow.
                 return message;
             } else if (nextState == State.SKIP_CONTROL_CHARS) {
@@ -222,7 +225,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                     if (contentLength > maxChunkSize) {
                         // Generate HttpMessage first.  HttpChunks will follow.
                         checkpoint(State.READ_FIXED_LENGTH_CONTENT_AS_CHUNKS);
-                        message.addHeader(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+                        message.setChunked(true);
                         // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT_AS_CHUNKS
                         // state reads data chunk by chunk.
                         chunkSize = message.getContentLength(-1);
@@ -233,7 +236,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                     if (buffer.readableBytes() > maxChunkSize) {
                         // Generate HttpMessage first.  HttpChunks will follow.
                         checkpoint(State.READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS);
-                        message.addHeader(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+                        message.setChunked(true);
                         return message;
                     }
                     break;
@@ -450,7 +453,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
 
         if (isContentAlwaysEmpty(message)) {
             nextState = State.SKIP_CONTROL_CHARS;
-        } else if (message.isChunked()) {
+        } else if (isChunked(message)) {
             nextState = State.READ_CHUNK_SIZE;
         } else if (message.getContentLength(-1) >= 0) {
             nextState = State.READ_FIXED_LENGTH_CONTENT;
@@ -458,6 +461,20 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             nextState = State.READ_VARIABLE_LENGTH_CONTENT;
         }
         return nextState;
+    }
+
+    private static boolean isChunked(HttpMessage message) {
+        List<String> chunked = message.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
+        if (chunked.isEmpty()) {
+            return false;
+        }
+
+        for (String v: chunked) {
+            if (v.equalsIgnoreCase(HttpHeaders.Values.CHUNKED)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private HttpChunkTrailer readTrailingHeaders(ChannelBuffer buffer) throws TooLongFrameException {

@@ -40,6 +40,7 @@ public class DefaultHttpMessage implements HttpMessage {
     private final HttpVersion version;
     private final Map<String, List<String>> headers = new TreeMap<String, List<String>>(CaseIgnoringComparator.INSTANCE);
     private ChannelBuffer content = ChannelBuffers.EMPTY_BUFFER;
+    private boolean chunked;
 
     /**
      * Creates a new instance.
@@ -112,17 +113,14 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public boolean isChunked() {
-        List<String> chunked = headers.get(HttpHeaders.Names.TRANSFER_ENCODING);
-        if (chunked == null || chunked.isEmpty()) {
-            return false;
-        }
+        return chunked;
+    }
 
-        for (String v: chunked) {
-            if (v.equalsIgnoreCase(HttpHeaders.Values.CHUNKED)) {
-                return true;
-            }
+    public void setChunked(boolean chunked) {
+        this.chunked = chunked;
+        if (chunked) {
+            setContent(ChannelBuffers.EMPTY_BUFFER);
         }
-        return false;
     }
 
     public boolean isKeepAlive() {
@@ -144,6 +142,10 @@ public class DefaultHttpMessage implements HttpMessage {
     public void setContent(ChannelBuffer content) {
         if (content == null) {
             content = ChannelBuffers.EMPTY_BUFFER;
+        }
+        if (content.readable() && isChunked()) {
+            throw new IllegalArgumentException(
+                    "non-empty content disallowed if this.chunked == true");
         }
         this.content = content;
     }
