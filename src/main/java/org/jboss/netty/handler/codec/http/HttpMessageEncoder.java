@@ -81,7 +81,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
         if (msg instanceof HttpChunk) {
             HttpChunk chunk = (HttpChunk) msg;
-            if (chunk.isLast()) {
+            if (chunk == HttpChunk.LAST_CHUNK) {
                 return LAST_CHUNK.duplicate();
             } else {
                 ChannelBuffer content = chunk.getContent();
