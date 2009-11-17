@@ -56,7 +56,7 @@ public interface HttpChunk {
 
     /**
      * Returns the content of this chunk.  If this is the 'end of content'
-     * maker, {@link ChannelBuffers#EMPTY_BUFFER} will be returned.
+     * marker, {@link ChannelBuffers#EMPTY_BUFFER} will be returned.
      */
     ChannelBuffer getContent();
 }
