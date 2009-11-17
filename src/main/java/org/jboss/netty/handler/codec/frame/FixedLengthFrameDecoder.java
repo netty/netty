@@ -63,7 +63,9 @@ public class FixedLengthFrameDecoder extends FrameDecoder {
         if (buffer.readableBytes() < frameLength) {
             return null;
         } else {
-            return buffer.readBytes(frameLength);
+            ChannelBuffer frame = buffer.slice(buffer.readerIndex(), frameLength);
+            buffer.skipBytes(frameLength);
+            return frame;
         }
     }
 }

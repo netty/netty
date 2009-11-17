@@ -16,7 +16,6 @@
 package org.jboss.netty.handler.codec.frame;
 
 import java.net.SocketAddress;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -181,8 +180,8 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
 
     private final boolean unfold;
-    private final AtomicReference<ChannelBuffer> cumulation =
-        new AtomicReference<ChannelBuffer>();
+    private ChannelBuffer cumulation = ChannelBuffers.EMPTY_BUFFER;
+    private boolean cleanedUp;
 
     protected FrameDecoder() {
         this(false);
@@ -207,16 +206,17 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
             return;
         }
 
-        ChannelBuffer cumulation = cumulation(ctx);
+        ChannelBuffer cumulation = this.cumulation;
         if (cumulation.readable()) {
-            cumulation.discardReadBytes();
-            cumulation.writeBytes(input);
-            callDecode(ctx, e.getChannel(), cumulation, e.getRemoteAddress());
+            cumulation = ChannelBuffers.wrappedBuffer(cumulation, input);
         } else {
-            callDecode(ctx, e.getChannel(), input, e.getRemoteAddress());
-            if (input.readable()) {
-                cumulation.writeBytes(input);
-            }
+            cumulation = input;
+        }
+
+        try {
+            callDecode(ctx, e.getChannel(), cumulation, e.getRemoteAddress());
+        } finally {
+            this.cumulation = cumulation.slice();
         }
     }
 
@@ -321,10 +321,12 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
     private void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         try {
-            ChannelBuffer cumulation = this.cumulation.getAndSet(null);
-            if (cumulation == null) {
+            if (cleanedUp) {
                 return;
             }
+            cleanedUp = true;
+            ChannelBuffer cumulation = this.cumulation;
+            this.cumulation = ChannelBuffers.EMPTY_BUFFER;
 
             if (cumulation.readable()) {
                 // Make sure all frames are read before notifying a closed channel.
@@ -341,17 +343,5 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
         } finally {
             ctx.sendUpstream(e);
         }
-    }
-
-    private ChannelBuffer cumulation(ChannelHandlerContext ctx) {
-        ChannelBuffer buf = cumulation.get();
-        if (buf == null) {
-            buf = ChannelBuffers.dynamicBuffer(
-                    ctx.getChannel().getConfig().getBufferFactory());
-            if (!cumulation.compareAndSet(null, buf)) {
-                buf = cumulation.get();
-            }
-        }
-        return buf;
     }
 }

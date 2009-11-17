@@ -363,7 +363,11 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
                     "Adjusted frame length (" + frameLength + ") is less " +
                     "than initialBytesToStrip: " + initialBytesToStrip);
         }
-        buffer.skipBytes(initialBytesToStrip);
-        return buffer.readBytes(frameLengthInt - initialBytesToStrip);
+
+        ChannelBuffer frame = buffer.slice(
+                buffer.readerIndex() + initialBytesToStrip,
+                frameLengthInt - initialBytesToStrip);
+        buffer.skipBytes(frameLengthInt);
+        return frame;
     }
 }

@@ -97,7 +97,7 @@ public abstract class AbstractSocketFixedLengthEchoTest {
 
         Channel cc = ccf.getChannel();
         for (int i = 0; i < data.length;) {
-            int length = Math.min(random.nextInt(1024 * 64), data.length - i);
+            int length = Math.min(random.nextInt(1024 * 3), data.length - i);
             cc.write(ChannelBuffers.wrappedBuffer(data, i, length));
             i += length;
         }
