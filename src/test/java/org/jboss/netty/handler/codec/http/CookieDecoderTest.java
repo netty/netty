@@ -225,6 +225,8 @@ public class CookieDecoderTest {
         assertNull(c.getDomain());
         assertTrue(c.getPorts().isEmpty());
         assertEquals(-1, c.getMaxAge());
+
+        assertFalse(it.hasNext());
     }
 
     @Test
@@ -258,6 +260,8 @@ public class CookieDecoderTest {
         assertNull(c.getCommentUrl());
         assertTrue(c.getPorts().isEmpty());
         assertEquals(-1, c.getMaxAge());
+
+        assertFalse(it.hasNext());
     }
 
     @Test
@@ -302,6 +306,8 @@ public class CookieDecoderTest {
         c = it.next();
         assertEquals("g", c.getName());
         assertEquals("\\", c.getValue());
+
+        assertFalse(it.hasNext());
     }
 
     @Test
