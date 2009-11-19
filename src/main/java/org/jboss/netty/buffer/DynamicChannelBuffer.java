@@ -38,9 +38,8 @@ import java.nio.channels.ScatteringByteChannel;
 public class DynamicChannelBuffer extends AbstractChannelBuffer {
 
     private final ChannelBufferFactory factory;
-    private final int initialCapacity;
     private final ByteOrder endianness;
-    private ChannelBuffer buffer = ChannelBuffers.EMPTY_BUFFER;
+    private ChannelBuffer buffer;
 
     public DynamicChannelBuffer(int estimatedLength) {
         this(ByteOrder.BIG_ENDIAN, estimatedLength);
@@ -61,8 +60,8 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
             throw new NullPointerException("factory");
         }
         this.factory = factory;
-        initialCapacity = estimatedLength;
         this.endianness = endianness;
+        buffer = factory.getBuffer(order(), estimatedLength);
     }
 
     public ChannelBufferFactory factory() {
@@ -268,10 +267,7 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
 
         int newCapacity;
         if (capacity() == 0) {
-            newCapacity = initialCapacity;
-            if (newCapacity == 0) {
-                newCapacity = 1;
-            }
+            newCapacity = 1;
         } else {
             newCapacity = capacity();
         }
