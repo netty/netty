@@ -303,4 +303,43 @@ public class CookieDecoderTest {
         assertEquals("g", c.getName());
         assertEquals("\\", c.getValue());
     }
+
+    @Test
+    public void testDecodingGoogleAnalyticsCookie() {
+        String source =
+            "ARPT=LWUKQPSWRTUN04CKKJI; " +
+            "kw-2E343B92-B097-442c-BFA5-BE371E0325A2=unfinished furniture; " +
+            "__utma=48461872.1094088325.1258140131.1258140131.1258140131.1; " +
+            "__utmb=48461872.13.10.1258140131; __utmc=48461872; " +
+            "__utmz=48461872.1258140131.1.1.utmcsr=overstock.com|utmccn=(referral)|utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance,/clearance,/32/dept.html";
+        Set<Cookie> cookies = new CookieDecoder().decode(source);
+        Iterator<Cookie> it = cookies.iterator();
+        Cookie c;
+
+        c = it.next();
+        assertEquals("__utma", c.getName());
+        assertEquals("48461872.1094088325.1258140131.1258140131.1258140131.1", c.getValue());
+
+        c = it.next();
+        assertEquals("__utmb", c.getName());
+        assertEquals("48461872.13.10.1258140131", c.getValue());
+
+        c = it.next();
+        assertEquals("__utmc", c.getName());
+        assertEquals("48461872", c.getValue());
+
+        c = it.next();
+        assertEquals("__utmz", c.getName());
+        assertEquals("48461872.1258140131.1.1.utmcsr=overstock.com|utmccn=(referral)|utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance,/clearance,/32/dept.html", c.getValue());
+
+        c = it.next();
+        assertEquals("ARPT", c.getName());
+        assertEquals("LWUKQPSWRTUN04CKKJI", c.getValue());
+
+        c = it.next();
+        assertEquals("kw-2E343B92-B097-442c-BFA5-BE371E0325A2", c.getName());
+        assertEquals("unfinished furniture", c.getValue());
+
+        assertFalse(it.hasNext());
+    }
 }
