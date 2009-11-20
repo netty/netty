@@ -130,4 +130,8 @@ public class DefaultHttpChunkTrailer implements HttpChunkTrailer {
     public ChannelBuffer getContent() {
         return ChannelBuffers.EMPTY_BUFFER;
     }
+
+    public void setContent(ChannelBuffer content) {
+        throw new IllegalStateException("read-only");
+    }
 }

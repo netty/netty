@@ -37,8 +37,8 @@ import org.jboss.netty.util.internal.CaseIgnoringComparator;
  */
 public class DefaultHttpMessage implements HttpMessage {
 
-    private final HttpVersion version;
     private final Map<String, List<String>> headers = new TreeMap<String, List<String>>(CaseIgnoringComparator.INSTANCE);
+    private HttpVersion version;
     private ChannelBuffer content = ChannelBuffers.EMPTY_BUFFER;
     private boolean chunked;
 
@@ -46,10 +46,7 @@ public class DefaultHttpMessage implements HttpMessage {
      * Creates a new instance.
      */
     protected DefaultHttpMessage(final HttpVersion version) {
-        if (version == null) {
-            throw new NullPointerException("version");
-        }
-        this.version = version;
+        setProtocolVersion(version);
     }
 
     public void addHeader(final String name, final String value) {
@@ -188,6 +185,13 @@ public class DefaultHttpMessage implements HttpMessage {
 
     public HttpVersion getProtocolVersion() {
         return version;
+    }
+
+    public void setProtocolVersion(HttpVersion version) {
+        if (version == null) {
+            throw new NullPointerException("version");
+        }
+        this.version = version;
     }
 
     public ChannelBuffer getContent() {

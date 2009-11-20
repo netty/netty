@@ -72,6 +72,11 @@ public interface HttpMessage {
     HttpVersion getProtocolVersion();
 
     /**
+     * Sets the protocol version of this message.
+     */
+    void setProtocolVersion(HttpVersion version);
+
+    /**
      * Returns the content of this message.  If there is no content or
      * {@link #isChunked()} returns {@code true}, an
      * {@link ChannelBuffers#EMPTY_BUFFER} is returned.

@@ -47,6 +47,10 @@ public interface HttpChunk {
             return ChannelBuffers.EMPTY_BUFFER;
         }
 
+        public void setContent(ChannelBuffer content) {
+            throw new IllegalStateException("read-only");
+        }
+
         public boolean isLast() {
             return true;
         }
@@ -99,4 +103,10 @@ public interface HttpChunk {
      * marker, {@link ChannelBuffers#EMPTY_BUFFER} will be returned.
      */
     ChannelBuffer getContent();
+
+    /**
+     * Sets the content of this chunk.  If an empty buffer is specified,
+     * this chunk becomes the 'end of content' marker.
+     */
+    void setContent(ChannelBuffer content);
 }

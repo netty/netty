@@ -42,7 +42,17 @@ public interface HttpRequest extends HttpMessage {
     HttpMethod getMethod();
 
     /**
+     * Sets the method of this request.
+     */
+    void setMethod(HttpMethod method);
+
+    /**
      * Returns the URI (or path) of this request.
      */
     String getUri();
+
+    /**
+     * Sets the URI (or path) of this request.
+     */
+    void setUri(String uri);
 }
