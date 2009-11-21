@@ -17,6 +17,8 @@ package org.jboss.netty.buffer;
 
 import static org.junit.Assert.*;
 
+import java.nio.ByteOrder;
+
 import org.junit.Test;
 
 /**
@@ -34,14 +36,7 @@ public class DynamicChannelBufferTest extends AbstractChannelBufferTest {
     protected ChannelBuffer newBuffer(int length) {
         buffer = ChannelBuffers.dynamicBuffer(length);
 
-        // A dynamic buffer does lazy initialization.
-        assertEquals(0, buffer.capacity());
-
-        // Initialize.
-        buffer.writeZero(1);
-        buffer.clear();
-
-        // And validate the initial capacity
+        assertEquals(0, buffer.readerIndex());
         assertEquals(0, buffer.writerIndex());
         assertEquals(length, buffer.capacity());
 
@@ -56,5 +51,22 @@ public class DynamicChannelBufferTest extends AbstractChannelBufferTest {
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
         new DynamicChannelBuffer(null, 0);
+    }
+
+    @Test
+    public void shouldNotFailOnInitialIndexUpdate() {
+        new DynamicChannelBuffer(ByteOrder.BIG_ENDIAN, 10).setIndex(0, 10);
+    }
+
+    @Test
+    public void shouldNotFailOnInitialIndexUpdate2() {
+        new DynamicChannelBuffer(ByteOrder.BIG_ENDIAN, 10).writerIndex(10);
+    }
+
+    @Test
+    public void shouldNotFailOnInitialIndexUpdate3() {
+        ChannelBuffer buf = new DynamicChannelBuffer(ByteOrder.BIG_ENDIAN, 10);
+        buf.writerIndex(10);
+        buf.readerIndex(10);
     }
 }

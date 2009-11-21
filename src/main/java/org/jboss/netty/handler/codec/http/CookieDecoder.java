@@ -46,7 +46,7 @@ import java.util.regex.Pattern;
 public class CookieDecoder {
 
     private final static Pattern PATTERN =
-        Pattern.compile("(?:\\s|[;,])*\\$*([^;=]+)(?:=(?:[\"']((?:\\\\.|[^\"])*)[\"']|([^;,]*)))?\\s*(?:[;,]+|$)");
+        Pattern.compile("(?:\\s|[;,])*\\$*([^;=]+)(?:=(?:[\"']((?:\\\\.|[^\"])*)[\"']|([^;,]*)))?(\\s*(?:[;,]+\\s*|$))");
 
     private final static String COMMA = ",";
 
@@ -63,42 +63,16 @@ public class CookieDecoder {
      * @return the decoded {@link Cookie}s
      */
     public Set<Cookie> decode(String header) {
-        Matcher m = PATTERN.matcher(header);
         List<String> names = new ArrayList<String>(8);
         List<String> values = new ArrayList<String>(8);
-        int pos = 0;
-        int version = 0;
-        while (m.find(pos)) {
-            pos = m.end();
-
-            // Extract name and value pair from the match.
-            String name = m.group(1);
-            String value = m.group(3);
-            if (value == null) {
-                value = decodeValue(m.group(2));
-            }
-
-            // An exceptional case:
-            // 'Expires' attribute can contain a comma without surrounded with quotes.
-            if (name.equalsIgnoreCase(CookieHeaderNames.EXPIRES) &&
-                value.length() <= 9) { // Longest day of week is 'Wednesday'.
-                if (m.find(pos)) {
-                    value = value + ", " + m.group(1);
-                    pos = m.end();
-                } else {
-                    continue;
-                }
-            }
-
-            names.add(name);
-            values.add(value);
-        }
+        extractKeyValuePairs(header, names, values);
 
         if (names.isEmpty()) {
             return Collections.emptySet();
         }
 
         int i;
+        int version = 0;
 
         // $Version is the only attribute that can appear before the actual
         // cookie name-value pair.
@@ -206,6 +180,55 @@ public class CookieDecoder {
         }
 
         return cookies;
+    }
+
+    private void extractKeyValuePairs(
+            String header, List<String> names, List<String> values) {
+        Matcher m = PATTERN.matcher(header);
+        int pos = 0;
+        String name = null;
+        String value = null;
+        String separator = null;
+        while (m.find(pos)) {
+            pos = m.end();
+
+            // Extract name and value pair from the match.
+            String newName = m.group(1);
+            String newValue = m.group(3);
+            if (newValue == null) {
+                newValue = decodeValue(m.group(2));
+            }
+            String newSeparator = m.group(4);
+
+            if (name == null) {
+                name = newName;
+                value = newValue == null? "" : newValue;
+                separator = newSeparator;
+                continue;
+            }
+
+            if (newValue == null &&
+                !CookieHeaderNames.DISCARD.equalsIgnoreCase(newName) &&
+                !CookieHeaderNames.SECURE.equalsIgnoreCase(newName) &&
+                !CookieHeaderNames.HTTPONLY.equalsIgnoreCase(newName)) {
+                value = value + separator + newName;
+                separator = newSeparator;
+                continue;
+            }
+
+            names.add(name);
+            values.add(value);
+
+            name = newName;
+            value = newValue;
+            separator = newSeparator;
+        }
+
+        // The last entry
+        if (name != null) {
+            names.add(name);
+            values.add(value);
+        }
     }
 
     private String decodeValue(String value) {

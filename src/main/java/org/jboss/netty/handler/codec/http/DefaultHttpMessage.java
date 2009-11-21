@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -38,46 +37,50 @@ import org.jboss.netty.util.internal.CaseIgnoringComparator;
  */
 public class DefaultHttpMessage implements HttpMessage {
 
-    private final HttpVersion version;
     private final Map<String, List<String>> headers = new TreeMap<String, List<String>>(CaseIgnoringComparator.INSTANCE);
+    private HttpVersion version;
     private ChannelBuffer content = ChannelBuffers.EMPTY_BUFFER;
+    private boolean chunked;
 
     /**
      * Creates a new instance.
      */
     protected DefaultHttpMessage(final HttpVersion version) {
-        if (version == null) {
-            throw new NullPointerException("version");
-        }
-        this.version = version;
+        setProtocolVersion(version);
     }
 
     public void addHeader(final String name, final String value) {
-        validateHeaderName(name);
-        validateHeaderValue(value);
+        HttpCodecUtil.validateHeaderName(name);
+        HttpCodecUtil.validateHeaderValue(value);
         if (headers.get(name) == null) {
             headers.put(name, new ArrayList<String>(1));
         }
         headers.get(name).add(value);
     }
+    
+    public void setHeaders(Map<String, List<String>> headers) {
+        for (String name: headers.keySet()) {
+            setHeader(name, headers.get(name));
+        }
+    }
 
     public void setHeader(final String name, final String value) {
-        validateHeaderName(name);
-        validateHeaderValue(value);
+        HttpCodecUtil.validateHeaderName(name);
+        HttpCodecUtil.validateHeaderValue(value);
         List<String> values = new ArrayList<String>(1);
         values.add(value);
         headers.put(name, values);
     }
 
     public void setHeader(final String name, final Iterable<String> values) {
-        validateHeaderName(name);
+        HttpCodecUtil.validateHeaderName(name);
         if (values == null) {
             throw new NullPointerException("values");
         }
 
         int nValues = 0;
         for (String v: values) {
-            validateHeaderValue(v);
+            HttpCodecUtil.validateHeaderValue(v);
             nValues ++;
         }
 
@@ -93,98 +96,6 @@ public class DefaultHttpMessage implements HttpMessage {
                 valueList.add(v);
             }
             headers.put(name, valueList);
-        }
-    }
-
-    public void setHeaders(Map<String, List<String>> headers) {
-        for (String name: headers.keySet()) {
-            setHeader(name, headers.get(name));
-        }
-    }
-
-    private static void validateHeaderName(String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-        for (int i = 0; i < name.length(); i ++) {
-            char c = name.charAt(i);
-            if (c > 127) {
-                throw new IllegalArgumentException(
-                        "name contains non-ascii character: " + name);
-            }
-
-            // Check prohibited characters.
-            switch (c) {
-            case '=':  case ',':  case ';': case ' ': case ':':
-            case '\t': case '\r': case '\n': case '\f':
-            case 0x0b: // Vertical tab
-                throw new IllegalArgumentException(
-                        "name contains one of the following prohibited characters: " +
-                        "=,;: \\t\\r\\n\\v\\f: " + name);
-            }
-        }
-    }
-
-    private static void validateHeaderValue(String value) {
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
-
-        // 0 - the previous character was neither CR nor LF
-        // 1 - the previous character was CR
-        // 2 - the previous character was LF
-        int state = 0;
-
-        for (int i = 0; i < value.length(); i ++) {
-            char c = value.charAt(i);
-
-            // Check the absolutely prohibited characters.
-            switch (c) {
-            case '\f':
-                throw new IllegalArgumentException(
-                        "value contains a prohibited character '\\f': " + value);
-            case 0x0b: // Vertical tab
-                throw new IllegalArgumentException(
-                        "value contains a prohibited character '\\v': " + value);
-            }
-
-            // Check the CRLF (HT | SP) pattern
-            switch (state) {
-            case 0:
-                switch (c) {
-                case '\r':
-                    state = 1;
-                    break;
-                case '\n':
-                    state = 2;
-                    break;
-                }
-                break;
-            case 1:
-                switch (c) {
-                case '\n':
-                    state = 2;
-                    break;
-                default:
-                    throw new IllegalArgumentException(
-                            "Only '\\n' is allowed after '\\r': " + value);
-                }
-                break;
-            case 2:
-                switch (c) {
-                case ' ': case '\t':
-                    state = 0;
-                    break;
-                default:
-                    throw new IllegalArgumentException(
-                            "Only ' ' and '\\t' are allowed after '\\n': " + value);
-                }
-            }
-        }
-
-        if (state != 0) {
-            throw new IllegalArgumentException(
-                    "value must not end with '\\r' or '\\n':" + value);
         }
     }
 
@@ -205,8 +116,12 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public boolean isChunked() {
-        List<String> chunked = headers.get(HttpHeaders.Names.TRANSFER_ENCODING);
-        if (chunked == null || chunked.isEmpty()) {
+        if (chunked) {
+            return true;
+        }
+
+        List<String> chunked = getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
+        if (chunked.isEmpty()) {
             return false;
         }
 
@@ -216,6 +131,13 @@ public class DefaultHttpMessage implements HttpMessage {
             }
         }
         return false;
+    }
+
+    public void setChunked(boolean chunked) {
+        this.chunked = chunked;
+        if (chunked) {
+            setContent(ChannelBuffers.EMPTY_BUFFER);
+        }
     }
 
     public boolean isKeepAlive() {
@@ -238,6 +160,10 @@ public class DefaultHttpMessage implements HttpMessage {
         if (content == null) {
             content = ChannelBuffers.EMPTY_BUFFER;
         }
+        if (content.readable() && isChunked()) {
+            throw new IllegalArgumentException(
+                    "non-empty content disallowed if this.chunked == true");
+        }
         this.content = content;
     }
 
@@ -254,11 +180,20 @@ public class DefaultHttpMessage implements HttpMessage {
             return values;
         }
     }
-
+    
     public Map<String, List<String>> getHeaders() {
         return headers;
     }
 
+
+    public boolean containsHeader(final String name) {
+        return headers.containsKey(name);
+    }
+
+    public Set<String> getHeaderNames() {
+        return headers.keySet();
+    }
+    
     public Set<Cookie> getCookies() {
         String value = getHeader(HttpHeaders.Names.COOKIE);
         if (value == null) {
@@ -268,37 +203,15 @@ public class DefaultHttpMessage implements HttpMessage {
         return decoder.decode(value);
     }
 
-    public void addCookie(Cookie cookie, boolean isServer) {
-        CookieEncoder encoder = new CookieEncoder(isServer);
-        Set<Cookie> cookies = getCookies();
-        if (cookies == null) {
-            cookies = new TreeSet<Cookie>();
-        }
-        cookies.add(cookie);
-        for (Cookie one: cookies) {
-            encoder.addCookie(one);
-        }
-        setHeader(HttpHeaders.Names.COOKIE, encoder.encode());
-    }
-
-    public void setCookies(Set<Cookie> cookies, boolean isServer) {
-        CookieEncoder encoder = new CookieEncoder(isServer);
-        for (Cookie one: cookies) {
-            encoder.addCookie(one);
-        }
-        setHeader(HttpHeaders.Names.COOKIE, encoder.encode());
-    }
-
-    public boolean containsHeader(final String name) {
-        return headers.containsKey(name);
-    }
-
-    public Set<String> getHeaderNames() {
-        return headers.keySet();
-    }
-
     public HttpVersion getProtocolVersion() {
         return version;
+    }
+
+    public void setProtocolVersion(HttpVersion version) {
+        if (version == null) {
+            throw new NullPointerException("version");
+        }
+        this.version = version;
     }
 
     public ChannelBuffer getContent() {

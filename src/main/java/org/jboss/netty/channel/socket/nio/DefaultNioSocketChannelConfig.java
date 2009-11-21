@@ -75,9 +75,7 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
             return true;
         }
 
-        if (key.equals("readWriteFair")) {
-            setReadWriteFair(true); // Deprecated
-        } else if (key.equals("writeBufferHighWaterMark")) {
+        if (key.equals("writeBufferHighWaterMark")) {
             setWriteBufferHighWaterMark0(ConversionUtil.toInt(value));
         } else if (key.equals("writeBufferLowWaterMark")) {
             setWriteBufferLowWaterMark0(ConversionUtil.toInt(value));
@@ -179,16 +177,5 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
             throw new NullPointerException("predictorFactory");
         }
         this.predictorFactory = predictorFactory;
-    }
-
-    public boolean isReadWriteFair() {
-        logger.warn(
-                "Detected an access to a deprecated configuration parameter: " +
-                "readWriteFair");
-        return true;
-    }
-
-    public void setReadWriteFair(boolean readWriteFair) {
-        isReadWriteFair();
     }
 }

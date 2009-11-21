@@ -49,15 +49,44 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  * <tr>
  * <td>{@code maxChunkSize}</td>
  * <td>The maximum length of the content or each chunk.  If the content length
- *     exceeds this value, the transfer encoding of the decoded message will be
- *     converted to 'chunked' and the content will be split into multiple
- *     {@link HttpChunk}s.  If the transfer encoding of the HTTP message is
- *     'chunked' already, each chunk will be split into smaller chunks if the
- *     length of the chunk exceeds this value.  If you prefer not to handle
- *     {@link HttpChunk}s in your handler, insert {@link HttpChunkAggregator}
- *     after this decoder in the {@link ChannelPipeline}.</td>
+ *     (or the length of each chunk) exceeds this value, the content or chunk
+ *     will be split into multiple {@link HttpChunk}s whose length is
+ *     {@code maxChunkSize} at maximum.</td>
  * </tr>
  * </table>
+ *
+ * <h3>Chunked Content</h3>
+ *
+ * If the content of an HTTP message is greater than {@code maxChunkSize} or
+ * the transfer encoding of the HTTP message is 'chunked', this decoder
+ * generates one {@link HttpMessage} instance and its following
+ * {@link HttpChunk}s per single HTTP message to avoid excessive memory
+ * consumption. For example, the following HTTP message:
+ * <pre>
+ * GET / HTTP/1.1
+ * Transfer-Encoding: chunked
+ *
+ * 1a
+ * abcdefghijklmnopqrstuvwxyz
+ * 10
+ * 1234567890abcdef
+ * 0
+ * Content-MD5: ...
+ * <i>[blank line]</i>
+ * </pre>.
+ * triggers {@link HttpRequestDecoder} to generate 4 objects:
+ * <ol>
+ * <li>An {@link HttpRequest} whose {@link HttpMessage#isChunked() chunked}
+ *     property is {@code true},<li>
+ * <li>The first {@link HttpChunk} whose content is {@code 'abcdefghijklmnopqrstuvwxyz'},</li>
+ * <li>The second {@link HttpChunk} whose content is {@code '1234567890abcdef'}, and</li>
+ * <li>An {@link HttpChunkTrailer} which marks the end of the content.</li>
+ * </ol>
+ *
+ * If you prefer not to handle {@link HttpChunk}s by yourself for your
+ * convenience, insert {@link HttpChunkAggregator} after this decoder in the
+ * {@link ChannelPipeline}.  However, please note that your server might not
+ * be as memory efficient as without the aggregator.
  *
  * <h3>Extensibility</h3>
  *
@@ -174,6 +203,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             checkpoint(nextState);
             if (nextState == State.READ_CHUNK_SIZE) {
                 // Chunked encoding
+                message.setChunked(true);
                 // Generate HttpMessage first.  HttpChunks will follow.
                 return message;
             } else if (nextState == State.SKIP_CONTROL_CHARS) {
@@ -195,7 +225,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                     if (contentLength > maxChunkSize) {
                         // Generate HttpMessage first.  HttpChunks will follow.
                         checkpoint(State.READ_FIXED_LENGTH_CONTENT_AS_CHUNKS);
-                        message.addHeader(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+                        message.setChunked(true);
                         // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT_AS_CHUNKS
                         // state reads data chunk by chunk.
                         chunkSize = message.getContentLength(-1);
@@ -206,7 +236,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                     if (buffer.readableBytes() > maxChunkSize) {
                         // Generate HttpMessage first.  HttpChunks will follow.
                         checkpoint(State.READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS);
-                        message.addHeader(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+                        message.setChunked(true);
                         return message;
                     }
                     break;
@@ -218,9 +248,13 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         case READ_VARIABLE_LENGTH_CONTENT: {
             if (content == null) {
                 content = ChannelBuffers.EMPTY_BUFFER;
+                // FIX composite is better than Dynamic here
+                // content = ChannelBuffers.dynamicBuffer(channel.getConfig().getBufferFactory());
             }
             //this will cause a replay error until the channel is closed where this will read what's left in the buffer
             content = ChannelBuffers.wrappedBuffer(content, buffer);
+            // FIX Composite is better than Dynamic here
+            //content.writeBytes(buffer.readBytes(buffer.readableBytes()));
             return reset();
         }
         case READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS: {
@@ -327,22 +361,15 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             }
         }
         case READ_CHUNK_FOOTER: {
-            // Skip the footer; does anyone use it?
-            try {
-                if (!skipLine(buffer)) {
-                    if (maxChunkSize == 0) {
-                        // Chunked encoding disabled.
-                        return reset();
-                    } else {
-                        reset();
-                        // The last chunk, which is empty
-                        return HttpChunk.LAST_CHUNK;
-                    }
-                }
-            } finally {
-                checkpoint();
+            HttpChunkTrailer trailer = readTrailingHeaders(buffer);
+            if (maxChunkSize == 0) {
+                // Chunked encoding disabled.
+                return reset();
+            } else {
+                reset();
+                // The last chunk, which is empty
+                return trailer;
             }
-            return null;
         }
         default: {
             throw new Error("Shouldn't reach here.");
@@ -398,9 +425,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         if (content == null) {
             content = buffer.readBytes((int) length);
         } else {
-            content.writeBytes(buffer.readBytes((int) length));
             content = ChannelBuffers.wrappedBuffer(content,
-                    buffer.readBytes((int) length));
+                        buffer.readBytes((int) length));
+            // FIX : composite is better than Dynamic here
+            // content.writeBytes(buffer.readBytes((int) length));
         }
     }
 
@@ -433,6 +461,12 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         if (isContentAlwaysEmpty(message)) {
             nextState = State.SKIP_CONTROL_CHARS;
         } else if (message.isChunked()) {
+            // HttpMessage.isChunked() returns true when either:
+            // 1) HttpMessage.setChunked(true) was called or
+            // 2) 'Transfer-Encoding' is 'chunked'.
+            // Because this decoder did not call HttpMessage.setChunked(true)
+            // yet, HttpMessage.isChunked() should return true only when
+            // 'Transfer-Encoding' is 'chunked'.
             nextState = State.READ_CHUNK_SIZE;
         } else if (message.getContentLength(-1) >= 0) {
             nextState = State.READ_FIXED_LENGTH_CONTENT;
@@ -440,6 +474,43 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             nextState = State.READ_VARIABLE_LENGTH_CONTENT;
         }
         return nextState;
+    }
+
+    private HttpChunkTrailer readTrailingHeaders(ChannelBuffer buffer) throws TooLongFrameException {
+        headerSize = 0;
+        String line = readHeader(buffer);
+        String lastHeader = null;
+        if (line.length() != 0) {
+            HttpChunkTrailer trailer = new DefaultHttpChunkTrailer();
+            do {
+                char firstChar = line.charAt(0);
+                if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
+                    List<String> current = trailer.getHeaders(lastHeader);
+                    if (current.size() != 0) {
+                        int lastPos = current.size() - 1;
+                        String newString = current.get(lastPos) + line.trim();
+                        current.set(lastPos, newString);
+                    } else {
+                        // Content-Length, Transfer-Encoding, or Trailer
+                    }
+                } else {
+                    String[] header = splitHeader(line);
+                    String name = header[0];
+                    if (!name.equalsIgnoreCase(HttpHeaders.Names.CONTENT_LENGTH) &&
+                        !name.equalsIgnoreCase(HttpHeaders.Names.TRANSFER_ENCODING) &&
+                        !name.equalsIgnoreCase(HttpHeaders.Names.TRAILER)) {
+                        trailer.addHeader(name, header[1]);
+                    }
+                    lastHeader = name;
+                }
+
+                line = readHeader(buffer);
+            } while (line.length() != 0);
+
+            return trailer;
+        }
+
+        return HttpChunk.LAST_CHUNK;
     }
 
     private String readHeader(ChannelBuffer buffer) throws TooLongFrameException {
@@ -520,30 +591,6 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
     }
 
-    /**
-     * Returns {@code true} if only if the skipped line was not empty.
-     * Please note that an empty line is also skipped, while {@code} false is
-     * returned.
-     */
-    private boolean skipLine(ChannelBuffer buffer) {
-        int lineLength = 0;
-        while (true) {
-            byte nextByte = buffer.readByte();
-            if (nextByte == HttpCodecUtil.CR) {
-                nextByte = buffer.readByte();
-                if (nextByte == HttpCodecUtil.LF) {
-                    return lineLength != 0;
-                }
-            }
-            else if (nextByte == HttpCodecUtil.LF) {
-                return lineLength != 0;
-            }
-            else if (!Character.isWhitespace((char) nextByte)) {
-                lineLength ++;
-            }
-        }
-    }
-
     private String[] splitInitialLine(String sb) {
         int aStart;
         int aEnd;
@@ -552,13 +599,13 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         int cStart;
         int cEnd;
 
-        aStart = HttpPostBodyUtil.findNonWhitespace(sb, 0);
+        aStart = findNonWhitespace(sb, 0);
         aEnd = findWhitespace(sb, aStart);
 
-        bStart = HttpPostBodyUtil.findNonWhitespace(sb, aEnd);
+        bStart = findNonWhitespace(sb, aEnd);
         bEnd = findWhitespace(sb, bStart);
 
-        cStart = HttpPostBodyUtil.findNonWhitespace(sb, bEnd);
+        cStart = findNonWhitespace(sb, bEnd);
         cEnd = findEndOfString(sb);
 
         return new String[] {
@@ -575,7 +622,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         int valueStart;
         int valueEnd;
 
-        nameStart = HttpPostBodyUtil.findNonWhitespace(sb, 0);
+        nameStart = findNonWhitespace(sb, 0);
         for (nameEnd = nameStart; nameEnd < length; nameEnd ++) {
             char ch = sb.charAt(nameEnd);
             if (ch == ':' || Character.isWhitespace(ch)) {
@@ -590,7 +637,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             }
         }
 
-        valueStart = HttpPostBodyUtil.findNonWhitespace(sb, colonEnd);
+        valueStart = findNonWhitespace(sb, colonEnd);
         if (valueStart == length) {
             return new String[] {
                     sb.substring(nameStart, nameEnd),
@@ -603,6 +650,16 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 sb.substring(nameStart, nameEnd),
                 sb.substring(valueStart, valueEnd)
         };
+    }
+
+    private int findNonWhitespace(String sb, int offset) {
+        int result;
+        for (result = offset; result < sb.length(); result ++) {
+            if (!Character.isWhitespace(sb.charAt(result))) {
+                break;
+            }
+        }
+        return result;
     }
 
     private int findWhitespace(String sb, int offset) {

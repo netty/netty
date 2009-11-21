@@ -25,8 +25,8 @@ package org.jboss.netty.handler.codec.http;
  */
 public class DefaultHttpRequest extends DefaultHttpMessage implements HttpRequest {
 
-    private final HttpMethod method;
-    private final String uri;
+    private HttpMethod method;
+    private String uri;
 
     /**
      * Creates a new instance.
@@ -37,22 +37,30 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
         super(httpVersion);
-        if (method == null) {
-            throw new NullPointerException("method");
-        }
-        if (uri == null) {
-            throw new NullPointerException("uri");
-        }
-        this.method = method;
-        this.uri = uri;
+        setMethod(method);
+        setUri(uri);
     }
 
     public HttpMethod getMethod() {
         return method;
     }
 
+    public void setMethod(HttpMethod method) {
+        if (method == null) {
+            throw new NullPointerException("method");
+        }
+        this.method = method;
+    }
+
     public String getUri() {
         return uri;
+    }
+
+    public void setUri(String uri) {
+        if (uri == null) {
+            throw new NullPointerException("uri");
+        }
+        this.uri = uri;
     }
 
     @Override

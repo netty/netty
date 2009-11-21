@@ -134,45 +134,6 @@ public class Channels {
         return new FailedChannelFuture(channel, cause);
     }
 
-    // event factory methods
-
-    /**
-     * @deprecated Instantiate {@link UpstreamMessageEvent} or {@link DownstreamMessageEvent} directly instead.
-     *
-     * Creates a new {@link MessageEvent}
-     *
-     * @param channel the channel which is associated with the event
-     * @param future  the future which will be notified when a message is sent
-     *                (only meaningful when the event is sent downstream)
-     * @param message the received or sent message object
-     *                ('received' when the event is sent upstream, and
-     *                 'sent' when the event is sent downstream)
-     */
-    @Deprecated
-    public static MessageEvent messageEvent(Channel channel, ChannelFuture future, Object message) {
-        return messageEvent(channel, future, message, null);
-    }
-
-    /**
-     * @deprecated Instantiate {@link UpstreamMessageEvent} or {@link DownstreamMessageEvent} directly instead.
-     *
-     * Creates a new {@link MessageEvent}
-     *
-     * @param channel the channel which is associated with the event
-     * @param future  the future which will be notified when a message is sent
-     *                (only meaningful when the event is sent downstream)
-     * @param message the received or sent message object
-     *                ('received' when the event is sent upstream, and
-     *                 'sent' when the event is sent downstream)
-     * @param remoteAddress the source or destination address of the message
-     *                      ('source' when the event is sent upstream, and
-     *                       'destination' when the event is sent downstream)
-     */
-    @Deprecated
-    public static MessageEvent messageEvent(Channel channel, ChannelFuture future, Object message, SocketAddress remoteAddress) {
-        return new DownstreamMessageEvent(channel, future, message, remoteAddress);
-    }
-
     // event emission methods
 
     /**
@@ -208,25 +169,6 @@ public class Channels {
     }
 
     /**
-     * @deprecated Use {@link #fireChannelOpen(ChannelHandlerContext)} instead.
-     *
-     * Sends a {@code "channelOpen"} event to the
-     * {@link ChannelUpstreamHandler} which is placed in the closest upstream
-     * from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     * <p>
-     * Please note that this method does not trigger a
-     * {@code "childChannelOpen"} event unlike {@link #fireChannelOpen(Channel)}
-     * method.
-     */
-    @Deprecated
-    public static void fireChannelOpen(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel) {
-        fireChannelOpen(ctx);
-    }
-
-    /**
      * Sends a {@code "channelBound"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
@@ -252,25 +194,6 @@ public class Channels {
     public static void fireChannelBound(ChannelHandlerContext ctx, SocketAddress localAddress) {
         ctx.sendUpstream(new UpstreamChannelStateEvent(
                 ctx.getChannel(), ChannelState.BOUND, localAddress));
-    }
-
-    /**
-     * @deprecated Use {@link #fireChannelBound(ChannelHandlerContext, SocketAddress)} instead.
-     *
-     * Sends a {@code "channelBound"} event to the
-     * {@link ChannelUpstreamHandler} which is placed in the closest upstream
-     * from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     *
-     * @param localAddress
-     *        the local address where the specified channel is bound
-     */
-    @Deprecated
-    public static void fireChannelBound(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel,
-            SocketAddress localAddress) {
-        fireChannelBound(ctx, localAddress);
     }
 
     /**
@@ -300,25 +223,6 @@ public class Channels {
 
         ctx.sendUpstream(new UpstreamChannelStateEvent(
                 ctx.getChannel(), ChannelState.CONNECTED, remoteAddress));
-    }
-
-    /**
-     * @deprecated Use {@link #fireChannelConnected(ChannelHandlerContext, SocketAddress)} instead.
-     *
-     * Sends a {@code "channelConnected"} event to the
-     * {@link ChannelUpstreamHandler} which is placed in the closest upstream
-     * from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     *
-     * @param remoteAddress
-     *        the remote address where the specified channel is connected
-     */
-    @Deprecated
-    public static void fireChannelConnected(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel,
-            SocketAddress remoteAddress) {
-        fireChannelConnected(ctx, remoteAddress);
     }
 
     /**
@@ -359,24 +263,6 @@ public class Channels {
     }
 
     /**
-     * @deprecated Use {@link #fireMessageReceived(ChannelHandlerContext, Object)} instead.
-     *
-     * Sends a {@code "messageReceived"} event to the
-     * {@link ChannelUpstreamHandler} which is placed in the closest upstream
-     * from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     *
-     * @param message  the received message
-     */
-    @Deprecated
-    public static void fireMessageReceived(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel,
-            Object message) {
-        fireMessageReceived(ctx, message);
-    }
-
-    /**
      * Sends a {@code "messageReceived"} event to the
      * {@link ChannelUpstreamHandler} which is placed in the closest upstream
      * from the handler associated with the specified
@@ -390,26 +276,6 @@ public class Channels {
             ChannelHandlerContext ctx, Object message, SocketAddress remoteAddress) {
         ctx.sendUpstream(new UpstreamMessageEvent(
                 ctx.getChannel(), message, remoteAddress));
-    }
-
-    /**
-     * @deprecated Use {@link #fireMessageReceived(ChannelHandlerContext, Object, SocketAddress)} instead.
-     *
-     * Sends a {@code "messageReceived"} event to the
-     * {@link ChannelUpstreamHandler} which is placed in the closest upstream
-     * from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     *
-     * @param message        the received message
-     * @param remoteAddress  the remote address where the received message
-     *                       came from
-     */
-    @Deprecated
-    public static void fireMessageReceived(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel,
-            Object message, SocketAddress remoteAddress) {
-        fireMessageReceived(ctx, message, remoteAddress);
     }
 
     /**
@@ -448,20 +314,6 @@ public class Channels {
     }
 
     /**
-     * @deprecated Use {@link #fireChannelInterestChanged(Channel)} instead.
-     *
-     * Sends a {@code "channelInterestChanged"} event to the first
-     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
-     * the specified {@link Channel}.
-     *
-     * @param interestOps the new interestOps
-     */
-    @Deprecated
-    public static void fireChannelInterestChanged(Channel channel, int interestOps) {
-        fireChannelInterestChanged(channel);
-    }
-
-    /**
      * Sends a {@code "channelInterestChanged"} event to the
      * {@link ChannelUpstreamHandler} which is placed in the closest upstream
      * from the handler associated with the specified
@@ -473,24 +325,6 @@ public class Channels {
         ctx.sendUpstream(
                 new UpstreamChannelStateEvent(
                         ctx.getChannel(), ChannelState.INTEREST_OPS, Channel.OP_READ));
-    }
-
-    /**
-     * @deprecated Use {@link #fireChannelInterestChanged(ChannelHandlerContext)} instead.
-     *
-     * Sends a {@code "channelInterestChanged"} event to the
-     * {@link ChannelUpstreamHandler} which is placed in the closest upstream
-     * from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     *
-     * @param channel     the {@link Channel}
-     * @param interestOps the new interestOps
-     */
-    @Deprecated
-    public static void fireChannelInterestChanged(
-            ChannelHandlerContext ctx, Channel channel, int interestOps) {
-
-        fireChannelInterestChanged(ctx);
     }
 
     /**
@@ -516,21 +350,6 @@ public class Channels {
     }
 
     /**
-     * @deprecated Use {@link #fireChannelDisconnected(ChannelHandlerContext)} instead.
-     *
-     * Sends a {@code "channelDisconnected"} event to the
-     * {@link ChannelUpstreamHandler} which is placed in the closest upstream
-     * from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     */
-    @Deprecated
-    public static void fireChannelDisconnected(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel) {
-        fireChannelDisconnected(ctx);
-    }
-
-    /**
      * Sends a {@code "channelUnbound"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
@@ -550,21 +369,6 @@ public class Channels {
 
         ctx.sendUpstream(new UpstreamChannelStateEvent(
                 ctx.getChannel(), ChannelState.BOUND, null));
-    }
-
-    /**
-     * @deprecated Use {@link #fireChannelUnbound(ChannelHandlerContext)} instead.
-     *
-     * Sends a {@code "channelUnbound"} event to the
-     * {@link ChannelUpstreamHandler} which is placed in the closest upstream
-     * from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     */
-    @Deprecated
-    public static void fireChannelUnbound(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel) {
-        fireChannelUnbound(ctx);
     }
 
     /**
@@ -596,21 +400,6 @@ public class Channels {
     }
 
     /**
-     * @deprecated Use {@link #fireChannelClosed(ChannelHandlerContext)}.
-     *
-     * Sends a {@code "channelClosed"} event to the
-     * {@link ChannelUpstreamHandler} which is placed in the closest upstream
-     * from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     */
-    @Deprecated
-    public static void fireChannelClosed(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel) {
-        fireChannelClosed(ctx);
-    }
-
-    /**
      * Sends a {@code "exceptionCaught"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
@@ -628,22 +417,6 @@ public class Channels {
      */
     public static void fireExceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         ctx.sendUpstream(new DefaultExceptionEvent(ctx.getChannel(), cause));
-    }
-
-    /**
-     * @deprecated Use {@link #fireExceptionCaught(ChannelHandlerContext, Throwable)} instead.
-     *
-     * Sends a {@code "exceptionCaught"} event to the
-     * {@link ChannelUpstreamHandler} which is placed in the closest upstream
-     * from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     */
-    @Deprecated
-    public static void fireExceptionCaught(
-            ChannelHandlerContext ctx,
-            @SuppressWarnings("unused") Channel channel,
-            Throwable cause) {
-        fireExceptionCaught(ctx, cause);
     }
 
     private static void fireChildChannelStateChanged(
@@ -694,27 +467,6 @@ public class Channels {
     }
 
     /**
-     * @deprecated Use {@link #bind(ChannelHandlerContext, ChannelFuture, SocketAddress)} instead.
-     *
-     * Sends a {@code "bind"} request to the
-     * {@link ChannelDownstreamHandler} which is placed in the closest
-     * downstream from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     *
-     * @param ctx     the context
-     * @param channel the channel to bind
-     * @param future  the future which will be notified when the bind
-     *                operation is done
-     * @param localAddress the local address to bind to
-     */
-    @Deprecated
-    public static void bind(
-            ChannelHandlerContext ctx, Channel channel,
-            ChannelFuture future, SocketAddress localAddress) {
-        bind(ctx, future, localAddress);
-    }
-
-    /**
      * Sends a {@code "unbind"} request to the
      * {@link ChannelDownstreamHandler} which is placed in the closest
      * downstream from the handler associated with the specified
@@ -727,25 +479,6 @@ public class Channels {
     public static void unbind(ChannelHandlerContext ctx, ChannelFuture future) {
         ctx.sendDownstream(new DownstreamChannelStateEvent(
                 ctx.getChannel(), future, ChannelState.BOUND, null));
-    }
-
-    /**
-     * @deprecated Use {@link #unbind(ChannelHandlerContext, ChannelFuture)} instead.
-     *
-     * Sends a {@code "unbind"} request to the
-     * {@link ChannelDownstreamHandler} which is placed in the closest
-     * downstream from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     *
-     * @param ctx     the context
-     * @param channel the channel to unbind
-     * @param future  the future which will be notified when the unbind
-     *                operation is done
-     */
-    @Deprecated
-    public static void unbind(
-            ChannelHandlerContext ctx, Channel channel, ChannelFuture future) {
-        unbind(ctx, future);
     }
 
     /**
@@ -807,27 +540,6 @@ public class Channels {
     }
 
     /**
-     * @deprecated Use {@link #connect(ChannelHandlerContext, ChannelFuture, SocketAddress)} instead.
-     *
-     * Sends a {@code "connect"} request to the
-     * {@link ChannelDownstreamHandler} which is placed in the closest
-     * downstream from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     *
-     * @param ctx     the context
-     * @param channel the channel to attempt a connection
-     * @param future  the future which will be notified when the connection
-     *                attempt is done
-     * @param remoteAddress the remote address to connect to
-     */
-    @Deprecated
-    public static void connect(
-            ChannelHandlerContext ctx, Channel channel,
-            ChannelFuture future, SocketAddress remoteAddress) {
-        connect(ctx, future, remoteAddress);
-    }
-
-    /**
      * Sends a {@code "write"} request to the last
      * {@link ChannelDownstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
@@ -854,26 +566,6 @@ public class Channels {
      */
     public static void write(
             ChannelHandlerContext ctx, ChannelFuture future, Object message) {
-        write(ctx, future, message, null);
-    }
-
-    /**
-     * @deprecated Use {@link #write(ChannelHandlerContext, ChannelFuture, Object)} instead.
-     *
-     * Sends a {@code "write"} request to the
-     * {@link ChannelDownstreamHandler} which is placed in the closest
-     * downstream from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     *
-     * @param ctx     the context
-     * @param channel the channel to write a message
-     * @param future  the future which will be notified when the write
-     *                operation is done
-     */
-    @Deprecated
-    public static void write(
-            ChannelHandlerContext ctx, Channel channel,
-            ChannelFuture future, Object message) {
         write(ctx, future, message, null);
     }
 
@@ -915,29 +607,6 @@ public class Channels {
             Object message, SocketAddress remoteAddress) {
         ctx.sendDownstream(
                 new DownstreamMessageEvent(ctx.getChannel(), future, message, remoteAddress));
-    }
-
-    /**
-     * @deprecated Use {@link #write(ChannelHandlerContext, ChannelFuture, Object, SocketAddress)} instead.
-     *
-     * Sends a {@code "write"} request to the
-     * {@link ChannelDownstreamHandler} which is placed in the closest
-     * downstream from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     *
-     * @param ctx     the context
-     * @param channel the channel to write a message
-     * @param future  the future which will be notified when the write
-     *                operation is done
-     * @param message the message to write to the channel
-     * @param remoteAddress  the destination of the message.
-     *                       {@code null} to use the default remote address.
-     */
-    @Deprecated
-    public static void write(
-            ChannelHandlerContext ctx, Channel channel,
-            ChannelFuture future, Object message, SocketAddress remoteAddress) {
-        write(ctx, future, message, remoteAddress);
     }
 
     /**
@@ -983,26 +652,6 @@ public class Channels {
     }
 
     /**
-     * @deprecated Use {@link #setInterestOps(ChannelHandlerContext, ChannelFuture, int)} instead.
-     *
-     * Sends a {@code "setInterestOps"} request to the
-     * {@link ChannelDownstreamHandler} which is placed in the closest
-     * downstream from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     *
-     * @param ctx     the context
-     * @param channel the channel to change the interestOps
-     * @param future  the future which will be notified when the interestOps is
-     *                changed.
-     */
-    @Deprecated
-    public static void setInterestOps(
-            ChannelHandlerContext ctx, Channel channel,
-            ChannelFuture future, int interestOps) {
-        setInterestOps(ctx, future, interestOps);
-    }
-
-    /**
      * Sends a {@code "disconnect"} request to the last
      * {@link ChannelDownstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
@@ -1034,24 +683,6 @@ public class Channels {
     }
 
     /**
-     * @deprecated Use {@link #disconnect(ChannelHandlerContext, ChannelFuture)} instead.
-     *
-     * Sends a {@code "disconnect"} request to the
-     * {@link ChannelDownstreamHandler} which is placed in the closest
-     * downstream from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     *
-     * @param ctx     the context
-     * @param channel the channel to disconnect
-     * @param future  the future which will be notified on disconnection
-     */
-    @Deprecated
-    public static void disconnect(
-            ChannelHandlerContext ctx, Channel channel, ChannelFuture future) {
-        disconnect(ctx, future);
-    }
-
-    /**
      * Sends a {@code "close"} request to the last
      * {@link ChannelDownstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
@@ -1080,24 +711,6 @@ public class Channels {
             ChannelHandlerContext ctx, ChannelFuture future) {
         ctx.sendDownstream(new DownstreamChannelStateEvent(
                 ctx.getChannel(), future, ChannelState.OPEN, Boolean.FALSE));
-    }
-
-    /**
-     * @deprecated Use {@link #close(ChannelHandlerContext, ChannelFuture)} instead.
-     *
-     * Sends a {@code "close"} request to the
-     * {@link ChannelDownstreamHandler} which is placed in the closest
-     * downstream from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     *
-     * @param ctx     the context
-     * @param channel the channel to close
-     * @param future  the future which will be notified on closure
-     */
-    @Deprecated
-    public static void close(
-            ChannelHandlerContext ctx, Channel channel, ChannelFuture future) {
-        close(ctx, future);
     }
 
     private static void validateInterestOps(int interestOps) {

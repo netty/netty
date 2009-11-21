@@ -19,6 +19,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
@@ -43,6 +44,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  *
  * @apiviz.uses org.jboss.netty.handler.codec.base64.Base64
  */
+@ChannelPipelineCoverage("all")
 public class Base64Encoder extends OneToOneEncoder {
 
     private final boolean breakLines;

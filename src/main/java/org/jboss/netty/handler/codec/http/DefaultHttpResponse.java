@@ -24,7 +24,8 @@ package org.jboss.netty.handler.codec.http;
  * @version $Rev$, $Date$
  */
 public class DefaultHttpResponse extends DefaultHttpMessage implements HttpResponse {
-    private final HttpResponseStatus status;
+
+    private HttpResponseStatus status;
 
     /**
      * Creates a new instance.
@@ -34,16 +35,19 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status) {
         super(version);
-        if (status == null) {
-            throw new NullPointerException("status");
-        }
-        this.status = status;
+        setStatus(status);
     }
 
     public HttpResponseStatus getStatus() {
         return status;
     }
 
+    public void setStatus(HttpResponseStatus status) {
+        if (status == null) {
+            throw new NullPointerException("status");
+        }
+        this.status = status;
+    }
 
     @Override
     public String toString() {

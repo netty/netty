@@ -15,6 +15,10 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -36,9 +40,57 @@ import org.jboss.netty.channel.ChannelPipeline;
 public interface HttpChunk {
 
     /**
-     * The 'end of content' maker in chunked encoding.
+     * The 'end of content' marker in chunked encoding.
      */
-    static HttpChunk LAST_CHUNK = new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER);
+    static HttpChunkTrailer LAST_CHUNK = new HttpChunkTrailer() {
+        public ChannelBuffer getContent() {
+            return ChannelBuffers.EMPTY_BUFFER;
+        }
+
+        public void setContent(ChannelBuffer content) {
+            throw new IllegalStateException("read-only");
+        }
+
+        public boolean isLast() {
+            return true;
+        }
+
+        public void addHeader(String name, String value) {
+            throw new IllegalStateException("read-only");
+        }
+
+        public void clearHeaders() {
+            // NOOP
+        }
+
+        public boolean containsHeader(String name) {
+            return false;
+        }
+
+        public String getHeader(String name) {
+            return null;
+        }
+
+        public Set<String> getHeaderNames() {
+            return Collections.emptySet();
+        }
+
+        public List<String> getHeaders(String name) {
+            return Collections.emptyList();
+        }
+
+        public void removeHeader(String name) {
+            // NOOP
+        }
+
+        public void setHeader(String name, String value) {
+            throw new IllegalStateException("read-only");
+        }
+
+        public void setHeader(String name, Iterable<String> values) {
+            throw new IllegalStateException("read-only");
+        }
+    };
 
     /**
      * Returns {@code true} if and only if this chunk is the 'end of content'
@@ -48,7 +100,13 @@ public interface HttpChunk {
 
     /**
      * Returns the content of this chunk.  If this is the 'end of content'
-     * maker, {@link ChannelBuffers#EMPTY_BUFFER} will be returned.
+     * marker, {@link ChannelBuffers#EMPTY_BUFFER} will be returned.
      */
     ChannelBuffer getContent();
+
+    /**
+     * Sets the content of this chunk.  If an empty buffer is specified,
+     * this chunk becomes the 'end of content' marker.
+     */
+    void setContent(ChannelBuffer content);
 }

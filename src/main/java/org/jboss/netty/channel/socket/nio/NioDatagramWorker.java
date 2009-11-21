@@ -653,26 +653,12 @@ class NioDatagramWorker implements Runnable {
     static void close(final NioDatagramChannel channel,
             final ChannelFuture future) {
         NioDatagramWorker worker = channel.worker;
-        Selector selector = worker.selector;
 
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         try {
-            // It is necessary to cancel all keys before closing a socket
-            // because the shutdown flag in the Selector loop is set only when
-            // all keys are cancelled.  Thus, DatagramChannel.close() and
-            // SelectionKey.cancel() must be placed in a synchronized block.
-            // Otherwise DatagramChannel.register() in RegisterTask can be called
-            // after cancel(), but before close(), resulting in the infinite
-            // Selector loop that refuses to shut down due to the dangling keys.
-            synchronized (channel.interestOpsLock) {
-                SelectionKey key = channel.getDatagramChannel().keyFor(selector);
-                if (key != null) {
-                    key.cancel();
-                    worker.cancelledKeys ++;
-                }
-                channel.getDatagramChannel().close();
-            }
+            channel.getDatagramChannel().close();
+            worker.cancelledKeys ++;
 
             if (channel.setClosed()) {
                 future.setSuccess();

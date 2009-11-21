@@ -310,11 +310,6 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
         return channel.realChannel.getConfig().getPipelineFactory();
     }
 
-    @Deprecated
-    public int getWriteTimeoutMillis() {
-        return channel.realChannel.getConfig().getWriteTimeoutMillis();
-    }
-
     public void setBufferFactory(ChannelBufferFactory bufferFactory) {
         channel.realChannel.getConfig().setBufferFactory(bufferFactory);
     }
@@ -325,10 +320,5 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
 
     public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
         channel.realChannel.getConfig().setPipelineFactory(pipelineFactory);
-    }
-
-    @Deprecated
-    public void setWriteTimeoutMillis(int writeTimeoutMillis) {
-        channel.realChannel.getConfig().setWriteTimeoutMillis(writeTimeoutMillis);
     }
 }

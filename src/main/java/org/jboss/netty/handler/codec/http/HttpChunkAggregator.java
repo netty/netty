@@ -89,12 +89,15 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
             if (m.isChunked()) {
                 // A chunked message - remove 'Transfer-Encoding' header,
                 // initialize the cumulative buffer, and wait for incoming chunks.
+                // TODO Add HttpMessage/HttpChunkTrailer.removeHeader(name, value)
                 List<String> encodings = m.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
                 encodings.remove(HttpHeaders.Values.CHUNKED);
                 if (encodings.isEmpty()) {
                     m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
                 }
                 m.setContent(ChannelBuffers.EMPTY_BUFFER);
+                //FIX dynamic buffer is not necessary: composite is better here 
+                // m.setContent(ChannelBuffers.dynamicBuffer(e.getChannel().getConfig().getBufferFactory()));
                 this.currentMessage = m;
             } else {
                 // Not a chunked message - pass through.
@@ -112,6 +115,8 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
             }
 
             currentMessage.setContent(ChannelBuffers.wrappedBuffer(content, chunk.getContent()));
+            // FIXME dynamic buffer is not necessary: composite is better here
+            // content.writeBytes(chunk.getContent());
             if (chunk.isLast()) {
                 this.currentMessage = null;
                 currentMessage.setHeader(

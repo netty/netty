@@ -573,26 +573,12 @@ class NioWorker implements Runnable {
 
     static void close(NioSocketChannel channel, ChannelFuture future) {
         NioWorker worker = channel.worker;
-        Selector selector = worker.selector;
 
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         try {
-            // It is necessary to cancel all keys before closing a socket
-            // because the shutdown flag in the Selector loop is set only when
-            // all keys are cancelled.  Thus, SocketChannel.close() and
-            // SelectionKey.cancel() must be placed in a synchronized block.
-            // Otherwise SocketChannel.register() in RegisterTask can be called
-            // after cancel(), but before close(), resulting in the infinite
-            // Selector loop that refuses to shut down due to the dangling keys.
-            synchronized (channel.interestOpsLock) {
-                SelectionKey key = channel.socket.keyFor(selector);
-                if (key != null) {
-                    key.cancel();
-                    worker.cancelledKeys ++;
-                }
-                channel.socket.close();
-            }
+            channel.socket.close();
+            worker.cancelledKeys ++;
 
             if (channel.setClosed()) {
                 future.setSuccess();

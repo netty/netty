@@ -26,23 +26,27 @@ import org.jboss.netty.buffer.ChannelBuffer;
  */
 public class DefaultHttpChunk implements HttpChunk {
 
-    private final ChannelBuffer content;
-    private final boolean last;
+    private ChannelBuffer content;
+    private boolean last;
 
     /**
      * Creates a new instance with the specified chunk content. If an empty
      * buffer is specified, this chunk becomes the 'end of content' marker.
      */
     public DefaultHttpChunk(ChannelBuffer content) {
+        setContent(content);
+    }
+
+    public ChannelBuffer getContent() {
+        return content;
+    }
+
+    public void setContent(ChannelBuffer content) {
         if (content == null) {
             throw new NullPointerException("content");
         }
         last = !content.readable();
         this.content = content;
-    }
-
-    public ChannelBuffer getContent() {
-        return content;
     }
 
     public boolean isLast() {

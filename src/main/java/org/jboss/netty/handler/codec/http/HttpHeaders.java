@@ -259,8 +259,7 @@ public final class HttpHeaders {
         /**
          * {@code "application/x-www-form-urlencoded"}
          */
-         public static final String APPLICATION_X_WWW_FORM_URLENCODED =
-             "application/x-www-form-urlencoded";
+        public static final String APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
         /**
          * {@code "base64"}
          */
@@ -272,7 +271,7 @@ public final class HttpHeaders {
         /**
          * {@code "boundary"}
          */
-        static final String BOUNDARY = "boundary";
+        public static final String BOUNDARY = "boundary";
         /**
          * {@code "bytes"}
          */
@@ -332,7 +331,7 @@ public final class HttpHeaders {
         /**
          * {@code "multipart/form-data"}
          */
-        static final String MULTIPART_FORM_DATA = "multipart/form-data";
+        public static final String MULTIPART_FORM_DATA = "multipart/form-data";
         /**
          * {@code "no-cache"}
          */
