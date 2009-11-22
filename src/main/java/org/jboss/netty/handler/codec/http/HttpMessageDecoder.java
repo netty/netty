@@ -109,7 +109,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     private final int maxInitialLineLength;
     private final int maxHeaderSize;
     private final int maxChunkSize;
-    protected volatile HttpMessage message;
+    private volatile HttpMessage message;
     private volatile ChannelBuffer content;
     private volatile long chunkSize;
     private int headerSize;
