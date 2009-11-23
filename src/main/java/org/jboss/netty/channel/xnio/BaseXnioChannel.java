@@ -41,7 +41,7 @@ import org.jboss.xnio.channels.WritableMessageChannel;
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
- * @version $Rev: 937 $, $Date: 2009-02-25 19:43:03 +0900 (Wed, 25 Feb 2009) $
+ * @version $Rev$, $Date$
  */
 @SuppressWarnings("unchecked")
 class BaseXnioChannel extends AbstractChannel implements XnioChannel {
