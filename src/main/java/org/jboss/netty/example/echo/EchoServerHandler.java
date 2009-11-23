@@ -32,7 +32,7 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
  *
- * @version $Rev: 1685 $, $Date: 2009-08-28 16:15:49 +0900 (Fri, 28 Aug 2009) $
+ * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("all")
 public class EchoServerHandler extends SimpleChannelUpstreamHandler {
