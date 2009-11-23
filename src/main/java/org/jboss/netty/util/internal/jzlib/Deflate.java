@@ -984,7 +984,7 @@ final class Deflate {
                 ins_h = (ins_h << hash_shift ^ window[strstart + MIN_MATCH - 1] & 0xff) &
                         hash_mask;
 
-                //	prev[strstart&w_mask]=hash_head=head[ins_h];
+                // prev[strstart&w_mask]=hash_head=head[ins_h];
                 hash_head = head[ins_h] & 0xffff;
                 prev[strstart & w_mask] = head[ins_h];
                 head[ins_h] = (short) strstart;
@@ -1021,7 +1021,7 @@ final class Deflate {
                         ins_h = (ins_h << hash_shift ^ window[strstart +
                                 MIN_MATCH - 1] & 0xff) &
                                 hash_mask;
-                        //	    prev[strstart&w_mask]=hash_head=head[ins_h];
+                        //        prev[strstart&w_mask]=hash_head=head[ins_h];
                         hash_head = head[ins_h] & 0xffff;
                         prev[strstart & w_mask] = head[ins_h];
                         head[ins_h] = (short) strstart;
@@ -1098,7 +1098,7 @@ final class Deflate {
             if (lookahead >= MIN_MATCH) {
                 ins_h = (ins_h << hash_shift ^ window[strstart + MIN_MATCH - 1] & 0xff) &
                         hash_mask;
-                //	prev[strstart&w_mask]=hash_head=head[ins_h];
+                //    prev[strstart&w_mask]=hash_head=head[ins_h];
                 hash_head = head[ins_h] & 0xffff;
                 prev[strstart & w_mask] = head[ins_h];
                 head[ins_h] = (short) strstart;
