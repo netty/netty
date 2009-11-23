@@ -360,7 +360,7 @@ public class Base64 {
 
         // Example: DkLE
         else {
-        	int outBuff;
+            int outBuff;
             try {
                 outBuff =
                         (DECODABET[src[srcOffset    ]] & 0xFF) << 18 |
