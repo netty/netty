@@ -70,11 +70,11 @@ public class HttpTunnelMessageUtils {
     
     
     public static HttpRequest createOpenTunnelRequest(SocketAddress host) {
-    	return createOpenTunnelRequest(convertToHostString(host));
+        return createOpenTunnelRequest(convertToHostString(host));
     }
     
     public static HttpRequest createOpenTunnelRequest(String host) {
-    	HttpRequest request = createRequestTemplate(host, null, OPEN_TUNNEL_REQUEST_URI);
+        HttpRequest request = createRequestTemplate(host, null, OPEN_TUNNEL_REQUEST_URI);
         setNoData(request);
         return request;
     }
@@ -89,7 +89,7 @@ public class HttpTunnelMessageUtils {
     }
 
     public static HttpRequest createSendDataRequest(SocketAddress host, String cookie, ChannelBuffer data) {
-    	return createSendDataRequest(convertToHostString(host), cookie, data);
+        return createSendDataRequest(convertToHostString(host), cookie, data);
     }
     
     public static HttpRequest createSendDataRequest(String host, String cookie, ChannelBuffer data) {
@@ -105,13 +105,13 @@ public class HttpTunnelMessageUtils {
     }
 
     public static HttpRequest createReceiveDataRequest(SocketAddress host, String tunnelId) {
-    	return createReceiveDataRequest(convertToHostString(host), tunnelId);
+        return createReceiveDataRequest(convertToHostString(host), tunnelId);
     }
     
     public static HttpRequest createReceiveDataRequest(String host, String tunnelId) {
-    	HttpRequest request = createRequestTemplate(host, tunnelId, CLIENT_RECV_REQUEST_URI);
-    	setNoData(request);
-    	return request;
+        HttpRequest request = createRequestTemplate(host, tunnelId, CLIENT_RECV_REQUEST_URI);
+        setNoData(request);
+        return request;
     }
     
     public static boolean isReceiveDataRequest(HttpRequest request) {
@@ -129,24 +129,24 @@ public class HttpTunnelMessageUtils {
     }
 
     public static boolean isServerToClientRequest(HttpRequest request) {
-		return isRequestTo(request, CLIENT_RECV_REQUEST_URI);
-	}
+        return isRequestTo(request, CLIENT_RECV_REQUEST_URI);
+    }
     
     public static String convertToHostString(SocketAddress hostAddress) {
-    	StringWriter host = new StringWriter();
-    	InetSocketAddress inetSocketAddr = (InetSocketAddress) hostAddress;
-    	InetAddress addr = inetSocketAddr.getAddress();
-    	if(addr instanceof Inet6Address) {
-    		host.append('[');
-    		host.append(addr.getHostAddress());
-    		host.append(']');
-    	} else {
-    		host.append(addr.getHostAddress());
-    	}
-    	
-    	host.append(':');
-    	host.append(Integer.toString(inetSocketAddr.getPort()));
-    	return host.toString();
+        StringWriter host = new StringWriter();
+        InetSocketAddress inetSocketAddr = (InetSocketAddress) hostAddress;
+        InetAddress addr = inetSocketAddr.getAddress();
+        if(addr instanceof Inet6Address) {
+            host.append('[');
+            host.append(addr.getHostAddress());
+            host.append(']');
+        } else {
+            host.append(addr.getHostAddress());
+        }
+        
+        host.append(':');
+        host.append(Integer.toString(inetSocketAddr.getPort()));
+        return host.toString();
     }
     
     private static HttpRequest createRequestTemplate(String host, String tunnelId, String uri) {
@@ -183,10 +183,10 @@ public class HttpTunnelMessageUtils {
             && uri.equals(decodedUri.getPath());
     }
 
-	private static void setNoData(HttpRequest request) {
-		request.setHeader(HttpHeaders.Names.CONTENT_LENGTH, "0");
-		request.setContent(null);
-	}
+    private static void setNoData(HttpRequest request) {
+        request.setHeader(HttpHeaders.Names.CONTENT_LENGTH, "0");
+        request.setContent(null);
+    }
 
     public static String extractTunnelId(HttpRequest request) {
         return request.getHeader(HttpHeaders.Names.COOKIE);

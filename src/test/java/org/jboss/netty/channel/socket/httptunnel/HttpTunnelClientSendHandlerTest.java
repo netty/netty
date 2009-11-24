@@ -90,18 +90,18 @@ public class HttpTunnelClientSendHandlerTest {
 
     @Test
     public void testOnlyOneRequestAtATime() {
-    	emulateConnectAndOpen();
+        emulateConnectAndOpen();
 
-    	channel.write(NettyTestUtils.createData(1234L));
-    	assertEquals(1, sink.events.size());
-    	checkIsSendDataRequestWithData(sink.events.poll(), "10.0.0.2:12345", NettyTestUtils.createData(1234L));
+        channel.write(NettyTestUtils.createData(1234L));
+        assertEquals(1, sink.events.size());
+        checkIsSendDataRequestWithData(sink.events.poll(), "10.0.0.2:12345", NettyTestUtils.createData(1234L));
 
-    	channel.write(NettyTestUtils.createData(5678L));
-    	assertEquals(0, sink.events.size());
+        channel.write(NettyTestUtils.createData(5678L));
+        assertEquals(0, sink.events.size());
 
-    	Channels.fireMessageReceived(channel, HttpTunnelMessageUtils.createSendDataResponse());
-    	assertEquals(1, sink.events.size());
-    	checkIsSendDataRequestWithData(sink.events.poll(), "10.0.0.2:12345", NettyTestUtils.createData(5678L));
+        Channels.fireMessageReceived(channel, HttpTunnelMessageUtils.createSendDataResponse());
+        assertEquals(1, sink.events.size());
+        checkIsSendDataRequestWithData(sink.events.poll(), "10.0.0.2:12345", NettyTestUtils.createData(5678L));
     }
 
     @Test
@@ -148,19 +148,19 @@ public class HttpTunnelClientSendHandlerTest {
 
     // FIXME expectedHost is unused.  Safe to remove?
     private void checkIsSendDataRequestWithData(ChannelEvent event, String expectedHost, ChannelBuffer data) {
-		assertTrue(event instanceof DownstreamMessageEvent);
-		DownstreamMessageEvent messageEvent = (DownstreamMessageEvent) event;
-		assertTrue(messageEvent.getMessage() instanceof HttpRequest);
-		HttpRequest request = (HttpRequest) messageEvent.getMessage();
-		assertTrue(HttpTunnelMessageUtils.isSendDataRequest(request));
-		assertEquals(data.readableBytes(), request.getContentLength());
+        assertTrue(event instanceof DownstreamMessageEvent);
+        DownstreamMessageEvent messageEvent = (DownstreamMessageEvent) event;
+        assertTrue(messageEvent.getMessage() instanceof HttpRequest);
+        HttpRequest request = (HttpRequest) messageEvent.getMessage();
+        assertTrue(HttpTunnelMessageUtils.isSendDataRequest(request));
+        assertEquals(data.readableBytes(), request.getContentLength());
 
-		ChannelBuffer content = request.getContent();
-		NettyTestUtils.assertEquals(data, content);
-	}
+        ChannelBuffer content = request.getContent();
+        NettyTestUtils.assertEquals(data, content);
+    }
 
-	private void emulateConnect() {
-	    channel.emulateConnected(LOCAL_ADDRESS, PROXY_ADDRESS, null);
+    private void emulateConnect() {
+        channel.emulateConnected(LOCAL_ADDRESS, PROXY_ADDRESS, null);
         sink.events.clear();
     }
 

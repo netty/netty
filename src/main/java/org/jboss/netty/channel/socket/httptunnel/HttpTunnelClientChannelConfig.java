@@ -143,17 +143,17 @@ public class HttpTunnelClientChannelConfig extends DefaultChannelConfig implemen
     }
 
     public void setSoLinger(int soLinger) {
-    	pollChannelConfig.setSoLinger(soLinger);
+        pollChannelConfig.setSoLinger(soLinger);
         sendChannelConfig.setSoLinger(soLinger);
     }
 
     public void setTcpNoDelay(boolean tcpNoDelay) {
-    	pollChannelConfig.setTcpNoDelay(true);
+        pollChannelConfig.setTcpNoDelay(true);
         sendChannelConfig.setTcpNoDelay(true);
     }
 
     public void setTrafficClass(int trafficClass) {
-    	pollChannelConfig.setTrafficClass(1);
+        pollChannelConfig.setTrafficClass(1);
         sendChannelConfig.setTrafficClass(1);
     }
 }

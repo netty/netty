@@ -108,14 +108,14 @@ public class NettyTestUtils {
     }
     
     public static ChannelBuffer createData(long containedNumber) {
-		ChannelBuffer data = ChannelBuffers.dynamicBuffer();
-		data.writeLong(containedNumber);
-		return data;
-	}
+        ChannelBuffer data = ChannelBuffers.dynamicBuffer();
+        data.writeLong(containedNumber);
+        return data;
+    }
     
     public static void checkIsUpstreamMessageEventContainingData(ChannelEvent event, ChannelBuffer expectedData) {
         ChannelBuffer data = checkIsUpstreamMessageEvent(event, ChannelBuffer.class);
-    	assertEquals(expectedData, data);
+        assertEquals(expectedData, data);
     }
     
     public static <T> T checkIsUpstreamMessageEvent(ChannelEvent event, Class<T> expectedMessageType) {
