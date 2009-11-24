@@ -36,16 +36,16 @@ class HttpTunnelServerChannelSink extends AbstractChannelSink {
 
     public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
 
-        if(e instanceof ChannelStateEvent) {
+        if (e instanceof ChannelStateEvent) {
             ChannelStateEvent ev = (ChannelStateEvent) e;
             switch(ev.getState()) {
             case OPEN:
-                if(Boolean.FALSE.equals(ev.getValue())) {
+                if (Boolean.FALSE.equals(ev.getValue())) {
                     realChannel.close().addListener(new ChannelFutureProxy(e.getFuture()));
                 }
                 break;
             case BOUND:
-                if(ev.getValue() != null) {
+                if (ev.getValue() != null) {
                     realChannel.bind((SocketAddress)ev.getValue()).addListener(new ChannelFutureProxy(e.getFuture()));
                 } else {
                     realChannel.unbind().addListener(new ChannelFutureProxy(e.getFuture()));
@@ -63,7 +63,7 @@ class HttpTunnelServerChannelSink extends AbstractChannelSink {
         }
 
         public void operationComplete(ChannelFuture future) throws Exception {
-            if(future.isSuccess()) {
+            if (future.isSuccess()) {
                 upstreamFuture.setSuccess();
             } else {
                 upstreamFuture.setFailure(future.getCause());

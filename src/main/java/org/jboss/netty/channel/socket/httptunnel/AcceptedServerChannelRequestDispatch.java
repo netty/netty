@@ -51,13 +51,13 @@ class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler 
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         HttpRequest request = (HttpRequest)e.getMessage();
 
-        if(HttpTunnelMessageUtils.isOpenTunnelRequest(request)) {
+        if (HttpTunnelMessageUtils.isOpenTunnelRequest(request)) {
             handleOpenTunnel(ctx);
-        } else if(HttpTunnelMessageUtils.isSendDataRequest(request)) {
+        } else if (HttpTunnelMessageUtils.isSendDataRequest(request)) {
             handleSendData(ctx, request);
-        } else if(HttpTunnelMessageUtils.isReceiveDataRequest(request)) {
+        } else if (HttpTunnelMessageUtils.isReceiveDataRequest(request)) {
             handleReceiveData(ctx, request);
-        } else if(HttpTunnelMessageUtils.isCloseTunnelRequest(request)) {
+        } else if (HttpTunnelMessageUtils.isCloseTunnelRequest(request)) {
             handleCloseTunnel(ctx, request);
         } else {
             LOG.warn("Invalid request received on http tunnel channel");
@@ -79,7 +79,7 @@ class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler 
 
     private void handleCloseTunnel(ChannelHandlerContext ctx, HttpRequest request) {
         String tunnelId = checkTunnelId(request, ctx);
-        if(tunnelId == null) {
+        if (tunnelId == null) {
             return;
         }
 
@@ -92,14 +92,14 @@ class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler 
 
     private void handleSendData(ChannelHandlerContext ctx, HttpRequest request) {
         String tunnelId = checkTunnelId(request, ctx);
-        if(tunnelId == null) {
+        if (tunnelId == null) {
             return;
         }
         if (LOG.isDebugEnabled()) {
             LOG.debug("send data request received for tunnel " + tunnelId);
         }
 
-        if(request.getContentLength() == 0 || request.getContent() == null || request.getContent().readableBytes() == 0) {
+        if (request.getContentLength() == 0 || request.getContent() == null || request.getContent().readableBytes() == 0) {
             if (LOG.isWarnEnabled()) {
                 LOG.warn("send data request contained no data on tunnel " + tunnelId);
             }
@@ -113,7 +113,7 @@ class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler 
 
     private void handleReceiveData(ChannelHandlerContext ctx, HttpRequest request) {
         String tunnelId = checkTunnelId(request, ctx);
-        if(tunnelId == null) {
+        if (tunnelId == null) {
             return;
         }
         if (LOG.isDebugEnabled()) {
@@ -124,10 +124,10 @@ class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler 
 
     private String checkTunnelId(HttpRequest request, ChannelHandlerContext ctx) {
         String tunnelId = HttpTunnelMessageUtils.extractTunnelId(request);
-        if(tunnelId == null) {
+        if (tunnelId == null) {
             LOG.warn("request without a tunnel id received - rejecting");
             Channels.write(ctx, Channels.future(ctx.getChannel()), HttpTunnelMessageUtils.createRejection(request, "no tunnel id specified in send data request"));
-        } else if(!messageSwitch.isOpenTunnel(tunnelId)) {
+        } else if (!messageSwitch.isOpenTunnel(tunnelId)) {
             LOG.warn("request for unknown tunnel id " + tunnelId + " received - rejecting");
             Channels.write(ctx, Channels.future(ctx.getChannel()), HttpTunnelMessageUtils.createRejection(request, "tunnel id \"" + tunnelId + "\" is either closed or does not exist"));
             return null;

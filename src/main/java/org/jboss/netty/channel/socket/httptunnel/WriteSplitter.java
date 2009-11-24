@@ -43,7 +43,7 @@ public class WriteSplitter {
 
         int startReadIndex = buffer.readerIndex();
         
-        if(buffer.readableBytes() > splitThreshold) {
+        if (buffer.readableBytes() > splitThreshold) {
             while(buffer.readable()) {
                 ChannelBuffer chunk = ChannelBuffers.buffer(Math.min(splitThreshold, buffer.readableBytes()));
                 buffer.readBytes(chunk);

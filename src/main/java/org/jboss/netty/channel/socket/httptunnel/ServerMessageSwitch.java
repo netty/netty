@@ -70,7 +70,7 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
 
     public void pollOutboundData(String tunnelId, Channel channel) {
         TunnelInfo tunnel = tunnelsById.get(tunnelId);
-        if(tunnel == null) {
+        if (tunnel == null) {
             if (LOG.isWarnEnabled()) {
                 LOG.warn("Poll request for tunnel " + tunnelId + " which does not exist or already closed");
             }
@@ -78,7 +78,7 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
             return;
         }
 
-        if(!tunnel.responseChannel.compareAndSet(null, channel)) {
+        if (!tunnel.responseChannel.compareAndSet(null, channel)) {
             if (LOG.isWarnEnabled()) {
                 LOG.warn("Duplicate poll request detected for tunnel " + tunnelId);
             }
@@ -91,13 +91,13 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
 
     private void sendQueuedData(TunnelInfo state) {
         ConcurrentLinkedQueue<QueuedResponse> queuedData = state.queuedResponses;
-        if(queuedData.peek() == null) {
+        if (queuedData.peek() == null) {
             // no data to send, or it has already been dealt with by another thread
             return;
         }
 
         Channel responseChannel = state.responseChannel.getAndSet(null);
-        if(responseChannel == null) {
+        if (responseChannel == null) {
             // no response channel, or another thread has already used it
             return;
         }
@@ -110,7 +110,7 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
         final ChannelFuture originalFuture = messageToSend.writeFuture;
         Channels.write(responseChannel, response).addListener(new ChannelFutureListener() {
             public void operationComplete(ChannelFuture future) throws Exception {
-                if(future.isSuccess()) {
+                if (future.isSuccess()) {
                     originalFuture.setSuccess();
                 } else {
                     originalFuture.setFailure(future.getCause());
@@ -121,7 +121,7 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
 
     public void routeInboundData(String tunnelId, ChannelBuffer inboundData) {
         TunnelInfo tunnel = tunnelsById.get(tunnelId);
-        if(tunnel == null) {
+        if (tunnel == null) {
             return;
         }
 
@@ -137,7 +137,7 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
 
     public void routeOutboundData(String tunnelId, ChannelBuffer data, ChannelFuture writeFuture) {
         TunnelInfo tunnel = tunnelsById.get(tunnelId);
-        if(tunnel == null) {
+        if (tunnel == null) {
             // tunnel is closed
             if (LOG.isWarnEnabled()) {
                 LOG.warn("attempt made to send data out on tunnel id " + tunnelId + " which is unknown or closed");

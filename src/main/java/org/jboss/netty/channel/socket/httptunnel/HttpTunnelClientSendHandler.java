@@ -67,7 +67,7 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
 
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        if(tunnelId == null) {
+        if (tunnelId == null) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("connection to " + e.getValue() + " succeeded - sending open tunnel request");
             }
@@ -84,22 +84,22 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         HttpResponse response = (HttpResponse)e.getMessage();
 
-        if(HttpTunnelMessageUtils.isOKResponse(response)) {
+        if (HttpTunnelMessageUtils.isOKResponse(response)) {
             long roundTripTime = System.nanoTime() - sendRequestTime;
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OK response received for tunnel " + tunnelId + ", after " + roundTripTime + " ns");
             }
             sendNextAfterResponse(ctx);
-        } else if(HttpTunnelMessageUtils.isTunnelOpenResponse(response)) {
+        } else if (HttpTunnelMessageUtils.isTunnelOpenResponse(response)) {
             tunnelId = HttpTunnelMessageUtils.extractCookie(response);
             if (LOG.isInfoEnabled()) {
                 LOG.info("tunnel open request accepted - id " + tunnelId);
             }
             tunnelChannel.onTunnelOpened(tunnelId);
             sendNextAfterResponse(ctx);
-        } else if(HttpTunnelMessageUtils.isTunnelCloseResponse(response)) {
+        } else if (HttpTunnelMessageUtils.isTunnelCloseResponse(response)) {
             if (LOG.isInfoEnabled()) {
-                if(disconnecting.get()) {
+                if (disconnecting.get()) {
                     LOG.info("server acknowledged disconnect for tunnel " + tunnelId);
                 } else {
                     LOG.info("server closed tunnel " + tunnelId);
@@ -116,7 +116,7 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
     }
 
     private void sendNextAfterResponse(ChannelHandlerContext ctx) {
-        if(pendingRequestCount.decrementAndGet() > 0) {
+        if (pendingRequestCount.decrementAndGet() > 0) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Immediately sending next send request for tunnel " + tunnelId);
             }
@@ -125,7 +125,7 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
     }
 
     private synchronized void sendQueuedData(ChannelHandlerContext ctx) {
-        if(disconnecting.get()) {
+        if (disconnecting.get()) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("sending close request for tunnel " + tunnelId);
             }
@@ -185,7 +185,7 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
         if (LOG.isInfoEnabled()) {
             LOG.info("tunnel shutdown requested for send channel of tunnel " + tunnelId);
         }
-        if(!ctx.getChannel().isConnected()) {
+        if (!ctx.getChannel().isConnected()) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("send channel of tunnel " + tunnelId + " is already disconnected");
             }
@@ -193,7 +193,7 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
             return;
         }
 
-        if(!disconnecting.compareAndSet(false, true)) {
+        if (!disconnecting.compareAndSet(false, true)) {
             if (LOG.isWarnEnabled()) {
                 LOG.warn("tunnel shutdown process already initiated for tunnel " + tunnelId);
             }
@@ -203,7 +203,7 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
         this.postShutdownEvent = postShutdownEvent;
 
         // if the channel is idle, send a close request immediately
-        if(pendingRequestCount.incrementAndGet() == 1) {
+        if (pendingRequestCount.incrementAndGet() == 1) {
             sendQueuedData(ctx);
         }
     }

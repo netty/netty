@@ -65,7 +65,7 @@ class HttpTunnelClientPollHandler extends SimpleChannelHandler {
             throws Exception {
         HttpResponse response = (HttpResponse) e.getMessage();
 
-        if(HttpTunnelMessageUtils.isOKResponse(response)) {
+        if (HttpTunnelMessageUtils.isOKResponse(response)) {
             long rtTime = System.nanoTime() - pollTime;
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OK response received for poll on tunnel " + tunnelId + " after " + rtTime + " ns");

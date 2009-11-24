@@ -45,15 +45,15 @@ class HttpTunnelAcceptedChannelSink extends AbstractChannelSink {
     }
 
     public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
-        if(e instanceof MessageEvent) {
+        if (e instanceof MessageEvent) {
             handleMessageEvent((MessageEvent)e);
-        } else if(e instanceof ChannelStateEvent) {
+        } else if (e instanceof ChannelStateEvent) {
             handleStateEvent((ChannelStateEvent)e);
         }
     }
 
     private void handleMessageEvent(MessageEvent ev) {
-        if(!(ev.getMessage() instanceof ChannelBuffer)) {
+        if (!(ev.getMessage() instanceof ChannelBuffer)) {
             throw new IllegalArgumentException("Attempt to send data which is not a ChannelBuffer:" + ev.getMessage());
         }
         messageSwitch.routeOutboundData(tunnelId, (ChannelBuffer)ev.getMessage(), ev.getFuture());
@@ -63,20 +63,20 @@ class HttpTunnelAcceptedChannelSink extends AbstractChannelSink {
         Channel owner = ev.getChannel();
         switch(ev.getState()) {
         case OPEN:
-            if(Boolean.FALSE.equals(ev.getValue())) {
+            if (Boolean.FALSE.equals(ev.getValue())) {
                 messageSwitch.closeTunnel(tunnelId);
                 active = false;
                 Channels.fireChannelClosed(owner);
             }
             break;
         case BOUND:
-            if(ev.getValue() == null) {
+            if (ev.getValue() == null) {
                 messageSwitch.closeTunnel(tunnelId);
                 active = false;
                 Channels.fireChannelUnbound(owner);
             }
         case CONNECTED:
-            if(ev.getValue() == null) {
+            if (ev.getValue() == null) {
                 messageSwitch.closeTunnel(tunnelId);
                 active = false;
                 Channels.fireChannelDisconnected(owner);

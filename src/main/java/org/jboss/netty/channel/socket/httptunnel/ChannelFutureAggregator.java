@@ -25,14 +25,14 @@ class ChannelFutureAggregator implements ChannelFutureListener {
     }
 
     public synchronized void operationComplete(ChannelFuture future) throws Exception {
-        if(future.isCancelled()) {
+        if (future.isCancelled()) {
             // TODO: what should the correct behaviour be when a fragment is cancelled?
             // cancel all outstanding fragments and cancel the aggregate?
             return;
         }
         
         pendingFutures.remove(future);
-        if(!future.isSuccess()) {
+        if (!future.isSuccess()) {
             aggregateFuture.setFailure(future.getCause());
             for(ChannelFuture pendingFuture : pendingFutures) {
                 pendingFuture.cancel();
@@ -40,7 +40,7 @@ class ChannelFutureAggregator implements ChannelFutureListener {
             return;
         }
         
-        if(pendingFutures.isEmpty()) {
+        if (pendingFutures.isEmpty()) {
             aggregateFuture.setSuccess();
         }
     }

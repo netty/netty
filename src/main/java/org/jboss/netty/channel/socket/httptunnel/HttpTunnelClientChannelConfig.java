@@ -57,11 +57,11 @@ public class HttpTunnelClientChannelConfig extends DefaultChannelConfig implemen
 
     @Override
     public boolean setOption(String key, Object value) {
-        if(super.setOption(key, value)) {
+        if (super.setOption(key, value)) {
             return true;
         }
 
-        if(PROXY_ADDRESS_OPTION.equals(key)) {
+        if (PROXY_ADDRESS_OPTION.equals(key)) {
             setProxyAddress((SocketAddress) value);
         } else {
             return false;

@@ -57,7 +57,7 @@ public class WriteFragmenter extends SimpleChannelDownstreamHandler {
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         ChannelBuffer data = (ChannelBuffer)e.getMessage();
 
-        if(data.readableBytes() <= splitThreshold) {
+        if (data.readableBytes() <= splitThreshold) {
             super.writeRequested(ctx, e);
         } else {
             WriteSplitter splitter = new WriteSplitter(splitThreshold);

@@ -106,7 +106,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
         serverAddress = remoteAddress;
 
         SocketAddress connectTarget;
-        if(config.getProxyAddress() != null) {
+        if (config.getProxyAddress() != null) {
             connectTarget = config.getProxyAddress();
         } else {
             connectTarget = remoteAddress;
@@ -180,7 +180,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
     }
 
     public void fullyEstablished() {
-        if(!bound) {
+        if (!bound) {
             bound = true;
             Channels.fireChannelBound(this, getLocalAddress());
         }
@@ -195,7 +195,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
         Channels.write(sendChannel, e.getMessage()).addListener(new ChannelFutureListener() {
 
             public void operationComplete(ChannelFuture future) throws Exception {
-                if(future.isSuccess()) {
+                if (future.isSuccess()) {
                     originalFuture.setSuccess();
                 } else {
                     originalFuture.setFailure(future.getCause());
@@ -205,7 +205,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
     }
 
     public String getServerHostName() {
-        if(serverHostName == null) {
+        if (serverHostName == null) {
             serverHostName = HttpTunnelMessageUtils.convertToHostString(serverAddress);
         }
 
@@ -223,9 +223,9 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
         }
 
         public void operationComplete(ChannelFuture future) throws Exception {
-            if(!future.isSuccess()) {
+            if (!future.isSuccess()) {
                 completionFuture.setFailure(future.getCause());
-            } else if(eventsLeft.decrementAndGet() == 0) {
+            } else if (eventsLeft.decrementAndGet() == 0) {
                 completionFuture.setSuccess();
             }
         }

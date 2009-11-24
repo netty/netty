@@ -136,7 +136,7 @@ public class HttpTunnelMessageUtils {
         StringWriter host = new StringWriter();
         InetSocketAddress inetSocketAddr = (InetSocketAddress) hostAddress;
         InetAddress addr = inetSocketAddr.getAddress();
-        if(addr instanceof Inet6Address) {
+        if (addr instanceof Inet6Address) {
             host.append('[');
             host.append(addr.getHostAddress());
             host.append(']');
@@ -153,7 +153,7 @@ public class HttpTunnelMessageUtils {
         HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, createCompleteUri(host, uri));
         request.setHeader(HttpHeaders.Names.HOST, host);
         request.setHeader(HttpHeaders.Names.USER_AGENT, USER_AGENT);
-        if(tunnelId != null) {
+        if (tunnelId != null) {
             request.setHeader(HttpHeaders.Names.COOKIE, tunnelId);
         }
         
@@ -216,7 +216,7 @@ public class HttpTunnelMessageUtils {
     }
 
     public static boolean hasContents(HttpResponse response, byte[] expectedContents) {
-        if(response.getContent() != null 
+        if (response.getContent() != null 
            && response.getContentLength() == expectedContents.length
            && response.getContent().readableBytes() == expectedContents.length) {
             byte[] compareBytes = new byte[expectedContents.length];
@@ -237,7 +237,7 @@ public class HttpTunnelMessageUtils {
     }
 
     public static String extractCookie(HttpResponse response) {
-        if(response.containsHeader(HttpHeaders.Names.SET_COOKIE)) {
+        if (response.containsHeader(HttpHeaders.Names.SET_COOKIE)) {
             return response.getHeader(HttpHeaders.Names.SET_COOKIE);
         }
         
@@ -267,7 +267,7 @@ public class HttpTunnelMessageUtils {
     }
 
     public static Object extractErrorMessage(HttpResponse response) {
-        if(response.getContent() == null || response.getContentLength() == 0) {
+        if (response.getContent() == null || response.getContentLength() == 0) {
             return "";
         }
         
@@ -291,7 +291,7 @@ public class HttpTunnelMessageUtils {
     
     private static HttpResponse createResponseTemplate(HttpResponseStatus status, ChannelBuffer data) {
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
-        if(data != null) {
+        if (data != null) {
             response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, Integer.toString(data.readableBytes()));
             response.setHeader(HttpHeaders.Names.CONTENT_TYPE, "application/octet-stream");
             response.setContent(data);

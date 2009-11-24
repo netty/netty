@@ -32,9 +32,9 @@ import org.jboss.netty.channel.MessageEvent;
 class HttpTunnelClientChannelSink extends AbstractChannelSink {
 
     public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
-        if(e instanceof ChannelStateEvent) {
+        if (e instanceof ChannelStateEvent) {
             handleChannelStateEvent((ChannelStateEvent)e);
-        } else if(e instanceof MessageEvent) {
+        } else if (e instanceof MessageEvent) {
             handleMessageEvent((MessageEvent)e);
         }
     }
@@ -49,21 +49,21 @@ class HttpTunnelClientChannelSink extends AbstractChannelSink {
         
         switch(e.getState()) {
         case CONNECTED:
-            if(e.getValue() != null) {
+            if (e.getValue() != null) {
                 channel.onConnectRequest(e.getFuture(), (InetSocketAddress) e.getValue());
             } else {
                 channel.onDisconnectRequest(e.getFuture());
             }
             break;
         case BOUND:
-            if(e.getValue() != null) {
+            if (e.getValue() != null) {
                 channel.onBindRequest((SocketAddress)e.getValue(), e.getFuture());
             } else {
                 channel.onUnbindRequest(e.getFuture());
             }
             break;
         case OPEN:
-            if(Boolean.FALSE.equals(e.getValue())) {
+            if (Boolean.FALSE.equals(e.getValue())) {
                 channel.onCloseRequest(e.getFuture());
             }
             break;
