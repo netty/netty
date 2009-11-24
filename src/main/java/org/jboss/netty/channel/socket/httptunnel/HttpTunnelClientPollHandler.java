@@ -15,9 +15,6 @@
  */
 package org.jboss.netty.channel.socket.httptunnel;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -26,6 +23,8 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -36,47 +35,55 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 class HttpTunnelClientPollHandler extends SimpleChannelHandler {
 
     public static final String NAME = "server2client";
-    
-    private static final Logger LOG = Logger.getLogger(HttpTunnelClientPollHandler.class.getName());
+
+    private static final InternalLogger LOG = InternalLoggerFactory.getInstance(HttpTunnelClientPollHandler.class);
 
     private String tunnelId;
-    private HttpTunnelClientWorkerOwner tunnelChannel;
+    private final HttpTunnelClientWorkerOwner tunnelChannel;
 
     private long pollTime;
 
     public HttpTunnelClientPollHandler(HttpTunnelClientWorkerOwner tunnelChannel) {
         this.tunnelChannel = tunnelChannel;
     }
-    
+
     public void setTunnelId(String tunnelId) {
         this.tunnelId = tunnelId;
     }
 
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        LOG.log(Level.FINE, "Poll channel for tunnel {0} established", tunnelId);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Poll channel for tunnel " + tunnelId + " established");
+        }
         tunnelChannel.fullyEstablished();
         sendPoll(ctx);
     }
-    
+
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
             throws Exception {
         HttpResponse response = (HttpResponse) e.getMessage();
-        
+
         if(HttpTunnelMessageUtils.isOKResponse(response)) {
             long rtTime = System.nanoTime() - pollTime;
-            LOG.log(Level.FINE, "OK response received for poll on tunnel {0} after {1}ns", new Object[] { tunnelId, rtTime });
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("OK response received for poll on tunnel " + tunnelId + " after " + rtTime + " ns");
+            }
             tunnelChannel.onMessageReceived(response.getContent());
             sendPoll(ctx);
         } else {
-            LOG.log(Level.WARNING, "non-OK response received for poll on tunnel {0}", tunnelId);
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("non-OK response received for poll on tunnel " + tunnelId);
+            }
         }
     }
 
     private void sendPoll(ChannelHandlerContext ctx) {
         pollTime = System.nanoTime();
-        LOG.log(Level.FINE, "sending poll request for tunnel {0}", tunnelId);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("sending poll request for tunnel " + tunnelId);
+        }
         HttpRequest request = HttpTunnelMessageUtils.createReceiveDataRequest(tunnelChannel.getServerHostName(), tunnelId);
         Channels.write(ctx, Channels.future(ctx.getChannel()), request);
     }

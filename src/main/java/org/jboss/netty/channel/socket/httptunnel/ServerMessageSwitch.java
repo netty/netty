@@ -22,8 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
@@ -31,6 +29,8 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -39,7 +39,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
  */
 class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, ServerMessageSwitchDownstreamInterface {
 
-    private static final Logger LOG = Logger.getLogger(ServerMessageSwitch.class.getName());
+    private static final InternalLogger LOG = InternalLoggerFactory.getInstance(ServerMessageSwitch.class.getName());
 
     private final String tunnelIdPrefix;
     private final AtomicInteger tunnelIdSequence;
@@ -71,13 +71,17 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
     public void pollOutboundData(String tunnelId, Channel channel) {
         TunnelInfo tunnel = tunnelsById.get(tunnelId);
         if(tunnel == null) {
-            LOG.log(Level.WARNING, "Poll request for tunnel {0} which does not exist or already closed");
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("Poll request for tunnel " + tunnelId + " which does not exist or already closed");
+            }
             Channels.write(channel, HttpTunnelMessageUtils.createRejection(null, "Unknown tunnel, possibly already closed"));
             return;
         }
 
         if(!tunnel.responseChannel.compareAndSet(null, channel)) {
-            LOG.log(Level.WARNING, "Duplicate poll request detected for tunnel {0}", tunnelId);
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("Duplicate poll request detected for tunnel " + tunnelId);
+            }
             Channels.write(channel, HttpTunnelMessageUtils.createRejection(null, "Only one poll request at a time per tunnel allowed"));
             return;
         }
@@ -98,7 +102,9 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
             return;
         }
 
-        LOG.log(Level.FINE, "sending response for tunnel id {0} to {1}", new Object[] { state.tunnelId, responseChannel.getRemoteAddress() });
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("sending response for tunnel id " + state.tunnelId + " to " + responseChannel.getRemoteAddress());
+        }
         QueuedResponse messageToSend = queuedData.poll();
         HttpResponse response = HttpTunnelMessageUtils.createRecvDataResponse(messageToSend.data);
         final ChannelFuture originalFuture = messageToSend.writeFuture;
@@ -119,7 +125,9 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
             return;
         }
 
-        LOG.log(Level.FINE, "routing inbound data for tunnel {0}", tunnelId);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("routing inbound data for tunnel " + tunnelId);
+        }
         Channels.fireMessageReceived(tunnel.localChannel, inboundData);
     }
 
@@ -131,7 +139,9 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
         TunnelInfo tunnel = tunnelsById.get(tunnelId);
         if(tunnel == null) {
             // tunnel is closed
-            LOG.log(Level.WARNING, "attempt made to send data out on tunnel id {0} which is unknown or closed", tunnelId);
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("attempt made to send data out on tunnel id " + tunnelId + " which is unknown or closed");
+            }
             return;
         }
 
@@ -140,7 +150,9 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
         ChannelFutureAggregator aggregator = new ChannelFutureAggregator(writeFuture);
         List<ChannelBuffer> fragments = splitter.split(data);
 
-        LOG.log(Level.FINE, "routing outbound data for tunnel {0}", tunnelId);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("routing outbound data for tunnel " + tunnelId);
+        }
         for(ChannelBuffer fragment : fragments) {
             ChannelFuture fragmentFuture = Channels.future(writeFuture.getChannel());
             aggregator.addFuture(fragmentFuture);

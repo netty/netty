@@ -15,9 +15,6 @@
  */
 package org.jboss.netty.channel.socket.httptunnel;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
@@ -25,24 +22,26 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * Upstream handler which is responsible for determining whether a received HTTP request is a legal
- * tunnel request, and if so, invoking the appropriate request method on the 
+ * tunnel request, and if so, invoking the appropriate request method on the
  * {@link ServerMessageSwitch} to service the request.
- * 
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("one")
 class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler {
-    
+
     public static final String NAME = "AcceptedServerChannelRequestDispatch";
-    
-    private static final Logger LOG = Logger.getLogger(AcceptedServerChannelRequestDispatch.class.getName());
-    
-    private ServerMessageSwitchUpstreamInterface messageSwitch;
+
+    private static final InternalLogger LOG = InternalLoggerFactory.getInstance(AcceptedServerChannelRequestDispatch.class);
+
+    private final ServerMessageSwitchUpstreamInterface messageSwitch;
 
     public AcceptedServerChannelRequestDispatch(ServerMessageSwitchUpstreamInterface messageSwitch) {
         this.messageSwitch = messageSwitch;
@@ -51,7 +50,7 @@ class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         HttpRequest request = (HttpRequest)e.getMessage();
-        
+
         if(HttpTunnelMessageUtils.isOpenTunnelRequest(request)) {
             handleOpenTunnel(ctx);
         } else if(HttpTunnelMessageUtils.isSendDataRequest(request)) {
@@ -61,7 +60,7 @@ class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler 
         } else if(HttpTunnelMessageUtils.isCloseTunnelRequest(request)) {
             handleCloseTunnel(ctx, request);
         } else {
-            LOG.warning("Invalid request received on http tunnel channel");
+            LOG.warn("Invalid request received on http tunnel channel");
             respondWith(ctx, HttpTunnelMessageUtils.createRejection(request, "invalid request to netty HTTP tunnel gateway"));
         }
     }
@@ -72,18 +71,21 @@ class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler 
 
     private void handleOpenTunnel(ChannelHandlerContext ctx) {
         String tunnelId = messageSwitch.createTunnel(ctx.getChannel().getRemoteAddress());
-        LOG.log(Level.INFO, "open tunnel request received from {0} - allocated ID {1}", new Object[] { ctx.getChannel().getRemoteAddress(), tunnelId });
+        if (LOG.isInfoEnabled()) {
+            LOG.info("open tunnel request received from " + ctx.getChannel().getRemoteAddress() + " - allocated ID " + tunnelId);
+        }
         respondWith(ctx, HttpTunnelMessageUtils.createTunnelOpenResponse(tunnelId));
     }
-    
+
     private void handleCloseTunnel(ChannelHandlerContext ctx, HttpRequest request) {
         String tunnelId = checkTunnelId(request, ctx);
         if(tunnelId == null) {
             return;
         }
-        
-        LOG.log(Level.INFO, "close tunnel request received for tunnel {0}", tunnelId);
-        
+
+        if (LOG.isInfoEnabled()) {
+            LOG.info("close tunnel request received for tunnel " + tunnelId);
+        }
         messageSwitch.closeTunnel(tunnelId);
         respondWith(ctx, HttpTunnelMessageUtils.createTunnelCloseResponse());
     }
@@ -93,39 +95,44 @@ class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler 
         if(tunnelId == null) {
             return;
         }
-        LOG.log(Level.FINE, "send data request received for tunnel {0}", tunnelId);
-        
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("send data request received for tunnel " + tunnelId);
+        }
+
         if(request.getContentLength() == 0 || request.getContent() == null || request.getContent().readableBytes() == 0) {
-            LOG.log(Level.WARNING, "send data request contained no data on tunnel {0}", tunnelId);
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("send data request contained no data on tunnel " + tunnelId);
+            }
             respondWith(ctx, HttpTunnelMessageUtils.createRejection(request, "Send data requests must contain data"));
             return;
         }
-        
+
         messageSwitch.routeInboundData(tunnelId, request.getContent());
         respondWith(ctx, HttpTunnelMessageUtils.createSendDataResponse());
     }
-    
+
     private void handleReceiveData(ChannelHandlerContext ctx, HttpRequest request) {
         String tunnelId = checkTunnelId(request, ctx);
         if(tunnelId == null) {
             return;
         }
-        LOG.log(Level.FINE, "poll data request received for tunnel {0}", tunnelId);
-        
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("poll data request received for tunnel " + tunnelId);
+        }
         messageSwitch.pollOutboundData(tunnelId, ctx.getChannel());
     }
 
     private String checkTunnelId(HttpRequest request, ChannelHandlerContext ctx) {
         String tunnelId = HttpTunnelMessageUtils.extractTunnelId(request);
         if(tunnelId == null) {
-            LOG.warning("request without a tunnel id received - rejecting");
+            LOG.warn("request without a tunnel id received - rejecting");
             Channels.write(ctx, Channels.future(ctx.getChannel()), HttpTunnelMessageUtils.createRejection(request, "no tunnel id specified in send data request"));
         } else if(!messageSwitch.isOpenTunnel(tunnelId)) {
-            LOG.log(Level.WARNING, "request for unknown tunnel id {0} received - rejecting", tunnelId);
+            LOG.warn("request for unknown tunnel id " + tunnelId + " received - rejecting");
             Channels.write(ctx, Channels.future(ctx.getChannel()), HttpTunnelMessageUtils.createRejection(request, "tunnel id \"" + tunnelId + "\" is either closed or does not exist"));
             return null;
         }
-        
+
         return tunnelId;
     }
 }
