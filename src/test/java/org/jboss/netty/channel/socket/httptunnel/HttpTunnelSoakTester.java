@@ -42,18 +42,18 @@ public class HttpTunnelSoakTester {
     private static final int SERVER_PORT = 20100;
 
     private static final Logger LOG = Logger.getLogger(HttpTunnelSoakTester.class.getName());
-    
-    private ServerBootstrap serverBootstrap;
-    private ClientBootstrap clientBootstrap;
-    private ChannelGroup channels;
-    
+
+    private final ServerBootstrap serverBootstrap;
+    private final ClientBootstrap clientBootstrap;
+    private final ChannelGroup channels;
+
     int expectedNextByte = 0;
     int nextWriteByte = 0;
 
-    private ExecutorService executor;
-    private ScheduledExecutorService scheduledExecutor;
-    private ConcurrentLinkedQueue<ChannelBuffer> verificationQueue;
-    
+    private final ExecutorService executor;
+    private final ScheduledExecutorService scheduledExecutor;
+    private final ConcurrentLinkedQueue<ChannelBuffer> verificationQueue;
+
     public HttpTunnelSoakTester() {
         try {
             System.in.read();
@@ -66,23 +66,23 @@ public class HttpTunnelSoakTester {
         verificationQueue = new ConcurrentLinkedQueue<ChannelBuffer>();
         ServerSocketChannelFactory serverChannelFactory = new NioServerSocketChannelFactory(executor, executor);
         HttpTunnelServerChannelFactory serverTunnelFactory = new HttpTunnelServerChannelFactory(serverChannelFactory);
-        
+
         serverBootstrap = new ServerBootstrap(serverTunnelFactory);
         serverBootstrap.setPipelineFactory(createServerPipelineFactory());
-        
+
         ClientSocketChannelFactory clientChannelFactory = new NioClientSocketChannelFactory(executor, executor);
         HttpTunnelClientChannelFactory clientTunnelFactory = new HttpTunnelClientChannelFactory(clientChannelFactory);
-        
+
         clientBootstrap = new ClientBootstrap(clientTunnelFactory);
         clientBootstrap.setPipelineFactory(createClientPipelineFactory());
         configureProxy();
-        
+
         channels = new DefaultChannelGroup();
     }
-    
+
     private void configureProxy() {
         String proxyHost = System.getProperty("http.proxyHost");
-        if(proxyHost != null && !proxyHost.isEmpty()) {
+        if(proxyHost != null && proxyHost.length() != 0) {
             int proxyPort = Integer.getInteger("http.proxyPort", 80);
             InetAddress chosenAddress = chooseAddress(proxyHost);
             InetSocketAddress proxyAddress = new InetSocketAddress(chosenAddress, proxyPort);
@@ -104,10 +104,10 @@ public class HttpTunnelSoakTester {
                 if(address.isAnyLocalAddress() || address.isLinkLocalAddress()) {
                     continue;
                 }
-                
+
                 return address;
             }
-            
+
             return null;
         } catch (UnknownHostException e) {
             return null;
@@ -116,7 +116,7 @@ public class HttpTunnelSoakTester {
 
     protected ChannelPipelineFactory createClientPipelineFactory() {
         return new ChannelPipelineFactory() {
-            
+
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline pipeline = Channels.pipeline();
                 pipeline.addLast("responseVerifier", new ResponseVerifier());
@@ -127,7 +127,7 @@ public class HttpTunnelSoakTester {
 
     protected ChannelPipelineFactory createServerPipelineFactory() {
         return new ChannelPipelineFactory() {
-            
+
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline pipeline = Channels.pipeline();
                 pipeline.addLast("echo", new EchoHandler());
@@ -141,27 +141,27 @@ public class HttpTunnelSoakTester {
         Channel serverChannel = serverBootstrap.bind(new InetSocketAddress(SERVER_PORT));
         channels.add(serverChannel);
         LOG.log(Level.INFO, "server channel bound to {0}", serverChannel.getLocalAddress());
-        
-        
+
+
         Channel clientChannel = createClientChannel();
         if(clientChannel == null) {
             LOG.severe("no client channel - bailing out");
             return;
         }
         channels.add(clientChannel);
-        
+
         scheduledExecutor.execute(new VerificationTask());
-        
+
         if(!pushData(clientChannel)) {
             LOG.severe("Data send cycle failed");
         } else {
             LOG.info("send cycle completed successfully");
         }
-        
+
         LOG.info("closing channels");
         closeChannel(clientChannel);
         closeChannel(serverChannel);
-        
+
         LOG.info("done!");
     }
 
@@ -181,7 +181,7 @@ public class HttpTunnelSoakTester {
         for(int i=0; i < 10000; i++) {
             byte[] randomBytesForSend = createRandomSizeByteArray();
             totalBytesSent += randomBytesForSend.length;
-            
+
             long startTime = System.nanoTime();
             ChannelFuture writeFuture = clientChannel.write(ChannelBuffers.wrappedBuffer(randomBytesForSend));
             try {
@@ -198,18 +198,18 @@ public class HttpTunnelSoakTester {
                 LOG.log(Level.SEVERE, "Interrupted while waiting for bytes to be written", e);
                 return false;
             }
-            
+
             if(i % 100 == 0 && i > 0) {
                 LOG.log(Level.INFO, "{0} writes completed, totalling {1} bytes", new Object[] { i, totalBytesSent });
             }
         }
-        
+
         long runEndTime = System.currentTimeMillis();
         long totalTime = runEndTime - runStartTime;
         long totalKB = totalBytesSent / 1024;
         double rate = totalKB / (totalTime / 1000.0);
         LOG.log(Level.INFO, "Average throughput: {0} KB/s", rate);
-        
+
         return true;
     }
 
@@ -225,12 +225,12 @@ public class HttpTunnelSoakTester {
             LOG.severe("Interrupted while waiting for client connect to be established");
             return null;
         }
-        
+
         if(!clientChannelFuture.isSuccess()) {
             LOG.log(Level.SEVERE, "did not connect successfully", clientChannelFuture.getCause());
             return null;
         }
-        
+
         return clientChannelFuture.getChannel();
     }
 
@@ -242,7 +242,7 @@ public class HttpTunnelSoakTester {
             randomBytes[i] = (byte)nextWriteByte;
             nextWriteByte = (nextWriteByte + 1) % 127;
         }
-        
+
         return randomBytes;
     }
 
@@ -254,7 +254,7 @@ public class HttpTunnelSoakTester {
             soakTester.shutdown();
         }
     }
-    
+
     private void shutdown() {
         serverBootstrap.releaseExternalResources();
         clientBootstrap.releaseExternalResources();
@@ -269,7 +269,7 @@ public class HttpTunnelSoakTester {
             Channels.write(ctx.getChannel(), e.getMessage());
         }
     }
-    
+
     @ChannelPipelineCoverage("one")
     private class ResponseVerifier extends SimpleChannelUpstreamHandler {
         @Override
@@ -277,31 +277,31 @@ public class HttpTunnelSoakTester {
             final ChannelBuffer receivedBytes = (ChannelBuffer) e.getMessage();
             verificationQueue.offer(receivedBytes);
         }
-        
+
         @Override
         public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
             channels.add(ctx.getChannel());
         }
     }
-    
+
     private class VerificationTask implements Runnable {
         public void run() {
             ChannelBuffer bytesToVerify = verificationQueue.poll();
             if(bytesToVerify == null) {
                 scheduledExecutor.schedule(this, 10, TimeUnit.MILLISECONDS);
             }
-            
-            
+
+
             while(bytesToVerify.readable()) {
                 if(bytesToVerify.readByte() != expectedNextByte) {
                     LOG.severe("received a byte out of sequence");
                     System.exit(-1);
                     return;
                 }
-                
+
                 expectedNextByte = (expectedNextByte + 1) % 127;
             }
-            
+
             scheduledExecutor.execute(this);
         }
     }
