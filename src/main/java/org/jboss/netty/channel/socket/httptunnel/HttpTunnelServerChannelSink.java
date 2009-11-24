@@ -33,9 +33,9 @@ import org.jboss.netty.channel.socket.ServerSocketChannel;
 class HttpTunnelServerChannelSink extends AbstractChannelSink {
 
     private ServerSocketChannel realChannel;
-    
+
     public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
-        
+
         if(e instanceof ChannelStateEvent) {
             ChannelStateEvent ev = (ChannelStateEvent) e;
             switch(ev.getState()) {
@@ -58,7 +58,7 @@ class HttpTunnelServerChannelSink extends AbstractChannelSink {
     private final class ChannelFutureProxy implements ChannelFutureListener {
         private final ChannelFuture upstreamFuture;
 
-        private ChannelFutureProxy(ChannelFuture upstreamFuture) {
+        ChannelFutureProxy(ChannelFuture upstreamFuture) {
             this.upstreamFuture = upstreamFuture;
         }
 

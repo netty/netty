@@ -40,13 +40,13 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, ServerMessageSwitchDownstreamInterface {
 
     private static final Logger LOG = Logger.getLogger(ServerMessageSwitch.class.getName());
-    
-    private String tunnelIdPrefix;
-    private AtomicInteger tunnelIdSequence;
-    
-    private HttpTunnelAcceptedChannelFactory newChannelFactory;
-    private ConcurrentHashMap<String, TunnelInfo> tunnelsById;
-    
+
+    private final String tunnelIdPrefix;
+    private final AtomicInteger tunnelIdSequence;
+
+    private final HttpTunnelAcceptedChannelFactory newChannelFactory;
+    private final ConcurrentHashMap<String, TunnelInfo> tunnelsById;
+
     public ServerMessageSwitch(HttpTunnelAcceptedChannelFactory newChannelFactory) {
         this.newChannelFactory = newChannelFactory;
         tunnelIdPrefix = Long.toHexString(new Random().nextLong());
@@ -75,13 +75,13 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
             Channels.write(channel, HttpTunnelMessageUtils.createRejection(null, "Unknown tunnel, possibly already closed"));
             return;
         }
-        
+
         if(!tunnel.responseChannel.compareAndSet(null, channel)) {
             LOG.log(Level.WARNING, "Duplicate poll request detected for tunnel {0}", tunnelId);
             Channels.write(channel, HttpTunnelMessageUtils.createRejection(null, "Only one poll request at a time per tunnel allowed"));
             return;
         }
-        
+
         sendQueuedData(tunnel);
     }
 
@@ -91,13 +91,13 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
             // no data to send, or it has already been dealt with by another thread
             return;
         }
-        
+
         Channel responseChannel = state.responseChannel.getAndSet(null);
         if(responseChannel == null) {
             // no response channel, or another thread has already used it
             return;
         }
-        
+
         LOG.log(Level.FINE, "sending response for tunnel id {0} to {1}", new Object[] { state.tunnelId, responseChannel.getRemoteAddress() });
         QueuedResponse messageToSend = queuedData.poll();
         HttpResponse response = HttpTunnelMessageUtils.createRecvDataResponse(messageToSend.data);
@@ -118,11 +118,11 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
         if(tunnel == null) {
             return;
         }
-        
+
         LOG.log(Level.FINE, "routing inbound data for tunnel {0}", tunnelId);
         Channels.fireMessageReceived(tunnel.localChannel, inboundData);
     }
-    
+
     public void closeTunnel(String tunnelId) {
         tunnelsById.remove(tunnelId);
     }
@@ -134,34 +134,38 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
             LOG.log(Level.WARNING, "attempt made to send data out on tunnel id {0} which is unknown or closed", tunnelId);
             return;
         }
-        
+
         WriteSplitter splitter = new WriteSplitter(HttpTunnelMessageUtils.MAX_BODY_SIZE);
-        
+
         ChannelFutureAggregator aggregator = new ChannelFutureAggregator(writeFuture);
         List<ChannelBuffer> fragments = splitter.split(data);
-        
+
         LOG.log(Level.FINE, "routing outbound data for tunnel {0}", tunnelId);
         for(ChannelBuffer fragment : fragments) {
             ChannelFuture fragmentFuture = Channels.future(writeFuture.getChannel());
             aggregator.addFuture(fragmentFuture);
             tunnel.queuedResponses.offer(new QueuedResponse(fragment, fragmentFuture));
         }
-        
+
         sendQueuedData(tunnel);
     }
-    
-    private class TunnelInfo {
+
+    private static final class TunnelInfo {
         public String tunnelId;
         public Channel localChannel;
         public AtomicReference<Channel> responseChannel = new AtomicReference<Channel>(null);
         public ConcurrentLinkedQueue<QueuedResponse> queuedResponses = new ConcurrentLinkedQueue<QueuedResponse>();
+
+        TunnelInfo() {
+            super();
+        }
     }
-    
-    private class QueuedResponse {
+
+    private static final class QueuedResponse {
         public ChannelBuffer data;
         public ChannelFuture writeFuture;
-        
-        public QueuedResponse(ChannelBuffer data, ChannelFuture writeFuture) {
+
+        QueuedResponse(ChannelBuffer data, ChannelFuture writeFuture) {
             this.data = data;
             this.writeFuture = writeFuture;
         }

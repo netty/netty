@@ -28,13 +28,13 @@ import org.jboss.netty.channel.SimpleChannelDownstreamHandler;
 
 /**
  * Downstream handler which places an upper bound on the size of written
- * {@link org.jboss.netty.ChannelBuffer ChannelBuffers}. If a buffer
+ * {@link ChannelBuffer ChannelBuffers}. If a buffer
  * is bigger than the specified upper bound, the buffer is broken up
  * into two or more smaller pieces.
  * <p>
  * This is utilised by the http tunnel to smooth out the per-byte latency,
  * by placing an upper bound on HTTP request / response body sizes.
- *  
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @version $Rev$, $Date$
@@ -48,15 +48,15 @@ public class WriteFragmenter extends SimpleChannelDownstreamHandler {
     public WriteFragmenter(int splitThreshold) {
         this.splitThreshold = splitThreshold;
     }
-    
+
     public void setSplitThreshold(int splitThreshold) {
         this.splitThreshold = splitThreshold;
     }
-    
+
     @Override
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         ChannelBuffer data = (ChannelBuffer)e.getMessage();
-        
+
         if(data.readableBytes() <= splitThreshold) {
             super.writeRequested(ctx, e);
         } else {

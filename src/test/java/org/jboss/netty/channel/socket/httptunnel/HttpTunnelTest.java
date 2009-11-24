@@ -41,29 +41,29 @@ public class HttpTunnelTest {
     private HttpTunnelServerChannelFactory serverFactory;
     private ClientBootstrap clientBootstrap;
     private ServerBootstrap serverBootstrap;
-    
-    private ChannelGroup activeConnections;
-    private ChannelHandler clientCaptureHandler;
-    private ServerEndHandler connectionCaptureHandler;
-    
-    private Channel serverEnd;
-    private CountDownLatch serverEndLatch;
-    
-    private ChannelBuffer receivedBytes;
-    private CountDownLatch messageReceivedLatch;
-    
-    private ChannelBuffer clientReceivedBytes;
-    private CountDownLatch clientMessageReceivedLatch;
+
+    ChannelGroup activeConnections;
+    ChannelHandler clientCaptureHandler;
+    ServerEndHandler connectionCaptureHandler;
+
+    Channel serverEnd;
+    CountDownLatch serverEndLatch;
+
+    ChannelBuffer receivedBytes;
+    CountDownLatch messageReceivedLatch;
+
+    ChannelBuffer clientReceivedBytes;
+    CountDownLatch clientMessageReceivedLatch;
     private Channel serverChannel;
-    
+
     @Before
     public void setUp() throws UnknownHostException {
         activeConnections = new DefaultChannelGroup();
         clientFactory = new HttpTunnelClientChannelFactory(new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
         serverFactory = new HttpTunnelServerChannelFactory(new NioServerSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
-        
+
         clientBootstrap = new ClientBootstrap(clientFactory);
-        
+
         clientCaptureHandler = new ClientEndHandler();
         clientBootstrap.setPipelineFactory(new ChannelPipelineFactory() {
 
@@ -73,30 +73,30 @@ public class HttpTunnelTest {
                 return pipeline;
             }
         });
-        
+
         clientReceivedBytes = ChannelBuffers.dynamicBuffer();
         clientMessageReceivedLatch = new CountDownLatch(1);
-        
+
         serverBootstrap = new ServerBootstrap(serverFactory);
-        
+
         connectionCaptureHandler = new ServerEndHandler();
         serverBootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            
+
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline pipeline = Channels.pipeline();
                 pipeline.addLast("capture", connectionCaptureHandler);
                 return pipeline;
             }
         });
-        
+
         serverEndLatch = new CountDownLatch(1);
         receivedBytes = ChannelBuffers.dynamicBuffer();
         messageReceivedLatch = new CountDownLatch(1);
-        
+
         serverChannel = serverBootstrap.bind(new InetSocketAddress(InetAddress.getLocalHost(), 12345));
         activeConnections.add(serverChannel);
     }
-    
+
     @After
     public void tearDown() throws Exception {
         activeConnections.disconnect().await(1000L);
@@ -110,55 +110,55 @@ public class HttpTunnelTest {
         assertTrue(connectFuture.await(1000L));
         assertTrue(connectFuture.isSuccess());
         assertNotNull(connectFuture.getChannel());
-        
+
         Channel clientChannel = connectFuture.getChannel();
         activeConnections.add(clientChannel);
         assertEquals(serverChannel.getLocalAddress(), clientChannel.getRemoteAddress());
-        
+
         assertTrue(serverEndLatch.await(1000, TimeUnit.MILLISECONDS));
         assertNotNull(serverEnd);
         assertEquals(clientChannel.getLocalAddress(), serverEnd.getRemoteAddress());
     }
-    
+
     @Test
     public void testSendDataFromClientToServer() throws Exception {
         ChannelFuture connectFuture = clientBootstrap.connect(new InetSocketAddress(InetAddress.getLocalHost(), 12345));
         assertTrue(connectFuture.await(1000L));
-        
+
         Channel clientEnd = connectFuture.getChannel();
         activeConnections.add(clientEnd);
-        
+
         assertTrue(serverEndLatch.await(1000, TimeUnit.MILLISECONDS));
-        
+
         ChannelFuture writeFuture = Channels.write(clientEnd, NettyTestUtils.createData(100L));
         assertTrue(writeFuture.await(1000L));
         assertTrue(writeFuture.isSuccess());
-        
+
         assertTrue(messageReceivedLatch.await(1000L, TimeUnit.MILLISECONDS));
         assertEquals(100L, receivedBytes.readLong());
     }
-    
+
     @Test
     public void testSendDataFromServerToClient() throws Exception {
         ChannelFuture connectFuture = clientBootstrap.connect(new InetSocketAddress(InetAddress.getLocalHost(), 12345));
         assertTrue(connectFuture.await(1000L));
-        
+
         Channel clientEnd = connectFuture.getChannel();
         activeConnections.add(clientEnd);
-        
+
         assertTrue(serverEndLatch.await(1000, TimeUnit.MILLISECONDS));
-        
+
         ChannelFuture writeFuture = Channels.write(serverEnd, NettyTestUtils.createData(4321L));
         assertTrue(writeFuture.await(1000L));
         assertTrue(writeFuture.isSuccess());
-        
+
         assertTrue(clientMessageReceivedLatch.await(1000, TimeUnit.MILLISECONDS));
         assertEquals(4321L, clientReceivedBytes.readLong());
     }
-    
+
     @ChannelPipelineCoverage("one")
     class ServerEndHandler extends SimpleChannelUpstreamHandler {
-        
+
         @Override
         public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
             serverEnd = e.getChannel();
@@ -166,14 +166,14 @@ public class HttpTunnelTest {
             serverEndLatch.countDown();
             super.channelConnected(ctx, e);
         }
-        
+
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
             receivedBytes.writeBytes((ChannelBuffer) e.getMessage());
             messageReceivedLatch.countDown();
         }
     }
-    
+
     @ChannelPipelineCoverage("one")
     class ClientEndHandler extends SimpleChannelUpstreamHandler {
 

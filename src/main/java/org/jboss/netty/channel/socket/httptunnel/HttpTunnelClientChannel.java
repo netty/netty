@@ -38,38 +38,38 @@ import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
  * The client end of an HTTP tunnel, created by an {@link HttpTunnelClientChannelFactory}. Channels of
  * this type are designed to emulate a normal TCP based socket channel as far as is feasible within the limitations
  * of the HTTP 1.1 protocol, and the usage patterns permitted by commonly used HTTP proxies and firewalls.
- * 
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @version $Rev$, $Date$
  */
 public class HttpTunnelClientChannel extends AbstractChannel implements SocketChannel, HttpTunnelClientWorkerOwner {
-    
-    private HttpTunnelClientChannelConfig config;
 
-    private SocketChannel sendChannel;
-    private SocketChannel pollChannel;
-    
+    private final HttpTunnelClientChannelConfig config;
+
+    private final SocketChannel sendChannel;
+    private final SocketChannel pollChannel;
+
     private String tunnelId;
     private ChannelFuture connectFuture;
     private boolean connected;
     private boolean bound;
-    
-    private InetSocketAddress serverAddress;
+
+    InetSocketAddress serverAddress;
     private String serverHostName;
 
 
     protected HttpTunnelClientChannel(ChannelFactory factory, ChannelPipeline pipeline, HttpTunnelClientChannelSink sink, ClientSocketChannelFactory outboundFactory, ChannelGroup realConnections) {
         super(null, factory, pipeline, sink);
-        
-        this.sendChannel = outboundFactory.newChannel(createSendPipeline());
-        this.pollChannel = outboundFactory.newChannel(createPollPipeline());
-        this.config = new HttpTunnelClientChannelConfig(sendChannel.getConfig(), pollChannel.getConfig());
-        this.serverAddress = null;
-        
+
+        sendChannel = outboundFactory.newChannel(createSendPipeline());
+        pollChannel = outboundFactory.newChannel(createPollPipeline());
+        config = new HttpTunnelClientChannelConfig(sendChannel.getConfig(), pollChannel.getConfig());
+        serverAddress = null;
+
         realConnections.add(sendChannel);
         realConnections.add(pollChannel);
-        
+
         Channels.fireChannelOpen(this);
     }
 
@@ -92,7 +92,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
     public InetSocketAddress getRemoteAddress() {
         return serverAddress;
     }
-    
+
     public void onMessageReceived(ChannelBuffer content) {
         Channels.fireMessageReceived(this, content);
     }
@@ -103,18 +103,18 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
          * The send and poll channels can later ask for the correct server address using
          * getServerHostName().
          */
-        this.serverAddress = remoteAddress;
-        
+        serverAddress = remoteAddress;
+
         SocketAddress connectTarget;
         if(config.getProxyAddress() != null) {
             connectTarget = config.getProxyAddress();
         } else {
             connectTarget = remoteAddress;
         }
-        
+
         Channels.connect(sendChannel, connectTarget);
     }
-    
+
     public void onDisconnectRequest(final ChannelFuture disconnectFuture) {
         ChannelFutureListener disconnectListener = new ConsolidatingFutureListener(disconnectFuture, 2);
         sendChannel.disconnect().addListener(disconnectListener);
@@ -126,13 +126,13 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
             }
         });
     }
-    
+
     public void onBindRequest(SocketAddress localAddress, final ChannelFuture bindFuture) {
         ChannelFutureListener bindListener = new ConsolidatingFutureListener(bindFuture, 2);
         sendChannel.bind(localAddress).addListener(bindListener);
         pollChannel.bind(localAddress).addListener(bindListener);
     }
-    
+
     public void onUnbindRequest(final ChannelFuture unbindFuture) {
         ChannelFutureListener unbindListener = new ConsolidatingFutureListener(unbindFuture, 2);
         sendChannel.unbind().addListener(unbindListener);
@@ -144,7 +144,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
         sendChannel.close().addListener(closeListener);
         pollChannel.close().addListener(closeListener);
     }
-    
+
     public void onTunnelOpened(String tunnelId) {
         this.tunnelId = tunnelId;
         setTunnelIdForPollChannel();
@@ -153,27 +153,27 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
 
     private ChannelPipeline createSendPipeline() {
         ChannelPipeline pipeline = Channels.pipeline();
-        
+
         pipeline.addLast("reqencoder", new HttpRequestEncoder()); // downstream
         pipeline.addLast("respdecoder", new HttpResponseDecoder()); // upstream
         pipeline.addLast("aggregator", new HttpChunkAggregator(HttpTunnelMessageUtils.MAX_BODY_SIZE)); // upstream
         pipeline.addLast("sendHandler", new HttpTunnelClientSendHandler(this)); // both
         pipeline.addLast("writeFragmenter", new WriteFragmenter(HttpTunnelMessageUtils.MAX_BODY_SIZE));
-        
+
         return pipeline;
     }
 
     private ChannelPipeline createPollPipeline() {
         ChannelPipeline pipeline = Channels.pipeline();
-        
+
         pipeline.addLast("reqencoder", new HttpRequestEncoder()); // downstream
         pipeline.addLast("respdecoder", new HttpResponseDecoder()); // upstream
         pipeline.addLast("aggregator", new HttpChunkAggregator(HttpTunnelMessageUtils.MAX_BODY_SIZE)); // upstream
         pipeline.addLast(HttpTunnelClientPollHandler.NAME, new HttpTunnelClientPollHandler(this)); // both
-        
+
         return pipeline;
     }
-    
+
     private void setTunnelIdForPollChannel() {
         HttpTunnelClientPollHandler pollHandler = pollChannel.getPipeline().get(HttpTunnelClientPollHandler.class);
         pollHandler.setTunnelId(tunnelId);
@@ -181,11 +181,11 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
 
     public void fullyEstablished() {
         if(!bound) {
-            this.bound = true;
+            bound = true;
             Channels.fireChannelBound(this, getLocalAddress());
         }
-        
-        this.connected = true;
+
+        connected = true;
         connectFuture.setSuccess();
         Channels.fireChannelConnected(this, getRemoteAddress());
     }
@@ -203,25 +203,25 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
             }
         });
     }
-    
+
     public String getServerHostName() {
         if(serverHostName == null) {
-            serverHostName = HttpTunnelMessageUtils.convertToHostString(serverAddress); 
+            serverHostName = HttpTunnelMessageUtils.convertToHostString(serverAddress);
         }
-        
-        return serverHostName; 
+
+        return serverHostName;
     }
-    
+
     private class ConsolidatingFutureListener implements ChannelFutureListener {
 
-        private ChannelFuture completionFuture;
-        private AtomicInteger eventsLeft;
+        private final ChannelFuture completionFuture;
+        private final AtomicInteger eventsLeft;
 
         public ConsolidatingFutureListener(ChannelFuture completionFuture, int numToConsolidate) {
             this.completionFuture = completionFuture;
             eventsLeft = new AtomicInteger(numToConsolidate);
         }
-        
+
         public void operationComplete(ChannelFuture future) throws Exception {
             if(!future.isSuccess()) {
                 completionFuture.setFailure(future.getCause());

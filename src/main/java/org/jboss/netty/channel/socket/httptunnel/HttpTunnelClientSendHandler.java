@@ -42,28 +42,29 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 class HttpTunnelClientSendHandler extends SimpleChannelHandler {
 
     public static final String NAME = "client2server";
-    
+
     private static final Logger LOG = Logger.getLogger(HttpTunnelClientSendHandler.class.getName());
-    
-    private HttpTunnelClientWorkerOwner tunnelChannel;
-    
+
+    private final HttpTunnelClientWorkerOwner tunnelChannel;
+
     private String tunnelId = null;
+    // FIXME Unused field - safe to remove?
     private String host;
-    
-    private AtomicBoolean disconnecting;
+
+    private final AtomicBoolean disconnecting;
     private ChannelStateEvent postShutdownEvent;
-    private ConcurrentLinkedQueue<MessageEvent> queuedWrites;
-    private AtomicInteger pendingRequestCount;
+    private final ConcurrentLinkedQueue<MessageEvent> queuedWrites;
+    private final AtomicInteger pendingRequestCount;
 
     private long sendRequestTime;
-        
+
     public HttpTunnelClientSendHandler(HttpTunnelClientWorkerOwner tunnelChannel) {
         this.tunnelChannel = tunnelChannel;
         queuedWrites = new ConcurrentLinkedQueue<MessageEvent>();
         pendingRequestCount = new AtomicInteger(0);
         disconnecting = new AtomicBoolean(false);
     }
-    
+
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         if(tunnelId == null) {
@@ -76,17 +77,17 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
             sendQueuedData(ctx);
         }
     }
-    
+
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         HttpResponse response = (HttpResponse)e.getMessage();
-        
+
         if(HttpTunnelMessageUtils.isOKResponse(response)) {
             long roundTripTime = System.nanoTime() - sendRequestTime;
             LOG.log(Level.FINE, "OK response received for tunnel {0}, after {1}ns", new Object[] { tunnelId, roundTripTime });
             sendNextAfterResponse(ctx);
         } else if(HttpTunnelMessageUtils.isTunnelOpenResponse(response)) {
-            this.tunnelId = HttpTunnelMessageUtils.extractCookie(response);
+            tunnelId = HttpTunnelMessageUtils.extractCookie(response);
             LOG.log(Level.INFO, "tunnel open request accepted - id {0}", tunnelId);
             tunnelChannel.onTunnelOpened(tunnelId);
             sendNextAfterResponse(ctx);
@@ -110,7 +111,7 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
             sendQueuedData(ctx);
         }
     }
-    
+
     private synchronized void sendQueuedData(ChannelHandlerContext ctx) {
         if(disconnecting.get()) {
             LOG.log(Level.FINE, "sending close request for tunnel {0}", tunnelId);
@@ -142,22 +143,22 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
             LOG.log(Level.FINE, "write request for tunnel {0} queued", tunnelId);
         }
     }
-    
+
     @Override
     public void closeRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         shutdownTunnel(ctx, e);
     }
-    
+
     @Override
     public void disconnectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         shutdownTunnel(ctx, e);
     }
-    
+
     @Override
     public void unbindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         shutdownTunnel(ctx, e);
     }
-    
+
     private void shutdownTunnel(ChannelHandlerContext ctx, ChannelStateEvent postShutdownEvent) {
         LOG.log(Level.INFO, "tunnel shutdown requested for send channel of tunnel {0}", tunnelId);
         if(!ctx.getChannel().isConnected()) {
@@ -165,20 +166,20 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
             ctx.sendDownstream(postShutdownEvent);
             return;
         }
-        
+
         if(!disconnecting.compareAndSet(false, true)) {
             LOG.log(Level.WARNING, "tunnel shutdown process already initiated for tunnel {0}", tunnelId);
             return;
         }
-        
+
         this.postShutdownEvent = postShutdownEvent;
-        
+
         // if the channel is idle, send a close request immediately
         if(pendingRequestCount.incrementAndGet() == 1) {
             sendQueuedData(ctx);
         }
     }
-    
+
     public String getTunnelId() {
         return tunnelId;
     }

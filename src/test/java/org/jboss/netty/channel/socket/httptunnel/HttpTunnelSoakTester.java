@@ -41,18 +41,18 @@ public class HttpTunnelSoakTester {
 
     private static final int SERVER_PORT = 20100;
 
-    private static final Logger LOG = Logger.getLogger(HttpTunnelSoakTester.class.getName());
+    static final Logger LOG = Logger.getLogger(HttpTunnelSoakTester.class.getName());
 
     private final ServerBootstrap serverBootstrap;
     private final ClientBootstrap clientBootstrap;
-    private final ChannelGroup channels;
+    final ChannelGroup channels;
 
     int expectedNextByte = 0;
     int nextWriteByte = 0;
 
     private final ExecutorService executor;
-    private final ScheduledExecutorService scheduledExecutor;
-    private final ConcurrentLinkedQueue<ChannelBuffer> verificationQueue;
+    final ScheduledExecutorService scheduledExecutor;
+    final ConcurrentLinkedQueue<ChannelBuffer> verificationQueue;
 
     public HttpTunnelSoakTester() {
         try {
@@ -246,7 +246,7 @@ public class HttpTunnelSoakTester {
         return randomBytes;
     }
 
-    public static void main(String[] args) throws UnknownHostException {
+    public static void main(String[] args) throws Exception {
         HttpTunnelSoakTester soakTester = new HttpTunnelSoakTester();
         try {
         soakTester.run();
@@ -263,7 +263,12 @@ public class HttpTunnelSoakTester {
     }
 
     @ChannelPipelineCoverage("one")
-    private class EchoHandler extends SimpleChannelUpstreamHandler {
+    private static class EchoHandler extends SimpleChannelUpstreamHandler {
+
+        EchoHandler() {
+            super();
+        }
+
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
             Channels.write(ctx.getChannel(), e.getMessage());
@@ -272,6 +277,11 @@ public class HttpTunnelSoakTester {
 
     @ChannelPipelineCoverage("one")
     private class ResponseVerifier extends SimpleChannelUpstreamHandler {
+
+        ResponseVerifier() {
+            super();
+        }
+
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
             final ChannelBuffer receivedBytes = (ChannelBuffer) e.getMessage();
@@ -285,6 +295,11 @@ public class HttpTunnelSoakTester {
     }
 
     private class VerificationTask implements Runnable {
+
+        VerificationTask() {
+            super();
+        }
+
         public void run() {
             ChannelBuffer bytesToVerify = verificationQueue.poll();
             if(bytesToVerify == null) {

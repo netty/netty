@@ -21,12 +21,12 @@ import org.junit.runner.RunWith;
 @RunWith(JMock.class)
 public class HttpTunnelServerChannelFactoryTest {
 
-    private JUnit4Mockery mockContext = new JUnit4Mockery();
-    private ServerSocketChannelFactory realChannelFactory;
+    private final JUnit4Mockery mockContext = new JUnit4Mockery();
+    ServerSocketChannelFactory realChannelFactory;
     private HttpTunnelServerChannelFactory factory;
-    
-    private ServerSocketChannel realChannel;
-    
+
+    ServerSocketChannel realChannel;
+
     @Before
     public void setUp() throws Exception {
         realChannelFactory = mockContext.mock(ServerSocketChannelFactory.class);
@@ -45,14 +45,14 @@ public class HttpTunnelServerChannelFactoryTest {
         assertNotNull(newChannel);
         assertSame(pipeline, newChannel.getPipeline());
     }
-    
+
     @Test
     public void testNewChannel_forwardsWrappedFactoryFailure() {
         final ChannelException innerException = new ChannelException();
         mockContext.checking(new Expectations() {{
             one(realChannelFactory).newChannel(with(any(ChannelPipeline.class))); will(throwException(innerException));
         }});
-        
+
         try {
             factory.newChannel(Channels.pipeline());
             fail("Expected ChannelException");
@@ -60,17 +60,17 @@ public class HttpTunnelServerChannelFactoryTest {
             assertSame(innerException, e);
         }
     }
-    
+
 //    @Test
 //    public void testChannelCreation_withServerBootstrap() {
 //        mockContext.checking(new Expectations() {{
 //            one(realChannelFactory).newChannel(with(any(ChannelPipeline.class))); will(returnValue(realChannel));
 //        }});
-//        
+//
 //        ServerBootstrap bootstrap = new ServerBootstrap(factory);
 //        Channel newChannel = bootstrap.bind(new InetSocketAddress(80));
 //        assertNotNull(newChannel);
-//        
+//
 //    }
-    
+
 }

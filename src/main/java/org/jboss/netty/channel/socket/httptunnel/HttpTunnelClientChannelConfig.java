@@ -15,27 +15,26 @@
  */
 package org.jboss.netty.channel.socket.httptunnel;
 
-import java.net.Socket;
 import java.net.SocketAddress;
 
 import org.jboss.netty.channel.DefaultChannelConfig;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 
 /**
- * Configuration for the client end of an HTTP tunnel. Any socket channel properties set here 
- * will be applied uniformly to the underlying send and poll channels, created from the channel 
+ * Configuration for the client end of an HTTP tunnel. Any socket channel properties set here
+ * will be applied uniformly to the underlying send and poll channels, created from the channel
  * factory provided to the {@link HttpTunnelClientChannelFactory}.
  * <p>
  * HTTP tunnel clients have the following additional options:
- * 
+ *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
  * <th>Name</th><th>Associated setter method</th>
  * </tr><tr>
- * <td>{@code "proxyAddress"}</td><td>{@link #setProxyAddress(Socket)}</td>
+ * <td>{@code "proxyAddress"}</td><td>{@link #setProxyAddress(SocketAddress)}</td>
  * </tr>
  * </table>
- * 
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @version $Rev$, $Date$
@@ -43,34 +42,34 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
 public class HttpTunnelClientChannelConfig extends DefaultChannelConfig implements SocketChannelConfig {
 
     public static final String PROXY_ADDRESS_OPTION = "proxyAddress";
-    
+
     private final SocketChannelConfig sendChannelConfig;
     private final SocketChannelConfig pollChannelConfig;
-    
+
     private SocketAddress proxyAddress;
 
     public HttpTunnelClientChannelConfig(SocketChannelConfig sendChannelConfig, SocketChannelConfig pollChannelConfig) {
         this.sendChannelConfig = sendChannelConfig;
         this.pollChannelConfig = pollChannelConfig;
     }
-    
+
     /* HTTP TUNNEL SPECIFIC CONFIGURATION */
-    
+
     @Override
     public boolean setOption(String key, Object value) {
         if(super.setOption(key, value)) {
             return true;
         }
-        
+
         if(PROXY_ADDRESS_OPTION.equals(key)) {
             setProxyAddress((SocketAddress) value);
         } else {
             return false;
         }
-        
+
         return true;
     }
-    
+
     /**
      * @return the address of the http proxy. If this is null, then no proxy
      * should be used.
@@ -78,7 +77,7 @@ public class HttpTunnelClientChannelConfig extends DefaultChannelConfig implemen
     public SocketAddress getProxyAddress() {
         return proxyAddress;
     }
-    
+
     /**
      * Specify a proxy to be used for the http tunnel. If this is null, then
      * no proxy should be used, otherwise this should be a directly accessible IPv4/IPv6
@@ -87,7 +86,7 @@ public class HttpTunnelClientChannelConfig extends DefaultChannelConfig implemen
     public void setProxyAddress(SocketAddress proxyAddress) {
         this.proxyAddress = proxyAddress;
     }
-    
+
     /* GENERIC SOCKET CHANNEL CONFIGURATION */
 
     public int getReceiveBufferSize() {
