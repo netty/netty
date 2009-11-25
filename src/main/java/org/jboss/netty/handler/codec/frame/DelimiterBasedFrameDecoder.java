@@ -66,8 +66,8 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
     private final ChannelBuffer[] delimiters;
     private final int maxFrameLength;
     private final boolean stripDelimiter;
-    private volatile boolean discardingTooLongFrame;
-    private volatile long tooLongFrameLength;
+    private boolean discardingTooLongFrame;
+    private long tooLongFrameLength;
 
     /**
      * Creates a new instance.

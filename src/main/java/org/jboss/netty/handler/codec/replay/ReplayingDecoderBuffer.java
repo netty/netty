@@ -169,6 +169,21 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return buffer.getUnsignedShort(index);
     }
 
+    public char getChar(int index) {
+        checkIndex(index, 2);
+        return buffer.getChar(index);
+    }
+
+    public float getFloat(int index) {
+        checkIndex(index, 4);
+        return buffer.getFloat(index);
+    }
+
+    public double getDouble(int index) {
+        checkIndex(index, 8);
+        return buffer.getDouble(index);
+    }
+
     @Override
     public int hashCode() {
         throw new UnreplayableOperationException();
@@ -335,6 +350,21 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return buffer.readUnsignedShort();
     }
 
+    public char readChar() {
+        checkReadableBytes(2);
+        return buffer.readChar();
+    }
+
+    public float readFloat() {
+        checkReadableBytes(4);
+        return buffer.readFloat();
+    }
+
+    public double readDouble() {
+        checkReadableBytes(8);
+        return buffer.readDouble();
+    }
+
     public void resetReaderIndex() {
         buffer.resetReaderIndex();
     }
@@ -402,6 +432,18 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void setShort(int index, short value) {
+        throw new UnreplayableOperationException();
+    }
+
+    public void setChar(int index, char value) {
+        throw new UnreplayableOperationException();
+    }
+
+    public void setFloat(int index, float value) {
+        throw new UnreplayableOperationException();
+    }
+
+    public void setDouble(int index, double value) {
         throw new UnreplayableOperationException();
     }
 
@@ -548,6 +590,18 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public void writeShort(short value) {
+        throw new UnreplayableOperationException();
+    }
+
+    public void writeChar(char value) {
+        throw new UnreplayableOperationException();
+    }
+
+    public void writeFloat(float value) {
+        throw new UnreplayableOperationException();
+    }
+
+    public void writeDouble(double value) {
         throw new UnreplayableOperationException();
     }
 

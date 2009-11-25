@@ -136,6 +136,18 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         return getInt(index) & 0xFFFFFFFFL;
     }
 
+    public char getChar(int index) {
+        return (char) getShort(index);
+    }
+
+    public float getFloat(int index) {
+        return Float.intBitsToFloat(getInt(index));
+    }
+
+    public double getDouble(int index) {
+        return Double.longBitsToDouble(getLong(index));
+    }
+
     public void getBytes(int index, byte[] dst) {
         getBytes(index, dst, 0, dst.length);
     }
@@ -150,6 +162,18 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         }
         getBytes(index, dst, dst.writerIndex(), length);
         dst.writerIndex(dst.writerIndex() + length);
+    }
+
+    public void setChar(int index, char value) {
+        setShort(index, (short) value);
+    }
+
+    public void setFloat(int index, float value) {
+        setInt(index, Float.floatToRawIntBits(value));
+    }
+
+    public void setDouble(int index, double value) {
+        setLong(index, Double.doubleToRawLongBits(value));
     }
 
     public void setBytes(int index, byte[] src) {
@@ -253,6 +277,18 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         long v = getLong(readerIndex);
         readerIndex += 8;
         return v;
+    }
+
+    public char readChar() {
+        return (char) readShort();
+    }
+
+    public float readFloat() {
+        return Float.intBitsToFloat(readInt());
+    }
+
+    public double readDouble() {
+        return Double.longBitsToDouble(readLong());
     }
 
     public ChannelBuffer readBytes(int length) {
@@ -377,6 +413,18 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     public void writeLong(long value) {
         setLong(writerIndex, value);
         writerIndex += 8;
+    }
+
+    public void writeChar(char value) {
+        writeShort((short) value);
+    }
+
+    public void writeFloat(float value) {
+        writeInt(Float.floatToRawIntBits(value));
+    }
+
+    public void writeDouble(double value) {
+        writeLong(Double.doubleToRawLongBits(value));
     }
 
     public void writeBytes(byte[] src, int srcIndex, int length) {

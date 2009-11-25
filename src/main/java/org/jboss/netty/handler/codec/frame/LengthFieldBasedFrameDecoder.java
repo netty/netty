@@ -192,9 +192,9 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
     private final int lengthFieldEndOffset;
     private final int lengthAdjustment;
     private final int initialBytesToStrip;
-    private volatile boolean discardingTooLongFrame;
-    private volatile long tooLongFrameLength;
-    private volatile long bytesToDiscard;
+    private boolean discardingTooLongFrame;
+    private long tooLongFrameLength;
+    private long bytesToDiscard;
 
     /**
      * Creates a new instance.

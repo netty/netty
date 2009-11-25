@@ -513,6 +513,39 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     long  getLong(int index);
 
     /**
+     * Gets a 2-byte UTF-16 character at the specified absolute
+     * {@code index} in this buffer.  This method does not modify
+     * {@code readerIndex} or {@code writerIndex} of this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 2} is greater than {@code this.capacity}
+     */
+    char  getChar(int index);
+
+    /**
+     * Gets a 32-bit floating point number at the specified absolute
+     * {@code index} in this buffer.  This method does not modify
+     * {@code readerIndex} or {@code writerIndex} of this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 4} is greater than {@code this.capacity}
+     */
+    float getFloat(int index);
+
+    /**
+     * Gets a 64-bit floating point number at the specified absolute
+     * {@code index} in this buffer.  This method does not modify
+     * {@code readerIndex} or {@code writerIndex} of this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 8} is greater than {@code this.capacity}
+     */
+    double getDouble(int index);
+
+    /**
      * Transfers this buffer's data to the specified destination starting at
      * the specified absolute {@code index} until the destination becomes
      * non-writable.  This method is basically same with
@@ -711,6 +744,42 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         {@code index + 8} is greater than {@code this.capacity}
      */
     void setLong(int index, long  value);
+
+    /**
+     * Sets the specified 2-byte UTF-16 character at the specified absolute
+     * {@code index} in this buffer.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 2} is greater than {@code this.capacity}
+     */
+    void setChar(int index, char value);
+
+    /**
+     * Sets the specified 32-bit floating-point number at the specified
+     * absolute {@code index} in this buffer.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 4} is greater than {@code this.capacity}
+     */
+    void setFloat(int index, float value);
+
+    /**
+     * Sets the specified 64-bit floating-point number at the specified
+     * absolute {@code index} in this buffer.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 8} is greater than {@code this.capacity}
+     */
+    void setDouble(int index, double value);
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
@@ -943,6 +1012,33 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code this.readableBytes} is less than {@code 8}
      */
     long  readLong();
+
+    /**
+     * Gets a 2-byte UTF-16 character at the current {@code readerIndex}
+     * and increases the {@code readerIndex} by {@code 2} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.readableBytes} is less than {@code 2}
+     */
+    char  readChar();
+
+    /**
+     * Gets a 32-bit floating point number at the current {@code readerIndex}
+     * and increases the {@code readerIndex} by {@code 4} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.readableBytes} is less than {@code 4}
+     */
+    float readFloat();
+
+    /**
+     * Gets a 64-bit floating point number at the current {@code readerIndex}
+     * and increases the {@code readerIndex} by {@code 8} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.readableBytes} is less than {@code 8}
+     */
+    double readDouble();
 
     /**
      * Transfers this buffer's data to a newly created buffer starting at
@@ -1184,6 +1280,36 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code this.writableBytes} is less than {@code 8}
      */
     void writeLong(long  value);
+
+    /**
+     * Sets the specified 2-byte UTF-16 character at the current
+     * {@code writerIndex} and increases the {@code writerIndex} by {@code 2}
+     * in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is less than {@code 2}
+     */
+    void writeChar(char value);
+
+    /**
+     * Sets the specified 32-bit floating point number at the current
+     * {@code writerIndex} and increases the {@code writerIndex} by {@code 4}
+     * in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is less than {@code 4}
+     */
+    void writeFloat(float value);
+
+    /**
+     * Sets the specified 64-bit floating point number at the current
+     * {@code writerIndex} and increases the {@code writerIndex} by {@code 8}
+     * in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is less than {@code 8}
+     */
+    void writeDouble(double value);
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at

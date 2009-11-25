@@ -16,7 +16,6 @@
 package org.jboss.netty.handler.codec.frame;
 
 import java.net.SocketAddress;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -181,8 +180,7 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
 
     private final boolean unfold;
-    private final AtomicReference<ChannelBuffer> cumulation =
-        new AtomicReference<ChannelBuffer>();
+    private ChannelBuffer cumulation;
 
     protected FrameDecoder() {
         this(false);
@@ -321,9 +319,11 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
     private void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         try {
-            ChannelBuffer cumulation = this.cumulation.getAndSet(null);
+            ChannelBuffer cumulation = this.cumulation;
             if (cumulation == null) {
                 return;
+            } else {
+                this.cumulation = null;
             }
 
             if (cumulation.readable()) {
@@ -344,14 +344,12 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
     }
 
     private ChannelBuffer cumulation(ChannelHandlerContext ctx) {
-        ChannelBuffer buf = cumulation.get();
-        if (buf == null) {
-            buf = ChannelBuffers.dynamicBuffer(
+        ChannelBuffer c = cumulation;
+        if (c == null) {
+            c = ChannelBuffers.dynamicBuffer(
                     ctx.getChannel().getConfig().getBufferFactory());
-            if (!cumulation.compareAndSet(null, buf)) {
-                buf = cumulation.get();
-            }
+            cumulation = c;
         }
-        return buf;
+        return c;
     }
 }
