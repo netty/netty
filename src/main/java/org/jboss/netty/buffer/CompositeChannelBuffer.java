@@ -150,6 +150,18 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         return order;
     }
 
+    public boolean hasArray() {
+        return false;
+    }
+
+    public byte[] array() {
+        throw new UnsupportedOperationException();
+    }
+
+    public int arrayOffset() {
+        throw new UnsupportedOperationException();
+    }
+
     public int capacity() {
         return indices[components.length];
     }

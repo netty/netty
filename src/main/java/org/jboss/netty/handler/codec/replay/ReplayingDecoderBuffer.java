@@ -57,6 +57,18 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         }
     }
 
+    public boolean hasArray() {
+        return false;
+    }
+
+    public byte[] array() {
+        throw new UnsupportedOperationException();
+    }
+
+    public int arrayOffset() {
+        throw new UnsupportedOperationException();
+    }
+
     public void clear() {
         throw new UnreplayableOperationException();
     }

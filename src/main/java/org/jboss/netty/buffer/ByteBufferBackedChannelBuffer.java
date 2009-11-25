@@ -80,6 +80,18 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         return capacity;
     }
 
+    public boolean hasArray() {
+        return buffer.hasArray();
+    }
+
+    public byte[] array() {
+        return buffer.array();
+    }
+
+    public int arrayOffset() {
+        return buffer.arrayOffset();
+    }
+
     public byte getByte(int index) {
         return buffer.get(index);
     }

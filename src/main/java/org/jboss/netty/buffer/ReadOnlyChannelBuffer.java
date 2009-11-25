@@ -64,6 +64,18 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
         return buffer.order();
     }
 
+    public boolean hasArray() {
+        return false;
+    }
+
+    public byte[] array() {
+        throw new ReadOnlyBufferException();
+    }
+
+    public int arrayOffset() {
+        throw new ReadOnlyBufferException();
+    }
+
     @Override
     public void discardReadBytes() {
         throw new ReadOnlyBufferException();

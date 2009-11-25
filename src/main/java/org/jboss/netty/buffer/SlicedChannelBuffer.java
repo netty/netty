@@ -73,6 +73,18 @@ public class SlicedChannelBuffer extends AbstractChannelBuffer implements Wrappe
         return length;
     }
 
+    public boolean hasArray() {
+        return buffer.hasArray();
+    }
+
+    public byte[] array() {
+        return buffer.array();
+    }
+
+    public int arrayOffset() {
+        return buffer.arrayOffset() + adjustment;
+    }
+
     public byte getByte(int index) {
         checkIndex(index);
         return buffer.getByte(index + adjustment);

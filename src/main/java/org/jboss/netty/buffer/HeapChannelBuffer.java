@@ -77,6 +77,18 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
         return array.length;
     }
 
+    public boolean hasArray() {
+        return true;
+    }
+
+    public byte[] array() {
+        return array;
+    }
+
+    public int arrayOffset() {
+        return 0;
+    }
+
     public byte getByte(int index) {
         return array[index];
     }

@@ -1563,6 +1563,30 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     ByteBuffer[] toByteBuffers(int index, int length);
 
     /**
+     * Returns {@code true} if and only if this buffer has a backing byte array.
+     * If this method returns true, you can safely call {@link #array()} and
+     * {@link #arrayOffset()}.
+     */
+    boolean hasArray();
+
+    /**
+     * Returns the backing byte array of this buffer.
+     *
+     * @throws UnsupportedOperationException
+     *         if there no accessible backing byte array
+     */
+    byte[] array();
+
+    /**
+     * Returns the offset of the first byte within the backing byte array of
+     * this buffer.
+     *
+     * @throws UnsupportedOperationException
+     *         if there no accessible backing byte array
+     */
+    int arrayOffset();
+
+    /**
      * Decodes this buffer's readable bytes into a string with the specified
      * character set name.  This method is identical to
      * {@code buf.toString(buf.readerIndex(), buf.readableBytes(), charsetName)}.

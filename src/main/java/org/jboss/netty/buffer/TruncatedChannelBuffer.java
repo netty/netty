@@ -67,6 +67,18 @@ public class TruncatedChannelBuffer extends AbstractChannelBuffer implements Wra
         return length;
     }
 
+    public boolean hasArray() {
+        return buffer.hasArray();
+    }
+
+    public byte[] array() {
+        return buffer.array();
+    }
+
+    public int arrayOffset() {
+        return buffer.arrayOffset();
+    }
+
     public byte getByte(int index) {
         checkIndex(index);
         return buffer.getByte(index);
