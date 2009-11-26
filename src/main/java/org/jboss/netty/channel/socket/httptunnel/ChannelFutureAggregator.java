@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package org.jboss.netty.channel.socket.httptunnel;
 
@@ -10,17 +10,17 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 
 class ChannelFutureAggregator implements ChannelFutureListener {
-    
-    private ChannelFuture aggregateFuture;
-    private Set<ChannelFuture> pendingFutures;
-    
+
+    private final ChannelFuture aggregateFuture;
+    private final Set<ChannelFuture> pendingFutures;
+
     public ChannelFutureAggregator(ChannelFuture aggregateFuture) {
         this.aggregateFuture = aggregateFuture;
-        this.pendingFutures = new HashSet<ChannelFuture>();
+        pendingFutures = new HashSet<ChannelFuture>();
     }
-    
+
     public void addFuture(ChannelFuture future) {
-        this.pendingFutures.add(future);
+        pendingFutures.add(future);
         future.addListener(this);
     }
 
@@ -30,7 +30,7 @@ class ChannelFutureAggregator implements ChannelFutureListener {
             // cancel all outstanding fragments and cancel the aggregate?
             return;
         }
-        
+
         pendingFutures.remove(future);
         if (!future.isSuccess()) {
             aggregateFuture.setFailure(future.getCause());
@@ -39,7 +39,7 @@ class ChannelFutureAggregator implements ChannelFutureListener {
             }
             return;
         }
-        
+
         if (pendingFutures.isEmpty()) {
             aggregateFuture.setSuccess();
         }

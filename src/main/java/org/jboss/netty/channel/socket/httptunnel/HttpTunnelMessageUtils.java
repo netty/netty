@@ -39,7 +39,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 /**
  * Utility class for creating http requests for the operation of the full duplex
  * http tunnel, and verifying that received requests are of the correct types.
- * 
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @version $Rev$, $Date$
@@ -53,53 +53,53 @@ public class HttpTunnelMessageUtils {
      * to ensure we do not dump large chunks of data on either peer.
      */
     public static final int MAX_BODY_SIZE = 16 * 1024;
-    
+
     /**
      * The tunnel will only accept connections from this specific user agent. This
      * allows us to distinguish a legitimate tunnel connection from someone pointing
      * a web browser or robot at the tunnel URL.
      */
     static final String USER_AGENT = "HttpTunnelClient";
-    
+
     static final String OPEN_TUNNEL_REQUEST_URI = "/http-tunnel/open";
     static final String CLOSE_TUNNEL_REQUEST_URI = "/http-tunnel/close";
     static final String CLIENT_SEND_REQUEST_URI = "/http-tunnel/send";
     static final String CLIENT_RECV_REQUEST_URI = "/http-tunnel/poll";
-    
+
     static final String CONTENT_TYPE = "application/octet-stream";
-    
-    
+
+
     public static HttpRequest createOpenTunnelRequest(SocketAddress host) {
         return createOpenTunnelRequest(convertToHostString(host));
     }
-    
+
     public static HttpRequest createOpenTunnelRequest(String host) {
         HttpRequest request = createRequestTemplate(host, null, OPEN_TUNNEL_REQUEST_URI);
         setNoData(request);
         return request;
     }
-    
+
     public static boolean isOpenTunnelRequest(HttpRequest request) {
         return isRequestTo(request, OPEN_TUNNEL_REQUEST_URI);
     }
-    
+
     public static boolean checkHost(HttpRequest request, SocketAddress expectedHost) {
         String host = request.getHeader(HttpHeaders.Names.HOST);
-        return expectedHost == null ? (host == null) : HttpTunnelMessageUtils.convertToHostString(expectedHost).equals(host);
+        return expectedHost == null ? host == null : HttpTunnelMessageUtils.convertToHostString(expectedHost).equals(host);
     }
 
     public static HttpRequest createSendDataRequest(SocketAddress host, String cookie, ChannelBuffer data) {
         return createSendDataRequest(convertToHostString(host), cookie, data);
     }
-    
+
     public static HttpRequest createSendDataRequest(String host, String cookie, ChannelBuffer data) {
         HttpRequest request = createRequestTemplate(host, cookie, CLIENT_SEND_REQUEST_URI);
         request.setHeader(HttpHeaders.Names.CONTENT_LENGTH, Long.toString(data.readableBytes()));
         request.setContent(data);
-        
+
         return request;
     }
-    
+
     public static boolean isSendDataRequest(HttpRequest request) {
         return isRequestTo(request, CLIENT_SEND_REQUEST_URI);
     }
@@ -107,23 +107,23 @@ public class HttpTunnelMessageUtils {
     public static HttpRequest createReceiveDataRequest(SocketAddress host, String tunnelId) {
         return createReceiveDataRequest(convertToHostString(host), tunnelId);
     }
-    
+
     public static HttpRequest createReceiveDataRequest(String host, String tunnelId) {
         HttpRequest request = createRequestTemplate(host, tunnelId, CLIENT_RECV_REQUEST_URI);
         setNoData(request);
         return request;
     }
-    
+
     public static boolean isReceiveDataRequest(HttpRequest request) {
         return isRequestTo(request, CLIENT_RECV_REQUEST_URI);
     }
-    
+
     public static HttpRequest createCloseTunnelRequest(String host, String tunnelId) {
         HttpRequest request = createRequestTemplate(host, tunnelId, CLOSE_TUNNEL_REQUEST_URI);
         setNoData(request);
         return request;
     }
-    
+
     public static boolean isCloseTunnelRequest(HttpRequest request) {
         return isRequestTo(request, CLOSE_TUNNEL_REQUEST_URI);
     }
@@ -131,7 +131,7 @@ public class HttpTunnelMessageUtils {
     public static boolean isServerToClientRequest(HttpRequest request) {
         return isRequestTo(request, CLIENT_RECV_REQUEST_URI);
     }
-    
+
     public static String convertToHostString(SocketAddress hostAddress) {
         StringWriter host = new StringWriter();
         InetSocketAddress inetSocketAddr = (InetSocketAddress) hostAddress;
@@ -143,12 +143,12 @@ public class HttpTunnelMessageUtils {
         } else {
             host.append(addr.getHostAddress());
         }
-        
+
         host.append(':');
         host.append(Integer.toString(inetSocketAddr.getPort()));
         return host.toString();
     }
-    
+
     private static HttpRequest createRequestTemplate(String host, String tunnelId, String uri) {
         HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, createCompleteUri(host, uri));
         request.setHeader(HttpHeaders.Names.HOST, host);
@@ -156,16 +156,16 @@ public class HttpTunnelMessageUtils {
         if (tunnelId != null) {
             request.setHeader(HttpHeaders.Names.COOKIE, tunnelId);
         }
-        
+
         return request;
     }
-    
+
     private static String createCompleteUri(String host, String uri) {
         StringBuilder builder = new StringBuilder(HTTP_URL_PREFIX.length() + host.length() + uri.length());
         builder.append(HTTP_URL_PREFIX);
         builder.append(host);
         builder.append(uri);
-        
+
         return builder.toString();
     }
 
@@ -176,7 +176,7 @@ public class HttpTunnelMessageUtils {
         } catch (URISyntaxException e) {
             return false;
         }
-        
+
         return HttpVersion.HTTP_1_1.equals(request.getProtocolVersion())
             && USER_AGENT.equals(request.getHeader(HttpHeaders.Names.USER_AGENT))
             && HttpMethod.POST.equals(request.getMethod())
@@ -191,7 +191,7 @@ public class HttpTunnelMessageUtils {
     public static String extractTunnelId(HttpRequest request) {
         return request.getHeader(HttpHeaders.Names.COOKIE);
     }
-    
+
     private static byte[] toBytes(String string) {
         try {
             return string.getBytes("UTF-8");
@@ -200,38 +200,38 @@ public class HttpTunnelMessageUtils {
             throw new RuntimeException("UTF-8 encoding not supported!");
         }
     }
-    
+
     public static HttpResponse createTunnelOpenResponse(String tunnelId) {
         HttpResponse response = createResponseTemplate(HttpResponseStatus.CREATED, null);
         response.setHeader(HttpHeaders.Names.SET_COOKIE, tunnelId);
         return response;
     }
-    
+
     public static boolean isTunnelOpenResponse(HttpResponse response) {
         return isResponseWithCode(response, HttpResponseStatus.CREATED);
     }
-    
+
     public static boolean isOKResponse(HttpResponse response) {
         return isResponseWithCode(response, HttpResponseStatus.OK);
     }
 
     public static boolean hasContents(HttpResponse response, byte[] expectedContents) {
-        if (response.getContent() != null 
+        if (response.getContent() != null
            && response.getContentLength() == expectedContents.length
            && response.getContent().readableBytes() == expectedContents.length) {
             byte[] compareBytes = new byte[expectedContents.length];
             response.getContent().readBytes(compareBytes);
             return Arrays.equals(expectedContents, compareBytes);
         }
-        
+
         return false;
     }
-    
+
     public static HttpResponse createTunnelCloseResponse() {
         HttpResponse response = createResponseTemplate(HttpResponseStatus.RESET_CONTENT, null);
         return response;
     }
-    
+
     public static boolean isTunnelCloseResponse(HttpResponse response) {
         return isResponseWithCode(response, HttpResponseStatus.RESET_CONTENT);
     }
@@ -240,20 +240,20 @@ public class HttpTunnelMessageUtils {
         if (response.containsHeader(HttpHeaders.Names.SET_COOKIE)) {
             return response.getHeader(HttpHeaders.Names.SET_COOKIE);
         }
-        
+
         return null;
     }
 
     public static HttpResponse createSendDataResponse() {
-        return createOKResponseTemplate(null); 
+        return createOKResponseTemplate(null);
     }
-    
+
     public static HttpResponse createRecvDataResponse(ChannelBuffer data) {
         return createOKResponseTemplate(data);
     }
 
     public static HttpResponse createRejection(HttpRequest request, String reason) {
-        HttpVersion version = (request != null) ? request.getProtocolVersion() : HttpVersion.HTTP_1_1;
+        HttpVersion version = request != null ? request.getProtocolVersion() : HttpVersion.HTTP_1_1;
         HttpResponse response = new DefaultHttpResponse(version, HttpResponseStatus.BAD_REQUEST);
         response.setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=\"utf-8\"");
         ChannelBuffer reasonBuffer = ChannelBuffers.wrappedBuffer(toBytes(reason));
@@ -261,16 +261,16 @@ public class HttpTunnelMessageUtils {
         response.setContent(reasonBuffer);
         return response;
     }
-    
+
     public static boolean isRejection(HttpResponse response) {
-        return !(HttpResponseStatus.OK.equals(response.getStatus()));
+        return !HttpResponseStatus.OK.equals(response.getStatus());
     }
 
     public static Object extractErrorMessage(HttpResponse response) {
         if (response.getContent() == null || response.getContentLength() == 0) {
             return "";
         }
-        
+
         byte[] bytes = new byte[response.getContent().readableBytes()];
         response.getContent().readBytes(bytes);
         try {
@@ -279,16 +279,16 @@ public class HttpTunnelMessageUtils {
             return "";
         }
     }
-    
+
     private static boolean isResponseWithCode(HttpResponse response, HttpResponseStatus status) {
         return HttpVersion.HTTP_1_1.equals(response.getProtocolVersion())
             && status.equals(response.getStatus());
     }
-    
+
     private static HttpResponse createOKResponseTemplate(ChannelBuffer data) {
         return createResponseTemplate(HttpResponseStatus.OK, data);
     }
-    
+
     private static HttpResponse createResponseTemplate(HttpResponseStatus status, ChannelBuffer data) {
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
         if (data != null) {

@@ -24,25 +24,25 @@ import org.jboss.netty.buffer.ChannelBuffers;
 /**
  * Provides functionality to split a provided ChannelBuffer into multiple fragments which fit
  * under a specified size threshold.
- * 
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @version $Rev$, $Date$
  */
 public class WriteSplitter {
 
-    private int splitThreshold;
+    private final int splitThreshold;
 
     public WriteSplitter(int splitThreshold) {
         this.splitThreshold = splitThreshold;
     }
 
     public List<ChannelBuffer> split(ChannelBuffer buffer) {
-        int listSize = (int)(((float)buffer.readableBytes()) / splitThreshold);
+        int listSize = (int)((float)buffer.readableBytes() / splitThreshold);
         ArrayList<ChannelBuffer> fragmentList = new ArrayList<ChannelBuffer>(listSize);
 
         int startReadIndex = buffer.readerIndex();
-        
+
         if (buffer.readableBytes() > splitThreshold) {
             while(buffer.readable()) {
                 ChannelBuffer chunk = ChannelBuffers.buffer(Math.min(splitThreshold, buffer.readableBytes()));
@@ -52,10 +52,10 @@ public class WriteSplitter {
         } else {
             fragmentList.add(ChannelBuffers.wrappedBuffer(buffer));
         }
-        
+
         buffer.readerIndex(startReadIndex);
 
         return fragmentList;
     }
-    
+
 }

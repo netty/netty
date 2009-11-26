@@ -34,41 +34,41 @@ import org.jboss.netty.channel.group.ChannelGroup;
 class TunnelWrappedServerChannelHandler extends SimpleChannelUpstreamHandler {
 
     public static final String NAME = "TunnelWrappedServerChannelHandler";
-    
-    private HttpTunnelServerChannel tunnelChannel;
-    private AcceptedServerChannelPipelineFactory pipelineFactory;
-    private ChannelGroup allChannels;
-    
+
+    private final HttpTunnelServerChannel tunnelChannel;
+    private final AcceptedServerChannelPipelineFactory pipelineFactory;
+    private final ChannelGroup allChannels;
+
     public TunnelWrappedServerChannelHandler(HttpTunnelServerChannel tunnelChannel, AcceptedServerChannelPipelineFactory pipelineFactory, ChannelGroup allChannels) {
         this.tunnelChannel = tunnelChannel;
         this.pipelineFactory = pipelineFactory;
         this.allChannels = allChannels;
     }
-    
+
     @Override
     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         e.getChannel().getConfig().setPipelineFactory(pipelineFactory);
         super.channelOpen(ctx, e);
     }
-    
+
     @Override
     public void channelBound(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         Channels.fireChannelBound(tunnelChannel, (SocketAddress) e.getValue());
         super.channelBound(ctx, e);
     }
-    
+
     @Override
     public void channelUnbound(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         Channels.fireChannelUnbound(tunnelChannel);
         super.channelUnbound(ctx, e);
     }
-    
+
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         Channels.fireChannelClosed(tunnelChannel);
         super.channelClosed(ctx, e);
     }
-    
+
     @Override
     public void childChannelOpen(ChannelHandlerContext ctx, ChildChannelStateEvent e) throws Exception {
         allChannels.add(e.getChildChannel());

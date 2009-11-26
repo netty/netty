@@ -46,7 +46,7 @@ class HttpTunnelClientChannelSink extends AbstractChannelSink {
 
     private void handleChannelStateEvent(ChannelStateEvent e) {
         HttpTunnelClientChannel channel = (HttpTunnelClientChannel) e.getChannel();
-        
+
         switch(e.getState()) {
         case CONNECTED:
             if (e.getValue() != null) {

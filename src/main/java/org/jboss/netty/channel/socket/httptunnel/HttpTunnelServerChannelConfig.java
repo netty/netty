@@ -31,16 +31,16 @@ import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
 public class HttpTunnelServerChannelConfig implements ServerSocketChannelConfig {
 
     private ChannelPipelineFactory pipelineFactory;
-    private ServerSocketChannel realChannel;
-    
+    private final ServerSocketChannel realChannel;
+
     public HttpTunnelServerChannelConfig(ServerSocketChannel realChannel) {
         this.realChannel = realChannel;
     }
-    
+
     private ServerSocketChannelConfig getWrappedConfig() {
         return realChannel.getConfig();
     }
-    
+
     public int getBacklog() {
         return getWrappedConfig().getBacklog();
     }
@@ -80,7 +80,7 @@ public class HttpTunnelServerChannelConfig implements ServerSocketChannelConfig 
     public ChannelPipelineFactory getPipelineFactory() {
         return pipelineFactory;
     }
-    
+
     public void setBufferFactory(ChannelBufferFactory bufferFactory) {
         getWrappedConfig().setBufferFactory(bufferFactory);
     }

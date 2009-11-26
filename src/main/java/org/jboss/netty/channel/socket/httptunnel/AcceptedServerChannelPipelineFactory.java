@@ -27,27 +27,27 @@ import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
  * Creates pipelines for incoming http tunnel connections, capable of decoding the incoming HTTP
  * requests, determining their type (client sending data, client polling data, or unknown) and
  * handling them appropriately.
- * 
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @version $Rev$, $Date$
  */
 class AcceptedServerChannelPipelineFactory implements ChannelPipelineFactory {
 
-    private ServerMessageSwitch messageSwitch;
+    private final ServerMessageSwitch messageSwitch;
 
     public AcceptedServerChannelPipelineFactory(ServerMessageSwitch messageSwitch) {
         this.messageSwitch = messageSwitch;
     }
-    
+
     public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline pipeline = Channels.pipeline();
-        
+
         pipeline.addLast("httpResponseEncoder", new HttpResponseEncoder());
         pipeline.addLast("httpRequestDecoder", new HttpRequestDecoder());
         pipeline.addLast("httpChunkAggregator", new HttpChunkAggregator(HttpTunnelMessageUtils.MAX_BODY_SIZE));
         pipeline.addLast("messageSwitchClient", new AcceptedServerChannelRequestDispatch(messageSwitch));
-        
+
         return pipeline;
     }
 }
