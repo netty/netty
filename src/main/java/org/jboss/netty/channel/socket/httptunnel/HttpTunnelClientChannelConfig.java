@@ -54,7 +54,8 @@ public class HttpTunnelClientChannelConfig extends DefaultChannelConfig implemen
     }
 
     /* HTTP TUNNEL SPECIFIC CONFIGURATION */
-
+    // TODO Support all options in the old tunnel (see HttpTunnelingSocketChannelConfig)
+    //      Mostly SSL, virtual host, and URL prefix
     @Override
     public boolean setOption(String key, Object value) {
         if (super.setOption(key, value)) {
