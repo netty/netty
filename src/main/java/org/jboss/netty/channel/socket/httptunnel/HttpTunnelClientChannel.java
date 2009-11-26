@@ -129,6 +129,8 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
 
     public void onBindRequest(SocketAddress localAddress, final ChannelFuture bindFuture) {
         ChannelFutureListener bindListener = new ConsolidatingFutureListener(bindFuture, 2);
+        // FIXME This will always fail since we cannot bind to the same local address twice.
+        //       Perhaps we should simply do nothing?
         sendChannel.bind(localAddress).addListener(bindListener);
         pollChannel.bind(localAddress).addListener(bindListener);
     }

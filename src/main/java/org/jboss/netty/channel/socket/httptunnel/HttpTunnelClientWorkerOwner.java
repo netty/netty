@@ -25,13 +25,13 @@ import org.jboss.netty.channel.ChannelFuture;
  * to notify the virtual tunnel channel of key events, and to get
  * access to higher level information required for correct
  * operation.
- * 
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @version $Rev$, $Date$
  */
 interface HttpTunnelClientWorkerOwner {
-
+    // FIXME No public methods should be exposed to users.
     /**
      * The HTTP tunnel client sink invokes this when the application code requests the connection
      * of an HTTP tunnel to the specified remote address.
@@ -41,7 +41,7 @@ interface HttpTunnelClientWorkerOwner {
     /**
      * The send channel handler calls this method when the server accepts the open tunnel request,
      * returning a unique tunnel ID.
-     * 
+     *
      * @param tunnelId the server allocated tunnel ID
      */
     public void onTunnelOpened(String tunnelId);
@@ -57,7 +57,7 @@ interface HttpTunnelClientWorkerOwner {
      * @param content the data received from the server
      */
     public void onMessageReceived(ChannelBuffer content);
-    
+
     /**
      * @return the name of the server with whom we are communicating with - this is used within
      * the HOST HTTP header for all requests. This is particularly important for operation behind
