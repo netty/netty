@@ -40,7 +40,7 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements Se
         super(factory, pipeline, new HttpTunnelServerChannelSink());
     }
 
-    public void setRealChannel(ServerSocketChannel realChannel, ServerMessageSwitch messageSwitch) {
+    void setRealChannel(ServerSocketChannel realChannel, ServerMessageSwitch messageSwitch) {
         this.realChannel = realChannel;
         HttpTunnelServerChannelSink sink = (HttpTunnelServerChannelSink) getPipeline().getSink();
         sink.setRealChannel(realChannel);
