@@ -23,13 +23,13 @@ import org.jboss.netty.channel.Channel;
  * Simple interface provided to a {@link ServerMessageSwitch}, allowing it to
  * create the server end of tunnels in response to legal tunnel creation
  * requests from clients.
- * 
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @version $Rev$, $Date$
  */
 interface HttpTunnelAcceptedChannelFactory {
-
+    // FIXME This method should not be exposed to users (should be package-private)
     public Channel newChannel(String newTunnelId, SocketAddress remoteAddress);
 
 }
