@@ -214,7 +214,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
         return serverHostName;
     }
 
-    private class ConsolidatingFutureListener implements ChannelFutureListener {
+    private static final class ConsolidatingFutureListener implements ChannelFutureListener {
 
         private final ChannelFuture completionFuture;
         private final AtomicInteger eventsLeft;
