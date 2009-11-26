@@ -31,17 +31,17 @@ import org.jboss.netty.channel.DefaultChannelConfig;
  * directly related TCP connections - the connections used by a client are likely
  * to change over the lifecycle of a tunnel, especially when an HTTP proxy is in
  * use.
- * 
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @version $Rev$, $Date$
  */
 class HttpTunnelAcceptedChannel extends AbstractChannel {
 
-    private ChannelConfig config;
-    private HttpTunnelAcceptedChannelSink sink;
-    private SocketAddress remoteAddress;
-    
+    private final ChannelConfig config;
+    private final HttpTunnelAcceptedChannelSink sink;
+    private final SocketAddress remoteAddress;
+
     protected HttpTunnelAcceptedChannel(HttpTunnelServerChannel parent, ChannelFactory factory, ChannelPipeline pipeline, HttpTunnelAcceptedChannelSink sink, SocketAddress remoteAddress) {
         super(parent, factory, pipeline, sink);
         config = new DefaultChannelConfig();
