@@ -29,8 +29,8 @@ import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
  */
 public class HttpTunnelServerChannelFactory implements ServerSocketChannelFactory {
 
-    private ServerSocketChannelFactory realConnectionFactory;
-    private ChannelGroup realConnections;
+    private final ServerSocketChannelFactory realConnectionFactory;
+    private final ChannelGroup realConnections;
 
     public HttpTunnelServerChannelFactory(ServerSocketChannelFactory realConnectionFactory) {
         this.realConnectionFactory = realConnectionFactory;
@@ -55,7 +55,7 @@ public class HttpTunnelServerChannelFactory implements ServerSocketChannelFactor
     }
 
     public void releaseExternalResources() {
-        realConnections.close();
+        realConnections.close().awaitUninterruptibly();
         realConnectionFactory.releaseExternalResources();
     }
 

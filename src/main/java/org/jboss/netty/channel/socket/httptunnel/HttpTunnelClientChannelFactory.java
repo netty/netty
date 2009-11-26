@@ -21,28 +21,28 @@ import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 
 /**
- * 
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @version $Rev$, $Date$
  */
 public class HttpTunnelClientChannelFactory implements ClientSocketChannelFactory {
 
-    private ClientSocketChannelFactory factory;
-    private ChannelGroup realConnections;
+    private final ClientSocketChannelFactory factory;
+    private final ChannelGroup realConnections;
 
     public HttpTunnelClientChannelFactory(ClientSocketChannelFactory factory) {
         this.factory = factory;
         realConnections = new DefaultChannelGroup();
     }
-    
+
     public HttpTunnelClientChannel newChannel(ChannelPipeline pipeline) {
         HttpTunnelClientChannel channel = new HttpTunnelClientChannel(this, pipeline, new HttpTunnelClientChannelSink(), factory, realConnections);
         return channel;
     }
 
     public void releaseExternalResources() {
-        realConnections.close();
+        realConnections.close().awaitUninterruptibly();
         factory.releaseExternalResources();
     }
 
