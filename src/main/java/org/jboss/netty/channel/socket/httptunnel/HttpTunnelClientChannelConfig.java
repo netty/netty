@@ -41,14 +41,14 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  */
 public class HttpTunnelClientChannelConfig extends DefaultChannelConfig implements SocketChannelConfig {
 
-    public static final String PROXY_ADDRESS_OPTION = "proxyAddress";
+    static final String PROXY_ADDRESS_OPTION = "proxyAddress";
 
     private final SocketChannelConfig sendChannelConfig;
     private final SocketChannelConfig pollChannelConfig;
 
     private SocketAddress proxyAddress;
 
-    public HttpTunnelClientChannelConfig(SocketChannelConfig sendChannelConfig, SocketChannelConfig pollChannelConfig) {
+    HttpTunnelClientChannelConfig(SocketChannelConfig sendChannelConfig, SocketChannelConfig pollChannelConfig) {
         this.sendChannelConfig = sendChannelConfig;
         this.pollChannelConfig = pollChannelConfig;
     }
