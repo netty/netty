@@ -32,20 +32,18 @@ import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
  */
 public class HttpTunnelServerChannel extends AbstractServerChannel implements ServerSocketChannel, HttpTunnelAcceptedChannelFactory {
 
-    private ServerSocketChannel realChannel;
-    private HttpTunnelServerChannelConfig config;
-    private ServerMessageSwitch messageSwitch;
+    private final ServerSocketChannel realChannel;
+    private final HttpTunnelServerChannelConfig config;
+    private final ServerMessageSwitch messageSwitch;
 
     protected HttpTunnelServerChannel(HttpTunnelServerChannelFactory factory, ChannelPipeline pipeline) {
         super(factory, pipeline, new HttpTunnelServerChannelSink());
-    }
 
-    void setRealChannel(ServerSocketChannel realChannel, ServerMessageSwitch messageSwitch) {
-        this.realChannel = realChannel;
+        messageSwitch = new ServerMessageSwitch(this);
+        realChannel = factory.createRealChannel(this, messageSwitch);
         HttpTunnelServerChannelSink sink = (HttpTunnelServerChannelSink) getPipeline().getSink();
         sink.setRealChannel(realChannel);
         config = new HttpTunnelServerChannelConfig(realChannel);
-        this.messageSwitch = messageSwitch;
         Channels.fireChannelOpen(this);
     }
 

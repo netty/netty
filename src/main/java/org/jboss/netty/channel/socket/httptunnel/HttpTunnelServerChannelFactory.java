@@ -38,14 +38,10 @@ public class HttpTunnelServerChannelFactory implements ServerSocketChannelFactor
     }
 
     public HttpTunnelServerChannel newChannel(ChannelPipeline pipeline) {
-        HttpTunnelServerChannel channel = new HttpTunnelServerChannel(this, pipeline);
-        ServerMessageSwitch messageSwitch = new ServerMessageSwitch(channel);
-        ServerSocketChannel realChannel = createRealChannel(channel, messageSwitch);
-        channel.setRealChannel(realChannel, messageSwitch);
-        return channel;
+        return new HttpTunnelServerChannel(this, pipeline);
     }
 
-    private ServerSocketChannel createRealChannel(HttpTunnelServerChannel channel, ServerMessageSwitch messageSwitch) {
+    ServerSocketChannel createRealChannel(HttpTunnelServerChannel channel, ServerMessageSwitch messageSwitch) {
         ChannelPipeline realChannelPipeline = Channels.pipeline();
         AcceptedServerChannelPipelineFactory realPipelineFactory = new AcceptedServerChannelPipelineFactory(messageSwitch);
         realChannelPipeline.addFirst(TunnelWrappedServerChannelHandler.NAME, new TunnelWrappedServerChannelHandler(channel, realPipelineFactory, realConnections));
