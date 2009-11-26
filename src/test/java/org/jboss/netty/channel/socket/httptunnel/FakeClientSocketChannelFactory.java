@@ -13,11 +13,11 @@ import org.jboss.netty.channel.socket.SocketChannel;
 public class FakeClientSocketChannelFactory implements ClientSocketChannelFactory {
 
     public List<FakeSocketChannel> createdChannels;
-    
+
     public FakeClientSocketChannelFactory() {
         createdChannels = new ArrayList<FakeSocketChannel>();
     }
-    
+
     public SocketChannel newChannel(ChannelPipeline pipeline) {
         FakeSocketChannel channel = new FakeSocketChannel(null, this, pipeline, new FakeChannelSink());
         createdChannels.add(channel);

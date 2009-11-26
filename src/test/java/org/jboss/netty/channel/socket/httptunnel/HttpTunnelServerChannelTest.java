@@ -30,12 +30,12 @@ public class HttpTunnelServerChannelTest {
     private HttpTunnelServerChannel virtualChannel;
     private UpstreamEventCatcher upstreamEvents;
     private FakeServerSocketChannelFactory realChannelFactory;
-    
+
     @Before
     public void setUp() throws Exception {
         realChannelFactory = new FakeServerSocketChannelFactory();
         realChannelFactory.sink = new FakeChannelSink();
-        
+
         HttpTunnelServerChannelFactory factory = new HttpTunnelServerChannelFactory(realChannelFactory);
         virtualChannel = factory.newChannel(createVirtualChannelPipeline());
     }
@@ -66,7 +66,7 @@ public class HttpTunnelServerChannelTest {
         realChannelFactory.createdChannel.bound = false;
         assertFalse(virtualChannel.isBound());
     }
-    
+
     @Test
     public void testConstruction_firesOpenEvent() {
         assertTrue(upstreamEvents.events.size() > 0);
@@ -81,7 +81,7 @@ public class HttpTunnelServerChannelTest {
         assertEquals(1, upstreamEvents.events.size());
         checkIsUpstreamChannelStateEvent(upstreamEvents.events.poll(), virtualChannel, ChannelState.BOUND, boundAddr);
     }
-    
+
     @Test
     public void testChannelUnboundEventFromReal_replicatedOnVirtual() {
         upstreamEvents.events.clear();
@@ -89,7 +89,7 @@ public class HttpTunnelServerChannelTest {
         assertEquals(1, upstreamEvents.events.size());
         checkIsUpstreamChannelStateEvent(upstreamEvents.events.poll(), virtualChannel, ChannelState.BOUND, null);
     }
-    
+
     @Test
     public void testChannelClosedEventFromReal_replicatedOnVirtual() {
         upstreamEvents.events.clear();
@@ -97,36 +97,36 @@ public class HttpTunnelServerChannelTest {
         assertEquals(1, upstreamEvents.events.size());
         checkIsUpstreamChannelStateEvent(upstreamEvents.events.poll(), virtualChannel, ChannelState.OPEN, Boolean.FALSE);
     }
-    
+
     @Test
     public void testHasConfiguration() {
         assertNotNull(virtualChannel.getConfig());
     }
-    
+
     @Test
     public void testChangePipelineFactoryDoesNotAffectRealChannel() {
         ChannelPipelineFactory realPipelineFactory = realChannelFactory.createdChannel.getConfig().getPipelineFactory();
         ChannelPipelineFactory virtualPipelineFactory = mockContext.mock(ChannelPipelineFactory.class);
         virtualChannel.getConfig().setPipelineFactory(virtualPipelineFactory);
         assertSame(virtualPipelineFactory, virtualChannel.getConfig().getPipelineFactory());
-        
+
         // channel pipeline factory is a special case: we do not want it set on the configuration
         // of the underlying factory
         assertSame(realPipelineFactory, realChannelFactory.createdChannel.getConfig().getPipelineFactory());
     }
-    
+
     @Test
     public void testChangingBacklogAffectsRealChannel() {
         virtualChannel.getConfig().setBacklog(1234);
         assertEquals(1234, realChannelFactory.createdChannel.getConfig().getBacklog());
     }
-    
+
     @Test
     public void testChangingConnectTimeoutMillisAffectsRealChannel() {
         virtualChannel.getConfig().setConnectTimeoutMillis(54321);
         assertEquals(54321, realChannelFactory.createdChannel.getConfig().getConnectTimeoutMillis());
     }
-    
+
     @Test
     public void testChangingPerformancePreferencesAffectsRealChannel() {
         final ServerSocketChannelConfig mockConfig = mockContext.mock(ServerSocketChannelConfig.class);
@@ -137,45 +137,45 @@ public class HttpTunnelServerChannelTest {
         virtualChannel.getConfig().setPerformancePreferences(100, 200, 300);
         mockContext.assertIsSatisfied();
     }
-    
+
     @Test
     public void testChangingReceiveBufferSizeAffectsRealChannel() {
         virtualChannel.getConfig().setReceiveBufferSize(10101);
         assertEquals(10101, realChannelFactory.createdChannel.getConfig().getReceiveBufferSize());
     }
-    
+
     @Test
     public void testChangingReuseAddressAffectsRealChannel() {
         virtualChannel.getConfig().setReuseAddress(true);
         assertEquals(true, realChannelFactory.createdChannel.getConfig().isReuseAddress());
     }
-    
+
     @Test
     public void testSetChannelPipelineFactoryViaOption() {
         final ServerSocketChannelConfig mockConfig = mockContext.mock(ServerSocketChannelConfig.class);
         realChannelFactory.createdChannel.config = mockConfig;
-        
+
         mockContext.checking(new Expectations() {{
             never(mockConfig);
         }});
-        
+
         ChannelPipelineFactory factory = mockContext.mock(ChannelPipelineFactory.class);
         virtualChannel.getConfig().setOption("pipelineFactory", factory);
         assertSame(factory, virtualChannel.getConfig().getPipelineFactory());
     }
-    
+
     @Test
     public void testSetOptionAffectsRealChannel() {
         final ServerSocketChannelConfig mockConfig = mockContext.mock(ServerSocketChannelConfig.class);
         realChannelFactory.createdChannel.config = mockConfig;
-        
+
         mockContext.checking(new Expectations() {{
             one(mockConfig).setOption("testOption", "testValue");
         }});
-        
+
         virtualChannel.getConfig().setOption("testOption", "testValue");
     }
-    
+
     private void checkIsUpstreamChannelStateEvent(ChannelEvent ev, Channel expectedChannel, ChannelState expectedState, Object expectedValue) {
         assertTrue(ev instanceof UpstreamChannelStateEvent);
         UpstreamChannelStateEvent checkedEv = (UpstreamChannelStateEvent) ev;
@@ -183,5 +183,5 @@ public class HttpTunnelServerChannelTest {
         assertEquals(expectedState, checkedEv.getState());
         assertEquals(expectedValue, checkedEv.getValue());
     }
-    
+
 }

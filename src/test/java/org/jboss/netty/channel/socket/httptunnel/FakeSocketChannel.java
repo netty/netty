@@ -28,7 +28,7 @@ public class FakeSocketChannel extends AbstractChannel implements SocketChannel 
         super(parent, factory, pipeline, sink);
         this.sink = sink;
     }
-    
+
     public InetSocketAddress getLocalAddress() {
         return localAddress;
     }
@@ -48,12 +48,12 @@ public class FakeSocketChannel extends AbstractChannel implements SocketChannel 
     public boolean isConnected() {
         return connected;
     }
-    
+
     public void emulateConnected(InetSocketAddress localAddress, InetSocketAddress remoteAddress, ChannelFuture connectedFuture) {
         if(connected) {
             return;
         }
-        
+
         emulateBound(localAddress, null);
         this.remoteAddress = remoteAddress;
         connected = true;
@@ -62,12 +62,12 @@ public class FakeSocketChannel extends AbstractChannel implements SocketChannel 
             connectedFuture.setSuccess();
         }
     }
-    
+
     public void emulateBound(InetSocketAddress localAddress, ChannelFuture boundFuture) {
         if(bound) {
             return;
         }
-        
+
         bound = true;
         this.localAddress = localAddress;
         Channels.fireChannelBound(this, localAddress);

@@ -18,11 +18,11 @@ public class FakeServerSocketChannelConfig extends DefaultChannelConfig implemen
     public ChannelPipelineFactory pipelineFactory;
     public int writeTimeout = 5000;
     public ChannelBufferFactory bufferFactory = new HeapChannelBufferFactory();
-    
+
     public int getBacklog() {
         return backlog;
     }
-    
+
     public void setBacklog(int backlog) {
         this.backlog = backlog;
     }
@@ -30,7 +30,7 @@ public class FakeServerSocketChannelConfig extends DefaultChannelConfig implemen
     public int getReceiveBufferSize() {
         return receiveBufferSize;
     }
-    
+
     public void setReceiveBufferSize(int receiveBufferSize) {
         this.receiveBufferSize = receiveBufferSize;
     }
@@ -38,7 +38,7 @@ public class FakeServerSocketChannelConfig extends DefaultChannelConfig implemen
     public boolean isReuseAddress() {
         return reuseAddress;
     }
-    
+
     public void setReuseAddress(boolean reuseAddress) {
         this.reuseAddress = reuseAddress;
     }

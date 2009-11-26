@@ -30,13 +30,13 @@ public class FakeChannelConfig implements SocketChannelConfig {
             return Channels.pipeline();
         }
     };
-    
+
     private int writeTimeout = 3000;
-    
+
     public int getReceiveBufferSize() {
         return receiveBufferSize;
     }
-    
+
     public void setReceiveBufferSize(int receiveBufferSize) {
         this.receiveBufferSize = receiveBufferSize;
     }
@@ -44,7 +44,7 @@ public class FakeChannelConfig implements SocketChannelConfig {
     public int getSendBufferSize() {
         return sendBufferSize;
     }
-    
+
     public void setSendBufferSize(int sendBufferSize) {
         this.sendBufferSize = sendBufferSize;
     }
@@ -52,7 +52,7 @@ public class FakeChannelConfig implements SocketChannelConfig {
     public int getSoLinger() {
         return soLinger;
     }
-    
+
     public void setSoLinger(int soLinger) {
         this.soLinger = soLinger;
     }
@@ -60,7 +60,7 @@ public class FakeChannelConfig implements SocketChannelConfig {
     public int getTrafficClass() {
         return trafficClass;
     }
-    
+
     public void setTrafficClass(int trafficClass) {
         this.trafficClass = trafficClass;
     }
@@ -68,7 +68,7 @@ public class FakeChannelConfig implements SocketChannelConfig {
     public boolean isKeepAlive() {
         return keepAlive;
     }
-    
+
     public void setKeepAlive(boolean keepAlive) {
         this.keepAlive = keepAlive;
     }
@@ -76,7 +76,7 @@ public class FakeChannelConfig implements SocketChannelConfig {
     public boolean isReuseAddress() {
         return reuseAddress;
     }
-    
+
     public void setReuseAddress(boolean reuseAddress) {
         this.reuseAddress = reuseAddress;
     }
@@ -96,7 +96,7 @@ public class FakeChannelConfig implements SocketChannelConfig {
     public ChannelBufferFactory getBufferFactory() {
         return bufferFactory;
     }
-    
+
     public void setBufferFactory(ChannelBufferFactory bufferFactory) {
         this.bufferFactory = bufferFactory;
     }
@@ -104,15 +104,15 @@ public class FakeChannelConfig implements SocketChannelConfig {
     public int getConnectTimeoutMillis() {
         return connectTimeout;
     }
-    
+
     public void setConnectTimeoutMillis(int connectTimeoutMillis) {
-        this.connectTimeout = connectTimeoutMillis;
+        connectTimeout = connectTimeoutMillis;
     }
 
     public ChannelPipelineFactory getPipelineFactory() {
         return pipelineFactory;
     }
-    
+
     public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
         this.pipelineFactory = pipelineFactory;
     }
@@ -120,9 +120,9 @@ public class FakeChannelConfig implements SocketChannelConfig {
     public int getWriteTimeoutMillis() {
         return writeTimeout;
     }
-    
+
     public void setWriteTimeoutMillis(int writeTimeoutMillis) {
-        this.writeTimeout = writeTimeoutMillis;
+        writeTimeout = writeTimeoutMillis;
     }
 
     public boolean setOption(String key, Object value) {

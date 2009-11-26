@@ -45,19 +45,19 @@ public class FakeServerSocketChannel extends AbstractChannel implements ServerSo
     public boolean isConnected() {
         return connected;
     }
-    
-    
+
+
     public FakeSocketChannel acceptNewConnection(InetSocketAddress remoteAddress, ChannelSink sink) throws Exception {
         ChannelPipeline newPipeline = getConfig().getPipelineFactory().getPipeline();
         FakeSocketChannel newChannel = new FakeSocketChannel(this, getFactory(), newPipeline, sink);
-        newChannel.localAddress = this.localAddress;
+        newChannel.localAddress = localAddress;
         newChannel.remoteAddress = remoteAddress;
         fireChannelOpen(newChannel);
         fireChannelBound(newChannel, newChannel.localAddress);
         fireChannelConnected(this, newChannel.remoteAddress);
-        
+
         return newChannel;
     }
 
-    
+
 }

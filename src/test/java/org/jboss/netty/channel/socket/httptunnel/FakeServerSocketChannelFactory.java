@@ -12,7 +12,7 @@ public class FakeServerSocketChannelFactory implements ServerSocketChannelFactor
 
     public ChannelSink sink = new FakeChannelSink();
     public FakeServerSocketChannel createdChannel;
-    
+
     public ServerSocketChannel newChannel(ChannelPipeline pipeline) {
         createdChannel = new FakeServerSocketChannel(this, pipeline, sink);
         return createdChannel;
