@@ -35,14 +35,14 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements Se
     private ServerSocketChannel realChannel;
     private HttpTunnelServerChannelConfig config;
     private ServerMessageSwitch messageSwitch;
-    
+
     protected HttpTunnelServerChannel(HttpTunnelServerChannelFactory factory, ChannelPipeline pipeline) {
         super(factory, pipeline, new HttpTunnelServerChannelSink());
     }
-    
+
     public void setRealChannel(ServerSocketChannel realChannel, ServerMessageSwitch messageSwitch) {
         this.realChannel = realChannel;
-        HttpTunnelServerChannelSink sink = (HttpTunnelServerChannelSink) this.getPipeline().getSink();
+        HttpTunnelServerChannelSink sink = (HttpTunnelServerChannelSink) getPipeline().getSink();
         sink.setRealChannel(realChannel);
         config = new HttpTunnelServerChannelConfig(realChannel);
         this.messageSwitch = messageSwitch;
@@ -66,10 +66,6 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements Se
         return realChannel.isBound();
     }
 
-    public ServerMessageSwitch getMessageSwitch() {
-        return messageSwitch;
-    }
-
     public HttpTunnelAcceptedChannel newChannel(String newTunnelId, SocketAddress remoteAddress) {
         ChannelPipeline childPipeline = null;
         try {
@@ -78,6 +74,6 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements Se
             throw new ChannelPipelineException("Failed to initialize a pipeline.", e);
         }
         HttpTunnelAcceptedChannelSink sink = new HttpTunnelAcceptedChannelSink(messageSwitch, newTunnelId);
-        return new HttpTunnelAcceptedChannel(this, this.getFactory(), childPipeline, sink, remoteAddress);
+        return new HttpTunnelAcceptedChannel(this, getFactory(), childPipeline, sink, remoteAddress);
     }
 }
