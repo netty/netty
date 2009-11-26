@@ -81,7 +81,6 @@ public class HttpTunnelSoakTester {
     }
 
     private void configureProxy() {
-        // TODO Use ChannelConfig properties instead of system property
         String proxyHost = System.getProperty("http.proxyHost");
         if(proxyHost != null && proxyHost.length() != 0) {
             int proxyPort = Integer.getInteger("http.proxyPort", 80);
