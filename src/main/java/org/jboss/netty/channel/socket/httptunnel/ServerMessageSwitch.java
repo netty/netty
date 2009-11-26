@@ -55,6 +55,8 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
     }
 
     public String createTunnel(SocketAddress remoteAddress) {
+        // FIXME Tunnel ID must be generated from SecureRandom by default.
+        //       Add HttpTunnelServerChannelConfig.tunnelIdGenerator
         String newTunnelId = tunnelIdPrefix + '_' + tunnelIdSequence.incrementAndGet();
         TunnelInfo newTunnel = new TunnelInfo();
         newTunnel.tunnelId = newTunnelId;
