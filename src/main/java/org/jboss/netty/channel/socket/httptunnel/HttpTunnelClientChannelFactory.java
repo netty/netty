@@ -29,16 +29,19 @@ import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 public class HttpTunnelClientChannelFactory implements ClientSocketChannelFactory {
 
     private final ClientSocketChannelFactory factory;
-    private final ChannelGroup realConnections;
+    private final ChannelGroup realConnections = new DefaultChannelGroup();
 
     public HttpTunnelClientChannelFactory(ClientSocketChannelFactory factory) {
+        if (factory == null) {
+            throw new NullPointerException("factory");
+        }
         this.factory = factory;
-        realConnections = new DefaultChannelGroup();
     }
 
     public HttpTunnelClientChannel newChannel(ChannelPipeline pipeline) {
-        HttpTunnelClientChannel channel = new HttpTunnelClientChannel(this, pipeline, new HttpTunnelClientChannelSink(), factory, realConnections);
-        return channel;
+        return new HttpTunnelClientChannel(
+                this, pipeline,
+                new HttpTunnelClientChannelSink(), factory, realConnections);
     }
 
     public void releaseExternalResources() {
