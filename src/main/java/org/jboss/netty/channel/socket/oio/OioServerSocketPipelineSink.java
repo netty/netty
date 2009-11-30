@@ -164,14 +164,23 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
         boolean bound = channel.isBound();
         try {
             channel.socket.close();
-            if (channel.setClosed()) {
-                future.setSuccess();
-                if (bound) {
-                    fireChannelUnbound(channel);
+
+            // Make sure the boss thread is not running so that that the future
+            // is notified after a new connection cannot be accepted anymore.
+            // See NETTY-256 for more information.
+            channel.shutdownLock.lock();
+            try {
+                if (channel.setClosed()) {
+                    future.setSuccess();
+                    if (bound) {
+                        fireChannelUnbound(channel);
+                    }
+                    fireChannelClosed(channel);
+                } else {
+                    future.setSuccess();
                 }
-                fireChannelClosed(channel);
-            } else {
-                future.setSuccess();
+            } finally {
+                channel.shutdownLock.unlock();
             }
         } catch (Throwable t) {
             future.setFailure(t);
@@ -187,6 +196,7 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
         }
 
         public void run() {
+            channel.shutdownLock.lock();
             while (channel.isBound()) {
                 try {
                     Socket acceptedSocket = channel.socket.accept();
@@ -238,6 +248,7 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                     }
                 }
             }
+            channel.shutdownLock.unlock();
         }
     }
 }

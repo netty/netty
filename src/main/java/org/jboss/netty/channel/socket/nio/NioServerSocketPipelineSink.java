@@ -175,14 +175,23 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
         boolean bound = channel.isBound();
         try {
             channel.socket.close();
-            if (channel.setClosed()) {
-                future.setSuccess();
-                if (bound) {
-                    fireChannelUnbound(channel);
+
+            // Make sure the boss thread is not running so that that the future
+            // is notified after a new connection cannot be accepted anymore.
+            // See NETTY-256 for more information.
+            channel.shutdownLock.lock();
+            try {
+                if (channel.setClosed()) {
+                    future.setSuccess();
+                    if (bound) {
+                        fireChannelUnbound(channel);
+                    }
+                    fireChannelClosed(channel);
+                } else {
+                    future.setSuccess();
                 }
-                fireChannelClosed(channel);
-            } else {
-                future.setSuccess();
+            } finally {
+                channel.shutdownLock.unlock();
             }
         } catch (Throwable t) {
             future.setFailure(t);
@@ -218,6 +227,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
         public void run() {
             final Thread currentThread = Thread.currentThread();
 
+            channel.shutdownLock.lock();
             for (;;) {
                 try {
                     if (selector.select(1000) > 0) {
@@ -249,6 +259,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                 }
             }
 
+            channel.shutdownLock.unlock();
             closeSelector();
         }
 
