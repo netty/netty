@@ -30,6 +30,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
  * @version $Rev$, $Date$
  */
 public class WriteSplitter {
+    // FIXME This class should be a static utility for efficiency.
 
     private final int splitThreshold;
 
@@ -45,6 +46,7 @@ public class WriteSplitter {
 
         if (buffer.readableBytes() > splitThreshold) {
             while(buffer.readable()) {
+                // FIXME No need to copy. Just slice.
                 ChannelBuffer chunk = ChannelBuffers.buffer(Math.min(splitThreshold, buffer.readableBytes()));
                 buffer.readBytes(chunk);
                 fragmentList.add(chunk);
