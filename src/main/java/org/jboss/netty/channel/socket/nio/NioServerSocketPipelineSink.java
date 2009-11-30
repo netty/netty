@@ -174,7 +174,13 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
     private void close(NioServerSocketChannel channel, ChannelFuture future) {
         boolean bound = channel.isBound();
         try {
-            channel.socket.close();
+            if (channel.socket.isOpen()) {
+                channel.socket.close();
+                Selector selector = channel.selector;
+                if (selector != null) {
+                    selector.wakeup();
+                }
+            }
 
             // Make sure the boss thread is not running so that that the future
             // is notified after a new connection cannot be accepted anymore.
@@ -222,6 +228,8 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                     closeSelector();
                 }
             }
+
+            channel.selector = selector;
         }
 
         public void run() {
@@ -286,6 +294,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
         }
 
         private void closeSelector() {
+            channel.selector = null;
             try {
                 selector.close();
             } catch (Exception e) {

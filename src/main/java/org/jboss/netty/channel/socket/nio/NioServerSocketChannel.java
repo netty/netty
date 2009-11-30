@@ -19,6 +19,7 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -49,6 +50,7 @@ class NioServerSocketChannel extends AbstractServerChannel
 
     final ServerSocketChannel socket;
     final Lock shutdownLock = new ReentrantLock();
+    volatile Selector selector;
     private final ServerSocketChannelConfig config;
 
     NioServerSocketChannel(
