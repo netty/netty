@@ -37,7 +37,7 @@ import org.jboss.netty.channel.DefaultChannelConfig;
  * @version $Rev$, $Date$
  */
 class HttpTunnelAcceptedChannel extends AbstractChannel {
-
+    // FIXME Implement SocketChannel
     private final ChannelConfig config;
     private final HttpTunnelAcceptedChannelSink sink;
     private final SocketAddress remoteAddress;
