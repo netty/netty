@@ -1225,6 +1225,7 @@ public class HttpPostRequestDecoder {
                 // found so lastPosition is correct
                 // but position is just after the delimiter (either close delimiter or simple one)
                 // so go back of delimiter size
+                undecodedChunk.readerIndex(readerIndex);
                 try {
                     currentAttribute.addContent(
                             undecodedChunk.slice(readerIndex, lastPosition-readerIndex),
@@ -1234,6 +1235,7 @@ public class HttpPostRequestDecoder {
                 }
                 undecodedChunk.readerIndex(lastPosition);
             } else {
+                undecodedChunk.readerIndex(readerIndex);
                 try {
                     currentAttribute.addContent(
                             undecodedChunk.slice(readerIndex, lastPosition-readerIndex),
