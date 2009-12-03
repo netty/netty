@@ -79,10 +79,10 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     @Override
     public void addContent(ChannelBuffer buffer, boolean last) throws IOException {
         int localsize = buffer.readableBytes();
+        super.addContent(buffer, last);
         if (definedSize > 0 && definedSize < size + localsize) {
             definedSize = size + localsize;
         }
-        super.addContent(buffer, last);
     }
     @Override
     public int hashCode() {

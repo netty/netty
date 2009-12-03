@@ -1011,8 +1011,8 @@ public class HttpPostRequestDecoder {
     }
 
     /**
-     * Remove the given FileUpload from the list of FileUploads to clean
-     * @param fileUpload
+     * Remove the given data from the list of datas to clean
+     * @param data
      */
     public void removeHttpDataFromClean(InterfaceHttpData data) {
         factory.removeHttpDataFromClean(data);
@@ -1130,6 +1130,7 @@ public class HttpPostRequestDecoder {
                 }
             }
         }
+        undecodedChunk.readerIndex(readerIndex);
         ChannelBuffer buffer = undecodedChunk.slice(readerIndex, lastPosition -
                 readerIndex);
         if (found) {
