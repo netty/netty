@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.queue;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 
 /**
  * A {@link IOException} raised by {@link BlockingReadHandler} when no data
@@ -25,7 +26,7 @@ import java.io.IOException;
  * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
-public class BlockingReadTimeoutException extends IOException {
+public class BlockingReadTimeoutException extends InterruptedIOException {
 
     private static final long serialVersionUID = 356009226872649493L;
 
