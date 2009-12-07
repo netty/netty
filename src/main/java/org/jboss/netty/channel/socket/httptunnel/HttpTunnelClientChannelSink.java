@@ -16,7 +16,6 @@
 package org.jboss.netty.channel.socket.httptunnel;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 
 import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.ChannelEvent;
@@ -57,7 +56,7 @@ class HttpTunnelClientChannelSink extends AbstractChannelSink {
             break;
         case BOUND:
             if (e.getValue() != null) {
-                channel.onBindRequest((SocketAddress)e.getValue(), e.getFuture());
+                channel.onBindRequest((InetSocketAddress)e.getValue(), e.getFuture());
             } else {
                 channel.onUnbindRequest(e.getFuture());
             }

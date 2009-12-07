@@ -48,8 +48,6 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
     private final HttpTunnelClientWorkerOwner tunnelChannel;
 
     private String tunnelId = null;
-    // FIXME Unused field - safe to remove?
-    private String host;
 
     private final AtomicBoolean disconnecting;
     private ChannelStateEvent postShutdownEvent;

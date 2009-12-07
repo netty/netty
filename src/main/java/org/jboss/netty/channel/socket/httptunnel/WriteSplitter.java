@@ -29,33 +29,23 @@ import org.jboss.netty.buffer.ChannelBuffers;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @version $Rev$, $Date$
  */
-public class WriteSplitter {
-    // FIXME This class should be a static utility for efficiency.
+public final class WriteSplitter {
 
-    private final int splitThreshold;
-
-    public WriteSplitter(int splitThreshold) {
-        this.splitThreshold = splitThreshold;
-    }
-
-    public List<ChannelBuffer> split(ChannelBuffer buffer) {
+    public static List<ChannelBuffer> split(ChannelBuffer buffer, int splitThreshold) {
         int listSize = (int)((float)buffer.readableBytes() / splitThreshold);
         ArrayList<ChannelBuffer> fragmentList = new ArrayList<ChannelBuffer>(listSize);
 
-        int startReadIndex = buffer.readerIndex();
-
         if (buffer.readableBytes() > splitThreshold) {
-            while(buffer.readable()) {
-                // FIXME No need to copy. Just slice.
-                ChannelBuffer chunk = ChannelBuffers.buffer(Math.min(splitThreshold, buffer.readableBytes()));
-                buffer.readBytes(chunk);
+            int slicePosition = buffer.readerIndex();
+            while(slicePosition < buffer.writerIndex()) {
+                int chunkSize = Math.min(splitThreshold, buffer.writerIndex() - slicePosition);
+                ChannelBuffer chunk = buffer.slice(slicePosition, chunkSize);
                 fragmentList.add(chunk);
+                slicePosition += chunkSize;
             }
         } else {
             fragmentList.add(ChannelBuffers.wrappedBuffer(buffer));
         }
-
-        buffer.readerIndex(startReadIndex);
 
         return fragmentList;
     }

@@ -31,7 +31,6 @@ import org.jboss.netty.channel.ChannelFuture;
  * @version $Rev$, $Date$
  */
 interface HttpTunnelClientWorkerOwner {
-    // FIXME No public methods should be exposed to users.
     /**
      * The HTTP tunnel client sink invokes this when the application code requests the connection
      * of an HTTP tunnel to the specified remote address.

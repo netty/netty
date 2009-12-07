@@ -60,8 +60,7 @@ public class WriteFragmenter extends SimpleChannelDownstreamHandler {
         if (data.readableBytes() <= splitThreshold) {
             super.writeRequested(ctx, e);
         } else {
-            WriteSplitter splitter = new WriteSplitter(splitThreshold);
-            List<ChannelBuffer> fragments = splitter.split(data);
+            List<ChannelBuffer> fragments = WriteSplitter.split(data, splitThreshold);
             ChannelFutureAggregator aggregator = new ChannelFutureAggregator(e.getFuture());
             for(ChannelBuffer fragment : fragments) {
                 ChannelFuture fragmentFuture = Channels.future(ctx.getChannel(), true);

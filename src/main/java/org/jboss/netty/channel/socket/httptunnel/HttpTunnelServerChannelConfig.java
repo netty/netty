@@ -32,6 +32,7 @@ public class HttpTunnelServerChannelConfig implements ServerSocketChannelConfig 
 
     private ChannelPipelineFactory pipelineFactory;
     private final ServerSocketChannel realChannel;
+    private TunnelIdGenerator tunnelIdGenerator = new DefaultTunnelIdGenerator();
 
     public HttpTunnelServerChannelConfig(ServerSocketChannel realChannel) {
         this.realChannel = realChannel;
@@ -93,6 +94,9 @@ public class HttpTunnelServerChannelConfig implements ServerSocketChannelConfig 
         if (name.equals("pipelineFactory")) {
             setPipelineFactory((ChannelPipelineFactory) value);
             return true;
+        } else if(name.equals("tunnelIdGenerator")) {
+            setTunnelIdGenerator((TunnelIdGenerator) value);
+            return true;
         } else {
             return getWrappedConfig().setOption(name, value);
         }
@@ -107,4 +111,13 @@ public class HttpTunnelServerChannelConfig implements ServerSocketChannelConfig 
     public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
         this.pipelineFactory = pipelineFactory;
     }
+    
+    public void setTunnelIdGenerator(TunnelIdGenerator tunnelIdGenerator) {
+        this.tunnelIdGenerator = tunnelIdGenerator;
+    }
+    
+    public TunnelIdGenerator getTunnelIdGenerator() {
+        return tunnelIdGenerator;
+    }
+    
 }

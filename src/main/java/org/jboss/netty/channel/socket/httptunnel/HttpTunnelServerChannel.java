@@ -30,7 +30,7 @@ import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @version $Rev$, $Date$
  */
-public class HttpTunnelServerChannel extends AbstractServerChannel implements ServerSocketChannel, HttpTunnelAcceptedChannelFactory {
+public class HttpTunnelServerChannel extends AbstractServerChannel implements ServerSocketChannel {
 
     private final ServerSocketChannel realChannel;
     private final HttpTunnelServerChannelConfig config;
@@ -39,7 +39,7 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements Se
     protected HttpTunnelServerChannel(HttpTunnelServerChannelFactory factory, ChannelPipeline pipeline) {
         super(factory, pipeline, new HttpTunnelServerChannelSink());
 
-        messageSwitch = new ServerMessageSwitch(this);
+        messageSwitch = new ServerMessageSwitch(new TunnelCreator());
         realChannel = factory.createRealChannel(this, messageSwitch);
         HttpTunnelServerChannelSink sink = (HttpTunnelServerChannelSink) getPipeline().getSink();
         sink.setRealChannel(realChannel);
@@ -64,14 +64,24 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements Se
         return realChannel.isBound();
     }
 
-    public HttpTunnelAcceptedChannel newChannel(String newTunnelId, SocketAddress remoteAddress) {
-        ChannelPipeline childPipeline = null;
-        try {
-            childPipeline = getConfig().getPipelineFactory().getPipeline();
-        } catch(Exception e) {
-            throw new ChannelPipelineException("Failed to initialize a pipeline.", e);
+    /**
+     * Used to hide the newChannel method from the public API.
+     */
+    private final class TunnelCreator implements HttpTunnelAcceptedChannelFactory {
+    
+        public HttpTunnelAcceptedChannel newChannel(String newTunnelId, SocketAddress remoteAddress) {
+            ChannelPipeline childPipeline = null;
+            try {
+                childPipeline = getConfig().getPipelineFactory().getPipeline();
+            } catch(Exception e) {
+                throw new ChannelPipelineException("Failed to initialize a pipeline.", e);
+            }
+            HttpTunnelAcceptedChannelSink sink = new HttpTunnelAcceptedChannelSink(messageSwitch, newTunnelId);
+            return new HttpTunnelAcceptedChannel(HttpTunnelServerChannel.this, getFactory(), childPipeline, sink, remoteAddress);
         }
-        HttpTunnelAcceptedChannelSink sink = new HttpTunnelAcceptedChannelSink(messageSwitch, newTunnelId);
-        return new HttpTunnelAcceptedChannel(this, getFactory(), childPipeline, sink, remoteAddress);
+        
+        public String generateTunnelId() {
+            return config.getTunnelIdGenerator().generateId();
+        }
     }
 }

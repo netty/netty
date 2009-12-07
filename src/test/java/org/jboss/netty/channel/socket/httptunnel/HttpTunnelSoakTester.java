@@ -178,7 +178,7 @@ public class HttpTunnelSoakTester {
     private boolean pushData(Channel clientChannel) {
         long totalBytesSent = 0;
         long runStartTime = System.currentTimeMillis();
-        for(int i=0; i < 10000; i++) {
+        for(int i=0; i < 50000; i++) {
             byte[] randomBytesForSend = createRandomSizeByteArray();
             totalBytesSent += randomBytesForSend.length;
 
@@ -214,7 +214,7 @@ public class HttpTunnelSoakTester {
     }
 
     private Channel createClientChannel() {
-        InetSocketAddress serverAddress = new InetSocketAddress("10.0.1.22", SERVER_PORT);
+        InetSocketAddress serverAddress = new InetSocketAddress("localhost", SERVER_PORT);
         ChannelFuture clientChannelFuture = clientBootstrap.connect(serverAddress);
         try {
             if(!clientChannelFuture.await(1000, TimeUnit.MILLISECONDS)) {

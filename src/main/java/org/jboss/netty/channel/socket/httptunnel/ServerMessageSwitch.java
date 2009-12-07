@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -42,7 +41,6 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
     private static final InternalLogger LOG = InternalLoggerFactory.getInstance(ServerMessageSwitch.class.getName());
 
     private final String tunnelIdPrefix;
-    private final AtomicInteger tunnelIdSequence;
 
     private final HttpTunnelAcceptedChannelFactory newChannelFactory;
     private final ConcurrentHashMap<String, TunnelInfo> tunnelsById;
@@ -50,14 +48,11 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
     public ServerMessageSwitch(HttpTunnelAcceptedChannelFactory newChannelFactory) {
         this.newChannelFactory = newChannelFactory;
         tunnelIdPrefix = Long.toHexString(new Random().nextLong());
-        tunnelIdSequence = new AtomicInteger(0);
         tunnelsById = new ConcurrentHashMap<String, TunnelInfo>();
     }
 
     public String createTunnel(SocketAddress remoteAddress) {
-        // FIXME Tunnel ID must be generated from SecureRandom by default.
-        //       Add HttpTunnelServerChannelConfig.tunnelIdGenerator
-        String newTunnelId = tunnelIdPrefix + '_' + tunnelIdSequence.incrementAndGet();
+        String newTunnelId = String.format("%s_%s", tunnelIdPrefix, newChannelFactory.generateTunnelId());
         TunnelInfo newTunnel = new TunnelInfo();
         newTunnel.tunnelId = newTunnelId;
         tunnelsById.put(newTunnelId, newTunnel);
@@ -93,11 +88,6 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
 
     private void sendQueuedData(TunnelInfo state) {
         ConcurrentLinkedQueue<QueuedResponse> queuedData = state.queuedResponses;
-        if (queuedData.peek() == null) {
-            // no data to send, or it has already been dealt with by another thread
-            return;
-        }
-
         Channel responseChannel = state.responseChannel.getAndSet(null);
         if (responseChannel == null) {
             // no response channel, or another thread has already used it
@@ -108,6 +98,12 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
             LOG.debug("sending response for tunnel id " + state.tunnelId + " to " + responseChannel.getRemoteAddress());
         }
         QueuedResponse messageToSend = queuedData.poll();
+        if(messageToSend == null) {
+            // no data to send, restore the response channel and bail out
+            state.responseChannel.set(responseChannel);
+            return;
+        }
+        
         HttpResponse response = HttpTunnelMessageUtils.createRecvDataResponse(messageToSend.data);
         final ChannelFuture originalFuture = messageToSend.writeFuture;
         Channels.write(responseChannel, response).addListener(new ChannelFutureListener() {
@@ -147,10 +143,8 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, Serve
             return;
         }
 
-        WriteSplitter splitter = new WriteSplitter(HttpTunnelMessageUtils.MAX_BODY_SIZE);
-
         ChannelFutureAggregator aggregator = new ChannelFutureAggregator(writeFuture);
-        List<ChannelBuffer> fragments = splitter.split(data);
+        List<ChannelBuffer> fragments = WriteSplitter.split(data, HttpTunnelMessageUtils.MAX_BODY_SIZE);
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("routing outbound data for tunnel " + tunnelId);

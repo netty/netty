@@ -7,24 +7,16 @@ import java.util.List;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.junit.Before;
 import org.junit.Test;
 
 public class WriteSplitterTest {
 
     private static final int SPLIT_THRESHOLD = 1024;
 
-    private WriteSplitter splitter;
-
-    @Before
-    public void setUp() throws Exception {
-        splitter = new WriteSplitter(SPLIT_THRESHOLD);
-    }
-
     @Test
     public void testSplit_bufferUnderThreshold() {
         ChannelBuffer buffer = createBufferWithContents(800);
-        List<ChannelBuffer> fragments = splitter.split(buffer);
+        List<ChannelBuffer> fragments = WriteSplitter.split(buffer, SPLIT_THRESHOLD);
         assertNotNull(fragments);
         assertEquals(1, fragments.size());
     }
@@ -32,7 +24,7 @@ public class WriteSplitterTest {
     @Test
     public void testSplit_bufferMatchesThreshold() {
         ChannelBuffer buffer = createBufferWithContents(SPLIT_THRESHOLD);
-        List<ChannelBuffer> fragments = splitter.split(buffer);
+        List<ChannelBuffer> fragments = WriteSplitter.split(buffer, SPLIT_THRESHOLD);
         assertNotNull(fragments);
         assertEquals(1, fragments.size());
     }
@@ -40,7 +32,7 @@ public class WriteSplitterTest {
     @Test
     public void testSplit_bufferOverThreshold() {
         ChannelBuffer buffer = createBufferWithContents((int)(SPLIT_THRESHOLD * 1.5));
-        List<ChannelBuffer> fragments = splitter.split(buffer);
+        List<ChannelBuffer> fragments = WriteSplitter.split(buffer, SPLIT_THRESHOLD);
         assertNotNull(fragments);
         assertEquals(2, fragments.size());
 
@@ -53,7 +45,7 @@ public class WriteSplitterTest {
     @Test
     public void testSplit_largeNumberOfFragments() {
         ChannelBuffer buffer = createBufferWithContents(SPLIT_THRESHOLD * 250);
-        List<ChannelBuffer> fragments = splitter.split(buffer);
+        List<ChannelBuffer> fragments = WriteSplitter.split(buffer, SPLIT_THRESHOLD);
         assertNotNull(fragments);
         assertEquals(250, fragments.size());
 

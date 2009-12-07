@@ -43,7 +43,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @version $Rev$, $Date$
  */
-public class HttpTunnelClientChannel extends AbstractChannel implements SocketChannel, HttpTunnelClientWorkerOwner {
+public class HttpTunnelClientChannel extends AbstractChannel implements SocketChannel {
 
     private final HttpTunnelClientChannelConfig config;
 
@@ -57,11 +57,15 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
 
     InetSocketAddress serverAddress;
     private String serverHostName;
+    
+    private WorkerCallbacks callbackProxy;
 
 
     protected HttpTunnelClientChannel(ChannelFactory factory, ChannelPipeline pipeline, HttpTunnelClientChannelSink sink, ClientSocketChannelFactory outboundFactory, ChannelGroup realConnections) {
         super(null, factory, pipeline, sink);
 
+        this.callbackProxy = new WorkerCallbacks();
+        
         sendChannel = outboundFactory.newChannel(createSendPipeline());
         pollChannel = outboundFactory.newChannel(createPollPipeline());
         config = new HttpTunnelClientChannelConfig(sendChannel.getConfig(), pollChannel.getConfig());
@@ -93,12 +97,11 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
         return serverAddress;
     }
 
-    public void onMessageReceived(ChannelBuffer content) {
-        Channels.fireMessageReceived(this, content);
-    }
+    
 
+    
     public void onConnectRequest(ChannelFuture connectFuture, InetSocketAddress remoteAddress) {
-        this.connectFuture = connectFuture;
+        HttpTunnelClientChannel.this.connectFuture = connectFuture;
         /* if we are using a proxy, the remoteAddress is swapped here for the address of the proxy.
          * The send and poll channels can later ask for the correct server address using
          * getServerHostName().
@@ -127,12 +130,12 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
         });
     }
 
-    public void onBindRequest(SocketAddress localAddress, final ChannelFuture bindFuture) {
+    public void onBindRequest(InetSocketAddress localAddress, final ChannelFuture bindFuture) {
         ChannelFutureListener bindListener = new ConsolidatingFutureListener(bindFuture, 2);
-        // FIXME This will always fail since we cannot bind to the same local address twice.
-        //       Perhaps we should simply do nothing?
+        // bind the send channel to the specified local address, and the poll channel to
+        // an ephemeral port on the same interface as the send channel
         sendChannel.bind(localAddress).addListener(bindListener);
-        pollChannel.bind(localAddress).addListener(bindListener);
+        pollChannel.bind(new InetSocketAddress(localAddress.getAddress(), 0)).addListener(bindListener);
     }
 
     public void onUnbindRequest(final ChannelFuture unbindFuture) {
@@ -147,11 +150,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
         pollChannel.close().addListener(closeListener);
     }
 
-    public void onTunnelOpened(String tunnelId) {
-        this.tunnelId = tunnelId;
-        setTunnelIdForPollChannel();
-        Channels.connect(pollChannel, sendChannel.getRemoteAddress());
-    }
+    
 
     private ChannelPipeline createSendPipeline() {
         ChannelPipeline pipeline = Channels.pipeline();
@@ -159,7 +158,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
         pipeline.addLast("reqencoder", new HttpRequestEncoder()); // downstream
         pipeline.addLast("respdecoder", new HttpResponseDecoder()); // upstream
         pipeline.addLast("aggregator", new HttpChunkAggregator(HttpTunnelMessageUtils.MAX_BODY_SIZE)); // upstream
-        pipeline.addLast("sendHandler", new HttpTunnelClientSendHandler(this)); // both
+        pipeline.addLast("sendHandler", new HttpTunnelClientSendHandler(callbackProxy)); // both
         pipeline.addLast("writeFragmenter", new WriteFragmenter(HttpTunnelMessageUtils.MAX_BODY_SIZE));
 
         return pipeline;
@@ -171,7 +170,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
         pipeline.addLast("reqencoder", new HttpRequestEncoder()); // downstream
         pipeline.addLast("respdecoder", new HttpResponseDecoder()); // upstream
         pipeline.addLast("aggregator", new HttpChunkAggregator(HttpTunnelMessageUtils.MAX_BODY_SIZE)); // upstream
-        pipeline.addLast(HttpTunnelClientPollHandler.NAME, new HttpTunnelClientPollHandler(this)); // both
+        pipeline.addLast(HttpTunnelClientPollHandler.NAME, new HttpTunnelClientPollHandler(callbackProxy)); // both
 
         return pipeline;
     }
@@ -181,16 +180,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
         pollHandler.setTunnelId(tunnelId);
     }
 
-    public void fullyEstablished() {
-        if (!bound) {
-            bound = true;
-            Channels.fireChannelBound(this, getLocalAddress());
-        }
-
-        connected = true;
-        connectFuture.setSuccess();
-        Channels.fireChannelConnected(this, getRemoteAddress());
-    }
+    
 
     public void sendData(MessageEvent e) {
         final ChannelFuture originalFuture = e.getFuture();
@@ -204,14 +194,6 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
                 }
             }
         });
-    }
-
-    public String getServerHostName() {
-        if (serverHostName == null) {
-            serverHostName = HttpTunnelMessageUtils.convertToHostString(serverAddress);
-        }
-
-        return serverHostName;
     }
 
     private static final class ConsolidatingFutureListener implements ChannelFutureListener {
@@ -231,5 +213,46 @@ public class HttpTunnelClientChannel extends AbstractChannel implements SocketCh
                 completionFuture.setSuccess();
             }
         }
+    }
+    
+    /**
+     * Contains the implementing methods of HttpTunnelClientWorkerOwner, so that these are hidden
+     * from the public API.
+     */
+    private class WorkerCallbacks implements HttpTunnelClientWorkerOwner {
+        
+        public void onConnectRequest(ChannelFuture connectFuture, InetSocketAddress remoteAddress) {
+            HttpTunnelClientChannel.this.onConnectRequest(connectFuture, remoteAddress);
+        }
+        
+        public void onTunnelOpened(String tunnelId) {
+            HttpTunnelClientChannel.this.tunnelId = tunnelId;
+            setTunnelIdForPollChannel();
+            Channels.connect(pollChannel, sendChannel.getRemoteAddress());
+        }
+        
+        public void fullyEstablished() {
+            if (!bound) {
+                bound = true;
+                Channels.fireChannelBound(HttpTunnelClientChannel.this, getLocalAddress());
+            }
+
+            connected = true;
+            connectFuture.setSuccess();
+            Channels.fireChannelConnected(HttpTunnelClientChannel.this, getRemoteAddress());
+        }
+        
+        public void onMessageReceived(ChannelBuffer content) {
+            Channels.fireMessageReceived(HttpTunnelClientChannel.this, content);
+        }
+        
+        public String getServerHostName() {
+            if (serverHostName == null) {
+                serverHostName = HttpTunnelMessageUtils.convertToHostString(serverAddress);
+            }
+
+            return serverHostName;
+        }
+        
     }
 }

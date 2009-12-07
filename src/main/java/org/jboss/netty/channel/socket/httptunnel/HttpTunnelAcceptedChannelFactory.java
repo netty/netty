@@ -29,7 +29,6 @@ import org.jboss.netty.channel.Channel;
  * @version $Rev$, $Date$
  */
 interface HttpTunnelAcceptedChannelFactory {
-    // FIXME This method should not be exposed to users (should be package-private)
     public Channel newChannel(String newTunnelId, SocketAddress remoteAddress);
-
+    public String generateTunnelId();
 }

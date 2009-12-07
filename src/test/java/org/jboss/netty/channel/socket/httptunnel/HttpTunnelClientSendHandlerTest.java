@@ -74,7 +74,7 @@ public class HttpTunnelClientSendHandlerTest {
         channel.write(NettyTestUtils.createData(1234L));
         assertEquals(1, sink.events.size());
         ChannelEvent sentEvent = sink.events.poll();
-        checkIsSendDataRequestWithData(sentEvent, "10.0.0.2:12345", NettyTestUtils.createData(1234L));
+        checkIsSendDataRequestWithData(sentEvent, NettyTestUtils.createData(1234L));
     }
 
     @Test
@@ -94,14 +94,14 @@ public class HttpTunnelClientSendHandlerTest {
 
         channel.write(NettyTestUtils.createData(1234L));
         assertEquals(1, sink.events.size());
-        checkIsSendDataRequestWithData(sink.events.poll(), "10.0.0.2:12345", NettyTestUtils.createData(1234L));
+        checkIsSendDataRequestWithData(sink.events.poll(), NettyTestUtils.createData(1234L));
 
         channel.write(NettyTestUtils.createData(5678L));
         assertEquals(0, sink.events.size());
 
         Channels.fireMessageReceived(channel, HttpTunnelMessageUtils.createSendDataResponse());
         assertEquals(1, sink.events.size());
-        checkIsSendDataRequestWithData(sink.events.poll(), "10.0.0.2:12345", NettyTestUtils.createData(5678L));
+        checkIsSendDataRequestWithData(sink.events.poll(), NettyTestUtils.createData(5678L));
     }
 
     @Test
@@ -110,7 +110,7 @@ public class HttpTunnelClientSendHandlerTest {
 
         channel.write(NettyTestUtils.createData(1234L));
         assertEquals(1, sink.events.size());
-        checkIsSendDataRequestWithData(sink.events.poll(), "10.0.0.2:12345", NettyTestUtils.createData(1234L));
+        checkIsSendDataRequestWithData(sink.events.poll(), NettyTestUtils.createData(1234L));
 
         channel.disconnect();
         Channels.fireMessageReceived(channel, HttpTunnelMessageUtils.createSendDataResponse());
@@ -146,8 +146,7 @@ public class HttpTunnelClientSendHandlerTest {
         assertFalse(channel.write(NettyTestUtils.createData(1234L)).isSuccess());
     }
 
-    // FIXME expectedHost is unused.  Safe to remove?
-    private void checkIsSendDataRequestWithData(ChannelEvent event, String expectedHost, ChannelBuffer data) {
+    private void checkIsSendDataRequestWithData(ChannelEvent event, ChannelBuffer data) {
         assertTrue(event instanceof DownstreamMessageEvent);
         DownstreamMessageEvent messageEvent = (DownstreamMessageEvent) event;
         assertTrue(messageEvent.getMessage() instanceof HttpRequest);
