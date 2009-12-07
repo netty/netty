@@ -15,7 +15,7 @@
  */
 
 /**
- * A collection of special-purpose handlers that store an event into their
- * internal queue instead of propagating the event immediately.
+ * The special-purpose handlers that store an event into an internal queue
+ * instead of propagating the event immediately.
  */
 package org.jboss.netty.handler.queue;
