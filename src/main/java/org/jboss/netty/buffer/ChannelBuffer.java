@@ -430,8 +430,8 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *        the expected minimum number of writable bytes
      * @throws IndexOutOfBoundsException
      *         if {@linkplain #writableBytes() the writable bytes} of this
-     *         buffer is less than the specified value and the capacity of the
-     *         buffer cannot be expanded
+     *         buffer is less than the specified value and if this buffer is
+     *         not a dynamic buffer
      */
     void ensureWritableBytes(int writableBytes);
 
