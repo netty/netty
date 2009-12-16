@@ -57,6 +57,10 @@ public final class HttpHeaders {
          */
         public static final String ACCEPT_RANGES= "Accept-Ranges";
         /**
+         * {@code "Accept-Patch"}
+         */
+        public static final String ACCEPT_PATCH= "Accept-Patch";
+        /**
          * {@code "Age"}
          */
         public static final String AGE = "Age";

@@ -62,6 +62,12 @@ public class HttpMethod implements Comparable<HttpMethod> {
     public static final HttpMethod PUT = new HttpMethod("PUT");
 
     /**
+     * The PATCH method requests that a set of changes described in the
+     * request entity be applied to the resource identified by the Request-URI.
+     */
+    public static final HttpMethod PATCH = new HttpMethod("PATCH");
+
+    /**
      * The DELETE method requests that the origin server delete the resource identified by the Request-URI.
      */
     public static final HttpMethod DELETE = new HttpMethod("DELETE");
@@ -85,6 +91,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
         methodMap.put(HEAD.toString(), HEAD);
         methodMap.put(POST.toString(), POST);
         methodMap.put(PUT.toString(), PUT);
+        methodMap.put(PATCH.toString(), PATCH);
         methodMap.put(DELETE.toString(), DELETE);
         methodMap.put(TRACE.toString(), TRACE);
         methodMap.put(CONNECT.toString(), CONNECT);

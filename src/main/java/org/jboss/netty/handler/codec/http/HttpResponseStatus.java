@@ -40,6 +40,11 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     public static final HttpResponseStatus SWITCHING_PROTOCOLS = new HttpResponseStatus(101, "Switching Protocols");
 
     /**
+     * 102 Processing (WebDAV, RFC2518)
+     */
+    public static final HttpResponseStatus PROCESSING = new HttpResponseStatus(102, "Processing");
+
+    /**
      * 200 OK
      */
     public static final HttpResponseStatus OK = new HttpResponseStatus(200, "OK");
@@ -55,7 +60,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     public static final HttpResponseStatus ACCEPTED = new HttpResponseStatus(202, "Accepted");
 
     /**
-     * 203 Non-Authoritative Information
+     * 203 Non-Authoritative Information (since HTTP/1.1)
      */
     public static final HttpResponseStatus NON_AUTHORITATIVE_INFORMATION = new HttpResponseStatus(203, "Non-Authoritative Information");
 
@@ -75,6 +80,11 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     public static final HttpResponseStatus PARTIAL_CONTENT = new HttpResponseStatus(206, "Partial Content");
 
     /**
+     * 207 Multi-Status (WebDAV, RFC2518)
+     */
+    public static final HttpResponseStatus MULTI_STATUS = new HttpResponseStatus(207, "Multi-Status");
+
+    /**
      * 300 Multiple Choices
      */
     public static final HttpResponseStatus MULTIPLE_CHOICES = new HttpResponseStatus(300, "Multiple Choices");
@@ -90,7 +100,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     public static final HttpResponseStatus FOUND = new HttpResponseStatus(302, "Found");
 
     /**
-     * 303 See Other
+     * 303 See Other (since HTTP/1.1)
      */
     public static final HttpResponseStatus SEE_OTHER = new HttpResponseStatus(303, "See Other");
 
@@ -100,12 +110,12 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     public static final HttpResponseStatus NOT_MODIFIED = new HttpResponseStatus(304, "Not Modified");
 
     /**
-     * 305 Use Proxy
+     * 305 Use Proxy (since HTTP/1.1)
      */
     public static final HttpResponseStatus USE_PROXY = new HttpResponseStatus(305, "Use Proxy");
 
     /**
-     * 307 Temporary Redirect
+     * 307 Temporary Redirect (since HTTP/1.1)
      */
     public static final HttpResponseStatus TEMPORARY_REDIRECT = new HttpResponseStatus(307, "Temporary Redirect");
 
@@ -200,6 +210,31 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     public static final HttpResponseStatus EXPECTATION_FAILED = new HttpResponseStatus(417, "Expectation Failed");
 
     /**
+     * 422 Unprocessable Entity (WebDAV, RFC4918)
+     */
+    public static final HttpResponseStatus UNPROCESSABLE_ENTITY = new HttpResponseStatus(422, "Unprocessable Entity");
+
+    /**
+     * 423 Locked (WebDAV, RFC4918)
+     */
+    public static final HttpResponseStatus LOCKED = new HttpResponseStatus(423, "Locked");
+
+    /**
+     * 424 Failed Dependency (WebDAV, RFC4918)
+     */
+    public static final HttpResponseStatus FAILED_DEPENDENCY = new HttpResponseStatus(424, "Failed Dependency");
+
+    /**
+     * 425 Unordered Collection (WebDAV, RFC3648)
+     */
+    public static final HttpResponseStatus UNORDERED_COLLECTION = new HttpResponseStatus(425, "Unordered Collection");
+
+    /**
+     * 426 Upgrade Required (RFC2817)
+     */
+    public static final HttpResponseStatus UPGRADE_REQUIRED = new HttpResponseStatus(426, "Upgrade Required");
+
+    /**
      * 500 Internal Server Error
      */
     public static final HttpResponseStatus INTERNAL_SERVER_ERROR = new HttpResponseStatus(500, "Internal Server Error");
@@ -230,6 +265,21 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     public static final HttpResponseStatus HTTP_VERSION_NOT_SUPPORTED = new HttpResponseStatus(505, "HTTP Version Not Supported");
 
     /**
+     * 506 Variant Also Negotiates (RFC2295)
+     */
+    public static final HttpResponseStatus VARIANT_ALSO_NEGOTIATES = new HttpResponseStatus(506, "Variant Also Negotiates");
+
+    /**
+     * 507 Insufficient Storage (WebDAV, RFC4918)
+     */
+    public static final HttpResponseStatus INSUFFICIENT_STORAGE = new HttpResponseStatus(507, "Insufficient Storage");
+
+    /**
+     * 510 Not Extended (RFC2774)
+     */
+    public static final HttpResponseStatus NOT_EXTENDED = new HttpResponseStatus(510, "Not Extended");
+
+    /**
      * Returns the {@link HttpResponseStatus} represented by the specified code.
      * If the specified code is a standard HTTP status code, a cached instance
      * will be returned.  Otherwise, a new instance will be returned.
@@ -240,6 +290,8 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             return CONTINUE;
         case 101:
             return SWITCHING_PROTOCOLS;
+        case 102:
+            return PROCESSING;
         case 200:
             return OK;
         case 201:
@@ -254,6 +306,8 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             return RESET_CONTENT;
         case 206:
             return PARTIAL_CONTENT;
+        case 207:
+            return MULTI_STATUS;
         case 300:
             return MULTIPLE_CHOICES;
         case 301:
@@ -304,6 +358,16 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             return REQUESTED_RANGE_NOT_SATISFIABLE;
         case 417:
             return EXPECTATION_FAILED;
+        case 422:
+            return UNPROCESSABLE_ENTITY;
+        case 423:
+            return LOCKED;
+        case 424:
+            return FAILED_DEPENDENCY;
+        case 425:
+            return UNORDERED_COLLECTION;
+        case 426:
+            return UPGRADE_REQUIRED;
         case 500:
             return INTERNAL_SERVER_ERROR;
         case 501:
@@ -316,6 +380,12 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             return GATEWAY_TIMEOUT;
         case 505:
             return HTTP_VERSION_NOT_SUPPORTED;
+        case 506:
+            return VARIANT_ALSO_NEGOTIATES;
+        case 507:
+            return INSUFFICIENT_STORAGE;
+        case 510:
+            return NOT_EXTENDED;
         }
 
         final String reasonPhrase;
