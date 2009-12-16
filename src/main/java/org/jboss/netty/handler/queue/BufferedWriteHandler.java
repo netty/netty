@@ -103,9 +103,9 @@ public class BufferedWriteHandler extends SimpleChannelDownstreamHandler {
     }
 
     /**
-     * Creates a new instance with the specified unbounded {@link Queue}.
-     * Please note that specifying a bounded {@link Queue} might result in
-     * an unspecified behavior.
+     * Creates a new instance with the specified thread-safe unbounded
+     * {@link Queue}.  Please note that specifying a bounded {@link Queue} or
+     * a thread-unsafe {@link Queue} will result in an unspecified behavior.
      */
     public BufferedWriteHandler(Queue<MessageEvent> queue) {
         if (queue == null) {
