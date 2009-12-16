@@ -414,6 +414,28 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     void discardReadBytes();
 
     /**
+     * Makes sure the number of {@linkplain #writableBytes() the writable bytes}
+     * is equal to or greater than the specified value.  If there is enough
+     * writable bytes in this buffer, this method returns with no side effect.
+     * Otherwise:
+     * <ul>
+     * <li>a non-dynamic buffer will throw an {@link IndexOutOfBoundsException}.</li>
+     * <li>a dynamic buffer will expand its capacity so that the number of the
+     *     {@link #writableBytes() writable bytes} becomes equal to or greater
+     *     than the specified value. The expansion involves the reallocation of
+     *     the internal buffer and consequently memory copy.</li>
+     * </ul>
+     *
+     * @param writableBytes
+     *        the expected minimum number of writable bytes
+     * @throws IndexOutOfBoundsException
+     *         if {@linkplain #writableBytes() the writable bytes} of this
+     *         buffer is less than the specified value and the capacity of the
+     *         buffer cannot be expanded
+     */
+    void ensureWritableBytes(int writableBytes);
+
+    /**
      * Gets a byte at the specified absolute {@code index} in this buffer.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.

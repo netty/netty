@@ -116,6 +116,12 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         readerIndex = 0;
     }
 
+    public void ensureWritableBytes(int writableBytes) {
+        if (writableBytes > writableBytes()) {
+            throw new IndexOutOfBoundsException();
+        }
+    }
+
     public short getUnsignedByte(int index) {
         return (short) (getByte(index) & 0xFF);
     }

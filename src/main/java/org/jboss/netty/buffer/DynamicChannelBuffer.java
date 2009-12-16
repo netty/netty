@@ -64,6 +64,28 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         buffer = factory.getBuffer(order(), estimatedLength);
     }
 
+    @Override
+    public void ensureWritableBytes(int minWritableBytes) {
+        if (minWritableBytes <= writableBytes()) {
+            return;
+        }
+
+        int newCapacity;
+        if (capacity() == 0) {
+            newCapacity = 1;
+        } else {
+            newCapacity = capacity();
+        }
+        int minNewCapacity = writerIndex() + minWritableBytes;
+        while (newCapacity < minNewCapacity) {
+            newCapacity <<= 1;
+        }
+
+        ChannelBuffer newBuffer = factory().getBuffer(order(), newCapacity);
+        newBuffer.writeBytes(buffer, 0, writerIndex());
+        buffer = newBuffer;
+    }
+
     public ChannelBufferFactory factory() {
         return factory;
     }
@@ -270,26 +292,5 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
 
     public String toString(int index, int length, String charsetName) {
         return buffer.toString(index, length, charsetName);
-    }
-
-    private void ensureWritableBytes(int requestedBytes) {
-        if (requestedBytes <= writableBytes()) {
-            return;
-        }
-
-        int newCapacity;
-        if (capacity() == 0) {
-            newCapacity = 1;
-        } else {
-            newCapacity = capacity();
-        }
-        int minNewCapacity = writerIndex() + requestedBytes;
-        while (newCapacity < minNewCapacity) {
-            newCapacity <<= 1;
-        }
-
-        ChannelBuffer newBuffer = factory().getBuffer(order(), newCapacity);
-        newBuffer.writeBytes(buffer, 0, writerIndex());
-        buffer = newBuffer;
     }
 }

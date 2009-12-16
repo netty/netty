@@ -95,6 +95,10 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         throw new UnreplayableOperationException();
     }
 
+    public void ensureWritableBytes(int writableBytes) {
+        throw new UnreplayableOperationException();
+    }
+
     public ChannelBuffer duplicate() {
         throw new UnreplayableOperationException();
     }
