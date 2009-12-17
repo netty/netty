@@ -136,13 +136,6 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
     }
 
     @Override
-    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
-            throws Exception {
-        initialize(ctx);
-        ctx.sendUpstream(e);
-    }
-
-    @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         destroy();
