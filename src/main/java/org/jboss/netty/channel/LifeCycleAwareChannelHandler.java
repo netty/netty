@@ -19,6 +19,15 @@ package org.jboss.netty.channel;
  * A {@link ChannelHandler} that is notified when it is added to or removed
  * from a {@link ChannelPipeline}.
  *
+ * <h3>Invalid access to the {@link ChannelHandlerContext}</h3>
+ *
+ * Calling {@link ChannelHandlerContext#sendUpstream(ChannelEvent)} or
+ * {@link ChannelHandlerContext#sendDownstream(ChannelEvent)} in
+ * {@link #beforeAdd(ChannelHandlerContext)} or {@link #afterRemove(ChannelHandlerContext)}
+ * will lead to an unexpected behavior.  It is because the context object has
+ * not been fully added to the pipeline or the context object is not a part of
+ * the pipeline anymore respectively.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
