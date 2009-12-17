@@ -15,7 +15,7 @@
  */
 
 /**
- * Encoder and decoder which compresses and decompresses {@link ChannelBuffer}s
+ * Encoder and decoder which compresses and decompresses {@link org.jboss.netty.buffer.ChannelBuffer}s
  * in a compression format such as <a href="http://en.wikipedia.org/wiki/Zlib">zlib</a>
  * and <a href="http://en.wikipedia.org/wiki/Gzip">gzip</a>.
  *
