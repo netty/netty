@@ -58,7 +58,7 @@ public class SecureChatClientHandler extends SimpleChannelUpstreamHandler {
         SslHandler sslHandler = ctx.getPipeline().get(SslHandler.class);
 
         // Begin handshake.
-        sslHandler.handshake(e.getChannel());
+        sslHandler.handshake();
     }
 
     @Override

@@ -183,7 +183,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
 
                         SslHandler sslHandler = new SslHandler(engine);
                         realChannel.getPipeline().addFirst("ssl", sslHandler);
-                        sslHandshakeFuture = sslHandler.handshake(realChannel);
+                        sslHandshakeFuture = sslHandler.handshake();
                     }
 
                     // Send the HTTP request.

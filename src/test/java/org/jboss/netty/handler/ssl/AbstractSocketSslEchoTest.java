@@ -130,7 +130,7 @@ public abstract class AbstractSocketSslEchoTest {
         assertTrue(ccf.isSuccess());
 
         Channel cc = ccf.getChannel();
-        ChannelFuture hf = cc.getPipeline().get(SslHandler.class).handshake(cc);
+        ChannelFuture hf = cc.getPipeline().get(SslHandler.class).handshake();
         hf.awaitUninterruptibly();
         if (!hf.isSuccess()) {
             logger.error("Handshake failed", hf.getCause());

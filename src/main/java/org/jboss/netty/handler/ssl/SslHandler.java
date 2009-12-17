@@ -45,6 +45,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.logging.InternalLogger;
@@ -130,7 +131,9 @@ import org.jboss.netty.util.internal.ImmediateExecutor;
  * @apiviz.landmark
  * @apiviz.uses org.jboss.netty.handler.ssl.SslBufferPool
  */
-public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler {
+public class SslHandler extends FrameDecoder
+                        implements ChannelDownstreamHandler,
+                                   LifeCycleAwareChannelHandler {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SslHandler.class);
@@ -154,6 +157,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
         return defaultBufferPool;
     }
 
+    private volatile ChannelHandlerContext ctx;
     private final SSLEngine engine;
     private final SslBufferPool bufferPool;
     private final Executor delegatedTaskExecutor;
@@ -305,7 +309,9 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
      * @return a {@link ChannelFuture} which is notified when the handshake
      *         succeeds or fails.
      */
-    public ChannelFuture handshake(Channel channel) {
+    public ChannelFuture handshake() {
+        ChannelHandlerContext ctx = this.ctx;
+        Channel channel = ctx.getChannel();
         ChannelFuture handshakeFuture;
         synchronized (handshakeLock) {
             if (handshaking) {
@@ -323,7 +329,7 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
         }
 
         try {
-            wrapNonAppData(context(channel), channel);
+            wrapNonAppData(ctx, channel);
         } catch (SSLException e) {
             handshakeFuture.setFailure(e);
         }
@@ -331,12 +337,21 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
     }
 
     /**
+     * @deprecated Use {@link #handshake()} instead.
+     */
+    @Deprecated
+    public ChannelFuture handshake(@SuppressWarnings("unused") Channel channel) {
+        return handshake();
+    }
+
+    /**
      * Sends an SSL {@code close_notify} message to the specified channel and
      * destroys the underlying {@link SSLEngine}.
      */
-    public ChannelFuture close(Channel channel) {
+    public ChannelFuture close() {
+        ChannelHandlerContext ctx = this.ctx;
+        Channel channel = ctx.getChannel();
         try {
-            ChannelHandlerContext ctx = context(channel);
             engine.closeOutbound();
             return wrapNonAppData(ctx, channel);
         } catch (SSLException e) {
@@ -344,8 +359,12 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
         }
     }
 
-    private ChannelHandlerContext context(Channel channel) {
-        return channel.getPipeline().getContext(this);
+    /**
+     * @deprecated Use {@link #close()} instead.
+     */
+    @Deprecated
+    public ChannelFuture close(@SuppressWarnings("unused") Channel channel) {
+        return close();
     }
 
     public void handleDownstream(
@@ -927,5 +946,21 @@ public class SslHandler extends FrameDecoder implements ChannelDownstreamHandler
                 Channels.close(context, e.getFuture());
             }
         }
+    }
+
+    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+    }
+
+    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
+        // Unused
+    }
+
+    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
+        // Unused
+    }
+
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        // Unused
     }
 }
