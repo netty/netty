@@ -61,19 +61,19 @@ import org.jboss.netty.util.internal.ImmediateExecutor;
  * <h3>Beginning the handshake</h3>
  * <p>
  * You must make sure not to write a message while the
- * {@linkplain #handshake(Channel) handshake} is in progress unless you are
+ * {@linkplain #handshake() handshake} is in progress unless you are
  * renegotiating.  You will be notified by the {@link ChannelFuture} which is
- * returned by the {@link #handshake(Channel)} method when the handshake
+ * returned by the {@link #handshake()} method when the handshake
  * process succeeds or fails.
  *
  * <h3>Renegotiation</h3>
  * <p>
  * Once the initial handshake is done successfully.  You can always call
- * {@link #handshake(Channel)} again to renegotiate the SSL session parameters.
+ * {@link #handshake()} again to renegotiate the SSL session parameters.
  *
  * <h3>Closing the session</h3>
  * <p>
- * To close the SSL session, the {@link #close(Channel)} method should be
+ * To close the SSL session, the {@link #close()} method should be
  * called to send the {@code close_notify} message to the remote peer.  One
  * exception is when you close the {@link Channel} - {@link SslHandler}
  * intercepts the close request and send the {@code close_notify} message
@@ -120,7 +120,7 @@ import org.jboss.netty.util.internal.ImmediateExecutor;
  * <li>create a new {@link SslHandler} instance with {@code startTls} flag set
  *     to {@code false},</li>
  * <li>insert the {@link SslHandler} to the {@link ChannelPipeline}, and</li>
- * <li>Initiate SSL handshake by calling {@link SslHandler#handshake(Channel)}.</li>
+ * <li>Initiate SSL handshake by calling {@link SslHandler#handshake()}.</li>
  * </ol>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
