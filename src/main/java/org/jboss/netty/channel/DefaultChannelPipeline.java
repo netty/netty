@@ -327,10 +327,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             return;
         }
 
-        if (!isAttached()) {
-            return;
-        }
-
         LifeCycleAwareChannelHandler h =
             (LifeCycleAwareChannelHandler) ctx.getHandler();
 
@@ -345,10 +341,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callAfterAdd(ChannelHandlerContext ctx) {
         if (!(ctx.getHandler() instanceof LifeCycleAwareChannelHandler)) {
-            return;
-        }
-
-        if (!isAttached()) {
             return;
         }
 
@@ -383,10 +375,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             return;
         }
 
-        if (!isAttached()) {
-            return;
-        }
-
         LifeCycleAwareChannelHandler h =
             (LifeCycleAwareChannelHandler) ctx.getHandler();
 
@@ -401,10 +389,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callAfterRemove(ChannelHandlerContext ctx) {
         if (!(ctx.getHandler() instanceof LifeCycleAwareChannelHandler)) {
-            return;
-        }
-
-        if (!isAttached()) {
             return;
         }
 
@@ -642,9 +626,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void init(String name, ChannelHandler handler) {
         DefaultChannelHandlerContext ctx = new DefaultChannelHandlerContext(null, null, name, handler);
+        callBeforeAdd(ctx);
         head = tail = ctx;
         name2ctx.clear();
         name2ctx.put(name, ctx);
+        callAfterAdd(ctx);
     }
 
     private void checkDuplicateName(String name) {
