@@ -27,6 +27,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 import org.jboss.netty.util.internal.jzlib.JZlib;
 import org.jboss.netty.util.internal.jzlib.ZStream;
@@ -40,12 +41,13 @@ import org.jboss.netty.util.internal.jzlib.ZStream;
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("one")
-public class ZlibEncoder extends OneToOneEncoder {
+public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChannelHandler {
 
     private static final byte[] EMPTY_ARRAY = new byte[0];
 
     private final ZStream z = new ZStream();
     private final AtomicBoolean finished = new AtomicBoolean();
+    private volatile ChannelHandlerContext ctx;
 
     /**
      * Creates a new zlib encoder with the default compression level ({@code 6})
@@ -161,8 +163,12 @@ public class ZlibEncoder extends OneToOneEncoder {
         }
     }
 
-    public ChannelFuture close(Channel channel) {
-        return finishEncode(channel.getPipeline().getContext(this), null);
+    public ChannelFuture close() {
+        ChannelHandlerContext ctx = this.ctx;
+        if (ctx == null) {
+            throw new IllegalStateException("not added to a pipeline");
+        }
+        return finishEncode(ctx, null);
     }
 
     public boolean isClosed() {
@@ -303,5 +309,21 @@ public class ZlibEncoder extends OneToOneEncoder {
         }
 
         return future;
+    }
+
+    public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+    }
+
+    public void afterAdd(ChannelHandlerContext ctx) throws Exception {
+        // Unused
+    }
+
+    public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
+        // Unused
+    }
+
+    public void afterRemove(ChannelHandlerContext ctx) throws Exception {
+        // Unused
     }
 }
