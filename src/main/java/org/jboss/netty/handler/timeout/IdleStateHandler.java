@@ -206,6 +206,9 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
             // this.channelOpen() will not be invoked.
             // We have to initialize here instead.
             initialize(ctx);
+        } else {
+            // channelOpen event has not been fired yet.
+            // this.channelOpen() will be invoked and initialization will occur there.
         }
     }
 
