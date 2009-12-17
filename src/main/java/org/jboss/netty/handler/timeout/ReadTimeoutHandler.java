@@ -120,7 +120,10 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
     }
 
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        initialize(ctx);
+        if (ctx.getPipeline().isAttached()) {
+            // channelOpen() has been called already - initialize here instead.
+            initialize(ctx);
+        }
     }
 
     public void afterAdd(ChannelHandlerContext ctx) throws Exception {
@@ -138,7 +141,7 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
     @Override
     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
-        updateLastReadTime();
+        initialize(ctx);
         ctx.sendUpstream(e);
     }
 
