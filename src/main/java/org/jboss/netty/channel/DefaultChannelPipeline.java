@@ -40,7 +40,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 public class DefaultChannelPipeline implements ChannelPipeline {
 
     static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
-    private static final ChannelSink discardingSink = new DiscardingChannelSink();
+    static final ChannelSink discardingSink = new DiscardingChannelSink();
 
     private volatile Channel channel;
     private volatile ChannelSink sink;
@@ -469,6 +469,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     public synchronized ChannelHandlerContext getContext(
             Class<? extends ChannelHandler> handlerType) {
+        if (handlerType == null) {
+            throw new NullPointerException("handlerType");
+        }
+
         if (name2ctx.isEmpty()) {
             return null;
         }
