@@ -217,6 +217,12 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     }
 
     @Override
+    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
+            throws Exception {
+        lastReadTime = lastWriteTime = System.currentTimeMillis();
+    }
+
+    @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         destroy();

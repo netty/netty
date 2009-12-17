@@ -136,6 +136,13 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
     }
 
     @Override
+    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
+            throws Exception {
+        updateLastReadTime();
+        ctx.sendUpstream(e);
+    }
+
+    @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         destroy();
@@ -145,16 +152,20 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
             throws Exception {
-        lastReadTime = System.currentTimeMillis();
+        updateLastReadTime();
         ctx.sendUpstream(e);
     }
 
     private void initialize(ChannelHandlerContext ctx) {
-        lastReadTime = System.currentTimeMillis();
+        updateLastReadTime();
         task = new ReadTimeoutTask(ctx);
         if (timeoutMillis > 0) {
             timeout = timer.newTimeout(task, timeoutMillis, TimeUnit.MILLISECONDS);
         }
+    }
+
+    private void updateLastReadTime() {
+        lastReadTime = System.currentTimeMillis();
     }
 
     private void destroy() {
