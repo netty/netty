@@ -121,7 +121,9 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
 
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         if (ctx.getPipeline().isAttached()) {
-            // channelOpen() has been called already - initialize here instead.
+            // channelOpen event has been fired already, which means
+            // this.channelOpen() will not be invoked.
+            // We have to initialize here instead.
             initialize(ctx);
         }
     }
@@ -141,6 +143,9 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
     @Override
     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
+        // This method will be invoked only if this handler was added
+        // before channelOpen event is fired.  If a user adds this handler
+        // after the channelOpen event, initialize() will be called by beforeAdd().
         initialize(ctx);
         ctx.sendUpstream(e);
     }
