@@ -269,7 +269,9 @@ public class ServerBootstrap extends Bootstrap {
         ChannelHandler binder = new Binder(localAddress, futureQueue);
         ChannelHandler parentHandler = getParentHandler();
         if (parentHandler != null) {
-            bossPipeline = new StaticChannelPipeline(binder, parentHandler);
+            bossPipeline = pipeline();
+            bossPipeline.addLast("binder", binder);
+            bossPipeline.addLast("userHandler", parentHandler);
         } else {
             bossPipeline = new StaticChannelPipeline(binder);
         }
