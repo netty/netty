@@ -32,9 +32,9 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.DefaultChannelPipeline;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.StaticChannelPipeline;
 
 /**
  * A skeletal {@link CodecEmbedder} implementation.
@@ -56,8 +56,17 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
      * handlers.
      */
     protected AbstractCodecEmbedder(ChannelHandler... handlers) {
-        pipeline = new EmbeddedChannelPipeline();
-        configurePipeline(handlers);
+        if (handlers == null) {
+            throw new NullPointerException("handlers");
+        }
+
+        // Initialize the pipeline.
+        ChannelHandler[] tmp = new ChannelHandler[handlers.length + 1];
+        System.arraycopy(handlers, 0, tmp, 0, handlers.length);
+        tmp[handlers.length] = sink;
+        pipeline = new EmbeddedChannelPipeline(tmp);
+
+        // Initialize the channel.
         channel = new EmbeddedChannel(pipeline, sink);
         fireInitialEvents();
     }
@@ -79,27 +88,6 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
         fireChannelOpen(channel);
         fireChannelBound(channel, channel.getLocalAddress());
         fireChannelConnected(channel, channel.getRemoteAddress());
-    }
-
-    private void configurePipeline(ChannelHandler... handlers) {
-        if (handlers == null) {
-            throw new NullPointerException("handlers");
-        }
-
-        if (handlers.length == 0) {
-            throw new IllegalArgumentException(
-                    "handlers should contain at least one " +
-                    ChannelHandler.class.getSimpleName() + '.');
-        }
-
-        for (int i = 0; i < handlers.length; i ++) {
-            ChannelHandler h = handlers[i];
-            if (h == null) {
-                throw new NullPointerException("handlers[" + i + "]");
-            }
-            pipeline.addLast(String.valueOf(i), handlers[i]);
-        }
-        pipeline.addLast("SINK", sink);
     }
 
     public boolean finish() {
@@ -218,10 +206,10 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
         }
     }
 
-    private static final class EmbeddedChannelPipeline extends DefaultChannelPipeline {
+    private static final class EmbeddedChannelPipeline extends StaticChannelPipeline {
 
-        EmbeddedChannelPipeline() {
-            super();
+        EmbeddedChannelPipeline(ChannelHandler... handlers) {
+            super(handlers);
         }
 
         @Override

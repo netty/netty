@@ -15,13 +15,8 @@
  */
 package org.jboss.netty.bootstrap;
 
-import static org.jboss.netty.channel.Channels.*;
-
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelConfig;
@@ -29,14 +24,10 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * A helper class which creates a new server-side {@link Channel} for a
@@ -183,9 +174,6 @@ public class ConnectionlessBootstrap extends Bootstrap {
             throw new NullPointerException("localAddress");
         }
 
-        final BlockingQueue<ChannelFuture> futureQueue =
-            new LinkedBlockingQueue<ChannelFuture>();
-
         ChannelPipeline pipeline;
         try {
             pipeline = getPipelineFactory().getPipeline();
@@ -193,26 +181,14 @@ public class ConnectionlessBootstrap extends Bootstrap {
             throw new ChannelPipelineException("Failed to initialize a pipeline.", e);
         }
 
-        pipeline.addFirst("binder", new ConnectionlessBinder(localAddress, futureQueue));
+        Channel ch = getFactory().newChannel(pipeline);
 
-        Channel channel = getFactory().newChannel(pipeline);
+        // Apply options.
+        ch.getConfig().setPipelineFactory(getPipelineFactory());
+        ch.getConfig().setOptions(getOptions());
 
-        // Wait until the future is available.
-        ChannelFuture future = null;
-        boolean interrupted = false;
-        do {
-            try {
-                future = futureQueue.poll(Integer.MAX_VALUE, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                interrupted = true;
-            }
-        } while (future == null);
-
-        pipeline.remove("binder");
-
-        if (interrupted) {
-            Thread.currentThread().interrupt();
-        }
+        // Bind
+        ChannelFuture future = ch.bind(localAddress);
 
         // Wait for the future.
         future.awaitUninterruptibly();
@@ -221,7 +197,7 @@ public class ConnectionlessBootstrap extends Bootstrap {
             throw new ChannelException("Failed to bind to: " + localAddress, future.getCause());
         }
 
-        return channel;
+        return ch;
     }
 
     /**
@@ -304,9 +280,6 @@ public class ConnectionlessBootstrap extends Bootstrap {
             throw new NullPointerException("remoteAddress");
         }
 
-        final BlockingQueue<ChannelFuture> futureQueue =
-            new LinkedBlockingQueue<ChannelFuture>();
-
         ChannelPipeline pipeline;
         try {
             pipeline = getPipelineFactory().getPipeline();
@@ -314,68 +287,16 @@ public class ConnectionlessBootstrap extends Bootstrap {
             throw new ChannelPipelineException("Failed to initialize a pipeline.", e);
         }
 
-        pipeline.addFirst(
-                "connector", new ClientBootstrap.Connector(
-                        this, remoteAddress, localAddress, futureQueue));
+        // Set the options.
+        Channel ch = getFactory().newChannel(pipeline);
+        ch.getConfig().setOptions(getOptions());
 
-        getFactory().newChannel(pipeline);
-
-        // Wait until the future is available.
-        ChannelFuture future = null;
-        boolean interrupted = false;
-        do {
-            try {
-                future = futureQueue.poll(Integer.MAX_VALUE, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                interrupted = true;
-            }
-        } while (future == null);
-
-        pipeline.remove("connector");
-
-        if (interrupted) {
-            Thread.currentThread().interrupt();
+        // Bind.
+        if (localAddress != null) {
+            ch.bind(localAddress);
         }
 
-        return future;
-    }
-
-    @ChannelPipelineCoverage("one")
-    private final class ConnectionlessBinder extends SimpleChannelUpstreamHandler {
-
-        private final SocketAddress localAddress;
-        private final BlockingQueue<ChannelFuture> futureQueue;
-
-        ConnectionlessBinder(SocketAddress localAddress, BlockingQueue<ChannelFuture> futureQueue) {
-            this.localAddress = localAddress;
-            this.futureQueue = futureQueue;
-        }
-
-        @Override
-        public void channelOpen(
-                ChannelHandlerContext ctx,
-                ChannelStateEvent evt) {
-
-            try {
-                evt.getChannel().getConfig().setPipelineFactory(getPipelineFactory());
-
-                // Apply options.
-                evt.getChannel().getConfig().setOptions(getOptions());
-            } finally {
-                ctx.sendUpstream(evt);
-            }
-
-            boolean finished = futureQueue.offer(evt.getChannel().bind(localAddress));
-            assert finished;
-        }
-
-        @Override
-        public void exceptionCaught(
-                ChannelHandlerContext ctx, ExceptionEvent e)
-                throws Exception {
-            boolean finished = futureQueue.offer(failedFuture(e.getChannel(), e.getCause()));
-            assert finished;
-            ctx.sendUpstream(e);
-        }
+        // Connect.
+        return ch.connect(remoteAddress);
     }
 }

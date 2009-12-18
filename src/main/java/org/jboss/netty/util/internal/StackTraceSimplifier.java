@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
 
 import org.jboss.netty.channel.DefaultChannelPipeline;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.StaticChannelPipeline;
 import org.jboss.netty.util.DebugUtil;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 
@@ -42,12 +43,13 @@ public class StackTraceSimplifier {
         Pattern.compile(
                 "^org\\.jboss\\.netty\\." +
                 "(util\\.(ThreadRenamingRunnable)" +
-                "|channel\\.(SimpleChannel(Upstream|Downstream)?Handler|DefaultChannelPipeline.*))$");
+                "|channel\\.(SimpleChannel(Upstream|Downstream)?Handler|(Default|Static)ChannelPipeline.*))$");
 
     /**
      * Removes unnecessary {@link StackTraceElement}s from the specified
      * exception. {@link ThreadRenamingRunnable}, {@link SimpleChannelHandler},
-     * and {@link DefaultChannelPipeline} will be dropped from the trace.
+     * {@link DefaultChannelPipeline}, and {@link StaticChannelPipeline}
+     * will be dropped from the trace.
      */
     public static void simplify(Throwable e) {
         if (!SIMPLIFY_STACK_TRACE) {
