@@ -485,7 +485,7 @@ class NioDatagramWorker implements Runnable {
 
     private static void writeNow(final NioDatagramChannel channel,
             final int writeSpinCount) {
-        boolean open = true;
+
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
 
@@ -556,10 +556,6 @@ class NioDatagramWorker implements Runnable {
                     evt.getFuture().setFailure(t);
                     evt = null;
                     fireExceptionCaught(channel, t);
-                    if (t instanceof IOException) {
-                        open = false;
-                        close(channel, succeededFuture(channel));
-                    }
                 }
             }
             channel.inWriteNowLoop = false;
@@ -567,12 +563,10 @@ class NioDatagramWorker implements Runnable {
 
         fireWriteComplete(channel, writtenBytes);
 
-        if (open) {
-            if (addOpWrite) {
-                setOpWrite(channel);
-            } else if (removeOpWrite) {
-                clearOpWrite(channel);
-            }
+        if (addOpWrite) {
+            setOpWrite(channel);
+        } else if (removeOpWrite) {
+            clearOpWrite(channel);
         }
     }
 
