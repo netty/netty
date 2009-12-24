@@ -240,6 +240,9 @@ class NioDatagramChannel extends AbstractChannel
      */
     private final class WriteBufferQueue extends
             LinkedTransferQueue<MessageEvent> {
+
+        private static final long serialVersionUID = 5057413071460766376L;
+
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
         WriteBufferQueue() {

@@ -210,6 +210,8 @@ class BaseXnioChannel extends AbstractChannel implements XnioChannel {
 
     private final class WriteBuffer extends LinkedTransferQueue<MessageEvent> {
 
+        private static final long serialVersionUID = 9223361436545857472L;
+
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
         WriteBuffer() {

@@ -171,6 +171,8 @@ class NioSocketChannel extends AbstractChannel
 
     private final class WriteBuffer extends LinkedTransferQueue<MessageEvent> {
 
+        private static final long serialVersionUID = -246694024103520626L;
+
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
         WriteBuffer() {

@@ -80,7 +80,7 @@ public class SecureChatClient {
             }
 
             // Sends the received line to the server.
-            lastWriteFuture = channel.write(line + '\n');
+            lastWriteFuture = channel.write(line + '\r' + '\n');
 
             // If user typed the 'bye' command, wait until the server closes
             // the connection.
