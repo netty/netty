@@ -21,7 +21,6 @@ import static org.junit.Assert.*;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
-import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
@@ -1535,13 +1534,6 @@ public abstract class AbstractChannelBufferTest {
 
     @Test
     public void testToString() {
-        try {
-            buffer.toString("UnsupportedCharsetName");
-            fail();
-        } catch (UnsupportedCharsetException e) {
-            // Expected
-        }
-
         buffer.clear();
         buffer.writeBytes(copiedBuffer("Hello, World!", CharsetUtil.ISO_8859_1));
         assertEquals("Hello, World!", buffer.toString(CharsetUtil.ISO_8859_1));

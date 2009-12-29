@@ -21,7 +21,6 @@ import static org.junit.Assert.*;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ScatteringByteChannel;
-import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -312,13 +311,6 @@ public class ChannelBuffersTest {
                         ByteBuffer.wrap(new byte[] { 1 }),
                         ByteBuffer.wrap(new byte[] { 2 }),
                         ByteBuffer.wrap(new byte[] { 3 })));
-
-        try {
-            copiedBuffer("", "UnsupportedCharset");
-            fail();
-        } catch (UnsupportedCharsetException e) {
-            // Expected
-        }
     }
 
     @Test
