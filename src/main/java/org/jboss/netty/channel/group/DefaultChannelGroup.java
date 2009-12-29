@@ -19,8 +19,8 @@ import java.net.SocketAddress;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -181,7 +181,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     public ChannelGroupFuture close() {
         Map<Integer, ChannelFuture> futures =
-            new HashMap<Integer, ChannelFuture>(size());
+            new LinkedHashMap<Integer, ChannelFuture>(size());
 
         for (Channel c: serverChannels.values()) {
             futures.put(c.getId(), c.close().awaitUninterruptibly());
@@ -195,7 +195,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     public ChannelGroupFuture disconnect() {
         Map<Integer, ChannelFuture> futures =
-            new HashMap<Integer, ChannelFuture>(size());
+            new LinkedHashMap<Integer, ChannelFuture>(size());
 
         for (Channel c: serverChannels.values()) {
             futures.put(c.getId(), c.disconnect().awaitUninterruptibly());
@@ -209,7 +209,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     public ChannelGroupFuture setInterestOps(int interestOps) {
         Map<Integer, ChannelFuture> futures =
-            new HashMap<Integer, ChannelFuture>(size());
+            new LinkedHashMap<Integer, ChannelFuture>(size());
 
         for (Channel c: serverChannels.values()) {
             futures.put(c.getId(), c.setInterestOps(interestOps).awaitUninterruptibly());
@@ -223,7 +223,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     public ChannelGroupFuture setReadable(boolean readable) {
         Map<Integer, ChannelFuture> futures =
-            new HashMap<Integer, ChannelFuture>(size());
+            new LinkedHashMap<Integer, ChannelFuture>(size());
 
         for (Channel c: serverChannels.values()) {
             futures.put(c.getId(), c.setReadable(readable).awaitUninterruptibly());
@@ -237,7 +237,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     public ChannelGroupFuture unbind() {
         Map<Integer, ChannelFuture> futures =
-            new HashMap<Integer, ChannelFuture>(size());
+            new LinkedHashMap<Integer, ChannelFuture>(size());
 
         for (Channel c: serverChannels.values()) {
             futures.put(c.getId(), c.unbind().awaitUninterruptibly());
@@ -251,7 +251,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     public ChannelGroupFuture write(Object message) {
         Map<Integer, ChannelFuture> futures =
-            new HashMap<Integer, ChannelFuture>(size());
+            new LinkedHashMap<Integer, ChannelFuture>(size());
         if (message instanceof ChannelBuffer) {
             ChannelBuffer buf = (ChannelBuffer) message;
             for (Channel c: this) {
@@ -267,7 +267,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     public ChannelGroupFuture write(Object message, SocketAddress remoteAddress) {
         Map<Integer, ChannelFuture> futures =
-            new HashMap<Integer, ChannelFuture>(size());
+            new LinkedHashMap<Integer, ChannelFuture>(size());
         if (message instanceof ChannelBuffer) {
             ChannelBuffer buf = (ChannelBuffer) message;
             for (Channel c: this) {
