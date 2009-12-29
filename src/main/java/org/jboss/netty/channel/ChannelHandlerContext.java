@@ -77,6 +77,31 @@ import java.util.concurrent.ConcurrentMap;
  * p2.addLast("f4", fh);
  * </pre>
  *
+ * <h3>Retrieving for later use</h3>
+ *
+ * You can keep the {@link ChannelHandlerContext} for later use, such as
+ * triggering an event outside the handler methods, even from a different thread.
+ * <pre>
+ * public class MyHandler extends SimpleChannelHandler
+ *                        implements LifeCycleAwareChannelHandler {
+ *
+ *     private ChannelHandlerContex ctx;
+ *
+ *     public void beforeAdd(ChannelHandlerContext ctx) {
+ *         this.ctx = ctx;
+ *     }
+ *
+ *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt) {
+ *         ctx.setAttachment(evt.getMessage());
+ *     }
+ *
+ *     public Object getLastReceivedMessage() {
+ *         return ctx.getAttachment();
+ *     }
+ *     ...
+ * }
+ * </pre>
+ *
  * <h3>Additional resources worth reading</h3>
  * <p>
  * Please refer to the {@link ChannelHandler}, {@link ChannelEvent}, and

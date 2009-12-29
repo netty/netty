@@ -24,9 +24,9 @@ package org.jboss.netty.channel;
  * Calling {@link ChannelHandlerContext#sendUpstream(ChannelEvent)} or
  * {@link ChannelHandlerContext#sendDownstream(ChannelEvent)} in
  * {@link #beforeAdd(ChannelHandlerContext)} or {@link #afterRemove(ChannelHandlerContext)}
- * will lead to an unexpected behavior.  It is because the context object has
- * not been fully added to the pipeline or the context object is not a part of
- * the pipeline anymore respectively.
+ * might lead to an unexpected behavior.  It is because the context object
+ * might not have been fully added to the pipeline or the context object is not
+ * a part of the pipeline anymore respectively.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
