@@ -25,6 +25,7 @@ import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
+import org.jboss.netty.util.CharsetUtil;
 
 /**
  * A UDP server that responds to the QOTM (quote of the moment) request to a
@@ -46,8 +47,8 @@ public class QuoteOfTheMomentServer {
 
         // Configure the pipeline.
         ChannelPipeline p = b.getPipeline();
-        p.addLast("encoder", new StringEncoder("UTF-8"));
-        p.addLast("decoder", new StringDecoder("UTF-8"));
+        p.addLast("encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
+        p.addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
         p.addLast("handler", new QuoteOfTheMomentServerHandler());
 
         // Enable broadcast

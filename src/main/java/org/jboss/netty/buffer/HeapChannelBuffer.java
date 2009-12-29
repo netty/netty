@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 
 /**
@@ -206,11 +207,11 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
         return ByteBuffer.wrap(array, index, length).order(order());
     }
 
-    public String toString(int index, int length, String charsetName) {
+    public String toString(int index, int length, Charset charset) {
         try {
-            return new String(array, index, length, charsetName);
+            return new String(array, index, length, charset.name());
         } catch (UnsupportedEncodingException e) {
-            throw new UnsupportedCharsetException(charsetName);
+            throw new UnsupportedCharsetException(charset.name());
         }
     }
 }

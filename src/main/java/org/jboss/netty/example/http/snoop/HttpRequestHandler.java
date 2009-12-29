@@ -41,6 +41,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.http.QueryStringDecoder;
+import org.jboss.netty.util.CharsetUtil;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -98,7 +99,7 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
             } else {
                 ChannelBuffer content = request.getContent();
                 if (content.readable()) {
-                    responseContent.append("CONTENT: " + content.toString("UTF-8") + "\r\n");
+                    responseContent.append("CONTENT: " + content.toString(CharsetUtil.UTF_8) + "\r\n");
                 }
                 writeResponse(e);
             }
@@ -121,14 +122,14 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
 
                 writeResponse(e);
             } else {
-                responseContent.append("CHUNK: " + chunk.getContent().toString("UTF-8") + "\r\n");
+                responseContent.append("CHUNK: " + chunk.getContent().toString(CharsetUtil.UTF_8) + "\r\n");
             }
         }
     }
 
     private void writeResponse(MessageEvent e) {
         // Convert the response content to a ChannelBuffer.
-        ChannelBuffer buf = ChannelBuffers.copiedBuffer(responseContent.toString(), "UTF-8");
+        ChannelBuffer buf = ChannelBuffers.copiedBuffer(responseContent.toString(), CharsetUtil.UTF_8);
         responseContent.setLength(0);
 
         // Decide whether to close the connection or not.

@@ -39,6 +39,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.stream.ChunkedFile;
+import org.jboss.netty.util.CharsetUtil;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -159,7 +160,8 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         response.setHeader(
                 HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8");
         response.setContent(ChannelBuffers.copiedBuffer(
-                "Failure: " + status.toString() + "\r\n", "UTF-8"));
+                "Failure: " + status.toString() + "\r\n",
+                CharsetUtil.UTF_8));
 
         // Close the connection as soon as the error message is sent.
         ctx.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);

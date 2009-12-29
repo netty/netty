@@ -18,6 +18,7 @@ package org.jboss.netty.buffer;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.List;
@@ -663,8 +664,16 @@ public class ChannelBuffers {
      * The new buffer's {@code readerIndex} and {@code writerIndex} are
      * {@code 0} and the length of the encoded string respectively.
      */
+    public static ChannelBuffer copiedBuffer(String string, Charset charset) {
+        return copiedBuffer(BIG_ENDIAN, string, charset);
+    }
+
+    /**
+     * @deprecated Use {@link #copiedBuffer(String, Charset)} instead.
+     */
+    @Deprecated
     public static ChannelBuffer copiedBuffer(String string, String charsetName) {
-        return copiedBuffer(BIG_ENDIAN, string, charsetName);
+        return copiedBuffer(string, Charset.forName(charsetName));
     }
 
     /**
@@ -674,12 +683,20 @@ public class ChannelBuffers {
      * {@code writerIndex} are {@code 0} and the length of the encoded string
      * respectively.
      */
-    public static ChannelBuffer copiedBuffer(ByteOrder endianness, String string, String charsetName) {
+    public static ChannelBuffer copiedBuffer(ByteOrder endianness, String string, Charset charset) {
         try {
-            return wrappedBuffer(endianness, string.getBytes(charsetName));
+            return wrappedBuffer(endianness, string.getBytes(charset.name()));
         } catch (UnsupportedEncodingException e) {
-            throw new UnsupportedCharsetException(charsetName);
+            throw new UnsupportedCharsetException(charset.name());
         }
+    }
+
+    /**
+     * @deprecated Use {@link #copiedBuffer(ByteOrder, String, Charset)} instead.
+     */
+    @Deprecated
+    public static ChannelBuffer copiedBuffer(ByteOrder endianness, String string, String charsetName) {
+        return copiedBuffer(endianness, string, Charset.forName(charsetName));
     }
 
     /**

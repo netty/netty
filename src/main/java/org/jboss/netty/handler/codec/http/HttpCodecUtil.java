@@ -15,6 +15,10 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.nio.charset.Charset;
+
+import org.jboss.netty.util.CharsetUtil;
+
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -64,7 +68,7 @@ class HttpCodecUtil {
 
     static final byte DOUBLE_QUOTE = '"';
 
-    static final String DEFAULT_CHARSET = "UTF-8";
+    static final Charset DEFAULT_CHARSET = CharsetUtil.UTF_8;
 
     private HttpCodecUtil() {
         super();
@@ -80,7 +84,7 @@ class HttpCodecUtil {
                 throw new IllegalArgumentException(
                         "name contains non-ascii character: " + name);
             }
-    
+
             // Check prohibited characters.
             switch (c) {
             case '=':  case ',':  case ';': case ' ': case ':':
@@ -97,15 +101,15 @@ class HttpCodecUtil {
         if (value == null) {
             throw new NullPointerException("value");
         }
-    
+
         // 0 - the previous character was neither CR nor LF
         // 1 - the previous character was CR
         // 2 - the previous character was LF
         int state = 0;
-    
+
         for (int i = 0; i < value.length(); i ++) {
             char c = value.charAt(i);
-    
+
             // Check the absolutely prohibited characters.
             switch (c) {
             case '\f':
@@ -115,7 +119,7 @@ class HttpCodecUtil {
                 throw new IllegalArgumentException(
                         "value contains a prohibited character '\\v': " + value);
             }
-    
+
             // Check the CRLF (HT | SP) pattern
             switch (state) {
             case 0:
@@ -149,7 +153,7 @@ class HttpCodecUtil {
                 }
             }
         }
-    
+
         if (state != 0) {
             throw new IllegalArgumentException(
                     "value must not end with '\\r' or '\\n':" + value);

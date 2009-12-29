@@ -38,10 +38,10 @@ import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
  *
  * // Decoders
  * pipeline.addLast("frameDecoder", new {@link DelimiterBasedFrameDecoder}(80, {@link Delimiters#lineDelimiter()}));
- * pipeline.addLast("stringDecoder", new {@link StringDecoder}("UTF-8"));
+ * pipeline.addLast("stringDecoder", new {@link StringDecoder}(CharsetUtil.UTF_8));
  *
  * // Encoder
- * pipeline.addLast("stringEncoder", new {@link StringEncoder}("UTF-8"));
+ * pipeline.addLast("stringEncoder", new {@link StringEncoder}(CharsetUtil.UTF_8));
  * </pre>
  * and then you can use a {@link String} instead of a {@link ChannelBuffer}
  * as a message:
@@ -62,7 +62,8 @@ import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 @ChannelPipelineCoverage("all")
 public class StringDecoder extends OneToOneDecoder {
 
-    private final String charsetName;
+    // TODO Use CharsetDecoder instead.
+    private final Charset charset;
 
     /**
      * Creates a new instance with the current system character set.
@@ -72,24 +73,21 @@ public class StringDecoder extends OneToOneDecoder {
     }
 
     /**
-     * Creates a new instance.
-     *
-     * @param charsetName  the name of the character set to use for decoding
-     */
-    public StringDecoder(String charsetName) {
-        this(Charset.forName(charsetName));
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param charset  the character set to use for decoding
+     * Creates a new instance with the specified character set.
      */
     public StringDecoder(Charset charset) {
         if (charset == null) {
             throw new NullPointerException("charset");
         }
-        charsetName = charset.name();
+        this.charset = charset;
+    }
+
+    /**
+     * @deprecated Use {@link #StringDecoder(Charset)} instead.
+     */
+    @Deprecated
+    public StringDecoder(String charsetName) {
+        this(Charset.forName(charsetName));
     }
 
     @Override
@@ -98,6 +96,6 @@ public class StringDecoder extends OneToOneDecoder {
         if (!(msg instanceof ChannelBuffer)) {
             return msg;
         }
-        return ((ChannelBuffer) msg).toString(charsetName);
+        return ((ChannelBuffer) msg).toString(charset);
     }
 }

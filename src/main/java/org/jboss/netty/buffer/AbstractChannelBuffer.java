@@ -21,6 +21,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.Charset;
 import java.util.NoSuchElementException;
 
 
@@ -530,27 +531,45 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         return new ByteBuffer[] { toByteBuffer(index, length) };
     }
 
-    public String toString(String charsetName) {
-        return toString(readerIndex, readableBytes(), charsetName);
+    public String toString(Charset charset) {
+        return toString(readerIndex, readableBytes(), charset);
     }
 
-    public String toString(String charsetName, ChannelBufferIndexFinder terminatorFinder) {
-        return toString(readerIndex, readableBytes(), charsetName, terminatorFinder);
+    public String toString(Charset charset, ChannelBufferIndexFinder terminatorFinder) {
+        return toString(readerIndex, readableBytes(), charset, terminatorFinder);
     }
 
     public String toString(
-            int index, int length, String charsetName,
+            int index, int length, Charset charset,
             ChannelBufferIndexFinder terminatorFinder) {
         if (terminatorFinder == null) {
-            return toString(index, length, charsetName);
+            return toString(index, length, charset);
         }
 
         int terminatorIndex = indexOf(index, index + length, terminatorFinder);
         if (terminatorIndex < 0) {
-            return toString(index, length, charsetName);
+            return toString(index, length, charset);
         }
 
-        return toString(index, terminatorIndex - index, charsetName);
+        return toString(index, terminatorIndex - index, charset);
+    }
+
+    public String toString(int index, int length, String charsetName,
+            ChannelBufferIndexFinder terminatorFinder) {
+        return toString(index, length, Charset.forName(charsetName), terminatorFinder);
+    }
+
+    public String toString(int index, int length, String charsetName) {
+        return toString(index, length, Charset.forName(charsetName));
+    }
+
+    public String toString(String charsetName,
+            ChannelBufferIndexFinder terminatorFinder) {
+        return toString(Charset.forName(charsetName), terminatorFinder);
+    }
+
+    public String toString(String charsetName) {
+        return toString(Charset.forName(charsetName));
     }
 
     public int indexOf(int fromIndex, int toIndex, byte value) {

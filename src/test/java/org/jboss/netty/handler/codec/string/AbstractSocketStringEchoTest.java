@@ -38,6 +38,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
+import org.jboss.netty.util.CharsetUtil;
 import org.jboss.netty.util.TestUtil;
 import org.jboss.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
@@ -93,13 +94,13 @@ public abstract class AbstractSocketStringEchoTest {
         EchoHandler ch = new EchoHandler();
 
         sb.getPipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
-        sb.getPipeline().addLast("decoder", new StringDecoder("ISO-8859-1"));
-        sb.getPipeline().addBefore("decoder", "encoder", new StringEncoder("ISO-8859-1"));
+        sb.getPipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
+        sb.getPipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
         sb.getPipeline().addAfter("decoder", "handler", sh);
 
         cb.getPipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
-        cb.getPipeline().addLast("decoder", new StringDecoder("ISO-8859-1"));
-        cb.getPipeline().addBefore("decoder", "encoder", new StringEncoder("ISO-8859-1"));
+        cb.getPipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
+        cb.getPipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
         cb.getPipeline().addAfter("decoder", "handler", ch);
 
         Channel sc = sb.bind(new InetSocketAddress(0));

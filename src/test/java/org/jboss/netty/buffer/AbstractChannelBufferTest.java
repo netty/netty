@@ -28,6 +28,7 @@ import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.Set;
 
+import org.jboss.netty.util.CharsetUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -1542,17 +1543,17 @@ public abstract class AbstractChannelBufferTest {
         }
 
         buffer.clear();
-        buffer.writeBytes(copiedBuffer("Hello, World!", "ISO-8859-1"));
-        assertEquals("Hello, World!", buffer.toString("ISO-8859-1"));
+        buffer.writeBytes(copiedBuffer("Hello, World!", CharsetUtil.ISO_8859_1));
+        assertEquals("Hello, World!", buffer.toString(CharsetUtil.ISO_8859_1));
 
         // Same with the previous one
-        assertEquals("Hello, World!", buffer.toString("ISO-8859-1", null));
+        assertEquals("Hello, World!", buffer.toString(CharsetUtil.ISO_8859_1, null));
 
         // NUL not found.
-        assertEquals("Hello, World!", buffer.toString("ISO-8859-1", ChannelBufferIndexFinder.NUL));
+        assertEquals("Hello, World!", buffer.toString(CharsetUtil.ISO_8859_1, ChannelBufferIndexFinder.NUL));
 
         // Linear space found.
-        assertEquals("Hello,", buffer.toString("ISO-8859-1", ChannelBufferIndexFinder.LINEAR_WHITESPACE));
+        assertEquals("Hello,", buffer.toString(CharsetUtil.ISO_8859_1, ChannelBufferIndexFinder.LINEAR_WHITESPACE));
     }
 
     @Test

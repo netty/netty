@@ -24,6 +24,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 
 /**
@@ -300,22 +301,22 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
-    public String toString(int index, int length, String charsetName) {
+    public String toString(int index, int length, Charset charset) {
         if (!buffer.isReadOnly() && buffer.hasArray()) {
             try {
                 return new String(
                         buffer.array(), index + buffer.arrayOffset(), length,
-                        charsetName);
+                        charset.name());
             } catch (UnsupportedEncodingException e) {
-                throw new UnsupportedCharsetException(charsetName);
+                throw new UnsupportedCharsetException(charset.name());
             }
         } else {
             byte[] tmp = new byte[length];
             ((ByteBuffer) buffer.duplicate().position(index)).get(tmp);
             try {
-                return new String(tmp, charsetName);
+                return new String(tmp, charset.name());
             } catch (UnsupportedEncodingException e) {
-                throw new UnsupportedCharsetException(charsetName);
+                throw new UnsupportedCharsetException(charset.name());
             }
         }
     }

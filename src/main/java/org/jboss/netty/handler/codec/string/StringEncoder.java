@@ -36,10 +36,10 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  *
  * // Decoders
  * pipeline.addLast("frameDecoder", new {@link DelimiterBasedFrameDecoder}({@link Delimiters#lineDelimiter()}));
- * pipeline.addLast("stringDecoder", new {@link StringDecoder}("UTF-8"));
+ * pipeline.addLast("stringDecoder", new {@link StringDecoder}(CharsetUtil.UTF_8));
  *
  * // Encoder
- * pipeline.addLast("stringEncoder", new {@link StringEncoder}("UTF-8"));
+ * pipeline.addLast("stringEncoder", new {@link StringEncoder}(CharsetUtil.UTF_8));
  * </pre>
  * and then you can use a {@link String} instead of a {@link ChannelBuffer}
  * as a message:
@@ -60,7 +60,8 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 @ChannelPipelineCoverage("all")
 public class StringEncoder extends OneToOneEncoder {
 
-    private final String charsetName;
+    // TODO Use CharsetEncoder instead.
+    private final Charset charset;
 
     /**
      * Creates a new instance with the current system character set.
@@ -69,15 +70,22 @@ public class StringEncoder extends OneToOneEncoder {
         this(Charset.defaultCharset());
     }
 
-    public StringEncoder(String charsetName) {
-        this(Charset.forName(charsetName));
-    }
-
+    /**
+     * Creates a new instance with the specified character set.
+     */
     public StringEncoder(Charset charset) {
         if (charset == null) {
             throw new NullPointerException("charset");
         }
-        charsetName = charset.name();
+        this.charset = charset;
+    }
+
+    /**
+     * @deprecated Use {@link #StringEncoder(Charset)} instead.
+     */
+    @Deprecated
+    public StringEncoder(String charsetName) {
+        this(Charset.forName(charsetName));
     }
 
     @Override
@@ -86,6 +94,6 @@ public class StringEncoder extends OneToOneEncoder {
         if (!(msg instanceof String)) {
             return msg;
         }
-        return copiedBuffer((String) msg, charsetName);
+        return copiedBuffer((String) msg, charset);
     }
 }

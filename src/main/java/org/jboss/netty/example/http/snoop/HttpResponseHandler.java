@@ -22,6 +22,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.util.CharsetUtil;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -60,7 +61,7 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler {
                 ChannelBuffer content = response.getContent();
                 if (content.readable()) {
                     System.out.println("CONTENT {");
-                    System.out.println(content.toString("UTF-8"));
+                    System.out.println(content.toString(CharsetUtil.UTF_8));
                     System.out.println("} END OF CONTENT");
                 }
             }
@@ -70,7 +71,7 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler {
                 readingChunks = false;
                 System.out.println("} END OF CHUNKED CONTENT");
             } else {
-                System.out.print(chunk.getContent().toString("UTF-8"));
+                System.out.print(chunk.getContent().toString(CharsetUtil.UTF_8));
                 System.out.flush();
             }
         }

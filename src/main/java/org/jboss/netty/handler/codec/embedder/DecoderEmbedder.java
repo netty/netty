@@ -31,7 +31,7 @@ import org.jboss.netty.handler.codec.string.StringDecoder;
  * {@link StringDecoder} without setting up the {@link ChannelPipeline} and
  * other mock objects by yourself:
  * <pre>
- * ChannelBuffer base64Data = ChannelBuffer.copiedBuffer("Zm9vYmFy", "ASCII");
+ * ChannelBuffer base64Data = ChannelBuffer.copiedBuffer("Zm9vYmFy", CharsetUtil.US_ASCII);
  *
  * DecoderEmbedder&lt;String&gt; embedder = new DecoderEmbedder&lt;String&gt;(
  *         new Base64Decoder(), new StringDecoder());

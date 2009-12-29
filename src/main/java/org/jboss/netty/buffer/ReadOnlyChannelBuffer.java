@@ -23,6 +23,7 @@ import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.Charset;
 
 /**
  * A derived buffer which forbids any write requests to its parent.  It is
@@ -190,8 +191,8 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
         return bufs;
     }
 
-    public String toString(int index, int length, String charsetName) {
-        return buffer.toString(index, length, charsetName);
+    public String toString(int index, int length, Charset charset) {
+        return buffer.toString(index, length, charset);
     }
 
     public int capacity() {

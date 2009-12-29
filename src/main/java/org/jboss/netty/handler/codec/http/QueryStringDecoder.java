@@ -18,6 +18,7 @@ package org.jboss.netty.handler.codec.http;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLDecoder;
+import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,7 +50,7 @@ public class QueryStringDecoder {
 
     private static final Pattern PARAM_PATTERN = Pattern.compile("([^=]*)=([^&]*)&*");
 
-    private final String charset;
+    private final Charset charset;
     private final String uri;
     private String path;
     private final Map<String, List<String>> params = new HashMap<String, List<String>>();
@@ -66,7 +67,7 @@ public class QueryStringDecoder {
      * Creates a new decoder that decodes the specified URI encoded in the
      * specified charset.
      */
-    public QueryStringDecoder(String uri, String charset) {
+    public QueryStringDecoder(String uri, Charset charset) {
         if (uri == null) {
             throw new NullPointerException("uri");
         }
@@ -76,6 +77,14 @@ public class QueryStringDecoder {
 
         this.uri = uri;
         this.charset = charset;
+    }
+
+    /**
+     * @deprecated Use {@link #QueryStringDecoder(String, Charset)} instead.
+     */
+    @Deprecated
+    public QueryStringDecoder(String uri, String charset) {
+        this(uri, Charset.forName(charset));
     }
 
     /**
@@ -90,7 +99,7 @@ public class QueryStringDecoder {
      * Creates a new decoder that decodes the specified URI encoded in the
      * specified charset.
      */
-    public QueryStringDecoder(URI uri, String charset){
+    public QueryStringDecoder(URI uri, Charset charset){
         if (uri == null) {
             throw new NullPointerException("uri");
         }
@@ -100,6 +109,14 @@ public class QueryStringDecoder {
 
         this.uri = uri.toASCIIString();
         this.charset = charset;
+    }
+
+    /**
+     * @deprecated Use {@link #QueryStringDecoder(URI, Charset)} instead.
+     */
+    @Deprecated
+    public QueryStringDecoder(URI uri, String charset){
+        this(uri, Charset.forName(charset));
     }
 
     /**
@@ -160,15 +177,15 @@ public class QueryStringDecoder {
         }
     }
 
-    private static String decodeComponent(String s, String charset) {
+    private static String decodeComponent(String s, Charset charset) {
         if (s == null) {
             return "";
         }
 
         try {
-            return URLDecoder.decode(s, charset);
+            return URLDecoder.decode(s, charset.name());
         } catch (UnsupportedEncodingException e) {
-            throw new UnsupportedCharsetException(charset);
+            throw new UnsupportedCharsetException(charset.name());
         }
     }
 }

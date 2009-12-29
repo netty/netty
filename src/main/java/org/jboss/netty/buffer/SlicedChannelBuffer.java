@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.Charset;
 
 
 /**
@@ -213,9 +214,9 @@ public class SlicedChannelBuffer extends AbstractChannelBuffer implements Wrappe
         return buffer.toByteBuffer(index + adjustment, length);
     }
 
-    public String toString(int index, int length, String charsetName) {
+    public String toString(int index, int length, Charset charset) {
         checkIndex(index, length);
-        return buffer.toString(index + adjustment, length, charsetName);
+        return buffer.toString(index + adjustment, length, charset);
     }
 
     private void checkIndex(int index) {

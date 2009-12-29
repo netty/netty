@@ -39,7 +39,7 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
  * embedded.offer(data);
  *
  * ChannelBuffer encoded = embedded.poll();
- * assert encoded.toString("ASCII").equals("Zm9vYmFy");
+ * assert encoded.toString(CharsetUtil.US_ASCII).equals("Zm9vYmFy");
  * </pre>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)

@@ -41,7 +41,8 @@ import org.jboss.netty.channel.ServerChannel;
  * recipients.add(channelB);
  * ..
  * <strong>recipients.write(ChannelBuffers.copiedBuffer(
- *         "Service will shut down for maintenance in 5 minutes.", "UTF-8"));</strong>
+ *         "Service will shut down for maintenance in 5 minutes.",
+ *         CharsetUtil.UTF_8));</strong>
  * </pre>
  *
  * <h3>Simplify shutdown process with {@link ChannelGroup}</h3>

@@ -19,6 +19,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +46,7 @@ import java.util.List;
  */
 public class QueryStringEncoder {
 
-    private final String charset;
+    private final Charset charset;
     private final String uri;
     private final List<Param> params = new ArrayList<Param>();
 
@@ -61,7 +62,7 @@ public class QueryStringEncoder {
      * Creates a new encoder that encodes a URI that starts with the specified
      * path string in the specified charset.
      */
-    public QueryStringEncoder(String uri, String charset) {
+    public QueryStringEncoder(String uri, Charset charset) {
         if (uri == null) {
             throw new NullPointerException("uri");
         }
@@ -71,6 +72,14 @@ public class QueryStringEncoder {
 
         this.uri = uri;
         this.charset = charset;
+    }
+
+    /**
+     * @deprecated Use {@link #QueryStringEncoder(String, Charset)} instead.
+     */
+    @Deprecated
+    public QueryStringEncoder(String uri, String charset) {
+        this(uri, Charset.forName(charset));
     }
 
     /**
@@ -119,11 +128,11 @@ public class QueryStringEncoder {
         }
     }
 
-    private static String encodeComponent(String s, String charset) {
+    private static String encodeComponent(String s, Charset charset) {
         try {
-            return URLEncoder.encode(s, charset).replaceAll("\\+", "%20");
+            return URLEncoder.encode(s, charset.name()).replaceAll("\\+", "%20");
         } catch (UnsupportedEncodingException e) {
-            throw new UnsupportedCharsetException(charset);
+            throw new UnsupportedCharsetException(charset.name());
         }
     }
 

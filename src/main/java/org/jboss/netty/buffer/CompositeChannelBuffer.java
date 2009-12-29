@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -587,11 +588,11 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         return buffers.toArray(new ByteBuffer[buffers.size()]);
     }
 
-    public String toString(int index, int length, String charsetName) {
+    public String toString(int index, int length, Charset charset) {
         int componentId = componentId(index);
         if (index + length <= indices[componentId + 1]) {
             return components[componentId].toString(
-                    index - indices[componentId], length, charsetName);
+                    index - indices[componentId], length, charset);
         }
 
         byte[] data = new byte[length];
@@ -610,9 +611,9 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
 
         try {
-            return new String(data, charsetName);
+            return new String(data, charset.name());
         } catch (UnsupportedEncodingException e) {
-            throw new UnsupportedCharsetException(charsetName);
+            throw new UnsupportedCharsetException(charset.name());
         }
     }
 

@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.Charset;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
@@ -504,11 +505,34 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return buffer.toByteBuffers(index, length);
     }
 
+    public String toString(int index, int length, Charset charset) {
+        checkIndex(index, length);
+        return buffer.toString(index, length, charset);
+    }
+
+    public String toString(
+            int index, int length, Charset charset,
+            ChannelBufferIndexFinder terminatorFinder) {
+        checkIndex(index, length);
+        return buffer.toString(index, length, charset, terminatorFinder);
+    }
+
+    public String toString(Charset charsetName) {
+        throw new UnreplayableOperationException();
+    }
+
+    public String toString(
+            Charset charset, ChannelBufferIndexFinder terminatorFinder) {
+        throw new UnreplayableOperationException();
+    }
+
+    @Deprecated
     public String toString(int index, int length, String charsetName) {
         checkIndex(index, length);
         return buffer.toString(index, length, charsetName);
     }
 
+    @Deprecated
     public String toString(
             int index, int length, String charsetName,
             ChannelBufferIndexFinder terminatorFinder) {
@@ -516,10 +540,12 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return buffer.toString(index, length, charsetName, terminatorFinder);
     }
 
+    @Deprecated
     public String toString(String charsetName) {
         throw new UnreplayableOperationException();
     }
 
+    @Deprecated
     public String toString(
             String charsetName, ChannelBufferIndexFinder terminatorFinder) {
         throw new UnreplayableOperationException();

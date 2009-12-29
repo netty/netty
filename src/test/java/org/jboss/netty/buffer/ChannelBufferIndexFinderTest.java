@@ -17,6 +17,7 @@ package org.jboss.netty.buffer;
 
 import static org.junit.Assert.*;
 
+import org.jboss.netty.util.CharsetUtil;
 import org.junit.Test;
 
 
@@ -32,7 +33,8 @@ public class ChannelBufferIndexFinderTest {
     @Test
     public void testForward() {
         ChannelBuffer buf = ChannelBuffers.copiedBuffer(
-                "abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx", "ISO-8859-1");
+                "abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx",
+                CharsetUtil.ISO_8859_1);
 
         assertEquals(3, buf.indexOf(Integer.MIN_VALUE, buf.capacity(), ChannelBufferIndexFinder.CRLF));
         assertEquals(6, buf.indexOf(3, buf.capacity(), ChannelBufferIndexFinder.NOT_CRLF));
@@ -50,7 +52,8 @@ public class ChannelBufferIndexFinderTest {
     @Test
     public void testBackward() {
         ChannelBuffer buf = ChannelBuffers.copiedBuffer(
-                "abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx", "ISO-8859-1");
+                "abc\r\n\ndef\r\rghi\n\njkl\0\0mno  \t\tx",
+                CharsetUtil.ISO_8859_1);
 
         assertEquals(27, buf.indexOf(Integer.MAX_VALUE, 0, ChannelBufferIndexFinder.LINEAR_WHITESPACE));
         assertEquals(23, buf.indexOf(28, 0, ChannelBufferIndexFinder.NOT_LINEAR_WHITESPACE));

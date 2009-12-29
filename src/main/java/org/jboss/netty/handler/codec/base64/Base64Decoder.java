@@ -25,6 +25,7 @@ import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
+import org.jboss.netty.util.CharsetUtil;
 
 /**
  * Decodes a Base64-encoded {@link ChannelBuffer} or US-ASCII {@link String}
@@ -69,8 +70,7 @@ public class Base64Decoder extends OneToOneDecoder {
     protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg)
             throws Exception {
         if (msg instanceof String) {
-            msg = ChannelBuffers.wrappedBuffer(
-                    ((String) msg).getBytes("ASCII"));
+            msg = ChannelBuffers.copiedBuffer((String) msg, CharsetUtil.US_ASCII);
         } else if (!(msg instanceof ChannelBuffer)) {
             return msg;
         }

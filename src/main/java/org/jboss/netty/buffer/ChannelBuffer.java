@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.NoSuchElementException;
 
@@ -1619,6 +1620,12 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if the specified character set name is not supported by the
      *         current VM
      */
+    String toString(Charset charset);
+
+    /**
+     * @deprecated Use {@link #toString(Charset)} instead.
+     */
+    @Deprecated
     String toString(String charsetName);
 
     /**
@@ -1634,6 +1641,13 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         current VM
      */
     String toString(
+            Charset charset, ChannelBufferIndexFinder terminatorFinder);
+
+    /**
+     * @deprecated Use {@link #toString(Charset, ChannelBufferIndexFinder)} instead.
+     */
+    @Deprecated
+    String toString(
             String charsetName, ChannelBufferIndexFinder terminatorFinder);
 
     /**
@@ -1646,6 +1660,12 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if the specified character set name is not supported by the
      *         current VM
      */
+    String toString(int index, int length, Charset charset);
+
+    /**
+     * @deprecated Use {@link #toString(int, int, Charset)} instead.
+     */
+    @Deprecated
     String toString(int index, int length, String charsetName);
 
     /**
@@ -1659,6 +1679,14 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if the specified character set name is not supported by the
      *         current VM
      */
+    String toString(
+            int index, int length, Charset charset,
+            ChannelBufferIndexFinder terminatorFinder);
+
+    /**
+     * @deprecated Use {@link #toString(int, int, Charset, ChannelBufferIndexFinder)} instead.
+     */
+    @Deprecated
     String toString(
             int index, int length, String charsetName,
             ChannelBufferIndexFinder terminatorFinder);

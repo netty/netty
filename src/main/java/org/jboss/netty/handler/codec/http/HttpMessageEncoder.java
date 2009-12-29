@@ -28,6 +28,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
+import org.jboss.netty.util.CharsetUtil;
 
 /**
  * Encodes an {@link HttpMessage} or an {@link HttpChunk} into
@@ -52,7 +53,8 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 @ChannelPipelineCoverage("all")
 public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
-    private static final ChannelBuffer LAST_CHUNK = copiedBuffer("0\r\n\r\n", "ASCII");
+    private static final ChannelBuffer LAST_CHUNK =
+        copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII);
 
     /**
      * Creates a new instance.
@@ -96,7 +98,9 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
                 int contentLength = content.readableBytes();
 
                 return wrappedBuffer(
-                        copiedBuffer(Integer.toHexString(contentLength), "ASCII"),
+                        copiedBuffer(
+                                Integer.toHexString(contentLength),
+                                CharsetUtil.US_ASCII),
                         wrappedBuffer(CRLF),
                         content.slice(content.readerIndex(), contentLength),
                         wrappedBuffer(CRLF));
