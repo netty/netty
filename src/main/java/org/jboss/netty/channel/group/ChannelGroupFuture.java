@@ -110,7 +110,7 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  *
  * @apiviz.owns org.jboss.netty.channel.group.ChannelGroupFutureListener - - notifies
  */
-public interface ChannelGroupFuture extends Iterable<ChannelFuture>{
+public interface ChannelGroupFuture extends Iterable<ChannelFuture> {
 
     /**
      * Returns the {@link ChannelGroup} which is associated with this future.
