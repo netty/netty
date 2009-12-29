@@ -18,14 +18,18 @@ package org.jboss.netty.buffer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.CharBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
-import java.nio.charset.UnsupportedCharsetException;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CoderResult;
+
+import org.jboss.netty.util.CharsetUtil;
 
 /**
  * A NIO {@link ByteBuffer} based buffer.  It is recommended to use {@link ChannelBuffers#directBuffer(int)}
@@ -302,23 +306,31 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     }
 
     public String toString(int index, int length, Charset charset) {
-        if (!buffer.isReadOnly() && buffer.hasArray()) {
-            try {
-                return new String(
-                        buffer.array(), index + buffer.arrayOffset(), length,
-                        charset.name());
-            } catch (UnsupportedEncodingException e) {
-                throw new UnsupportedCharsetException(charset.name());
-            }
-        } else {
-            byte[] tmp = new byte[length];
-            ((ByteBuffer) buffer.duplicate().position(index)).get(tmp);
-            try {
-                return new String(tmp, charset.name());
-            } catch (UnsupportedEncodingException e) {
-                throw new UnsupportedCharsetException(charset.name());
-            }
+        if (length == 0) {
+            return "";
         }
+
+        final CharsetDecoder decoder = CharsetUtil.getDecoder(charset);
+        final ByteBuffer src =
+            ((ByteBuffer) buffer.duplicate().position(
+                    index).limit(index + length)).order(order());
+        final CharBuffer dst = CharBuffer.allocate(
+                (int) ((double) length * decoder.maxCharsPerByte()));
+        try {
+            CoderResult cr = decoder.decode(src, dst, true);
+            if (!cr.isUnderflow()) {
+                cr.throwException();
+            }
+            cr = decoder.flush(dst);
+            if (!cr.isUnderflow()) {
+                cr.throwException();
+            }
+        } catch (CharacterCodingException x) {
+            throw new IllegalStateException(x);
+        }
+
+        dst.flip();
+        return dst.toString();
     }
 
     public ChannelBuffer slice(int index, int length) {

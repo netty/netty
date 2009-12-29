@@ -15,13 +15,17 @@
  */
 package org.jboss.netty.buffer;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
-import java.nio.charset.UnsupportedCharsetException;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CoderResult;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.jboss.netty.util.CharsetUtil;
 
 
 /**
@@ -660,16 +664,159 @@ public class ChannelBuffers {
 
     /**
      * Creates a new big-endian buffer whose content is the specified
-     * {@code string} encoded by the specified {@code charsetName}.
+     * {@code string} encoded in the specified {@code charset}.
      * The new buffer's {@code readerIndex} and {@code writerIndex} are
      * {@code 0} and the length of the encoded string respectively.
      */
-    public static ChannelBuffer copiedBuffer(String string, Charset charset) {
-        return copiedBuffer(BIG_ENDIAN, string, charset);
+    public static ChannelBuffer copiedBuffer(CharSequence string, Charset charset) {
+        return copiedBuffer(BIG_ENDIAN, string, 0, string.length(), charset);
     }
 
     /**
-     * @deprecated Use {@link #copiedBuffer(String, Charset)} instead.
+     * Creates a new big-endian buffer whose content is a subregion of
+     * the specified {@code string} encoded in the specified {@code charset}.
+     * The new buffer's {@code readerIndex} and {@code writerIndex} are
+     * {@code 0} and the length of the encoded string respectively.
+     */
+    public static ChannelBuffer copiedBuffer(
+            CharSequence string, int offset, int length, Charset charset) {
+        return copiedBuffer(BIG_ENDIAN, string, offset, length, charset);
+    }
+
+    /**
+     * Creates a new buffer with the specified {@code endianness} whose
+     * content is the specified {@code string} encoded in the specified
+     * {@code charset}.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0} and the length of the encoded string
+     * respectively.
+     */
+    public static ChannelBuffer copiedBuffer(ByteOrder endianness, CharSequence string, Charset charset) {
+        return copiedBuffer(endianness, string, 0, string.length(), charset);
+    }
+
+    /**
+     * Creates a new buffer with the specified {@code endianness} whose
+     * content is a subregion of the specified {@code string} encoded in the
+     * specified {@code charset}.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0} and the length of the encoded string
+     * respectively.
+     */
+    public static ChannelBuffer copiedBuffer(
+            ByteOrder endianness, CharSequence string, int offset, int length, Charset charset) {
+        if (string == null) {
+            throw new NullPointerException("string");
+        }
+        if (length == 0) {
+            return EMPTY_BUFFER;
+        }
+        return copiedBuffer(
+                endianness, CharBuffer.wrap(string, offset, offset + length),
+                charset);
+    }
+
+    /**
+     * Creates a new big-endian buffer whose content is the specified
+     * {@code array} encoded in the specified {@code charset}.
+     * The new buffer's {@code readerIndex} and {@code writerIndex} are
+     * {@code 0} and the length of the encoded string respectively.
+     */
+    public static ChannelBuffer copiedBuffer(char[] array, Charset charset) {
+        return copiedBuffer(BIG_ENDIAN, array, 0, array.length, charset);
+    }
+
+    /**
+     * Creates a new big-endian buffer whose content is a subregion of
+     * the specified {@code array} encoded in the specified {@code charset}.
+     * The new buffer's {@code readerIndex} and {@code writerIndex} are
+     * {@code 0} and the length of the encoded string respectively.
+     */
+    public static ChannelBuffer copiedBuffer(
+            char[] array, int offset, int length, Charset charset) {
+        return copiedBuffer(BIG_ENDIAN, array, offset, length, charset);
+    }
+
+    /**
+     * Creates a new buffer with the specified {@code endianness} whose
+     * content is the specified {@code array} encoded in the specified
+     * {@code charset}.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0} and the length of the encoded string
+     * respectively.
+     */
+    public static ChannelBuffer copiedBuffer(ByteOrder endianness, char[] array, Charset charset) {
+        return copiedBuffer(endianness, array, 0, array.length, charset);
+    }
+
+    /**
+     * Creates a new buffer with the specified {@code endianness} whose
+     * content is a subregion of the specified {@code array} encoded in the
+     * specified {@code charset}.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0} and the length of the encoded string
+     * respectively.
+     */
+    public static ChannelBuffer copiedBuffer(
+            ByteOrder endianness, char[] array, int offset, int length, Charset charset) {
+        if (array == null) {
+            throw new NullPointerException("array");
+        }
+        if (length == 0) {
+            return EMPTY_BUFFER;
+        }
+        return copiedBuffer(
+                endianness, CharBuffer.wrap(array, offset, length), charset);
+    }
+
+    /**
+     * Creates a new big-endian buffer whose content is the specified NIO
+     * {@code buffer} encoded in the specified {@code charset}.
+     * The new buffer's {@code readerIndex} and {@code writerIndex} are
+     * {@code 0} and the length of the encoded string respectively.
+     */
+    public static ChannelBuffer copiedBuffer(CharBuffer buffer, Charset charset) {
+        return copiedBuffer(BIG_ENDIAN, buffer, charset);
+    }
+
+    /**
+     * Creates a new buffer with the specified {@code endianness} whose
+     * content is the specified {@code string} encoded in the specified
+     * NIO {@code buffer}.  The new buffer's {@code readerIndex} and
+     * {@code writerIndex} are {@code 0} and the length of the encoded string
+     * respectively.
+     */
+    public static ChannelBuffer copiedBuffer(ByteOrder endianness, CharBuffer buffer, Charset charset) {
+        if (endianness == null) {
+            throw new NullPointerException("endianness");
+        }
+        if (buffer == null) {
+            throw new NullPointerException("buffer");
+        }
+        if (!buffer.hasRemaining()) {
+            return EMPTY_BUFFER;
+        }
+
+        CharsetEncoder encoder = CharsetUtil.getEncoder(charset);
+        CharBuffer src = buffer;
+        ByteBuffer dst = ByteBuffer.allocate(
+                (int) ((double) buffer.remaining() * encoder.maxBytesPerChar()));
+        try {
+            CoderResult cr = encoder.encode(src, dst, true);
+            if (!cr.isUnderflow()) {
+                cr.throwException();
+            }
+            cr = encoder.flush(dst);
+            if (!cr.isUnderflow()) {
+                cr.throwException();
+            }
+        } catch (CharacterCodingException x) {
+            throw new IllegalStateException(x);
+        }
+
+        ChannelBuffer result = wrappedBuffer(endianness, dst.array());
+        result.writerIndex(dst.position());
+        return result;
+    }
+
+    /**
+     * @deprecated Use {@link #copiedBuffer(CharSequence, Charset)} instead.
      */
     @Deprecated
     public static ChannelBuffer copiedBuffer(String string, String charsetName) {
@@ -677,22 +824,7 @@ public class ChannelBuffers {
     }
 
     /**
-     * Creates a new buffer with the specified {@code endianness} whose
-     * content is the specified {@code string} encoded by the specified
-     * {@code charsetName}.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0} and the length of the encoded string
-     * respectively.
-     */
-    public static ChannelBuffer copiedBuffer(ByteOrder endianness, String string, Charset charset) {
-        try {
-            return wrappedBuffer(endianness, string.getBytes(charset.name()));
-        } catch (UnsupportedEncodingException e) {
-            throw new UnsupportedCharsetException(charset.name());
-        }
-    }
-
-    /**
-     * @deprecated Use {@link #copiedBuffer(ByteOrder, String, Charset)} instead.
+     * @deprecated Use {@link #copiedBuffer(ByteOrder, CharSequence, Charset)} instead.
      */
     @Deprecated
     public static ChannelBuffer copiedBuffer(ByteOrder endianness, String string, String charsetName) {

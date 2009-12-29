@@ -84,17 +84,6 @@ public class CharsetUtil {
      * Returns a cached thread-local {@link CharsetEncoder} for the specified
      * <tt>charset</tt>.
      */
-    public static CharsetEncoder getEncoder(String charset) {
-        if (charset == null) {
-            throw new NullPointerException("charset");
-        }
-        return getEncoder(Charset.forName(charset));
-    }
-
-    /**
-     * Returns a cached thread-local {@link CharsetEncoder} for the specified
-     * <tt>charset</tt>.
-     */
     public static CharsetEncoder getEncoder(Charset charset) {
         if (charset == null) {
             throw new NullPointerException("charset");
@@ -114,17 +103,6 @@ public class CharsetUtil {
         e.onUnmappableCharacter(CodingErrorAction.REPLACE);
         map.put(charset, e);
         return e;
-    }
-
-    /**
-     * Returns a cached thread-local {@link CharsetDecoder} for the specified
-     * <tt>charset</tt>.
-     */
-    public static CharsetDecoder getDecoder(String charset) {
-        if (charset == null) {
-            throw new NullPointerException("charset");
-        }
-        return getDecoder(Charset.forName(charset));
     }
 
     /**

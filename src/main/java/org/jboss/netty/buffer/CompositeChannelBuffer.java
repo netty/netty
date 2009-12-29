@@ -18,16 +18,20 @@ package org.jboss.netty.buffer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.CharBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
-import java.nio.charset.UnsupportedCharsetException;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CoderResult;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import org.jboss.netty.util.CharsetUtil;
 
 
 /**
@@ -595,26 +599,45 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
                     index - indices[componentId], length, charset);
         }
 
+        if (length == 0) {
+            return "";
+        }
+
         byte[] data = new byte[length];
         int dataIndex = 0;
         int i = componentId;
 
-        while (length > 0) {
+        int remaining = length;
+        while (remaining > 0) {
             ChannelBuffer s = components[i];
             int adjustment = indices[i];
-            int localLength = Math.min(length, s.capacity() - (index - adjustment));
+            int localLength = Math.min(remaining, s.capacity() - (index - adjustment));
             s.getBytes(index - adjustment, data, dataIndex, localLength);
             index += localLength;
             dataIndex += localLength;
-            length -= localLength;
+            remaining -= localLength;
             i ++;
         }
 
+        final CharsetDecoder decoder = CharsetUtil.getDecoder(charset);
+        final ByteBuffer src = ByteBuffer.wrap(data);
+        final CharBuffer dst = CharBuffer.allocate(
+                (int) ((double) length * decoder.maxCharsPerByte()));
         try {
-            return new String(data, charset.name());
-        } catch (UnsupportedEncodingException e) {
-            throw new UnsupportedCharsetException(charset.name());
+            CoderResult cr = decoder.decode(src, dst, true);
+            if (!cr.isUnderflow()) {
+                cr.throwException();
+            }
+            cr = decoder.flush(dst);
+            if (!cr.isUnderflow()) {
+                cr.throwException();
+            }
+        } catch (CharacterCodingException x) {
+            throw new IllegalStateException(x);
         }
+
+        dst.flip();
+        return dst.toString();
     }
 
     private int componentId(int index) {
