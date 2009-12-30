@@ -58,87 +58,87 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         setComponents(buffers);
     }
 
-   /**
-    * Same with {@link #slice(int, int)} except that this method returns a list.
-    */
-   public List<ChannelBuffer> decompose(int index, int length) {
-       if (length == 0) {
-           return Collections.emptyList();
-       }
+    /**
+     * Same with {@link #slice(int, int)} except that this method returns a list.
+     */
+    public List<ChannelBuffer> decompose(int index, int length) {
+        if (length == 0) {
+            return Collections.emptyList();
+        }
 
-       if (index + length > capacity()) {
-           throw new IndexOutOfBoundsException();
-       }
+        if (index + length > capacity()) {
+            throw new IndexOutOfBoundsException();
+        }
 
-       int componentId = componentId(index);
-       List<ChannelBuffer> slice = new ArrayList<ChannelBuffer>(components.length);
+        int componentId = componentId(index);
+        List<ChannelBuffer> slice = new ArrayList<ChannelBuffer>(components.length);
 
-       // The first component
-       ChannelBuffer first = components[componentId].duplicate();
-       first.readerIndex(index - indices[componentId]);
+        // The first component
+        ChannelBuffer first = components[componentId].duplicate();
+        first.readerIndex(index - indices[componentId]);
 
-       ChannelBuffer buf = first;
-       int bytesToSlice = length;
-       do {
-           int readableBytes = buf.readableBytes();
-           if (bytesToSlice <= readableBytes) {
-               // Last component
-               buf.writerIndex(buf.readerIndex() + bytesToSlice);
-               slice.add(buf);
-               break;
-           } else {
-               // Not the last component
-               slice.add(buf);
-               bytesToSlice -= readableBytes;
-               componentId ++;
+        ChannelBuffer buf = first;
+        int bytesToSlice = length;
+        do {
+            int readableBytes = buf.readableBytes();
+            if (bytesToSlice <= readableBytes) {
+                // Last component
+                buf.writerIndex(buf.readerIndex() + bytesToSlice);
+                slice.add(buf);
+                break;
+            } else {
+                // Not the last component
+                slice.add(buf);
+                bytesToSlice -= readableBytes;
+                componentId ++;
 
-               // Fetch the next component.
-               buf = components[componentId].duplicate();
-           }
-       } while (bytesToSlice > 0);
+                // Fetch the next component.
+                buf = components[componentId].duplicate();
+            }
+        } while (bytesToSlice > 0);
 
-       // Slice all components because only readable bytes are interesting.
-       for (int i = 0; i < slice.size(); i ++) {
-           slice.set(i, slice.get(i).slice());
-       }
+        // Slice all components because only readable bytes are interesting.
+        for (int i = 0; i < slice.size(); i ++) {
+            slice.set(i, slice.get(i).slice());
+        }
 
-       return slice;
-   }
+        return slice;
+    }
 
-   /**
-    * Setup this ChannelBuffer from the list
-    */
-   private void setComponents(List<ChannelBuffer> newComponents) {
-       assert !newComponents.isEmpty();
+    /**
+     * Setup this ChannelBuffer from the list
+     */
+    private void setComponents(List<ChannelBuffer> newComponents) {
+        assert !newComponents.isEmpty();
 
-       // Clear the cache.
-       lastAccessedComponentId = 0;
+        // Clear the cache.
+        lastAccessedComponentId = 0;
 
-       // Build the component array.
-       components = new ChannelBuffer[newComponents.size()];
-       for (int i = 0; i < components.length; i ++) {
-           ChannelBuffer c = newComponents.get(i);
-           if (c.order() != order()) {
-               throw new IllegalArgumentException(
-                       "All buffers must have the same endianness.");
-           }
+        // Build the component array.
+        components = new ChannelBuffer[newComponents.size()];
+        for (int i = 0; i < components.length; i ++) {
+            ChannelBuffer c = newComponents.get(i);
+            if (c.order() != order()) {
+                throw new IllegalArgumentException(
+                        "All buffers must have the same endianness.");
+            }
 
-           assert c.readerIndex() == 0;
-           assert c.writerIndex() == c.capacity();
+            assert c.readerIndex() == 0;
+            assert c.writerIndex() == c.capacity();
 
-           components[i] = c;
-       }
+            components[i] = c;
+        }
 
-       // Build the component lookup table.
+        // Build the component lookup table.
        indices = new int[components.length + 1];
-       indices[0] = 0;
-       for (int i = 1; i <= components.length; i ++) {
-           indices[i] = indices[i - 1] + components[i - 1].capacity();
-       }
+        indices[0] = 0;
+        for (int i = 1; i <= components.length; i ++) {
+            indices[i] = indices[i - 1] + components[i - 1].capacity();
+        }
 
-       // Reset the indexes.
-       setIndex(0, capacity());
-   }
+        // Reset the indexes.
+        setIndex(0, capacity());
+    }
 
     private CompositeChannelBuffer(CompositeChannelBuffer buffer) {
         order = buffer.order;
