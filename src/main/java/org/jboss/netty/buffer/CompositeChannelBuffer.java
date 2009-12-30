@@ -130,7 +130,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
 
         // Build the component lookup table.
-       indices = new int[components.length + 1];
+        indices = new int[components.length + 1];
         indices[0] = 0;
         for (int i = 1; i <= components.length; i ++) {
             indices[i] = indices[i - 1] + components[i - 1].capacity();
