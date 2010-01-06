@@ -70,6 +70,8 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
             setReceiveBufferSize(ConversionUtil.toInt(value));
         } else if (key.equals("sendBufferSize")) {
             setSendBufferSize(ConversionUtil.toInt(value));
+        } else if (key.equals("receiveBufferSizePredictorFactory")) {
+            setReceiveBufferSizePredictorFactory((ReceiveBufferSizePredictorFactory) value);
         } else if (key.equals("receiveBufferSizePredictor")) {
             setReceiveBufferSizePredictor((ReceiveBufferSizePredictor) value);
         } else if (key.equals("reuseAddress")) {
