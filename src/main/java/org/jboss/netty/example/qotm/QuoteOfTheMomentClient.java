@@ -58,6 +58,13 @@ public class QuoteOfTheMomentClient {
         // Allow packets as large as up to 1024 bytes (default is 768).
         // You could increase or decrease this value to avoid truncated packets
         // or to improve memory footprint respectively.
+        //
+        // Please also note that a large UDP packet might be truncated or
+        // dropped by your router no matter how you configured this option.
+        // In UDP, a packet is truncated or dropped if it is larger than a
+        // certain size, depending on router configuration.  IPv4 routers
+        // truncate and IPv6 routers drop a large packet.  That's why it is
+        // safe to send small packets in UDP.
         b.setOption(
                 "receiveBufferSizePredictorFactory",
                 new FixedReceiveBufferSizePredictorFactory(1024));
