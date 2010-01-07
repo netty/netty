@@ -173,6 +173,10 @@ public final class HttpHeaders {
          */
         public static final String MAX_FORWARDS = "Max-Forwards";
         /**
+         * {@code "Origin"}
+         */
+        public static final String ORIGIN = "Origin";
+        /**
          * {@code "Pragma"}
          */
         public static final String PRAGMA = "Pragma";
@@ -240,6 +244,18 @@ public final class HttpHeaders {
          * {@code "Warning"}
          */
         public static final String WARNING = "Warning";
+        /**
+         * {@code "WebSocket-Location"}
+         */
+        public static final String WEBSOCKET_LOCATION = "WebSocket-Location";
+        /**
+         * {@code "WebSocket-Origin"}
+         */
+        public static final String WEBSOCKET_ORIGIN = "WebSocket-Origin";
+        /**
+         * {@code "WebSocket-Protocol"}
+         */
+        public static final String WEBSOCKET_PROTOCOL = "WebSocket-Protocol";
         /**
          * {@code "WWW-Authenticate"}
          */
@@ -368,6 +384,10 @@ public final class HttpHeaders {
          * {@code "trailers"}
          */
         public static final String TRAILERS = "trailers";
+        /**
+         * {@code "WebSocket"}
+         */
+        public static final String WEBSOCKET = "WebSocket";
 
         private Values() {
             super();
