@@ -91,17 +91,19 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
         if (msg instanceof HttpChunk) {
             HttpChunk chunk = (HttpChunk) msg;
             if (chunked) {
-                if (chunk == HttpChunk.LAST_CHUNK) {
+                if (chunk.isLast()) {
                     chunked = false;
-                    return LAST_CHUNK.duplicate();
-                } else if (chunk instanceof HttpChunkTrailer) {
-                    ChannelBuffer trailer = ChannelBuffers.dynamicBuffer(
-                            channel.getConfig().getBufferFactory());
-                    trailer.writeByte((byte) '0');
-                    trailer.writeBytes(CRLF);
-                    encodeTrailingHeaders(trailer, (HttpChunkTrailer) chunk);
-                    trailer.writeBytes(CRLF);
-                    return trailer;
+                    if (chunk instanceof HttpChunkTrailer) {
+                        ChannelBuffer trailer = ChannelBuffers.dynamicBuffer(
+                                channel.getConfig().getBufferFactory());
+                        trailer.writeByte((byte) '0');
+                        trailer.writeBytes(CRLF);
+                        encodeTrailingHeaders(trailer, (HttpChunkTrailer) chunk);
+                        trailer.writeBytes(CRLF);
+                        return trailer;
+                    } else {
+                        return LAST_CHUNK.duplicate();
+                    }
                 } else {
                     ChannelBuffer content = chunk.getContent();
                     int contentLength = content.readableBytes();
@@ -115,7 +117,7 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
                             wrappedBuffer(CRLF));
                 }
             } else {
-                if (chunk == HttpChunk.LAST_CHUNK) {
+                if (chunk.isLast()) {
                     return null;
                 } else {
                     return chunk.getContent();
