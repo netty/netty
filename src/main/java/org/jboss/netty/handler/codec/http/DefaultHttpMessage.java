@@ -112,19 +112,9 @@ public class DefaultHttpMessage implements HttpMessage {
     public boolean isChunked() {
         if (chunked) {
             return true;
+        } else {
+            return HttpCodecUtil.isTransferEncodingChunked(this);
         }
-
-        List<String> chunked = getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
-        if (chunked.isEmpty()) {
-            return false;
-        }
-
-        for (String v: chunked) {
-            if (v.equalsIgnoreCase(HttpHeaders.Values.CHUNKED)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     public void setChunked(boolean chunked) {

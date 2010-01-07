@@ -50,11 +50,13 @@ import org.jboss.netty.util.CharsetUtil;
  *
  * @apiviz.landmark
  */
-@ChannelPipelineCoverage("all")
+@ChannelPipelineCoverage("one")
 public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
     private static final ChannelBuffer LAST_CHUNK =
         copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII);
+
+    private volatile boolean chunked;
 
     /**
      * Creates a new instance.
@@ -66,16 +68,21 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
     @Override
     protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
         if (msg instanceof HttpMessage) {
-            HttpMessage request = (HttpMessage) msg;
+            HttpMessage m = (HttpMessage) msg;
+            boolean chunked = this.chunked = HttpCodecUtil.isTransferEncodingChunked(m);
             ChannelBuffer header = ChannelBuffers.dynamicBuffer(
                     channel.getConfig().getBufferFactory());
-            encodeInitialLine(header, request);
-            encodeHeaders(header, request);
+            encodeInitialLine(header, m);
+            encodeHeaders(header, m);
             header.writeBytes(CRLF);
 
-            ChannelBuffer content = request.getContent();
+            ChannelBuffer content = m.getContent();
             if (!content.readable()) {
                 return header; // no content
+            } else if (chunked) {
+                throw new IllegalArgumentException(
+                        "HttpMessage.content must be empty " +
+                        "if Transfer-Encoding is chunked.");
             } else {
                 return wrappedBuffer(header, content);
             }
@@ -83,28 +90,38 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
         if (msg instanceof HttpChunk) {
             HttpChunk chunk = (HttpChunk) msg;
-            if (chunk == HttpChunk.LAST_CHUNK) {
-                return LAST_CHUNK.duplicate();
-            } else if (chunk instanceof HttpChunkTrailer) {
-                ChannelBuffer trailer = ChannelBuffers.dynamicBuffer(
-                        channel.getConfig().getBufferFactory());
-                trailer.writeByte((byte) '0');
-                trailer.writeBytes(CRLF);
-                encodeTrailingHeaders(trailer, (HttpChunkTrailer) chunk);
-                trailer.writeBytes(CRLF);
-                return trailer;
-            } else {
-                ChannelBuffer content = chunk.getContent();
-                int contentLength = content.readableBytes();
+            if (chunked) {
+                if (chunk == HttpChunk.LAST_CHUNK) {
+                    chunked = false;
+                    return LAST_CHUNK.duplicate();
+                } else if (chunk instanceof HttpChunkTrailer) {
+                    ChannelBuffer trailer = ChannelBuffers.dynamicBuffer(
+                            channel.getConfig().getBufferFactory());
+                    trailer.writeByte((byte) '0');
+                    trailer.writeBytes(CRLF);
+                    encodeTrailingHeaders(trailer, (HttpChunkTrailer) chunk);
+                    trailer.writeBytes(CRLF);
+                    return trailer;
+                } else {
+                    ChannelBuffer content = chunk.getContent();
+                    int contentLength = content.readableBytes();
 
-                return wrappedBuffer(
-                        copiedBuffer(
-                                Integer.toHexString(contentLength),
-                                CharsetUtil.US_ASCII),
-                        wrappedBuffer(CRLF),
-                        content.slice(content.readerIndex(), contentLength),
-                        wrappedBuffer(CRLF));
+                    return wrappedBuffer(
+                            copiedBuffer(
+                                    Integer.toHexString(contentLength),
+                                    CharsetUtil.US_ASCII),
+                            wrappedBuffer(CRLF),
+                            content.slice(content.readerIndex(), contentLength),
+                            wrappedBuffer(CRLF));
+                }
+            } else {
+                if (chunk == HttpChunk.LAST_CHUNK) {
+                    return null;
+                } else {
+                    return chunk.getContent();
+                }
             }
+
         }
 
         // Unknown message type.

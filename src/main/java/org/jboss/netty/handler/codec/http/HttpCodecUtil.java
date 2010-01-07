@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.nio.charset.Charset;
+import java.util.List;
 
 import org.jboss.netty.util.CharsetUtil;
 
@@ -158,5 +159,19 @@ class HttpCodecUtil {
             throw new IllegalArgumentException(
                     "value must not end with '\\r' or '\\n':" + value);
         }
+    }
+
+    static boolean isTransferEncodingChunked(HttpMessage m) {
+        List<String> chunked = m.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
+        if (chunked.isEmpty()) {
+            return false;
+        }
+
+        for (String v: chunked) {
+            if (v.equalsIgnoreCase(HttpHeaders.Values.CHUNKED)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
