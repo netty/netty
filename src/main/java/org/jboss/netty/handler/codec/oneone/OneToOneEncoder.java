@@ -66,7 +66,7 @@ public abstract class OneToOneEncoder implements ChannelDownstreamHandler {
         Object encodedMessage = encode(ctx, e.getChannel(), originalMessage);
         if (originalMessage == encodedMessage) {
             ctx.sendDownstream(evt);
-        } else {
+        } else if (encodedMessage != null) {
             write(ctx, e.getFuture(), encodedMessage, e.getRemoteAddress());
         }
     }
