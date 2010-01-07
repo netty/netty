@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.ConversionUtil;
 
 /**
  * A {@link ChannelPipeline} that might perform better at the cost of
@@ -41,12 +42,6 @@ public class StaticChannelPipeline implements ChannelPipeline {
 
     // FIXME Code duplication with DefaultChannelPipeline
     static final InternalLogger logger = InternalLoggerFactory.getInstance(StaticChannelPipeline.class);
-
-    // The names of the first 16 handlers to avoid int->string conversion cost
-    private static final String[] NAMES = {
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-        "10","11","12","13","14","15",
-    };
 
     private volatile Channel channel;
     private volatile ChannelSink sink;
@@ -78,13 +73,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
                 throw new NullPointerException("handlers[" + i + ']');
             }
 
-            String name;
-            if (i < NAMES.length) {
-                name = NAMES[i];
-            } else {
-                name = Integer.toString(i);
-            }
-
+            String name = ConversionUtil.toString(i);
             StaticChannelHandlerContext ctx =
                 new StaticChannelHandlerContext(i, name, h);
             contexts[i] = ctx;

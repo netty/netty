@@ -70,10 +70,6 @@ public class ConversionUtil {
         }
     }
 
-    private ConversionUtil() {
-        // Unused
-    }
-
     /**
      * Converts the specified object into an array of strings.
      */
@@ -95,5 +91,22 @@ public class ConversionUtil {
         }
 
         return String.valueOf(value).split("[, \\t\\n\\r\\f\\e\\a]");
+    }
+
+    private static final String[] INTEGERS = {
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+        "10","11","12","13","14","15",
+    };
+
+    public static String toString(int value) {
+        if (value >= 0 && value < INTEGERS.length) {
+            return INTEGERS[value];
+        } else {
+            return Integer.toString(value);
+        }
+    }
+
+    private ConversionUtil() {
+        // Unused
     }
 }
