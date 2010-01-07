@@ -70,6 +70,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         for (int i = 0; i < contexts.length; i ++) {
             ChannelHandler h = handlers[i];
             if (h == null) {
+                // FIXME: Should just break the loop on null
                 throw new NullPointerException("handlers[" + i + ']');
             }
 
