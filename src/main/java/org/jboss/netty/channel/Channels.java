@@ -18,6 +18,8 @@ package org.jboss.netty.channel;
 import java.net.SocketAddress;
 import java.util.Map;
 
+import org.jboss.netty.util.internal.ConversionUtil;
+
 
 /**
  * A helper class which provides various convenience methods related with
@@ -60,6 +62,29 @@ public class Channels {
      */
     public static ChannelPipeline pipeline() {
         return new DefaultChannelPipeline();
+    }
+
+    /**
+     * Creates a new {@link ChannelPipeline} which contains the specified
+     * {@link ChannelHandler}s.  The names of the specified handlers are
+     * generated automatically; the first handler's name is {@code "0"},
+     * the second handler's name is {@code "1"}, the third handler's name is
+     * {@code "2"}, and so on.
+     */
+    public static ChannelPipeline pipeline(ChannelHandler... handlers) {
+        if (handlers == null) {
+            throw new NullPointerException("handlers");
+        }
+
+        ChannelPipeline newPipeline = pipeline();
+        for (int i = 0; i < handlers.length; i ++) {
+            ChannelHandler h = handlers[i];
+            if (h == null) {
+                break;
+            }
+            newPipeline.addLast(ConversionUtil.toString(i), h);
+        }
+        return newPipeline;
     }
 
     /**
