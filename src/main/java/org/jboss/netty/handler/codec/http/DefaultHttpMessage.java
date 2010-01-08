@@ -15,17 +15,12 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.util.internal.CaseIgnoringComparator;
 
 /**
  * The default {@link HttpMessage} implementation.
@@ -37,7 +32,7 @@ import org.jboss.netty.util.internal.CaseIgnoringComparator;
  */
 public class DefaultHttpMessage implements HttpMessage {
 
-    private final Map<String, List<String>> headers = new TreeMap<String, List<String>>(CaseIgnoringComparator.INSTANCE);
+    private final HttpHeaders headers = new HttpHeaders();
     private HttpVersion version;
     private ChannelBuffer content = ChannelBuffers.EMPTY_BUFFER;
     private boolean chunked;
@@ -50,51 +45,19 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public void addHeader(final String name, final String value) {
-        HttpCodecUtil.validateHeaderName(name);
-        HttpCodecUtil.validateHeaderValue(value);
-        if (headers.get(name) == null) {
-            headers.put(name, new ArrayList<String>(1));
-        }
-        headers.get(name).add(value);
+        headers.addHeader(name, value);
     }
 
     public void setHeader(final String name, final String value) {
-        HttpCodecUtil.validateHeaderName(name);
-        HttpCodecUtil.validateHeaderValue(value);
-        List<String> values = new ArrayList<String>(1);
-        values.add(value);
-        headers.put(name, values);
+        headers.setHeader(name, value);
     }
 
     public void setHeader(final String name, final Iterable<String> values) {
-        HttpCodecUtil.validateHeaderName(name);
-        if (values == null) {
-            throw new NullPointerException("values");
-        }
-
-        int nValues = 0;
-        for (String v: values) {
-            HttpCodecUtil.validateHeaderValue(v);
-            nValues ++;
-        }
-
-        if (nValues == 0) {
-            throw new IllegalArgumentException("values is empty.");
-        }
-
-        if (values instanceof List<?>) {
-            headers.put(name, (List<String>) values);
-        } else {
-            List<String> valueList = new LinkedList<String>();
-            for (String v: values) {
-                valueList.add(v);
-            }
-            headers.put(name, valueList);
-        }
+        headers.setHeader(name, values);
     }
 
     public void removeHeader(final String name) {
-        headers.remove(name);
+        headers.removeHeader(name);
     }
 
     public long getContentLength() {
@@ -102,7 +65,7 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public long getContentLength(long defaultValue) {
-        List<String> contentLength = headers.get(HttpHeaders.Names.CONTENT_LENGTH);
+        List<String> contentLength = getHeaders(HttpHeaders.Names.CONTENT_LENGTH);
         if (contentLength != null && contentLength.size() > 0) {
             return Long.parseLong(contentLength.get(0));
         }
@@ -137,7 +100,7 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public void clearHeaders() {
-        headers.clear();
+        headers.clearHeaders();
     }
 
     public void setContent(ChannelBuffer content) {
@@ -152,25 +115,24 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public String getHeader(final String name) {
-        List<String> header = headers.get(name);
-        return header != null && header.size() > 0 ? headers.get(name).get(0) : null;
+        List<String> values = getHeaders(name);
+        return values.size() > 0 ? values.get(0) : null;
     }
 
     public List<String> getHeaders(final String name) {
-        List<String> values = headers.get(name);
-        if (values == null) {
-            return Collections.emptyList();
-        } else {
-            return values;
-        }
+        return headers.getHeaders(name);
+    }
+
+    public List<Map.Entry<String, String>> getHeaders() {
+        return headers.getHeaders();
     }
 
     public boolean containsHeader(final String name) {
-        return headers.containsKey(name);
+        return headers.containsHeader(name);
     }
 
     public Set<String> getHeaderNames() {
-        return headers.keySet();
+        return headers.getHeaderNames();
     }
 
     public HttpVersion getProtocolVersion() {

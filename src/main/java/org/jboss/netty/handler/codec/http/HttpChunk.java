@@ -17,6 +17,7 @@ package org.jboss.netty.handler.codec.http;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -76,6 +77,10 @@ public interface HttpChunk {
         }
 
         public List<String> getHeaders(String name) {
+            return Collections.emptyList();
+        }
+
+        public List<Map.Entry<String, String>> getHeaders() {
             return Collections.emptyList();
         }
 

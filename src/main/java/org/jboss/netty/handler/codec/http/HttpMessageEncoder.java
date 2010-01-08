@@ -19,8 +19,7 @@ import static org.jboss.netty.buffer.ChannelBuffers.*;
 import static org.jboss.netty.handler.codec.http.HttpCodecUtil.*;
 
 import java.io.UnsupportedEncodingException;
-import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -131,13 +130,9 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
     }
 
     private void encodeHeaders(ChannelBuffer buf, HttpMessage message) {
-        Set<String> headers = message.getHeaderNames();
         try {
-            for (String header : headers) {
-                List<String> values = message.getHeaders(header);
-                for (String value : values) {
-                    encodeHeader(buf, header, value);
-                }
+            for (Map.Entry<String, String> h: message.getHeaders()) {
+                encodeHeader(buf, h.getKey(), h.getValue());
             }
         } catch (UnsupportedEncodingException e) {
             throw (Error) new Error().initCause(e);
@@ -145,13 +140,9 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
     }
 
     private void encodeTrailingHeaders(ChannelBuffer buf, HttpChunkTrailer trailer) {
-        Set<String> headers = trailer.getHeaderNames();
         try {
-            for (String header : headers) {
-                List<String> values = trailer.getHeaders(header);
-                for (String value : values) {
-                    encodeHeader(buf, header, value);
-                }
+            for (Map.Entry<String, String> h: trailer.getHeaders()) {
+                encodeHeader(buf, h.getKey(), h.getValue());
             }
         } catch (UnsupportedEncodingException e) {
             throw (Error) new Error().initCause(e);

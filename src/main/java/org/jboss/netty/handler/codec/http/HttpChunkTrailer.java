@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -49,6 +50,14 @@ public interface HttpChunkTrailer extends HttpChunk {
      *         such header.
      */
     List<String> getHeaders(String name);
+
+    /**
+     * Returns the all header names and values that this trailer contains.
+     *
+     * @return the {@link List} of the header name-value pairs.  An empty list
+     *         if there is no header in this trailer.
+     */
+    List<Map.Entry<String, String>> getHeaders();
 
     /**
      * Returns {@code true} if and only if there is a trailing header with

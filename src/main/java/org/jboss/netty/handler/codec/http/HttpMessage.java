@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -54,6 +55,14 @@ public interface HttpMessage {
      *         such header.
      */
     List<String> getHeaders(String name);
+
+    /**
+     * Returns the all header names and values that this message contains.
+     *
+     * @return the {@link List} of the header name-value pairs.  An empty list
+     *         if there is no header in this message.
+     */
+    List<Map.Entry<String, String>> getHeaders();
 
     /**
      * Returns {@code true} if and only if there is a header with the specified

@@ -15,6 +15,14 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+import org.jboss.netty.util.internal.CaseIgnoringComparator;
+
 /**
  * Standard HTTP header names and values.
  *
@@ -24,7 +32,7 @@ package org.jboss.netty.handler.codec.http;
  *
  * @apiviz.stereotype static
  */
-public final class HttpHeaders {
+public class HttpHeaders {
 
     /**
      * Standard HTTP header names.
@@ -385,6 +393,10 @@ public final class HttpHeaders {
          */
         public static final String TRAILERS = "trailers";
         /**
+         * {@code "Upgrade"}
+         */
+        public static final String UPGRADE = "Upgrade";
+        /**
          * {@code "WebSocket"}
          */
         public static final String WEBSOCKET = "WebSocket";
@@ -394,7 +406,273 @@ public final class HttpHeaders {
         }
     }
 
-    private HttpHeaders() {
-        super();
+    private static int hash(String name) {
+        int h = 0;
+        for (int i = name.length() - 1; i >= 0; i --) {
+            char c = name.charAt(i);
+            if (c >= 'A' && c <= 'Z') {
+                c += 32;
+            }
+            h = 31 * h + c;
+        }
+
+        if (h > 0) {
+            return h;
+        } else if (h == Integer.MIN_VALUE) {
+            return Integer.MAX_VALUE;
+        } else {
+            return -h;
+        }
+    }
+
+    private static boolean eq(String name1, String name2) {
+        int nameLen = name1.length();
+        if (nameLen != name2.length()) {
+            return false;
+        }
+
+        for (int i = nameLen - 1; i >= 0; i --) {
+            char c1 = name1.charAt(i);
+            char c2 = name2.charAt(i);
+            if (c1 != c2) {
+                if (c1 >= 'A' && c1 <= 'Z') {
+                    c1 += 32;
+                }
+                if (c2 >= 'A' && c2 <= 'Z') {
+                    c2 += 32;
+                }
+                if (c1 != c2) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private final Entry[] entries = new Entry[17];
+    private final Entry head = new Entry(-1, null, null);
+
+    HttpHeaders() {
+        head.before = head.after = head;
+    }
+
+    private int index(int hash) {
+        return hash % entries.length;
+    }
+
+    void validateHeaderName(String name) {
+        HttpCodecUtil.validateHeaderName(name);
+    }
+
+    void addHeader(final String name, final String value) {
+        validateHeaderName(name);
+        HttpCodecUtil.validateHeaderValue(value);
+        int h = hash(name);
+        int i = index(h);
+        addHeader0(h, i, name, value);
+    }
+
+    private void addHeader0(int h, int i, final String name, final String value) {
+        // Update the hash table.
+        Entry e = entries[i];
+        Entry newEntry;
+        if (e == null) {
+            entries[i] = newEntry = new Entry(h, name, value);
+        } else {
+            entries[i] = newEntry = new Entry(h, name, value);
+            newEntry.next = e;
+        }
+
+        // Update the linked list.
+        newEntry.addBefore(head);
+    }
+
+    void removeHeader(final String name) {
+        int h = hash(name);
+        int i = index(h);
+        removeHeader0(h, i, name);
+    }
+
+    private void removeHeader0(int h, int i, String name) {
+        Entry e = entries[i];
+        if (e == null) {
+            return;
+        }
+
+        for (;;) {
+            if (e.hash == h && eq(name, e.key)) {
+                Entry next = e.next;
+                if (next != null) {
+                    entries[i] = next;
+                    e = next;
+                } else {
+                    entries[i] = null;
+                    return;
+                }
+            } else {
+                break;
+            }
+        }
+
+        for (;;) {
+            Entry next = e.next;
+            if (next == null) {
+                break;
+            }
+            if (next.hash == h && eq(name, next.key)) {
+                e.next = next.next;
+                next.remove();
+            } else {
+                e = next;
+            }
+        }
+    }
+
+    void setHeader(final String name, final String value) {
+        validateHeaderName(name);
+        HttpCodecUtil.validateHeaderValue(value);
+        int h = hash(name);
+        int i = index(h);
+        removeHeader0(h, i, name);
+        addHeader0(h, i, name, value);
+    }
+
+    void setHeader(final String name, final Iterable<String> values) {
+        validateHeaderName(name);
+        if (values == null) {
+            throw new NullPointerException("values");
+        }
+
+        boolean empty = true;
+        for (String v: values) {
+            if (v == null) {
+                break;
+            }
+            HttpCodecUtil.validateHeaderValue(v);
+            empty = false;
+        }
+
+        int h = hash(name);
+        int i = index(h);
+
+        removeHeader0(h, i, name);
+        if (empty) {
+            return;
+        }
+
+        for (String v: values) {
+            if (v == null) {
+                break;
+            }
+            addHeader0(h, i, name, v);
+        }
+    }
+
+    void clearHeaders() {
+        for (int i = 0; i < entries.length; i ++) {
+            entries[i] = null;
+        }
+        head.before = head.after = head;
+    }
+
+    String getHeader(final String name) {
+        int h = hash(name);
+        int i = index(h);
+        Entry e = entries[i];
+        while (e != null) {
+            if (e.hash == h && eq(name, e.key)) {
+                return e.value;
+            }
+
+            e = e.next;
+        }
+        return null;
+    }
+
+    List<String> getHeaders(final String name) {
+        LinkedList<String> values = new LinkedList<String>();
+
+        int h = hash(name);
+        int i = index(h);
+        Entry e = entries[i];
+        while (e != null) {
+            if (e.hash == h && eq(name, e.key)) {
+                values.addFirst(e.value);
+            }
+            e = e.next;
+        }
+        return values;
+    }
+
+    List<Map.Entry<String, String>> getHeaders() {
+        List<Map.Entry<String, String>> all =
+            new LinkedList<Map.Entry<String, String>>();
+
+        Entry e = head.after;
+        while (e != head) {
+            all.add(e);
+            e = e.after;
+        }
+        return all;
+    }
+
+    boolean containsHeader(String name) {
+        return getHeader(name) != null;
+    }
+
+    Set<String> getHeaderNames() {
+        Set<String> names =
+            new TreeSet<String>(CaseIgnoringComparator.INSTANCE);
+
+        Entry e = head.after;
+        while (e != head) {
+            names.add(e.key);
+            e = e.after;
+        }
+        return names;
+    }
+
+    private static final class Entry implements Map.Entry<String, String> {
+        final int hash;
+        final String key;
+        String value;
+        Entry next;
+        Entry before, after;
+
+        Entry(int hash, String key, String value) {
+            this.hash = hash;
+            this.key = key;
+            this.value = value;
+        }
+
+        void remove() {
+            before.after = after;
+            after.before = before;
+        }
+
+        void addBefore(Entry e) {
+            after  = e;
+            before = e.before;
+            before.after = this;
+            after.before = this;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public String getValue() {
+            return value;
+        }
+
+        public String setValue(String value) {
+            if (value == null) {
+                throw new NullPointerException("value");
+            }
+            HttpCodecUtil.validateHeaderValue(value);
+            String oldValue = this.value;
+            this.value = value;
+            return oldValue;
+        }
     }
 }
