@@ -406,6 +406,8 @@ public class HttpHeaders {
         }
     }
 
+    private static final int BUCKET_SIZE = 17;
+
     private static int hash(String name) {
         int h = 0;
         for (int i = name.length() - 1; i >= 0; i --) {
@@ -449,15 +451,15 @@ public class HttpHeaders {
         return true;
     }
 
-    private final Entry[] entries = new Entry[17];
+    private static int index(int hash) {
+        return hash % BUCKET_SIZE;
+    }
+
+    private final Entry[] entries = new Entry[BUCKET_SIZE];
     private final Entry head = new Entry(-1, null, null);
 
     HttpHeaders() {
         head.before = head.after = head;
-    }
-
-    private int index(int hash) {
-        return hash % entries.length;
     }
 
     void validateHeaderName(String name) {
