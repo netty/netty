@@ -72,14 +72,10 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
 
             responseContent.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
 
-            if (!request.getHeaderNames().isEmpty()) {
-                for (String name: request.getHeaderNames()) {
-                    for (String value: request.getHeaders(name)) {
-                        responseContent.append("HEADER: " + name + " = " + value + "\r\n");
-                    }
-                }
-                responseContent.append("\r\n");
+            for (Map.Entry<String, String> h: request.getHeaders()) {
+                responseContent.append("HEADER: " + h.getKey() + " = " + h.getValue() + "\r\n");
             }
+            responseContent.append("\r\n");
 
             QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getUri());
             Map<String, List<String>> params = queryStringDecoder.getParameters();
@@ -133,10 +129,7 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
         responseContent.setLength(0);
 
         // Decide whether to close the connection or not.
-        boolean close =
-            HttpHeaders.Values.CLOSE.equalsIgnoreCase(request.getHeader(HttpHeaders.Names.CONNECTION)) ||
-            request.getProtocolVersion().equals(HttpVersion.HTTP_1_0) &&
-            !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(request.getHeader(HttpHeaders.Names.CONNECTION));
+        boolean close = !request.isKeepAlive();
 
         // Build the response object.
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
