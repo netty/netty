@@ -17,6 +17,7 @@ package org.jboss.netty.channel;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.SelectionKey;
 
 import org.jboss.netty.channel.socket.DatagramChannel;
@@ -205,9 +206,10 @@ public interface Channel extends Comparable<Channel> {
     /**
      * Sends a message to this channel asynchronously.    If this channel was
      * created by a connectionless transport (e.g. {@link DatagramChannel})
-     * and is not connected yet, you call {@link #write(Object, SocketAddress)}
-     * instead.  Otherwise, the write request will fail and an
-     * {@code 'exceptionCaught'} event will be triggered.
+     * and is not connected yet, you have to call {@link #write(Object, SocketAddress)}
+     * instead.  Otherwise, the write request will fail with
+     * {@link NotYetConnectedException} and an {@code 'exceptionCaught'} event
+     * will be triggered.
      *
      * @param message the message to write
      *
@@ -224,8 +226,8 @@ public interface Channel extends Comparable<Channel> {
      * message instead of this channel's current remote address.  If this
      * channel was created by a connectionless transport (e.g. {@link DatagramChannel})
      * and is not connected yet, you must specify non-null address.  Otherwise,
-     * the write request will fail and an {@code 'exceptionCaught'} will be
-     * triggered.
+     * the write request will fail with {@link NotYetConnectedException} and
+     * an {@code 'exceptionCaught'} event will be triggered.
      *
      * @param message       the message to write
      * @param remoteAddress where to send the specified message.
