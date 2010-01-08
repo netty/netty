@@ -488,6 +488,9 @@ public class HttpHeaders {
     }
 
     void removeHeader(final String name) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
         int h = hash(name);
         int i = index(h);
         removeHeader0(h, i, name);
@@ -576,6 +579,10 @@ public class HttpHeaders {
     }
 
     String getHeader(final String name) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+
         int h = hash(name);
         int i = index(h);
         Entry e = entries[i];
@@ -590,6 +597,10 @@ public class HttpHeaders {
     }
 
     List<String> getHeaders(final String name) {
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
+
         LinkedList<String> values = new LinkedList<String>();
 
         int h = hash(name);
