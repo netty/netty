@@ -56,11 +56,6 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
             return;
         }
 
-        if (request.isChunked()) {
-            sendError(ctx, HttpResponseStatus.BAD_REQUEST);
-            return;
-        }
-
         String path = sanitizeUri(request.getUri());
         if (path == null) {
             sendError(ctx, HttpResponseStatus.FORBIDDEN);
@@ -100,11 +95,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         ChannelFuture writeFuture = ch.write(new ChunkedFile(raf, 0, fileLength, 8192));
 
         // Decide whether to close the connection or not.
-        boolean close =
-            HttpHeaders.Values.CLOSE.equalsIgnoreCase(request.getHeader(HttpHeaders.Names.CONNECTION)) ||
-            request.getProtocolVersion().equals(HttpVersion.HTTP_1_0) &&
-            !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(request.getHeader(HttpHeaders.Names.CONNECTION));
-
+        boolean close = !request.isKeepAlive();
         if (close) {
             // Close the connection when the whole content is written out.
             writeFuture.addListener(ChannelFutureListener.CLOSE);
