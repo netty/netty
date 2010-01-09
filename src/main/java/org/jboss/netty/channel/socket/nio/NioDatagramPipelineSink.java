@@ -116,12 +116,14 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
     private void close(NioDatagramChannel channel, ChannelFuture future) {
         try {
             channel.getDatagramChannel().socket().close();
-            future.setSuccess();
             if (channel.setClosed()) {
+                future.setSuccess();
                 if (channel.isBound()) {
                     fireChannelUnbound(channel);
                 }
                 fireChannelClosed(channel);
+            } else {
+                future.setSuccess();
             }
         } catch (final Throwable t) {
             future.setFailure(t);
