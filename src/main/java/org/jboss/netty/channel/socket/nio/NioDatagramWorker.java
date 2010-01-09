@@ -438,9 +438,9 @@ class NioDatagramWorker implements Runnable {
     static void write(final NioDatagramChannel channel,
             final boolean mightNeedWakeup) {
         /*
-         * Note that we are not checking if the channel is connected. Connected has a different
-         * meaning in UDP and means that the channels socket is configured to only send and
-         * receive from a given remote peer.
+         * Note that we are not checking if the channel is connected. Connected
+         * has a different meaning in UDP and means that the channels socket is
+         * configured to only send and receive from a given remote peer.
          */
         if (!channel.isOpen()) {
             cleanUpWriteBuffer(channel);
