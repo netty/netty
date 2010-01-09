@@ -401,7 +401,7 @@ class NioDatagramWorker implements Runnable {
             // the channel is ready to receive.
             remoteAddress = nioChannel.receive(byteBuffer);
             failure = false;
-        } catch (AsynchronousCloseException e) {
+        } catch (ClosedChannelException e) {
             // Can happen, and does not need a user attention.
         } catch (Throwable t) {
             fireExceptionCaught(channel, t);
