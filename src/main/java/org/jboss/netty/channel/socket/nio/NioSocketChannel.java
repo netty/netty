@@ -45,11 +45,11 @@ import org.jboss.netty.util.internal.ThreadLocalBoolean;
 class NioSocketChannel extends AbstractChannel
                                 implements org.jboss.netty.channel.socket.SocketChannel {
 
-    static final int ST_OPEN = 0;
-    static final int ST_BOUND = 1;
-    static final int ST_CONNECTED = 2;
-    static final int ST_CLOSED = -1;
-    volatile int state = ST_OPEN;
+    private static final int ST_OPEN = 0;
+    private static final int ST_BOUND = 1;
+    private static final int ST_CONNECTED = 2;
+    private static final int ST_CLOSED = -1;
+    private volatile int state = ST_OPEN;
 
     final SocketChannel socket;
     final NioWorker worker;
@@ -125,6 +125,16 @@ class NioSocketChannel extends AbstractChannel
 
     public boolean isConnected() {
         return state == ST_CONNECTED;
+    }
+
+    final void setBound() {
+        assert state == ST_OPEN;
+        state = ST_BOUND;
+    }
+
+    final void setConnected() {
+        assert state == ST_OPEN || state == ST_BOUND;
+        state = ST_CONNECTED;
     }
 
     @Override

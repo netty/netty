@@ -23,6 +23,7 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
+import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
@@ -302,8 +303,7 @@ class NioWorker implements Runnable {
     }
 
     private static boolean read(SelectionKey k) {
-        java.nio.channels.SocketChannel ch =
-            (java.nio.channels.SocketChannel) k.channel();
+        ScatteringByteChannel ch = (ScatteringByteChannel) k.channel();
         NioSocketChannel channel = (NioSocketChannel) k.attachment();
 
         ReceiveBufferSizePredictor predictor =
@@ -325,15 +325,10 @@ class NioWorker implements Runnable {
                 }
             }
             failure = false;
+        } catch (AsynchronousCloseException e) {
+            // Can happen, and does not need a user attention.
         } catch (Throwable t) {
-            if (!ch.isConnected()) {
-                channel.state = NioSocketChannel.ST_CLOSED;
-            }
-            if (t instanceof AsynchronousCloseException) {
-                // Can happen, and does not need a user attention.
-            } else {
-                fireExceptionCaught(channel, t);
-            }
+            fireExceptionCaught(channel, t);
         }
 
         if (readBytes > 0) {
@@ -473,23 +468,18 @@ class NioWorker implements Runnable {
                         addOpWrite = true;
                         break;
                     }
+                } catch (AsynchronousCloseException e) {
+                    // Doesn't need a user attention - ignore.
+                    channel.currentWriteEvent = evt;
+                    channel.currentWriteIndex = bufIdx;
                 } catch (Throwable t) {
-                    if (!channel.socket.isConnected()) {
-                        channel.state = NioSocketChannel.ST_CLOSED;
-                    }
-                    if (t instanceof AsynchronousCloseException) {
-                        // Doesn't need a user attention - ignore.
-                        channel.currentWriteEvent = evt;
-                        channel.currentWriteIndex = bufIdx;
-                    } else {
-                        channel.currentWriteEvent = null;
-                        evt.getFuture().setFailure(t);
-                        evt = null;
-                        fireExceptionCaught(channel, t);
-                        if (t instanceof IOException) {
-                            open = false;
-                            close(channel, succeededFuture(channel));
-                        }
+                    channel.currentWriteEvent = null;
+                    evt.getFuture().setFailure(t);
+                    evt = null;
+                    fireExceptionCaught(channel, t);
+                    if (t instanceof IOException) {
+                        open = false;
+                        close(channel, succeededFuture(channel));
                     }
                 }
             }
@@ -782,7 +772,7 @@ class NioWorker implements Runnable {
             }
 
             if (!server) {
-                channel.state = NioSocketChannel.ST_CONNECTED;
+                channel.setConnected();
                 if (!((NioClientSocketChannel) channel).boundManually) {
                     fireChannelBound(channel, localAddress);
                 }
