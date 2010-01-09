@@ -133,8 +133,9 @@ class NioSocketChannel extends AbstractChannel
     }
 
     final void setConnected() {
-        assert state == ST_OPEN || state == ST_BOUND : "Invalid state: " + state;
-        state = ST_CONNECTED;
+        if (state != ST_CLOSED) {
+            state = ST_CONNECTED;
+        }
     }
 
     @Override
