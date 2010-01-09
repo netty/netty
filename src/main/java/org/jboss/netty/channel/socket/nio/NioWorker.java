@@ -758,6 +758,7 @@ class NioWorker implements Runnable {
                             selector, channel.getRawInterestOps(), channel);
                 }
                 if (future != null) {
+                    channel.setConnected();
                     future.setSuccess();
                 }
             } catch (IOException e) {
@@ -772,7 +773,6 @@ class NioWorker implements Runnable {
             }
 
             if (!server) {
-                channel.setConnected();
                 if (!((NioClientSocketChannel) channel).boundManually) {
                     fireChannelBound(channel, localAddress);
                 }
