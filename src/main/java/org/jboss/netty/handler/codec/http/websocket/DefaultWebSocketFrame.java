@@ -20,6 +20,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.util.CharsetUtil;
 
 /**
+ * The default {@link WebSocketFrame} implementation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
@@ -30,14 +31,33 @@ public class DefaultWebSocketFrame implements WebSocketFrame {
     private int type;
     private ChannelBuffer binaryData;
 
+    /**
+     * Creates a new empty text frame.
+     */
     public DefaultWebSocketFrame() {
         this(0, ChannelBuffers.EMPTY_BUFFER);
     }
 
+    /**
+     * Creates a new text frame from with the specified string.
+     */
     public DefaultWebSocketFrame(String textData) {
         this(0, ChannelBuffers.copiedBuffer(textData, CharsetUtil.UTF_8));
     }
 
+    /**
+     * Creates a new frame with the specified frame type and the specified data.
+     *
+     * @param type
+     *        the type of the frame. {@code 0} is the only allowed type currently.
+     * @param binaryData
+     *        the content of the frame.  If <tt>(type &amp; 0x80 == 0)</tt>,
+     *        it must be encoded in UTF-8.
+     *
+     * @throws IllegalArgumentException
+     *         if If <tt>(type &amp; 0x80 == 0)</tt> and the data is not encoded
+     *         in UTF-8
+     */
     public DefaultWebSocketFrame(int type, ChannelBuffer binaryData) {
         setData(type, binaryData);
     }

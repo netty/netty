@@ -22,12 +22,16 @@ import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
- * Encodes a {@code String} to a {@link ChannelBuffer} inside a Web Socket protocol frame.
+ * Encodes a {@link WebSocketFrame} into a {@link ChannelBuffer}.
+ * <p>
+ * For the detailed instruction on adding add Web Socket support to your HTTP
+ * server, take a look into the <tt>WebSocketServer</tt> example located in the
+ * {@code org.jboss.netty.example.http.websocket} package.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Mike Heath (mheath@apache.org)
  * @author Trustin Lee (trustin@gmail.com)
- * @version $Rev:$, $Date:$
+ * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("all")
 public class WebSocketFrameEncoder extends OneToOneEncoder {

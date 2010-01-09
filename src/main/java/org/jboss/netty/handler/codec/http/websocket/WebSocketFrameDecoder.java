@@ -24,14 +24,16 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 import org.jboss.netty.handler.codec.replay.VoidEnum;
 
 /**
- * Decodes the received {@link ChannelBuffer}s as Web Socket frames.  If the Web Socket frame type has its most
- * significant bit set, the Web Socket frame will be sent upstream as a {@link ChannelBuffer} object.  Otherwise,
- * a {@link String} object is ent upstream.
+ * Decodes {@link ChannelBuffer}s into {@link WebSocketFrame}s.
+ * <p>
+ * For the detailed instruction on adding add Web Socket support to your HTTP
+ * server, take a look into the <tt>WebSocketServer</tt> example located in the
+ * {@code org.jboss.netty.example.http.websocket} package.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Mike Heath (mheath@apache.org)
  * @author Trustin Lee (trustin@gmail.com)
- * @version $Rev:$, $Date:$
+ * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("one")
 public class WebSocketFrameDecoder extends ReplayingDecoder<VoidEnum> {

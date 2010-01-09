@@ -18,16 +18,63 @@ package org.jboss.netty.handler.codec.http.websocket;
 import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
+ * A Web Socket frame that represents either text or binary data.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
 public interface WebSocketFrame {
+
+    /**
+     * Returns the type of this frame.
+     * <tt>0x00-0x7F</tt> means a text frame encoded in UTF-8, and
+     * <tt>0x80-0xFF</tt> means a binary frame.  Currently, {@code 0} is the
+     * only allowed type according to the specification.
+     */
     int getType();
+
+    /**
+     * Returns {@code true} if and only if the content of this frame is a string
+     * encoded in UTF-8.
+     */
     boolean isText();
+
+    /**
+     * Returns {@code true} if and only if the content of this frame is an
+     * arbitrary binary data.
+     */
     boolean isBinary();
+
+    /**
+     * Returns the content of this frame as-is, with no UTF-8 decoding.
+     */
     ChannelBuffer getBinaryData();
+
+    /**
+     * Converts the content of this frame into a UTF-8 string and returns the
+     * converted string.
+     */
     String getTextData();
+
+    /**
+     * Sets the type and the content of this frame.
+     *
+     * @param type
+     *        the type of the frame. {@code 0} is the only allowed type currently.
+     * @param binaryData
+     *        the content of the frame.  If <tt>(type &amp; 0x80 == 0)</tt>,
+     *        it must be encoded in UTF-8.
+     *
+     * @throws IllegalArgumentException
+     *         if If <tt>(type &amp; 0x80 == 0)</tt> and the data is not encoded
+     *         in UTF-8
+     */
     void setData(int type, ChannelBuffer binaryData);
+
+    /**
+     * Returns the string representation of this frame.  Please note that this
+     * method is not identical to {@link #getTextData()}.
+     */
+    String toString();
 }
