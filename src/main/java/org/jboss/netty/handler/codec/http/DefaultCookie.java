@@ -83,9 +83,8 @@ public class DefaultCookie implements Cookie {
 
             // Check prohibited characters.
             switch (c) {
-            case '=':  case ',':  case ';': case ' ':
-            case '\t': case '\r': case '\n': case '\f':
-            case 0x0b: // Vertical tab
+            case '\t': case '\n': case 0x0b: case '\f': case '\r':
+            case ' ':  case ',':  case ';':  case '=':
                 throw new IllegalArgumentException(
                         "name contains one of the following prohibited characters: " +
                         "=,; \\t\\r\\n\\v\\f: " + name);

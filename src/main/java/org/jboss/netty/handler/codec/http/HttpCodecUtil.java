@@ -88,9 +88,8 @@ class HttpCodecUtil {
 
             // Check prohibited characters.
             switch (c) {
-            case '=':  case ',':  case ';': case ' ': case ':':
-            case '\t': case '\r': case '\n': case '\f':
-            case 0x0b: // Vertical tab
+            case '\t': case '\n': case 0x0b: case '\f': case '\r':
+            case ' ':  case ',':  case ':':  case ';':  case '=':
                 throw new IllegalArgumentException(
                         "name contains one of the following prohibited characters: " +
                         "=,;: \\t\\r\\n\\v\\f: " + name);
@@ -113,12 +112,12 @@ class HttpCodecUtil {
 
             // Check the absolutely prohibited characters.
             switch (c) {
-            case '\f':
-                throw new IllegalArgumentException(
-                        "value contains a prohibited character '\\f': " + value);
             case 0x0b: // Vertical tab
                 throw new IllegalArgumentException(
                         "value contains a prohibited character '\\v': " + value);
+            case '\f':
+                throw new IllegalArgumentException(
+                        "value contains a prohibited character '\\f': " + value);
             }
 
             // Check the CRLF (HT | SP) pattern
@@ -145,7 +144,7 @@ class HttpCodecUtil {
                 break;
             case 2:
                 switch (c) {
-                case ' ': case '\t':
+                case '\t': case ' ':
                     state = 0;
                     break;
                 default:
