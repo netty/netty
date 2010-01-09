@@ -327,7 +327,7 @@ class NioWorker implements Runnable {
             failure = false;
         } catch (Throwable t) {
             if (!ch.isConnected()) {
-                channel.setClosedFlag();
+                channel.state = NioSocketChannel.ST_CLOSED;
             }
             if (t instanceof AsynchronousCloseException) {
                 // Can happen, and does not need a user attention.
@@ -475,7 +475,7 @@ class NioWorker implements Runnable {
                     }
                 } catch (Throwable t) {
                     if (!channel.socket.isConnected()) {
-                        channel.setClosedFlag();
+                        channel.state = NioSocketChannel.ST_CLOSED;
                     }
                     if (t instanceof AsynchronousCloseException) {
                         // Doesn't need a user attention - ignore.
@@ -782,7 +782,7 @@ class NioWorker implements Runnable {
             }
 
             if (!server) {
-                channel.setConnected();
+                channel.state = NioSocketChannel.ST_CONNECTED;
                 if (!((NioClientSocketChannel) channel).boundManually) {
                     fireChannelBound(channel, localAddress);
                 }
