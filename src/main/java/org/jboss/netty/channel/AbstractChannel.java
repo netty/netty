@@ -64,7 +64,7 @@ public abstract class AbstractChannel implements Channel {
     private final ChannelFactory factory;
     private final ChannelPipeline pipeline;
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this);
-    private final ChannelFuture closeFuture = new UnfailingChannelFuture(this, false);
+    private final ChannelCloseFuture closeFuture = new ChannelCloseFuture();
     private volatile int interestOps = OP_READ;
 
     /** Cache for the string representation of this channel */
@@ -163,7 +163,7 @@ public abstract class AbstractChannel implements Channel {
      *                      closed yet
      */
     protected boolean setClosed() {
-        return closeFuture.setSuccess();
+        return closeFuture.setClosed();
     }
 
     public ChannelFuture bind(SocketAddress localAddress) {
@@ -308,5 +308,28 @@ public abstract class AbstractChannel implements Channel {
             break;
         }
         return answer;
+    }
+
+    private final class ChannelCloseFuture extends DefaultChannelFuture {
+
+        public ChannelCloseFuture() {
+            super(AbstractChannel.this, false);
+        }
+
+        @Override
+        public boolean setSuccess() {
+            // User is not supposed to call this method - ignore silently.
+            return false;
+        }
+
+        @Override
+        public boolean setFailure(Throwable cause) {
+            // User is not supposed to call this method - ignore silently.
+            return false;
+        }
+
+        boolean setClosed() {
+            return super.setSuccess();
+        }
     }
 }
