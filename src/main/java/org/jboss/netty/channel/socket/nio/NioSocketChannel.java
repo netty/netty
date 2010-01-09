@@ -128,12 +128,12 @@ class NioSocketChannel extends AbstractChannel
     }
 
     final void setBound() {
-        assert state == ST_OPEN;
+        assert state == ST_OPEN : "Invalid state: " + state;
         state = ST_BOUND;
     }
 
     final void setConnected() {
-        assert state == ST_OPEN || state == ST_BOUND;
+        assert state == ST_OPEN || state == ST_BOUND : "Invalid state: " + state;
         state = ST_CONNECTED;
     }
 
