@@ -218,10 +218,10 @@ public class CookieEncoder {
         for (int i = 0; i < val.length(); i ++) {
             char c = val.charAt(i);
             switch (c) {
-            case '(': case ')': case '<': case '>': case '@': case ',':
-            case ';': case ':': case '"': case '/': case '[': case ']':
-            case '?': case '=': case '{': case '}': case ' ':
-            case '\t': case '\\':
+            case '\t': case ' ': case '"': case '(':  case ')': case ',':
+            case '/':  case ':': case ';': case '<':  case '=': case '>':
+            case '?':  case '@': case '[': case '\\': case ']':
+            case '{':  case '}':
                 addQuoted(sb, name, val);
                 return;
             }
