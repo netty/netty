@@ -23,7 +23,6 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
-import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
@@ -303,7 +302,8 @@ class NioWorker implements Runnable {
     }
 
     private static boolean read(SelectionKey k) {
-        ScatteringByteChannel ch = (ScatteringByteChannel) k.channel();
+        java.nio.channels.SocketChannel ch =
+            (java.nio.channels.SocketChannel) k.channel();
         NioSocketChannel channel = (NioSocketChannel) k.attachment();
 
         ReceiveBufferSizePredictor predictor =
@@ -325,10 +325,15 @@ class NioWorker implements Runnable {
                 }
             }
             failure = false;
-        } catch (AsynchronousCloseException e) {
-            // Can happen, and does not need a user attention.
         } catch (Throwable t) {
-            fireExceptionCaught(channel, t);
+            if (!ch.isConnected()) {
+                channel.setClosedFlag();
+            }
+            if (t instanceof AsynchronousCloseException) {
+                // Can happen, and does not need a user attention.
+            } else {
+                fireExceptionCaught(channel, t);
+            }
         }
 
         if (readBytes > 0) {
@@ -468,18 +473,23 @@ class NioWorker implements Runnable {
                         addOpWrite = true;
                         break;
                     }
-                } catch (AsynchronousCloseException e) {
-                    // Doesn't need a user attention - ignore.
-                    channel.currentWriteEvent = evt;
-                    channel.currentWriteIndex = bufIdx;
                 } catch (Throwable t) {
-                    channel.currentWriteEvent = null;
-                    evt.getFuture().setFailure(t);
-                    evt = null;
-                    fireExceptionCaught(channel, t);
-                    if (t instanceof IOException) {
-                        open = false;
-                        close(channel, succeededFuture(channel));
+                    if (!channel.socket.isConnected()) {
+                        channel.setClosedFlag();
+                    }
+                    if (t instanceof AsynchronousCloseException) {
+                        // Doesn't need a user attention - ignore.
+                        channel.currentWriteEvent = evt;
+                        channel.currentWriteIndex = bufIdx;
+                    } else {
+                        channel.currentWriteEvent = null;
+                        evt.getFuture().setFailure(t);
+                        evt = null;
+                        fireExceptionCaught(channel, t);
+                        if (t instanceof IOException) {
+                            open = false;
+                            close(channel, succeededFuture(channel));
+                        }
                     }
                 }
             }
