@@ -772,6 +772,7 @@ class NioWorker implements Runnable {
             }
 
             if (!server) {
+                channel.setConnected();
                 if (!((NioClientSocketChannel) channel).boundManually) {
                     fireChannelBound(channel, localAddress);
                 }

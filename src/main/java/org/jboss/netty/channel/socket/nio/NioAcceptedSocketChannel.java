@@ -45,6 +45,7 @@ final class NioAcceptedSocketChannel extends NioSocketChannel {
 
         this.bossThread = bossThread;
 
+        setConnected();
         fireChannelOpen(this);
         fireChannelBound(this, getLocalAddress());
         fireChannelConnected(this, getRemoteAddress());
