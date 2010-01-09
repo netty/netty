@@ -22,6 +22,13 @@ import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 /**
+ * An HTTP server which serves Web Socket requests at:
+ *
+ *     http://localhost:8080/websocket
+ *
+ * Open your browser at http://localhost:8080/, then the demo page will be
+ * loaded and a Web Socket connection will be made automatically.
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
  *

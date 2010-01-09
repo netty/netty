@@ -68,7 +68,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
             return;
         }
 
-        // Send the example web page.
+        // Send the demo page.
         if (req.getUri().equals("/")) {
             HttpResponse res = new DefaultHttpResponse(
                     HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
@@ -86,34 +86,36 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
             return;
         }
 
-        // Serve the WebSocket connection.
-        if (req.getUri().equals(WEBSOCKET_PATH)) {
-            if (HttpHeaders.Values.UPGRADE.equalsIgnoreCase(req.getHeader(HttpHeaders.Names.CONNECTION)) &&
-                HttpHeaders.Values.WEBSOCKET.equalsIgnoreCase(req.getHeader(HttpHeaders.Names.UPGRADE))) {
-                HttpResponse res = new DefaultHttpResponse(
-                        HttpVersion.HTTP_1_1,
-                        new HttpResponseStatus(101, "Web Socket Protocol Handshake"));
-                res.addHeader(HttpHeaders.Names.UPGRADE, HttpHeaders.Values.WEBSOCKET);
-                res.addHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.UPGRADE);
-                res.addHeader(HttpHeaders.Names.WEBSOCKET_ORIGIN, req.getHeader(HttpHeaders.Names.ORIGIN));
-                res.addHeader(HttpHeaders.Names.WEBSOCKET_LOCATION, getWebSocketLocation(req));
-                String protocol = req.getHeader(HttpHeaders.Names.WEBSOCKET_PROTOCOL);
-                if (protocol != null) {
-                    res.addHeader(HttpHeaders.Names.WEBSOCKET_PROTOCOL, protocol);
-                }
+        // Serve the WebSocket handshake request.
+        if (req.getUri().equals(WEBSOCKET_PATH) &&
+            HttpHeaders.Values.UPGRADE.equalsIgnoreCase(req.getHeader(HttpHeaders.Names.CONNECTION)) &&
+            HttpHeaders.Values.WEBSOCKET.equalsIgnoreCase(req.getHeader(HttpHeaders.Names.UPGRADE))) {
 
-                ChannelPipeline p = ctx.getChannel().getPipeline();
-                p.remove("aggregator");
-                p.replace("decoder", "wsdecoder", new WebSocketFrameDecoder());
-
-                ctx.getChannel().write(res);
-
-                p.replace("encoder", "wsencoder", new WebSocketFrameEncoder());
-
-                return;
+            // Create the WebSocket handshake response.
+            HttpResponse res = new DefaultHttpResponse(
+                    HttpVersion.HTTP_1_1,
+                    new HttpResponseStatus(101, "Web Socket Protocol Handshake"));
+            res.addHeader(HttpHeaders.Names.UPGRADE, HttpHeaders.Values.WEBSOCKET);
+            res.addHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.UPGRADE);
+            res.addHeader(HttpHeaders.Names.WEBSOCKET_ORIGIN, req.getHeader(HttpHeaders.Names.ORIGIN));
+            res.addHeader(HttpHeaders.Names.WEBSOCKET_LOCATION, getWebSocketLocation(req));
+            String protocol = req.getHeader(HttpHeaders.Names.WEBSOCKET_PROTOCOL);
+            if (protocol != null) {
+                res.addHeader(HttpHeaders.Names.WEBSOCKET_PROTOCOL, protocol);
             }
+
+            // Upgrade the connection and send the handshake response.
+            ChannelPipeline p = ctx.getChannel().getPipeline();
+            p.remove("aggregator");
+            p.replace("decoder", "wsdecoder", new WebSocketFrameDecoder());
+
+            ctx.getChannel().write(res);
+
+            p.replace("encoder", "wsencoder", new WebSocketFrameEncoder());
+            return;
         }
 
+        // Send an error page otherwise.
         sendHttpResponse(
                 ctx, req, new DefaultHttpResponse(
                         HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN));
@@ -126,6 +128,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     private void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
+        // Generate an error page if response status code is not OK (200).
         if (res.getStatus().getCode() != 200) {
             res.setContent(
                     ChannelBuffers.copiedBuffer(
@@ -135,6 +138,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
                     Integer.toString(res.getContent().readableBytes()));
         }
 
+        // Send the response and close the connection if necessary.
         ChannelFuture f = ctx.getChannel().write(res);
         if (!req.isKeepAlive() || res.getStatus().getCode() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);

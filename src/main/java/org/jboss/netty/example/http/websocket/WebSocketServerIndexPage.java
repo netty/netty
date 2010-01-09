@@ -21,6 +21,8 @@ import org.jboss.netty.util.CharsetUtil;
 
 
 /**
+ * Generates the demo HTML page which is served at http://localhost:8080/
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
  *
