@@ -20,7 +20,7 @@
   <groupId>org.jboss.netty</groupId>
   <artifactId>netty</artifactId>
   <packaging>bundle</packaging>
-  <version>3.2.0.ALPHA3</version>
+  <version>3.2.0.ALPHA4-SNAPSHOT</version>
 
   <name>The Netty Project</name>
   <url>http://www.jboss.org/netty/</url>
@@ -47,8 +47,8 @@
   <inceptionYear>2008</inceptionYear>
 
   <scm>
-    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/tags/netty-3.2.0.ALPHA3</connection>
-    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/tags/netty-3.2.0.ALPHA3</developerConnection>
+    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/trunk</connection>
+    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/trunk</developerConnection>
   </scm>
 
   <dependencies>
