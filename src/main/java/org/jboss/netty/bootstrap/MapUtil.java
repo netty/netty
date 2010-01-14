@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util.internal;
+package org.jboss.netty.bootstrap;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -29,14 +29,14 @@ import java.util.Map;
  *
  * @version $Rev$, $Date$
  */
-public class MapUtil {
+class MapUtil {
 
     /**
      * Returns {@code true} if and only if the specified {@code map} is an
      * ordered map, like {@link LinkedHashMap} is.
      */
     @SuppressWarnings("unchecked")
-    public static boolean isOrderedMap(Map<?, ?> map) {
+    static boolean isOrderedMap(Map<?, ?> map) {
         Class<?> mapType = map.getClass();
         if (LinkedHashMap.class.isAssignableFrom(mapType)) {
             // LinkedHashMap is an ordered map.

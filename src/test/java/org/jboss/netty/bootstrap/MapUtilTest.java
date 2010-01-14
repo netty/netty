@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util.internal;
+package org.jboss.netty.bootstrap;
 
 import static org.junit.Assert.*;
 
@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.jboss.netty.bootstrap.MapUtil;
 import org.junit.Test;
 
 

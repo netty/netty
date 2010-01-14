@@ -29,7 +29,6 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.util.ExternalResourceReleasable;
-import org.jboss.netty.util.internal.MapUtil;
 
 /**
  * A helper class which initializes a {@link Channel}.  This class provides
