@@ -98,7 +98,7 @@ public class ReadOnlyChannelBufferTest {
 
         expect(buf.toByteBuffer(23, 24)).andReturn(bb);
         expect(buf.toByteBuffers(25, 26)).andReturn(bbs);
-        expect(buf.toString(27, 28, CharsetUtil.UTF_8)).andReturn("29");
+        expect(buf.getString(27, 28, CharsetUtil.UTF_8)).andReturn("29");
         expect(buf.capacity()).andReturn(30);
 
         replay(buf);
@@ -126,7 +126,7 @@ public class ReadOnlyChannelBufferTest {
         assertEquals(102, roBBs[1].capacity());
         assertTrue(roBBs[1].isReadOnly());
 
-        assertEquals("29", roBuf.toString(27, 28, CharsetUtil.UTF_8));
+        assertEquals("29", roBuf.getString(27, 28, CharsetUtil.UTF_8));
         assertEquals(30, roBuf.capacity());
 
         verify(buf);

@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.CharBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
@@ -208,9 +209,9 @@ public class TruncatedChannelBuffer extends AbstractChannelBuffer implements Wra
         return buffer.toByteBuffer(index, length);
     }
 
-    public String toString(int index, int length, Charset charset) {
+    public int getString(int index, int length, CharBuffer dst, Charset charset) {
         checkIndex(index, length);
-        return buffer.toString(index, length, charset);
+        return buffer.getString(index, length, dst, charset);
     }
 
     private void checkIndex(int index) {

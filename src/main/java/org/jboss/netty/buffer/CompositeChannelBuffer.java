@@ -23,10 +23,8 @@ import java.nio.ByteOrder;
 import java.nio.CharBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CoderResult;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -592,15 +590,15 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         return buffers.toArray(new ByteBuffer[buffers.size()]);
     }
 
-    public String toString(int index, int length, Charset charset) {
+    public int getString(int index, int length, CharBuffer dst, Charset charset) {
         int componentId = componentId(index);
         if (index + length <= indices[componentId + 1]) {
-            return components[componentId].toString(
-                    index - indices[componentId], length, charset);
+            return components[componentId].getString(
+                    index - indices[componentId], length, dst, charset);
         }
 
         if (length == 0) {
-            return "";
+            return 0;
         }
 
         byte[] data = new byte[length];
@@ -620,24 +618,10 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
 
         final CharsetDecoder decoder = CharsetUtil.getDecoder(charset);
+        final int start = dst.position();
         final ByteBuffer src = ByteBuffer.wrap(data);
-        final CharBuffer dst = CharBuffer.allocate(
-                (int) ((double) length * decoder.maxCharsPerByte()));
-        try {
-            CoderResult cr = decoder.decode(src, dst, true);
-            if (!cr.isUnderflow()) {
-                cr.throwException();
-            }
-            cr = decoder.flush(dst);
-            if (!cr.isUnderflow()) {
-                cr.throwException();
-            }
-        } catch (CharacterCodingException x) {
-            throw new IllegalStateException(x);
-        }
-
-        dst.flip();
-        return dst.toString();
+        ChannelBuffers.decodeString(src, dst, decoder);
+        return dst.position() - start;
     }
 
     private int componentId(int index) {

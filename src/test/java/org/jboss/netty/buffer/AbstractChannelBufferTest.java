@@ -1537,15 +1537,6 @@ public abstract class AbstractChannelBufferTest {
         buffer.clear();
         buffer.writeBytes(copiedBuffer("Hello, World!", CharsetUtil.ISO_8859_1));
         assertEquals("Hello, World!", buffer.toString(CharsetUtil.ISO_8859_1));
-
-        // Same with the previous one
-        assertEquals("Hello, World!", buffer.toString(CharsetUtil.ISO_8859_1, null));
-
-        // NUL not found.
-        assertEquals("Hello, World!", buffer.toString(CharsetUtil.ISO_8859_1, ChannelBufferIndexFinder.NUL));
-
-        // Linear space found.
-        assertEquals("Hello,", buffer.toString(CharsetUtil.ISO_8859_1, ChannelBufferIndexFinder.LINEAR_WHITESPACE));
     }
 
     @Test

@@ -19,10 +19,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.util.NoSuchElementException;
+
+import org.jboss.netty.util.CharsetUtil;
 
 
 /**
@@ -169,6 +173,44 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         }
         getBytes(index, dst, dst.writerIndex(), length);
         dst.writerIndex(dst.writerIndex() + length);
+    }
+
+    public String getString(int index, int length, Charset charset) {
+        if (length == 0) {
+            return "";
+        }
+
+        final CharsetDecoder decoder = CharsetUtil.getDecoder(charset);
+        final CharBuffer dst = CharBuffer.allocate(
+                (int) ((double) length * decoder.maxCharsPerByte()));
+
+        int decodedChars = getString(index, length, dst, charset);
+        if (decodedChars == 0) {
+            return "";
+        }
+        return dst.flip().toString();
+    }
+
+    public int getString(int index, int length, char[] dst, Charset charset) {
+        return getString(index, length, CharBuffer.wrap(dst), charset);
+    }
+
+    public int getString(
+            int index, int length,
+            char[] dst, int dstOffset, int dstLength, Charset charset) {
+        return getString(index, length, CharBuffer.wrap(
+                        dst, dstOffset, dstLength), charset);
+    }
+
+    public int getString(int index, int length, Appendable out, Charset charset)
+            throws IOException {
+        if (out instanceof CharBuffer) {
+            return getString(index, length, out, charset);
+        }
+
+        String str = getString(index, length, charset);
+        out.append(str);
+        return str.length();
     }
 
     public void setChar(int index, char value) {
@@ -380,6 +422,35 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         readerIndex += length;
     }
 
+    public int readString(int length, char[] dst, Charset charset) {
+        checkReadableBytes(length);
+        int result = getString(readerIndex, length, dst, charset);
+        readerIndex += length;
+        return result;
+    }
+
+    public int readString(int length, char[] dst, int dstOffset, int dstLength, Charset charset) {
+        checkReadableBytes(length);
+        int result = getString(readerIndex, length, dst, dstOffset, dstLength, charset);
+        readerIndex += length;
+        return result;
+    }
+
+    public int readString(int length, Appendable out, Charset charset)
+            throws IOException {
+        checkReadableBytes(length);
+        int result = getString(readerIndex, length, out, charset);
+        readerIndex += length;
+        return result;
+    }
+
+    public String readString(int length, Charset charset) {
+        checkReadableBytes(length);
+        String result = getString(readerIndex, length, charset);
+        readerIndex += length;
+        return result;
+    }
+
     public void skipBytes(int length) {
         int newReaderIndex = readerIndex + length;
         if (newReaderIndex > writerIndex) {
@@ -532,40 +603,30 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     }
 
     public String toString(Charset charset) {
-        return toString(readerIndex, readableBytes(), charset);
-    }
-
-    public String toString(Charset charset, ChannelBufferIndexFinder terminatorFinder) {
-        return toString(readerIndex, readableBytes(), charset, terminatorFinder);
-    }
-
-    public String toString(
-            int index, int length, Charset charset,
-            ChannelBufferIndexFinder terminatorFinder) {
-        if (terminatorFinder == null) {
-            return toString(index, length, charset);
-        }
-
-        int terminatorIndex = indexOf(index, index + length, terminatorFinder);
-        if (terminatorIndex < 0) {
-            return toString(index, length, charset);
-        }
-
-        return toString(index, terminatorIndex - index, charset);
+        return getString(readerIndex, readableBytes(), charset);
     }
 
     public String toString(int index, int length, String charsetName,
             ChannelBufferIndexFinder terminatorFinder) {
-        return toString(index, length, Charset.forName(charsetName), terminatorFinder);
+        if (terminatorFinder == null) {
+            return toString(index, length, charsetName);
+        }
+
+        int terminatorIndex = indexOf(index, index + length, terminatorFinder);
+        if (terminatorIndex < 0) {
+            return toString(index, length, charsetName);
+        }
+
+        return toString(index, terminatorIndex - index, charsetName);
     }
 
     public String toString(int index, int length, String charsetName) {
-        return toString(index, length, Charset.forName(charsetName));
+        return getString(index, length, Charset.forName(charsetName));
     }
 
     public String toString(String charsetName,
             ChannelBufferIndexFinder terminatorFinder) {
-        return toString(Charset.forName(charsetName), terminatorFinder);
+        return toString(readerIndex, readableBytes(), charsetName, terminatorFinder);
     }
 
     public String toString(String charsetName) {

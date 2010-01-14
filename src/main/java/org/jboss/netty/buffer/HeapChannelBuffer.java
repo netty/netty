@@ -23,10 +23,8 @@ import java.nio.CharBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CoderResult;
 
 import org.jboss.netty.util.CharsetUtil;
 
@@ -124,6 +122,18 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
         return out.write(ByteBuffer.wrap(array, index, length));
     }
 
+    public int getString(int index, int length, CharBuffer dst, Charset charset) {
+        if (length == 0) {
+            return 0;
+        }
+
+        final CharsetDecoder decoder = CharsetUtil.getDecoder(charset);
+        final int start = dst.position();
+        final ByteBuffer src = ByteBuffer.wrap(array, index, length);
+        ChannelBuffers.decodeString(src, dst, decoder);
+        return dst.position() - start;
+    }
+
     public void setByte(int index, byte value) {
         array[index] = value;
     }
@@ -209,31 +219,5 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
 
     public ByteBuffer toByteBuffer(int index, int length) {
         return ByteBuffer.wrap(array, index, length).order(order());
-    }
-
-    public String toString(int index, int length, Charset charset) {
-        if (length == 0) {
-            return "";
-        }
-
-        final CharsetDecoder decoder = CharsetUtil.getDecoder(charset);
-        final ByteBuffer src = ByteBuffer.wrap(array, index, length);
-        final CharBuffer dst = CharBuffer.allocate(
-                (int) ((double) length * decoder.maxCharsPerByte()));
-        try {
-            CoderResult cr = decoder.decode(src, dst, true);
-            if (!cr.isUnderflow()) {
-                cr.throwException();
-            }
-            cr = decoder.flush(dst);
-            if (!cr.isUnderflow()) {
-                cr.throwException();
-            }
-        } catch (CharacterCodingException x) {
-            throw new IllegalStateException(x);
-        }
-
-        dst.flip();
-        return dst.toString();
     }
 }

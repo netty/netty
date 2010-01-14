@@ -24,10 +24,8 @@ import java.nio.CharBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CoderResult;
 
 import org.jboss.netty.util.CharsetUtil;
 
@@ -305,32 +303,18 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
-    public String toString(int index, int length, Charset charset) {
+    public int getString(int index, int length, CharBuffer dst, Charset charset) {
         if (length == 0) {
-            return "";
+            return 0;
         }
 
         final CharsetDecoder decoder = CharsetUtil.getDecoder(charset);
+        final int start = dst.position();
         final ByteBuffer src =
             ((ByteBuffer) buffer.duplicate().position(
                     index).limit(index + length)).order(order());
-        final CharBuffer dst = CharBuffer.allocate(
-                (int) ((double) length * decoder.maxCharsPerByte()));
-        try {
-            CoderResult cr = decoder.decode(src, dst, true);
-            if (!cr.isUnderflow()) {
-                cr.throwException();
-            }
-            cr = decoder.flush(dst);
-            if (!cr.isUnderflow()) {
-                cr.throwException();
-            }
-        } catch (CharacterCodingException x) {
-            throw new IllegalStateException(x);
-        }
-
-        dst.flip();
-        return dst.toString();
+        ChannelBuffers.decodeString(src, dst, decoder);
+        return dst.position() - start;
     }
 
     public ChannelBuffer slice(int index, int length) {

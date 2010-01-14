@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.CharBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
@@ -291,7 +292,7 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         return buffer.toByteBuffer(index, length);
     }
 
-    public String toString(int index, int length, Charset charset) {
-        return buffer.toString(index, length, charset);
+    public int getString(int index, int length, CharBuffer dst, Charset charset) {
+        return buffer.getString(index, length, dst, charset);
     }
 }

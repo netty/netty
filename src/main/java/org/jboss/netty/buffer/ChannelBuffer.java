@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.CharBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
@@ -707,6 +708,22 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      */
     int   getBytes(int index, GatheringByteChannel out, int length) throws IOException;
 
+    // FIXME Document me
+    int   getString(int index, int length, char[] dst, Charset charset);
+    // FIXME Document me
+    int   getString(int index, int length, char[] dst, int dstOffset, int dstLength, Charset charset);
+    // FIXME Document me
+    int   getString(int index, int length, Appendable out, Charset charset) throws IOException;
+    // FIXME Document me
+    int   getString(int index, int length, CharBuffer dst, Charset charset);
+
+    /**
+     * Decodes this buffer's sub-region into a string with the specified
+     * character set.  This method does not modify {@code readerIndex} or
+     * {@code writerIndex} of this buffer.
+     */
+    String getString(int index, int length, Charset charset);
+
     /**
      * Sets the specified byte at the specified absolute {@code index} in this
      * buffer.
@@ -1236,6 +1253,15 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      */
     int  readBytes(GatheringByteChannel out, int length) throws IOException;
 
+    // FIXME Document me
+    int    readString(int length, char[] dst, Charset charset);
+    // FIXME Document me
+    int    readString(int length, char[] dst, int dstOffset, int dstLength, Charset charset);
+    // FIXME Document me
+    int    readString(int length, Appendable out, Charset charset) throws IOException ;
+    // FIXME Document me
+    String readString(int length, Charset charset);
+
     /**
      * Increases the current {@code readerIndex} by the specified
      * {@code length} in this buffer.
@@ -1629,62 +1655,20 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     String toString(String charsetName);
 
     /**
-     * Decodes this buffer's readable bytes into a string until the specified
-     * {@code terminatorFinder} returns {@code true} with the specified
-     * character set name.  This method is identical to
-     * {@code buf.toString(buf.readerIndex(), buf.readableBytes(), charsetName, terminatorFinder)}.
-     * This method does not modify {@code readerIndex} or {@code writerIndex} of
-     * this buffer.
-     *
-     * @throws UnsupportedCharsetException
-     *         if the specified character set name is not supported by the
-     *         current VM
-     */
-    String toString(
-            Charset charset, ChannelBufferIndexFinder terminatorFinder);
-
-    /**
-     * @deprecated Use {@link #toString(Charset, ChannelBufferIndexFinder)} instead.
+     * @deprecated Use {@link #getString(int, int, Charset)} instead.
      */
     @Deprecated
     String toString(
             String charsetName, ChannelBufferIndexFinder terminatorFinder);
 
     /**
-     * Decodes this buffer's sub-region into a string with the specified
-     * character set name.
-     * This method does not modify {@code readerIndex} or {@code writerIndex} of
-     * this buffer.
-     *
-     * @throws UnsupportedCharsetException
-     *         if the specified character set name is not supported by the
-     *         current VM
-     */
-    String toString(int index, int length, Charset charset);
-
-    /**
-     * @deprecated Use {@link #toString(int, int, Charset)} instead.
+     * @deprecated Use {@link #getString(int, int, Charset)} instead.
      */
     @Deprecated
     String toString(int index, int length, String charsetName);
 
     /**
-     * Decodes this buffer's readable bytes into a string until the specified
-     * {@code terminatorFinder} returns {@code true} with the specified
-     * character set name.
-     * This method does not modify {@code readerIndex} or {@code writerIndex} of
-     * this buffer.
-     *
-     * @throws UnsupportedCharsetException
-     *         if the specified character set name is not supported by the
-     *         current VM
-     */
-    String toString(
-            int index, int length, Charset charset,
-            ChannelBufferIndexFinder terminatorFinder);
-
-    /**
-     * @deprecated Use {@link #toString(int, int, Charset, ChannelBufferIndexFinder)} instead.
+     * @deprecated Use {@link #getString(int, int, Charset)} instead.
      */
     @Deprecated
     String toString(

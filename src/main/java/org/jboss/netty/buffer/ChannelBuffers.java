@@ -20,6 +20,7 @@ import java.nio.ByteOrder;
 import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.util.ArrayList;
@@ -795,20 +796,7 @@ public class ChannelBuffers {
         CharBuffer src = buffer;
         ByteBuffer dst = ByteBuffer.allocate(
                 (int) ((double) buffer.remaining() * encoder.maxBytesPerChar()));
-
-        try {
-            CoderResult cr = encoder.encode(src, dst, true);
-            if (!cr.isUnderflow()) {
-                cr.throwException();
-            }
-            cr = encoder.flush(dst);
-            if (!cr.isUnderflow()) {
-                cr.throwException();
-            }
-        } catch (CharacterCodingException x) {
-            throw new IllegalStateException(x);
-        }
-
+        ChannelBuffers.encodeString(src, dst, encoder);
         ChannelBuffer result = wrappedBuffer(endianness, dst.array());
         result.writerIndex(dst.position());
         return result;
@@ -1124,6 +1112,36 @@ public class ChannelBuffers {
         }
 
         return -1;
+    }
+
+    static void encodeString(CharBuffer src, ByteBuffer dst, CharsetEncoder encoder) {
+        try {
+            CoderResult cr = encoder.encode(src, dst, true);
+            if (!cr.isUnderflow()) {
+                cr.throwException();
+            }
+            cr = encoder.flush(dst);
+            if (!cr.isUnderflow()) {
+                cr.throwException();
+            }
+        } catch (CharacterCodingException x) {
+            throw new IllegalStateException(x);
+        }
+    }
+
+    static void decodeString(ByteBuffer src, CharBuffer dst, CharsetDecoder decoder) {
+        try {
+            CoderResult cr = decoder.decode(src, dst, true);
+            if (!cr.isUnderflow()) {
+                cr.throwException();
+            }
+            cr = decoder.flush(dst);
+            if (!cr.isUnderflow()) {
+                cr.throwException();
+            }
+        } catch (CharacterCodingException x) {
+            throw new IllegalStateException(x);
+        }
     }
 
     private ChannelBuffers() {

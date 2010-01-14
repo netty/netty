@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.CharBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
@@ -324,6 +325,28 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         throw new UnreplayableOperationException();
     }
 
+    public int readString(int length, Appendable out, Charset charset)
+            throws IOException {
+        checkReadableBytes(length);
+        return buffer.readString(length, out, charset);
+    }
+
+    public int readString(int length, char[] dst, Charset charset) {
+        checkReadableBytes(length);
+        return buffer.readString(length, dst, charset);
+    }
+
+    public int readString(int length, char[] dst, int dstOffset, int dstLength, Charset charset) {
+        checkReadableBytes(length);
+        return buffer.readString(length, dst, dstOffset, dstLength, charset);
+    }
+
+    public String readString(int length, Charset charset) {
+        checkReadableBytes(length);
+        // TODO Auto-generated method stub
+        return null;
+    }
+
     public int readerIndex() {
         return buffer.readerIndex();
     }
@@ -505,24 +528,34 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return buffer.toByteBuffers(index, length);
     }
 
-    public String toString(int index, int length, Charset charset) {
+    public String getString(int index, int length, Charset charset) {
         checkIndex(index, length);
-        return buffer.toString(index, length, charset);
+        return buffer.getString(index, length, charset);
     }
 
-    public String toString(
-            int index, int length, Charset charset,
-            ChannelBufferIndexFinder terminatorFinder) {
+    public int getString(int index, int length, Appendable out, Charset charset)
+            throws IOException {
         checkIndex(index, length);
-        return buffer.toString(index, length, charset, terminatorFinder);
+        return buffer.getString(index, length, out, charset);
+    }
+
+    public int getString(int index, int length, char[] dst, Charset charset) {
+        checkIndex(index, length);
+        return buffer.getString(index, length, dst, charset);
+    }
+
+    public int getString(int index, int length, char[] dst, int dstOffset, int dstLength,
+            Charset charset) {
+        checkIndex(index, length);
+        return buffer.getString(index, length, dst, dstOffset, dstLength, charset);
+    }
+
+    public int getString(int index, int length, CharBuffer dst, Charset charset) {
+        checkIndex(index, length);
+        return buffer.getString(index, length, dst, charset);
     }
 
     public String toString(Charset charsetName) {
-        throw new UnreplayableOperationException();
-    }
-
-    public String toString(
-            Charset charset, ChannelBufferIndexFinder terminatorFinder) {
         throw new UnreplayableOperationException();
     }
 
