@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util.internal;
+package org.jboss.netty.handler.codec.serialization;
 
 import java.io.FilterInputStream;
 import java.io.InputStream;
@@ -28,13 +28,13 @@ import java.io.InputStream;
  * @version $Rev$, $Date$
  *
  */
-public class SwitchableInputStream extends FilterInputStream {
+final class SwitchableInputStream extends FilterInputStream {
 
     /**
      * Creates a new instance without initializing the reference to the
      * underlying stream.
      */
-    public SwitchableInputStream() {
+    SwitchableInputStream() {
         super(null);
     }
 
@@ -42,7 +42,7 @@ public class SwitchableInputStream extends FilterInputStream {
      * Creates a new instance with the initial reference to the underlying
      * stream.
      */
-    public void switchStream(InputStream in) {
+    void switchStream(InputStream in) {
         this.in = in;
     }
 }

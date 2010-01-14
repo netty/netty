@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util.internal;
+package org.jboss.netty.handler.codec.serialization;
 
 import static org.easymock.EasyMock.*;
 import static org.easymock.classextension.EasyMock.*;
@@ -21,6 +21,7 @@ import static org.junit.Assert.*;
 
 import java.io.InputStream;
 
+import org.jboss.netty.handler.codec.serialization.SwitchableInputStream;
 import org.junit.Test;
 
 
