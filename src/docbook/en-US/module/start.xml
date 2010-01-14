@@ -152,14 +152,16 @@ public class DiscardServer {
 
         &ServerBootstrap; bootstrap = new &ServerBootstrap;<co id="example.discard2.co2" />(factory);
 
-        DiscardServerHandler handler = new DiscardServerHandler();
-        &ChannelPipeline; pipeline = bootstrap.getPipeline();
-        pipeline.addLast("handler", handler);<co id="example.discard2.co3" />
+        bootstrap.setPipelineFactory(new &ChannelPipelineFactory;() {<co id="example.discard2.co3" />
+            public &ChannelPipeline; getPipeline() {
+                return &Channels;.pipeline(new DiscardServerHandler());<co id="example.discard2.co4" />
+            }
+        });
 
-        bootstrap.setOption("child.tcpNoDelay", true);<co id="example.discard2.co4" />
+        bootstrap.setOption("child.tcpNoDelay", true);<co id="example.discard2.co5" />
         bootstrap.setOption("child.keepAlive", true);
 
-        bootstrap.bind(new InetSocketAddress(8080));<co id="example.discard2.co5" />
+        bootstrap.bind(new InetSocketAddress(8080));<co id="example.discard2.co6" />
     }
 }</programlisting>
     <calloutlist>
@@ -188,18 +190,23 @@ public class DiscardServer {
       </callout>
       <callout arearefs="example.discard2.co3">
         <para>
-          Here, we add the <classname>DiscardServerHandler</classname> to the
-          <emphasis>default</emphasis> &ChannelPipeline;.  Whenever a new
-          connection is accepted by the server, a new &ChannelPipeline; will
-          be created for a newly accepted &Channel; and all the
-          &ChannelHandler;s added here will be added to the new
-          &ChannelPipeline;.  It's just like
-          <ulink url="http://en.wikipedia.org/wiki/Object_copy">a shallow-copy
-          operation</ulink>; all &Channel; and their &ChannelPipeline;s will
-          share the same <classname>DiscardServerHandler</classname> instance.
+          Here, we configure the &ChannelPipelineFactory;.  Whenever a new
+          connection is accepted by the server, a new &ChannelPipeline; will be
+          created by the specified &ChannelPipelineFactory;.  The new pipeline
+          contains the <classname>DiscardServerHandler</classname>.  As the
+          application gets complicated, it is likely that you will add more
+          handlers to the pipeline and extract this anonymous class into a top
+          level class eventually.
         </para>
       </callout>
       <callout arearefs="example.discard2.co4">
+        <para>
+          Strictly speaking, we do not need to create a new
+          <classname>DiscardServerHandler</classname> instance for a new
+          connection because the handler is stateless.
+        </para>
+      </callout>
+      <callout arearefs="example.discard2.co5">
         <para>
           You can also set the parameters which are specific to the &Channel;
           implementation.  We are writing a TCP/IP server, so we are allowed
@@ -212,7 +219,7 @@ public class DiscardServer {
           <programlisting>bootstrap.setOption("reuseAddress", true);</programlisting>
         </para>
       </callout>
-      <callout arearefs="example.discard2.co5">
+      <callout arearefs="example.discard2.co6">
         <para>
           We are ready to go now.  What's left is to bind to the port and to
           start the server.  Here, we bind to the port <literal>8080</literal>
@@ -491,8 +498,11 @@ public class TimeClient {
 
         &ClientBootstrap; bootstrap = new &ClientBootstrap;<co id="example.time2.co2"/>(factory);
 
-        TimeClientHandler handler = new TimeClientHandler();
-        bootstrap.getPipeline().addLast("handler", handler);
+        bootstrap.setPipelineFactory(new &ChannelPipelineFactory;() {
+            public &ChannelPipeline; getPipeline() {
+                return &Channels;.pipeline(new TimeClientHandler());
+            }
+        });
         
         bootstrap.setOption("tcpNoDelay"<co id="example.time2.co3"/>, true);
         bootstrap.setOption("keepAlive", true);
@@ -681,45 +691,6 @@ public class TimeClientHandler extends &SimpleChannelHandler; {
           </para>
         </callout>
       </calloutlist>
-      <para>
-        There's another place that needs a fix.  Do you remember that we
-        added a <classname>TimeClientHandler</classname> instance to the
-        <emphasis>default</emphasis> &ChannelPipeline; of the &ClientBootstrap;?
-        It means one same <classname>TimeClientHandler</classname> instance is
-        going to handle multiple &Channel;s and consequently the data will be
-        corrupted.  To create a new <classname>TimeClientHandler</classname>
-        instance per &Channel;, we have to implement a &ChannelPipelineFactory;:
-      </para>
-      <programlisting>package org.jboss.netty.example.time;
-
-public class TimeClientPipelineFactory implements &ChannelPipelineFactory; {
-
-    public &ChannelPipeline; getPipeline() {
-        &ChannelPipeline; pipeline = &Channels;.pipeline();
-        pipeline.addLast("handler", new TimeClientHandler());
-        return pipeline;
-    }
-}</programlisting>
-      <para>
-        Now let us replace the following lines of <classname>TimeClient</classname>:
-      </para>
-      <programlisting>TimeClientHandler handler = new TimeClientHandler();
-bootstrap.getPipeline().addLast("handler", handler);</programlisting>
-      <para>
-        with the following:
-      </para>
-      <programlisting>bootstrap.setPipelineFactory(new TimeClientPipelineFactory());</programlisting>
-      <para>
-        It might look somewhat complicated at the first glance, and it is true
-        that we don't need to introduce <classname>TimeClientPipelineFactory</classname>
-        in this particular case because <classname>TimeClient</classname> creates
-        only one connection.
-      </para>
-      <para>
-        However, as your application gets more and more complex, you will
-        almost always end up with writing a &ChannelPipelineFactory;, which
-        yields much more flexibility to the pipeline configuration.
-      </para>
     </section>
     <section>
       <title>
@@ -805,6 +776,20 @@ public class TimeDecoder extends &FrameDecoder; {
           </para>
         </callout>
       </calloutlist>
+      <para>
+        Now that we have another handler to insert into the &ChannelPipeline;,
+        we should modify the &ChannelPipelineFactory; implementation in the
+        <classname>TimeClient</classname>:
+      </para>
+      <programlisting>
+        bootstrap.setPipelineFactory(new &ChannelPipelineFactory;() {
+            public &ChannelPipeline; getPipeline() {
+                return &Channels;.pipeline(
+                        new TimeDecoder(),
+                        new TimeClientHandler());
+            }
+        });
+      </programlisting>
       <para>
         If you are an adventurous person, you might want to try the
         &ReplayingDecoder; which simplifies the decoder even more.  You will
