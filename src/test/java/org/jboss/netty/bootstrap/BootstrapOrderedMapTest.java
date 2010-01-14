@@ -22,10 +22,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-import org.jboss.netty.bootstrap.MapUtil;
 import org.junit.Test;
 
 
@@ -36,38 +33,33 @@ import org.junit.Test;
  * @version $Rev$, $Date$
  *
  */
-public class MapUtilTest {
-
-    static {
-        Logger logger = Logger.getLogger(MapUtil.class.getName());
-        logger.setLevel(Level.ALL);
-    }
+public class BootstrapOrderedMapTest {
 
     @Test
     public void shouldReturnTrueIfLinkedHashMap() {
-        assertTrue(MapUtil.isOrderedMap(new LinkedHashMap<String, String>()));
+        assertTrue(Bootstrap.isOrderedMap(new LinkedHashMap<String, String>()));
     }
 
     @Test
     public void shouldReturnTrueIfMapImplementsOrderedMap() {
-        assertTrue(MapUtil.isOrderedMap(new DummyOrderedMap<String, String>()));
+        assertTrue(Bootstrap.isOrderedMap(new DummyOrderedMap<String, String>()));
     }
 
     @Test
     public void shouldReturnFalseIfMapHasNoDefaultConstructor() {
-        assertFalse(MapUtil.isOrderedMap(
+        assertFalse(Bootstrap.isOrderedMap(
                 new MapWithoutDefaultConstructor<String, String>(
                         new HashMap<String, String>())));
     }
 
     @Test
     public void shouldReturnFalseIfMapIsNotOrdered() {
-        assertFalse(MapUtil.isOrderedMap(new HashMap<String, String>()));
+        assertFalse(Bootstrap.isOrderedMap(new HashMap<String, String>()));
     }
 
     @Test
     public void shouldReturnTrueIfMapIsOrdered() {
-        assertTrue(MapUtil.isOrderedMap(new UnknownOrderedMap<String, String>()));
+        assertTrue(Bootstrap.isOrderedMap(new UnknownOrderedMap<String, String>()));
     }
 
     interface OrderedMap {
