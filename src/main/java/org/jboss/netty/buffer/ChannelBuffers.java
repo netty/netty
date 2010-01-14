@@ -669,7 +669,7 @@ public class ChannelBuffers {
      * {@code 0} and the length of the encoded string respectively.
      */
     public static ChannelBuffer copiedBuffer(CharSequence string, Charset charset) {
-        return copiedBuffer(BIG_ENDIAN, string, 0, string.length(), charset);
+        return copiedBuffer(BIG_ENDIAN, string, charset);
     }
 
     /**
@@ -691,7 +691,15 @@ public class ChannelBuffers {
      * respectively.
      */
     public static ChannelBuffer copiedBuffer(ByteOrder endianness, CharSequence string, Charset charset) {
-        return copiedBuffer(endianness, string, 0, string.length(), charset);
+        if (string == null) {
+            throw new NullPointerException("string");
+        }
+
+        if (string instanceof CharBuffer) {
+            return copiedBuffer(endianness, (CharBuffer) string, charset);
+        }
+
+        return copiedBuffer(endianness, CharBuffer.wrap(string), charset);
     }
 
     /**
@@ -709,6 +717,23 @@ public class ChannelBuffers {
         if (length == 0) {
             return EMPTY_BUFFER;
         }
+
+        if (string instanceof CharBuffer) {
+            CharBuffer buf = (CharBuffer) string;
+            if (buf.hasArray()) {
+                return copiedBuffer(
+                        endianness,
+                        buf.array(),
+                        buf.arrayOffset() + buf.position() + offset,
+                        length, charset);
+            }
+
+            buf = buf.slice();
+            buf.limit(length);
+            buf.position(offset);
+            return copiedBuffer(endianness, buf, charset);
+        }
+
         return copiedBuffer(
                 endianness, CharBuffer.wrap(string, offset, offset + length),
                 charset);
@@ -765,38 +790,12 @@ public class ChannelBuffers {
                 endianness, CharBuffer.wrap(array, offset, length), charset);
     }
 
-    /**
-     * Creates a new big-endian buffer whose content is the specified NIO
-     * {@code buffer} encoded in the specified {@code charset}.
-     * The new buffer's {@code readerIndex} and {@code writerIndex} are
-     * {@code 0} and the length of the encoded string respectively.
-     */
-    public static ChannelBuffer copiedBuffer(CharBuffer buffer, Charset charset) {
-        return copiedBuffer(BIG_ENDIAN, buffer, charset);
-    }
-
-    /**
-     * Creates a new buffer with the specified {@code endianness} whose
-     * content is the specified {@code string} encoded in the specified
-     * NIO {@code buffer}.  The new buffer's {@code readerIndex} and
-     * {@code writerIndex} are {@code 0} and the length of the encoded string
-     * respectively.
-     */
-    public static ChannelBuffer copiedBuffer(ByteOrder endianness, CharBuffer buffer, Charset charset) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
-        if (buffer == null) {
-            throw new NullPointerException("buffer");
-        }
-        if (!buffer.hasRemaining()) {
-            return EMPTY_BUFFER;
-        }
-
+    private static ChannelBuffer copiedBuffer(ByteOrder endianness, CharBuffer buffer, Charset charset) {
         CharsetEncoder encoder = CharsetUtil.getEncoder(charset);
         CharBuffer src = buffer;
         ByteBuffer dst = ByteBuffer.allocate(
                 (int) ((double) buffer.remaining() * encoder.maxBytesPerChar()));
+
         try {
             CoderResult cr = encoder.encode(src, dst, true);
             if (!cr.isUnderflow()) {
