@@ -111,6 +111,17 @@ public class Bootstrap implements ExternalResourceReleasable {
      * {@link Channel} is created.  {@link Bootstrap} creates a new pipeline
      * which has the same entries with the returned pipeline for a new
      * {@link Channel}.
+     * <p>
+     * Please note that this method is a convenience method that works only
+     * when <b>1)</b> you create only one channel from this bootstrap (e.g.
+     * one-time client-side or connectionless channel) or <b>2)</b> the
+     * {@link ChannelPipelineCoverage} of all handlers in the pipeline is
+     * {@code "all"}.  You have to use
+     * {@link #setPipelineFactory(ChannelPipelineFactory)} if <b>1)</b> your
+     * pipeline contains a {@link ChannelHandler} whose
+     * {@link ChannelPipelineCoverage} is {@code "one"} and <b>2)</b> one or
+     * more channels are going to be created by this bootstrap (e.g. server-side
+     * channels).
      *
      * @return the default {@link ChannelPipeline}
      *
@@ -160,6 +171,17 @@ public class Bootstrap implements ExternalResourceReleasable {
      * Dependency injection friendly convenience method for
      * {@link #getPipeline()} which returns the default pipeline of this
      * bootstrap as an ordered map.
+     * <p>
+     * Please note that this method is a convenience method that works only
+     * when <b>1)</b> you create only one channel from this bootstrap (e.g.
+     * one-time client-side or connectionless channel) or <b>2)</b> the
+     * {@link ChannelPipelineCoverage} of all handlers in the pipeline is
+     * {@code "all"}.  You have to use
+     * {@link #setPipelineFactory(ChannelPipelineFactory)} if <b>1)</b> your
+     * pipeline contains a {@link ChannelHandler} whose
+     * {@link ChannelPipelineCoverage} is {@code "one"} and <b>2)</b> one or
+     * more channels are going to be created by this bootstrap (e.g. server-side
+     * channels).
      *
      * @throws IllegalStateException
      *         if {@link #setPipelineFactory(ChannelPipelineFactory)} was
@@ -177,6 +199,17 @@ public class Bootstrap implements ExternalResourceReleasable {
      * Dependency injection friendly convenience method for
      * {@link #setPipeline(ChannelPipeline)} which sets the default pipeline of
      * this bootstrap from an ordered map.
+     * <p>
+     * Please note that this method is a convenience method that works only
+     * when <b>1)</b> you create only one channel from this bootstrap (e.g.
+     * one-time client-side or connectionless channel) or <b>2)</b> the
+     * {@link ChannelPipelineCoverage} of all handlers in the pipeline is
+     * {@code "all"}.  You have to use
+     * {@link #setPipelineFactory(ChannelPipelineFactory)} if <b>1)</b> your
+     * pipeline contains a {@link ChannelHandler} whose
+     * {@link ChannelPipelineCoverage} is {@code "one"} and <b>2)</b> one or
+     * more channels are going to be created by this bootstrap (e.g. server-side
+     * channels).
      *
      * @throws IllegalArgumentException
      *         if the specified map is not an ordered map
