@@ -25,9 +25,9 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
 
 /**
  * A helper class which creates a new server-side {@link Channel} for a
@@ -61,8 +61,28 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
  *
  * Every channel has its own {@link ChannelPipeline} and you can configure it
  * in two ways.
+ *
+ * The recommended approach is to specify a {@link ChannelPipelineFactory} by
+ * calling {@link #setPipelineFactory(ChannelPipelineFactory)}.
+ *
+ * <pre>
+ * ConnectionlessBootstrap b = ...;
+ * b.setPipelineFactory(new MyPipelineFactory());
+ *
+ * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
+ *   public ChannelPipeline getPipeline() throws Exception {
+ *     // Create and configure a new pipeline for a new channel.
+ *     {@link ChannelPipeline} p = {@link Channels}.pipeline();
+ *     p.addLast("encoder", new EncodingHandler());
+ *     p.addLast("decoder", new DecodingHandler());
+ *     p.addLast("logic",   new LogicHandler());
+ *     return p;
+ *   }
+ * }
+ * </pre>
+
  * <p>
- * {@linkplain #setPipeline(ChannelPipeline) The first approach} is to use
+ * The alternative approach, which works only in a certain situation, is to use
  * the default pipeline and let the bootstrap to shallow-copy the default
  * pipeline for each new channel:
  *
@@ -70,7 +90,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
  * ConnectionlessBootstrap b = ...;
  * {@link ChannelPipeline} p = b.getPipeline();
  *
- * // Add handlers to the pipeline.
+ * // Add handlers to the default pipeline.
  * p.addLast("encoder", new EncodingHandler());
  * p.addLast("decoder", new DecodingHandler());
  * p.addLast("logic",   new LogicHandler());
@@ -78,24 +98,9 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
  *
  * Please note 'shallow-copy' here means that the added {@link ChannelHandler}s
  * are not cloned but only their references are added to the new pipeline.
- * Therefore, you have to choose the second approach if you are going to open
- * more than one {@link Channel} whose {@link ChannelPipeline} contains any
- * {@link ChannelHandler} whose {@link ChannelPipelineCoverage} is {@code "one"}.
- *
- * <p>
- * {@linkplain #setPipelineFactory(ChannelPipelineFactory) The second approach}
- * is to specify a {@link ChannelPipelineFactory} by yourself and have full
- * control over how a new pipeline is created.  This approach is more complex
- * than the first approach while it is much more flexible:
- *
- * <pre>
- * ConnectionlessBootstrap b = ...;
- * b.setPipelineFactory(new MyPipelineFactory());
- *
- * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
- *   // Create a new pipeline for a new channel and configure it here ...
- * }
- * </pre>
+ * Therefore, you cannot use this approach if you are going to open more than
+ * one {@link Channel}s or run a server that accepts incoming connections to
+ * create its child channels.
  *
  * <h3>Applying different settings for different {@link Channel}s</h3>
  *

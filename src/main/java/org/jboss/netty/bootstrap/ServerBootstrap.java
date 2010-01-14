@@ -37,6 +37,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ChildChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.ServerChannelFactory;
@@ -101,43 +102,48 @@ import org.jboss.netty.channel.StaticChannelPipeline;
  *
  * <h3>Configuring a child channel pipeline</h3>
  *
- * Every child channel has its own {@link ChannelPipeline} and you can
- * configure it in two ways.
+ * Every channel has its own {@link ChannelPipeline} and you can configure it
+ * in two ways.
  *
- * {@linkplain #setPipeline(ChannelPipeline) The first approach} is to use
- * the default pipeline and let the bootstrap to shallow copy the default
- * pipeline for each new child channel:
+ * The recommended approach is to specify a {@link ChannelPipelineFactory} by
+ * calling {@link #setPipelineFactory(ChannelPipelineFactory)}.
  *
  * <pre>
- * ServerBootstrap b = ...;
+ * ConnectionlessBootstrap b = ...;
+ * b.setPipelineFactory(new MyPipelineFactory());
+ *
+ * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
+ *   public ChannelPipeline getPipeline() throws Exception {
+ *     // Create and configure a new pipeline for a new channel.
+ *     {@link ChannelPipeline} p = {@link Channels}.pipeline();
+ *     p.addLast("encoder", new EncodingHandler());
+ *     p.addLast("decoder", new DecodingHandler());
+ *     p.addLast("logic",   new LogicHandler());
+ *     return p;
+ *   }
+ * }
+ * </pre>
+
+ * <p>
+ * The alternative approach, which works only in a certain situation, is to use
+ * the default pipeline and let the bootstrap to shallow-copy the default
+ * pipeline for each new channel:
+ *
+ * <pre>
+ * ConnectionlessBootstrap b = ...;
  * {@link ChannelPipeline} p = b.getPipeline();
  *
- * // Add handlers to the pipeline.
+ * // Add handlers to the default pipeline.
  * p.addLast("encoder", new EncodingHandler());
  * p.addLast("decoder", new DecodingHandler());
  * p.addLast("logic",   new LogicHandler());
  * </pre>
-  *
+ *
  * Please note 'shallow-copy' here means that the added {@link ChannelHandler}s
  * are not cloned but only their references are added to the new pipeline.
- * Therefore, you have to choose the second approach if you are going to accept
- * more than one child {@link Channel} whose {@link ChannelPipeline} contains
- * any {@link ChannelHandler} whose {@link ChannelPipelineCoverage} is
- * {@code "one"}.
- * <p>
- * {@linkplain #setPipelineFactory(ChannelPipelineFactory) The second approach}
- * is to specify a {@link ChannelPipelineFactory} by yourself and have full
- * control over how a new pipeline is created.  This approach is more complex
- * than the first approach while it is much more flexible:
- *
- * <pre>
- * ServerBootstrap b = ...;
- * b.setPipelineFactory(new MyPipelineFactory());
- *
- * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
- *   // Create a new pipeline for a new child channel and configure it here ...
- * }
- * </pre>
+ * Therefore, you cannot use this approach if you are going to open more than
+ * one {@link Channel}s or run a server that accepts incoming connections to
+ * create its child channels.
  *
  * <h3>Applying different settings for different {@link Channel}s</h3>
  *
