@@ -50,7 +50,6 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.ImmediateExecutor;
 
 /**
  * Adds <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL

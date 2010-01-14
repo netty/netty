@@ -21,7 +21,6 @@ import static org.junit.Assert.*;
 import java.security.Permission;
 import java.util.concurrent.Executor;
 
-import org.jboss.netty.util.internal.ImmediateExecutor;
 import org.junit.Test;
 
 
@@ -47,7 +46,7 @@ public class ThreadRenamingRunnableTest {
     @Test
     public void testWithoutSecurityManager() throws Exception {
         final String oldThreadName = Thread.currentThread().getName();
-        Executor e = ImmediateExecutor.INSTANCE;
+        Executor e = new ImmediateExecutor();
         e.execute(new ThreadRenamingRunnable(
                 new Runnable() {
                     public void run() {
@@ -62,7 +61,7 @@ public class ThreadRenamingRunnableTest {
     @Test
     public void testWithSecurityManager() throws Exception {
         final String oldThreadName = Thread.currentThread().getName();
-        Executor e = ImmediateExecutor.INSTANCE;
+        Executor e = new ImmediateExecutor();
         System.setSecurityManager(new SecurityManager() {
 
             @Override
@@ -92,4 +91,16 @@ public class ThreadRenamingRunnableTest {
             assertEquals(oldThreadName, Thread.currentThread().getName());
         }
     }
+
+    private static class ImmediateExecutor implements Executor {
+
+        ImmediateExecutor() {
+            super();
+        }
+
+        public void execute(Runnable command) {
+            command.run();
+        }
+    }
+
 }

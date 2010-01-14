@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util.internal;
+package org.jboss.netty.handler.ssl;
 
 import java.util.concurrent.Executor;
 
@@ -26,12 +26,12 @@ import java.util.concurrent.Executor;
  * @version $Rev$, $Date$
  *
  */
-public class ImmediateExecutor implements Executor {
+final class ImmediateExecutor implements Executor {
 
     /**
      * The default instance.
      */
-    public static final ImmediateExecutor INSTANCE = new ImmediateExecutor();
+    static final ImmediateExecutor INSTANCE = new ImmediateExecutor();
 
     public void execute(Runnable command) {
         command.run();
