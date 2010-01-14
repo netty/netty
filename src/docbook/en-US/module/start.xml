@@ -781,15 +781,13 @@ public class TimeDecoder extends &FrameDecoder; {
         we should modify the &ChannelPipelineFactory; implementation in the
         <classname>TimeClient</classname>:
       </para>
-      <programlisting>
-        bootstrap.setPipelineFactory(new &ChannelPipelineFactory;() {
+      <programlisting>        bootstrap.setPipelineFactory(new &ChannelPipelineFactory;() {
             public &ChannelPipeline; getPipeline() {
                 return &Channels;.pipeline(
                         new TimeDecoder(),
                         new TimeClientHandler());
             }
-        });
-      </programlisting>
+        });</programlisting>
       <para>
         If you are an adventurous person, you might want to try the
         &ReplayingDecoder; which simplifies the decoder even more.  You will
