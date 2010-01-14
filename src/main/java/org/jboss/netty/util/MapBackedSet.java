@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util.internal;
+package org.jboss.netty.util;
 
 import java.io.Serializable;
 import java.util.AbstractSet;
@@ -29,7 +29,7 @@ import java.util.Set;
  *
  * @version $Rev$, $Date$
  */
-public class MapBackedSet<E> extends AbstractSet<E> implements Serializable {
+final class MapBackedSet<E> extends AbstractSet<E> implements Serializable {
 
     private static final long serialVersionUID = -6761513279741915432L;
 
@@ -38,7 +38,7 @@ public class MapBackedSet<E> extends AbstractSet<E> implements Serializable {
     /**
      * Creates a new instance which wraps the specified {@code map}.
      */
-    public MapBackedSet(Map<E, Boolean> map) {
+    MapBackedSet(Map<E, Boolean> map) {
         this.map = map;
     }
 

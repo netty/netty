@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util.internal;
+package org.jboss.netty.util;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import org.jboss.netty.util.MapBackedSet;
 import org.junit.Test;
 
 

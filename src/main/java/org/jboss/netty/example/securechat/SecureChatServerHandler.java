@@ -16,8 +16,6 @@
 package org.jboss.netty.example.securechat;
 
 import java.net.InetAddress;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -31,8 +29,9 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.channel.group.ChannelGroup;
+import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.handler.ssl.SslHandler;
-import org.jboss.netty.util.internal.MapBackedSet;
 
 /**
  * Handles a server-side channel.
@@ -48,8 +47,7 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
     private static final Logger logger = Logger.getLogger(
             SecureChatServerHandler.class.getName());
 
-    static final Set<Channel> channels =
-        new MapBackedSet<Channel>(new ConcurrentHashMap<Channel, Boolean>());
+    static final ChannelGroup channels = new DefaultChannelGroup();
 
     @Override
     public void handleUpstream(

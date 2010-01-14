@@ -25,7 +25,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.netty.util.internal.MapBackedSet;
 
 /**
  * A delegating {@link ExecutorService} with its own termination management.
