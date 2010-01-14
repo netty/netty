@@ -54,8 +54,8 @@ public class TelnetClient {
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
-        TelnetClientHandler handler = new TelnetClientHandler();
-        bootstrap.setPipelineFactory(new TelnetPipelineFactory(handler));
+        // Configure the pipeline factory.
+        bootstrap.setPipelineFactory(new TelnetClientPipelineFactory());
 
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));

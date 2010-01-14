@@ -39,9 +39,8 @@ public class SecureChatServer {
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
-        SecureChatServerHandler handler = new SecureChatServerHandler();
-
-        bootstrap.setPipelineFactory(new SecureChatPipelineFactory(handler));
+        // Configure the pipeline factory.
+        bootstrap.setPipelineFactory(new SecureChatServerPipelineFactory());
 
         // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress(8080));

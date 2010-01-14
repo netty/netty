@@ -19,8 +19,13 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.example.echo.EchoClient;
+import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
+import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 
 /**
  * Modification of {@link EchoClient} which utilizes Java object serialization.
@@ -42,9 +47,9 @@ public class ObjectEchoClient {
         }
 
         // Parse options.
-        String host = args[0];
-        int port = Integer.parseInt(args[1]);
-        int firstMessageSize;
+        final String host = args[0];
+        final int port = Integer.parseInt(args[1]);
+        final int firstMessageSize;
 
         if (args.length == 3) {
             firstMessageSize = Integer.parseInt(args[2]);
@@ -58,14 +63,17 @@ public class ObjectEchoClient {
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
-        // Set up the default event pipeline.
-        ObjectEchoHandler handler = new ObjectEchoHandler(firstMessageSize);
-        bootstrap.getPipeline().addLast("handler", handler);
+        // Set up the pipeline factory.
+        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+            public ChannelPipeline getPipeline() throws Exception {
+                return Channels.pipeline(
+                        new ObjectEncoder(),
+                        new ObjectDecoder(),
+                        new ObjectEchoClientHandler(firstMessageSize));
+            }
+        });
 
         // Start the connection attempt.
         bootstrap.connect(new InetSocketAddress(host, port));
-
-        // Start performance monitor.
-        new ThroughputMonitor(handler).start();
     }
 }

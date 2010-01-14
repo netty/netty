@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 Red Hat, Inc.
+ * Copyright 2010 Red Hat, Inc.
  *
  * Red Hat licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -29,12 +29,11 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
-import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 
 /**
- * Handles both client-side and server-side handler depending on which
- * constructor was called.
+ * Handler implementation for the object echo client.  It initiates the
+ * ping-pong traffic between the object echo client and server by sending the
+ * first message to the server.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
@@ -42,25 +41,18 @@ import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
  * @version $Rev$, $Date$
  */
 @ChannelPipelineCoverage("all")
-public class ObjectEchoHandler extends SimpleChannelUpstreamHandler {
+public class ObjectEchoClientHandler extends SimpleChannelUpstreamHandler {
 
     private static final Logger logger = Logger.getLogger(
-            ObjectEchoHandler.class.getName());
+            ObjectEchoClientHandler.class.getName());
 
     private final List<Integer> firstMessage;
     private final AtomicLong transferredMessages = new AtomicLong();
 
     /**
-     * Creates a server-side handler.
-     */
-    public ObjectEchoHandler() {
-        firstMessage = new ArrayList<Integer>();
-    }
-
-    /**
      * Creates a client-side handler.
      */
-    public ObjectEchoHandler(int firstMessageSize) {
+    public ObjectEchoClientHandler(int firstMessageSize) {
         if (firstMessageSize <= 0) {
             throw new IllegalArgumentException(
                     "firstMessageSize: " + firstMessageSize);
@@ -86,21 +78,10 @@ public class ObjectEchoHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void channelOpen(ChannelHandlerContext ctx,
-            ChannelStateEvent e) throws Exception {
-        // Add encoder and decoder as soon as a new channel is created so that
-        // a Java object is serialized and deserialized.
-        e.getChannel().getPipeline().addFirst("encoder", new ObjectEncoder());
-        e.getChannel().getPipeline().addFirst("decoder", new ObjectDecoder());
-    }
-
-    @Override
     public void channelConnected(
             ChannelHandlerContext ctx, ChannelStateEvent e) {
         // Send the first message if this handler is a client-side handler.
-        if (!firstMessage.isEmpty()) {
-            e.getChannel().write(firstMessage);
-        }
+        e.getChannel().write(firstMessage);
     }
 
     @Override

@@ -23,6 +23,9 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.http.HttpTunnelingClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
@@ -62,10 +65,14 @@ public class HttpTunnelingClientExample {
                 new HttpTunnelingClientSocketChannelFactory(
                         new OioClientSocketChannelFactory(Executors.newCachedThreadPool())));
 
-        // Set up the default event pipeline.
-        b.getPipeline().addLast("decoder", new StringDecoder());
-        b.getPipeline().addLast("encoder", new StringEncoder());
-        b.getPipeline().addLast("handler", new LoggingHandler(InternalLogLevel.INFO));
+        b.setPipelineFactory(new ChannelPipelineFactory() {
+            public ChannelPipeline getPipeline() throws Exception {
+                return Channels.pipeline(
+                        new StringDecoder(),
+                        new StringEncoder(),
+                        new LoggingHandler(InternalLogLevel.INFO));
+            }
+        });
 
         // Set additional options required by the HTTP tunneling transport.
         b.setOption("serverName", uri.getHost());

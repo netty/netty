@@ -19,6 +19,9 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
@@ -57,18 +60,22 @@ public class UptimeClient {
         int port = Integer.parseInt(args[1]);
 
         // Initialize the timer that schedules subsequent reconnection attempts.
-        Timer timer = new HashedWheelTimer();
+        final Timer timer = new HashedWheelTimer();
 
         // Configure the client.
-        ClientBootstrap bootstrap = new ClientBootstrap(
+        final ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
-        bootstrap.getPipeline().addLast(
-                "timeout", new ReadTimeoutHandler(timer, READ_TIMEOUT));
-        bootstrap.getPipeline().addLast(
-                "handler", new UptimeClientHandler(bootstrap, timer));
+        // Configure the pipeline factory.
+        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+            public ChannelPipeline getPipeline() throws Exception {
+                return Channels.pipeline(
+                        new ReadTimeoutHandler(timer, READ_TIMEOUT),
+                        new UptimeClientHandler(bootstrap, timer));
+            }
+        });
 
         bootstrap.setOption(
                 "remoteAddress", new InetSocketAddress(host, port));

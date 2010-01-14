@@ -56,8 +56,8 @@ public class SecureChatClient {
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
-        SecureChatClientHandler handler = new SecureChatClientHandler();
-        bootstrap.setPipelineFactory(new SecureChatPipelineFactory(handler));
+        // Configure the pipeline factory.
+        bootstrap.setPipelineFactory(new SecureChatClientPipelineFactory());
 
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));

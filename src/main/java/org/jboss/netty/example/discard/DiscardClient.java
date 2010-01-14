@@ -20,6 +20,9 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 
 /**
@@ -42,9 +45,9 @@ public class DiscardClient {
         }
 
         // Parse options.
-        String host = args[0];
-        int port = Integer.parseInt(args[1]);
-        int firstMessageSize;
+        final String host = args[0];
+        final int port = Integer.parseInt(args[1]);
+        final int firstMessageSize;
         if (args.length == 3) {
             firstMessageSize = Integer.parseInt(args[2]);
         } else {
@@ -57,9 +60,13 @@ public class DiscardClient {
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
-        // Set up the default event pipeline.
-        DiscardClientHandler handler = new DiscardClientHandler(firstMessageSize);
-        bootstrap.getPipeline().addLast("handler", handler);
+        // Set up the pipeline factory.
+        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+            public ChannelPipeline getPipeline() throws Exception {
+                return Channels.pipeline(
+                        new DiscardClientHandler(firstMessageSize));
+            }
+        });
 
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));

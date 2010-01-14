@@ -20,6 +20,9 @@ import java.util.concurrent.TimeUnit;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
 import org.jboss.netty.channel.local.DefaultLocalServerChannelFactory;
 import org.jboss.netty.channel.local.LocalAddress;
@@ -54,9 +57,14 @@ public class LocalExampleMultthreaded {
         ClientBootstrap cb = new ClientBootstrap(
                 new DefaultLocalClientChannelFactory());
 
-        cb.getPipeline().addLast("decoder", new StringDecoder());
-        cb.getPipeline().addLast("encoder", new StringEncoder());
-        cb.getPipeline().addLast("handler", new LoggingHandler(InternalLogLevel.INFO));
+        cb.setPipelineFactory(new ChannelPipelineFactory() {
+            public ChannelPipeline getPipeline() throws Exception {
+                return Channels.pipeline(
+                        new StringDecoder(),
+                        new StringEncoder(),
+                        new LoggingHandler(InternalLogLevel.INFO));
+            }
+        });
 
         // Read commands from array
         String[] commands = { "First", "Second", "Third", "quit" };

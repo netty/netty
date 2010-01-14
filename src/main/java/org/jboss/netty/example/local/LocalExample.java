@@ -21,6 +21,9 @@ import java.io.InputStreamReader;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
 import org.jboss.netty.channel.local.DefaultLocalServerChannelFactory;
 import org.jboss.netty.channel.local.LocalAddress;
@@ -55,10 +58,15 @@ public class LocalExample {
         ClientBootstrap cb = new ClientBootstrap(
                 new DefaultLocalClientChannelFactory());
 
-        // Set up the default client-side event pipeline.
-        cb.getPipeline().addLast("decoder", new StringDecoder());
-        cb.getPipeline().addLast("encoder", new StringEncoder());
-        cb.getPipeline().addLast("handler", new LoggingHandler(InternalLogLevel.INFO));
+        // Set up the client-side pipeline factory.
+        cb.setPipelineFactory(new ChannelPipelineFactory() {
+            public ChannelPipeline getPipeline() throws Exception {
+                return Channels.pipeline(
+                        new StringDecoder(),
+                        new StringEncoder(),
+                        new LoggingHandler(InternalLogLevel.INFO));
+            }
+        });
 
         // Make the connection attempt to the server.
         ChannelFuture channelFuture = cb.connect(socketAddress);

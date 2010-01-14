@@ -38,8 +38,8 @@ public class TelnetServer {
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
-        TelnetServerHandler handler = new TelnetServerHandler();
-        bootstrap.setPipelineFactory(new TelnetPipelineFactory(handler));
+        // Configure the pipeline factory.
+        bootstrap.setPipelineFactory(new TelnetServerPipelineFactory());
 
         // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress(8080));

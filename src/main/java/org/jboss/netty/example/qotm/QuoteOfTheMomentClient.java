@@ -20,6 +20,8 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.FixedReceiveBufferSizePredictorFactory;
 import org.jboss.netty.channel.socket.DatagramChannel;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
@@ -46,11 +48,15 @@ public class QuoteOfTheMomentClient {
 
         ConnectionlessBootstrap b = new ConnectionlessBootstrap(f);
 
-        // Configure the pipeline.
-        ChannelPipeline p = b.getPipeline();
-        p.addLast("encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
-        p.addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
-        p.addLast("handler", new QuoteOfTheMomentClientHandler());
+        // Configure the pipeline factory.
+        b.setPipelineFactory(new ChannelPipelineFactory() {
+            public ChannelPipeline getPipeline() throws Exception {
+                return Channels.pipeline(
+                        new StringEncoder(CharsetUtil.ISO_8859_1),
+                        new StringDecoder(CharsetUtil.ISO_8859_1),
+                        new QuoteOfTheMomentClientHandler());
+            }
+        });
 
         // Enable broadcast
         b.setOption("broadcast", "true");
