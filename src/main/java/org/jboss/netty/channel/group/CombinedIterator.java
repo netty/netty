@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util.internal;
+package org.jboss.netty.channel.group;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -23,13 +23,13 @@ import java.util.NoSuchElementException;
  * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
-public class CombinedIterator<E> implements Iterator<E> {
+final class CombinedIterator<E> implements Iterator<E> {
 
     private final Iterator<E> i1;
     private final Iterator<E> i2;
     private Iterator<E> currentIterator;
 
-    public CombinedIterator(Iterator<E> i1, Iterator<E> i2) {
+    CombinedIterator(Iterator<E> i1, Iterator<E> i2) {
         if (i1 == null) {
             throw new NullPointerException("i1");
         }

@@ -30,7 +30,6 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ServerChannel;
-import org.jboss.netty.util.internal.CombinedIterator;
 import org.jboss.netty.util.internal.ConcurrentHashMap;
 
 /**
