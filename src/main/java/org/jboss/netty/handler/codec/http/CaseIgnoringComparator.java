@@ -28,7 +28,7 @@ final class CaseIgnoringComparator implements Comparator<String>, Serializable {
 
     private static final long serialVersionUID = 4582133183775373862L;
 
-    public static final CaseIgnoringComparator INSTANCE = new CaseIgnoringComparator();
+    static final CaseIgnoringComparator INSTANCE = new CaseIgnoringComparator();
 
     private CaseIgnoringComparator() {
         super();
