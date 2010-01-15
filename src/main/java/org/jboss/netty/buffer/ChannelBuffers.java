@@ -794,8 +794,8 @@ public class ChannelBuffers {
     private static ChannelBuffer copiedBuffer(ByteOrder endianness, CharBuffer buffer, Charset charset) {
         CharBuffer src = buffer;
         ByteBuffer dst = ChannelBuffers.encodeString(src, charset);
-        ChannelBuffer result = wrappedBuffer(endianness, dst.array(), 0, dst.remaining());
-        result.writerIndex(dst.position());
+        ChannelBuffer result = wrappedBuffer(endianness, dst.array());
+        result.writerIndex(dst.remaining());
         return result;
     }
 
