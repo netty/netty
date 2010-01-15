@@ -20,14 +20,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.CharBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-
-import org.jboss.netty.util.CharsetUtil;
 
 /**
  * A NIO {@link ByteBuffer} based buffer.  It is recommended to use {@link ChannelBuffers#directBuffer(int)}
@@ -303,18 +299,14 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
-    public int getString(int index, int length, CharBuffer dst, Charset charset) {
+    public String toString(int index, int length, Charset charset) {
         if (length == 0) {
-            return 0;
+            return "";
         }
 
-        final CharsetDecoder decoder = CharsetUtil.getDecoder(charset);
-        final int start = dst.position();
-        final ByteBuffer src =
-            ((ByteBuffer) buffer.duplicate().position(
-                    index).limit(index + length)).order(order());
-        ChannelBuffers.decodeString(src, dst, decoder);
-        return dst.position() - start;
+        return ChannelBuffers.decodeString(
+                ((ByteBuffer) buffer.duplicate().position(index).limit(index + length)),
+                charset);
     }
 
     public ChannelBuffer slice(int index, int length) {

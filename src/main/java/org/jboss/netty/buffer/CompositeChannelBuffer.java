@@ -20,16 +20,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.CharBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import org.jboss.netty.util.CharsetUtil;
 
 
 /**
@@ -590,15 +586,15 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         return buffers.toArray(new ByteBuffer[buffers.size()]);
     }
 
-    public int getString(int index, int length, CharBuffer dst, Charset charset) {
-        int componentId = componentId(index);
-        if (index + length <= indices[componentId + 1]) {
-            return components[componentId].getString(
-                    index - indices[componentId], length, dst, charset);
+    public String toString(int index, int length, Charset charset) {
+        if (length == 0) {
+            return "";
         }
 
-        if (length == 0) {
-            return 0;
+        int componentId = componentId(index);
+        if (index + length <= indices[componentId + 1]) {
+            return components[componentId].toString(
+                    index - indices[componentId], length, charset);
         }
 
         byte[] data = new byte[length];
@@ -617,11 +613,8 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             i ++;
         }
 
-        final CharsetDecoder decoder = CharsetUtil.getDecoder(charset);
-        final int start = dst.position();
-        final ByteBuffer src = ByteBuffer.wrap(data);
-        ChannelBuffers.decodeString(src, dst, decoder);
-        return dst.position() - start;
+        return ChannelBuffers.decodeString(
+                ByteBuffer.wrap(data), charset);
     }
 
     private int componentId(int index) {

@@ -19,14 +19,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-
-import org.jboss.netty.util.CharsetUtil;
 
 /**
  * A skeletal implementation for Java heap buffers.
@@ -122,16 +118,13 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
         return out.write(ByteBuffer.wrap(array, index, length));
     }
 
-    public int getString(int index, int length, CharBuffer dst, Charset charset) {
+    public String toString(int index, int length, Charset charset) {
         if (length == 0) {
-            return 0;
+            return "";
         }
 
-        final CharsetDecoder decoder = CharsetUtil.getDecoder(charset);
-        final int start = dst.position();
-        final ByteBuffer src = ByteBuffer.wrap(array, index, length);
-        ChannelBuffers.decodeString(src, dst, decoder);
-        return dst.position() - start;
+        return ChannelBuffers.decodeString(
+                ByteBuffer.wrap(array, index, length), charset);
     }
 
     public void setByte(int index, byte value) {

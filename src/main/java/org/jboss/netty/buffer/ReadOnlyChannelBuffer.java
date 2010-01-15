@@ -20,7 +20,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.CharBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -196,7 +195,7 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
         return buffer.capacity();
     }
 
-    public int getString(int index, int length, CharBuffer dst, Charset charset) {
-        return buffer.getString(index, length, dst, charset);
+    public String toString(int index, int length, Charset charset) {
+        return buffer.toString(index, length, charset);
     }
 }

@@ -792,12 +792,9 @@ public class ChannelBuffers {
     }
 
     private static ChannelBuffer copiedBuffer(ByteOrder endianness, CharBuffer buffer, Charset charset) {
-        CharsetEncoder encoder = CharsetUtil.getEncoder(charset);
         CharBuffer src = buffer;
-        ByteBuffer dst = ByteBuffer.allocate(
-                (int) ((double) buffer.remaining() * encoder.maxBytesPerChar()));
-        ChannelBuffers.encodeString(src, dst, encoder);
-        ChannelBuffer result = wrappedBuffer(endianness, dst.array());
+        ByteBuffer dst = ChannelBuffers.encodeString(src, charset);
+        ChannelBuffer result = wrappedBuffer(endianness, dst.array(), 0, dst.remaining());
         result.writerIndex(dst.position());
         return result;
     }
@@ -1114,7 +1111,10 @@ public class ChannelBuffers {
         return -1;
     }
 
-    static void encodeString(CharBuffer src, ByteBuffer dst, CharsetEncoder encoder) {
+    static ByteBuffer encodeString(CharBuffer src, Charset charset) {
+        final CharsetEncoder encoder = CharsetUtil.getEncoder(charset);
+        final ByteBuffer dst = ByteBuffer.allocate(
+                (int) ((double) src.remaining() * encoder.maxBytesPerChar()));
         try {
             CoderResult cr = encoder.encode(src, dst, true);
             if (!cr.isUnderflow()) {
@@ -1127,9 +1127,14 @@ public class ChannelBuffers {
         } catch (CharacterCodingException x) {
             throw new IllegalStateException(x);
         }
+        dst.flip();
+        return dst;
     }
 
-    static void decodeString(ByteBuffer src, CharBuffer dst, CharsetDecoder decoder) {
+    static String decodeString(ByteBuffer src, Charset charset) {
+        final CharsetDecoder decoder = CharsetUtil.getDecoder(charset);
+        final CharBuffer dst = CharBuffer.allocate(
+                (int) ((double) src.remaining() * decoder.maxCharsPerByte()));
         try {
             CoderResult cr = decoder.decode(src, dst, true);
             if (!cr.isUnderflow()) {
@@ -1142,6 +1147,7 @@ public class ChannelBuffers {
         } catch (CharacterCodingException x) {
             throw new IllegalStateException(x);
         }
+        return dst.flip().toString();
     }
 
     private ChannelBuffers() {
