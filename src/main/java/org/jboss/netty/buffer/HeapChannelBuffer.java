@@ -22,7 +22,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-import java.nio.charset.Charset;
 
 /**
  * A skeletal implementation for Java heap buffers.
@@ -116,15 +115,6 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
         return out.write(ByteBuffer.wrap(array, index, length));
-    }
-
-    public String toString(int index, int length, Charset charset) {
-        if (length == 0) {
-            return "";
-        }
-
-        return ChannelBuffers.decodeString(
-                ByteBuffer.wrap(array, index, length), charset);
     }
 
     public void setByte(int index, byte value) {

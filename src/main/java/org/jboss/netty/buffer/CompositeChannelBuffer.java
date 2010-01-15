@@ -22,7 +22,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -584,37 +583,6 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
 
         return buffers.toArray(new ByteBuffer[buffers.size()]);
-    }
-
-    public String toString(int index, int length, Charset charset) {
-        if (length == 0) {
-            return "";
-        }
-
-        int componentId = componentId(index);
-        if (index + length <= indices[componentId + 1]) {
-            return components[componentId].toString(
-                    index - indices[componentId], length, charset);
-        }
-
-        byte[] data = new byte[length];
-        int dataIndex = 0;
-        int i = componentId;
-
-        int remaining = length;
-        while (remaining > 0) {
-            ChannelBuffer s = components[i];
-            int adjustment = indices[i];
-            int localLength = Math.min(remaining, s.capacity() - (index - adjustment));
-            s.getBytes(index - adjustment, data, dataIndex, localLength);
-            index += localLength;
-            dataIndex += localLength;
-            remaining -= localLength;
-            i ++;
-        }
-
-        return ChannelBuffers.decodeString(
-                ByteBuffer.wrap(data), charset);
     }
 
     private int componentId(int index) {

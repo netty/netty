@@ -22,7 +22,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-import java.nio.charset.Charset;
 
 
 /**
@@ -179,9 +178,5 @@ public class DuplicatedChannelBuffer extends AbstractChannelBuffer implements Wr
 
     public ByteBuffer toByteBuffer(int index, int length) {
         return buffer.toByteBuffer(index, length);
-    }
-
-    public String toString(int index, int length, Charset charset) {
-        return buffer.toString(index, length, charset);
     }
 }

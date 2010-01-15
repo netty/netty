@@ -23,7 +23,6 @@ import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-import java.nio.charset.Charset;
 
 /**
  * A NIO {@link ByteBuffer} based buffer.  It is recommended to use {@link ChannelBuffers#directBuffer(int)}
@@ -297,16 +296,6 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
             return ((ByteBuffer) buffer.duplicate().position(
                     index).limit(index + length)).slice().order(order());
         }
-    }
-
-    public String toString(int index, int length, Charset charset) {
-        if (length == 0) {
-            return "";
-        }
-
-        return ChannelBuffers.decodeString(
-                ((ByteBuffer) buffer.duplicate().position(index).limit(index + length)),
-                charset);
     }
 
     public ChannelBuffer slice(int index, int length) {
