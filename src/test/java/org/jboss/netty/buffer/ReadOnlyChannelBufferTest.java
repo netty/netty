@@ -26,7 +26,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
-import org.jboss.netty.util.CharsetUtil;
 import org.junit.Test;
 
 /**
@@ -98,8 +97,7 @@ public class ReadOnlyChannelBufferTest {
 
         expect(buf.toByteBuffer(23, 24)).andReturn(bb);
         expect(buf.toByteBuffers(25, 26)).andReturn(bbs);
-        expect(buf.toString(27, 28, CharsetUtil.UTF_8)).andReturn("29");
-        expect(buf.capacity()).andReturn(30);
+        expect(buf.capacity()).andReturn(27);
 
         replay(buf);
 
@@ -125,9 +123,7 @@ public class ReadOnlyChannelBufferTest {
         assertTrue(roBBs[0].isReadOnly());
         assertEquals(102, roBBs[1].capacity());
         assertTrue(roBBs[1].isReadOnly());
-
-        assertEquals("29", roBuf.toString(27, 28, CharsetUtil.UTF_8));
-        assertEquals(30, roBuf.capacity());
+        assertEquals(27, roBuf.capacity());
 
         verify(buf);
     }
