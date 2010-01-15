@@ -99,8 +99,9 @@ import org.jboss.netty.channel.Channels;
  * manages any resources.  What manages the resources is the
  * {@link ChannelFactory} implementation you specified in the constructor of
  * {@link ClientBootstrap}.  Therefore, it is OK to create as many
- * {@link ClientBootstrap} instances as you want to apply different settings
- * for different {@link Channel}s.
+ * {@link ClientBootstrap} instances as you want with the same
+ * {@link ChannelFactory} to apply different settings for different
+ * {@link Channel}s.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
