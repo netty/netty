@@ -1199,6 +1199,7 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testSequentialCopiedBufferTransfer2() {
         buffer.clear();
         buffer.writeZero(buffer.capacity());
@@ -1249,6 +1250,7 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testSequentialSlice2() {
         buffer.clear();
         buffer.writeZero(buffer.capacity());
@@ -1641,6 +1643,7 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testSkipBytes2() {
         buffer.clear();
         buffer.writeZero(buffer.capacity());

@@ -24,7 +24,6 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
-import java.util.NoSuchElementException;
 
 /**
  * A random and sequential accessible sequence of zero or more bytes (octets).
@@ -176,10 +175,13 @@ import java.util.NoSuchElementException;
  *
  * <h3>Search operations</h3>
  *
- * Various {@code indexOf()} methods help you locate an index of a value which
- * meets a certain criteria.  Complicated dynamic sequential search can be done
- * with {@link ChannelBufferIndexFinder} as well as simple static single byte
- * search.
+ * Various {@link #indexOf(int, int, byte)} methods help you locate an index of
+ * a value which meets a certain criteria.  Complicated dynamic sequential
+ * search can be done with {@link ChannelBufferIndexFinder} as well as simple
+ * static single byte search.
+ * <p>
+ * If you are decoding variable length data such as NUL-terminated string, you
+ * will find {@link #bytesBefore(byte)} also useful.
  *
  * <h3>Mark and reset</h3>
  *
@@ -1080,20 +1082,9 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     ChannelBuffer readBytes(int length);
 
     /**
-     * Transfers this buffer's data to a newly created buffer starting at
-     * the current {@code readerIndex} until the specified {@code indexFinder}
-     * returns {@code true} and increases the {@code readerIndex}
-     * by the number of the transferred bytes.  The returned buffer's
-     * {@code readerIndex} and {@code writerIndex} are {@code 0} and
-     * the number of the transferred bytes respectively.
-     *
-     * @param indexFinder finds the end index of the sub-region
-     *
-     * @return the newly created buffer which contains the transferred bytes
-     *
-     * @throws NoSuchElementException
-     *         if {@code indexFinder} didn't return {@code true} at all
+     * @deprecated Use {@link #bytesBefore(ChannelBufferIndexFinder)} and {@link #readBytes(int)} instead.
      */
+    @Deprecated
     ChannelBuffer readBytes(ChannelBufferIndexFinder indexFinder);
 
     /**
@@ -1111,17 +1102,9 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     ChannelBuffer readSlice(int length);
 
     /**
-     * Returns a new slice of this buffer's sub-region starting at the current
-     * {@code readerIndex} and increases the {@code readerIndex} by the size
-     * of the new slice (determined by {@code indexFinder}).
-     *
-     * @param indexFinder finds the end index of the sub-region
-     *
-     * @return the newly created slice
-     *
-     * @throws NoSuchElementException
-     *         if {@code indexFinder} didn't return {@code true} at all
+     * @deprecated Use {@link #bytesBefore(ChannelBufferIndexFinder)} and {@link #readSlice(int)} instead.
      */
+    @Deprecated
     ChannelBuffer readSlice(ChannelBufferIndexFinder indexFinder);
 
     /**
@@ -1246,14 +1229,9 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     void skipBytes(int length);
 
     /**
-     * Increases the current {@code readerIndex} until the specified
-     * {@code indexFinder} returns {@code true} in this buffer.
-     *
-     * @return the number of skipped bytes
-     *
-     * @throws NoSuchElementException
-     *         if {@code firstIndexFinder} didn't return {@code true} at all
+     * @deprecated Use {@link #bytesBefore(ChannelBufferIndexFinder)} and {@link #skipBytes(int)} instead.
      */
+    @Deprecated
     int  skipBytes(ChannelBufferIndexFinder indexFinder);
 
     /**
@@ -1483,7 +1461,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     int indexOf(int fromIndex, int toIndex, byte value);
 
     /**
-     * Locates the first index where the specified {@code indexFinder}
+     * Locates the first place where the specified {@code indexFinder}
      * returns {@code true}.  The search takes place from the specified
      * {@code fromIndex} (inclusive) to the specified {@code toIndex}
      * (exclusive).
@@ -1495,10 +1473,106 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * this buffer.
      *
      * @return the absolute index where the specified {@code indexFinder}
-     *         returned {@code true} if the {@code indexFinder} returned
-     *         {@code true}.  {@code -1} otherwise.
+     *         returned {@code true}.  {@code -1} if the {@code indexFinder}
+     *         did not return {@code true} at all.
      */
     int indexOf(int fromIndex, int toIndex, ChannelBufferIndexFinder indexFinder);
+
+    /**
+     * Locates the first occurrence of the specified {@code value} in this
+     * buffer.  The search takes place from the current {@code readerIndex}
+     * (inclusive) to the current {@code writerIndex} (exclusive).
+     * <p>
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @return the number of bytes between the current {@code readerIndex}
+     *         and the first occurrence if found. {@code -1} otherwise.
+     */
+    int bytesBefore(byte value);
+
+    /**
+     * Locates the first place where the specified {@code indexFinder} returns
+     * {@code true}.  The search takes place from the current {@code readerIndex}
+     * (inclusive) to the current {@code writerIndex}.
+     * <p>
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @return the number of bytes between the current {@code readerIndex}
+     *         and the first place where the {@code indexFinder} returned
+     *         {@code true}.  {@code -1} if the {@code indexFinder} did not
+     *         return {@code true} at all.
+     */
+    int bytesBefore(ChannelBufferIndexFinder indexFinder);
+
+    /**
+     * Locates the first occurrence of the specified {@code value} in this
+     * buffer.  The search starts from the current {@code readerIndex}
+     * (inclusive) and lasts for the specified {@code length}.
+     * <p>
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @return the number of bytes between the current {@code readerIndex}
+     *         and the first occurrence if found. {@code -1} otherwise.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code length} is greater than {@code this.readableBytes}
+     */
+    int bytesBefore(int length, byte value);
+
+    /**
+     * Locates the first place where the specified {@code indexFinder} returns
+     * {@code true}.  The search starts the current {@code readerIndex}
+     * (inclusive) and lasts for the specified {@code length}.
+     * <p>
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @return the number of bytes between the current {@code readerIndex}
+     *         and the first place where the {@code indexFinder} returned
+     *         {@code true}.  {@code -1} if the {@code indexFinder} did not
+     *         return {@code true} at all.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code length} is greater than {@code this.readableBytes}
+     */
+    int bytesBefore(int length, ChannelBufferIndexFinder indexFinder);
+
+    /**
+     * Locates the first occurrence of the specified {@code value} in this
+     * buffer.  The search starts from the specified {@code index} (inclusive)
+     * and lasts for the specified {@code length}.
+     * <p>
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @return the number of bytes between the specified {@code index}
+     *         and the first occurrence if found. {@code -1} otherwise.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code index + length} is greater than {@code this.capacity}
+     */
+    int bytesBefore(int index, int length, byte value);
+
+    /**
+     * Locates the first place where the specified {@code indexFinder} returns
+     * {@code true}.  The search starts the specified {@code index} (inclusive)
+     * and lasts for the specified {@code length}.
+     * <p>
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @return the number of bytes between the specified {@code index}
+     *         and the first place where the {@code indexFinder} returned
+     *         {@code true}.  {@code -1} if the {@code indexFinder} did not
+     *         return {@code true} at all.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code index + length} is greater than {@code this.capacity}
+     */
+    int bytesBefore(int index, int length, ChannelBufferIndexFinder indexFinder);
 
     /**
      * Returns a copy of this buffer's readable bytes.  Modifying the content
@@ -1636,20 +1710,20 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     String toString(String charsetName);
 
     /**
-     * @deprecated Use {@link #toString(int, int, Charset)} instead.
+     * @deprecated Use {@link #bytesBefore(ChannelBufferIndexFinder)} and {@link #toString(int, int, Charset)} instead.
      */
     @Deprecated
     String toString(
             String charsetName, ChannelBufferIndexFinder terminatorFinder);
 
     /**
-     * @deprecated Use {@link #toString(int, int, Charset)} instead.
+     * @deprecated Use {@link #bytesBefore(int, int, ChannelBufferIndexFinder)} and {@link #toString(int, int, Charset)} instead.
      */
     @Deprecated
     String toString(int index, int length, String charsetName);
 
     /**
-     * @deprecated Use {@link #toString(int, int, Charset)} instead.
+     * @deprecated Use {@link #bytesBefore(int, int, ChannelBufferIndexFinder)} and {@link #toString(int, int, Charset)} instead.
      */
     @Deprecated
     String toString(

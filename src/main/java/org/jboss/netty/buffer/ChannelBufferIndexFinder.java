@@ -21,10 +21,8 @@ package org.jboss.netty.buffer;
  * <p>
  * This interface enables the sequential search for the data which meets more
  * complex and dynamic condition than just a simple value matching.  Please
- * refer to {@link ChannelBuffer#indexOf(int, int, ChannelBufferIndexFinder)},
- * {@link ChannelBuffer#readBytes(ChannelBufferIndexFinder)},
- * {@link ChannelBuffer#readSlice(ChannelBufferIndexFinder)}, and
- * {@link ChannelBuffer#skipBytes(ChannelBufferIndexFinder)}
+ * refer to {@link ChannelBuffer#indexOf(int, int, ChannelBufferIndexFinder)} and
+ * {@link ChannelBuffer#bytesBefore(int, int, ChannelBufferIndexFinder)}
  * for more explanation.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)

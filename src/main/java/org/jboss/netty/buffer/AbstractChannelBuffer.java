@@ -583,6 +583,41 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         return ChannelBuffers.indexOf(this, fromIndex, toIndex, indexFinder);
     }
 
+    public int bytesBefore(byte value) {
+        return bytesBefore(readerIndex(), readableBytes(), value);
+    }
+
+    public int bytesBefore(ChannelBufferIndexFinder indexFinder) {
+        return bytesBefore(readerIndex(), readableBytes(), indexFinder);
+    }
+
+    public int bytesBefore(int length, byte value) {
+        checkReadableBytes(length);
+        return bytesBefore(readerIndex(), length, value);
+    }
+
+    public int bytesBefore(int length, ChannelBufferIndexFinder indexFinder) {
+        checkReadableBytes(length);
+        return bytesBefore(readerIndex(), length, indexFinder);
+    }
+
+    public int bytesBefore(int index, int length, byte value) {
+        int endIndex = indexOf(index, index + length, value);
+        if (endIndex < 0) {
+            return -1;
+        }
+        return endIndex - index;
+    }
+
+    public int bytesBefore(int index, int length,
+            ChannelBufferIndexFinder indexFinder) {
+        int endIndex = indexOf(index, index + length, indexFinder);
+        if (endIndex < 0) {
+            return -1;
+        }
+        return endIndex - index;
+    }
+
     @Override
     public int hashCode() {
         return ChannelBuffers.hashCode(this);

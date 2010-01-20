@@ -63,7 +63,8 @@ public class ReplayingDecoderTest {
         @Override
         protected Object decode(ChannelHandlerContext ctx, Channel channel,
                 ChannelBuffer buffer, VoidEnum state) throws Exception {
-            ChannelBuffer msg = buffer.readBytes(ChannelBufferIndexFinder.LF);
+            ChannelBuffer msg = buffer.readBytes(
+                    buffer.bytesBefore(ChannelBufferIndexFinder.LF));
             buffer.skipBytes(1);
             return msg;
         }

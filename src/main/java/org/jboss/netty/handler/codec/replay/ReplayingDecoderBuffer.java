@@ -223,6 +223,57 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return endIndex;
     }
 
+    public int bytesBefore(byte value) {
+        int bytes = buffer.bytesBefore(value);
+        if (bytes < 0) {
+            throw REPLAY;
+        }
+        return bytes;
+    }
+
+    public int bytesBefore(ChannelBufferIndexFinder indexFinder) {
+        int bytes = buffer.bytesBefore(indexFinder);
+        if (bytes < 0) {
+            throw REPLAY;
+        }
+        return bytes;
+    }
+
+    public int bytesBefore(int length, byte value) {
+        checkReadableBytes(length);
+        int bytes = buffer.bytesBefore(length, value);
+        if (bytes < 0) {
+            throw REPLAY;
+        }
+        return bytes;
+    }
+
+    public int bytesBefore(int length, ChannelBufferIndexFinder indexFinder) {
+        checkReadableBytes(length);
+        int bytes = buffer.bytesBefore(length, indexFinder);
+        if (bytes < 0) {
+            throw REPLAY;
+        }
+        return bytes;
+    }
+
+    public int bytesBefore(int index, int length, byte value) {
+        int bytes = buffer.bytesBefore(index, length, value);
+        if (bytes < 0) {
+            throw REPLAY;
+        }
+        return bytes;
+    }
+
+    public int bytesBefore(int index, int length,
+            ChannelBufferIndexFinder indexFinder) {
+        int bytes = buffer.bytesBefore(index, length, indexFinder);
+        if (bytes < 0) {
+            throw REPLAY;
+        }
+        return bytes;
+    }
+
     public void markReaderIndex() {
         buffer.markReaderIndex();
     }
