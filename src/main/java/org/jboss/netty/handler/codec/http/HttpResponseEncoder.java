@@ -17,8 +17,6 @@ package org.jboss.netty.handler.codec.http;
 
 import static org.jboss.netty.handler.codec.http.HttpCodecUtil.*;
 
-import java.io.UnsupportedEncodingException;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
@@ -40,17 +38,13 @@ public class HttpResponseEncoder extends HttpMessageEncoder {
     }
 
     @Override
-    protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message) {
+    protected void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception {
         HttpResponse response = (HttpResponse) message;
-        try {
-            buf.writeBytes(response.getProtocolVersion().toString().getBytes("ASCII"));
-            buf.writeByte(SP);
-            buf.writeBytes(String.valueOf(response.getStatus().getCode()).getBytes("ASCII"));
-            buf.writeByte(SP);
-            buf.writeBytes(String.valueOf(response.getStatus().getReasonPhrase()).getBytes("ASCII"));
-            buf.writeBytes(CRLF);
-        } catch (UnsupportedEncodingException e) {
-            throw (Error) new Error().initCause(e);
-        }
+        buf.writeBytes(response.getProtocolVersion().toString().getBytes("ASCII"));
+        buf.writeByte(SP);
+        buf.writeBytes(String.valueOf(response.getStatus().getCode()).getBytes("ASCII"));
+        buf.writeByte(SP);
+        buf.writeBytes(String.valueOf(response.getStatus().getReasonPhrase()).getBytes("ASCII"));
+        buf.writeBytes(CRLF);
     }
 }
