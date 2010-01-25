@@ -46,7 +46,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * <li>When initializing an {@link SSLContext} on the server side,
  *     specify the proper {@link TrustManager} as the second argument of
  *     {@link SSLContext#init(KeyManager[], javax.net.ssl.TrustManager[], java.security.SecureRandom)}
- *     to validate the the client certificate.</li>
+ *     to validate the client certificate.</li>
  * </ul>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
