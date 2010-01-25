@@ -46,7 +46,8 @@ public class SecureChatTrustManagerFactory extends TrustManagerFactorySpi {
                 X509Certificate[] chain, String authType) throws CertificateException {
             // Always trust - it is an example.
             // You should do something in the real world.
-            // You will reach here only if you enabled client certificate auth.
+            // You will reach here only if you enabled client certificate auth,
+            // as described in SecureChatSslContextFactory.
             System.err.println(
                     "UNKNOWN CLIENT CERTIFICATE: " + chain[0].getSubjectDN());
         }
