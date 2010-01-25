@@ -22,6 +22,14 @@ import java.io.InputStream;
  * A bogus key store which provides all the required information to
  * create an example SSL connection.
  *
+ * To generate a bogus key store:
+ * <pre>
+ * keytool  -genkey -alias securechat -keysize 2048 -validity 36500
+ *          -keyalg RSA -dname "CN=securechat"
+ *          -keypass secret -storepass secret
+ *          -keystore cert.jks
+ * </pre>
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Trustin Lee (trustin@gmail.com)
  *
