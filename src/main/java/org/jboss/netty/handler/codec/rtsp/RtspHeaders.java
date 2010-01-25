@@ -26,7 +26,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
  */
 public class RtspHeaders {
 
-    public static final class Names extends HttpHeaders.Names {
+    public static class Names extends HttpHeaders.Names {
 
         public static final String ALLOW = "Allow";
 
