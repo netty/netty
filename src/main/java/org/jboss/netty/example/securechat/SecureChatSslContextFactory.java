@@ -58,9 +58,7 @@ public class SecureChatSslContextFactory {
 
             // Initialize the SSLContext to work with our key managers.
             serverContext = SSLContext.getInstance(PROTOCOL);
-            serverContext.init(
-                    kmf.getKeyManagers(),
-                    SecureChatTrustManagerFactory.getTrustManagers(), null);
+            serverContext.init(kmf.getKeyManagers(), null, null);
         } catch (Exception e) {
             throw new Error(
                     "Failed to initialize the server-side SSLContext", e);
@@ -68,8 +66,7 @@ public class SecureChatSslContextFactory {
 
         try {
             clientContext = SSLContext.getInstance(PROTOCOL);
-            clientContext.init(
-                    null, SecureChatTrustManagerFactory.getTrustManagers(), null);
+            clientContext.init(null, SecureChatTrustManagerFactory.getTrustManagers(), null);
         } catch (Exception e) {
             throw new Error(
                     "Failed to initialize the client-side SSLContext", e);
