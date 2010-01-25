@@ -232,6 +232,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * @apiviz.landmark
  */
 public interface ChannelBuffer extends Comparable<ChannelBuffer> {
+    // TODO Review the documentation before releasing 3.2.0
 
     /**
      * Returns the factory which creates a {@link ChannelBuffer} whose

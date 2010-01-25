@@ -91,6 +91,7 @@ import org.jboss.netty.util.CharsetUtil;
  * @apiviz.has org.jboss.netty.buffer.ChannelBuffer oneway - - creates
  */
 public class ChannelBuffers {
+    // TODO Review the documentation before releasing 3.2.0
 
     /**
      * Big endian byte order.
