@@ -71,21 +71,13 @@ public class NioServerSocketShutdownTimeTest {
                     ((InetSocketAddress) channel.getLocalAddress()).getPort());
 
             while (!handler.connected) {
-                try {
-                    Thread.sleep(1);
-                } catch (InterruptedException e) {
-                    // Ignore
-                }
+                Thread.yield();
             }
 
             socket.close();
 
             while (!handler.closed) {
-                try {
-                    Thread.sleep(1);
-                } catch (InterruptedException e) {
-                    // Ignore
-                }
+                Thread.yield();
             }
         } finally {
             if (socket != null) {
