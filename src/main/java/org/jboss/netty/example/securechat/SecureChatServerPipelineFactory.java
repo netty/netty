@@ -47,6 +47,9 @@ public class SecureChatServerPipelineFactory implements
         // and accept any invalid certificates in the client side.
         // You will need something more complicated to identify both
         // and server in the real world.
+        //
+        // Read SecureChatSslContextFactory
+        // if you need client certificate authentication.
 
         SSLEngine engine =
             SecureChatSslContextFactory.getServerContext().createSSLEngine();
