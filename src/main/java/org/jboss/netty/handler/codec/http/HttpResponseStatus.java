@@ -284,7 +284,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
      * If the specified code is a standard HTTP status code, a cached instance
      * will be returned.  Otherwise, a new instance will be returned.
      */
-    public static final HttpResponseStatus valueOf(int code) {
+    public static HttpResponseStatus valueOf(int code) {
         switch (code) {
         case 100:
             return CONTINUE;
