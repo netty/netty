@@ -81,6 +81,8 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
             setWriteBufferLowWaterMark0(ConversionUtil.toInt(value));
         } else if (key.equals("writeSpinCount")) {
             setWriteSpinCount(ConversionUtil.toInt(value));
+        } else if (key.equals("receiveBufferSizePredictorFactory")) {
+            setReceiveBufferSizePredictorFactory((ReceiveBufferSizePredictorFactory) value);
         } else if (key.equals("receiveBufferSizePredictor")) {
             setReceiveBufferSizePredictor((ReceiveBufferSizePredictor) value);
         } else {
