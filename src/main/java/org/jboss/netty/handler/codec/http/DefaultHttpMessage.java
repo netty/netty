@@ -21,6 +21,8 @@ import java.util.Set;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
+import org.jboss.netty.handler.codec.http.HttpHeaders.Values;
 
 /**
  * The default {@link HttpMessage} implementation.
@@ -44,15 +46,15 @@ public class DefaultHttpMessage implements HttpMessage {
         setProtocolVersion(version);
     }
 
-    public void addHeader(final String name, final String value) {
+    public void addHeader(final String name, final Object value) {
         headers.addHeader(name, value);
     }
 
-    public void setHeader(final String name, final String value) {
+    public void setHeader(final String name, final Object value) {
         headers.setHeader(name, value);
     }
 
-    public void setHeader(final String name, final Iterable<String> values) {
+    public void setHeader(final String name, final Iterable<?> values) {
         headers.setHeader(name, values);
     }
 
@@ -60,16 +62,14 @@ public class DefaultHttpMessage implements HttpMessage {
         headers.removeHeader(name);
     }
 
+    @Deprecated
     public long getContentLength() {
-        return getContentLength(0);
+        return HttpHeaders.getContentLength(this);
     }
 
+    @Deprecated
     public long getContentLength(long defaultValue) {
-        List<String> contentLength = getHeaders(HttpHeaders.Names.CONTENT_LENGTH);
-        if (contentLength != null && contentLength.size() > 0) {
-            return Long.parseLong(contentLength.get(0));
-        }
-        return defaultValue;
+        return HttpHeaders.getContentLength(this, defaultValue);
     }
 
     public boolean isChunked() {
@@ -88,15 +88,42 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public boolean isKeepAlive() {
-        if (HttpHeaders.Values.CLOSE.equalsIgnoreCase(getHeader(HttpHeaders.Names.CONNECTION))) {
+        HttpVersion version = getProtocolVersion();
+        if (!version.getProtocolName().equals("HTTP")) {
             return false;
         }
 
-        if (getProtocolVersion().equals(HttpVersion.HTTP_1_0) &&
-            !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(getHeader(HttpHeaders.Names.CONNECTION))) {
+        String connection = getHeader(Names.CONNECTION);
+        if (HttpHeaders.Values.CLOSE.equalsIgnoreCase(connection)) {
+            return false;
+        }
+
+        if (version.equals(HttpVersion.HTTP_1_0) &&
+            !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(connection)) {
             return false;
         }
         return true;
+    }
+
+    public void setKeepAlive(boolean keepAlive) {
+        HttpVersion version = getProtocolVersion();
+        if (!version.getProtocolName().equals("HTTP")) {
+            return;
+        }
+
+        if (version.equals(HttpVersion.HTTP_1_0)) {
+            if (keepAlive) {
+                setHeader(Names.CONNECTION, Values.KEEP_ALIVE);
+            } else {
+                removeHeader(Names.CONNECTION);
+            }
+        } else {
+            if (keepAlive) {
+                removeHeader(Names.CONNECTION);
+            } else {
+                setHeader(Names.CONNECTION, Values.CLOSE);
+            }
+        }
     }
 
     public void clearHeaders() {

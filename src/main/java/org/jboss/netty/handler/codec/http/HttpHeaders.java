@@ -409,6 +409,57 @@ public class HttpHeaders {
         }
     }
 
+
+    /**
+     * Returns the length of the content.  Please note that this value is
+     * not retrieved from {@link HttpMessage#getContent()} but from the
+     * {@code "Content-Length"} header, and thus they are independent from each
+     * other.
+     *
+     * @return the content length or {@code 0} if this message does not have
+     *         the {@code "Content-Length"} header
+     */
+    public static long getContentLength(HttpMessage message) {
+        return getContentLength(message, 0L);
+    }
+
+    /**
+     * Returns the length of the content.  Please note that this value is
+     * not retrieved from {@link HttpMessage#getContent()} but from the
+     * {@code "Content-Length"} header, and thus they are independent from each
+     * other.
+     *
+     * @return the content length or {@code defaultValue} if this message does
+     *         not have the {@code "Content-Length"} header
+     */
+    public static long getContentLength(HttpMessage message, long defaultValue) {
+        String contentLength = message.getHeader(Names.CONTENT_LENGTH);
+        if (contentLength != null) {
+            return Long.parseLong(contentLength);
+        }
+        return defaultValue;
+    }
+
+    public static void setContentLength(HttpMessage message, long value) {
+        message.setHeader(Names.CONTENT_LENGTH, value);
+    }
+
+    public static String getHost(HttpMessage message) {
+        return message.getHeader(Names.HOST);
+    }
+
+    public static String getHost(HttpMessage message, String defaultValue) {
+        String host = getHost(message);
+        if (host == null) {
+            return defaultValue;
+        }
+        return host;
+    }
+
+    public static void setHost(HttpMessage message, String value) {
+        message.setHeader(Names.HOST, value);
+    }
+
     private static final int BUCKET_SIZE = 17;
 
     private static int hash(String name) {
@@ -469,12 +520,13 @@ public class HttpHeaders {
         HttpCodecUtil.validateHeaderName(name);
     }
 
-    void addHeader(final String name, final String value) {
+    void addHeader(final String name, final Object value) {
         validateHeaderName(name);
-        HttpCodecUtil.validateHeaderValue(value);
+        String strVal = toString(value);
+        HttpCodecUtil.validateHeaderValue(strVal);
         int h = hash(name);
         int i = index(h);
-        addHeader0(h, i, name, value);
+        addHeader0(h, i, name, strVal);
     }
 
     private void addHeader0(int h, int i, final String name, final String value) {
@@ -536,43 +588,34 @@ public class HttpHeaders {
         }
     }
 
-    void setHeader(final String name, final String value) {
+    void setHeader(final String name, final Object value) {
         validateHeaderName(name);
-        HttpCodecUtil.validateHeaderValue(value);
+        String strVal = toString(value);
+        HttpCodecUtil.validateHeaderValue(strVal);
         int h = hash(name);
         int i = index(h);
         removeHeader0(h, i, name);
-        addHeader0(h, i, name, value);
+        addHeader0(h, i, name, strVal);
     }
 
-    void setHeader(final String name, final Iterable<String> values) {
-        validateHeaderName(name);
+    void setHeader(final String name, final Iterable<?> values) {
         if (values == null) {
             throw new NullPointerException("values");
         }
 
-        boolean empty = true;
-        for (String v: values) {
-            if (v == null) {
-                break;
-            }
-            HttpCodecUtil.validateHeaderValue(v);
-            empty = false;
-        }
+        validateHeaderName(name);
 
         int h = hash(name);
         int i = index(h);
 
         removeHeader0(h, i, name);
-        if (empty) {
-            return;
-        }
-
-        for (String v: values) {
+        for (Object v: values) {
             if (v == null) {
                 break;
             }
-            addHeader0(h, i, name, v);
+            String strVal = toString(v);
+            HttpCodecUtil.validateHeaderValue(strVal);
+            addHeader0(h, i, name, strVal);
         }
     }
 
@@ -646,6 +689,13 @@ public class HttpHeaders {
             e = e.after;
         }
         return names;
+    }
+
+    private static String toString(Object value) {
+        if (value == null) {
+            return null;
+        }
+        return value.toString();
     }
 
     private static final class Entry implements Map.Entry<String, String> {

@@ -56,7 +56,7 @@ public interface HttpChunk {
             return true;
         }
 
-        public void addHeader(String name, String value) {
+        public void addHeader(String name, Object value) {
             throw new IllegalStateException("read-only");
         }
 
@@ -88,11 +88,11 @@ public interface HttpChunk {
             // NOOP
         }
 
-        public void setHeader(String name, String value) {
+        public void setHeader(String name, Object value) {
             throw new IllegalStateException("read-only");
         }
 
-        public void setHeader(String name, Iterable<String> values) {
+        public void setHeader(String name, Iterable<?> values) {
             throw new IllegalStateException("read-only");
         }
     };

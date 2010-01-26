@@ -74,21 +74,21 @@ public interface HttpChunkTrailer extends HttpChunk {
     /**
      * Adds a new trailing header with the specified name and value.
      */
-    void addHeader(String name, String value);
+    void addHeader(String name, Object value);
 
     /**
      * Sets a new trailing header with the specified name and value.
      * If there is an existing trailing header with the same name, the existing
      * one is removed.
      */
-    void setHeader(String name, String value);
+    void setHeader(String name, Object value);
 
     /**
      * Sets a new trailing header with the specified name and values.
      * If there is an existing trailing header with the same name, the existing
      * one is removed.
      */
-    void setHeader(String name, Iterable<String> values);
+    void setHeader(String name, Iterable<?> values);
 
     /**
      * Removes the trailing header with the specified name.

@@ -101,19 +101,19 @@ public interface HttpMessage {
     /**
      * Adds a new header with the specified name and value.
      */
-    void addHeader(String name, String value);
+    void addHeader(String name, Object value);
 
     /**
      * Sets a new header with the specified name and value.  If there is an
      * existing header with the same name, the existing header is removed.
      */
-    void setHeader(String name, String value);
+    void setHeader(String name, Object value);
 
     /**
      * Sets a new header with the specified name and values.  If there is an
      * existing header with the same name, the existing header is removed.
      */
-    void setHeader(String name, Iterable<String> values);
+    void setHeader(String name, Iterable<?> values);
 
     /**
      * Removes the header with the specified name.
@@ -126,25 +126,15 @@ public interface HttpMessage {
     void clearHeaders();
 
     /**
-     * Returns the length of the content.  Please note that this value is
-     * not retrieved from {@link #getContent()} but from the
-     * {@code "Content-Length"} header, and thus they are independent from each
-     * other.
-     *
-     * @return the content length or {@code 0} if this message does not have
-     *         the {@code "Content-Length"} header
+     * @deprecated Use {@link HttpHeaders#getContentLength(HttpMessage)} instead.
      */
+    @Deprecated
     long getContentLength();
 
     /**
-     * Returns the length of the content.  Please note that this value is
-     * not retrieved from {@link #getContent()} but from the
-     * {@code "Content-Length"} header, and thus they are independent from each
-     * other.
-     *
-     * @return the content length or {@code defaultValue} if this message does
-     *         not have the {@code "Content-Length"} header
+     * @deprecated Use {@link HttpHeaders#getContentLength(HttpMessage, long)} instead.
      */
+    @Deprecated
     long getContentLength(long defaultValue);
 
     /**
@@ -175,7 +165,37 @@ public interface HttpMessage {
 
     /**
      * Returns {@code true} if and only if the connection can remain open and
-     * thus 'kept alive'.
+     * thus 'kept alive'.  In HTTP, this property is determined by the value of the
+     * {@code "Connection"} header and the protocol version of this message.
+     * <p>
+     * Please note that the default implementation of this method only
+     * understands HTTP.  If the protocol version of this message indicates
+     * other derived protocols such as RTSP and ICAP, it will return false by
+     * default.
      */
     boolean isKeepAlive();
+
+    /**
+     * Sets the value of the {@code "Connection"} header depending on the
+     * protocol version of this message.  The default implementation sets or
+     * removes the {@code "Connection"} header with the following rules:
+     * <ul>
+     * <li>If protocol version is HTTP/1.1 or later:
+     *     <ul>
+     *     <li>set to {@code "close"} if {@code keepAlive} is {@code false}.</li>
+     *     <li>remove otherwise.</li>
+     *     </ul></li>
+     * <li>If protocol version is HTTP/1.0:
+     *     <ul>
+     *     <li>set to {@code "keep-alive"} if {@code keepAlive} is {@code true}.</li>
+     *     <li>remove otherwise.</li>
+     *     </ul></li>
+     * <li>do nothing if the protocol name is not {@code "HTTP"}.</li>
+     * </ul>
+     * Please note that the default implementation of this method only
+     * understands HTTP.  If the protocol version of this message indicates
+     * other derived protocols such as RTSP and ICAP, it will do nothing by
+     * default.
+     */
+    void setKeepAlive(boolean keepAlive);
 }

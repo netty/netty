@@ -214,7 +214,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 message.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
                 return message;
             } else {
-                long contentLength = message.getContentLength(-1);
+                long contentLength = HttpHeaders.getContentLength(message, -1);
                 if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
                     content = ChannelBuffers.EMPTY_BUFFER;
                     return reset();
@@ -228,7 +228,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                         message.setChunked(true);
                         // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT_AS_CHUNKS
                         // state reads data chunk by chunk.
-                        chunkSize = message.getContentLength(-1);
+                        chunkSize = HttpHeaders.getContentLength(message, -1);
                         return message;
                     }
                     break;
@@ -415,7 +415,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
     }
 
     private void readFixedLengthContent(ChannelBuffer buffer) {
-        long length = message.getContentLength(-1);
+        long length = HttpHeaders.getContentLength(message, -1);
         assert length <= Integer.MAX_VALUE;
 
         if (content == null) {
@@ -461,7 +461,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             // yet, HttpMessage.isChunked() should return true only when
             // 'Transfer-Encoding' is 'chunked'.
             nextState = State.READ_CHUNK_SIZE;
-        } else if (message.getContentLength(-1) >= 0) {
+        } else if (HttpHeaders.getContentLength(message, -1) >= 0) {
             nextState = State.READ_FIXED_LENGTH_CONTENT;
         } else {
             nextState = State.READ_VARIABLE_LENGTH_CONTENT;

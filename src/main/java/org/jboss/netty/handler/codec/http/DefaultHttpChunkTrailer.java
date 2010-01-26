@@ -48,15 +48,15 @@ public class DefaultHttpChunkTrailer implements HttpChunkTrailer {
         return true;
     }
 
-    public void addHeader(final String name, final String value) {
+    public void addHeader(final String name, final Object value) {
         headers.addHeader(name, value);
     }
 
-    public void setHeader(final String name, final String value) {
+    public void setHeader(final String name, final Object value) {
         headers.setHeader(name, value);
     }
 
-    public void setHeader(final String name, final Iterable<String> values) {
+    public void setHeader(final String name, final Iterable<?> values) {
         headers.setHeader(name, values);
     }
 
