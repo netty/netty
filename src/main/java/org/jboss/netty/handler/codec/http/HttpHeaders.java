@@ -89,6 +89,10 @@ public class HttpHeaders {
          */
         public static final String CONNECTION = "Connection";
         /**
+         * {@code "Content-Base"}
+         */
+        public static final String CONTENT_BASE = "Content-Base";
+        /**
          * {@code "Content-Encoding"}
          */
         public static final String CONTENT_ENCODING = "Content-Encoding";
