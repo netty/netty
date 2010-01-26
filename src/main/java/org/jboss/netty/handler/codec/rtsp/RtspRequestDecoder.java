@@ -62,5 +62,4 @@ public class RtspRequestDecoder extends HttpMessageDecoder {
     protected boolean isDecodingRequest() {
         return true;
     }
-
 }
