@@ -44,10 +44,6 @@ public class NioServerSocketShutdownTimeTest {
 
     @Test(timeout = 10000)
     public void testSuccessfulBindAttempt() throws Exception {
-        if (!TestUtil.isTimingTestEnabled()) {
-            return;
-        }
-
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new NioServerSocketChannelFactory(
                         Executors.newCachedThreadPool(),

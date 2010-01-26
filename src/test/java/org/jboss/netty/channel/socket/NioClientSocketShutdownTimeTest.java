@@ -41,10 +41,6 @@ public class NioClientSocketShutdownTimeTest {
 
     @Test
     public void testShutdownTime() throws Throwable {
-        if (!TestUtil.isTimingTestEnabled()) {
-            return;
-        }
-
         ServerSocketChannel serverSocket = ServerSocketChannel.open();
         serverSocket.socket().bind(new InetSocketAddress(0));
 

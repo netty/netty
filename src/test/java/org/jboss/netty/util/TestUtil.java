@@ -18,8 +18,6 @@ package org.jboss.netty.util;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-import org.jboss.netty.util.internal.ConversionUtil;
-
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -29,20 +27,9 @@ import org.jboss.netty.util.internal.ConversionUtil;
 @org.junit.Ignore
 public final class TestUtil {
 
-    private static final boolean ENABLED;
     private static final InetAddress LOCALHOST;
 
     static {
-        String value = System.getProperty("exclude-timing-tests", "false").trim();
-        if (value.length() == 0) {
-            value = "true";
-        }
-
-        ENABLED = !ConversionUtil.toBoolean(value);
-        if (!ENABLED) {
-            System.err.println("Timing tests will be disabled as requested.");
-        }
-
         InetAddress localhost = null;
         try {
             localhost = InetAddress.getLocalHost();
@@ -60,10 +47,6 @@ public final class TestUtil {
         }
 
         LOCALHOST = localhost;
-    }
-
-    public static boolean isTimingTestEnabled() {
-        return ENABLED;
     }
 
     public static InetAddress getLocalHost() {
