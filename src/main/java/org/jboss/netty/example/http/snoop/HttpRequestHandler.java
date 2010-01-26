@@ -17,6 +17,8 @@ package org.jboss.netty.example.http.snoop;
 
 import static org.jboss.netty.handler.codec.http.HttpHeaders.*;
 import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.*;
+import static org.jboss.netty.handler.codec.http.HttpResponseStatus.*;
+import static org.jboss.netty.handler.codec.http.HttpVersion.*;
 
 import java.util.List;
 import java.util.Map;
@@ -38,11 +40,8 @@ import org.jboss.netty.handler.codec.http.CookieEncoder;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpChunkTrailer;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.codec.http.QueryStringDecoder;
 import org.jboss.netty.util.CharsetUtil;
 
@@ -58,24 +57,25 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
 
     private volatile HttpRequest request;
     private volatile boolean readingChunks;
-    private final StringBuilder responseContent = new StringBuilder();
+    /** Buffer that stores the response content */
+    private final StringBuilder buf = new StringBuilder();
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (!readingChunks) {
             HttpRequest request = this.request = (HttpRequest) e.getMessage();
-            responseContent.setLength(0);
-            responseContent.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
-            responseContent.append("===================================\r\n");
+            buf.setLength(0);
+            buf.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
+            buf.append("===================================\r\n");
 
-            responseContent.append("VERSION: " + request.getProtocolVersion().getText() + "\r\n");
-            responseContent.append("HOSTNAME: " + getHost(request, "unknown") + "\r\n");
-            responseContent.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
+            buf.append("VERSION: " + request.getProtocolVersion() + "\r\n");
+            buf.append("HOSTNAME: " + getHost(request, "unknown") + "\r\n");
+            buf.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
 
             for (Map.Entry<String, String> h: request.getHeaders()) {
-                responseContent.append("HEADER: " + h.getKey() + " = " + h.getValue() + "\r\n");
+                buf.append("HEADER: " + h.getKey() + " = " + h.getValue() + "\r\n");
             }
-            responseContent.append("\r\n");
+            buf.append("\r\n");
 
             QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.getUri());
             Map<String, List<String>> params = queryStringDecoder.getParameters();
@@ -84,10 +84,10 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
                     String key = p.getKey();
                     List<String> vals = p.getValue();
                     for (String val : vals) {
-                        responseContent.append("PARAM: " + key + " = " + val + "\r\n");
+                        buf.append("PARAM: " + key + " = " + val + "\r\n");
                     }
                 }
-                responseContent.append("\r\n");
+                buf.append("\r\n");
             }
 
             if (request.isChunked()) {
@@ -95,7 +95,7 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
             } else {
                 ChannelBuffer content = request.getContent();
                 if (content.readable()) {
-                    responseContent.append("CONTENT: " + content.toString(CharsetUtil.UTF_8) + "\r\n");
+                    buf.append("CONTENT: " + content.toString(CharsetUtil.UTF_8) + "\r\n");
                 }
                 writeResponse(e);
             }
@@ -103,22 +103,22 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
             HttpChunk chunk = (HttpChunk) e.getMessage();
             if (chunk.isLast()) {
                 readingChunks = false;
-                responseContent.append("END OF CONTENT\r\n");
+                buf.append("END OF CONTENT\r\n");
 
                 HttpChunkTrailer trailer = (HttpChunkTrailer) chunk;
                 if (!trailer.getHeaderNames().isEmpty()) {
-                    responseContent.append("\r\n");
+                    buf.append("\r\n");
                     for (String name: trailer.getHeaderNames()) {
                         for (String value: trailer.getHeaders(name)) {
-                            responseContent.append("TRAILING HEADER: " + name + " = " + value + "\r\n");
+                            buf.append("TRAILING HEADER: " + name + " = " + value + "\r\n");
                         }
                     }
-                    responseContent.append("\r\n");
+                    buf.append("\r\n");
                 }
 
                 writeResponse(e);
             } else {
-                responseContent.append("CHUNK: " + chunk.getContent().toString(CharsetUtil.UTF_8) + "\r\n");
+                buf.append("CHUNK: " + chunk.getContent().toString(CharsetUtil.UTF_8) + "\r\n");
             }
         }
     }
@@ -128,8 +128,8 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
         boolean keepAlive = request.isKeepAlive();
 
         // Build the response object.
-        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        response.setContent(ChannelBuffers.copiedBuffer(responseContent.toString(), CharsetUtil.UTF_8));
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
+        response.setContent(ChannelBuffers.copiedBuffer(buf.toString(), CharsetUtil.UTF_8));
         response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
 
         if (keepAlive) {
@@ -138,7 +138,7 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
         }
 
         // Encode the cookie.
-        String cookieString = request.getHeader(HttpHeaders.Names.COOKIE);
+        String cookieString = request.getHeader(COOKIE);
         if (cookieString != null) {
             CookieDecoder cookieDecoder = new CookieDecoder();
             Set<Cookie> cookies = cookieDecoder.decode(cookieString);

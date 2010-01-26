@@ -15,6 +15,13 @@
  */
 package org.jboss.netty.example.http.websocket;
 
+import static org.jboss.netty.handler.codec.http.HttpHeaders.*;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.*;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Values.*;
+import static org.jboss.netty.handler.codec.http.HttpMethod.*;
+import static org.jboss.netty.handler.codec.http.HttpResponseStatus.*;
+import static org.jboss.netty.handler.codec.http.HttpVersion.*;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelFuture;
@@ -27,11 +34,11 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
+import org.jboss.netty.handler.codec.http.HttpHeaders.Values;
 import org.jboss.netty.handler.codec.http.websocket.DefaultWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocket.WebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocket.WebSocketFrameDecoder;
@@ -61,25 +68,21 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 
     private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest req) {
         // Allow only GET methods.
-        if (req.getMethod() != HttpMethod.GET) {
+        if (req.getMethod() != GET) {
             sendHttpResponse(
-                    ctx, req, new DefaultHttpResponse(
-                            HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN));
+                    ctx, req, new DefaultHttpResponse(HTTP_1_1, FORBIDDEN));
             return;
         }
 
         // Send the demo page.
         if (req.getUri().equals("/")) {
-            HttpResponse res = new DefaultHttpResponse(
-                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+            HttpResponse res = new DefaultHttpResponse(HTTP_1_1, OK);
 
             ChannelBuffer content =
                 WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
 
-            res.setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html");
-            res.setHeader(
-                    HttpHeaders.Names.CONTENT_LENGTH,
-                    Integer.toString(content.readableBytes()));
+            res.setHeader(CONTENT_TYPE, "text/html; charset=UTF-8");
+            setContentLength(res, content.readableBytes());
 
             res.setContent(content);
             sendHttpResponse(ctx, req, res);
@@ -88,20 +91,20 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 
         // Serve the WebSocket handshake request.
         if (req.getUri().equals(WEBSOCKET_PATH) &&
-            HttpHeaders.Values.UPGRADE.equalsIgnoreCase(req.getHeader(HttpHeaders.Names.CONNECTION)) &&
-            HttpHeaders.Values.WEBSOCKET.equalsIgnoreCase(req.getHeader(HttpHeaders.Names.UPGRADE))) {
+            Values.UPGRADE.equalsIgnoreCase(req.getHeader(CONNECTION)) &&
+            WEBSOCKET.equalsIgnoreCase(req.getHeader(Names.UPGRADE))) {
 
             // Create the WebSocket handshake response.
             HttpResponse res = new DefaultHttpResponse(
-                    HttpVersion.HTTP_1_1,
+                    HTTP_1_1,
                     new HttpResponseStatus(101, "Web Socket Protocol Handshake"));
-            res.addHeader(HttpHeaders.Names.UPGRADE, HttpHeaders.Values.WEBSOCKET);
-            res.addHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.UPGRADE);
-            res.addHeader(HttpHeaders.Names.WEBSOCKET_ORIGIN, req.getHeader(HttpHeaders.Names.ORIGIN));
-            res.addHeader(HttpHeaders.Names.WEBSOCKET_LOCATION, getWebSocketLocation(req));
-            String protocol = req.getHeader(HttpHeaders.Names.WEBSOCKET_PROTOCOL);
+            res.addHeader(Names.UPGRADE, WEBSOCKET);
+            res.addHeader(CONNECTION, Values.UPGRADE);
+            res.addHeader(WEBSOCKET_ORIGIN, req.getHeader(ORIGIN));
+            res.addHeader(WEBSOCKET_LOCATION, getWebSocketLocation(req));
+            String protocol = req.getHeader(WEBSOCKET_PROTOCOL);
             if (protocol != null) {
-                res.addHeader(HttpHeaders.Names.WEBSOCKET_PROTOCOL, protocol);
+                res.addHeader(WEBSOCKET_PROTOCOL, protocol);
             }
 
             // Upgrade the connection and send the handshake response.
@@ -117,8 +120,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 
         // Send an error page otherwise.
         sendHttpResponse(
-                ctx, req, new DefaultHttpResponse(
-                        HttpVersion.HTTP_1_1, HttpResponseStatus.FORBIDDEN));
+                ctx, req, new DefaultHttpResponse(HTTP_1_1, FORBIDDEN));
     }
 
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
@@ -133,9 +135,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
             res.setContent(
                     ChannelBuffers.copiedBuffer(
                             res.getStatus().toString(), CharsetUtil.UTF_8));
-            res.setHeader(
-                    HttpHeaders.Names.CONTENT_LENGTH,
-                    Integer.toString(res.getContent().readableBytes()));
+            setContentLength(res, res.getContent().readableBytes());
         }
 
         // Send the response and close the connection if necessary.
