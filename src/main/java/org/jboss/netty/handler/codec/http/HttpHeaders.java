@@ -567,6 +567,7 @@ public class HttpHeaders {
                     e = next;
                 } else {
                     entries[i] = null;
+                    e.remove();
                     return;
                 }
             } else {
