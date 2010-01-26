@@ -43,7 +43,7 @@ public class HttpHeaders {
      *
      * @apiviz.stereotype static
      */
-    public static class Names {
+    public static final class Names {
         /**
          * {@code "Accept"}
          */
@@ -269,7 +269,7 @@ public class HttpHeaders {
          */
         public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
 
-        protected Names() {
+        private Names() {
             super();
         }
     }
@@ -283,7 +283,7 @@ public class HttpHeaders {
      *
      * @apiviz.stereotype static
      */
-    public static class Values {
+    public static final class Values {
         /**
          * {@code "base64"}
          */
@@ -336,10 +336,6 @@ public class HttpHeaders {
          * {@code "max-age"}
          */
         public static final String MAX_AGE = "max-age";
-        /**
-         * {@code "max-fresh"}
-         */
-        public static final String MAX_FRESH = "max-fresh";
         /**
          * {@code "max-stale"}
          */
@@ -405,7 +401,7 @@ public class HttpHeaders {
          */
         public static final String WEBSOCKET = "WebSocket";
 
-        protected Values() {
+        private Values() {
             super();
         }
     }
