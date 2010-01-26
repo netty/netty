@@ -67,7 +67,7 @@
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
-  
+
     <!-- Google Protocol Buffers - completely optional -->
     <dependency>
       <groupId>com.google.protobuf</groupId>
@@ -119,7 +119,7 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.google.inject</groupId>
+      <groupId>com.google.code.guice</groupId>
       <artifactId>guice</artifactId>
       <version>1.0</version>
       <scope>compile</scope>
@@ -132,7 +132,7 @@
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
-  
+
     <!-- Logging frameworks - completely optional -->
     <dependency>
       <groupId>org.slf4j</groupId>
