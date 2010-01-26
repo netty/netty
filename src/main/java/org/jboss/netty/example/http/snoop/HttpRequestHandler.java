@@ -15,6 +15,9 @@
  */
 package org.jboss.netty.example.http.snoop;
 
+import static org.jboss.netty.handler.codec.http.HttpHeaders.*;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.*;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -61,15 +64,12 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (!readingChunks) {
             HttpRequest request = this.request = (HttpRequest) e.getMessage();
+            responseContent.setLength(0);
             responseContent.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
             responseContent.append("===================================\r\n");
 
             responseContent.append("VERSION: " + request.getProtocolVersion().getText() + "\r\n");
-
-            if (request.containsHeader(HttpHeaders.Names.HOST)) {
-                responseContent.append("HOSTNAME: " + request.getHeader(HttpHeaders.Names.HOST) + "\r\n");
-            }
-
+            responseContent.append("HOSTNAME: " + getHost(request, "unknown") + "\r\n");
             responseContent.append("REQUEST_URI: " + request.getUri() + "\r\n\r\n");
 
             for (Map.Entry<String, String> h: request.getHeaders()) {
@@ -124,24 +124,20 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
     }
 
     private void writeResponse(MessageEvent e) {
-        // Convert the response content to a ChannelBuffer.
-        ChannelBuffer buf = ChannelBuffers.copiedBuffer(responseContent.toString(), CharsetUtil.UTF_8);
-        responseContent.setLength(0);
-
         // Decide whether to close the connection or not.
-        boolean close = !request.isKeepAlive();
+        boolean keepAlive = request.isKeepAlive();
 
         // Build the response object.
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        response.setContent(buf);
-        response.setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8");
+        response.setContent(ChannelBuffers.copiedBuffer(responseContent.toString(), CharsetUtil.UTF_8));
+        response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8");
 
-        if (!close) {
-            // There's no need to add 'Content-Length' header
-            // if this is the last response.
-            response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf.readableBytes()));
+        if (keepAlive) {
+            // Add 'Content-Length' header only for a keep-alive connection.
+            response.setHeader(CONTENT_LENGTH, response.getContent().readableBytes());
         }
 
+        // Encode the cookie.
         String cookieString = request.getHeader(HttpHeaders.Names.COOKIE);
         if (cookieString != null) {
             CookieDecoder cookieDecoder = new CookieDecoder();
@@ -152,15 +148,15 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
                 for (Cookie cookie : cookies) {
                     cookieEncoder.addCookie(cookie);
                 }
-                response.addHeader(HttpHeaders.Names.SET_COOKIE, cookieEncoder.encode());
+                response.addHeader(SET_COOKIE, cookieEncoder.encode());
             }
         }
 
         // Write the response.
         ChannelFuture future = e.getChannel().write(response);
 
-        // Close the connection after the write operation is done if necessary.
-        if (close) {
+        // Close the non-keep-alive connection after the write operation is done.
+        if (!keepAlive) {
             future.addListener(ChannelFutureListener.CLOSE);
         }
     }
