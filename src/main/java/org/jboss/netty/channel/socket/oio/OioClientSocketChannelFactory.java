@@ -69,8 +69,8 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  * operations.  Any I/O requests such as {@code "connect"} and {@code "write"}
  * will be performed in a blocking manner.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
  *

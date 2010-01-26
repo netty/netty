@@ -33,8 +33,8 @@ import javax.net.ssl.SSLEngine;
  * buffer for every 'wrap' and 'unwrap' operation wastes a lot of memory
  * bandwidth, resulting in the application performance degradation.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
  */

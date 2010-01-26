@@ -50,8 +50,8 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  * use other {@link Executor} implementation than the recommended
  * {@link OrderedMemoryAwareThreadPoolExecutor}.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
  *

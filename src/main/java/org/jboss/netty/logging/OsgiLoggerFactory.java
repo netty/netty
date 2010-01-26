@@ -24,8 +24,8 @@ import org.osgi.util.tracker.ServiceTracker;
  * Logger factory which creates an <a href="http://www.osgi.org/">OSGi</a>
  * {@link LogService} logger.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
  *

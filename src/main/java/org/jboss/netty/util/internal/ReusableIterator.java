@@ -18,8 +18,8 @@ package org.jboss.netty.util.internal;
 import java.util.Iterator;
 
 /**
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
 public interface ReusableIterator<E> extends Iterator<E> {

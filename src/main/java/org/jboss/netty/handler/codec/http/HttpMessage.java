@@ -26,9 +26,9 @@ import org.jboss.netty.buffer.ChannelBuffers;
  * An HTTP message which provides common properties for {@link HttpRequest} and
  * {@link HttpResponse}.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  *
  * @see HttpHeaders

@@ -20,8 +20,8 @@ package org.jboss.netty.handler.codec.replay;
  * {@link ReplayingDecoder} when a user wants to manage the decoder state or
  * there's no state to manage.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
  *

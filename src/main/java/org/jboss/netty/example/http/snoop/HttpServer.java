@@ -25,9 +25,9 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * An HTTP server that sends back the content of the received HTTP request
  * in a pretty plaintext form.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
  */

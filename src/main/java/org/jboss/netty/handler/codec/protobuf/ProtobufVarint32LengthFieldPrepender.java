@@ -34,7 +34,7 @@ import com.google.protobuf.CodedOutputStream;
  *
  * @see com.google.protobuf.CodedOutputStream
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Tomasz Blachowicz (tblachowicz@gmail.com)
  * @version $Rev$, $Date$
  */

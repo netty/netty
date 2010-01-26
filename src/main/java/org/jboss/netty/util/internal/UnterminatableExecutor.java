@@ -20,8 +20,8 @@ import java.util.concurrent.Executor;
 /**
  * Disables shutdown of an {@link Executor} by wrapping the {@link Executor}.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
 public class UnterminatableExecutor implements Executor {

@@ -24,8 +24,8 @@ import java.nio.ByteOrder;
  * very well in most situations because it relies on the JVM garbage collector,
  * which is highly optimized for heap allocation.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
 public class HeapChannelBufferFactory extends AbstractChannelBufferFactory {

@@ -30,7 +30,7 @@ import org.jboss.netty.example.echo.EchoServerHandler;
  *       class="org.jboss.netty.example.http.tunnel.LocalEchoServerRegistration" /&gt;
  * </pre>
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */

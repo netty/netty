@@ -35,8 +35,8 @@ import org.jboss.netty.channel.MessageEvent;
  * Receives downstream events from a {@link ChannelPipeline}.  It contains
  * an array of I/O workers.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Daniel Bevenius (dbevenius@jboss.com)
  *
  * @version $Rev$, $Date$

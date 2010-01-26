@@ -24,8 +24,8 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * when its execution ends.  To change the default thread names set by Netty,
  * use {@link #setThreadNameDeterminer(ThreadNameDeterminer)}.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
  *

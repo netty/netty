@@ -39,8 +39,8 @@ import org.jboss.netty.channel.MessageEvent;
 /**
  * A skeletal {@link CodecEmbedder} implementation.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
 abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {

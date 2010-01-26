@@ -29,8 +29,8 @@ import com.google.inject.BindingAnnotation;
  * A parameter or a field annotated with this annotation will be injected with
  * the resource required to run a {@link ChannelFactory}.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
 @Retention(RetentionPolicy.RUNTIME)

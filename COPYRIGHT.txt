@@ -6,6 +6,7 @@ sent to Trustin Lee <trustin@gmail.com>.
 
 SVN Login(s)            Name
 -------------------------------------------------------------------------------
+amit.bhayani@jboss.com  Amit Bhayani
 ataylor                 Andy Taylor
 beve                    Daniel Bevenius
 fredbregier             Frederic Bregier

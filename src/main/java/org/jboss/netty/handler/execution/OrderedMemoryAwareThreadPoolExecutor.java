@@ -123,8 +123,8 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  * or synchronized {@link WeakHashMap} instead of managing the life cycle of the
  * keys by yourself.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author David M. Lloyd (david.lloyd@redhat.com)
  *
  * @version $Rev$, $Date$

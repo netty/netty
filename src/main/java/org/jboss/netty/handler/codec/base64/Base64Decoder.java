@@ -44,8 +44,8 @@ import org.jboss.netty.util.CharsetUtil;
  * pipeline.addLast("base64Encoder", new {@link Base64Encoder}());
  * </pre>
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  *
  * @apiviz.uses org.jboss.netty.handler.codec.base64.Base64

@@ -18,8 +18,8 @@ package org.jboss.netty.logging;
 /**
  * The log level that {@link InternalLogger} can log at.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
 public enum InternalLogLevel {

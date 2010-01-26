@@ -18,8 +18,8 @@ package org.jboss.netty.util;
 /**
  * Overrides the thread name proposed by {@link ThreadRenamingRunnable}.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
 public interface ThreadNameDeterminer {

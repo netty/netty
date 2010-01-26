@@ -25,8 +25,8 @@ import java.util.concurrent.TimeUnit;
  * their termination.  An {@link Executor} which is not an {@link ExecutorService}
  * will be ignored silently.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
 public class ExecutorUtil {

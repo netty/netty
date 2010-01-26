@@ -22,8 +22,8 @@ package org.jboss.netty.channel;
  * the child channel accepted by a {@link ServerChannel}, but it is safe to use
  * it for any other purposes.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
  *

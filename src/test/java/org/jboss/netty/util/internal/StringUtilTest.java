@@ -23,7 +23,7 @@ import org.junit.Test;
  * Unit test for {@link StringUtil}.
  * <p/>
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Daniel Bevenius (dbevenius@jboss.com)
  * @version $Rev$, $Date$
  */

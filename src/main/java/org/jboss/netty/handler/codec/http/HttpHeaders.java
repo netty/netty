@@ -26,7 +26,7 @@ import java.util.TreeSet;
  * Provides the constants for the standard HTTP header names and values and
  * commonly used utility methods that accesses an {@link HttpMessage}.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  *
@@ -37,7 +37,7 @@ public class HttpHeaders {
     /**
      * Standard HTTP header names.
      *
-     * @author The Netty Project (netty-dev@lists.jboss.org)
+     * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
      * @author Andy Taylor (andy.taylor@jboss.org)
      * @version $Rev$, $Date$
      *
@@ -281,7 +281,7 @@ public class HttpHeaders {
     /**
      * Standard HTTP header values.
      *
-     * @author The Netty Project (netty-dev@lists.jboss.org)
+     * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
      * @author Andy Taylor (andy.taylor@jboss.org)
      * @version $Rev$, $Date$
      *

@@ -40,7 +40,7 @@ import org.jboss.netty.logging.InternalLogLevel;
  * for the detailed instruction on how to deploy the server-side HTTP tunnel in
  * your Servlet container.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
  */

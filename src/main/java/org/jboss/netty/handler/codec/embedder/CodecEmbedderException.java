@@ -19,8 +19,8 @@ package org.jboss.netty.handler.codec.embedder;
  * A {@link RuntimeException} which is thrown when a {@link CodecEmbedder}
  * failed to encode or decode the specified input.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  *
  * @apiviz.exclude

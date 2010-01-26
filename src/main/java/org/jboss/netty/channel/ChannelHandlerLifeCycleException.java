@@ -20,8 +20,8 @@ package org.jboss.netty.channel;
  * {@link LifeCycleAwareChannelHandler} throws an {@link Exception}
  * in its handler methods.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
  *

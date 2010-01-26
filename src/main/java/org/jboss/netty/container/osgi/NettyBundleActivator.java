@@ -46,8 +46,8 @@ import org.osgi.framework.ServiceRegistration;
  * An OSGi {@link BundleActivator} that configures logging and registered
  * all {@link ChannelFactory} implementations as OSGi services.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
 public class NettyBundleActivator implements BundleActivator {

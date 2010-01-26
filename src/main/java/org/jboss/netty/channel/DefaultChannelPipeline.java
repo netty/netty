@@ -31,8 +31,8 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * to use {@link Channels#pipeline()} to create a new {@link ChannelPipeline}
  * instance rather than calling the constructor directly.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
  *

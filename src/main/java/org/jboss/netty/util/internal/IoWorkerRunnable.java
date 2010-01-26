@@ -18,7 +18,7 @@ package org.jboss.netty.util.internal;
 import org.jboss.netty.channel.ChannelFuture;
 
 /**
- * @author Trustin Heui-seung Lee (trustin@gmail.com)
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
 public class IoWorkerRunnable implements Runnable {

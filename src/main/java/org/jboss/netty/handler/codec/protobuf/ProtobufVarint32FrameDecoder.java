@@ -32,7 +32,7 @@ import com.google.protobuf.CodedInputStream;
  *
  * @see com.google.protobuf.CodedInputStream
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Tomasz Blachowicz (tblachowicz@gmail.com)
  *
  * @version $Rev$, $Date$

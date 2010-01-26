@@ -74,8 +74,8 @@ import java.net.SocketAddress;
  * <p>
  * To see how an event is interpreted further, please refer to {@link ChannelEvent}.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
  */

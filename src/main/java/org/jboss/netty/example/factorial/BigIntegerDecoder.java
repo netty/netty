@@ -27,8 +27,8 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * integer length prefix into a Java {@link BigInteger} instance.  For example,
  * { 0, 0, 0, 1, 42 } will be decoded into new BigInteger("42").
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
  */

@@ -27,8 +27,8 @@ import java.nio.channels.FileChannel;
  * A {@link ChunkedInput} that fetches data from a file chunk by chunk using
  * NIO {@link FileChannel}.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Frederic Bregier
  * @version $Rev$, $Date$
  */

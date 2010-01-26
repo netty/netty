@@ -23,8 +23,8 @@ import org.jboss.xnio.channels.BoundServer;
  * An XNIO {@link IoHandlerFactory} implementation that must be specified when
  * you create a {@link BoundServer} to integrate XNIO into Netty.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
 public class XnioAcceptedChannelHandlerFactory implements IoHandlerFactory<java.nio.channels.Channel> {

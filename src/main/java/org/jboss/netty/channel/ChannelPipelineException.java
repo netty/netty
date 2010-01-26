@@ -20,8 +20,8 @@ package org.jboss.netty.channel;
  * failed to process a {@link ChannelEvent} or when a {@link ChannelPipelineFactory}
  * failed to initialize a {@link ChannelPipeline}.
  *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Trustin Lee (trustin@gmail.com)
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
  *
