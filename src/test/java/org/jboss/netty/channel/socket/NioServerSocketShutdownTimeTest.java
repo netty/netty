@@ -62,7 +62,7 @@ public class NioServerSocketShutdownTimeTest {
 
         Channel channel = bootstrap.bind();
 
-        long startTime = System.currentTimeMillis();
+        final long startTime;
 
         Socket socket = null;
         try {
@@ -87,6 +87,8 @@ public class NioServerSocketShutdownTimeTest {
                     // Ignore.
                 }
             }
+
+            startTime = System.currentTimeMillis();
             channel.close().awaitUninterruptibly();
             bootstrap.getFactory().releaseExternalResources();
         }
