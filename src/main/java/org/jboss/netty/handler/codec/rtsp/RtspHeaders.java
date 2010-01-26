@@ -18,6 +18,7 @@ package org.jboss.netty.handler.codec.rtsp;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 /**
+ * Standard RTSP header names and values.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Amit Bhayani (amit.bhayani@gmail.com)
@@ -26,36 +27,74 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
  */
 public class RtspHeaders {
 
+    /**
+     * Standard RTSP header names.
+     *
+     * @author The Netty Project (netty-dev@lists.jboss.org)
+     * @author Amit Bhayani (amit.bhayani@gmail.com)
+     * @author Trustin Lee (trustin@gmail.com)
+     * @version $Rev$, $Date$
+     */
     public static class Names extends HttpHeaders.Names {
-
+        /**
+         * {@code "Allow"}
+         */
         public static final String ALLOW = "Allow";
-
+        /**
+         * {@code "Bandwidth"}
+         */
         public static final String BANDWIDTH = "Bandwidth";
-
+        /**
+         * {@code "Blocksize"}
+         */
         public static final String BLOCKSIZE = "Blocksize";
-
+        /**
+         * {@code "Conference"}
+         */
         public static final String CONFERENCE = "Conference";
-
+        /**
+         * {@code "CSeq"}
+         */
         public static final String CSEQ = "CSeq";
-
+        /**
+         * {@code "Proxy-Require"}
+         */
         public static final String PROXY_REQUIRE = "Proxy-Require";
-
+        /**
+         * {@code "Public"}
+         */
         public static final String PUBLIC = "Public";
-
+        /**
+         * {@code "Require"}
+         */
         public static final String REQUIRE = "Require";
-
+        /**
+         * {@code "RTP-Info"}
+         */
         public static final String RTP_INFO = "RTP-Info";
-
+        /**
+         * {@code "Scale"}
+         */
         public static final String SCALE = "Scale";
-
+        /**
+         * {@code "Speed"}
+         */
         public static final String SPEED = "Speed";
-
+        /**
+         * {@code "Session"}
+         */
         public static final String SESSION = "Session";
-
+        /**
+         * {@code "Timestamp"}
+         */
         public static final String TIMESTAMP = "Timestamp";
-
+        /**
+         * {@code "Transport"}
+         */
         public static final String TRANSPORT = "Transport";
-
+        /**
+         * {@code "Unsupported"}
+         */
         public static final String UNSUPPORTED = "Unsupported";
 
         protected Names() {
@@ -63,31 +102,101 @@ public class RtspHeaders {
         }
     }
 
+    /**
+     * Standard RTSP header names.
+     *
+     * @author The Netty Project (netty-dev@lists.jboss.org)
+     * @author Trustin Lee (trustin@gmail.com)
+     * @version $Rev$, $Date$
+     */
     public static class Values extends HttpHeaders.Values {
-
+        /**
+         * {@code "append"}
+         */
         public static final String APPEND = "append";
+        /**
+         * {@code "AVP"}
+         */
         public static final String AVP = "AVP";
+        /**
+         * {@code "client_port"}
+         */
         public static final String CLIENT_PORT = "client_port";
+        /**
+         * {@code "destination"}
+         */
         public static final String DESTINATION = "destination";
+        /**
+         * {@code "interleaved"}
+         */
         public static final String INTERLEAVED = "interleaved";
+        /**
+         * {@code "layers"}
+         */
         public static final String LAYERS = "layers";
+        /**
+         * {@code "mode"}
+         */
         public static final String MODE = "mode";
+        /**
+         * {@code "multicast"}
+         */
         public static final String MULTICAST = "multicast";
+        /**
+         * {@code "port"}
+         */
         public static final String PORT = "port";
+        /**
+         * {@code "RTP"}
+         */
         public static final String RTP = "RTP";
+        /**
+         * {@code "rtptime"}
+         */
         public static final String RTPTIME = "rtptime";
+        /**
+         * {@code "seq"}
+         */
         public static final String SEQ = "seq";
+        /**
+         * {@code "server_port"}
+         */
         public static final String SERVER_PORT = "server_port";
+        /**
+         * {@code "ssrc"}
+         */
         public static final String SSRC = "ssrc";
+        /**
+         * {@code "TCP"}
+         */
         public static final String TCP = "TCP";
+        /**
+         * {@code "timeout"}
+         */
         public static final String TIMEOUT = "timeout";
+        /**
+         * {@code "ttl"}
+         */
         public static final String TTL = "ttl";
+        /**
+         * {@code "UDP"}
+         */
         public static final String UDP = "UDP";
+        /**
+         * {@code "unicast"}
+         */
         public static final String UNICAST = "unicast";
+        /**
+         * {@code "url"}
+         */
         public static final String URL = "url";
 
         protected Values() {
             super();
         }
+    }
+
+    protected RtspHeaders() {
+        super();
     }
 }

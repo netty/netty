@@ -18,6 +18,7 @@ package org.jboss.netty.handler.codec.rtsp;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 /**
+ * The version of RTSP.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Amit Bhayani (amit.bhayani@gmail.com)
@@ -26,16 +27,17 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
  */
 public class RtspVersion extends HttpVersion {
 
+    /**
+     * RTSP/1.0
+     */
     public static final RtspVersion RTSP_1_0 = new RtspVersion("RTSP", 1, 0);
 
-    public RtspVersion(String text) {
-        super(text);
-    }
-
-    public RtspVersion(String protocolName, int majorVersion, int minorVersion) {
-        super(protocolName, majorVersion, minorVersion);
-    }
-
+    /**
+     * Returns an existing or new {@link RtspVersion} instance which matches to
+     * the specified protocol version string.  If the specified {@code text} is
+     * equal to {@code "RTSP/1.0"}, {@link #RTSP_1_0} will be returned.
+     * Otherwise, a new {@link RtspVersion} instance will be returned.
+     */
     public static RtspVersion valueOf(String text) {
         if (text == null) {
             throw new NullPointerException("text");
@@ -47,5 +49,20 @@ public class RtspVersion extends HttpVersion {
         }
 
         return new RtspVersion(text);
+    }
+
+    /**
+     * Creates a new RTSP version with the specified version string.
+     */
+    public RtspVersion(String text) {
+        super(text);
+    }
+
+    /**
+     * Creates a new HTTP version with the specified protocol name and version
+     * numbers.
+     */
+    public RtspVersion(String protocolName, int majorVersion, int minorVersion) {
+        super(protocolName, majorVersion, minorVersion);
     }
 }

@@ -18,6 +18,7 @@ package org.jboss.netty.handler.codec.rtsp;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 /**
+ * The status code and its description of a RTSP response.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Amit Bhayani (amit.bhayani@gmail.com)
@@ -128,6 +129,14 @@ public class RtspResponseStatus extends HttpResponseStatus {
             551, "Option not supported");
 
 
+    /**
+     * Returns the {@link HttpResponseStatus} represented by the specified code.
+     * If the specified code is a standard RTSP or HTTP status code, a cached
+     * instance will be returned.  Otherwise, a new instance will be returned.
+     * Please note that this method does not return {@link RtspResponseStatus}
+     * but returns {@link HttpResponseStatus} because RTSP re-uses many HTTP
+     * response status codes.
+     */
     public static HttpResponseStatus valueOf(int code) {
         switch (code) {
         case 250: return LOW_STORAGE_SPACE;
@@ -151,6 +160,10 @@ public class RtspResponseStatus extends HttpResponseStatus {
         }
     }
 
+    /**
+     * Creates a new instance with the specified {@code code} and its
+     * {@code reasonPhrase}.
+     */
     public RtspResponseStatus(int code, String reasonPhrase) {
         super(code, reasonPhrase);
     }
