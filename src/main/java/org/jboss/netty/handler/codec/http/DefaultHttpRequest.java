@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import org.jboss.netty.util.internal.StringUtil;
+
 /**
  * The default {@link HttpRequest} implementation.
  *
@@ -65,6 +67,24 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
 
     @Override
     public String toString() {
-        return getMethod().toString() + ' ' + getUri() + ' ' + getProtocolVersion().getText();
+        StringBuilder buf = new StringBuilder();
+        buf.append(getClass().getSimpleName());
+        buf.append("(keepAlive: ");
+        buf.append(isKeepAlive());
+        buf.append(", chunked: ");
+        buf.append(isChunked());
+        buf.append(')');
+        buf.append(StringUtil.NEWLINE);
+        buf.append(getMethod().toString());
+        buf.append(' ');
+        buf.append(getUri());
+        buf.append(' ');
+        buf.append(getProtocolVersion().getText());
+        buf.append(StringUtil.NEWLINE);
+        appendHeaders(buf);
+
+        // Remove the last newline.
+        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
+        return buf.toString();
     }
 }

@@ -23,6 +23,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
 import org.jboss.netty.handler.codec.http.HttpHeaders.Values;
+import org.jboss.netty.util.internal.StringUtil;
 
 /**
  * The default {@link HttpMessage} implementation.
@@ -175,5 +176,33 @@ public class DefaultHttpMessage implements HttpMessage {
 
     public ChannelBuffer getContent() {
         return content;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        buf.append(getClass().getSimpleName());
+        buf.append("(version: ");
+        buf.append(getProtocolVersion().getText());
+        buf.append(", keepAlive: ");
+        buf.append(isKeepAlive());
+        buf.append(", chunked: ");
+        buf.append(isChunked());
+        buf.append(')');
+        buf.append(StringUtil.NEWLINE);
+        appendHeaders(buf);
+
+        // Remove the last newline.
+        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
+        return buf.toString();
+    }
+
+    void appendHeaders(StringBuilder buf) {
+        for (Map.Entry<String, String> e: getHeaders()) {
+            buf.append(e.getKey());
+            buf.append(": ");
+            buf.append(e.getValue());
+            buf.append(StringUtil.NEWLINE);
+        }
     }
 }

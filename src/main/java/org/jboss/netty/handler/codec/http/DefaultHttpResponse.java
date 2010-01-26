@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import org.jboss.netty.util.internal.StringUtil;
+
 /**
  * The default {@link HttpResponse} implementation.
  *
@@ -51,6 +53,22 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
 
     @Override
     public String toString() {
-        return getProtocolVersion().getText() + ' ' + getStatus().toString();
+        StringBuilder buf = new StringBuilder();
+        buf.append(getClass().getSimpleName());
+        buf.append("(keepAlive: ");
+        buf.append(isKeepAlive());
+        buf.append(", chunked: ");
+        buf.append(isChunked());
+        buf.append(')');
+        buf.append(StringUtil.NEWLINE);
+        buf.append(getProtocolVersion().getText());
+        buf.append(' ');
+        buf.append(getStatus().toString());
+        buf.append(StringUtil.NEWLINE);
+        appendHeaders(buf);
+
+        // Remove the last newline.
+        buf.setLength(buf.length() - StringUtil.NEWLINE.length());
+        return buf.toString();
     }
 }
