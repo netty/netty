@@ -221,7 +221,7 @@ public final class RtspResponseStatuses {
             462, "Destination unreachable");
 
     /**
-     * 463 Destination unreachable
+     * 463 Key management failure
      */
     public static final HttpResponseStatus KEY_MANAGEMENT_FAILURE = new HttpResponseStatus(
             463, "Key management failure");
