@@ -119,16 +119,16 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.google.code.guice</groupId>
+      <groupId>com.google.inject</groupId>
       <artifactId>guice</artifactId>
-      <version>1.0</version>
+      <version>2.0</version>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring</artifactId>
-      <version>2.0.8</version>
+      <version>2.5.6.SEC01</version>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
@@ -137,7 +137,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.5.8</version>
+      <version>1.5.10</version>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
@@ -151,7 +151,7 @@
     <dependency>
       <groupId>org.jboss.logging</groupId>
       <artifactId>jboss-logging-spi</artifactId>
-      <version>2.1.0.GA</version>
+      <version>2.1.1.GA</version>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
@@ -197,13 +197,13 @@
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymockclassextension</artifactId>
-      <version>2.4</version>
+      <version>2.5.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
-      <version>1.5.8</version>
+      <version>1.5.10</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -216,7 +216,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>2.0.2</version>
+        <version>2.1</version>
         <configuration>
           <encoding>UTF-8</encoding>
           <source>1.5</source>
@@ -235,7 +235,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.4.3</version>
+        <version>2.5</version>
         <configuration>
           <forkMode>never</forkMode>
           <excludes>
@@ -586,7 +586,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.2-beta-4</version>
+        <version>2.2-beta-5</version>
         <executions>
           <execution>
             <id>generate-distribution</id>
@@ -683,7 +683,7 @@
             <inherited>true</inherited>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-deploy-plugin</artifactId>
-            <version>2.4</version>
+            <version>2.5</version>
             <configuration>
               <updateReleaseInfo>true</updateReleaseInfo>
             </configuration>
