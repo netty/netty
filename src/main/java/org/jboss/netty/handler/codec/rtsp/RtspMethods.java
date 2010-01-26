@@ -28,7 +28,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
  * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
-public class RtspMethods {
+public final class RtspMethods {
 
     /**
      * The OPTIONS method represents a request for information about the communication options available on the request/response
@@ -141,5 +141,4 @@ public class RtspMethods {
     private RtspMethods() {
         super();
     }
-
 }

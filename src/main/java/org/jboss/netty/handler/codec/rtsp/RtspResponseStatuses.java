@@ -25,7 +25,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
  * @author Trustin Lee (trustin@gmail.com)
  * @version $Rev$, $Date$
  */
-public class RtspResponseStatuses {
+public final class RtspResponseStatuses {
 
     /**
      * 100 Continue
