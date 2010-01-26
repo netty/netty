@@ -20,10 +20,11 @@ import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpMessageDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 /**
  * Decodes {@link ChannelBuffer}s into {@link HttpResponse}s whose status is
- * {@link RtspResponseStatus} and protocol version is {@link RtspVersion}.
+ * {@link RtspResponseStatuses} and protocol version is {@link RtspVersion}.
  * <p>
  * Please refer to {@link HttpMessageDecoder} for the detailed information on
  * how this decoder works and what parameters are available.
@@ -54,9 +55,9 @@ public class RtspResponseDecoder extends HttpMessageDecoder {
 
     @Override
     protected HttpMessage createMessage(String[] initialLine) throws Exception {
-        return new DefaultHttpResponse(RtspVersion.valueOf(initialLine[0]),
-                new RtspResponseStatus(Integer.valueOf(initialLine[1]),
-                        initialLine[2]));
+        return new DefaultHttpResponse(
+                RtspVersion.valueOf(initialLine[0]),
+                new HttpResponseStatus(Integer.valueOf(initialLine[1]),initialLine[2]));
     }
 
     @Override
