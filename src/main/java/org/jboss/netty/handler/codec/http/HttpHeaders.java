@@ -23,7 +23,8 @@ import java.util.TreeSet;
 
 
 /**
- * Standard HTTP header names and values.
+ * Provides the constants for the standard HTTP header names and values and
+ * commonly used utility methods that accesses an {@link HttpMessage}.
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Andy Taylor (andy.taylor@jboss.org)
