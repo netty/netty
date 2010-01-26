@@ -127,7 +127,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     /**
      * 401 Unauthorized
      */
-    public static final HttpResponseStatus UNUATHORIZED = new HttpResponseStatus(401, "Unauthorized");
+    public static final HttpResponseStatus UNAUTHORIZED = new HttpResponseStatus(401, "Unauthorized");
 
     /**
      * 402 Payment Required
@@ -325,7 +325,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         case 400:
             return BAD_REQUEST;
         case 401:
-            return UNUATHORIZED;
+            return UNAUTHORIZED;
         case 402:
             return PAYMENT_REQUIRED;
         case 403:
