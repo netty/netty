@@ -23,7 +23,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 
 /**
  * Decodes {@link ChannelBuffer}s into {@link HttpRequest}s whose method is
- * {@link RtspMethod} and protocol version is {@link RtspVersion}.
+ * {@link RtspMethods} and protocol version is {@link RtspVersion}.
  * <p>
  * Please refer to {@link HttpMessageDecoder} for the detailed information on
  * how this decoder works and what parameters are available.
@@ -55,7 +55,7 @@ public class RtspRequestDecoder extends HttpMessageDecoder {
     @Override
     protected HttpMessage createMessage(String[] initialLine) throws Exception {
         return new DefaultHttpRequest(RtspVersion.valueOf(initialLine[2]),
-                RtspMethod.valueOf(initialLine[0]), initialLine[1]);
+                RtspMethods.valueOf(initialLine[0]), initialLine[1]);
     }
 
     @Override
