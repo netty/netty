@@ -27,15 +27,13 @@ import org.jboss.netty.buffer.ChannelBuffer;
  */
 final class DirectBufferPool {
 
-    private final SoftReference<ByteBuffer>[] pool;
-
-    DirectBufferPool() {
-        this(4);
-    }
+    private static final int POOL_SIZE = 4;
 
     @SuppressWarnings("unchecked")
-    DirectBufferPool(int poolSize) {
-        pool = new SoftReference[poolSize];
+    private final SoftReference<ByteBuffer>[] pool = new SoftReference[POOL_SIZE];
+
+    DirectBufferPool() {
+        super();
     }
 
     final ByteBuffer acquire(ChannelBuffer src) {
@@ -46,7 +44,7 @@ final class DirectBufferPool {
     }
 
     private final ByteBuffer acquire(int size) {
-        for (int i = 0; i < pool.length; i ++) {
+        for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
             if (ref == null) {
                 continue;
@@ -75,11 +73,7 @@ final class DirectBufferPool {
     }
 
     final void release(ByteBuffer buffer) {
-        if (buffer == null) {
-            return;
-        }
-
-        for (int i = 0; i < pool.length; i ++) {
+        for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
             if (ref == null || ref.get() == null) {
                 pool[i] = new SoftReference<ByteBuffer>(buffer);
@@ -88,7 +82,8 @@ final class DirectBufferPool {
         }
 
         // pool is full - replace one
-        for (int i = 0; i< pool.length; i ++) {
+        final int capacity = buffer.capacity();
+        for (int i = 0; i< POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
             ByteBuffer pooled = ref.get();
             if (pooled == null) {
@@ -96,14 +91,14 @@ final class DirectBufferPool {
                 continue;
             }
 
-            if (pooled.capacity() < buffer.capacity()) {
+            if (pooled.capacity() < capacity) {
                 pool[i] = new SoftReference<ByteBuffer>(buffer);
                 return;
             }
         }
     }
 
-    static final int normalizeCapacity(int capacity) {
+    private static final int normalizeCapacity(int capacity) {
         // Normalize to multiple of 4096.
         // Strictly speaking, 4096 should be normalized to 4096,
         // but it becomes 8192 to keep the calculation simplistic.
