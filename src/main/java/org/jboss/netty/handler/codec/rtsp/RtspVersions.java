@@ -30,7 +30,7 @@ public final class RtspVersions {
     /**
      * RTSP/1.0
      */
-    public static final HttpVersion RTSP_1_0 = new HttpVersion("RTSP", 1, 0);
+    public static final HttpVersion RTSP_1_0 = new HttpVersion("RTSP", 1, 0, true);
 
     /**
      * Returns an existing or new {@link HttpVersion} instance which matches to
@@ -48,7 +48,7 @@ public final class RtspVersions {
             return RTSP_1_0;
         }
 
-        return new HttpVersion(text);
+        return new HttpVersion(text, true);
     }
 
     private RtspVersions() {

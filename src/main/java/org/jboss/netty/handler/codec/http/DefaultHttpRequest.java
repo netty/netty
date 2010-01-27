@@ -69,9 +69,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append(getClass().getSimpleName());
-        buf.append("(keepAlive: ");
-        buf.append(isKeepAlive());
-        buf.append(", chunked: ");
+        buf.append("(chunked: ");
         buf.append(isChunked());
         buf.append(')');
         buf.append(StringUtil.NEWLINE);

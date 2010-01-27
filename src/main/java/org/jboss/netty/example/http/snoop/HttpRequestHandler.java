@@ -125,7 +125,7 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
 
     private void writeResponse(MessageEvent e) {
         // Decide whether to close the connection or not.
-        boolean keepAlive = request.isKeepAlive();
+        boolean keepAlive = isKeepAlive(request);
 
         // Build the response object.
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
@@ -154,7 +154,7 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
 
         // Write the response.
         ChannelFuture future = e.getChannel().write(response);
-
+        System.out.println(response.toString());
         // Close the non-keep-alive connection after the write operation is done.
         if (!keepAlive) {
             future.addListener(ChannelFutureListener.CLOSE);

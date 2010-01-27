@@ -164,38 +164,8 @@ public interface HttpMessage {
     void setChunked(boolean chunked);
 
     /**
-     * Returns {@code true} if and only if the connection can remain open and
-     * thus 'kept alive'.  In HTTP, this property is determined by the value of the
-     * {@code "Connection"} header and the protocol version of this message.
-     * <p>
-     * Please note that the default implementation of this method only
-     * understands HTTP.  If the protocol version of this message indicates
-     * other derived protocols such as RTSP and ICAP, it will return false by
-     * default.
+     * @deprecated Use {@link HttpHeaders#isKeepAlive(HttpMessage)} instead.
      */
+    @Deprecated
     boolean isKeepAlive();
-
-    /**
-     * Sets the value of the {@code "Connection"} header depending on the
-     * protocol version of this message.  The default implementation sets or
-     * removes the {@code "Connection"} header with the following rules:
-     * <ul>
-     * <li>If protocol version is HTTP/1.1 or later:
-     *     <ul>
-     *     <li>set to {@code "close"} if {@code keepAlive} is {@code false}.</li>
-     *     <li>remove otherwise.</li>
-     *     </ul></li>
-     * <li>If protocol version is HTTP/1.0:
-     *     <ul>
-     *     <li>set to {@code "keep-alive"} if {@code keepAlive} is {@code true}.</li>
-     *     <li>remove otherwise.</li>
-     *     </ul></li>
-     * <li>do nothing if the protocol name is not {@code "HTTP"}.</li>
-     * </ul>
-     * Please note that the default implementation of this method only
-     * understands HTTP.  If the protocol version of this message indicates
-     * other derived protocols such as RTSP and ICAP, it will do nothing by
-     * default.
-     */
-    void setKeepAlive(boolean keepAlive);
 }

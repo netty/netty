@@ -21,8 +21,6 @@ import java.util.Set;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
-import org.jboss.netty.handler.codec.http.HttpHeaders.Values;
 import org.jboss.netty.util.internal.StringUtil;
 
 /**
@@ -88,43 +86,9 @@ public class DefaultHttpMessage implements HttpMessage {
         }
     }
 
+    @Deprecated
     public boolean isKeepAlive() {
-        HttpVersion version = getProtocolVersion();
-        if (!version.getProtocolName().equals("HTTP")) {
-            return false;
-        }
-
-        String connection = getHeader(Names.CONNECTION);
-        if (HttpHeaders.Values.CLOSE.equalsIgnoreCase(connection)) {
-            return false;
-        }
-
-        if (version.equals(HttpVersion.HTTP_1_0) &&
-            !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(connection)) {
-            return false;
-        }
-        return true;
-    }
-
-    public void setKeepAlive(boolean keepAlive) {
-        HttpVersion version = getProtocolVersion();
-        if (!version.getProtocolName().equals("HTTP")) {
-            return;
-        }
-
-        if (version.equals(HttpVersion.HTTP_1_0)) {
-            if (keepAlive) {
-                setHeader(Names.CONNECTION, Values.KEEP_ALIVE);
-            } else {
-                removeHeader(Names.CONNECTION);
-            }
-        } else {
-            if (keepAlive) {
-                removeHeader(Names.CONNECTION);
-            } else {
-                setHeader(Names.CONNECTION, Values.CLOSE);
-            }
-        }
+        return HttpHeaders.isKeepAlive(this);
     }
 
     public void clearHeaders() {

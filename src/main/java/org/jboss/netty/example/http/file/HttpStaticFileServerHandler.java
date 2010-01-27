@@ -96,7 +96,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         ChannelFuture writeFuture = ch.write(new ChunkedFile(raf, 0, fileLength, 8192));
 
         // Decide whether to close the connection or not.
-        if (!request.isKeepAlive()) {
+        if (!isKeepAlive(request)) {
             // Close the connection when the whole content is written out.
             writeFuture.addListener(ChannelFutureListener.CLOSE);
         }

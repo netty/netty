@@ -441,6 +441,60 @@ public class HttpHeaders {
         return defaultValue;
     }
 
+    /**
+     * Returns {@code true} if and only if the connection can remain open and
+     * thus 'kept alive'.  This methods respects the value of the
+     * {@code "Connection"} header first and then the return value of
+     * {@link HttpVersion#isKeepAliveDefault()}.
+     */
+    public static boolean isKeepAlive(HttpMessage message) {
+        String connection = message.getHeader(Names.CONNECTION);
+        if (Values.CLOSE.equalsIgnoreCase(connection)) {
+            return false;
+        }
+
+        if (message.getProtocolVersion().isKeepAliveDefault()) {
+            return !Values.CLOSE.equalsIgnoreCase(connection);
+        } else {
+            return Values.KEEP_ALIVE.equalsIgnoreCase(connection);
+        }
+    }
+
+    /**
+     * Sets the value of the {@code "Connection"} header depending on the
+     * protocol version of the specified message.  This method sets or removes
+     * the {@code "Connection"} header depending on what the default keep alive
+     * mode of the message's protocol version is, as specified by
+     * {@link HttpVersion#isKeepAliveDefault()}.
+     * <ul>
+     * <li>If the connection is kept alive by default:
+     *     <ul>
+     *     <li>set to {@code "close"} if {@code keepAlive} is {@code false}.</li>
+     *     <li>remove otherwise.</li>
+     *     </ul></li>
+     * <li>If the connection is closed by default:
+     *     <ul>
+     *     <li>set to {@code "keep-alive"} if {@code keepAlive} is {@code true}.</li>
+     *     <li>remove otherwise.</li>
+     *     </ul></li>
+     * </ul>
+     */
+    public static void setKeepAlive(HttpMessage message, boolean keepAlive) {
+        if (message.getProtocolVersion().isKeepAliveDefault()) {
+            if (keepAlive) {
+                message.removeHeader(Names.CONNECTION);
+            } else {
+                message.setHeader(Names.CONNECTION, Values.CLOSE);
+            }
+        } else {
+            if (keepAlive) {
+                message.setHeader(Names.CONNECTION, Values.KEEP_ALIVE);
+            } else {
+                message.removeHeader(Names.CONNECTION);
+            }
+        }
+    }
+
     // TODO Document me
 
     public static void setContentLength(HttpMessage message, long value) {

@@ -140,7 +140,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 
         // Send the response and close the connection if necessary.
         ChannelFuture f = ctx.getChannel().write(res);
-        if (!req.isKeepAlive() || res.getStatus().getCode() != 200) {
+        if (!isKeepAlive(req) || res.getStatus().getCode() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
     }

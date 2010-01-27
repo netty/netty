@@ -38,12 +38,12 @@ public class HttpVersion implements Comparable<HttpVersion> {
     /**
      * HTTP/1.0
      */
-    public static final HttpVersion HTTP_1_0 = new HttpVersion("HTTP", 1, 0);
+    public static final HttpVersion HTTP_1_0 = new HttpVersion("HTTP", 1, 0, false);
 
     /**
      * HTTP/1.1
      */
-    public static final HttpVersion HTTP_1_1 = new HttpVersion("HTTP", 1, 1);
+    public static final HttpVersion HTTP_1_1 = new HttpVersion("HTTP", 1, 1, true);
 
     /**
      * Returns an existing or new {@link HttpVersion} instance which matches to
@@ -65,13 +65,22 @@ public class HttpVersion implements Comparable<HttpVersion> {
         if (text.equals("HTTP/1.0")) {
             return HTTP_1_0;
         }
-        return new HttpVersion(text);
+        return new HttpVersion(text, true);
     }
 
     private final String protocolName;
     private final int majorVersion;
     private final int minorVersion;
     private final String text;
+    private final boolean keepAliveDefault;
+
+    /**
+     * @deprecated Use {@link #HttpVersion(String, boolean)} instead.
+     */
+    @Deprecated
+    public HttpVersion(String text) {
+        this(text, true);
+    }
 
     /**
      * Creates a new HTTP version with the specified version string.  You will
@@ -80,7 +89,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
      * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
      * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
      */
-    public HttpVersion(String text) {
+    public HttpVersion(String text, boolean keepAliveDefault) {
         if (text == null) {
             throw new NullPointerException("text");
         }
@@ -99,6 +108,16 @@ public class HttpVersion implements Comparable<HttpVersion> {
         majorVersion = Integer.parseInt(m.group(2));
         minorVersion = Integer.parseInt(m.group(3));
         this.text = protocolName + '/' + majorVersion + '.' + minorVersion;
+        this.keepAliveDefault = keepAliveDefault;
+    }
+
+    /**
+     * @deprecated Use {@link #HttpVersion(String, int, int, boolean)} instead.
+     */
+    @Deprecated
+    public HttpVersion(
+            String protocolName, int majorVersion, int minorVersion) {
+        this(protocolName, majorVersion, minorVersion, true);
     }
 
     /**
@@ -109,7 +128,8 @@ public class HttpVersion implements Comparable<HttpVersion> {
      * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>
      */
     public HttpVersion(
-            String protocolName, int majorVersion, int minorVersion) {
+            String protocolName, int majorVersion, int minorVersion,
+            boolean keepAliveDefault) {
         if (protocolName == null) {
             throw new NullPointerException("protocolName");
         }
@@ -137,6 +157,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
         this.majorVersion = majorVersion;
         this.minorVersion = minorVersion;
         text = protocolName + '/' + majorVersion + '.' + minorVersion;
+        this.keepAliveDefault = keepAliveDefault;
     }
 
     /**
@@ -165,6 +186,14 @@ public class HttpVersion implements Comparable<HttpVersion> {
      */
     public String getText() {
         return text;
+    }
+
+    /**
+     * Returns {@code true} if and only if the connection is kept alive unless
+     * the {@code "Connection"} header is set to {@code "close"} explicitly.
+     */
+    public boolean isKeepAliveDefault() {
+        return keepAliveDefault;
     }
 
     /**
