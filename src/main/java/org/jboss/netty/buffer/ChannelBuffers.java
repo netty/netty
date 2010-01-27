@@ -301,7 +301,7 @@ public class ChannelBuffers {
         if (!buffer.hasRemaining()) {
             return EMPTY_BUFFER;
         }
-        if (!buffer.isReadOnly() && buffer.hasArray()) {
+        if (buffer.hasArray()) {
             return wrappedBuffer(buffer.order(), buffer.array(), buffer.arrayOffset(),buffer.remaining());
         } else {
             return new ByteBufferBackedChannelBuffer(buffer);

@@ -225,7 +225,7 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
 
         int readBytes = 0;
 
-        if (!buffer.isReadOnly() && buffer.hasArray()) {
+        if (buffer.hasArray()) {
             index += buffer.arrayOffset();
             do {
                 int localReadBytes = in.read(buffer.array(), index, length);
