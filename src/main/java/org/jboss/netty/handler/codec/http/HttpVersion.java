@@ -88,6 +88,10 @@ public class HttpVersion implements Comparable<HttpVersion> {
      * derived from HTTP, such as
      * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
      * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
+     *
+     * @param keepAliveDefault
+     *        {@code true} if and only if the connection is kept alive unless
+     *        the {@code "Connection"} header is set to {@code "close"} explicitly.
      */
     public HttpVersion(String text, boolean keepAliveDefault) {
         if (text == null) {
@@ -126,6 +130,10 @@ public class HttpVersion implements Comparable<HttpVersion> {
      * implementing a protocol derived from HTTP, such as
      * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
      * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>
+     *
+     * @param keepAliveDefault
+     *        {@code true} if and only if the connection is kept alive unless
+     *        the {@code "Connection"} header is set to {@code "close"} explicitly.
      */
     public HttpVersion(
             String protocolName, int majorVersion, int minorVersion,
