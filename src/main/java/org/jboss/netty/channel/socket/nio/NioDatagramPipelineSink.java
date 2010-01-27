@@ -83,14 +83,14 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
             switch (state) {
             case OPEN:
                 if (Boolean.FALSE.equals(value)) {
-                    NioDatagramWorker.close(channel, future);
+                    channel.worker.close(channel, future);
                 }
                 break;
             case BOUND:
                 if (value != null) {
                     bind(channel, future, (InetSocketAddress) value);
                 } else {
-                    NioDatagramWorker.close(channel, future);
+                    channel.worker.close(channel, future);
                 }
                 break;
             case CONNECTED:
@@ -101,15 +101,14 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
                 }
                 break;
             case INTEREST_OPS:
-                NioDatagramWorker.setInterestOps(channel, future, ((Integer) value)
-                        .intValue());
+                channel.worker.setInterestOps(channel, future, ((Integer) value).intValue());
                 break;
             }
         } else if (e instanceof MessageEvent) {
             final MessageEvent event = (MessageEvent) e;
             final boolean offered = channel.writeBufferQueue.offer(event);
             assert offered;
-            NioDatagramWorker.write(channel, true);
+            channel.worker.write(channel, true);
         }
     }
 
@@ -194,7 +193,7 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
             fireExceptionCaught(channel, t);
         } finally {
             if (connected && !workerStarted) {
-                NioDatagramWorker.close(channel, future);
+                channel.worker.close(channel, future);
             }
         }
     }

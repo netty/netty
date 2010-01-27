@@ -19,6 +19,7 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -69,7 +70,8 @@ class NioSocketChannel extends AbstractChannel
     volatile boolean inWriteNowLoop;
 
     MessageEvent currentWriteEvent;
-    int currentWriteIndex;
+    ByteBuffer currentWriteBuffer;
+    boolean currentWriteBufferIsPooled;
 
     public NioSocketChannel(
             Channel parent, ChannelFactory factory,
@@ -255,7 +257,7 @@ class NioSocketChannel extends AbstractChannel
 
         public void run() {
             writeTaskInTaskQueue.set(false);
-            NioWorker.write(NioSocketChannel.this, false);
+            worker.write(NioSocketChannel.this, false);
         }
     }
 }

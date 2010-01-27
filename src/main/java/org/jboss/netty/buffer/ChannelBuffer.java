@@ -252,6 +252,12 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     ByteOrder order();
 
     /**
+     * Returns {@code true} if and only if this buffer is backed by an
+     * NIO direct buffer.
+     */
+    boolean isDirect();
+
+    /**
      * Returns the {@code readerIndex} of this buffer.
      */
     int readerIndex();

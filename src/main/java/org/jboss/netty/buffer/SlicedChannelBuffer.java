@@ -69,6 +69,10 @@ public class SlicedChannelBuffer extends AbstractChannelBuffer implements Wrappe
         return buffer.order();
     }
 
+    public boolean isDirect() {
+        return buffer.isDirect();
+    }
+
     public int capacity() {
         return length;
     }

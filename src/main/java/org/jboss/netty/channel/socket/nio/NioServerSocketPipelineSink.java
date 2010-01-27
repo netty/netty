@@ -116,17 +116,17 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
             switch (state) {
             case OPEN:
                 if (Boolean.FALSE.equals(value)) {
-                    NioWorker.close(channel, future);
+                    channel.worker.close(channel, future);
                 }
                 break;
             case BOUND:
             case CONNECTED:
                 if (value == null) {
-                    NioWorker.close(channel, future);
+                    channel.worker.close(channel, future);
                 }
                 break;
             case INTEREST_OPS:
-                NioWorker.setInterestOps(channel, future, ((Integer) value).intValue());
+                channel.worker.setInterestOps(channel, future, ((Integer) value).intValue());
                 break;
             }
         } else if (e instanceof MessageEvent) {
@@ -134,7 +134,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
             NioSocketChannel channel = (NioSocketChannel) event.getChannel();
             boolean offered = channel.writeBuffer.offer(event);
             assert offered;
-            NioWorker.write(channel, true);
+            channel.worker.write(channel, true);
         }
     }
 

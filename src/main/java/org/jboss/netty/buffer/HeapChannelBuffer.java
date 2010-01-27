@@ -71,6 +71,10 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
         setIndex(readerIndex, writerIndex);
     }
 
+    public boolean isDirect() {
+        return false;
+    }
+
     public int capacity() {
         return array.length;
     }

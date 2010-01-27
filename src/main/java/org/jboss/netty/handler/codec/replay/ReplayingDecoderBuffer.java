@@ -58,6 +58,10 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         }
     }
 
+    public boolean isDirect() {
+        return buffer.isDirect();
+    }
+
     public boolean hasArray() {
         return false;
     }

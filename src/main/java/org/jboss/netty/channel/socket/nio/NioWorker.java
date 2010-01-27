@@ -19,6 +19,7 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
@@ -79,6 +80,7 @@ class NioWorker implements Runnable {
     private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
     private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
+    private final DirectBufferPool directBufferPool = new DirectBufferPool();
 
     NioWorker(int bossId, int id, Executor executor) {
         this.bossId = bossId;
@@ -302,7 +304,7 @@ class NioWorker implements Runnable {
         return false;
     }
 
-    private static boolean read(SelectionKey k) {
+    private boolean read(SelectionKey k) {
         ScatteringByteChannel ch = (ScatteringByteChannel) k.channel();
         NioSocketChannel channel = (NioSocketChannel) k.attachment();
 
@@ -347,17 +349,17 @@ class NioWorker implements Runnable {
         return true;
     }
 
-    private static void write(SelectionKey k) {
+    private void write(SelectionKey k) {
         NioSocketChannel ch = (NioSocketChannel) k.attachment();
         write(ch, false);
     }
 
-    private static void close(SelectionKey k) {
+    private void close(SelectionKey k) {
         NioSocketChannel ch = (NioSocketChannel) k.attachment();
         close(ch, succeededFuture(ch));
     }
 
-    static void write(final NioSocketChannel channel, boolean mightNeedWakeup) {
+    void write(final NioSocketChannel channel, boolean mightNeedWakeup) {
         if (!channel.isConnected()) {
             cleanUpWriteBuffer(channel);
             return;
@@ -374,21 +376,20 @@ class NioWorker implements Runnable {
         }
     }
 
-    private static boolean scheduleWriteIfNecessary(final NioSocketChannel channel) {
-        final NioWorker worker = channel.worker;
+    private boolean scheduleWriteIfNecessary(final NioSocketChannel channel) {
         final Thread currentThread = Thread.currentThread();
-        final Thread workerThread = worker.thread;
+        final Thread workerThread = thread;
         if (currentThread != workerThread) {
             if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
-                boolean offered = worker.writeTaskQueue.offer(channel.writeTask);
+                boolean offered = writeTaskQueue.offer(channel.writeTask);
                 assert offered;
             }
 
             if (!(channel instanceof NioAcceptedSocketChannel) ||
                 ((NioAcceptedSocketChannel) channel).bossThread != currentThread) {
-                final Selector workerSelector = worker.selector;
+                final Selector workerSelector = selector;
                 if (workerSelector != null) {
-                    if (worker.wakenUp.compareAndSet(false, true)) {
+                    if (wakenUp.compareAndSet(false, true)) {
                         workerSelector.wakeup();
                     }
                 }
@@ -410,72 +411,76 @@ class NioWorker implements Runnable {
         return false;
     }
 
-    private static void writeNow(NioSocketChannel channel, int writeSpinCount) {
+    private void writeNow(NioSocketChannel channel, int writeSpinCount) {
 
         boolean open = true;
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
 
-        MessageEvent evt;
-        ChannelBuffer buf;
-        int bufIdx;
         int writtenBytes = 0;
 
         Queue<MessageEvent> writeBuffer = channel.writeBuffer;
         synchronized (channel.writeLock) {
             channel.inWriteNowLoop = true;
-            evt = channel.currentWriteEvent;
             for (;;) {
+                MessageEvent evt = channel.currentWriteEvent;
+                ByteBuffer buf;
                 if (evt == null) {
-                    evt = writeBuffer.poll();
-                    if (evt == null) {
-                        channel.currentWriteEvent = null;
+                    if ((channel.currentWriteEvent = evt = writeBuffer.poll()) == null) {
                         removeOpWrite = true;
                         break;
                     }
 
-                    evt = consolidateComposite(evt);
-                    buf = (ChannelBuffer) evt.getMessage();
-                    bufIdx = buf.readerIndex();
+                    ChannelBuffer origBuf = (ChannelBuffer) evt.getMessage();
+                    if (origBuf.isDirect()) {
+                        channel.currentWriteBuffer = buf = origBuf.toByteBuffer();
+                        channel.currentWriteBufferIsPooled = false;
+                    } else {
+                        channel.currentWriteBuffer = buf = directBufferPool.acquire(origBuf);
+                        channel.currentWriteBufferIsPooled = true;
+                    }
                 } else {
-                    buf = (ChannelBuffer) evt.getMessage();
-                    bufIdx = channel.currentWriteIndex;
+                    buf = channel.currentWriteBuffer;
                 }
 
                 try {
                     for (int i = writeSpinCount; i > 0; i --) {
-                        int localWrittenBytes = buf.getBytes(
-                            bufIdx,
-                            channel.socket,
-                            buf.writerIndex() - bufIdx);
-
+                        int localWrittenBytes = channel.socket.write(buf);
                         if (localWrittenBytes != 0) {
-                            bufIdx += localWrittenBytes;
                             writtenBytes += localWrittenBytes;
                             break;
                         }
                     }
 
-                    if (bufIdx == buf.writerIndex()) {
+                    if (!buf.hasRemaining()) {
                         // Successful write - proceed to the next message.
+                        if (channel.currentWriteBufferIsPooled) {
+                            directBufferPool.release(buf);
+                        }
+
+                        ChannelFuture future = evt.getFuture();
                         channel.currentWriteEvent = null;
-                        evt.getFuture().setSuccess();
+                        channel.currentWriteBuffer = null;
                         evt = null;
+                        buf = null;
+                        future.setSuccess();
                     } else {
                         // Not written fully - perhaps the kernel buffer is full.
-                        channel.currentWriteEvent = evt;
-                        channel.currentWriteIndex = bufIdx;
                         addOpWrite = true;
                         break;
                     }
                 } catch (AsynchronousCloseException e) {
                     // Doesn't need a user attention - ignore.
-                    channel.currentWriteEvent = evt;
-                    channel.currentWriteIndex = bufIdx;
                 } catch (Throwable t) {
+                    if (channel.currentWriteBufferIsPooled) {
+                        directBufferPool.release(buf);
+                    }
+                    ChannelFuture future = evt.getFuture();
                     channel.currentWriteEvent = null;
-                    evt.getFuture().setFailure(t);
+                    channel.currentWriteBuffer = null;
+                    buf = null;
                     evt = null;
+                    future.setFailure(t);
                     fireExceptionCaught(channel, t);
                     if (t instanceof IOException) {
                         open = false;
@@ -511,9 +516,8 @@ class NioWorker implements Runnable {
         return e;
     }
 
-    private static void setOpWrite(NioSocketChannel channel) {
-        NioWorker worker = channel.worker;
-        Selector selector = worker.selector;
+    private void setOpWrite(NioSocketChannel channel) {
+        Selector selector = this.selector;
         SelectionKey key = channel.socket.keyFor(selector);
         if (key == null) {
             return;
@@ -541,9 +545,8 @@ class NioWorker implements Runnable {
         }
     }
 
-    private static void clearOpWrite(NioSocketChannel channel) {
-        NioWorker worker = channel.worker;
-        Selector selector = worker.selector;
+    private void clearOpWrite(NioSocketChannel channel) {
+        Selector selector = this.selector;
         SelectionKey key = channel.socket.keyFor(selector);
         if (key == null) {
             return;
@@ -571,14 +574,12 @@ class NioWorker implements Runnable {
         }
     }
 
-    static void close(NioSocketChannel channel, ChannelFuture future) {
-        NioWorker worker = channel.worker;
-
+    void close(NioSocketChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         try {
             channel.socket.close();
-            worker.cancelledKeys ++;
+            cancelledKeys ++;
 
             if (channel.setClosed()) {
                 future.setSuccess();
@@ -600,17 +601,15 @@ class NioWorker implements Runnable {
         }
     }
 
-    private static void cleanUpWriteBuffer(NioSocketChannel channel) {
+    private void cleanUpWriteBuffer(NioSocketChannel channel) {
         Exception cause = null;
         boolean fireExceptionCaught = false;
 
         // Clean up the stale messages in the write buffer.
         synchronized (channel.writeLock) {
             MessageEvent evt = channel.currentWriteEvent;
+            ByteBuffer buf = channel.currentWriteBuffer;
             if (evt != null) {
-                channel.currentWriteEvent = null;
-                channel.currentWriteIndex = 0;
-
                 // Create the exception only once to avoid the excessive overhead
                 // caused by fillStackTrace.
                 if (channel.isOpen()) {
@@ -618,7 +617,17 @@ class NioWorker implements Runnable {
                 } else {
                     cause = new ClosedChannelException();
                 }
-                evt.getFuture().setFailure(cause);
+
+                if (channel.currentWriteBufferIsPooled) {
+                    directBufferPool.release(buf);
+                }
+
+                ChannelFuture future = evt.getFuture();
+                channel.currentWriteEvent = null;
+                channel.currentWriteBuffer = null;
+                buf = null;
+                evt = null;
+                future.setFailure(cause);
                 fireExceptionCaught = true;
             }
 
@@ -650,15 +659,14 @@ class NioWorker implements Runnable {
         }
     }
 
-    static void setInterestOps(
+    void setInterestOps(
             NioSocketChannel channel, ChannelFuture future, int interestOps) {
         boolean changed = false;
         try {
             // interestOps can change at any time and at any thread.
             // Acquire a lock to avoid possible race condition.
             synchronized (channel.interestOpsLock) {
-                NioWorker worker = channel.worker;
-                Selector selector = worker.selector;
+                Selector selector = this.selector;
                 SelectionKey key = channel.socket.keyFor(selector);
 
                 if (key == null || selector == null) {
@@ -676,8 +684,8 @@ class NioWorker implements Runnable {
                 case 0:
                     if (channel.getRawInterestOps() != interestOps) {
                         key.interestOps(interestOps);
-                        if (Thread.currentThread() != worker.thread &&
-                            worker.wakenUp.compareAndSet(false, true)) {
+                        if (Thread.currentThread() != thread &&
+                            wakenUp.compareAndSet(false, true)) {
                             selector.wakeup();
                         }
                         changed = true;
@@ -686,19 +694,19 @@ class NioWorker implements Runnable {
                 case 1:
                 case 2:
                     if (channel.getRawInterestOps() != interestOps) {
-                        if (Thread.currentThread() == worker.thread) {
+                        if (Thread.currentThread() == thread) {
                             key.interestOps(interestOps);
                             changed = true;
                         } else {
-                            worker.selectorGuard.readLock().lock();
+                            selectorGuard.readLock().lock();
                             try {
-                                if (worker.wakenUp.compareAndSet(false, true)) {
+                                if (wakenUp.compareAndSet(false, true)) {
                                     selector.wakeup();
                                 }
                                 key.interestOps(interestOps);
                                 changed = true;
                             } finally {
-                                worker.selectorGuard.readLock().unlock();
+                                selectorGuard.readLock().unlock();
                             }
                         }
                     }

@@ -64,6 +64,10 @@ public class DuplicatedChannelBuffer extends AbstractChannelBuffer implements Wr
         return buffer.order();
     }
 
+    public boolean isDirect() {
+        return buffer.isDirect();
+    }
+
     public int capacity() {
         return buffer.capacity();
     }

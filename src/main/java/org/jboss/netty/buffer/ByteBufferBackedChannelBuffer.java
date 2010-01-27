@@ -70,6 +70,10 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    public boolean isDirect() {
+        return buffer.isDirect();
+    }
+
     public ByteOrder order() {
         return order;
     }

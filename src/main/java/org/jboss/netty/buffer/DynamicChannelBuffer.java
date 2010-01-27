@@ -94,6 +94,10 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         return endianness;
     }
 
+    public boolean isDirect() {
+        return buffer.isDirect();
+    }
+
     public int capacity() {
         return buffer.capacity();
     }

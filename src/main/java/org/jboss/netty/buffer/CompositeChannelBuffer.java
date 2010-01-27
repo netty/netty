@@ -148,6 +148,10 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         return order;
     }
 
+    public boolean isDirect() {
+        return false;
+    }
+
     public boolean hasArray() {
         return false;
     }

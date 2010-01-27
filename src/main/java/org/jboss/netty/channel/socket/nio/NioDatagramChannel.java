@@ -22,6 +22,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -107,6 +108,8 @@ class NioDatagramChannel extends AbstractChannel
      * The current write {@link MessageEvent}
      */
     MessageEvent currentWriteEvent;
+    ByteBuffer currentWriteBuffer;
+    boolean currentWriteBufferIsPooled;
 
     /**
      * Boolean that indicates that write operation is in progress.
@@ -313,7 +316,7 @@ class NioDatagramChannel extends AbstractChannel
 
         public void run() {
             writeTaskInTaskQueue.set(false);
-            NioDatagramWorker.write(NioDatagramChannel.this, false);
+            worker.write(NioDatagramChannel.this, false);
         }
     }
 

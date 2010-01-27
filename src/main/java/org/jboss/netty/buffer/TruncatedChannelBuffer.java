@@ -63,6 +63,10 @@ public class TruncatedChannelBuffer extends AbstractChannelBuffer implements Wra
         return buffer.order();
     }
 
+    public boolean isDirect() {
+        return buffer.isDirect();
+    }
+
     public int capacity() {
         return length;
     }

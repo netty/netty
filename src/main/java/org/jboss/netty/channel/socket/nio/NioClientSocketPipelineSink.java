@@ -88,25 +88,25 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             switch (state) {
             case OPEN:
                 if (Boolean.FALSE.equals(value)) {
-                    NioWorker.close(channel, future);
+                    channel.worker.close(channel, future);
                 }
                 break;
             case BOUND:
                 if (value != null) {
                     bind(channel, future, (SocketAddress) value);
                 } else {
-                    NioWorker.close(channel, future);
+                    channel.worker.close(channel, future);
                 }
                 break;
             case CONNECTED:
                 if (value != null) {
                     connect(channel, future, (SocketAddress) value);
                 } else {
-                    NioWorker.close(channel, future);
+                    channel.worker.close(channel, future);
                 }
                 break;
             case INTEREST_OPS:
-                NioWorker.setInterestOps(channel, future, ((Integer) value).intValue());
+                channel.worker.setInterestOps(channel, future, ((Integer) value).intValue());
                 break;
             }
         } else if (e instanceof MessageEvent) {
@@ -114,7 +114,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             NioSocketChannel channel = (NioSocketChannel) event.getChannel();
             boolean offered = channel.writeBuffer.offer(event);
             assert offered;
-            NioWorker.write(channel, true);
+            channel.worker.write(channel, true);
         }
     }
 
@@ -156,7 +156,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         } catch (Throwable t) {
             cf.setFailure(t);
             fireExceptionCaught(channel, t);
-            NioWorker.close(channel, succeededFuture(channel));
+            channel.worker.close(channel, succeededFuture(channel));
         }
     }
 
@@ -373,7 +373,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
 
                     ch.connectFuture.setFailure(cause);
                     fireExceptionCaught(ch, cause);
-                    NioWorker.close(ch, succeededFuture(ch));
+                    ch.worker.close(ch, succeededFuture(ch));
                 }
             }
         }
@@ -388,13 +388,13 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             } catch (Throwable t) {
                 ch.connectFuture.setFailure(t);
                 fireExceptionCaught(ch, t);
-                NioWorker.close(ch, succeededFuture(ch));
+                ch.worker.close(ch, succeededFuture(ch));
             }
         }
 
         private void close(SelectionKey k) {
             NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
-            NioWorker.close(ch, succeededFuture(ch));
+            ch.worker.close(ch, succeededFuture(ch));
         }
     }
 
@@ -412,7 +412,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                 channel.socket.register(
                         boss.selector, SelectionKey.OP_CONNECT, channel);
             } catch (ClosedChannelException e) {
-                NioWorker.close(channel, succeededFuture(channel));
+                channel.worker.close(channel, succeededFuture(channel));
             }
 
             int connectTimeout = channel.getConfig().getConnectTimeoutMillis();

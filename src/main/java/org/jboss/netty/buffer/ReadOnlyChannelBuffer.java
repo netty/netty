@@ -64,6 +64,10 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
         return buffer.order();
     }
 
+    public boolean isDirect() {
+        return buffer.isDirect();
+    }
+
     public boolean hasArray() {
         return false;
     }
