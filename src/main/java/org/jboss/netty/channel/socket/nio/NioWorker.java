@@ -334,8 +334,6 @@ class NioWorker implements Runnable {
                     break;
                 }
             }
-            directBuffer.flip();
-            buffer.writeBytes(directBuffer);
             failure = false;
         } catch (ClosedChannelException e) {
             // Can happen, and does not need a user attention.
@@ -343,6 +341,8 @@ class NioWorker implements Runnable {
             fireExceptionCaught(channel, t);
         } finally {
             if (fromPool) {
+                directBuffer.flip();
+                buffer.writeBytes(directBuffer);
                 directBufferPool.release(directBuffer);
             }
         }
