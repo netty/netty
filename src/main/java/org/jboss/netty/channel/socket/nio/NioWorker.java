@@ -315,13 +315,11 @@ class NioWorker implements Runnable {
             bufferFactory.getBuffer(predictor.nextReceiveBufferSize());
 
         final ByteBuffer directBuffer;
-        final boolean fromPool;
-        if (buffer.isDirect()) {
-            directBuffer = buffer.toByteBuffer();
-            fromPool = false;
-        } else {
+        final boolean fromPool = !buffer.isDirect();
+        if (fromPool) {
             directBuffer = directBufferPool.acquire(buffer.writableBytes());
-            fromPool = true;
+        } else {
+            directBuffer = buffer.toByteBuffer();
         }
 
         int ret = 0;
