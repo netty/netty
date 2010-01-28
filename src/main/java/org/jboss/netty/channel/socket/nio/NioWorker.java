@@ -344,6 +344,8 @@ class NioWorker implements Runnable {
                 directBuffer.flip();
                 buffer.writeBytes(directBuffer);
                 directBufferPool.release(directBuffer);
+            } else {
+                buffer.writerIndex(buffer.writerIndex() + readBytes);
             }
         }
 
