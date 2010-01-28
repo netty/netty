@@ -345,6 +345,7 @@ class NioWorker implements Runnable {
                 buffer.writeBytes(directBuffer);
                 directBufferPool.release(directBuffer);
             } else {
+                // no need to copy: directBuffer is just a view to buffer.
                 buffer.writerIndex(buffer.writerIndex() + readBytes);
             }
         }
