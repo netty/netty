@@ -15,7 +15,7 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.*;
+import static org.jboss.netty.channel.Channels.fireChannelInterestChanged;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -24,6 +24,8 @@ import java.nio.channels.SocketChannel;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.AbstractChannel;
@@ -59,7 +61,7 @@ class NioSocketChannel extends AbstractChannel
     private volatile InetSocketAddress remoteAddress;
 
     final Object interestOpsLock = new Object();
-    final Object writeLock = new Object();
+    final Lock writeLock = new ReentrantLock();
 
     final Runnable writeTask = new WriteTask();
     final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
@@ -67,7 +69,6 @@ class NioSocketChannel extends AbstractChannel
     final Queue<MessageEvent> writeBuffer = new WriteBuffer();
     final AtomicInteger writeBufferSize = new AtomicInteger();
     final AtomicInteger highWaterMarkCounter = new AtomicInteger();
-    volatile boolean inWriteNowLoop;
 
     MessageEvent currentWriteEvent;
     ByteBuffer currentWriteBuffer;
@@ -257,7 +258,7 @@ class NioSocketChannel extends AbstractChannel
 
         public void run() {
             writeTaskInTaskQueue.set(false);
-            worker.write(NioSocketChannel.this, false);
+            worker.write(NioSocketChannel.this);
         }
     }
 }
