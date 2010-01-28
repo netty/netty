@@ -30,6 +30,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.channel.WriteCompletionEvent;
 
 /**
  * Handles a client-side channel.
@@ -87,7 +88,11 @@ public class DiscardClientHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
         // Server is supposed to send nothing.  Therefore, do nothing.
-        transferredBytes.addAndGet(((ChannelBuffer) e.getMessage()).readableBytes());
+    }
+
+    @Override
+    public void writeComplete(ChannelHandlerContext ctx, WriteCompletionEvent e) {
+        transferredBytes.addAndGet(e.getWrittenAmount());
     }
 
     @Override
