@@ -43,7 +43,7 @@ final class DirectBufferPool {
         return dst;
     }
 
-    private final ByteBuffer acquire(int size) {
+    final ByteBuffer acquire(int size) {
         for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
             if (ref == null) {
