@@ -34,6 +34,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -446,7 +447,8 @@ class NioDatagramWorker implements Runnable {
             return;
         }
 
-        if (!channel.writeLock.tryLock()) {
+        final ReentrantLock writeLock = channel.writeLock;
+        if (writeLock.isHeldByCurrentThread() || !writeLock.tryLock()) {
             rescheduleWrite(channel);
             return;
         }
@@ -458,7 +460,7 @@ class NioDatagramWorker implements Runnable {
         boolean removeOpWrite = false;
         int writtenBytes = 0;
 
-        synchronized (channel.writeLock) {
+        try {
             // loop forever...
             for (;;) {
                 MessageEvent evt = channel.currentWriteEvent;
@@ -535,6 +537,8 @@ class NioDatagramWorker implements Runnable {
                     fireExceptionCaught(channel, t);
                 }
             }
+        } finally {
+        	writeLock.unlock();
         }
 
         fireWriteComplete(channel, writtenBytes);
@@ -622,7 +626,8 @@ class NioDatagramWorker implements Runnable {
         boolean fireExceptionCaught = false;
 
         // Clean up the stale messages in the write buffer.
-        synchronized (channel.writeLock) {
+        channel.writeLock.lock();
+        try {
             MessageEvent evt = channel.currentWriteEvent;
             ByteBuffer buf = channel.currentWriteBuffer;
             if (evt != null) {
@@ -667,6 +672,8 @@ class NioDatagramWorker implements Runnable {
                     fireExceptionCaught = true;
                 }
             }
+        } finally {
+        	channel.writeLock.unlock();
         }
 
         if (fireExceptionCaught) {

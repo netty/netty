@@ -34,6 +34,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -378,8 +379,9 @@ class NioWorker implements Runnable {
             cleanUpWriteBuffer(channel);
             return;
         }
-
-        if (!channel.writeLock.tryLock()) {
+        
+        final ReentrantLock writeLock = channel.writeLock;
+        if (writeLock.isHeldByCurrentThread() || !writeLock.tryLock()) {
             rescheduleWrite(channel);
             return;
         }
@@ -460,7 +462,7 @@ class NioWorker implements Runnable {
                 }
             }
         } finally {
-            channel.writeLock.unlock();
+            writeLock.unlock();
         }
 
         fireWriteComplete(channel, writtenBytes);

@@ -24,7 +24,6 @@ import java.nio.channels.SocketChannel;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -61,7 +60,7 @@ class NioSocketChannel extends AbstractChannel
     private volatile InetSocketAddress remoteAddress;
 
     final Object interestOpsLock = new Object();
-    final Lock writeLock = new ReentrantLock();
+    final ReentrantLock writeLock = new ReentrantLock();
 
     final Runnable writeTask = new WriteTask();
     final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
