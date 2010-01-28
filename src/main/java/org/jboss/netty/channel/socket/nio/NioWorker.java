@@ -78,7 +78,6 @@ class NioWorker implements Runnable {
     private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
     private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
-    private final DirectBufferPool directBufferPool = new DirectBufferPool();
 
     NioWorker(int bossId, int id, Executor executor) {
         this.bossId = bossId;
@@ -317,7 +316,7 @@ class NioWorker implements Runnable {
         final ByteBuffer directBuffer;
         final boolean fromPool = !buffer.isDirect();
         if (fromPool) {
-            directBuffer = directBufferPool.acquire(buffer.writableBytes());
+            directBuffer = DirectBufferPool.acquire(buffer.writableBytes());
         } else {
             directBuffer = buffer.toByteBuffer();
         }
@@ -341,7 +340,7 @@ class NioWorker implements Runnable {
             if (fromPool) {
                 directBuffer.flip();
                 buffer.writeBytes(directBuffer);
-                directBufferPool.release(directBuffer);
+                DirectBufferPool.release(directBuffer);
             } else {
                 // no need to copy: directBuffer is just a view to buffer.
                 buffer.writerIndex(buffer.writerIndex() + readBytes);
@@ -408,7 +407,7 @@ class NioWorker implements Runnable {
                         channel.currentWriteBuffer = buf = origBuf.toByteBuffer();
                         channel.currentWriteBufferIsPooled = false;
                     } else {
-                        channel.currentWriteBuffer = buf = directBufferPool.acquire(origBuf);
+                        channel.currentWriteBuffer = buf = DirectBufferPool.acquire(origBuf);
                         channel.currentWriteBufferIsPooled = true;
                     }
                 } else {
@@ -427,7 +426,7 @@ class NioWorker implements Runnable {
                     if (!buf.hasRemaining()) {
                         // Successful write - proceed to the next message.
                         if (channel.currentWriteBufferIsPooled) {
-                            directBufferPool.release(buf);
+                        	DirectBufferPool.release(buf);
                         }
 
                         ChannelFuture future = evt.getFuture();
@@ -445,7 +444,7 @@ class NioWorker implements Runnable {
                     // Doesn't need a user attention - ignore.
                 } catch (Throwable t) {
                     if (channel.currentWriteBufferIsPooled) {
-                        directBufferPool.release(buf);
+                    	DirectBufferPool.release(buf);
                     }
                     ChannelFuture future = evt.getFuture();
                     channel.currentWriteEvent = null;
@@ -563,7 +562,7 @@ class NioWorker implements Runnable {
                 }
 
                 if (channel.currentWriteBufferIsPooled) {
-                    directBufferPool.release(buf);
+                	DirectBufferPool.release(buf);
                 }
 
                 ChannelFuture future = evt.getFuture();

@@ -29,7 +29,7 @@ final class DirectBufferPool {
 
     private static final int POOL_SIZE = 4;
 
-    private final ThreadLocal<SoftReference<ByteBuffer>[]> pool = 
+    private static final ThreadLocal<SoftReference<ByteBuffer>[]> pool = 
     	new ThreadLocal<SoftReference<ByteBuffer>[]>() {
 			@Override
 			@SuppressWarnings("unchecked")
@@ -40,19 +40,15 @@ final class DirectBufferPool {
     	};
 
 
-    DirectBufferPool() {
-        super();
-    }
-
-    final ByteBuffer acquire(ChannelBuffer src) {
+    static final ByteBuffer acquire(ChannelBuffer src) {
         ByteBuffer dst = acquire(src.readableBytes());
         src.getBytes(src.readerIndex(), dst);
         dst.rewind();
         return dst;
     }
 
-    final ByteBuffer acquire(int size) {
-    	final SoftReference<ByteBuffer>[] pool = this.pool.get();
+    static final ByteBuffer acquire(int size) {
+    	final SoftReference<ByteBuffer>[] pool = DirectBufferPool.pool.get();
         for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
             if (ref == null) {
@@ -81,8 +77,8 @@ final class DirectBufferPool {
         return buf;
     }
 
-    final void release(ByteBuffer buffer) {
-    	final SoftReference<ByteBuffer>[] pool = this.pool.get();
+    static final void release(ByteBuffer buffer) {
+    	final SoftReference<ByteBuffer>[] pool = DirectBufferPool.pool.get();
         for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
             if (ref == null || ref.get() == null) {
@@ -114,4 +110,8 @@ final class DirectBufferPool {
         // but it becomes 8192 to keep the calculation simplistic.
         return (capacity & 0xfffff000) + 0x1000;
     }
+
+	private DirectBufferPool() {
+	    super();
+	}
 }

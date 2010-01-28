@@ -127,8 +127,6 @@ class NioDatagramWorker implements Runnable {
 
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
-    private final DirectBufferPool directBufferPool = new DirectBufferPool();
-
     /**
      * Sole constructor.
      *
@@ -476,7 +474,7 @@ class NioDatagramWorker implements Runnable {
                         channel.currentWriteBuffer = buf = origBuf.toByteBuffer();
                         channel.currentWriteBufferIsPooled = false;
                     } else {
-                        channel.currentWriteBuffer = buf = directBufferPool.acquire(origBuf);
+                        channel.currentWriteBuffer = buf = DirectBufferPool.acquire(origBuf);
                         channel.currentWriteBufferIsPooled = true;
                     }
                 } else {
@@ -508,7 +506,7 @@ class NioDatagramWorker implements Runnable {
                     if (localWrittenBytes > 0) {
                         // Successful write - proceed to the next message.
                         if (channel.currentWriteBufferIsPooled) {
-                            directBufferPool.release(buf);
+                        	DirectBufferPool.release(buf);
                         }
 
                         ChannelFuture future = evt.getFuture();
@@ -526,7 +524,7 @@ class NioDatagramWorker implements Runnable {
                     // Doesn't need a user attention - ignore.
                 } catch (final Throwable t) {
                     if (channel.currentWriteBufferIsPooled) {
-                        directBufferPool.release(buf);
+                    	DirectBufferPool.release(buf);
                     }
                     ChannelFuture future = evt.getFuture();
                     channel.currentWriteEvent = null;
@@ -636,7 +634,7 @@ class NioDatagramWorker implements Runnable {
                     cause = new ClosedChannelException();
                 }
                 if (channel.currentWriteBufferIsPooled) {
-                    directBufferPool.release(buf);
+                	DirectBufferPool.release(buf);
                 }
 
                 ChannelFuture future = evt.getFuture();
