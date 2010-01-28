@@ -27,6 +27,8 @@ import java.nio.channels.DatagramChannel;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.AbstractChannel;
@@ -76,7 +78,7 @@ class NioDatagramChannel extends AbstractChannel
     /**
      * Monitor object for synchronizing access to the {@link WriteBufferQueue}.
      */
-    final Object writeLock = new Object();
+    final Lock writeLock = new ReentrantLock();
 
     /**
      * WriteTask that performs write operations.
@@ -110,11 +112,6 @@ class NioDatagramChannel extends AbstractChannel
     MessageEvent currentWriteEvent;
     ByteBuffer currentWriteBuffer;
     boolean currentWriteBufferIsPooled;
-
-    /**
-     * Boolean that indicates that write operation is in progress.
-     */
-    volatile boolean inWriteNowLoop;
 
     private volatile InetSocketAddress localAddress;
     volatile InetSocketAddress remoteAddress;
@@ -316,7 +313,7 @@ class NioDatagramChannel extends AbstractChannel
 
         public void run() {
             writeTaskInTaskQueue.set(false);
-            worker.write(NioDatagramChannel.this, false);
+            worker.write(NioDatagramChannel.this);
         }
     }
 

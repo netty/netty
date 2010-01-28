@@ -108,7 +108,7 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
             final MessageEvent event = (MessageEvent) e;
             final boolean offered = channel.writeBufferQueue.offer(event);
             assert offered;
-            channel.worker.write(channel, true);
+            channel.worker.write(channel);
         }
     }
 

@@ -25,7 +25,7 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.FixedReceiveBufferSizePredictorFactory;
 import org.jboss.netty.channel.socket.DatagramChannel;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
-import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.util.CharsetUtil;
@@ -44,7 +44,7 @@ public class QuoteOfTheMomentClient {
 
     public static void main(String[] args) throws Exception {
         DatagramChannelFactory f =
-            new OioDatagramChannelFactory(Executors.newCachedThreadPool());
+            new NioDatagramChannelFactory(Executors.newCachedThreadPool());
 
         ConnectionlessBootstrap b = new ConnectionlessBootstrap(f);
 
