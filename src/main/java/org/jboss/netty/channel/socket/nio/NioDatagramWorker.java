@@ -424,7 +424,7 @@ class NioDatagramWorker implements Runnable {
         }
 
         if (failure) {
-            close(key);
+            close(channel, succeededFuture(channel));
             return false;
         }
 
