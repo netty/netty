@@ -383,9 +383,9 @@ class NioDatagramWorker implements Runnable {
      */
     private boolean read(final SelectionKey key) {
         final NioDatagramChannel channel = (NioDatagramChannel) key.attachment();
-        ReceiveBufferSizePredictor predictor =
-            channel.getConfig().getReceiveBufferSizePredictor();
-        final ChannelBufferFactory bufferFactory = channel.getConfig().getBufferFactory();
+        final NioDatagramChannelConfig cfg = channel.getConfig();
+        final ReceiveBufferSizePredictor predictor = cfg.getReceiveBufferSizePredictor();
+        final ChannelBufferFactory bufferFactory = cfg.getBufferFactory();
         final DatagramChannel nioChannel = (DatagramChannel) key.channel();
 
         // Allocating a non-direct buffer with a max udp packge size.
