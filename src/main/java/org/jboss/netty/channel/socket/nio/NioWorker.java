@@ -280,7 +280,7 @@ class NioWorker implements Runnable {
                     }
                 }
                 if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                    write(k);
+                    write((NioSocketChannel) k.attachment());
                 }
             } catch (CancelledKeyException e) {
                 close(k);
@@ -359,11 +359,6 @@ class NioWorker implements Runnable {
         }
 
         return true;
-    }
-
-    private void write(SelectionKey k) {
-        NioSocketChannel ch = (NioSocketChannel) k.attachment();
-        write(ch);
     }
 
     private void close(SelectionKey k) {

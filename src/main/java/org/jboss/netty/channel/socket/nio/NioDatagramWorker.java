@@ -349,7 +349,7 @@ class NioDatagramWorker implements Runnable {
                     }
                 }
                 if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                    write(k);
+                    write((NioDatagramChannel) k.attachment());
                 }
             } catch (CancelledKeyException e) {
                 close(k);
@@ -368,10 +368,6 @@ class NioDatagramWorker implements Runnable {
             return true;
         }
         return false;
-    }
-
-    private void write(SelectionKey k) {
-        write((NioDatagramChannel) k.attachment());
     }
 
     /**
