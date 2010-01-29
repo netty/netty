@@ -24,7 +24,6 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
-import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
@@ -303,17 +302,15 @@ class NioWorker implements Runnable {
     }
 
     private boolean read(SelectionKey k) {
-        ScatteringByteChannel ch = (ScatteringByteChannel) k.channel();
-        NioSocketChannel channel = (NioSocketChannel) k.attachment();
+        final java.nio.channels.SocketChannel nioch =
+            (java.nio.channels.SocketChannel) k.channel();
+        final NioSocketChannel channel = (NioSocketChannel) k.attachment();
 
-        ReceiveBufferSizePredictor predictor =
-            channel.getConfig().getReceiveBufferSizePredictor();
-        ChannelBufferFactory bufferFactory =
-            channel.getConfig().getBufferFactory();
+        final NioSocketChannelConfig cfg = channel.getConfig();
+        final ReceiveBufferSizePredictor predictor = cfg.getReceiveBufferSizePredictor();
+        final ChannelBufferFactory bufferFactory = cfg.getBufferFactory();
 
-        ChannelBuffer buffer =
-            bufferFactory.getBuffer(predictor.nextReceiveBufferSize());
-
+        final ChannelBuffer buffer = bufferFactory.getBuffer(predictor.nextReceiveBufferSize());
         final ByteBuffer directBuffer;
         final boolean fromPool = !buffer.isDirect();
         if (fromPool) {
@@ -326,7 +323,7 @@ class NioWorker implements Runnable {
         int readBytes = 0;
         boolean failure = true;
         try {
-            while ((ret = ch.read(directBuffer)) > 0) {
+            while ((ret = nioch.read(directBuffer)) > 0) {
                 readBytes += ret;
                 if (!directBuffer.hasRemaining()) {
                     break;
@@ -379,13 +376,13 @@ class NioWorker implements Runnable {
             cleanUpWriteBuffer(channel);
             return;
         }
-        
+
         final ReentrantLock writeLock = channel.writeLock;
         if (writeLock.isHeldByCurrentThread() || !writeLock.tryLock()) {
             rescheduleWrite(channel);
             return;
         }
-        
+
         final Queue<MessageEvent> writeBuffer = channel.writeBuffer;
         final int writeSpinCount = channel.getConfig().getWriteSpinCount();
 
@@ -646,7 +643,7 @@ class NioWorker implements Runnable {
             channel.setRawInterestOpsNow(interestOps);
             return false;
         }
-        
+
         switch (CONSTRAINT_LEVEL) {
         case 0:
             if (channel.getRawInterestOps() != interestOps) {
@@ -686,7 +683,7 @@ class NioWorker implements Runnable {
         }
         return false;
     }
-    
+
     private final class RegisterTask implements Runnable {
         private final NioSocketChannel channel;
         private final ChannelFuture future;
