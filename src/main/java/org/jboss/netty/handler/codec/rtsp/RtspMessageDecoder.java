@@ -16,14 +16,17 @@
 package org.jboss.netty.handler.codec.rtsp;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
-import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
+import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpMessage;
-import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpMessageDecoder;
 
 /**
- * Decodes {@link ChannelBuffer}s into RTSP requests represented in
- * {@link HttpRequest}s.
+ * Decodes {@link ChannelBuffer}s into RTSP messages represented in
+ * {@link HttpMessage}s.
  * <p>
  * <h3>Parameters that prevents excessive memory consumption</h3>
  * <table border="1">
@@ -32,7 +35,8 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
  * </tr>
  * <tr>
  * <td>{@code maxInitialLineLength}</td>
- * <td>The maximum length of the initial line (e.g. {@code "SETUP / RTSP/1.0"})
+ * <td>The maximum length of the initial line
+ *     (e.g. {@code "SETUP / RTSP/1.0"} or {@code "RTSP/1.0 200 OK"})
  *     If the length of the initial line exceeds this value, a
  *     {@link TooLongFrameException} will be raised.</td>
  * </tr>
@@ -47,38 +51,41 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
  *     value, a {@link TooLongFrameException} will be raised.</td>
  * </tr>
  * </table>
- * *
+ *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
-public class RtspRequestDecoder extends RtspMessageDecoder {
+public abstract class RtspMessageDecoder extends HttpMessageDecoder {
+
+    private final DecoderEmbedder<HttpMessage> aggregator;
 
     /**
      * Creates a new instance with the default
      * {@code maxInitialLineLength (4096}}, {@code maxHeaderSize (8192)}, and
      * {@code maxContentLength (8192)}.
      */
-    public RtspRequestDecoder() {
-        super();
+    protected RtspMessageDecoder() {
+        this(4096, 8192, 8192);
     }
 
     /**
      * Creates a new instance with the specified parameters.
      */
-    public RtspRequestDecoder(int maxInitialLineLength, int maxHeaderSize, int maxContentLength) {
-        super(maxInitialLineLength, maxHeaderSize, maxContentLength);
+    protected RtspMessageDecoder(int maxInitialLineLength, int maxHeaderSize, int maxContentLength) {
+        super(maxInitialLineLength, maxHeaderSize, maxContentLength * 2);
+        aggregator = new DecoderEmbedder<HttpMessage>(new HttpChunkAggregator(maxContentLength));
     }
 
     @Override
-    protected HttpMessage createMessage(String[] initialLine) throws Exception {
-        return new DefaultHttpRequest(RtspVersions.valueOf(initialLine[2]),
-                RtspMethods.valueOf(initialLine[0]), initialLine[1]);
-    }
-
-    @Override
-    protected boolean isDecodingRequest() {
-        return true;
+    protected Object decode(ChannelHandlerContext ctx, Channel channel,
+            ChannelBuffer buffer, State state) throws Exception {
+        Object o = super.decode(ctx, channel, buffer, state);
+        if (o != null && aggregator.offer(o)) {
+            return aggregator.poll();
+        } else {
+            return null;
+        }
     }
 }
