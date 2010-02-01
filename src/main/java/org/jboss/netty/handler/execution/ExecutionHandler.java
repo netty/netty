@@ -20,8 +20,8 @@ import java.util.concurrent.Executor;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -32,23 +32,71 @@ import org.jboss.netty.util.internal.ExecutorUtil;
 /**
  * Forwards an upstream {@link ChannelEvent} to an {@link Executor}.
  * <p>
- * You can implement various thread model by adding this handler to a
- * {@link ChannelPipeline}.  The most common use case of this handler is to
- * add a {@link ExecutionHandler} which was specified with
- * {@link OrderedMemoryAwareThreadPoolExecutor}:
+ * {@link ExecutionHandler} is often used when your {@link ChannelHandler}
+ * performs a blocking operation that takes long time or accesses a resource
+ * which is not CPU-bound.  Running such operations in a pipeline without an
+ * {@link ExecutionHandler} will result in unwanted hiccup during I/O because
+ * an I/O thread cannot perform I/O until your handler returns the control to
+ * the I/O thread.
+ * <p>
+ * In most cases, an {@link ExecutionHandler} is coupled with an
+ * {@link OrderedMemoryAwareThreadPoolExecutor} because it guarantees the
+ * correct event execution order and prevents an {@link OutOfMemoryError}
+ * under load:
  * <pre>
- * ChannelPipeline pipeline = ...;
- * pipeline.addLast("decoder", new MyProtocolDecoder());
- * pipeline.addLast("encoder", new MyProtocolEncoder());
+ * public class DatabaseGatewayPipelineFactory implements ChannelPipelineFactory {
  *
- * // HERE
- * <strong>pipeline.addLast("executor", new {@link ExecutionHandler}(new {@link OrderedMemoryAwareThreadPoolExecutor}(16, 1048576, 1048576)));</strong>
+ *     <b>private final ExecutionHandler executionHandler;</b>
  *
- * pipeline.addLast("handler", new MyBusinessLogicHandler());
+ *     public DatabaseGatewayPipelineFactory(ExecutionHandler executionHandler) {
+ *         this.executionHandler = executionHandler;
+ *     }
+ *
+ *     public ChannelPipeline getPipeline() {
+ *         return Channels.pipeline(
+ *                 new DatabaseGatewayProtocolEncoder(),
+ *                 new DatabaseGatewayProtocolDecoder(),
+ *                 <b>executionHandler, // Must be shared</b>
+ *                 new DatabaseQueryingHandler());
+ *     }
+ * }
+ * ...
+ *
+ * public static void main(String[] args) {
+ *     ServerBootstrap bootstrap = ...;
+ *     ...
+ *     <b>ExecutionHandler executionHandler = new ExecutionHandler(
+ *             new {@link OrderedMemoryAwareThreadPoolExecutor}(16, 1048576, 1048576))
+ *     bootstrap.setPipelineFactory(
+ *             new DatabaseGatewayPipelineFactory(executionHandler));</b>
+ *     ...
+ *     bootstrap.bind(...);
+ *     ...
+ *
+ *     while (!isServerReadyToShutDown()) {
+ *         // ... wait ...
+ *     }
+ *
+ *     bootstrap.releaseExternalResources();
+ *     <b>executionHandler.releaseEXternalResources();</b>
+ * }
  * </pre>
- * to utilize more processors to handle {@link ChannelEvent}s.  You can also
- * use other {@link Executor} implementation than the recommended
- * {@link OrderedMemoryAwareThreadPoolExecutor}.
+ *
+ * Please refer to {@link OrderedMemoryAwareThreadPoolExecutor} for the
+ * detailed information about how the event order is guaranteed.
+ *
+ * <h3>SEDA (Staged Event-Driven Architecture)</h3>
+ * You can implement an alternative thread model such as
+ * <a href="http://en.wikipedia.org/wiki/Staged_event-driven_architecture">SEDA</a>
+ * by adding more than one {@link ExecutionHandler} to the pipeline.
+ *
+ * <h3>Using other {@link Executor} implementation</h3>
+ *
+ * Although it's recommended to use {@link OrderedMemoryAwareThreadPoolExecutor},
+ * you can use other {@link Executor} implementations.  However, you must note
+ * that other {@link Executor} implementation might break your application
+ * because they often do not maintain event execution order nor interact with
+ * I/O threads to control the incoming traffic and avoid {@link OutOfMemoryError}.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>

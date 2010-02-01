@@ -30,7 +30,6 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChildChannelStateEvent;
@@ -202,7 +201,6 @@ public abstract class AbstractSocketServerBootstrapTest {
         new ServerBootstrap(createMock(ServerChannelFactory.class)).bind(null);
     }
 
-    @ChannelPipelineCoverage("all")
     private static class ParentChannelHandler extends SimpleChannelUpstreamHandler {
 
         volatile Channel child;

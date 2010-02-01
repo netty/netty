@@ -18,7 +18,6 @@ package org.jboss.netty.channel;
 import java.util.concurrent.Executor;
 
 import org.jboss.netty.handler.execution.ExecutionHandler;
-import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 
 
 /**
@@ -64,39 +63,26 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
  * You will also find various helper methods in {@link Channels} to be useful
  * to generate and send an artificial or manipulated event.
  *
+ * <h3>State management</h3>
+ *
+ * Please refer to {@link ChannelHandler}.
+ *
  * <h3>Thread safety</h3>
  * <p>
- * If there's no {@link ExecutionHandler} in the {@link ChannelPipeline},
  * {@link #handleUpstream(ChannelHandlerContext, ChannelEvent) handleUpstream}
- * will be invoked sequentially by the same thread (i.e. an I/O thread).
- * Please note that this does not necessarily mean that there's a dedicated
- * thread per {@link Channel}; the I/O thread of some transport can serve more
- * than one {@link Channel} (e.g. NIO transport), while the I/O thread of
- * other transports can serve only one (e.g. OIO transport).
+ * will be invoked sequentially by the same thread (i.e. an I/O thread) and
+ * therefore a handler does not need to worry about being invoked with a new
+ * upstream event before the previous upstream event is finished.
  * <p>
- * If an {@link ExecutionHandler} is added in the {@link ChannelPipeline},
- * {@link #handleUpstream(ChannelHandlerContext, ChannelEvent) handleUpstream}
- * may be invoked by different threads at the same time, depending on what
- * {@link Executor} implementation is used with the {@link ExecutionHandler}.
+ * This does not necessarily mean that there's a dedicated thread per
+ * {@link Channel}; the I/O thread of some transport can serve more than one
+ * {@link Channel} (e.g. NIO transport), while the I/O thread of other
+ * transports can serve only one (e.g. OIO transport).
  * <p>
- * {@link OrderedMemoryAwareThreadPoolExecutor} is provided to guarantee the
- * order of {@link ChannelEvent}s.  It does not guarantee that the invocation
- * will be made by the same thread for the same channel, but it does guarantee
- * that the invocation will be made sequentially for the events of the same
- * channel.  For example, the events can be processed as depicted below:
- *
- * <pre>
- *           -----------------------------------&gt; Timeline -----------------------------------&gt;
- *
- * Thread X: --- Channel A (Event 1) --.   .-- Channel B (Event 2) --- Channel B (Event 3) ---&gt;
- *                                      \ /
- *                                       X
- *                                      / \
- * Thread Y: --- Channel B (Event 1) --'   '-- Channel A (Event 2) --- Channel A (Event 3) ---&gt;
- * </pre>
- * <p>
- * Also, please refer to the {@link ChannelPipelineCoverage} annotation to
- * understand the relationship between a handler and its stateful properties.
+ * However, if you add an {@link ExecutionHandler} to a {@link ChannelPipeline},
+ * this behavior changes depending on what {@link Executor} was employed to
+ * dispatch the events.  Please refer to {@link ExecutionHandler} for more
+ * information.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>

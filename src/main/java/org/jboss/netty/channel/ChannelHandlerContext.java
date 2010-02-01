@@ -15,7 +15,6 @@
  */
 package org.jboss.netty.channel;
 
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Provides the properties and operations which are specific to a
@@ -175,10 +174,6 @@ public interface ChannelHandlerContext {
     /**
      * Retrieves an object which is {@link #setAttachment(Object) attached} to
      * this context.
-     * <p>
-     * As an alternative, you might want to use a {@link ChannelLocal} variable
-     * or a {@link ConcurrentMap} whose key is {@link ChannelHandlerContext}.
-     * Please refer to {@link ChannelPipelineCoverage} for the detailed examples.
      *
      * @return {@code null} if no object was attached or
      *                      {@code null} was attached
@@ -189,10 +184,6 @@ public interface ChannelHandlerContext {
      * Attaches an object to this context to store a stateful information
      * specific to the {@link ChannelHandler} which is associated with this
      * context.
-     * <p>
-     * As an alternative, you might want to use a {@link ChannelLocal} variable
-     * or a {@link ConcurrentMap} whose key is {@link ChannelHandlerContext}.
-     * Please refer to {@link ChannelPipelineCoverage} for the detailed examples.
      */
     void setAttachment(Object attachment);
 }

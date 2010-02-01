@@ -212,6 +212,7 @@ import java.util.concurrent.ConcurrentMap;
 @Documented
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
+@Deprecated
 public @interface ChannelPipelineCoverage {
 
     /**

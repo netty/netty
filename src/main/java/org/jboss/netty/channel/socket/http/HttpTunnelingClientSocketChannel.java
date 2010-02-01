@@ -33,7 +33,6 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.DefaultChannelPipeline;
@@ -321,7 +320,6 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         });
     }
 
-    @ChannelPipelineCoverage("one")
     final class ServletChannelHandler extends SimpleChannelUpstreamHandler {
 
         private volatile boolean readingChunks;

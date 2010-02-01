@@ -31,7 +31,6 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -158,7 +157,6 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
         }
     }
 
-    @ChannelPipelineCoverage("one")
     private class EchoHandler extends SimpleChannelUpstreamHandler {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();

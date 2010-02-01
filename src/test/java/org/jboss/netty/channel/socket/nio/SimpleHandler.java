@@ -17,7 +17,6 @@ package org.jboss.netty.channel.socket.nio;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
@@ -27,7 +26,6 @@ import org.jboss.netty.channel.SimpleChannelHandler;
  * @author Daniel Bevenius (dbevenius@jboss.com)
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("all")
 public class SimpleHandler extends SimpleChannelHandler {
 
     @Override

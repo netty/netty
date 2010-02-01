@@ -32,37 +32,34 @@ import org.jboss.netty.util.ObjectSizeEstimator;
 import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
 
 /**
- * A {@link MemoryAwareThreadPoolExecutor} which maintains the
- * {@link ChannelEvent} order for the same {@link Channel}.
+ * A {@link MemoryAwareThreadPoolExecutor} which makes sure the events from the
+ * same {@link Channel} are executed sequentially.
  * <p>
- * {@link OrderedMemoryAwareThreadPoolExecutor} executes the queued task in the
- * same thread if an existing thread is running a task associated with the same
- * {@link Channel}.  This behavior is to make sure the events from the same
- * {@link Channel} are handled in a correct order.  A different thread might be
- * chosen only when the task queue of the {@link Channel} is empty.
- * <p>
- * Although {@link OrderedMemoryAwareThreadPoolExecutor} guarantees the order
- * of {@link ChannelEvent}s.  It does not guarantee that the invocation will be
- * made by the same thread for the same channel, but it does guarantee that
- * the invocation will be made sequentially for the events of the same channel.
- * For example, the events can be processed as depicted below:
- *
+ * For example, let's say there are two executor threads that handle the events
+ * from the two channels:
  * <pre>
- *           -----------------------------------&gt; Timeline -----------------------------------&gt;
+ *           -------------------------------------&gt; Timeline ------------------------------------&gt;
  *
- * Thread X: --- Channel A (Event 1) --.   .-- Channel B (Event 2) --- Channel B (Event 3) ---&gt;
+ * Thread X: --- Channel A (Event A1) --.   .-- Channel B (Event B2) --- Channel B (Event B3) ---&gt;
  *                                      \ /
  *                                       X
  *                                      / \
- * Thread Y: --- Channel B (Event 1) --'   '-- Channel A (Event 2) --- Channel A (Event 3) ---&gt;
+ * Thread Y: --- Channel B (Event B1) --'   '-- Channel A (Event A2) --- Channel A (Event A3) ---&gt;
  * </pre>
- *
- * Please note that the events of different channels are independent from each
+ * As you see, the events from different channels are independent from each
  * other.  That is, an event of Channel B will not be blocked by an event of
  * Channel A and vice versa, unless the thread pool is exhausted.
  * <p>
- * If you want the events associated with the same channel to be executed
- * simultaneously, please use {@link MemoryAwareThreadPoolExecutor} instead.
+ * Also, it is guaranteed that the invocation will be made sequentially for the
+ * events from the same channel.  For example, the event A2 is never executed
+ * before the event A1 is finished.  (Although not recommended, if you want the
+ * events from the same channel to be executed simultaneously, please use
+ * {@link MemoryAwareThreadPoolExecutor} instead.)
+ * <p>
+ * However, it is not guaranteed that the invocation will be made by the same
+ * thread for the same channel.  The events from the same channel can be
+ * executed by different threads.  For example, the Event A2 is executed by the
+ * thread Y while the event A1 was executed by the thread X.
  *
  * <h3>Using a different key other than {@link Channel} to maintain event order</h3>
  * <p>

@@ -25,7 +25,6 @@ import java.util.concurrent.Executors;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
@@ -93,7 +92,6 @@ public class NioServerSocketShutdownTimeTest {
         assertTrue("Shutdown takes too long: " + shutdownTime + " ms", shutdownTime < 500);
     }
 
-    @ChannelPipelineCoverage("all")
     private static class DummyHandler extends SimpleChannelUpstreamHandler {
         volatile boolean connected;
         volatile boolean closed;

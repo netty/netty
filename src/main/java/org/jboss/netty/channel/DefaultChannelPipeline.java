@@ -15,9 +15,6 @@
  */
 package org.jboss.netty.channel;
 
-import static org.jboss.netty.channel.ChannelPipelineCoverage.*;
-
-import java.lang.annotation.AnnotationFormatError;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -698,35 +695,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         "handler must be either " +
                         ChannelUpstreamHandler.class.getName() + " or " +
                         ChannelDownstreamHandler.class.getName() + '.');
-            }
-
-
-            ChannelPipelineCoverage coverage = handler.getClass().getAnnotation(ChannelPipelineCoverage.class);
-            if (coverage == null) {
-                logger.warn(
-                        "Handler '" + handler.getClass().getName() +
-                        "' does not have a '" +
-                        ChannelPipelineCoverage.class.getSimpleName() +
-                        "' annotation with its class declaration. " +
-                        "It is strongly recommended to add the annotation " +
-                        "for a documentation purpose to tell if a single " +
-                        "handler instance can handle more than one pipeline " +
-                        "(\"" + ALL + "\") or not (\"" + ONE + "\")");
-            } else {
-                String coverageValue = coverage.value();
-                if (coverageValue == null) {
-                    throw new AnnotationFormatError(
-                            ChannelPipelineCoverage.class.getSimpleName() +
-                            " annotation value is undefined for type: " +
-                            handler.getClass().getName());
-                }
-
-                if (!coverageValue.equals(ALL) && !coverageValue.equals(ONE)) {
-                    throw new AnnotationFormatError(
-                            ChannelPipelineCoverage.class.getSimpleName() +
-                            " annotation value: " + coverageValue +
-                            " (must be either \"" + ALL + "\" or \"" + ONE + ")");
-                }
             }
 
             this.prev = prev;

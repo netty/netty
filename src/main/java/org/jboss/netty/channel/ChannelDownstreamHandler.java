@@ -57,15 +57,16 @@ package org.jboss.netty.channel;
  * You will also find various helper methods in {@link Channels} to be useful
  * to generate and send an artificial or manipulated event.
  *
+ * <h3>State management</h3>
+ *
+ * Please refer to {@link ChannelHandler}.
+ *
  * <h3>Thread safety</h3>
  * <p>
  * {@link #handleDownstream(ChannelHandlerContext, ChannelEvent) handleDownstream}
  * may be invoked by more than one thread simultaneously.  If the handler
  * accesses a shared resource or stores stateful information, you might need
  * proper synchronization in the handler implementation.
- * <p>
- * Also, please refer to the {@link ChannelPipelineCoverage} annotation to
- * understand the relationship between a handler and its stateful properties.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>

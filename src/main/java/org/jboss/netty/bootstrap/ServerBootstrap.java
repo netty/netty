@@ -34,7 +34,6 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
@@ -310,7 +309,6 @@ public class ServerBootstrap extends Bootstrap {
         return channel;
     }
 
-    @ChannelPipelineCoverage("one")
     private final class Binder extends SimpleChannelUpstreamHandler {
 
         private final SocketAddress localAddress;

@@ -29,7 +29,6 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.util.ExternalResourceReleasable;
 
@@ -116,12 +115,10 @@ public class Bootstrap implements ExternalResourceReleasable {
      * <p>
      * Please note that this method is a convenience method that works only
      * when <b>1)</b> you create only one channel from this bootstrap (e.g.
-     * one-time client-side or connectionless channel) or <b>2)</b> the
-     * {@link ChannelPipelineCoverage} of all handlers in the pipeline is
-     * {@code "all"}.  You have to use
+     * one-time client-side or connectionless channel) or <b>2)</b> all handlers
+     * in the pipeline is stateless.  You have to use
      * {@link #setPipelineFactory(ChannelPipelineFactory)} if <b>1)</b> your
-     * pipeline contains a {@link ChannelHandler} whose
-     * {@link ChannelPipelineCoverage} is {@code "one"} and <b>2)</b> one or
+     * pipeline contains a stateful {@link ChannelHandler} and <b>2)</b> one or
      * more channels are going to be created by this bootstrap (e.g. server-side
      * channels).
      *
@@ -152,12 +149,10 @@ public class Bootstrap implements ExternalResourceReleasable {
      * <p>
      * Please note that this method is a convenience method that works only
      * when <b>1)</b> you create only one channel from this bootstrap (e.g.
-     * one-time client-side or connectionless channel) or <b>2)</b> the
-     * {@link ChannelPipelineCoverage} of all handlers in the pipeline is
-     * {@code "all"}.  You have to use
+     * one-time client-side or connectionless channel) or <b>2)</b> all handlers
+     * in the pipeline is stateless.  You have to use
      * {@link #setPipelineFactory(ChannelPipelineFactory)} if <b>1)</b> your
-     * pipeline contains a {@link ChannelHandler} whose
-     * {@link ChannelPipelineCoverage} is {@code "one"} and <b>2)</b> one or
+     * pipeline contains a stateful {@link ChannelHandler} and <b>2)</b> one or
      * more channels are going to be created by this bootstrap (e.g. server-side
      * channels).
      */
@@ -176,12 +171,10 @@ public class Bootstrap implements ExternalResourceReleasable {
      * <p>
      * Please note that this method is a convenience method that works only
      * when <b>1)</b> you create only one channel from this bootstrap (e.g.
-     * one-time client-side or connectionless channel) or <b>2)</b> the
-     * {@link ChannelPipelineCoverage} of all handlers in the pipeline is
-     * {@code "all"}.  You have to use
+     * one-time client-side or connectionless channel) or <b>2)</b> all handlers
+     * in the pipeline is stateless.  You have to use
      * {@link #setPipelineFactory(ChannelPipelineFactory)} if <b>1)</b> your
-     * pipeline contains a {@link ChannelHandler} whose
-     * {@link ChannelPipelineCoverage} is {@code "one"} and <b>2)</b> one or
+     * pipeline contains a stateful {@link ChannelHandler} and <b>2)</b> one or
      * more channels are going to be created by this bootstrap (e.g. server-side
      * channels).
      *
@@ -204,12 +197,10 @@ public class Bootstrap implements ExternalResourceReleasable {
      * <p>
      * Please note that this method is a convenience method that works only
      * when <b>1)</b> you create only one channel from this bootstrap (e.g.
-     * one-time client-side or connectionless channel) or <b>2)</b> the
-     * {@link ChannelPipelineCoverage} of all handlers in the pipeline is
-     * {@code "all"}.  You have to use
+     * one-time client-side or connectionless channel) or <b>2)</b> all handlers
+     * in the pipeline is stateless.  You have to use
      * {@link #setPipelineFactory(ChannelPipelineFactory)} if <b>1)</b> your
-     * pipeline contains a {@link ChannelHandler} whose
-     * {@link ChannelPipelineCoverage} is {@code "one"} and <b>2)</b> one or
+     * pipeline contains a stateful {@link ChannelHandler} and <b>2)</b> one or
      * more channels are going to be created by this bootstrap (e.g. server-side
      * channels).
      *

@@ -29,12 +29,10 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
- * Handler for a server-side channel.  Please note that this handler's
- * {@link ChannelPipelineCoverage} annotation value is "one".  It means
- * this handler maintains some stateful information which is specific to
- * a certain channel.  Therefore, an instance of this handler can
- * cover only one ChannelPipeline and Channel pair.  You have to create
- * a new handler instance whenever you create a new channel and insert
+ * Handler for a server-side channel.  This handler maintains stateful
+ * information which is specific to a certain channel using member variables.
+ * Therefore, an instance of this handler can cover only one channel.  You have
+ * to create a new handler instance whenever you create a new channel and insert
  * this handler  to avoid a race condition.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

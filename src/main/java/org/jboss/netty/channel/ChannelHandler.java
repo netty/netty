@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.channel;
 
+import org.jboss.netty.bootstrap.Bootstrap;
+
 /**
  * Handles or intercepts a {@link ChannelEvent}, and sends a
  * {@link ChannelEvent} to the next handler in a {@link ChannelPipeline}.
@@ -42,6 +44,124 @@ package org.jboss.netty.channel;
  * context object, the {@link ChannelHandler} can pass events upstream or
  * downstream, modify the behavior of the pipeline, or store the information
  * (attachment) which is specific to the handler.
+ *
+ * <h3>State management</h3>
+ *
+ * A {@link ChannelHandler} often needs to store some stateful information.
+ * The simplest and recommended approach is to use member variables:
+ * <pre>
+ * public class DataServerHandler extends SimpleChannelHandler {
+ *
+ *     <b>private boolean loggedIn;</b>
+ *
+ *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ *         Channel ch = e.getChannel();
+ *         Object o = e.getMessage();
+ *         if (o instanceof LoginMessage) {
+ *             authenticate((LoginMessage) o);
+ *             <b>loggedIn = true;</b>
+ *         } else (o instanceof GetDataMessage) {
+ *             if (<b>loggedIn</b>) {
+ *                 ch.write(fetchSecret((GetDataMessage) o));
+ *             } else {
+ *                 fail();
+ *             }
+ *         }
+ *     }
+ *     ...
+ * }
+ * </pre>
+ * Because the handler instance has a state variable which is dedicated to
+ * one connection, you have to create a new handler instance for each new
+ * channel to avoid a race condition where a unauthenticated client can get
+ * the confidential information:
+ * <pre>
+ * // Create a new handler instance per channel.
+ * // See {@link Bootstrap#setPipelineFactory(ChannelPipelineFactory)}.
+ * public class DataServerPipelineFactory implements ChannelPipelineFactory {
+ *     public ChannelPipeline getPipeline() {
+ *         return Channels.pipeline(<b>new DataServerHandler()</b>);
+ *     }
+ * }
+ * </pre>
+ *
+ * <h4>Using an attachment</h4>
+ *
+ * Although it's recommended to use member variables to store the state of a
+ * handler, for some reason you might not want to create many handler instances.
+ * In such a case, you can use an <em>attachment</em> which is provided by
+ * {@link ChannelHandlerContext}:
+ * <pre>
+ * public class DataServerHandler extends SimpleChannelHandler {
+ *
+ *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ *         Channel ch = e.getChannel();
+ *         Object o = e.getMessage();
+ *         if (o instanceof LoginMessage) {
+ *             authenticate((LoginMessage) o);
+ *             <b>ctx.setAttachment(true)</b>;
+ *         } else (o instanceof GetDataMessage) {
+ *             if (<b>Boolean.TRUE.equals(ctx.getAttachment())</b>) {
+ *                 ch.write(fetchSecret((GetDataMessage) o));
+ *             } else {
+ *                 fail();
+ *             }
+ *         }
+ *     }
+ *     ...
+ * }
+ * </pre>
+ * Now that the state of the handler is stored as an attachment, you can add the
+ * same handler instance to different pipelines:
+ * <pre>
+ * public class DataServerPipelineFactory implements ChannelPipelineFactory {
+ *     private static final StatefulHandler SINGLETON = new DataServerHandler();
+ *     public ChannelPipeline getPipeline() {
+ *         return Channels.pipeline(<b>SINGLETON</b>);
+ *     }
+ * }
+ * </pre>
+ *
+ * <h4>Using a {@link ChannelLocal}</h4>
+ *
+ * If you have a state variable which needs to be accessed either from other
+ * handlers or outside handlers, you can use {@link ChannelLocal}:
+ * <pre>
+ * public final class DataServerState {
+ *
+ *     <b>public static final ChannelLocal&lt;Boolean&gt; loggedIn = new ChannelLocal&lt;Boolean&gt;() {
+ *         protected Boolean initialValue(Channel channel) {
+ *             return false;
+ *         }
+ *     }</b>
+ *     ...
+ * }
+ *
+ * public class DataServerHandler extends SimpleChannelHandler {
+ *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ *         Channel ch = e.getChannel();
+ *         Object o = e.getMessage();
+ *         if (o instanceof LoginMessage) {
+ *             authenticate((LoginMessage) o);
+ *             <b>DataServerState.loggedIn.set(ch, true);</b>
+ *         } else (o instanceof GetDataMessage) {
+ *             if (<b>DataServerState.loggedIn.get(ch)</b>) {
+ *                 ctx.getChannel().write(fetchSecret((GetDataMessage) o));
+ *             } else {
+ *                 fail();
+ *             }
+ *         }
+ *     }
+ *     ...
+ * }
+ *
+ * // Print the remote addresses of the authenticated clients:
+ * for (Channel ch: allClientChannels) {
+ *     if (<b>DataServerState.loggedIn.get(ch)</b>) {
+ *         System.out.println(ch.getRemoteAddress());
+ *     }
+ * }
+ * </pre>
  *
  * <h3>Additional resources worth reading</h3>
  * <p>

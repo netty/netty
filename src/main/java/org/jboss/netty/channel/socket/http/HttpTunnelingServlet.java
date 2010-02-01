@@ -35,7 +35,6 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -221,7 +220,6 @@ public class HttpTunnelingServlet extends HttpServlet {
         return buffer;
     }
 
-    @ChannelPipelineCoverage("one")
     private static final class OutboundConnectionHandler extends SimpleChannelUpstreamHandler {
 
         private final ServletOutputStream out;
