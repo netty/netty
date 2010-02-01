@@ -34,7 +34,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -48,6 +47,7 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
+import org.jboss.netty.util.internal.NonReentrantLock;
 
 /**
  * A class responsible for registering channels with {@link Selector}.
@@ -443,8 +443,8 @@ class NioDatagramWorker implements Runnable {
             return;
         }
 
-        final ReentrantLock writeLock = channel.writeLock;
-        if (writeLock.isHeldByCurrentThread() || !writeLock.tryLock()) {
+        final NonReentrantLock writeLock = channel.writeLock;
+        if (!writeLock.tryLock()) {
             rescheduleWrite(channel);
             return;
         }

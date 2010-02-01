@@ -15,8 +15,7 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.fireChannelInterestChanged;
-import static org.jboss.netty.channel.Channels.fireChannelOpen;
+import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -28,7 +27,6 @@ import java.nio.channels.DatagramChannel;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.AbstractChannel;
@@ -41,6 +39,7 @@ import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.socket.DatagramChannelConfig;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
+import org.jboss.netty.util.internal.NonReentrantLock;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 /**
@@ -76,9 +75,9 @@ class NioDatagramChannel extends AbstractChannel
     final Object interestOpsLock = new Object();
 
     /**
-     * Monitor object for synchronizing access to the {@link WriteBufferQueue}.
+     * Synchronizes access to the {@link WriteBufferQueue}.
      */
-    final ReentrantLock writeLock = new ReentrantLock();
+    final NonReentrantLock writeLock = new NonReentrantLock();
 
     /**
      * WriteTask that performs write operations.

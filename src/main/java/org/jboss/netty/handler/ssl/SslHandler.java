@@ -50,6 +50,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.NonReentrantLock;
 
 /**
  * Adds <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL
@@ -174,6 +175,7 @@ public class SslHandler extends FrameDecoder
     final Object ignoreClosedChannelExceptionLock = new Object();
     private final Queue<PendingWrite> pendingUnencryptedWrites = new LinkedList<PendingWrite>();
     private final Queue<MessageEvent> pendingEncryptedWrites = new LinkedList<MessageEvent>();
+    private final NonReentrantLock pendingEncryptedWritesLock = new NonReentrantLock();
 
     /**
      * Creates a new instance.
@@ -658,36 +660,35 @@ public class SslHandler extends FrameDecoder
     }
 
     private void offerEncryptedWriteRequest(MessageEvent encryptedWrite) {
-        boolean offered;
-        if (Thread.holdsLock(pendingEncryptedWrites)) {
-            offered = pendingEncryptedWrites.offer(encryptedWrite);
-        } else {
-            synchronized (pendingEncryptedWrites) {
-                offered = pendingEncryptedWrites.offer(encryptedWrite);
+        final boolean locked = pendingEncryptedWritesLock.tryLock();
+        try {
+            pendingEncryptedWrites.offer(encryptedWrite);
+        } finally {
+            if (locked) {
+                pendingEncryptedWritesLock.unlock();
             }
         }
-        assert offered;
     }
 
     private void flushPendingEncryptedWrites(ChannelHandlerContext ctx) {
         // Avoid possible dead lock and data integrity issue
         // which is caused by cross communication between more than one channel
         // in the same VM.
-        if (Thread.holdsLock(pendingEncryptedWrites)) {
+        if (!pendingEncryptedWritesLock.tryLock()) {
             return;
         }
 
-        synchronized (pendingEncryptedWrites) {
+        try {
             if (pendingEncryptedWrites.isEmpty()) {
                 return;
             }
-        }
 
-        synchronized (pendingEncryptedWrites) {
             MessageEvent e;
             while ((e = pendingEncryptedWrites.poll()) != null) {
                 ctx.sendDownstream(e);
             }
+        } finally {
+            pendingEncryptedWritesLock.unlock();
         }
     }
 
@@ -827,7 +828,7 @@ public class SslHandler extends FrameDecoder
                 // There is also a same issue between pendingEncryptedWrites
                 // and pendingUnencryptedWrites.
                 if (!Thread.holdsLock(handshakeLock) &&
-                    !Thread.holdsLock(pendingEncryptedWrites)) {
+                    !pendingEncryptedWritesLock.isHeldByCurrentThread()) {
                     wrap(ctx, channel);
                 }
             }
