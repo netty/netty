@@ -21,7 +21,6 @@ import static org.junit.Assert.*;
 
 import java.io.InputStream;
 
-import org.jboss.netty.handler.codec.serialization.SwitchableInputStream;
 import org.junit.Test;
 
 

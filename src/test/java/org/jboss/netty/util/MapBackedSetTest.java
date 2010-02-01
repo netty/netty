@@ -22,7 +22,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import org.jboss.netty.util.MapBackedSet;
 import org.junit.Test;
 
 
