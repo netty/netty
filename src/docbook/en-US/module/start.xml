@@ -73,15 +73,14 @@
     </para>
     <programlisting>package org.jboss.netty.example.discard;
 
-@&ChannelPipelineCoverage;("all")<co id="example.discard.co1"/>
-public class DiscardServerHandler extends &SimpleChannelHandler; {<co id="example.discard.co2"/>
+public class DiscardServerHandler extends &SimpleChannelHandler; {<co id="example.discard.co1"/>
 
     @Override
-    public void messageReceived(&ChannelHandlerContext; ctx, &MessageEvent; e) {<co id="example.discard.co3"/>
+    public void messageReceived(&ChannelHandlerContext; ctx, &MessageEvent; e) {<co id="example.discard.co2"/>
     }
 
     @Override
-    public void exceptionCaught(&ChannelHandlerContext; ctx, &ExceptionEvent; e) {<co id="example.discard.co4"/>
+    public void exceptionCaught(&ChannelHandlerContext; ctx, &ExceptionEvent; e) {<co id="example.discard.co3"/>
         e.getCause().printStackTrace();
         
         &Channel; ch = e.getChannel();
@@ -91,16 +90,6 @@ public class DiscardServerHandler extends &SimpleChannelHandler; {<co id="exampl
     <calloutlist>
       <callout arearefs="example.discard.co1">
         <para>
-          &ChannelPipelineCoverage; annotates a handler type to tell if the
-          handler instance of the annotated type can be shared by more than
-          one &Channel; (and its associated &ChannelPipeline;).
-          <classname>DiscardServerHandler</classname> does not manage any
-          stateful information, and therefore it is annotated with the value
-          <literal>"all"</literal>.
-        </para>
-      </callout>
-      <callout arearefs="example.discard.co2">
-        <para>
           <classname>DiscardServerHandler</classname> extends
           &SimpleChannelHandler;, which is an implementation of
           &ChannelHandler;.  &SimpleChannelHandler; provides various event
@@ -109,7 +98,7 @@ public class DiscardServerHandler extends &SimpleChannelHandler; {<co id="exampl
           the handler interfaces by yourself.
         </para>
       </callout>
-      <callout arearefs="example.discard.co3">
+      <callout arearefs="example.discard.co2">
         <para>
           We override the <methodname>messageReceived</methodname> event
           handler method here.  This method is called with a &MessageEvent;,
@@ -118,7 +107,7 @@ public class DiscardServerHandler extends &SimpleChannelHandler; {<co id="exampl
           nothing to implement the DISCARD protocol.
         </para>
       </callout>
-      <callout arearefs="example.discard.co4">
+      <callout arearefs="example.discard.co3">
         <para>
           <methodname>exceptionCaught</methodname> event handler method is
           called with an &ExceptionEvent; when an exception was raised by
@@ -154,14 +143,14 @@ public class DiscardServer {
 
         bootstrap.setPipelineFactory(new &ChannelPipelineFactory;() {<co id="example.discard2.co3" />
             public &ChannelPipeline; getPipeline() {
-                return &Channels;.pipeline(new DiscardServerHandler());<co id="example.discard2.co4" />
+                return &Channels;.pipeline(new DiscardServerHandler());
             }
         });
 
-        bootstrap.setOption("child.tcpNoDelay", true);<co id="example.discard2.co5" />
+        bootstrap.setOption("child.tcpNoDelay", true);<co id="example.discard2.co4" />
         bootstrap.setOption("child.keepAlive", true);
 
-        bootstrap.bind(new InetSocketAddress(8080));<co id="example.discard2.co6" />
+        bootstrap.bind(new InetSocketAddress(8080));<co id="example.discard2.co5" />
     }
 }</programlisting>
     <calloutlist>
@@ -201,13 +190,6 @@ public class DiscardServer {
       </callout>
       <callout arearefs="example.discard2.co4">
         <para>
-          Strictly speaking, we do not need to create a new
-          <classname>DiscardServerHandler</classname> instance for a new
-          connection because the handler is stateless.
-        </para>
-      </callout>
-      <callout arearefs="example.discard2.co5">
-        <para>
           You can also set the parameters which are specific to the &Channel;
           implementation.  We are writing a TCP/IP server, so we are allowed
           to set the socket options such as <literal>tcpNoDelay</literal> and
@@ -219,7 +201,7 @@ public class DiscardServer {
           <programlisting>bootstrap.setOption("reuseAddress", true);</programlisting>
         </para>
       </callout>
-      <callout arearefs="example.discard2.co6">
+      <callout arearefs="example.discard2.co5">
         <para>
           We are ready to go now.  What's left is to bind to the port and to
           start the server.  Here, we bind to the port <literal>8080</literal>
@@ -260,6 +242,7 @@ public void messageReceived(&ChannelHandlerContext; ctx, &MessageEvent; e) {
     &ChannelBuffer;<co id="example.discard3.co1"/> buf = (ChannelBuffer) e.getMessage();
     while(buf.readable()) {
         System.out.println((char) buf.readByte());
+        System.out.flush();
     }
 }</programlisting>
     <calloutlist>
@@ -353,7 +336,6 @@ public void messageReceived(&ChannelHandlerContext; ctx, &MessageEvent; e) {
     </para>
     <programlisting>package org.jboss.netty.example.time;
 
-@&ChannelPipelineCoverage;("all")
 public class TimeServerHandler extends &SimpleChannelHandler; {
 
     @Override
@@ -447,7 +429,7 @@ ch.close();</programlisting>
           method after the &ChannelFuture;, which was returned by the
           <methodname>write</methodname> method, notifies you when the write
           operation has been done.  Please note that, <methodname>close</methodname>
-          might not close the connection immediately, and it returns a
+          also might not close the connection immediately, and it returns a
           &ChannelFuture;.
         </para>
       </callout>
@@ -545,7 +527,6 @@ public class TimeClient {
 
 import java.util.Date;
 
-@&ChannelPipelineCoverage;("all")
 public class TimeClientHandler extends &SimpleChannelHandler; {
 
     @Override
@@ -633,17 +614,16 @@ import static org.jboss.netty.buffer.&ChannelBuffers;.*;
 
 import java.util.Date;
 
-@&ChannelPipelineCoverage;("one")<co id="example.time3.co1"/>
 public class TimeClientHandler extends &SimpleChannelHandler; {
 
-    private final &ChannelBuffer; buf = dynamicBuffer();<co id="example.time3.co2"/>
+    private final &ChannelBuffer; buf = dynamicBuffer();<co id="example.time3.co1"/>
 
     @Override
     public void messageReceived(&ChannelHandlerContext; ctx, &MessageEvent; e) {
         &ChannelBuffer; m = (&ChannelBuffer;) e.getMessage();
-        buf.writeBytes(m);<co id="example.time3.co3"/>
+        buf.writeBytes(m);<co id="example.time3.co2"/>
         
-        if (buf.readableBytes() &gt;= 4) {<co id="example.time3.co4"/>
+        if (buf.readableBytes() &gt;= 4) {<co id="example.time3.co3"/>
             long currentTimeMillis = buf.readInt() * 1000L;
             System.out.println(new Date(currentTimeMillis));
             e.getChannel().close();
@@ -659,29 +639,18 @@ public class TimeClientHandler extends &SimpleChannelHandler; {
       <calloutlist>
         <callout arearefs="example.time3.co1">
           <para>
-            This time, <literal>"one"</literal> was used as the value of the 
-            &ChannelPipelineCoverage; annotation.  It's because the new
-            <classname>TimeClientHandler</classname> has to maintain the internal
-            buffer and therefore cannot serve multiple &Channel;s.  If an
-            instance of <classname>TimeClientHandler</classname> is shared by
-            multiple &Channel;s (and consequently multiple &ChannelPipeline;s),
-            the content of the <varname>buf</varname> will be corrupted. 
-          </para>
-        </callout>
-        <callout arearefs="example.time3.co2">
-          <para>
             A <firstterm>dynamic buffer</firstterm> is a &ChannelBuffer; which
             increases its capacity on demand.  It's very useful when you don't
             know the length of the message.
           </para>
         </callout>
-        <callout arearefs="example.time3.co3">
+        <callout arearefs="example.time3.co2">
           <para>
             First, all received data should be cumulated into
             <varname>buf</varname>.
           </para>
         </callout>
-        <callout arearefs="example.time3.co4">
+        <callout arearefs="example.time3.co3">
           <para>
             And then, the handler must check if <varname>buf</varname> has enough
             data, 4 bytes in this example, and proceed to the actual business
@@ -729,35 +698,28 @@ public class TimeClientHandler extends &SimpleChannelHandler; {
       </para>
       <programlisting>package org.jboss.netty.example.time;
 
-<co id="example.time4.co1"/>
 public class TimeDecoder extends &FrameDecoder; {
 
     @Override
     protected Object decode(
-            &ChannelHandlerContext; ctx, &Channel; channel, &ChannelBuffer; buffer)<co id="example.time4.co2"/> {
+            &ChannelHandlerContext; ctx, &Channel; channel, &ChannelBuffer; buffer)<co id="example.time4.co1"/> {
             
         if (buffer.readableBytes() &lt; 4) {
-            return null; <co id="example.time4.co3"/>
+            return null; <co id="example.time4.co2"/>
         }
         
-        return buffer.readBytes(4);<co id="example.time4.co4"/>
+        return buffer.readBytes(4);<co id="example.time4.co3"/>
     }
 }</programlisting>
       <calloutlist>
         <callout arearefs="example.time4.co1">
-          <para>
-            There's no &ChannelPipelineCoverage; annotation this time because
-            &FrameDecoder; is already annotated with <literal>"one"</literal>.
-          </para>
-        </callout>
-        <callout arearefs="example.time4.co2">
           <para>
             &FrameDecoder; calls <methodname>decode</methodname> method with
             an internally maintained cumulative buffer whenever new data is
             received.
           </para>
         </callout>
-        <callout arearefs="example.time4.co3">
+        <callout arearefs="example.time4.co2">
           <para>
             If <literal>null</literal> is returned, it means there's not 
             enough data yet.  &FrameDecoder; will call again when there is a
@@ -926,27 +888,19 @@ public void channelConnected(&ChannelHandlerContext; ctx, &ChannelStateEvent; e)
     
 import static org.jboss.netty.buffer.&ChannelBuffers;.*;
 
-@&ChannelPipelineCoverage;("all")<co id="example.time6.co1"/>
 public class TimeEncoder extends &SimpleChannelHandler; {
 
-    public void writeRequested(&ChannelHandlerContext; ctx, &MessageEvent;<co id="example.time6.co2"/> e) {
+    public void writeRequested(&ChannelHandlerContext; ctx, &MessageEvent;<co id="example.time6.co1"/> e) {
         UnixTime time = (UnixTime) e.getMessage();
         
         &ChannelBuffer; buf = buffer(4);
         buf.writeInt(time.getValue());
         
-        &Channels;.write(ctx, e.getFuture(), buf);<co id="example.time6.co3"/>
+        &Channels;.write(ctx, e.getFuture(), buf);<co id="example.time6.co2"/>
     }
 }</programlisting>
     <calloutlist>
       <callout arearefs="example.time6.co1">
-        <para>
-          The &ChannelPipelineCoverage; value of an encoder is usually
-          <literal>"all"</literal> because this encoder is stateless.
-          Actually, most encoders are stateless.
-        </para>
-      </callout>
-      <callout arearefs="example.time6.co2">
         <para>
           An encoder overrides the <methodname>writeRequested</methodname>
           method to intercept a write request.  Please note that the
@@ -962,7 +916,7 @@ public class TimeEncoder extends &SimpleChannelHandler; {
           between a upstream event and a downstream event.
         </para>
       </callout>
-      <callout arearefs="example.time6.co3">
+      <callout arearefs="example.time6.co2">
         <para>
           Once done with transforming a POJO into a &ChannelBuffer;, you should
           forward the new buffer to the previous &ChannelDownstreamHandler; in
