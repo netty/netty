@@ -45,6 +45,7 @@ public class HttpResponseEncoder extends HttpMessageEncoder {
         buf.writeBytes(String.valueOf(response.getStatus().getCode()).getBytes("ASCII"));
         buf.writeByte(SP);
         buf.writeBytes(String.valueOf(response.getStatus().getReasonPhrase()).getBytes("ASCII"));
-        buf.writeBytes(CRLF);
+        buf.writeByte(CR);
+        buf.writeByte(LF);
     }
 }

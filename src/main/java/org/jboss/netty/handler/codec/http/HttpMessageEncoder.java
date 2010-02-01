@@ -73,7 +73,8 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
                     channel.getConfig().getBufferFactory());
             encodeInitialLine(header, m);
             encodeHeaders(header, m);
-            header.writeBytes(CRLF);
+            header.writeByte(CR);
+            header.writeByte(LF);
 
             ChannelBuffer content = m.getContent();
             if (!content.readable()) {
@@ -96,9 +97,11 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
                         ChannelBuffer trailer = ChannelBuffers.dynamicBuffer(
                                 channel.getConfig().getBufferFactory());
                         trailer.writeByte((byte) '0');
-                        trailer.writeBytes(CRLF);
+                        trailer.writeByte(CR);
+                        trailer.writeByte(LF);
                         encodeTrailingHeaders(trailer, (HttpChunkTrailer) chunk);
-                        trailer.writeBytes(CRLF);
+                        trailer.writeByte(CR);
+                        trailer.writeByte(LF);
                         return trailer;
                     } else {
                         return LAST_CHUNK.duplicate();
@@ -155,7 +158,8 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
         buf.writeByte(COLON);
         buf.writeByte(SP);
         buf.writeBytes(value.getBytes("ASCII"));
-        buf.writeBytes(CRLF);
+        buf.writeByte(CR);
+        buf.writeByte(LF);
     }
 
     protected abstract void encodeInitialLine(ChannelBuffer buf, HttpMessage message) throws Exception;
