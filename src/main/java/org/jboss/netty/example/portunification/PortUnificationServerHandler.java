@@ -78,7 +78,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
         } else if (isFactorial(magic1)) {
             switchToFactorial(ctx);
         } else {
-            // Unknown protocol discard everything and close the connection.
+            // Unknown protocol; discard everything and close the connection.
             buffer.skipBytes(buffer.readableBytes());
             ctx.getChannel().close();
             return null;
