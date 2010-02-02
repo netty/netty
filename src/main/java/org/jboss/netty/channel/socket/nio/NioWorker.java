@@ -483,14 +483,13 @@ class NioWorker implements Runnable {
     }
 
     private void rescheduleWrite(final NioSocketChannel channel) {
-        final Thread currentThread = Thread.currentThread();
         if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
             boolean offered = writeTaskQueue.offer(channel.writeTask);
             assert offered;
         }
 
         if (!(channel instanceof NioAcceptedSocketChannel) ||
-            ((NioAcceptedSocketChannel) channel).bossThread != currentThread) {
+            ((NioAcceptedSocketChannel) channel).bossThread != Thread.currentThread()) {
             final Selector workerSelector = selector;
             if (workerSelector != null) {
                 if (wakenUp.compareAndSet(false, true)) {
