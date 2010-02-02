@@ -22,6 +22,8 @@ package org.jboss.netty.channel;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
+ *
+ * @apiviz.has        org.jboss.netty.channel.ReceiveBufferSizePredictor oneway - - creates
  */
 public interface ReceiveBufferSizePredictorFactory {
 
