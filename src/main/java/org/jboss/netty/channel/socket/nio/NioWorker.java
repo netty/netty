@@ -372,6 +372,11 @@ class NioWorker implements Runnable {
             return;
         }
 
+        if (channel.writeTaskInTaskQueue.get() && Thread.currentThread() != thread) {
+            rescheduleWrite(channel);
+            return;
+        }
+
         final NonReentrantLock writeLock = channel.writeLock;
         if (!writeLock.tryLock()) {
             rescheduleWrite(channel);
