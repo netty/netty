@@ -28,6 +28,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.internal.ExecutorUtil;
