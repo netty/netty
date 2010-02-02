@@ -31,8 +31,8 @@ import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
  * {@link SocketChannelConfig} or use {@link #setOptions(Map)} to set the
  * transport-specific properties:
  * <pre>
- * Channel ch = ...;
- * SocketChannelConfig cfg = <strong>(SocketChannelConfig) ch.getConfig();</strong>
+ * {@link Channel} ch = ...;
+ * {@link SocketChannelConfig} cfg = <strong>({@link SocketChannelConfig}) ch.getConfig();</strong>
  * cfg.setTcpNoDelay(false);
  * </pre>
  *

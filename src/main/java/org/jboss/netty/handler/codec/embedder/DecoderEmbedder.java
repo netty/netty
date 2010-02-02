@@ -19,6 +19,7 @@ import static org.jboss.netty.channel.Channels.*;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.base64.Base64Decoder;
@@ -31,10 +32,10 @@ import org.jboss.netty.handler.codec.string.StringDecoder;
  * {@link StringDecoder} without setting up the {@link ChannelPipeline} and
  * other mock objects by yourself:
  * <pre>
- * ChannelBuffer base64Data = ChannelBuffer.copiedBuffer("Zm9vYmFy", CharsetUtil.US_ASCII);
+ * {@link ChannelBuffer} base64Data = {@link ChannelBuffers}.copiedBuffer("Zm9vYmFy", CharsetUtil.US_ASCII);
  *
- * DecoderEmbedder&lt;String&gt; embedder = new DecoderEmbedder&lt;String&gt;(
- *         new Base64Decoder(), new StringDecoder());
+ * {@link DecoderEmbedder}&lt;String&gt; embedder = new {@link DecoderEmbedder}&lt;String&gt;(
+ *         new {@link Base64Decoder}(), new {@link StringDecoder}());
  *
  * embedded.offer(base64Data);
  *

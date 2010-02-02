@@ -18,9 +18,15 @@ package org.jboss.netty.channel.group;
 import java.net.SocketAddress;
 import java.util.Set;
 
+import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ServerChannel;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.util.CharsetUtil;
 
 /**
  * A thread-safe {@link Set} that contains open {@link Channel}s and provides
@@ -36,13 +42,13 @@ import org.jboss.netty.channel.ServerChannel;
  * If you need to broadcast a message to more than one {@link Channel}, you can
  * add the {@link Channel}s associated with the recipients and call {@link ChannelGroup#write(Object)}:
  * <pre>
- * <strong>ChannelGroup recipients = new DefaultChannelGroup();</strong>
+ * <strong>{@link ChannelGroup} recipients = new {@link DefaultChannelGroup}();</strong>
  * recipients.add(channelA);
  * recipients.add(channelB);
  * ..
- * <strong>recipients.write(ChannelBuffers.copiedBuffer(
+ * <strong>recipients.write({@link ChannelBuffers}.copiedBuffer(
  *         "Service will shut down for maintenance in 5 minutes.",
- *         CharsetUtil.UTF_8));</strong>
+ *         {@link CharsetUtil}.UTF_8));</strong>
  * </pre>
  *
  * <h3>Simplify shutdown process with {@link ChannelGroup}</h3>
@@ -54,15 +60,15 @@ import org.jboss.netty.channel.ServerChannel;
  * This rule is very useful when you shut down a server in one shot:
  *
  * <pre>
- * <strong>ChannelGroup allChannels = new DefaultChannelGroup();</strong>
+ * <strong>{@link ChannelGroup} allChannels = new {@link DefaultChannelGroup}();</strong>
  *
  * public static void main(String[] args) throws Exception {
- *     ServerBootstrap b = new ServerBootstrap(..);
+ *     {@link ServerBootstrap} b = new {@link ServerBootstrap}(..);
  *     ...
  *
  *     // Start the server
  *     b.getPipeline().addLast("handler", new MyHandler());
- *     Channel serverChannel = b.bind(..);
+ *     {@link Channel} serverChannel = b.bind(..);
  *     <strong>allChannels.add(serverChannel);</strong>
  *
  *     ... Wait until the shutdown signal reception ...
@@ -72,8 +78,9 @@ import org.jboss.netty.channel.ServerChannel;
  *     b.releaseExternalResources();
  * }
  *
- * public class MyHandler extends SimpleChannelUpstreamHandler {
- *     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) {
+ * public class MyHandler extends {@link SimpleChannelUpstreamHandler} {
+ *     {@code @Override}
+ *     public void channelOpen({@link ChannelHandlerContext} ctx, {@link ChannelStateEvent} e) {
  *         // Add all open channels to the global group so that they are
  *         // closed on shutdown.
  *         <strong>allChannels.add(e.getChannel());</strong>

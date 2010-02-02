@@ -53,7 +53,7 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  * // Sending the event downstream (outbound)
  * void handleDownstream({@link ChannelHandlerContext} ctx, {@link ChannelEvent} e) throws Exception {
  *     ...
- *     ctx.sendDownstream(new MessageEvent(...));
+ *     ctx.sendDownstream(new {@link DownstreamMessageEvent}(...));
  *     ...
  * }
  * </pre>

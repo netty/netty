@@ -21,6 +21,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
@@ -46,7 +47,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
  * and then you can use a {@link String} instead of a {@link ChannelBuffer}
  * as a message:
  * <pre>
- * void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
  *     String msg = (String) e.getMessage();
  *     ch.write("Did you say '" + msg + "'?\n");
  * }

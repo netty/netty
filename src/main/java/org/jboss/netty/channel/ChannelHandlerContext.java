@@ -45,11 +45,12 @@ package org.jboss.netty.channel;
  * as how many times it is added to pipelines, regardless if it is added to the
  * same pipeline multiple times or added to different pipelines multiple times:
  * <pre>
- * public class FactorialHandler extends SimpleUpstreamChannelHandler {
+ * public class FactorialHandler extends {@link SimpleChannelHandler} {
  *
  *   // This handler will receive a sequence of increasing integers starting
  *   // from 1.
- *   public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt) {
+ *   {@code @Override}
+ *   public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} evt) {
  *     Integer a = (Integer) ctx.getAttachment();
  *     Integer b = (Integer) evt.getMessage();
  *
@@ -67,11 +68,11 @@ package org.jboss.netty.channel;
  * // calculated correctly 4 times once the two pipelines (p1 and p2) are active.
  * FactorialHandler fh = new FactorialHandler();
  *
- * ChannelPipeline p1 = Channels.pipeline();
+ * {@link ChannelPipeline} p1 = {@link Channels}.pipeline();
  * p1.addLast("f1", fh);
  * p1.addLast("f2", fh);
  *
- * ChannelPipeline p2 = Channels.pipeline();
+ * {@link ChannelPipeline} p2 = {@link Channels}.pipeline();
  * p2.addLast("f3", fh);
  * p2.addLast("f4", fh);
  * </pre>
@@ -81,16 +82,17 @@ package org.jboss.netty.channel;
  * You can keep the {@link ChannelHandlerContext} for later use, such as
  * triggering an event outside the handler methods, even from a different thread.
  * <pre>
- * public class MyHandler extends SimpleChannelHandler
- *                        implements LifeCycleAwareChannelHandler {
+ * public class MyHandler extends {@link SimpleChannelHandler}
+ *                        implements {@link LifeCycleAwareChannelHandler} {
  *
- *     private ChannelHandlerContex ctx;
+ *     private {@link ChannelHandlerContext} ctx;
  *
- *     public void beforeAdd(ChannelHandlerContext ctx) {
+ *     public void beforeAdd({@link ChannelHandlerContext} ctx) {
  *         this.ctx = ctx;
  *     }
  *
- *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt) {
+ *     {@code @Override}
+ *     public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} evt) {
  *         ctx.setAttachment(evt.getMessage());
  *     }
  *

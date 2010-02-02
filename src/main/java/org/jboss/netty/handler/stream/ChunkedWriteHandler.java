@@ -27,6 +27,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
@@ -46,16 +47,16 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * To use {@link ChunkedWriteHandler} in your application, you have to insert
  * a new {@link ChunkedWriteHandler} instance:
  * <pre>
- * ChannelPipeline p = ...;
- * p.addLast("streamer", <b>new ChunkedWriteHandler()</b>);
+ * {@link ChannelPipeline} p = ...;
+ * p.addLast("streamer", <b>new {@link ChunkedWriteHandler}()</b>);
  * p.addLast("handler", new MyHandler());
  * </pre>
  * Once inserted, you can write a {@link ChunkedInput} so that the
  * {@link ChunkedWriteHandler} can pick it up and fetch the content of the
  * stream chunk by chunk and write the fetched chunk downstream:
  * <pre>
- * Channel ch = ...;
- * ch.write(new ChunkedFile(new File("video.mkv"));
+ * {@link Channel} ch = ...;
+ * ch.write(new {@link ChunkedFile}(new File("video.mkv"));
  * </pre>
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

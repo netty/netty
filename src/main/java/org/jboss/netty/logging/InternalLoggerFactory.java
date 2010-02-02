@@ -24,7 +24,7 @@ import org.jboss.netty.util.internal.StackTraceSimplifier;
  * You can change it to your preferred logging framework before other Netty
  * classes are loaded:
  * <pre>
- * InternalLoggerFactory.setDefaultFactory(new {@link Log4JLoggerFactory}());
+ * {@link InternalLoggerFactory}.setDefaultFactory(new {@link Log4JLoggerFactory}());
  * </pre>
  * Please note that the new default factory is effective only for the classes
  * which were loaded after the default factory is changed.  Therefore,

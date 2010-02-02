@@ -36,12 +36,13 @@ import java.net.SocketAddress;
  * call {@code super.handleDownstream()} so that other handler methods are
  * invoked properly:
  * </p>
- * <pre>public class MyChannelHandler extends SimpleChannelDownstreamHandler {
+ * <pre>public class MyChannelHandler extends {@link SimpleChannelDownstreamHandler} {
  *
+ *     {@code @Override}
  *     public void handleDownstream({@link ChannelHandlerContext} ctx, {@link ChannelEvent} e) throws Exception {
  *
  *         // Log all channel state changes.
- *         if (e instanceof MessageEvent) {
+ *         if (e instanceof {@link MessageEvent}) {
  *             logger.info("Writing:: " + e);
  *         }
  *

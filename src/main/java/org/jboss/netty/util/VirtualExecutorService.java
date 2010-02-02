@@ -25,6 +25,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+
 
 /**
  * A delegating {@link ExecutorService} with its own termination management.
@@ -38,10 +41,10 @@ import java.util.concurrent.TimeUnit;
  *
  * <pre>
  * ExecutorService globalExecutor = ...;
- * ExecutorService virtualExecutor = new VirtualExecutorService(globalExecutor);
+ * ExecutorService virtualExecutor = new {@link VirtualExecutorService}(globalExecutor);
  *
- * ChannelFactory factory =
- *         new NioServerSocketChannelFactory(virtualExecutor, virtualExecutor);
+ * {@link ChannelFactory} factory =
+ *         new {@link NioServerSocketChannelFactory}(virtualExecutor, virtualExecutor);
  * ...
  *
  * // ChannelFactory.releaseExternalResources() shuts down the executor and

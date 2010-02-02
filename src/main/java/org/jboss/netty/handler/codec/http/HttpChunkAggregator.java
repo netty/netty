@@ -34,12 +34,12 @@ import org.jboss.netty.handler.codec.frame.TooLongFrameException;
  * care of HTTP messages whose transfer encoding is 'chunked'.  Insert this
  * handler after {@link HttpMessageDecoder} in the {@link ChannelPipeline}:
  * <pre>
- * ChannelPipeline p = ...;
+ * {@link ChannelPipeline} p = ...;
  * ...
- * p.addLast("decoder", new HttpRequestDecoder());
- * p.addLast("aggregator", <b>new HttpChunkAggregator(1048576)</b>);
+ * p.addLast("decoder", new {@link HttpRequestDecoder}());
+ * p.addLast("aggregator", <b>new {@link HttpChunkAggregator}(1048576)</b>);
  * ...
- * p.addLast("encoder", new HttpResponseEncoder());
+ * p.addLast("encoder", new {@link HttpResponseEncoder}());
  * p.addLast("handler", new HttpRequestHandler());
  * </pre>
  *

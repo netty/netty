@@ -31,7 +31,7 @@ import java.util.regex.Pattern;
  * Splits an HTTP query string into a path string and key-value parameter pairs.
  * This decoder is for one time use only.  Create a new instance for each URI:
  * <pre>
- * QueryStringDecoder decoder = new QueryStringDecoder("/hello?recipient=world");
+ * {@link QueryStringDecoder} decoder = new {@link QueryStringDecoder}("/hello?recipient=world");
  * assert decoder.getPath().equals("/hello");
  * assert decoder.getParameters().get("recipient").equals("world");
  * </pre>

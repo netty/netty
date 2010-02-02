@@ -75,11 +75,12 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  * DECODER IMPLEMENTATION
  * ======================
  *
- * public class IntegerHeaderFrameDecoder extends FrameDecoder {
+ * public class IntegerHeaderFrameDecoder extends {@link FrameDecoder} {
  *
- *   protected Object decode(ChannelHandlerContext ctx,
- *                           Channel channel,
- *                           ChannelBuffer buf) throws Exception {
+ *   {@code @Override}
+ *   protected Object decode({@link ChannelHandlerContext} ctx,
+ *                           {@link Channel channel},
+ *                           {@link ChannelBuffer} buf) throws Exception {
  *
  *     // Make sure if the length field was received.
  *     if (buf.readableBytes() &lt; 4) {
@@ -114,7 +115,7 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  *     }
  *
  *     // There's enough bytes in the buffer. Read it.
- *     ChannelBuffer frame = buf.readBytes(length);
+ *     {@link ChannelBuffer} frame = buf.readBytes(length);
  *
  *     // Successfully decoded a frame.  Return the decoded frame.
  *     return <strong>frame</strong>;
@@ -140,13 +141,16 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  * {@link ChannelPipeline#replace(ChannelHandler, String, ChannelHandler)}, but
  * some additional steps are required:
  * <pre>
- * public class FirstDecoder extends FrameDecoder {
+ * public class FirstDecoder extends {@link FrameDecoder} {
  *
  *     public FirstDecoder() {
  *         super(true); // Enable unfold
  *     }
  *
- *     protected Object decode(ChannelHandlerContext ctx, Channel ch, ChannelBuffer buf) {
+ *     {@code @Override}
+ *     protected Object decode({@link ChannelHandlerContext} ctx,
+ *                             {@link Channel} channel,
+ *                             {@link ChannelBuffer} buf) {
  *         ...
  *         // Decode the first message
  *         Object firstMessage = ...;

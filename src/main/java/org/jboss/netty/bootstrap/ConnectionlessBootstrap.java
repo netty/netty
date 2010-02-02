@@ -46,7 +46,7 @@ import org.jboss.netty.channel.Channels;
  * {@link #setOption(String, Object) Options} are used to configure a channel:
  *
  * <pre>
- * ConnectionlessBootstrap b = ...;
+ * {@link ConnectionlessBootstrap} b = ...;
  *
  * // Options for a new channel
  * b.setOption("localAddress", new {@link InetSocketAddress}(8080));
@@ -66,11 +66,11 @@ import org.jboss.netty.channel.Channels;
  * calling {@link #setPipelineFactory(ChannelPipelineFactory)}.
  *
  * <pre>
- * ConnectionlessBootstrap b = ...;
+ * {@link ConnectionlessBootstrap} b = ...;
  * b.setPipelineFactory(new MyPipelineFactory());
  *
  * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
- *   public ChannelPipeline getPipeline() throws Exception {
+ *   public {@link ChannelPipeline} getPipeline() throws Exception {
  *     // Create and configure a new pipeline for a new channel.
  *     {@link ChannelPipeline} p = {@link Channels}.pipeline();
  *     p.addLast("encoder", new EncodingHandler());
@@ -87,7 +87,7 @@ import org.jboss.netty.channel.Channels;
  * pipeline for each new channel:
  *
  * <pre>
- * ConnectionlessBootstrap b = ...;
+ * {@link ConnectionlessBootstrap} b = ...;
  * {@link ChannelPipeline} p = b.getPipeline();
  *
  * // Add handlers to the default pipeline.
@@ -143,7 +143,7 @@ public class ConnectionlessBootstrap extends Bootstrap {
      * similar to the following code:
      *
      * <pre>
-     * ServerBootstrap b = ...;
+     * {@link ConnectionlessBootstrap} b = ...;
      * b.connect(b.getOption("localAddress"));
      * </pre>
      *
@@ -213,7 +213,7 @@ public class ConnectionlessBootstrap extends Bootstrap {
      * automatically. This method is similar to the following code:
      *
      * <pre>
-     * ConnectionlessBootstrap b = ...;
+     * {@link ConnectionlessBootstrap} b = ...;
      * b.connect(b.getOption("remoteAddress"), b.getOption("localAddress"));
      * </pre>
      *
@@ -245,7 +245,7 @@ public class ConnectionlessBootstrap extends Bootstrap {
      * with the following code:
      *
      * <pre>
-     * ClientBootstrap b = ...;
+     * {@link ConnectionlessBootstrap} b = ...;
      * b.connect(remoteAddress, b.getOption("localAddress"));
      * </pre>
      *

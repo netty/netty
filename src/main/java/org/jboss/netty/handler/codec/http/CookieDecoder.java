@@ -29,9 +29,9 @@ import java.util.regex.Pattern;
  * the HTTP cookie version 0, 1, and 2.
  *
  * <pre>
- * HttpRequest req = ...;
+ * {@link HttpRequest} req = ...;
  * String value = req.getHeader("Cookie");
- * Set&lt;Cookie&gt; cookies = new CookieDecoder().decode(value);
+ * Set&lt;{@link Cookie}&gt; cookies = new {@link CookieDecoder}().decode(value);
  * </pre>
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

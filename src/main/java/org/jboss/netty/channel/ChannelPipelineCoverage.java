@@ -31,8 +31,6 @@ import org.jboss.netty.channel.ChannelHandler.Sharable;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
- *
- * @apiviz.landmark
  */
 @Inherited
 @Documented

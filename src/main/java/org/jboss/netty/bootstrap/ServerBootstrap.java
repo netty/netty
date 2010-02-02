@@ -73,7 +73,7 @@ import org.jboss.netty.channel.StaticChannelPipeline;
  * channel:
  *
  * <pre>
- * ServerBootstrap b = ...;
+ * {@link ServerBootstrap} b = ...;
  *
  * // Options for a parent channel
  * b.setOption("localAddress", new {@link InetSocketAddress}(8080));
@@ -108,11 +108,11 @@ import org.jboss.netty.channel.StaticChannelPipeline;
  * calling {@link #setPipelineFactory(ChannelPipelineFactory)}.
  *
  * <pre>
- * ConnectionlessBootstrap b = ...;
+ * {@link ServerBootstrap} b = ...;
  * b.setPipelineFactory(new MyPipelineFactory());
  *
  * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
- *   public ChannelPipeline getPipeline() throws Exception {
+ *   public {@link ChannelPipeline} getPipeline() throws Exception {
  *     // Create and configure a new pipeline for a new channel.
  *     {@link ChannelPipeline} p = {@link Channels}.pipeline();
  *     p.addLast("encoder", new EncodingHandler());
@@ -129,7 +129,7 @@ import org.jboss.netty.channel.StaticChannelPipeline;
  * pipeline for each new channel:
  *
  * <pre>
- * ConnectionlessBootstrap b = ...;
+ * {@link ServerBootstrap} b = ...;
  * {@link ChannelPipeline} p = b.getPipeline();
  *
  * // Add handlers to the default pipeline.
@@ -231,7 +231,7 @@ public class ServerBootstrap extends Bootstrap {
      * similar to the following code:
      *
      * <pre>
-     * ServerBootstrap b = ...;
+     * {@link ServerBootstrap} b = ...;
      * b.connect(b.getOption("localAddress"));
      * </pre>
      *

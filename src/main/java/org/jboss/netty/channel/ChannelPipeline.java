@@ -40,8 +40,8 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * {@link Channels} rather than calling an individual implementation's
  * constructor:
  * <pre>
- * import static org.jboss.netty.channel.Channels.*;
- * ChannelPipeline pipeline = pipeline(); // same with Channels.pipeline()
+ * import static org.jboss.netty.channel.{@link Channels}.*;
+ * {@link ChannelPipeline} pipeline = pipeline(); // same with Channels.pipeline()
  * </pre>
  *
  * <h3>How an event flows in a pipeline</h3>
@@ -112,7 +112,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * <p>
  * For example, let us assume that we created the following pipeline:
  * <pre>
- * ChannelPipeline p = Channels.pipeline();
+ * {@link ChannelPipeline} p = {@link Channels}.pipeline();
  * p.addLast("1", new UpstreamHandlerA());
  * p.addLast("2", new UpstreamHandlerB());
  * p.addLast("3", new DownstreamHandlerA());
@@ -159,7 +159,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * and it could be represented as shown in the following example:
  *
  * <pre>
- * ChannelPipeline pipeline = {@link Channels#pipeline() Channels.pipeline()};
+ * {@link ChannelPipeline} pipeline = {@link Channels#pipeline() Channels.pipeline()};
  * pipeline.addLast("decoder", new MyProtocolDecoder());
  * pipeline.addLast("encoder", new MyProtocolEncoder());
  * pipeline.addLast("executor", new {@link ExecutionHandler}(new {@link OrderedMemoryAwareThreadPoolExecutor}(16, 1048576, 1048576)));
@@ -179,8 +179,10 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * {@link ChannelPipeline}, the following code does not work as expected if
  * <tt>FirstHandler</tt> is the last handler in the pipeline:
  * <pre>
- * public class FirstHandler extends SimpleChannelUpstreamHandler {
- *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ * public class FirstHandler extends {@link SimpleChannelUpstreamHandler} {
+ *
+ *     {@code @Override}
+ *     public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
  *         // Remove this handler from the pipeline,
  *         ctx.getPipeline().remove(this);
  *         // And let SecondHandler handle the current event.

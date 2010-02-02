@@ -21,7 +21,9 @@ import java.util.concurrent.TimeUnit;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 
 /**
@@ -74,10 +76,11 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  * operation it is waiting for, which is a dead lock.
  * <pre>
  * // BAD - NEVER DO THIS
- * public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ * {@code @Override}
+ * public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
  *     if (e.getMessage() instanceof ShutdownMessage) {
- *         ChannelGroup allChannels = MyServer.getAllChannels();
- *         ChannelGroupFuture future = allChannels.close();
+ *         {@link ChannelGroup} allChannels = MyServer.getAllChannels();
+ *         {@link ChannelGroupFuture} future = allChannels.close();
  *         future.awaitUninterruptibly();
  *         // Perform post-shutdown operation
  *         // ...
@@ -85,12 +88,13 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  * }
  *
  * // GOOD
+ * {@code @Override}
  * public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
  *     if (e.getMessage() instanceof ShutdownMessage) {
- *         ChannelGroup allChannels = MyServer.getAllChannels();
- *         ChannelGroupFuture future = allChannels.close();
- *         future.addListener(new ChannelGroupFutureListener() {
- *             public void operationComplete(ChannelGroupFuture future) {
+ *         {@link ChannelGroup} allChannels = MyServer.getAllChannels();
+ *         {@link ChannelGroupFuture} future = allChannels.close();
+ *         future.addListener(new {@link ChannelGroupFutureListener}() {
+ *             public void operationComplete({@link ChannelGroupFuture} future) {
  *                 // Perform post-closure operation
  *                 // ...
  *             }

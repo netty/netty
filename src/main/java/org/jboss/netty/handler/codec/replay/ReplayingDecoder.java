@@ -42,11 +42,12 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * availability of the required bytes.  For example, the following
  * {@link FrameDecoder} implementation:
  * <pre>
- * public class IntegerHeaderFrameDecoder extends FrameDecoder {
+ * public class IntegerHeaderFrameDecoder extends {@link FrameDecoder} {
  *
- *   protected Object decode(ChannelHandlerContext ctx,
- *                           Channel channel,
- *                           ChannelBuffer buf) throws Exception {
+ *   {@code @Override}
+ *   protected Object decode({@link ChannelHandlerContext} ctx,
+ *                           {@link Channel} channel,
+ *                           {@link ChannelBuffer} buf) throws Exception {
  *
  *     if (buf.readableBytes() &lt; 4) {
  *        return <strong>null</strong>;
@@ -67,12 +68,12 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * is simplified like the following with {@link ReplayingDecoder}:
  * <pre>
  * public class IntegerHeaderFrameDecoder
- *      extends ReplayingDecoder&lt;VoidEnum&gt; {
+ *      extends {@link ReplayingDecoder}&lt;{@link VoidEnum}&gt; {
  *
- *   protected Object decode(ChannelHandlerContext ctx,
- *                           Channel channel,
- *                           ChannelBuffer buf,
- *                           VoidEnum state) throws Exception {
+ *   protected Object decode({@link ChannelHandlerContext} ctx,
+ *                           {@link Channel} channel,
+ *                           {@link ChannelBuffer} buf,
+ *                           {@link VoidEnum} state) throws Exception {
  *
  *     return buf.readBytes(buf.readInt());
  *   }
@@ -112,11 +113,12 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * <li>You must keep in mind that {@code decode(..)} method can be called many
  *     times to decode a single message.  For example, the following code will
  *     not work:
- * <pre> public class MyDecoder extends ReplayingDecoder&lt;VoidEnum&gt; {
+ * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link VoidEnum}&gt; {
  *
  *   private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
  *
- *   public Object decode(.., ChannelBuffer buffer, ..) throws Exception {
+ *   {@code @Override}
+ *   public Object decode(.., {@link ChannelBuffer} buffer, ..) throws Exception {
  *
  *     // A message contains 2 integers.
  *     values.offer(buffer.readInt());
@@ -131,11 +133,12 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  *      The correct implementation looks like the following, and you can also
  *      utilize the 'checkpoint' feature which is explained in detail in the
  *      next section.
- * <pre> public class MyDecoder extends ReplayingDecoder&lt;VoidEnum&gt; {
+ * <pre> public class MyDecoder extends {@link ReplayingDecoder}&lt;{@link VoidEnum}&gt; {
  *
  *   private final Queue&lt;Integer&gt; values = new LinkedList&lt;Integer&gt;();
  *
- *   public Object decode(.., ChannelBuffer buffer, ..) throws Exception {
+ *   {@code @Override}
+ *   public Object decode(.., {@link ChannelBuffer} buffer, ..) throws Exception {
  *
  *     // Revert the state of the variable that might have been changed
  *     // since the last partial decode.
@@ -177,7 +180,7 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * }
  *
  * public class IntegerHeaderFrameDecoder
- *      extends ReplayingDecoder&lt;<strong>MyDecoderState</strong>&gt; {
+ *      extends {@link ReplayingDecoder}&lt;<strong>MyDecoderState</strong>&gt; {
  *
  *   private int length;
  *
@@ -186,10 +189,11 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  *     <strong>super(MyDecoderState.READ_LENGTH);</strong>
  *   }
  *
- *   protected Object decode(ChannelHandlerContext ctx,
- *                           Channel channel,
- *                           ChannelBuffer buf,
- *                           MyDecoderState state) throws Exception {
+ *   {@code @Override}
+ *   protected Object decode({@link ChannelHandlerContext} ctx,
+ *                           {@link Channel} channel,
+ *                           {@link ChannelBuffer} buf,
+ *                           <b>MyDecoderState</b> state) throws Exception {
  *     switch (state) {
  *     case READ_LENGTH:
  *       length = buf.readInt();
@@ -210,15 +214,16 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * An alternative way to manage the decoder state is to manage it by yourself.
  * <pre>
  * public class IntegerHeaderFrameDecoder
- *      extends ReplayingDecoder&lt;<strong>VoidEnum</strong>&gt; {
+ *      extends {@link ReplayingDecoder}&lt;<strong>{@link VoidEnum}</strong>&gt; {
  *
  *   <strong>private boolean readLength;</strong>
  *   private int length;
  *
- *   protected Object decode(ChannelHandlerContext ctx,
- *                           Channel channel,
- *                           ChannelBuffer buf,
- *                           MyDecoderState state) throws Exception {
+ *   {@code @Override}
+ *   protected Object decode({@link ChannelHandlerContext} ctx,
+ *                           {@link Channel} channel,
+ *                           {@link ChannelBuffer} buf,
+ *                           {@link VoidEnum} state) throws Exception {
  *     if (!readLength) {
  *       length = buf.readInt();
  *       <strong>readLength = true;</strong>
@@ -244,13 +249,17 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * {@link ChannelPipeline#replace(ChannelHandler, String, ChannelHandler)}, but
  * some additional steps are required:
  * <pre>
- * public class FirstDecoder extends ReplayingDecoder&lt;VoidEnum&gt; {
+ * public class FirstDecoder extends {@link ReplayingDecoder}&lt;{@link VoidEnum}&gt; {
  *
  *     public FirstDecoder() {
  *         super(true); // Enable unfold
  *     }
  *
- *     protected Object decode(ChannelHandlerContext ctx, Channel ch, ChannelBuffer buf, VoidEnum state) {
+ *     {@code @Override}
+ *     protected Object decode({@link ChannelHandlerContext} ctx,
+ *                             {@link Channel} ch,
+ *                             {@link ChannelBuffer} buf,
+ *                             {@link VoidEnum} state) {
  *         ...
  *         // Decode the first message
  *         Object firstMessage = ...;

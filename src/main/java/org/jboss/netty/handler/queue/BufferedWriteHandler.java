@@ -18,6 +18,7 @@ package org.jboss.netty.handler.queue;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -56,14 +57,14 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * queue when the size of the queue increases.  You can implement your own
  * auto-flush strategy by extending this handler:
  * <pre>
- * public class AutoFlusher extends BufferedWriteHandler {
+ * public class AutoFlusher extends {@link BufferedWriteHandler} {
  *
  *     private final AtomicLong bufferSize = new AtomicLong();
  *
- *     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) {
+ *     public void writeRequested({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
  *         super.writeRequested(ctx, e);
  *
- *         ChannelBuffer data = (ChannelBuffer) e.getMessage();
+ *         {@link ChannelBuffer} data = ({@link ChannelBuffer}) e.getMessage();
  *         int newBufferSize = bufferSize.addAndGet(data.readableBytes());
  *
  *         // Flush the queue if it gets larger than 8KiB.

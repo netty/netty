@@ -23,6 +23,7 @@ import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.base64.Base64Encoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
+import org.jboss.netty.util.CharsetUtil;
 
 /**
  * A helper that wraps an encoder so that it can be used without doing actual
@@ -33,13 +34,13 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
  * <pre>
  * String data = "foobar";
  *
- * EncoderEmbedder&lt;ChannelBuffer&gt; embedder = new EncoderEmbedder&lt;ChannelBuffer&gt;(
- *         new Base64Encoder(), new StringEncoder());
+ * {@link EncoderEmbedder}&lt;{@link ChannelBuffer}&gt; embedder = new {@link EncoderEmbedder}&lt;{@link ChannelBuffer}&gt;(
+ *         new {@link Base64Encoder}(), new {@link StringEncoder}());
  *
  * embedded.offer(data);
  *
- * ChannelBuffer encoded = embedded.poll();
- * assert encoded.toString(CharsetUtil.US_ASCII).equals("Zm9vYmFy");
+ * {@link ChannelBuffer} encoded = embedded.poll();
+ * assert encoded.toString({@link CharsetUtil}.US_ASCII).equals("Zm9vYmFy");
  * </pre>
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

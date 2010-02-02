@@ -30,14 +30,14 @@ import java.util.TreeSet;
  * data structure are removed so that the encoder can start over.
  * <pre>
  * // Client-side example
- * HttpRequest req = ...;
- * CookieEncoder encoder = new CookieEncoder(false);
+ * {@link HttpRequest} req = ...;
+ * {@link CookieEncoder} encoder = new {@link CookieEncoder}(false);
  * encoder.addCookie("JSESSIONID", "1234");
  * res.setHeader("Cookie", encoder.encode());
  *
  * // Server-side example
- * HttpResponse res = ...;
- * CookieEncoder encoder = new CookieEncoder(true);
+ * {@link HttpResponse} res = ...;
+ * {@link CookieEncoder} encoder = new {@link CookieEncoder}(true);
  * encoder.addCookie("JSESSIONID", "1234");
  * res.setHeader("Set-Cookie", encoder.encode());
  * </pre>

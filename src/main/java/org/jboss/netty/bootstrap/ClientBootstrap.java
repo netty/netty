@@ -37,7 +37,7 @@ import org.jboss.netty.channel.Channels;
  * {@link #setOption(String, Object) Options} are used to configure a channel:
  *
  * <pre>
- * ClientBootstrap b = ...;
+ * {@link ClientBootstrap} b = ...;
  *
  * // Options for a new channel
  * b.setOption("remoteAddress", new {@link InetSocketAddress}("example.com", 8080));
@@ -57,11 +57,11 @@ import org.jboss.netty.channel.Channels;
  * calling {@link #setPipelineFactory(ChannelPipelineFactory)}.
  *
  * <pre>
- * ConnectionlessBootstrap b = ...;
+ * {@link ClientBootstrap} b = ...;
  * b.setPipelineFactory(new MyPipelineFactory());
  *
  * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
- *   public ChannelPipeline getPipeline() throws Exception {
+ *   public {@link ChannelPipeline} getPipeline() throws Exception {
  *     // Create and configure a new pipeline for a new channel.
  *     {@link ChannelPipeline} p = {@link Channels}.pipeline();
  *     p.addLast("encoder", new EncodingHandler());
@@ -78,7 +78,7 @@ import org.jboss.netty.channel.Channels;
  * pipeline for each new channel:
  *
  * <pre>
- * ConnectionlessBootstrap b = ...;
+ * {@link ClientBootstrap} b = ...;
  * {@link ChannelPipeline} p = b.getPipeline();
  *
  * // Add handlers to the default pipeline.
@@ -135,7 +135,7 @@ public class ClientBootstrap extends Bootstrap {
      * This method is similar to the following code:
      *
      * <pre>
-     * ClientBootstrap b = ...;
+     * {@link ClientBootstrap} b = ...;
      * b.connect(b.getOption("remoteAddress"), b.getOption("localAddress"));
      * </pre>
      *
@@ -166,7 +166,7 @@ public class ClientBootstrap extends Bootstrap {
      * automatically.  This method is identical with the following code:
      *
      * <pre>
-     * ClientBootstrap b = ...;
+     * {@link ClientBootstrap} b = ...;
      * b.connect(remoteAddress, b.getOption("localAddress"));
      * </pre>
      *

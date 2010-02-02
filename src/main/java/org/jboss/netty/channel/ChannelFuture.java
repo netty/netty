@@ -64,9 +64,10 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  * operation it is waiting for, which is a dead lock.
  * <pre>
  * // BAD - NEVER DO THIS
- * public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ * {@code @Override}
+ * public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
  *     if (e.getMessage() instanceof GoodByeMessage) {
- *         ChannelFuture future = e.getChannel().close();
+ *         {@link ChannelFuture} future = e.getChannel().close();
  *         future.awaitUninterruptibly();
  *         // Perform post-closure operation
  *         // ...
@@ -74,11 +75,12 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  * }
  *
  * // GOOD
- * public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ * {@code @Override}
+ * public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
  *     if (e.getMessage() instanceof GoodByeMessage) {
- *         ChannelFuture future = e.getChannel().close();
- *         future.addListener(new ChannelFutureListener() {
- *             public void operationComplete(ChannelFuture future) {
+ *         {@link ChannelFuture} future = e.getChannel().close();
+ *         future.addListener(new {@link ChannelFutureListener}() {
+ *             public void operationComplete({@link ChannelFuture} future) {
  *                 // Perform post-closure operation
  *                 // ...
  *             }

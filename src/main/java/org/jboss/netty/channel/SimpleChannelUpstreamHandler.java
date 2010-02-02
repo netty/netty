@@ -37,12 +37,13 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * call {@code super.handleUpstream()} so that other handler methods are invoked
  * properly:
  * </p>
- * <pre>public class MyChannelHandler extends SimpleChannelUpstreamHandler {
+ * <pre>public class MyChannelHandler extends {@link SimpleChannelUpstreamHandler} {
  *
+ *     {@code @Override}
  *     public void handleUpstream({@link ChannelHandlerContext} ctx, {@link ChannelEvent} e) throws Exception {
  *
  *         // Log all channel state changes.
- *         if (e instanceof ChannelStateEvent) {
+ *         if (e instanceof {@link ChannelStateEvent}) {
  *             logger.info("Channel state changed: " + e);
  *         }
  *

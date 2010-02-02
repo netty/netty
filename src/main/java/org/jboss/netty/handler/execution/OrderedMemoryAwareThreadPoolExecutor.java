@@ -69,11 +69,12 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  * For example, you can change the key to the remote IP of the peer:
  *
  * <pre>
- * public class RemoteAddressBasedOMATPE extends OrderedMemoryAwareThreadPoolExecutor {
+ * public class RemoteAddressBasedOMATPE extends {@link OrderedMemoryAwareThreadPoolExecutor} {
  *
  *     ... Constructors ...
  *
- *     protected ConcurrentMap&lt;Object, Executor&gt; new ChildExecutorMap() {
+ *     {@code @Override}
+ *     protected ConcurrentMap&lt;Object, Executor&gt; newChildExecutorMap() {
  *         // The default implementation returns a special ConcurrentMap that
  *         // uses identity comparison only (see {@link IdentityHashMap}).
  *         // Because SocketAddress does not work with identity comparison,
@@ -81,7 +82,7 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  *         return new ConcurrentHashMap&lt;Object, Executor&gt;
  *     }
  *
- *     protected Object getChildExecutorKey(ChannelEvent e) {
+ *     protected Object getChildExecutorKey({@link ChannelEvent} e) {
  *         // Use the IP of the remote peer as a key.
  *         return ((InetSocketAddress) e.getChannel().getRemoteAddress()).getAddress();
  *     }

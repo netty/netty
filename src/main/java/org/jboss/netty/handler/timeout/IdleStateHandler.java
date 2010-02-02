@@ -19,9 +19,13 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -65,28 +69,32 @@ import org.jboss.netty.util.TimerTask;
  * // An example that sends a ping message when there is no traffic
  * // (either inbound or outbound) for 30 seconds.
  *
- * public class MyPipelineFactory implements ChannelPipelineFactory {
+ * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
  *
- *     public MyPipelineFactory(Timer timer) {
+ *     private final {@link Timer} timer;
+ *
+ *     public MyPipelineFactory({@link Timer} timer) {
  *         this.timer = timer;
  *     }
  *
- *     public ChannelPipeline getPipeline() {
- *         return Channels.pipeline(
- *             new IdleStateHandler(timer, 30, 30, 0),
+ *     public {@link ChannelPipeline} getPipeline() {
+ *         return {@link Channels}.pipeline(
+ *             new {@link IdleStateHandler}(timer, 30, 30, 0),
  *             new MyHandler());
  *     }
  * }
  *
  * // Handler should handle the IdleStateEvent triggered by IdleStateHandler.
- * public class MyHandler extends IdleStateAwareChannelHandler {
- *     public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) {
+ * public class MyHandler extends {@link IdleStateAwareChannelHandler} {
+ *
+ *     {@code @Override}
+ *     public void channelIdle({@link ChannelHandlerContext} ctx, {@link IdleStateEvent} e) {
  *         ctx.getChannel().write(new PingMessage());
  *     }
  * }
  *
- * ServerBootstrap bootstrap = ...;
- * Timer timer = new HashedWheelTimer();
+ * {@link ServerBootstrap} bootstrap = ...;
+ * {@link Timer} timer = new {@link HashedWheelTimer}();
  * ...
  * bootstrap.setPipelineFactory(new MyPipelineFactory(timer));
  * ...

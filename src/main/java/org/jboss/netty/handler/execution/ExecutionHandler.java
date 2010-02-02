@@ -17,11 +17,14 @@ package org.jboss.netty.handler.execution;
 
 import java.util.concurrent.Executor;
 
+import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
@@ -44,16 +47,16 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  * correct event execution order and prevents an {@link OutOfMemoryError}
  * under load:
  * <pre>
- * public class DatabaseGatewayPipelineFactory implements ChannelPipelineFactory {
+ * public class DatabaseGatewayPipelineFactory implements {@link ChannelPipelineFactory} {
  *
- *     <b>private final ExecutionHandler executionHandler;</b>
+ *     <b>private final {@link ExecutionHandler} executionHandler;</b>
  *
- *     public DatabaseGatewayPipelineFactory(ExecutionHandler executionHandler) {
+ *     public DatabaseGatewayPipelineFactory({@link ExecutionHandler} executionHandler) {
  *         this.executionHandler = executionHandler;
  *     }
  *
- *     public ChannelPipeline getPipeline() {
- *         return Channels.pipeline(
+ *     public {@link ChannelPipeline} getPipeline() {
+ *         return {@link Channels}.pipeline(
  *                 new DatabaseGatewayProtocolEncoder(),
  *                 new DatabaseGatewayProtocolDecoder(),
  *                 <b>executionHandler, // Must be shared</b>
@@ -63,9 +66,9 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  * ...
  *
  * public static void main(String[] args) {
- *     ServerBootstrap bootstrap = ...;
+ *     {@link ServerBootstrap} bootstrap = ...;
  *     ...
- *     <b>ExecutionHandler executionHandler = new ExecutionHandler(
+ *     <b>{@link ExecutionHandler} executionHandler = new {@link ExecutionHandler}(
  *             new {@link OrderedMemoryAwareThreadPoolExecutor}(16, 1048576, 1048576))
  *     bootstrap.setPipelineFactory(
  *             new DatabaseGatewayPipelineFactory(executionHandler));</b>
@@ -78,7 +81,7 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  *     }
  *
  *     bootstrap.releaseExternalResources();
- *     <b>executionHandler.releaseEXternalResources();</b>
+ *     <b>executionHandler.releaseExternalResources();</b>
  * }
  * </pre>
  *

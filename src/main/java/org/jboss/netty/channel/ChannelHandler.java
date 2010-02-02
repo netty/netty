@@ -23,6 +23,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import org.jboss.netty.bootstrap.Bootstrap;
+import org.jboss.netty.channel.group.ChannelGroup;
 
 /**
  * Handles or intercepts a {@link ChannelEvent}, and sends a
@@ -57,12 +58,13 @@ import org.jboss.netty.bootstrap.Bootstrap;
  * A {@link ChannelHandler} often needs to store some stateful information.
  * The simplest and recommended approach is to use member variables:
  * <pre>
- * public class DataServerHandler extends SimpleChannelHandler {
+ * public class DataServerHandler extends {@link SimpleChannelHandler} {
  *
  *     <b>private boolean loggedIn;</b>
  *
- *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
- *         Channel ch = e.getChannel();
+ *     {@code @Override}
+ *     public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
+ *         {@link Channel} ch = e.getChannel();
  *         Object o = e.getMessage();
  *         if (o instanceof LoginMessage) {
  *             authenticate((LoginMessage) o);
@@ -85,9 +87,9 @@ import org.jboss.netty.bootstrap.Bootstrap;
  * <pre>
  * // Create a new handler instance per channel.
  * // See {@link Bootstrap#setPipelineFactory(ChannelPipelineFactory)}.
- * public class DataServerPipelineFactory implements ChannelPipelineFactory {
- *     public ChannelPipeline getPipeline() {
- *         return Channels.pipeline(<b>new DataServerHandler()</b>);
+ * public class DataServerPipelineFactory implements {@link ChannelPipelineFactory} {
+ *     public {@link ChannelPipeline} getPipeline() {
+ *         return {@link Channels}.pipeline(<b>new DataServerHandler()</b>);
  *     }
  * }
  * </pre>
@@ -99,11 +101,12 @@ import org.jboss.netty.bootstrap.Bootstrap;
  * In such a case, you can use an <em>attachment</em> which is provided by
  * {@link ChannelHandlerContext}:
  * <pre>
- * {@literal @Sharable}
- * public class DataServerHandler extends SimpleChannelHandler {
+ * {@code @Sharable}
+ * public class DataServerHandler extends {@link SimpleChannelHandler} {
  *
- *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
- *         Channel ch = e.getChannel();
+ *     {@code @Override}
+ *     public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
+ *         {@link Channel} ch = e.getChannel();
  *         Object o = e.getMessage();
  *         if (o instanceof LoginMessage) {
  *             authenticate((LoginMessage) o);
@@ -122,10 +125,12 @@ import org.jboss.netty.bootstrap.Bootstrap;
  * Now that the state of the handler is stored as an attachment, you can add the
  * same handler instance to different pipelines:
  * <pre>
- * public class DataServerPipelineFactory implements ChannelPipelineFactory {
- *     private static final StatefulHandler SINGLETON = new DataServerHandler();
- *     public ChannelPipeline getPipeline() {
- *         return Channels.pipeline(<b>SINGLETON</b>);
+ * public class DataServerPipelineFactory implements {@link ChannelPipelineFactory} {
+ *
+ *     private static final DataServerHandler <b>SHARED</b> = new DataServerHandler();
+ *
+ *     public {@link ChannelPipeline} getPipeline() {
+ *         return {@link Channels}.pipeline(<b>SHARED</b>);
  *     }
  * }
  * </pre>
@@ -137,7 +142,7 @@ import org.jboss.netty.bootstrap.Bootstrap;
  * <pre>
  * public final class DataServerState {
  *
- *     <b>public static final ChannelLocal&lt;Boolean&gt; loggedIn = new ChannelLocal&lt;Boolean&gt;() {
+ *     <b>public static final {@link ChannelLocal}&lt;Boolean&gt; loggedIn = new {@link ChannelLocal}&lt;Boolean&gt;() {
  *         protected Boolean initialValue(Channel channel) {
  *             return false;
  *         }
@@ -145,9 +150,11 @@ import org.jboss.netty.bootstrap.Bootstrap;
  *     ...
  * }
  *
- * {@literal @Sharable}
- * public class DataServerHandler extends SimpleChannelHandler {
- *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ * {@code @Sharable}
+ * public class DataServerHandler extends {@link SimpleChannelHandler} {
+ *
+ *     {@code @Override}
+ *     public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
  *         Channel ch = e.getChannel();
  *         Object o = e.getMessage();
  *         if (o instanceof LoginMessage) {
@@ -165,24 +172,25 @@ import org.jboss.netty.bootstrap.Bootstrap;
  * }
  *
  * // Print the remote addresses of the authenticated clients:
- * for (Channel ch: allClientChannels) {
+ * {@link ChannelGroup} allClientChannels = ...;
+ * for ({@link Channel} ch: allClientChannels) {
  *     if (<b>DataServerState.loggedIn.get(ch)</b>) {
  *         System.out.println(ch.getRemoteAddress());
  *     }
  * }
  * </pre>
  *
- * <h4>The {@literal @Sharable} annotation</h4>
+ * <h4>The {@code @Sharable} annotation</h4>
  * <p>
  * In the examples above which used an attachment or a {@link ChannelLocal},
- * you might have noticed the {@literal @Sharable} annotation.
+ * you might have noticed the {@code @Sharable} annotation.
  * <p>
- * If a {@link ChannelHandler} is annotated with the {@literal @Sharable}
+ * If a {@link ChannelHandler} is annotated with the {@code @Sharable}
  * annotation, it means you can create an instance of the handler just once and
  * add it to one or more {@link ChannelPipeline}s multiple times without
  * a race condition.
  * <p>
- * If this annotation is not specified, it is safe to create a new handler
+ * If this annotation is not specified, you have to create a new handler
  * instance every time you add it to a pipeline because it has unshared state
  * such as member variables.
  * <p>
@@ -210,7 +218,7 @@ public interface ChannelHandler {
      * can be added to one or more {@link ChannelPipeline}s multiple times
      * without a race condition.
      * <p>
-     * If this annotation is not specified, it is safe to create a new handler
+     * If this annotation is not specified, you have to create a new handler
      * instance every time you add it to a pipeline because it has unshared
      * state such as member variables.
      * <p>

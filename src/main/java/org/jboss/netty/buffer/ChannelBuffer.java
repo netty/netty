@@ -46,7 +46,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * its internal implementation:
  *
  * <pre>
- * ChannelBuffer buffer = ...;
+ * {@link ChannelBuffer} buffer = ...;
  * for (int i = 0; i &lt; buffer.capacity(); i ++</strong>) {
  *     byte b = array.getByte(i);
  *     System.out.println((char) b);
@@ -85,7 +85,7 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * <pre>
  * // Iterates the readable bytes of a buffer.
- * ChannelBuffer buffer = ...;
+ * {@link ChannelBuffer} buffer = ...;
  * while (buffer.readable()) {
  *     System.out.println(buffer.readByte());
  * }
@@ -108,7 +108,7 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * <pre>
  * // Fills the writable bytes of a buffer with random integers.
- * ChannelBuffer buffer = ...;
+ * {@link ChannelBuffer} buffer = ...;
  * while (buffer.writableBytes() >= 4) {
  *     buffer.writeInt(random.nextInt());
  * }
@@ -296,7 +296,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * <pre>
      * // Create a buffer whose readerIndex, writerIndex and capacity are
      * // 0, 0 and 8 respectively.
-     * ChannelBuffer buf = ChannelBuffers.buffer(8);
+     * {@link ChannelBuffer} buf = {@link ChannelBuffers}.buffer(8);
      *
      * // IndexOutOfBoundsException is thrown because the specified
      * // readerIndex (2) cannot be greater than the current writerIndex (0).
@@ -309,7 +309,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * <pre>
      * // Create a buffer whose readerIndex, writerIndex and capacity are
      * // 0, 8 and 8 respectively.
-     * ChannelBuffer buf = ChannelBuffers.wrappedBuffer(new byte[8]);
+     * {@link ChannelBuffer} buf = {@link ChannelBuffers}.wrappedBuffer(new byte[8]);
      *
      * // readerIndex becomes 8.
      * buf.readLong();

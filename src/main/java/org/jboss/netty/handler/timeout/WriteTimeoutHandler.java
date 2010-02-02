@@ -19,9 +19,12 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelDownstreamHandler;
@@ -37,22 +40,24 @@ import org.jboss.netty.util.TimerTask;
  * certain period of time.
  *
  * <pre>
- * public class MyPipelineFactory implements ChannelPipelineFactory {
+ * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
  *
- *     public MyPipelineFactory(Timer timer) {
+ *     private final {@link Timer} timer;
+ *
+ *     public MyPipelineFactory({@link Timer} timer) {
  *         this.timer = timer;
  *     }
  *
- *     public ChannelPipeline getPipeline() {
+ *     public {@link ChannelPipeline} getPipeline() {
  *         // An example configuration that implements 30-second write timeout:
- *         return Channels.pipeline(
- *             new WriteTimeoutHandler(timer, 30),
+ *         return {@link Channels}.pipeline(
+ *             new {@link WriteTimeoutHandler}(timer, 30),
  *             new MyHandler());
  *     }
  * }
  *
- * ServerBootstrap bootstrap = ...;
- * Timer timer = new HashedWheelTimer();
+ * {@link ServerBootstrap} bootstrap = ...;
+ * {@link Timer} timer = new {@link HashedWheelTimer}();
  * ...
  * bootstrap.setPipelineFactory(new MyPipelineFactory(timer));
  * ...

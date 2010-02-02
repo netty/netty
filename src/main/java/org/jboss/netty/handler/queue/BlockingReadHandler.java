@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -46,22 +47,22 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * <p>
  * Here is an example that demonstrates the usage:
  * <pre>
- * BlockingReadHandler&lt;ChannelBuffer&gt; reader =
- *         new BlockingReadHandler&lt;ChannelBuffer&gt;();
- * ChannelPipeline p = ...;
+ * {@link BlockingReadHandler}&lt;{@link ChannelBuffer}&gt; reader =
+ *         new {@link BlockingReadHandler}&lt;{@link ChannelBuffer}&gt;();
+ * {@link ChannelPipeline} p = ...;
  * p.addLast("reader", reader);
  *
  * ...
  *
  * // Read a message from a channel in a blocking manner.
  * try {
- *     ChannelBuffer buf = reader.read(60, TimeUnit.SECONDS);
+ *     {@link ChannelBuffer} buf = reader.read(60, TimeUnit.SECONDS);
  *     if (buf == null) {
  *         // Connection closed.
  *     } else {
  *         // Handle the received message here.
  *     }
- * } catch (BlockingReadTimeoutException e) {
+ * } catch ({@link BlockingReadTimeoutException} e) {
  *     // Read timed out.
  * } catch (IOException e) {
  *     // Other read errors

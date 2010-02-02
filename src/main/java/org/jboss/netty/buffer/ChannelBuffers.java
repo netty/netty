@@ -37,13 +37,13 @@ import org.jboss.netty.util.CharsetUtil;
  * This classes is intended to be used with Java 5 static import statement:
  *
  * <pre>
- * import static org.jboss.netty.buffer.ChannelBuffers.*;
+ * import static org.jboss.netty.buffer.{@link ChannelBuffers}.*;
  *
- * ChannelBuffer heapBuffer = buffer(128);
- * ChannelBuffer directBuffer = directBuffer(256);
- * ChannelBuffer dynamicBuffer = dynamicBuffer(512);
- * ChannelBuffer wrappedBuffer = wrappedBuffer(new byte[128], new byte[256]);
- * ChannelBuffer copiedBuffer = copiedBuffer(ByteBuffer.allocate(128));
+ * {@link ChannelBuffer} heapBuffer    = buffer(128);
+ * {@link ChannelBuffer} directBuffer  = directBuffer(256);
+ * {@link ChannelBuffer} dynamicBuffer = dynamicBuffer(512);
+ * {@link ChannelBuffer} wrappedBuffer = wrappedBuffer(new byte[128], new byte[256]);
+ * {@link ChannelBuffer} copiedBuffe r = copiedBuffer({@link ByteBuffer}.allocate(128));
  * </pre>
  *
  * <h3>Allocating a new buffer</h3>

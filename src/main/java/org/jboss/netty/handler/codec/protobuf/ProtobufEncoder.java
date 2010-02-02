@@ -21,6 +21,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.LengthFieldPrepender;
@@ -48,7 +49,7 @@ import com.google.protobuf.Message;
  * and then you can use a {@code MyMessage} instead of a {@link ChannelBuffer}
  * as a message:
  * <pre>
- * void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+ * void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} e) {
  *     MyMessage req = (MyMessage) e.getMessage();
  *     MyMessage res = MyMessage.newBuilder().setText(
  *                               "Did you say '" + req.getText() + "'?").build();

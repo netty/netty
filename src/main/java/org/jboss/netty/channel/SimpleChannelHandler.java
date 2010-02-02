@@ -46,22 +46,24 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * call {@code super.handleUpstream()} or {@code super.handleDownstream()} so
  * that other handler methods are invoked properly:
  * </p>
- * <pre>public class MyChannelHandler extends SimpleChannelHandler {
+ * <pre>public class MyChannelHandler extends {@link SimpleChannelHandler} {
  *
+ *     {@code @Override}
  *     public void handleUpstream({@link ChannelHandlerContext} ctx, {@link ChannelEvent} e) throws Exception {
  *
  *         // Log all channel state changes.
- *         if (e instanceof ChannelStateEvent) {
+ *         if (e instanceof {@link ChannelStateEvent}) {
  *             logger.info("Channel state changed: " + e);
  *         }
  *
  *         <strong>super.handleUpstream(ctx, e);</strong>
  *     }
  *
+ *     {@code @Override}
  *     public void handleDownstream({@link ChannelHandlerContext} ctx, {@link ChannelEvent} e) throws Exception {
  *
  *         // Log all channel state changes.
- *         if (e instanceof MessageEvent) {
+ *         if (e instanceof {@link MessageEvent}) {
  *             logger.info("Writing:: " + e);
  *         }
  *

@@ -47,7 +47,7 @@ package org.jboss.netty.channel;
  * // Sending the event upstream (inbound)
  * void handleDownstream({@link ChannelHandlerContext} ctx, {@link ChannelEvent} e) throws Exception {
  *     ...
- *     ctx.sendUpstream(new DefaultChannelStateEvent(...));
+ *     ctx.sendUpstream(new {@link UpstreamChannelStateEvent}(...));
  *     ...
  * }
  * </pre>
