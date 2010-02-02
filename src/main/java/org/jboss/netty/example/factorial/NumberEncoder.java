@@ -24,8 +24,9 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
- * Encodes a {@link Number} into the binary representation with a 32-bit length
- * prefix.  For example, 42 will be encoded to { 0, 0, 0, 1, 42 }.
+ * Encodes a {@link Number} into the binary representation prepended with
+ * a magic number ('F' or 0x46) and a 32-bit length prefix.  For example, 42
+ * will be encoded to { 'F', 0, 0, 0, 1, 42 }.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
@@ -55,10 +56,11 @@ public class NumberEncoder extends OneToOneEncoder {
         byte[] data = v.toByteArray();
         int dataLength = data.length;
 
-        // Construct a message with a length header.
+        // Construct a message.
         ChannelBuffer buf = ChannelBuffers.dynamicBuffer();
-        buf.writeInt(dataLength);
-        buf.writeBytes(data);
+        buf.writeByte((byte) 'F'); // magic number
+        buf.writeInt(dataLength);  // data length
+        buf.writeBytes(data);      // data
 
         // Return the constructed message.
         return buf;

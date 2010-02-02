@@ -20,12 +20,14 @@ import java.math.BigInteger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.handler.codec.frame.CorruptedFrameException;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 
 /**
- * Decodes the binary representation of a {@link BigInteger} with 32-bit
- * integer length prefix into a Java {@link BigInteger} instance.  For example,
- * { 0, 0, 0, 1, 42 } will be decoded into new BigInteger("42").
+ * Decodes the binary representation of a {@link BigInteger} prepended
+ * with a magic number ('F' or 0x46) and a 32-bit integer length prefix into a
+ * {@link BigInteger} instance.  For example, { 'F', 0, 0, 0, 1, 42 } will be
+ * decoded into new BigInteger("42").
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
@@ -38,19 +40,26 @@ public class BigIntegerDecoder extends FrameDecoder {
     protected Object decode(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
         // Wait until the length prefix is available.
-        if (buffer.readableBytes() < 4) {
+        if (buffer.readableBytes() < 5) {
             return null;
         }
 
-        int dataLength = buffer.getInt(buffer.readerIndex());
+        buffer.markReaderIndex();
+
+        // Check the magic number.
+        int magicNumber = buffer.readUnsignedByte();
+        if (magicNumber != 'F') {
+            buffer.resetReaderIndex();
+            throw new CorruptedFrameException(
+                    "Invalid magic number: " + magicNumber);
+        }
 
         // Wait until the whole data is available.
-        if (buffer.readableBytes() < dataLength + 4) {
+        int dataLength = buffer.readInt();
+        if (buffer.readableBytes() < dataLength) {
+            buffer.resetReaderIndex();
             return null;
         }
-
-        // Skip the length field because we know it already.
-        buffer.skipBytes(4);
 
         // Convert the received data into a new BigInteger.
         byte[] decoded = new byte[dataLength];
