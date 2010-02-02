@@ -28,7 +28,6 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
@@ -181,7 +180,6 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
         return productQueue.size();
     }
 
-    @ChannelPipelineCoverage("all")
     private final class EmbeddedChannelSink implements ChannelSink, ChannelUpstreamHandler {
         EmbeddedChannelSink() {
             super();

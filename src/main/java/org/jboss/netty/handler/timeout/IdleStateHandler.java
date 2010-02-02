@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
@@ -65,10 +64,19 @@ import org.jboss.netty.util.TimerTask;
  * <pre>
  * // An example that sends a ping message when there is no traffic
  * // (either inbound or outbound) for 30 seconds.
- * ChannelPipeline p = ...;
- * Timer timer = new HashedWheelTimer();
- * p.addLast("timeout", new IdleStateHandler(timer, 30, 30, 0));
- * p.addLast("handler", new MyHandler());
+ *
+ * public class MyPipelineFactory implements ChannelPipelineFactory {
+ *
+ *     public MyPipelineFactory(Timer timer) {
+ *         this.timer = timer;
+ *     }
+ *
+ *     public ChannelPipeline getPipeline() {
+ *         return Channels.pipeline(
+ *             new IdleStateHandler(timer, 30, 30, 0),
+ *             new MyHandler());
+ *     }
+ * }
  *
  * // Handler should handle the IdleStateEvent triggered by IdleStateHandler.
  * public class MyHandler extends IdleStateAwareChannelHandler {
@@ -77,6 +85,11 @@ import org.jboss.netty.util.TimerTask;
  *     }
  * }
  *
+ * ServerBootstrap bootstrap = ...;
+ * Timer timer = new HashedWheelTimer();
+ * ...
+ * bootstrap.setPipelineFactory(new MyPipelineFactory(timer));
+ * ...
  * // To shut down, call {@link #releaseExternalResources()} or {@link Timer#stop()}.
  * </pre>
  *
@@ -91,7 +104,6 @@ import org.jboss.netty.util.TimerTask;
  * @apiviz.uses org.jboss.netty.util.HashedWheelTimer
  * @apiviz.has org.jboss.netty.handler.timeout.IdleStateEvent oneway - - triggers
  */
-@ChannelPipelineCoverage("one")
 public class IdleStateHandler extends SimpleChannelUpstreamHandler
                              implements LifeCycleAwareChannelHandler,
                                         ExternalResourceReleasable {

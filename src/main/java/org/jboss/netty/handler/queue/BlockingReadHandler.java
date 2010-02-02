@@ -23,7 +23,6 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -75,7 +74,6 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("one")
 public class BlockingReadHandler<E> extends SimpleChannelUpstreamHandler {
 
     private final BlockingQueue<ChannelEvent> queue;

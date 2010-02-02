@@ -20,7 +20,6 @@ import static org.jboss.netty.channel.Channels.*;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
@@ -37,14 +36,26 @@ import org.jboss.netty.util.TimerTask;
  * period of time.
  *
  * <pre>
- * // An example configuration that implements 30-second read timeout:
- * ChannelPipeline p = ...;
- * Timer timer = new HashedWheelTimer();
- * p.addLast("timeout", new ReadTimeoutHandler(timer, 30));
- * p.addLast("handler", new MyHandler());
+ * public class MyPipelineFactory implements ChannelPipelineFactory {
  *
+ *     public MyPipelineFactory(Timer timer) {
+ *         this.timer = timer;
+ *     }
+ *
+ *     public ChannelPipeline getPipeline() {
+ *         // An example configuration that implements 30-second read timeout:
+ *         return Channels.pipeline(
+ *             new ReadTimeoutHandler(timer, 30),
+ *             new MyHandler());
+ *     }
+ * }
+ *
+ * ServerBootstrap bootstrap = ...;
+ * Timer timer = new HashedWheelTimer();
+ * ...
+ * bootstrap.setPipelineFactory(new MyPipelineFactory(timer));
+ * ...
  * // To shut down, call {@link #releaseExternalResources()} or {@link Timer#stop()}.
- * </pre>
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
@@ -57,7 +68,6 @@ import org.jboss.netty.util.TimerTask;
  * @apiviz.uses org.jboss.netty.util.HashedWheelTimer
  * @apiviz.has org.jboss.netty.handler.timeout.TimeoutException oneway - - raises
  */
-@ChannelPipelineCoverage("one")
 public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
                                 implements LifeCycleAwareChannelHandler,
                                            ExternalResourceReleasable {

@@ -22,10 +22,10 @@ import java.util.concurrent.TimeUnit;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelDownstreamHandler;
+import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timeout;
@@ -37,12 +37,25 @@ import org.jboss.netty.util.TimerTask;
  * certain period of time.
  *
  * <pre>
- * // An example configuration that implements 30-second write timeout:
- * ChannelPipeline p = ...;
- * Timer timer = new HashedWheelTimer();
- * p.addLast("timeout", new WriteTimeoutHandler(timer, 30));
- * p.addLast("handler", new MyHandler());
+ * public class MyPipelineFactory implements ChannelPipelineFactory {
  *
+ *     public MyPipelineFactory(Timer timer) {
+ *         this.timer = timer;
+ *     }
+ *
+ *     public ChannelPipeline getPipeline() {
+ *         // An example configuration that implements 30-second write timeout:
+ *         return Channels.pipeline(
+ *             new WriteTimeoutHandler(timer, 30),
+ *             new MyHandler());
+ *     }
+ * }
+ *
+ * ServerBootstrap bootstrap = ...;
+ * Timer timer = new HashedWheelTimer();
+ * ...
+ * bootstrap.setPipelineFactory(new MyPipelineFactory(timer));
+ * ...
  * // To shut down, call {@link #releaseExternalResources()} or {@link Timer#stop()}.
  * </pre>
  *
@@ -57,7 +70,7 @@ import org.jboss.netty.util.TimerTask;
  * @apiviz.uses org.jboss.netty.util.HashedWheelTimer
  * @apiviz.has org.jboss.netty.handler.timeout.TimeoutException oneway - - raises
  */
-@ChannelPipelineCoverage("all")
+@Sharable
 public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
                                  implements ExternalResourceReleasable {
 

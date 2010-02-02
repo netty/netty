@@ -30,7 +30,6 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -52,7 +51,6 @@ import org.jboss.netty.util.CharsetUtil;
  *
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("one")
 public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
 
     private volatile HttpRequest request;

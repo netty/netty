@@ -21,7 +21,6 @@ import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
@@ -53,7 +52,6 @@ public class LocalServerPipelineFactory implements ChannelPipelineFactory {
         return pipeline;
     }
 
-    @ChannelPipelineCoverage("all")
     static class EchoCloseServerHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
         public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
                 throws Exception {

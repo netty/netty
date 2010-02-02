@@ -24,7 +24,6 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -283,7 +282,6 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.codec.replay.UnreplayableOperationException oneway - - throws
  */
-@ChannelPipelineCoverage("one")
 public abstract class ReplayingDecoder<T extends Enum<T>>
         extends SimpleChannelUpstreamHandler {
 

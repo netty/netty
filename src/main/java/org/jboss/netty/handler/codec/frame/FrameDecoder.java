@@ -23,7 +23,6 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
@@ -176,7 +175,6 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  *
  * @apiviz.landmark
  */
-@ChannelPipelineCoverage("one")
 public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
 
     private final boolean unfold;

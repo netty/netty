@@ -24,7 +24,6 @@ import java.util.logging.Logger;
 
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -42,7 +41,6 @@ import org.jboss.netty.example.localtime.LocalTimeProtocol.Locations;
  *
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("all")
 public class LocalTimeServerHandler extends SimpleChannelUpstreamHandler {
 
     private static final Logger logger = Logger.getLogger(

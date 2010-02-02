@@ -17,7 +17,6 @@ package org.jboss.netty.example.http.snoop;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -31,7 +30,6 @@ import org.jboss.netty.util.CharsetUtil;
  *
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("one")
 public class HttpResponseHandler extends SimpleChannelUpstreamHandler {
 
     private volatile boolean readingChunks;

@@ -21,7 +21,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
@@ -34,7 +33,6 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * @version $Rev$, $Date$
  *
  */
-@ChannelPipelineCoverage("all")
 public class NumberEncoder extends OneToOneEncoder {
 
     @Override

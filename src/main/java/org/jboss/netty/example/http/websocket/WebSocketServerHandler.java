@@ -28,7 +28,6 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -51,7 +50,6 @@ import org.jboss.netty.util.CharsetUtil;
  *
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("one")
 public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 
     private static final String WEBSOCKET_PATH = "/websocket";

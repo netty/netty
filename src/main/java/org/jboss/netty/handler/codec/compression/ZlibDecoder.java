@@ -19,7 +19,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 import org.jboss.netty.util.internal.jzlib.JZlib;
 import org.jboss.netty.util.internal.jzlib.ZStream;
@@ -32,7 +31,6 @@ import org.jboss.netty.util.internal.jzlib.ZStream;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("one")
 public class ZlibDecoder extends OneToOneDecoder {
 
     private final ZStream z = new ZStream();

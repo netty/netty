@@ -24,7 +24,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferOutputStream;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
@@ -43,7 +43,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.codec.serialization.ObjectEncoderOutputStream - - - compatible with
  */
-@ChannelPipelineCoverage("all")
+@Sharable
 public class ObjectEncoder extends OneToOneEncoder {
     private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
 

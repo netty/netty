@@ -21,7 +21,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
@@ -59,7 +59,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
  *
  * @apiviz.landmark
  */
-@ChannelPipelineCoverage("all")
+@Sharable
 public class StringDecoder extends OneToOneDecoder {
 
     // TODO Use CharsetDecoder instead.

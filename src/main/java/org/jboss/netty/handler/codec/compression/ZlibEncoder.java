@@ -24,7 +24,6 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
@@ -40,7 +39,6 @@ import org.jboss.netty.util.internal.jzlib.ZStream;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("one")
 public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChannelHandler {
 
     private static final byte[] EMPTY_ARRAY = new byte[0];

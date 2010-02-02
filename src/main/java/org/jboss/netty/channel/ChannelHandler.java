@@ -15,6 +15,13 @@
  */
 package org.jboss.netty.channel;
 
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 import org.jboss.netty.bootstrap.Bootstrap;
 
 /**
@@ -92,6 +99,7 @@ import org.jboss.netty.bootstrap.Bootstrap;
  * In such a case, you can use an <em>attachment</em> which is provided by
  * {@link ChannelHandlerContext}:
  * <pre>
+ * {@literal @Sharable}
  * public class DataServerHandler extends SimpleChannelHandler {
  *
  *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
@@ -137,6 +145,7 @@ import org.jboss.netty.bootstrap.Bootstrap;
  *     ...
  * }
  *
+ * {@literal @Sharable}
  * public class DataServerHandler extends SimpleChannelHandler {
  *     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
  *         Channel ch = e.getChannel();
@@ -163,6 +172,23 @@ import org.jboss.netty.bootstrap.Bootstrap;
  * }
  * </pre>
  *
+ * <h4>The {@literal @Sharable} annotation</h4>
+ * <p>
+ * In the examples above which used an attachment or a {@link ChannelLocal},
+ * you might have noticed the {@literal @Sharable} annotation.
+ * <p>
+ * If a {@link ChannelHandler} is annotated with the {@literal @Sharable}
+ * annotation, it means you can create an instance of the handler just once and
+ * add it to one or more {@link ChannelPipeline}s multiple times without
+ * a race condition.
+ * <p>
+ * If this annotation is not specified, it is safe to create a new handler
+ * instance every time you add it to a pipeline because it has unshared state
+ * such as member variables.
+ * <p>
+ * This annotation is provided for documentation purpose, just like
+ * <a href="http://www.javaconcurrencyinpractice.com/annotations/doc/">the JCIP annotations</a>.
+ *
  * <h3>Additional resources worth reading</h3>
  * <p>
  * Please refer to the {@link ChannelEvent} and {@link ChannelPipeline} to find
@@ -178,5 +204,28 @@ import org.jboss.netty.bootstrap.Bootstrap;
  * @apiviz.exclude ^org\.jboss\.netty\.handler\..*$
  */
 public interface ChannelHandler {
-    // This is a tag interface.
+
+    /**
+     * Indicates that the same instance of the annotated {@link ChannelHandler}
+     * can be added to one or more {@link ChannelPipeline}s multiple times
+     * without a race condition.
+     * <p>
+     * If this annotation is not specified, it is safe to create a new handler
+     * instance every time you add it to a pipeline because it has unshared
+     * state such as member variables.
+     * <p>
+     * This annotation is provided for documentation purpose, just like
+     * <a href="http://www.javaconcurrencyinpractice.com/annotations/doc/">the JCIP annotations</a>.
+     *
+     * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+     * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+     * @version $Rev$, $Date$
+     */
+    @Inherited
+    @Documented
+    @Target(ElementType.TYPE)
+    @Retention(RetentionPolicy.RUNTIME)
+    public @interface Sharable {
+        // no value
+    }
 }

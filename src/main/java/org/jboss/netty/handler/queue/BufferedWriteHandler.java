@@ -20,7 +20,6 @@ import java.util.concurrent.BlockingQueue;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelDownstreamHandler;
@@ -88,7 +87,6 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("one")
 public class BufferedWriteHandler extends SimpleChannelDownstreamHandler {
 
     private final Queue<MessageEvent> queue;

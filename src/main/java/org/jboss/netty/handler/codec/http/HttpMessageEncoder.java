@@ -25,7 +25,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 import org.jboss.netty.util.CharsetUtil;
 
@@ -49,7 +48,6 @@ import org.jboss.netty.util.CharsetUtil;
  *
  * @apiviz.landmark
  */
-@ChannelPipelineCoverage("one")
 public abstract class HttpMessageEncoder extends OneToOneEncoder {
 
     private static final ChannelBuffer LAST_CHUNK =

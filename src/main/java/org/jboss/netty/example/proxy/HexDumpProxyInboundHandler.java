@@ -24,7 +24,6 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -36,7 +35,6 @@ import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("one")
 public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
 
     private final ClientSocketChannelFactory cf;
@@ -102,7 +100,6 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
         closeOnFlush(e.getChannel());
     }
 
-    @ChannelPipelineCoverage("one")
     private static class OutboundHandler extends SimpleChannelUpstreamHandler {
 
         private final Channel inboundChannel;

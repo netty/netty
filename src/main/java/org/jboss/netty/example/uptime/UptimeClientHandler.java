@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -38,7 +37,6 @@ import org.jboss.netty.util.TimerTask;
  *
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("one")
 public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
 
     final ClientBootstrap bootstrap;

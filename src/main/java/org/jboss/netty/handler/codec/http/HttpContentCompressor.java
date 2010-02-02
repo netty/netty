@@ -16,7 +16,6 @@
 package org.jboss.netty.handler.codec.http;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.compression.ZlibEncoder;
 import org.jboss.netty.handler.codec.compression.ZlibWrapper;
 import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
@@ -32,7 +31,6 @@ import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("one")
 public class HttpContentCompressor extends HttpContentEncoder {
 
     private final int compressionLevel;

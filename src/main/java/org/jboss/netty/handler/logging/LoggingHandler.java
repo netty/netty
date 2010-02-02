@@ -22,10 +22,10 @@ import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.logging.InternalLogLevel;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -42,7 +42,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  *
  * @apiviz.landmark
  */
-@ChannelPipelineCoverage("all")
+@Sharable
 public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
 
     private static final InternalLogLevel DEFAULT_LEVEL = InternalLogLevel.DEBUG;

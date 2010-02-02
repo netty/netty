@@ -27,7 +27,6 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
@@ -66,7 +65,6 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.stream.ChunkedInput oneway - - reads from
  */
-@ChannelPipelineCoverage("one")
 public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
 
     private static final InternalLogger logger =

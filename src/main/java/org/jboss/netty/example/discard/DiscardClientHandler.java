@@ -24,7 +24,6 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -40,7 +39,6 @@ import org.jboss.netty.channel.WriteCompletionEvent;
  *
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("all")
 public class DiscardClientHandler extends SimpleChannelUpstreamHandler {
 
     private static final Logger logger = Logger.getLogger(

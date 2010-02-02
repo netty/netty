@@ -18,7 +18,6 @@ package org.jboss.netty.handler.codec.http;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -47,7 +46,6 @@ import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("one")
 public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
 
     private volatile DecoderEmbedder<ChannelBuffer> decoder;

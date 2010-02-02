@@ -18,7 +18,6 @@ package org.jboss.netty.handler.codec.http.websocket;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 import org.jboss.netty.handler.codec.replay.VoidEnum;
@@ -35,7 +34,6 @@ import org.jboss.netty.handler.codec.replay.VoidEnum;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
-@ChannelPipelineCoverage("one")
 public class WebSocketFrameDecoder extends ReplayingDecoder<VoidEnum> {
 
     public static final int DEFAULT_MAX_FRAME_SIZE = 16384;

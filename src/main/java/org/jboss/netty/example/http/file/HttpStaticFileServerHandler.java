@@ -32,7 +32,6 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -48,7 +47,6 @@ import org.jboss.netty.util.CharsetUtil;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
-@ChannelPipelineCoverage("one")
 public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
 
     @Override
