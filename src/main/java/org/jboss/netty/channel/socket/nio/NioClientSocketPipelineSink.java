@@ -114,7 +114,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             NioSocketChannel channel = (NioSocketChannel) event.getChannel();
             boolean offered = channel.writeBuffer.offer(event);
             assert offered;
-            channel.worker.write(channel);
+            channel.worker.write(channel, true);
         }
     }
 

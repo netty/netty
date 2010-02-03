@@ -34,7 +34,6 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
-import org.jboss.netty.util.internal.NonReentrantLock;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 /**
@@ -60,7 +59,7 @@ class NioSocketChannel extends AbstractChannel
     private volatile InetSocketAddress remoteAddress;
 
     final Object interestOpsLock = new Object();
-    final NonReentrantLock writeLock = new NonReentrantLock();
+    final Object writeLock = new Object();
 
     final Runnable writeTask = new WriteTask();
     final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
@@ -68,6 +67,7 @@ class NioSocketChannel extends AbstractChannel
     final Queue<MessageEvent> writeBuffer = new WriteBuffer();
     final AtomicInteger writeBufferSize = new AtomicInteger();
     final AtomicInteger highWaterMarkCounter = new AtomicInteger();
+    volatile boolean inWriteNowLoop;
 
     MessageEvent currentWriteEvent;
     ByteBuffer currentWriteBuffer;
@@ -257,7 +257,7 @@ class NioSocketChannel extends AbstractChannel
 
         public void run() {
             writeTaskInTaskQueue.set(false);
-            worker.write(NioSocketChannel.this);
+            worker.write(NioSocketChannel.this, false);
         }
     }
 }

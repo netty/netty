@@ -39,7 +39,6 @@ import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.socket.DatagramChannelConfig;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
-import org.jboss.netty.util.internal.NonReentrantLock;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 /**
@@ -75,9 +74,9 @@ class NioDatagramChannel extends AbstractChannel
     final Object interestOpsLock = new Object();
 
     /**
-     * Synchronizes access to the {@link WriteBufferQueue}.
+     * Monitor object for synchronizing access to the {@link WriteBufferQueue}.
      */
-    final NonReentrantLock writeLock = new NonReentrantLock();
+    final Object writeLock = new Object();
 
     /**
      * WriteTask that performs write operations.
@@ -111,6 +110,11 @@ class NioDatagramChannel extends AbstractChannel
     MessageEvent currentWriteEvent;
     ByteBuffer currentWriteBuffer;
     boolean currentWriteBufferIsPooled;
+
+    /**
+     * Boolean that indicates that write operation is in progress.
+     */
+    volatile boolean inWriteNowLoop;
 
     private volatile InetSocketAddress localAddress;
     volatile InetSocketAddress remoteAddress;
@@ -312,7 +316,7 @@ class NioDatagramChannel extends AbstractChannel
 
         public void run() {
             writeTaskInTaskQueue.set(false);
-            worker.write(NioDatagramChannel.this);
+            worker.write(NioDatagramChannel.this, false);
         }
     }
 
