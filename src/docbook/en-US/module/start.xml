@@ -992,7 +992,7 @@ public class TimeClient {
         &ClientBootstrap; bootstrap = ...;
         ...
         &ChannelFuture; future<co id="example.time7.co1"/> = bootstrap.connect(...);
-        future.awaitUninterruptible();<co id="example.time7.co2"/>
+        future.awaitUninterruptibly();<co id="example.time7.co2"/>
         if (!future.isSuccess()) {
             future.getCause().printStackTrace();<co id="example.time7.co3"/>
         }
