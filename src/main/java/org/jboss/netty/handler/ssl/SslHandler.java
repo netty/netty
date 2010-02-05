@@ -780,7 +780,7 @@ public class SslHandler extends FrameDecoder
                 synchronized (handshakeLock) {
                     if (initialHandshake && !engine.getUseClientMode() &&
                         !engine.isInboundDone() && !engine.isOutboundDone()) {
-                        handshake(channel);
+                        handshake();
                         initialHandshake = false;
                     }
 
