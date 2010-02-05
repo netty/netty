@@ -68,8 +68,17 @@ import org.jboss.netty.util.internal.NonReentrantLock;
  *
  * <h3>Renegotiation</h3>
  * <p>
- * Once the initial handshake is done successfully.  You can always call
- * {@link #handshake()} again to renegotiate the SSL session parameters.
+ * TLS renegotiation has been disabled by default due to a known security issue,
+ * <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2009-3555">CVE-2009-3555</a>.
+ * You can re-enable renegotiation by calling {@link #setEnableRenegotiation(boolean)}
+ * with {@code true} at your own risk.
+ * <p>
+ * If {@link #isEnableRenegotiation() enableRenegotiation} is {@code true} and
+ * the initial handshake has been done successfully, you can call
+ * {@link #handshake()} to trigger the renegotiation.
+ * <p>
+ * If {@link #isEnableRenegotiation() enableRenegotiation} is {@code false},
+ * an attempt to trigger renegotiation will result in the connection closure.
  *
  * <h3>Closing the session</h3>
  * <p>
@@ -163,8 +172,9 @@ public class SslHandler extends FrameDecoder
     private final Executor delegatedTaskExecutor;
     private final boolean startTls;
 
+    private volatile boolean enableRenegotiation;
+
     final Object handshakeLock = new Object();
-    private boolean initialHandshake;
     private boolean handshaking;
     private volatile boolean handshaken;
     private volatile ChannelFuture handshakeFuture;
@@ -311,6 +321,10 @@ public class SslHandler extends FrameDecoder
      *         succeeds or fails.
      */
     public ChannelFuture handshake() {
+        if (handshaken && !isEnableRenegotiation()) {
+            throw new IllegalStateException("renegotiation disabled");
+        }
+
         ChannelHandlerContext ctx = this.ctx;
         Channel channel = ctx.getChannel();
         ChannelFuture handshakeFuture;
@@ -366,6 +380,20 @@ public class SslHandler extends FrameDecoder
     @Deprecated
     public ChannelFuture close(@SuppressWarnings("unused") Channel channel) {
         return close();
+    }
+
+    /**
+     * Returns {@code true} if and only if TLS renegotiation is enabled.
+     */
+    public boolean isEnableRenegotiation() {
+        return enableRenegotiation;
+    }
+
+    /**
+     * Enables or disables TLS renegotiation.
+     */
+    public void setEnableRenegotiation(boolean enableRenegotiation) {
+        this.enableRenegotiation = enableRenegotiation;
     }
 
     public void handleDownstream(
@@ -585,7 +613,8 @@ public class SslHandler extends FrameDecoder
                             offerEncryptedWriteRequest(encryptedWrite);
                             offered = true;
                         } else {
-                            HandshakeStatus handshakeStatus = result.getHandshakeStatus();
+                            final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
+                            handleRenegotiation(handshakeStatus);
                             switch (handshakeStatus) {
                             case NEED_WRAP:
                                 if (outAppBuf.hasRemaining()) {
@@ -611,7 +640,7 @@ public class SslHandler extends FrameDecoder
                             default:
                                 throw new IllegalStateException(
                                         "Unknown handshake status: " +
-                                        result.getHandshakeStatus());
+                                        handshakeStatus);
                             }
                         }
                     }
@@ -724,7 +753,9 @@ public class SslHandler extends FrameDecoder
                     write(ctx, future, msg);
                 }
 
-                switch (result.getHandshakeStatus()) {
+                final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
+                handleRenegotiation(handshakeStatus);
+                switch (handshakeStatus) {
                 case FINISHED:
                     setHandshakeSuccess(channel);
                     runDelegatedTasks();
@@ -745,8 +776,7 @@ public class SslHandler extends FrameDecoder
                     break;
                 default:
                     throw new IllegalStateException(
-                            "Unexpected handshake status: " +
-                            result.getHandshakeStatus());
+                            "Unexpected handshake status: " + handshakeStatus);
                 }
 
                 if (result.bytesProduced() == 0) {
@@ -778,10 +808,10 @@ public class SslHandler extends FrameDecoder
             for (;;) {
                 SSLEngineResult result;
                 synchronized (handshakeLock) {
-                    if (initialHandshake && !engine.getUseClientMode() &&
+                    if (!handshaken && !handshaking &&
+                        !engine.getUseClientMode() &&
                         !engine.isInboundDone() && !engine.isOutboundDone()) {
                         handshake();
-                        initialHandshake = false;
                     }
 
                     try {
@@ -790,7 +820,9 @@ public class SslHandler extends FrameDecoder
                         throw e;
                     }
 
-                    switch (result.getHandshakeStatus()) {
+                    final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
+                    handleRenegotiation(handshakeStatus);
+                    switch (handshakeStatus) {
                     case NEED_UNWRAP:
                         if (inNetBuf.hasRemaining() && !engine.isInboundDone()) {
                             break;
@@ -812,8 +844,7 @@ public class SslHandler extends FrameDecoder
                         break loop;
                     default:
                         throw new IllegalStateException(
-                                "Unknown handshake status: " +
-                                result.getHandshakeStatus());
+                                "Unknown handshake status: " + handshakeStatus);
                     }
                 }
             }
@@ -847,6 +878,46 @@ public class SslHandler extends FrameDecoder
             throw e;
         } finally {
             bufferPool.release(outAppBuf);
+        }
+    }
+
+    private void handleRenegotiation(HandshakeStatus handshakeStatus) {
+        if (handshakeStatus == HandshakeStatus.NOT_HANDSHAKING) {
+            // Not handshaking
+            return;
+        }
+
+        if (!handshaken) {
+            // Not renegotiation
+            return;
+        }
+
+        if (handshaking) {
+            // Renegotiation in progress or failed already.
+            // i.e. Renegotiation check has been done already below.
+            return;
+        }
+
+        if (engine.isInboundDone() || engine.isOutboundDone()) {
+            // Not handshaking but closing.
+            return;
+        }
+
+        if (isEnableRenegotiation()) {
+            // Continue renegotiation.
+            handshake();
+        } else {
+            // Prevent reentrance of this method.
+            handshaking = true;
+
+            // Raise an exception.
+            fireExceptionCaught(
+                    ctx, new SSLException(
+                            "renegotiation attempted by peer; " +
+                            "closing the connection"));
+
+            // Close the connection to stop renegotiation.
+            Channels.close(ctx, succeededFuture(ctx.getChannel()));
         }
     }
 
