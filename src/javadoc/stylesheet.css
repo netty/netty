@@ -1,122 +1,100 @@
-/*
- * Copyright 2009 Red Hat, Inc.
- *
- * Red Hat licenses this file to you under the Apache License, version 2.0
- * (the "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at:
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
- */
+/* Javadoc style sheet */
 
-* {
-  font-family: "Liberation Sans", "DejaVu Sans", "Lucida Grande", Geneva, Verdana, Helvetica, Arial, sans-serif;
-}
+/* Define colors, fonts and other style attributes here to override the defaults */
 
+/* Page background color */
 body {
-  background-color: #FFFFFF;
-  color:#000000;
-  font-size: 11pt;
-}
+	background-color: #FFFFFF;
+	background-image:url(resources/bkg_gradient.gif);
+	background-repeat: repeat-x;
+	margin:0 auto;
+	font-family:'Lucida Grande', Geneva, Verdana, Arial, sans-serif;
+	font-size:12px;
+	padding:0em 2em;
+	color:#333;
 
-a:link {color:#0033cc;}
-a:visited {color:#0044cc;}
+ }
 
-tt, tt *, pre, pre *, code, code * {
-  font-family: "Liberation Mono", "DejaVu Sans Mono", Consolas, Monaco, "Lucida Console", "Courier New", monospace;
-}
+/* Common elements */
+
+font {
+	font-family: inherit;
+	font-size: inherit;
+	color: inherit;
+	font-weight: inherit; }
+
+hr { display: none; }
+
+a:link { color:#0066cc; }
+a:visited { color:#8b5caf; }
+a:hover { color:#6699cc; }
+
 
 /* Headings */
-h1, h2, h3, h4, h5, h6 {
-    color:#4a5d75;
-    line-height:130%;
-    margin-top:0em;
-    font-family:'Lucida Grande', Geneva, Verdana, Arial, sans-serif;
-    background-color:transparent;
-}
-
 h1 {
-  font-size:2em;
-  padding: 0em;
-  margin: 0.8em 0em 0.35em 0em;
+	font-size: 145%;
+	background-image:url(resources/h1_hdr.png);
+	background-repeat:no-repeat;
+	border-top:1px dotted #CCCCCC;
+	line-height:1.2em;
+	color:#182737;
+	font-size:2em;
+	padding:1.5em;
+	margin-top: 0px;
+	text-align:left;
 }
 
-h2 {
-  font-size:1.6em;
-  padding: 0em;
-  margin: 0.8em 0em 0.35em 0em;
+
+/* Default Table elements and colors */
+
+th, table { border-collapse:collapse;border-color: #E6E7E8; }
+
+
+.TableHeadingColor     {
+	background:#000000 url(resources/bkg_blkheader.png) repeat-x scroll left top;
+	color:#FFFFFF;
+	font-size:12px;
+	font-weight:bold;
+	height:31px;
+	text-align:left;
+	padding:1.5em;
 }
 
-h3 {
-  font-size:1.3em;
-  padding: 0em;
-  margin: 0.8em 0em 0.35em 0em;
+.TableHeadingColor th {
+	padding-left: 10px;
 }
 
-h4 {
-  font-size:1.1em;
-  padding: 0em;
-  margin: 0.8em 0em 0.35em 0em;
-}
 
-h5 {
-  font-size:1em;
-  padding: 0em;
-  margin: 0.8em 0em 0.35em 0em;
-}
-
-/* Tables */
-table {
-  border-collapse: collapse;
-  border-color: black;
-}
-
-th {
-  text-align: left;
-  background: #CCCCFF;
-  color:#000000;
-  padding: 3px 6px;
-  border-color: black;
-}
-
-td {
-  vertical-align: top;
-  padding: 3px 6px;
-  border-color: black;
-}
-
-/* Table colors */
-.TableHeadingColor {
-  background: #CCCCFF; /* Dark mauve */
-  color:#000000;
-}
-.TableHeadingColor TH * {
-  font-size: 1.2em !important;
-}
-.TableSubHeadingColor {
-  background: #EEEEFF; /* Light mauve */
-  color:#000000
-}
-.TableRowColor {
-  background: #FFFFFF; /* White */
-  color:#000000
-}
+.TableSubHeadingColor  { background: #EEEEFF } /* Light mauve */
+.TableRowColor { background: #FFFFFF; border-color: #E6E7E8;}
+.TableRowColor td { line-height: 175%; padding-left: 10px;}
 
 /* Font used in left-hand frame lists */
-.FrameTitleFont   { font-size: 100%; color:#000000 }
-.FrameHeadingFont { font-size:  90%; color:#000000 }
-.FrameItemFont    { font-size:  90%; color:#000000 }
+.FrameTitleFont   { font-size: 125%; font-family: Helvetica, Arial, sans-serif; font-weight: bold; margin-top: 1em; display: block; }
+.FrameHeadingFont { font-size: 125%; font-family: 'Lucida Grande', Geneva, Verdana, Arial, sans-serif; font-weight: bold; margin-top: 1em; display: block;  }
+.FrameItemFont    { font-size: 100%; font-family: Helvetica, Arial, sans-serif }
 
 /* Navigation bar fonts and colors */
-.NavBarCell1    { background-color:#EEEEFF; color:#000000} /* Light mauve */
-.NavBarCell1Rev { background-color:#00008B; color:#FFFFFF} /* Dark Blue */
-.NavBarFont1    { color:#000000;color:#000000;}
-.NavBarFont1Rev { color:#FFFFFF;color:#FFFFFF;}
 
-.NavBarCell2    { background-color:#FFFFFF; color:#000000}
-.NavBarCell3    { background-color:#FFFFFF; color:#000000}
+.NavBarCell1    { background-color: #ffffff;
+	background-image:url(resources/bkgheader.png);
+	background-repeat: repeat-x scroll left top;
+	line-height:2em;
+	padding-left:6px;
+	padding-right:6px;
+}
+
+.NavBarFont1 {
+	color: white;
+}
+.NavBarCell1 a {
+	color: white;
+}
+
+.NavBarCell1Rev { background-color:#FFFFFF; padding-left:6px; padding-right:6px;}
+.NavBarFont1    { color:#FFFFFF;}
+.NavBarFont1Rev { color:#243446;}
+
+.NavBarCell2    { background-color:#FFFFFF;}
+.NavBarCell3    { background-color:#FFFFFF;}
+
