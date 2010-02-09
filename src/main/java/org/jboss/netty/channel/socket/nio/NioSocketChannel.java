@@ -67,7 +67,8 @@ class NioSocketChannel extends AbstractChannel
     final Queue<MessageEvent> writeBuffer = new WriteBuffer();
     final AtomicInteger writeBufferSize = new AtomicInteger();
     final AtomicInteger highWaterMarkCounter = new AtomicInteger();
-    volatile boolean inWriteNowLoop;
+    boolean inWriteNowLoop;
+    boolean writeSuspended;
 
     MessageEvent currentWriteEvent;
     ByteBuffer currentWriteBuffer;
@@ -257,7 +258,7 @@ class NioSocketChannel extends AbstractChannel
 
         public void run() {
             writeTaskInTaskQueue.set(false);
-            worker.write(NioSocketChannel.this, false);
+            worker.writeFromTaskLoop(NioSocketChannel.this);
         }
     }
 }

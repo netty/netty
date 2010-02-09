@@ -281,7 +281,7 @@ class NioWorker implements Runnable {
                     }
                 }
                 if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                    write(k);
+                    writeFromSelectorLoop(k);
                 }
             } catch (CancelledKeyException e) {
                 close(k);
@@ -364,31 +364,45 @@ class NioWorker implements Runnable {
         return true;
     }
 
-    private void write(SelectionKey k) {
-        NioSocketChannel ch = (NioSocketChannel) k.attachment();
-        write(ch, false);
-    }
-
     private void close(SelectionKey k) {
         NioSocketChannel ch = (NioSocketChannel) k.attachment();
         close(ch, succeededFuture(ch));
     }
 
-    void write(final NioSocketChannel channel, boolean mightNeedWakeup) {
+    void writeFromUserCode(final NioSocketChannel channel) {
         if (!channel.isConnected()) {
             cleanUpWriteBuffer(channel);
             return;
         }
 
-        if (mightNeedWakeup && scheduleWriteIfNecessary(channel)) {
+        if (scheduleWriteIfNecessary(channel)) {
+            return;
+        }
+
+        // From here, we are sure Thread.currentThread() == workerThread.
+
+        if (channel.writeSuspended) {
             return;
         }
 
         if (channel.inWriteNowLoop) {
-            scheduleWriteIfNecessary(channel);
-        } else {
-            writeNow(channel, channel.getConfig().getWriteSpinCount());
+            // Need to update the queue?
+            return;
         }
+
+        write0(channel);
+    }
+
+    void writeFromTaskLoop(final NioSocketChannel ch) {
+        if (!ch.writeSuspended) {
+            write0(ch);
+        }
+    }
+
+    void writeFromSelectorLoop(final SelectionKey k) {
+        NioSocketChannel ch = (NioSocketChannel) k.attachment();
+        ch.writeSuspended = false;
+        write0(ch);
     }
 
     private boolean scheduleWriteIfNecessary(final NioSocketChannel channel) {
@@ -426,15 +440,15 @@ class NioWorker implements Runnable {
         return false;
     }
 
-    private void writeNow(NioSocketChannel channel, int writeSpinCount) {
-
+    private void write0(NioSocketChannel channel) {
         boolean open = true;
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
 
         int writtenBytes = 0;
 
-        Queue<MessageEvent> writeBuffer = channel.writeBuffer;
+        final Queue<MessageEvent> writeBuffer = channel.writeBuffer;
+        final int writeSpinCount = channel.getConfig().getWriteSpinCount();
         synchronized (channel.writeLock) {
             channel.inWriteNowLoop = true;
             for (;;) {
@@ -443,6 +457,7 @@ class NioWorker implements Runnable {
                 if (evt == null) {
                     if ((channel.currentWriteEvent = evt = writeBuffer.poll()) == null) {
                         removeOpWrite = true;
+                        channel.writeSuspended = false;
                         break;
                     }
 
@@ -482,6 +497,7 @@ class NioWorker implements Runnable {
                     } else {
                         // Not written fully - perhaps the kernel buffer is full.
                         addOpWrite = true;
+                        channel.writeSuspended = true;
                         break;
                     }
                 } catch (AsynchronousCloseException e) {
