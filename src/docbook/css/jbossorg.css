@@ -97,9 +97,9 @@ sup {color:#999;}
 
 /* Custom overrides */
 
-pre, code {
+tt, tt *, pre, pre *, code, code * {
   font-size: 100% !important;
-  font-family: "Liberation Mono", "Consolas", "Monaco", "Vera Sans Mono", "Courier New", monospace !important;
+  font-family: "Liberation Mono", "DejaVu Sans Mono", Consolas, Monaco, "Vera Sans Mono", "Lucida Console", "Courier New", monospace !important;
 }
 
 pre a:link * {color:#0066cc !important;}
