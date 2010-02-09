@@ -422,6 +422,8 @@
           </docletArtifact>
           <attach>false</attach>
           <stylesheetfile>${basedir}/src/javadoc/stylesheet.css</stylesheetfile>
+          <javadocDirectory>${basedir}/src/javadoc</javadocDirectory>
+          <docfilessubdirs>true</docfilessubdirs>
           <useStandardDocletOptions>true</useStandardDocletOptions>
           <outputDirectory>${project.build.directory}/api</outputDirectory>
           <reportOutputDirectory>${project.build.directory}/api</reportOutputDirectory>
