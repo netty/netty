@@ -99,7 +99,7 @@ sup {color:#999;}
 
 pre, code {
   font-size: 100% !important;
-  font-family: monospace !important;
+  font-family: "Liberation Mono", "Consolas", "Monaco", "Vera Sans Mono", "Courier New", monospace !important;
 }
 
 pre a:link * {color:#0066cc !important;}

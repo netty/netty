@@ -21,6 +21,10 @@ font {
 
 hr { display: none; }
 
+pre, code, tt {
+  font-family: "Liberation Mono", "Consolas", "Monaco", "Vera Sans Mono", "Courier New", monospace !important;
+}
+
 a:link { color:#0066cc; }
 a:visited { color:#8b5caf; }
 a:hover { color:#6699cc; }

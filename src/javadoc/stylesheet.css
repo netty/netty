@@ -25,6 +25,10 @@ font {
 
 hr { display: none; }
 
+pre, code, tt {
+  font-family: "Liberation Mono", "Consolas", "Monaco", "Vera Sans Mono", "Courier New", monospace !important;
+}
+
 a:link { color:#0066cc; }
 a:visited { color:#8b5caf; }
 a:hover { color:#6699cc; }
@@ -97,4 +101,3 @@ th, table { border-collapse:collapse;border-color: #E6E7E8; }
 
 .NavBarCell2    { background-color:#FFFFFF;}
 .NavBarCell3    { background-color:#FFFFFF;}
-
