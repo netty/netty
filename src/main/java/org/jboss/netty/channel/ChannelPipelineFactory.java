@@ -15,12 +15,22 @@
  */
 package org.jboss.netty.channel;
 
+import org.jboss.netty.bootstrap.Bootstrap;
+import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
+
 /**
  * Creates a new {@link ChannelPipeline} for a new {@link Channel}.
  * <p>
- * This interface was introduced to initialize the {@link ChannelPipeline} of
- * the child channel accepted by a {@link ServerChannel}, but it is safe to use
- * it for any other purposes.
+ * When a {@linkplain ServerChannel server-side channel} accepts a new incoming
+ * connection, a new child channel is created for each newly accepted connection.
+ * A new child channel uses a new {@link ChannelPipeline}, which is created by
+ * the {@link ChannelPipelineFactory} specified in the server-side channel's
+ * {@link ChannelConfig#getPipelineFactory() "pipelineFactory"} option.
+ * <p>
+ * Also, when a {@link ClientBootstrap} or {@link ConnectionlessBootstrap}
+ * creates a new channel, it uses the {@link Bootstrap#getPipelineFactory() "pipelineFactory"}
+ * property to create a new {@link ChannelPipeline} for each new channel.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>

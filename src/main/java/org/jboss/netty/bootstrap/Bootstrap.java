@@ -229,7 +229,7 @@ public class Bootstrap implements ExternalResourceReleasable {
 
     /**
      * Returns the {@link ChannelPipelineFactory} which creates a new
-     * {@link ChannelPipeline} for a new {@link Channel}.
+     * {@link ChannelPipeline} for each new {@link Channel}.
      *
      * @see #getPipeline()
      */
@@ -239,10 +239,10 @@ public class Bootstrap implements ExternalResourceReleasable {
 
     /**
      * Sets the {@link ChannelPipelineFactory} which creates a new
-     * {@link ChannelPipeline} for a new {@link Channel}.  Calling this method
-     * invalidates the current {@code pipeline} property of this bootstrap.
-     * Subsequent {@link #getPipeline()} and {@link #getPipelineAsMap()} calls
-     * will raise {@link IllegalStateException}.
+     * {@link ChannelPipeline} for each new {@link Channel}.  Calling this
+     * method invalidates the current {@code pipeline} property of this
+     * bootstrap.  Subsequent {@link #getPipeline()} and {@link #getPipelineAsMap()}
+     * calls will raise {@link IllegalStateException}.
      *
      * @see #setPipeline(ChannelPipeline)
      * @see #setPipelineAsMap(Map)
