@@ -114,7 +114,8 @@ class NioDatagramChannel extends AbstractChannel
     /**
      * Boolean that indicates that write operation is in progress.
      */
-    volatile boolean inWriteNowLoop;
+    boolean inWriteNowLoop;
+    boolean writeSuspended;
 
     private volatile InetSocketAddress localAddress;
     volatile InetSocketAddress remoteAddress;
@@ -316,7 +317,7 @@ class NioDatagramChannel extends AbstractChannel
 
         public void run() {
             writeTaskInTaskQueue.set(false);
-            worker.write(NioDatagramChannel.this, false);
+            worker.writeFromTaskLoop(NioDatagramChannel.this);
         }
     }
 

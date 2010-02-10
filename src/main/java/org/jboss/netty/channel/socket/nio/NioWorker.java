@@ -386,7 +386,6 @@ class NioWorker implements Runnable {
         }
 
         if (channel.inWriteNowLoop) {
-            // Need to update the queue?
             return;
         }
 
