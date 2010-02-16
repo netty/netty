@@ -17,6 +17,7 @@ package org.jboss.netty.channel;
 
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 
 /**
@@ -25,13 +26,40 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  * All I/O operations in Netty are asynchronous.  It means any I/O calls will
  * return immediately with no guarantee that the requested I/O operation has
  * been completed at the end of the call.  Instead, you will be returned with
- * a {@link ChannelFuture} instance which tells you when the requested I/O
- * operation has succeeded, failed, or cancelled.
+ * a {@link ChannelFuture} instance which gives you the information about the
+ * result or status of the I/O operation.
  * <p>
+ * A {@link ChannelFuture} is either <em>uncompleted</em> or <em>completed</em>.
+ * When an I/O operation begins, a new future object is created.  The new future
+ * is uncompleted initially - it is neither succeeded, failed, nor cancelled
+ * because the I/O operation is not finished yet.  If the I/O operation is
+ * finished either successfully, with failure, or by cancellation, the future is
+ * marked as completed with more specific information, such as the cause of the
+ * failure.  Please note that even failure and cancellation belong to the
+ * completed state.
+ * <pre>
+ *                                      +---------------------------+
+ *                                      | Completed successfully    |
+ *                                      +---------------------------+
+ *                                 +---->      isDone() = <b>true</b>      |
+ * +--------------------------+    |    |   isSuccess() = <b>true</b>      |
+ * |        Uncompleted       |    |    +===========================+
+ * +--------------------------+    |    | Completed with failure    |
+ * |      isDone() = <b>false</b>    |    |    +---------------------------+
+ * |   isSuccess() = false    |----+---->   isDone() = <b>true</b>         |
+ * | isCancelled() = false    |    |    | getCause() = <b>non-null</b>     |
+ * |    getCause() = null     |    |    +===========================+
+ * +--------------------------+    |    | Completed by cancellation |
+ *                                 |    +---------------------------+
+ *                                 +---->      isDone() = <b>true</b>      |
+ *                                      | isCancelled() = <b>true</b>      |
+ *                                      +---------------------------+
+ * </pre>
+ *
  * Various methods are provided to let you check if the I/O operation has been
  * completed, wait for the completion, and retrieve the result of the I/O
- * operation. It also allows you to add more than one {@link ChannelFutureListener}
- * so you can get notified when the I/O operation has been completed.
+ * operation. It also allows you to add {@link ChannelFutureListener}s so you
+ * can get notified when the I/O operation is completed.
  *
  * <h3>Prefer {@link #addListener(ChannelFutureListener)} to {@link #await()}</h3>
  *
@@ -93,6 +121,48 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  * where it is more convenient to call {@link #await()}. In such a case, please
  * make sure you do not call {@link #await()} in an I/O thread.  Otherwise,
  * {@link IllegalStateException} will be raised to prevent a dead lock.
+ *
+ * <h3>Do not confuse I/O timeout and await timeout</h3>
+ *
+ * The timeout value you specify with {@link #await(long)},
+ * {@link #await(long, TimeUnit)}, {@link #awaitUninterruptibly(long)}, or
+ * {@link #awaitUninterruptibly(long, TimeUnit)} are not related with I/O
+ * timeout at all.  If an I/O operation times out, the future will be marked as
+ * 'completed with failure,' as depicted in the diagram above.  For example,
+ * connect timeout should be configured via a transport-specific option:
+ * <pre>
+ * // BAD - NEVER DO THIS
+ * {@link ClientBootstrap} b = ...;
+ * {@link ChannelFuture} f = b.connect(...);
+ * f.awaitUninterruptibly(10, TimeUnit.SECONDS);
+ * if (f.isCancelled()) {
+ *     // Connection attempt cancelled by user
+ * } else if (!f.isSuccess()) {
+ *     // You might get a NullPointerException here because the future
+ *     // might not be completed yet.
+ *     f.getCause().printStackTrace();
+ * } else {
+ *     // Connection established successfully
+ * }
+ *
+ * // GOOD
+ * {@link ClientBootstrap} b = ...;
+ * // Configure the connect timeout option.
+ * <b>b.setOption("connectTimeout", 10000);</b>
+ * {@link ChannelFuture} f = b.connect(...);
+ * f.awaitUninterruptibly();
+ *
+ * // Now we are sure the future is completed.
+ * assert f.isDone();
+ *
+ * if (f.isCancelled()) {
+ *     // Connection attempt cancelled by user
+ * } else if (!f.isSuccess()) {
+ *     f.getCause().printStackTrace();
+ * } else {
+ *     // Connection established successfully
+ * }
+ * </pre>
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
