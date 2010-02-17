@@ -34,13 +34,6 @@ package org.jboss.netty.channel;
  * {@link #getPipeline()}.  A non-trivial application could insert, remove, or
  * replace handlers in the pipeline dynamically in runtime.
  *
- * <h3>Storing stateful information</h3>
- *
- * {@link #setAttachment(Object)} and {@link #getAttachment()} allow you to
- * store and access stateful information that is related with a handler and its
- * context.  Please refer to {@link ChannelHandler} to learn various recommended
- * ways to manage stateful information.
- *
  * <h3>Retrieving for later use</h3>
  *
  * You can keep the {@link ChannelHandlerContext} for later use, such as
@@ -66,6 +59,13 @@ package org.jboss.netty.channel;
  *     ...
  * }
  * </pre>
+ *
+ * <h3>Storing stateful information</h3>
+ *
+ * {@link #setAttachment(Object)} and {@link #getAttachment()} allow you to
+ * store and access stateful information that is related with a handler and its
+ * context.  Please refer to {@link ChannelHandler} to learn various recommended
+ * ways to manage stateful information.
  *
  * <h3>A handler can have more than one context</h3>
  *
