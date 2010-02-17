@@ -17,9 +17,9 @@ package org.jboss.netty.channel;
 
 
 /**
- * Enables a {@link ChannelHandler} to send a {@link ChannelEvent} upstream or
- * downstream, modify a {@link ChannelPipeline} dynamically, or store stateful
- * information.
+ * Enables a {@link ChannelHandler} to interact with the {@link ChannelPipeline}
+ * it belongs to.  A handler can send a {@link ChannelEvent} upstream or
+ * downstream, modify the {@link ChannelPipeline} it belongs to dynamically.
  *
  * <h3>Sending an event</h3>
  *
