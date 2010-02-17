@@ -50,7 +50,7 @@ import org.jboss.netty.channel.group.ChannelGroup;
  * object.  A {@link ChannelHandler} is supposed to interact with the
  * {@link ChannelPipeline} it belongs to via a context object.  Using the
  * context object, the {@link ChannelHandler} can pass events upstream or
- * downstream, modify the behavior of the pipeline, or store the information
+ * downstream, modify the pipeline dynamically, or store the information
  * (attachment) which is specific to the handler.
  *
  * <h3>State management</h3>

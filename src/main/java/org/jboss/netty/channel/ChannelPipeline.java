@@ -36,7 +36,11 @@ import org.jboss.netty.handler.ssl.SslHandler;
  *
  * <h3>Creation of a pipeline</h3>
  * <p>
- * It is recommended to create a new pipeline using the helper methods in
+ * For each new channel, a new pipeline must be created.  If a new pipeline is
+ * attached to a channel, the coupling is permanent; the channel cannot attach
+ * another pipeline to it nor detach the current pipeline from it.
+ * <p>
+ * The recommended way to create a new pipeline is to use the helper methods in
  * {@link Channels} rather than calling an individual implementation's
  * constructor:
  * <pre>

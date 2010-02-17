@@ -17,23 +17,58 @@ package org.jboss.netty.channel;
 
 
 /**
- * Provides the properties and operations which are specific to a
- * {@link ChannelHandler} and the {@link ChannelPipeline} it belongs to.
- * Via a {@link ChannelHandlerContext}, a {@link ChannelHandler} can send
- * a {@link ChannelEvent} upstream or downstream, modify the behavior of the
- * pipeline, or store the information (attachment) which is specific to the
- * handler.
- * <pre>
- *         <b>n</b> = the number of the handler entries in a pipeline
+ * Enables a {@link ChannelHandler} to send a {@link ChannelEvent} upstream or
+ * downstream, modify a {@link ChannelPipeline} dynamically, or store stateful
+ * information.
  *
- * +---------+ 1 .. 1 +----------+ 1    n +---------+ n    m +---------+
- * | Channel |--------| Pipeline |--------| Context |--------| Handler |
- * +---------+        +----------+        +----+----+        +----+----+
- *                                             | 1..1             |
- *                                       +-----+------+           |
- *                                       | Attachment |<----------+
- *                                       +------------+    stores
+ * <h3>Sending an event</h3>
+ *
+ * You can send or forward a {@link ChannelEvent} to the closest handler in the
+ * same {@link ChannelPipeline} by calling {@link #sendUpstream(ChannelEvent)}
+ * or {@link #sendDownstream(ChannelEvent)}.  Please refer to
+ * {@link ChannelPipeline} to understand how an event flows.
+ *
+ * <h3>Modifying a pipeline</h3>
+ *
+ * You can get the {@link ChannelPipeline} your handler belongs to by calling
+ * {@link #getPipeline()}.  A non-trivial application could insert, remove, or
+ * replace handlers in the pipeline dynamically in runtime.
+ *
+ * <h3>Storing stateful information</h3>
+ *
+ * {@link #setAttachment(Object)} and {@link #getAttachment()} allow you to
+ * store and access stateful information that is related with a handler and its
+ * context.  Please refer to {@link ChannelHandler} to learn various recommended
+ * ways to manage stateful information.
+ *
+ * <h3>Retrieving for later use</h3>
+ *
+ * You can keep the {@link ChannelHandlerContext} for later use, such as
+ * triggering an event outside the handler methods, even from a different thread.
+ * <pre>
+ * public class MyHandler extends {@link SimpleChannelHandler}
+ *                        implements {@link LifeCycleAwareChannelHandler} {
+ *
+ *     private {@link ChannelHandlerContext} ctx;
+ *
+ *     public void beforeAdd({@link ChannelHandlerContext} ctx) {
+ *         this.ctx = ctx;
+ *     }
+ *
+ *     {@code @Override}
+ *     public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} evt) {
+ *         ctx.setAttachment(evt.getMessage());
+ *     }
+ *
+ *     public Object getLastReceivedMessage() {
+ *         return ctx.getAttachment();
+ *     }
+ *     ...
+ * }
  * </pre>
+ *
+ * <h3>A handler can have more than one context</h3>
+ *
  * Please note that a {@link ChannelHandler} instance can be added to more than
  * one {@link ChannelPipeline}.  It means a single {@link ChannelHandler}
  * instance can have more than one {@link ChannelHandlerContext} and therefore
@@ -75,32 +110,6 @@ package org.jboss.netty.channel;
  * {@link ChannelPipeline} p2 = {@link Channels}.pipeline();
  * p2.addLast("f3", fh);
  * p2.addLast("f4", fh);
- * </pre>
- *
- * <h3>Retrieving for later use</h3>
- *
- * You can keep the {@link ChannelHandlerContext} for later use, such as
- * triggering an event outside the handler methods, even from a different thread.
- * <pre>
- * public class MyHandler extends {@link SimpleChannelHandler}
- *                        implements {@link LifeCycleAwareChannelHandler} {
- *
- *     private {@link ChannelHandlerContext} ctx;
- *
- *     public void beforeAdd({@link ChannelHandlerContext} ctx) {
- *         this.ctx = ctx;
- *     }
- *
- *     {@code @Override}
- *     public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} evt) {
- *         ctx.setAttachment(evt.getMessage());
- *     }
- *
- *     public Object getLastReceivedMessage() {
- *         return ctx.getAttachment();
- *     }
- *     ...
- * }
  * </pre>
  *
  * <h3>Additional resources worth reading</h3>
