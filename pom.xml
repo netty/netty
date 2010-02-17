@@ -47,6 +47,7 @@
   <inceptionYear>2008</inceptionYear>
 
   <scm>
+    <url>http://fisheye.jboss.org/browse/Netty</url>
     <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/trunk</connection>
     <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/trunk</developerConnection>
   </scm>
