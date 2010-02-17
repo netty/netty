@@ -148,7 +148,7 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  * // GOOD
  * {@link ClientBootstrap} b = ...;
  * // Configure the connect timeout option.
- * <b>b.setOption("connectTimeout", 10000);</b>
+ * <b>b.setOption("connectTimeoutMillis", 10000);</b>
  * {@link ChannelFuture} f = b.connect(...);
  * f.awaitUninterruptibly();
  *
