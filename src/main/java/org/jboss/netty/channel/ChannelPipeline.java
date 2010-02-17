@@ -35,10 +35,11 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * and how the {@link ChannelHandler}s in the pipeline interact with each other.
  *
  * <h3>Creation of a pipeline</h3>
- * <p>
- * For each new channel, a new pipeline must be created.  If a new pipeline is
- * attached to a channel, the coupling is permanent; the channel cannot attach
- * another pipeline to it nor detach the current pipeline from it.
+ *
+ * For each new channel, a new pipeline must be created and attached to the
+ * channel.  Once attached, the coupling between the channel and the pipeline
+ * is permanent; the channel cannot attach another pipeline to it nor detach
+ * the current pipeline from it.
  * <p>
  * The recommended way to create a new pipeline is to use the helper methods in
  * {@link Channels} rather than calling an individual implementation's
@@ -49,7 +50,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * </pre>
  *
  * <h3>How an event flows in a pipeline</h3>
- * <p>
+ *
  * The following diagram describes how {@link ChannelEvent}s are processed by
  * {@link ChannelHandler}s in a {@link ChannelPipeline} typically.
  * A {@link ChannelEvent} can be handled by either a {@link ChannelUpstreamHandler}
