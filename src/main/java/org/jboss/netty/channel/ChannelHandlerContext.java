@@ -42,19 +42,17 @@ package org.jboss.netty.channel;
  * public class MyHandler extends {@link SimpleChannelHandler}
  *                        implements {@link LifeCycleAwareChannelHandler} {
  *
- *     private {@link ChannelHandlerContext} ctx;
+ *     <b>private {@link ChannelHandlerContext} ctx;</b>
  *
  *     public void beforeAdd({@link ChannelHandlerContext} ctx) {
- *         this.ctx = ctx;
+ *         <b>this.ctx = ctx;</b>
  *     }
  *
- *     {@code @Override}
- *     public void messageReceived({@link ChannelHandlerContext} ctx, {@link MessageEvent} evt) {
- *         ctx.setAttachment(evt.getMessage());
- *     }
- *
- *     public Object getLastReceivedMessage() {
- *         return ctx.getAttachment();
+ *     public void login(String username, password) {
+ *         {@link Channels}.write(
+ *                 <b>this.ctx</b>,
+ *                 {@link Channels}.succeededFuture(<b>this.ctx</t>.getChannel()),
+ *                 new LoginMessage(username, password));
  *     }
  *     ...
  * }
