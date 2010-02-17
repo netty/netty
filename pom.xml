@@ -38,6 +38,16 @@
     <name>JBoss, by Red Hat</name>
     <url>http://www.jboss.org/</url>
   </organization>
+
+  <developers>
+    <developer>
+      <id>trustin</id>
+      <name>Trustin Lee</name>
+      <email>trustin@gmail.com</email>
+      <url>http://gleamynode.net/</url>
+    </developer>
+  </developers>
+
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>
