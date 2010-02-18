@@ -318,6 +318,7 @@ class NioWorker implements Runnable {
         final boolean fromPool = !buffer.isDirect();
         if (fromPool) {
             directBuffer = directBufferPool.acquire(buffer.writableBytes());
+            directBuffer.mark();
         } else {
             directBuffer = buffer.toByteBuffer();
         }
@@ -339,9 +340,9 @@ class NioWorker implements Runnable {
             fireExceptionCaught(channel, t);
         } finally {
             if (fromPool) {
-                directBuffer.flip();
+                directBuffer.limit(directBuffer.position());
+                directBuffer.reset();
                 buffer.writeBytes(directBuffer);
-                directBufferPool.release(directBuffer);
             } else {
                 // no need to copy: directBuffer is just a view to buffer.
                 buffer.writerIndex(buffer.writerIndex() + readBytes);
@@ -463,10 +464,8 @@ class NioWorker implements Runnable {
                     ChannelBuffer origBuf = (ChannelBuffer) evt.getMessage();
                     if (origBuf.isDirect()) {
                         channel.currentWriteBuffer = buf = origBuf.toByteBuffer();
-                        channel.currentWriteBufferIsPooled = false;
                     } else {
                         channel.currentWriteBuffer = buf = directBufferPool.acquire(origBuf);
-                        channel.currentWriteBufferIsPooled = true;
                     }
                 } else {
                     buf = channel.currentWriteBuffer;
@@ -483,10 +482,6 @@ class NioWorker implements Runnable {
 
                     if (!buf.hasRemaining()) {
                         // Successful write - proceed to the next message.
-                        if (channel.currentWriteBufferIsPooled) {
-                            directBufferPool.release(buf);
-                        }
-
                         ChannelFuture future = evt.getFuture();
                         channel.currentWriteEvent = null;
                         channel.currentWriteBuffer = null;
@@ -502,9 +497,6 @@ class NioWorker implements Runnable {
                 } catch (AsynchronousCloseException e) {
                     // Doesn't need a user attention - ignore.
                 } catch (Throwable t) {
-                    if (channel.currentWriteBufferIsPooled) {
-                        directBufferPool.release(buf);
-                    }
                     ChannelFuture future = evt.getFuture();
                     channel.currentWriteEvent = null;
                     channel.currentWriteBuffer = null;
@@ -624,7 +616,6 @@ class NioWorker implements Runnable {
         // Clean up the stale messages in the write buffer.
         synchronized (channel.writeLock) {
             MessageEvent evt = channel.currentWriteEvent;
-            ByteBuffer buf = channel.currentWriteBuffer;
             if (evt != null) {
                 // Create the exception only once to avoid the excessive overhead
                 // caused by fillStackTrace.
@@ -634,14 +625,9 @@ class NioWorker implements Runnable {
                     cause = new ClosedChannelException();
                 }
 
-                if (channel.currentWriteBufferIsPooled) {
-                    directBufferPool.release(buf);
-                }
-
                 ChannelFuture future = evt.getFuture();
                 channel.currentWriteEvent = null;
                 channel.currentWriteBuffer = null;
-                buf = null;
                 evt = null;
                 future.setFailure(cause);
                 fireExceptionCaught = true;

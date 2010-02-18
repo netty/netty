@@ -521,10 +521,8 @@ class NioDatagramWorker implements Runnable {
                     ChannelBuffer origBuf = (ChannelBuffer) evt.getMessage();
                     if (origBuf.isDirect()) {
                         channel.currentWriteBuffer = buf = origBuf.toByteBuffer();
-                        channel.currentWriteBufferIsPooled = false;
                     } else {
                         channel.currentWriteBuffer = buf = directBufferPool.acquire(origBuf);
-                        channel.currentWriteBufferIsPooled = true;
                     }
                 } else {
                     buf = channel.currentWriteBuffer;
@@ -554,10 +552,6 @@ class NioDatagramWorker implements Runnable {
 
                     if (localWrittenBytes > 0) {
                         // Successful write - proceed to the next message.
-                        if (channel.currentWriteBufferIsPooled) {
-                            directBufferPool.release(buf);
-                        }
-
                         ChannelFuture future = evt.getFuture();
                         channel.currentWriteEvent = null;
                         channel.currentWriteBuffer = null;
@@ -573,9 +567,6 @@ class NioDatagramWorker implements Runnable {
                 } catch (final AsynchronousCloseException e) {
                     // Doesn't need a user attention - ignore.
                 } catch (final Throwable t) {
-                    if (channel.currentWriteBufferIsPooled) {
-                        directBufferPool.release(buf);
-                    }
                     ChannelFuture future = evt.getFuture();
                     channel.currentWriteEvent = null;
                     channel.currentWriteBuffer = null;
@@ -704,7 +695,6 @@ class NioDatagramWorker implements Runnable {
         // Clean up the stale messages in the write buffer.
         synchronized (channel.writeLock) {
             MessageEvent evt = channel.currentWriteEvent;
-            ByteBuffer buf = channel.currentWriteBuffer;
             if (evt != null) {
                 // Create the exception only once to avoid the excessive overhead
                 // caused by fillStackTrace.
@@ -713,14 +703,10 @@ class NioDatagramWorker implements Runnable {
                 } else {
                     cause = new ClosedChannelException();
                 }
-                if (channel.currentWriteBufferIsPooled) {
-                    directBufferPool.release(buf);
-                }
 
                 ChannelFuture future = evt.getFuture();
                 channel.currentWriteEvent = null;
                 channel.currentWriteBuffer = null;
-                buf = null;
                 evt = null;
                 future.setFailure(cause);
                 fireExceptionCaught = true;

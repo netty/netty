@@ -15,7 +15,6 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import java.lang.ref.SoftReference;
 import java.nio.ByteBuffer;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -27,10 +26,9 @@ import org.jboss.netty.buffer.ChannelBuffer;
  */
 final class DirectBufferPool {
 
-    private static final int POOL_SIZE = 4;
+    private static final int preallocatedBufferCapacity = 128 * 1024;
 
-    @SuppressWarnings("unchecked")
-    private final SoftReference<ByteBuffer>[] pool = new SoftReference[POOL_SIZE];
+    private ByteBuffer preallocatedBuffer;
 
     DirectBufferPool() {
         super();
@@ -38,70 +36,43 @@ final class DirectBufferPool {
 
     final ByteBuffer acquire(ChannelBuffer src) {
         ByteBuffer dst = acquire(src.readableBytes());
+        dst.mark();
         src.getBytes(src.readerIndex(), dst);
-        dst.rewind();
+        dst.reset();
         return dst;
     }
 
     final ByteBuffer acquire(int size) {
-        for (int i = 0; i < POOL_SIZE; i ++) {
-            SoftReference<ByteBuffer> ref = pool[i];
-            if (ref == null) {
-                continue;
-            }
-
-            ByteBuffer buf = ref.get();
-            if (buf == null) {
-                pool[i] = null;
-                continue;
-            }
-
-            if (buf.capacity() < size) {
-                continue;
-            }
-
-            pool[i] = null;
-
-            buf.rewind();
-            buf.limit(size);
-            return buf;
-        }
-
-        ByteBuffer buf = ByteBuffer.allocateDirect(normalizeCapacity(size));
-        buf.limit(size);
-        return buf;
-    }
-
-    final void release(ByteBuffer buffer) {
-        for (int i = 0; i < POOL_SIZE; i ++) {
-            SoftReference<ByteBuffer> ref = pool[i];
-            if (ref == null || ref.get() == null) {
-                pool[i] = new SoftReference<ByteBuffer>(buffer);
-                return;
+        ByteBuffer preallocatedBuffer = this.preallocatedBuffer;
+        if (preallocatedBuffer == null) {
+            if (size < preallocatedBufferCapacity) {
+                return preallocateAndAcquire(size);
+            } else {
+                return ByteBuffer.allocateDirect(size);
             }
         }
 
-        // pool is full - replace one
-        final int capacity = buffer.capacity();
-        for (int i = 0; i< POOL_SIZE; i ++) {
-            SoftReference<ByteBuffer> ref = pool[i];
-            ByteBuffer pooled = ref.get();
-            if (pooled == null) {
-                pool[i] = null;
-                continue;
+        if (preallocatedBuffer.remaining() < size) {
+            if (size > preallocatedBufferCapacity) {
+                return ByteBuffer.allocateDirect(size);
+            } else {
+                return preallocateAndAcquire(size);
             }
-
-            if (pooled.capacity() < capacity) {
-                pool[i] = new SoftReference<ByteBuffer>(buffer);
-                return;
-            }
+        } else {
+            int nextPos = preallocatedBuffer.position() + size;
+            ByteBuffer x = preallocatedBuffer.duplicate();
+            preallocatedBuffer.position(nextPos);
+            x.limit(nextPos);
+            return x;
         }
     }
 
-    private static final int normalizeCapacity(int capacity) {
-        // Normalize to multiple of 4096.
-        // Strictly speaking, 4096 should be normalized to 4096,
-        // but it becomes 8192 to keep the calculation simplistic.
-        return (capacity & 0xfffff000) + 0x1000;
+    private final ByteBuffer preallocateAndAcquire(int size) {
+        ByteBuffer preallocatedBuffer = this.preallocatedBuffer =
+            ByteBuffer.allocateDirect(preallocatedBufferCapacity);
+        ByteBuffer x = preallocatedBuffer.duplicate();
+        x.limit(size);
+        preallocatedBuffer.position(size);
+        return x;
     }
 }

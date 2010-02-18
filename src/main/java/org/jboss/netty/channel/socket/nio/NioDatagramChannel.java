@@ -109,7 +109,6 @@ class NioDatagramChannel extends AbstractChannel
      */
     MessageEvent currentWriteEvent;
     ByteBuffer currentWriteBuffer;
-    boolean currentWriteBufferIsPooled;
 
     /**
      * Boolean that indicates that write operation is in progress.

@@ -72,7 +72,6 @@ class NioSocketChannel extends AbstractChannel
 
     MessageEvent currentWriteEvent;
     ByteBuffer currentWriteBuffer;
-    boolean currentWriteBufferIsPooled;
 
     public NioSocketChannel(
             Channel parent, ChannelFactory factory,
