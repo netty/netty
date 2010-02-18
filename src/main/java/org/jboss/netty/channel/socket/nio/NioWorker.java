@@ -314,22 +314,13 @@ class NioWorker implements Runnable {
         ChannelBuffer buffer =
             bufferFactory.getBuffer(predictor.nextReceiveBufferSize());
 
-        final ByteBuffer directBuffer;
-        final boolean fromPool = !buffer.isDirect();
-        if (fromPool) {
-            directBuffer = directBufferPool.acquire(buffer.writableBytes());
-            directBuffer.mark();
-        } else {
-            directBuffer = buffer.toByteBuffer();
-        }
-
         int ret = 0;
         int readBytes = 0;
         boolean failure = true;
         try {
-            while ((ret = ch.read(directBuffer)) > 0) {
+            while ((ret = buffer.writeBytes(ch, buffer.writableBytes())) > 0) {
                 readBytes += ret;
-                if (!directBuffer.hasRemaining()) {
+                if (!buffer.writable()) {
                     break;
                 }
             }
@@ -338,15 +329,6 @@ class NioWorker implements Runnable {
             // Can happen, and does not need a user attention.
         } catch (Throwable t) {
             fireExceptionCaught(channel, t);
-        } finally {
-            if (fromPool) {
-                directBuffer.limit(directBuffer.position());
-                directBuffer.reset();
-                buffer.writeBytes(directBuffer);
-            } else {
-                // no need to copy: directBuffer is just a view to buffer.
-                buffer.writerIndex(buffer.writerIndex() + readBytes);
-            }
         }
 
         if (readBytes > 0) {
