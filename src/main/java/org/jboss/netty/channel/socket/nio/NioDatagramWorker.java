@@ -220,7 +220,7 @@ class NioDatagramWorker implements Runnable {
             }
 
             try {
-                selector.select(500);
+                SelectorUtil.select(selector);
 
                 // 'wakenUp.compareAndSet(false, true)' is always evaluated
                 // before calling 'selector.wakeup()' to reduce the wake-up
