@@ -18,6 +18,9 @@ package org.jboss.netty.channel.socket.nio;
 import java.nio.ByteBuffer;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.SystemPropertyUtil;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
@@ -26,7 +29,25 @@ import org.jboss.netty.buffer.ChannelBuffer;
  */
 final class DirectBufferPool {
 
-    private static final int preallocatedBufferCapacity = 128 * 1024;
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(DirectBufferPool.class);
+
+    private static final int CAPACITY;
+
+    static {
+        int val = SystemPropertyUtil.get(
+                "org.jboss.netty.channel.socket.nio.preallocatedBufferCapacity",
+                0);
+
+        if (val <= 0) {
+            val = 128 * 1024;
+        } else {
+            logger.debug(
+                    "Using the specified preallocated buffer capacity: " + val);
+        }
+
+        CAPACITY = val;
+    }
 
     private ByteBuffer preallocatedBuffer;
 
@@ -45,7 +66,7 @@ final class DirectBufferPool {
     final ByteBuffer acquire(int size) {
         ByteBuffer preallocatedBuffer = this.preallocatedBuffer;
         if (preallocatedBuffer == null) {
-            if (size < preallocatedBufferCapacity) {
+            if (size < CAPACITY) {
                 return preallocateAndAcquire(size);
             } else {
                 return ByteBuffer.allocateDirect(size);
@@ -53,7 +74,7 @@ final class DirectBufferPool {
         }
 
         if (preallocatedBuffer.remaining() < size) {
-            if (size > preallocatedBufferCapacity) {
+            if (size > CAPACITY) {
                 return ByteBuffer.allocateDirect(size);
             } else {
                 return preallocateAndAcquire(size);
@@ -69,7 +90,7 @@ final class DirectBufferPool {
 
     private final ByteBuffer preallocateAndAcquire(int size) {
         ByteBuffer preallocatedBuffer = this.preallocatedBuffer =
-            ByteBuffer.allocateDirect(preallocatedBufferCapacity);
+            ByteBuffer.allocateDirect(CAPACITY);
         ByteBuffer x = preallocatedBuffer.duplicate();
         x.limit(size);
         preallocatedBuffer.position(size);

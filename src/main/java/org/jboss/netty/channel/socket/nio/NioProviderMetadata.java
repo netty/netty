@@ -62,8 +62,7 @@ class NioProviderMetadata {
 
         // Use the system property if possible.
         try {
-            String value = SystemPropertyUtil.get(CONSTRAINT_LEVEL_PROPERTY, "-1");
-            constraintLevel = Integer.parseInt(value);
+            constraintLevel = SystemPropertyUtil.get(CONSTRAINT_LEVEL_PROPERTY, -1);
             if (constraintLevel < 0 || constraintLevel > 2) {
                 constraintLevel = -1;
             } else {

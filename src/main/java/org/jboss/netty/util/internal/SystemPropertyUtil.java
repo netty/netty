@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.util.internal;
 
+import java.util.regex.Pattern;
+
 /**
  * Accesses the system property swallowing a {@link SecurityException}.
  *
@@ -57,6 +59,28 @@ public class SystemPropertyUtil {
             value = def;
         }
         return value;
+    }
+
+    /**
+     * Returns the value of the Java system property with the specified
+     * {@code key}, while falling back to the specified default value if
+     * the property access fails.
+     *
+     * @return the property value.
+     *         {@code def} if there's no such property or if an access to the
+     *         specified property is not allowed.
+     */
+    public static int get(String key, int def) {
+        String value = get(key);
+        if (value == null) {
+            return def;
+        }
+
+        if (Pattern.matches("-?[0-9]+", value)) {
+            return Integer.parseInt(value);
+        } else {
+            return def;
+        }
     }
 
     private SystemPropertyUtil() {
