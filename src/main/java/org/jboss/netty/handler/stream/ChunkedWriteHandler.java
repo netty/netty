@@ -59,6 +59,14 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * ch.write(new {@link ChunkedFile}(new File("video.mkv"));
  * </pre>
  *
+ * <h3>Sending a stream which generates a chunk intermittently</h3>
+ *
+ * Some {@link ChunkedInput} generates a chunk on a certain event or timing.
+ * Such {@link ChunkedInput} implementation often returns {@code false} on
+ * {@link ChunkedInput#hasNextChunk()}, resulting in the indefinitely suspended
+ * transfer.  To resume the transfer when a new chunk is available, you have to
+ * call {@link #resumeTransfer()}.
+ *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
@@ -74,6 +82,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
     private final Queue<MessageEvent> queue =
         new LinkedTransferQueue<MessageEvent>();
 
+    private ChannelHandlerContext ctx;
     private MessageEvent currentEvent;
 
     /**
@@ -81,6 +90,22 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
      */
     public ChunkedWriteHandler() {
         super();
+    }
+
+    /**
+     * Continues to fetch the chunks from the input.
+     */
+    public void resumeTransfer() {
+        ChannelHandlerContext ctx = this.ctx;
+        if (ctx == null) {
+            return;
+        }
+
+        try {
+            flush(ctx);
+        } catch (Exception e) {
+            logger.warn("Unexpected exception while sending chunks.", e);
+        }
     }
 
     public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
@@ -94,6 +119,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         assert offered;
 
         if (ctx.getChannel().isWritable()) {
+            this.ctx = ctx;
             flush(ctx);
         }
     }
