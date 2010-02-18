@@ -79,6 +79,8 @@ class NioWorker implements Runnable {
     private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
+    private final ReadBufferPool readBufferPool = new ReadBufferPool();
+
     NioWorker(int bossId, int id, Executor executor) {
         this.bossId = bossId;
         this.id = id;
@@ -316,18 +318,40 @@ class NioWorker implements Runnable {
         int ret = 0;
         int readBytes = 0;
         boolean failure = true;
-        try {
-            while ((ret = buffer.writeBytes(ch, buffer.writableBytes())) > 0) {
-                readBytes += ret;
-                if (!buffer.writable()) {
-                    break;
+
+        if (buffer.isDirect()) {
+            try {
+                while ((ret = buffer.writeBytes(ch, buffer.writableBytes())) > 0) {
+                    readBytes += ret;
+                    if (!buffer.writable()) {
+                        break;
+                    }
                 }
+                failure = false;
+            } catch (ClosedChannelException e) {
+                // Can happen, and does not need a user attention.
+            } catch (Throwable t) {
+                fireExceptionCaught(channel, t);
             }
-            failure = false;
-        } catch (ClosedChannelException e) {
-            // Can happen, and does not need a user attention.
-        } catch (Throwable t) {
-            fireExceptionCaught(channel, t);
+        } else {
+            ByteBuffer bb = readBufferPool.acquire(buffer.writableBytes());
+            try {
+                while ((ret = ch.read(bb)) > 0) {
+                    readBytes += ret;
+                    if (!bb.hasRemaining()) {
+                        break;
+                    }
+                }
+                failure = false;
+            } catch (ClosedChannelException e) {
+                // Can happen, and does not need a user attention.
+            } catch (Throwable t) {
+                fireExceptionCaught(channel, t);
+            } finally {
+                bb.flip();
+                buffer.writeBytes(bb);
+                readBufferPool.release(bb);
+            }
         }
 
         if (readBytes > 0) {
