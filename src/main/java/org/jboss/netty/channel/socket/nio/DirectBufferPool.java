@@ -43,7 +43,7 @@ final class DirectBufferPool {
             val = 128 * 1024;
         } else {
             logger.debug(
-                    "Using the specified preallocated buffer capacity: " + val);
+                    "Setting the preallocated buffer capacity to: " + val);
         }
 
         CAPACITY = val;

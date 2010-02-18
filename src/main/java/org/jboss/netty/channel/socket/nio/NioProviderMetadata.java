@@ -48,6 +48,9 @@ class NioProviderMetadata {
         InternalLoggerFactory.getInstance(NioProviderMetadata.class);
 
     private static final String CONSTRAINT_LEVEL_PROPERTY =
+        "org.jboss.netty.channel.socket.nio.constraintLevel";
+
+    private static final String OLD_CONSTRAINT_LEVEL_PROPERTY =
         "java.nio.channels.spi.constraintLevel";
 
     /**
@@ -61,17 +64,24 @@ class NioProviderMetadata {
         int constraintLevel = -1;
 
         // Use the system property if possible.
-        try {
-            constraintLevel = SystemPropertyUtil.get(CONSTRAINT_LEVEL_PROPERTY, -1);
+        constraintLevel = SystemPropertyUtil.get(CONSTRAINT_LEVEL_PROPERTY, -1);
+        if (constraintLevel < 0 || constraintLevel > 2) {
+            // Try the old property.
+            constraintLevel = SystemPropertyUtil.get(OLD_CONSTRAINT_LEVEL_PROPERTY, -1);
             if (constraintLevel < 0 || constraintLevel > 2) {
                 constraintLevel = -1;
             } else {
-                logger.debug(
-                        "Using the specified NIO constraint level: " +
-                        constraintLevel);
+                logger.warn(
+                        "System property '" +
+                        OLD_CONSTRAINT_LEVEL_PROPERTY +
+                        "' has been deprecated.  Use '" +
+                        CONSTRAINT_LEVEL_PROPERTY + "' instead.");
             }
-        } catch (Exception e) {
-            // format error
+        }
+
+        if (constraintLevel >= 0) {
+            logger.debug(
+                    "Setting the NIO constraint level to: " + constraintLevel);
         }
 
         if (constraintLevel < 0) {
