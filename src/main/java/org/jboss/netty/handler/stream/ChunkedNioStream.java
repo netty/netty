@@ -96,6 +96,10 @@ public class ChunkedNioStream implements ChunkedInput {
         return false;
     }
 
+    public boolean isEndOfInput() throws Exception {
+        return hasNextChunk();
+    }
+
     public void close() throws Exception {
         in.close();
     }

@@ -129,6 +129,10 @@ public class ChunkedFile implements ChunkedInput {
         return offset < endOffset && file.getChannel().isOpen();
     }
 
+    public boolean isEndOfInput() throws Exception {
+        return hasNextChunk();
+    }
+
     public void close() throws Exception {
         file.close();
     }

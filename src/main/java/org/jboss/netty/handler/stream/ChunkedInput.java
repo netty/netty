@@ -30,7 +30,9 @@ public interface ChunkedInput {
 
     /**
      * Returns {@code true} if and only if there is any data left in the
-     * stream.
+     * stream.  Please note that {@code false} does not necessarily mean that
+     * the stream has reached at its end.  In a slow stream, the next chunk
+     * might be unavailable just momentarily.
      */
     boolean hasNextChunk() throws Exception;
 
@@ -42,8 +44,17 @@ public interface ChunkedInput {
      *
      * @return the fetched chunk, which is usually {@link ChannelBuffer}.
      *         {@code null} if there is no data left in the stream.
+     *         Please note that {@code null} does not necessarily mean that the
+     *         stream has reached at its end.  In a slow stream, the next chunk
+     *         might be unavailable just momentarily.
      */
     Object nextChunk() throws Exception;
+
+    /**
+     * Return {@code true} if and only if there is no data left in the stream
+     * and the stream has reached at its end.
+     */
+    boolean isEndOfInput() throws Exception;
 
     /**
      * Releases the resources associated with the stream.

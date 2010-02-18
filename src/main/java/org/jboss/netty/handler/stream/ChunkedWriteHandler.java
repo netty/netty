@@ -171,15 +171,13 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                 if (m instanceof ChunkedInput) {
                     ChunkedInput chunks = (ChunkedInput) m;
                     Object chunk;
-                    boolean last;
+                    boolean endOfInput;
                     try {
                         chunk = chunks.nextChunk();
                         if (chunk == null) {
                             chunk = ChannelBuffers.EMPTY_BUFFER;
-                            last = true;
-                        } else {
-                            last = !chunks.hasNextChunk();
                         }
+                        endOfInput = chunks.isEndOfInput();
                     } catch (Throwable t) {
                         MessageEvent currentEvent = this.currentEvent;
                         this.currentEvent = null;
@@ -193,7 +191,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
 
                     ChannelFuture writeFuture;
                     final MessageEvent currentEvent = this.currentEvent;
-                    if (last) {
+                    if (endOfInput) {
                         this.currentEvent = null;
                         closeInput(chunks);
                         writeFuture = currentEvent.getFuture();
