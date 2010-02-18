@@ -127,8 +127,6 @@ class NioDatagramWorker implements Runnable {
 
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
-    private final DirectBufferPool directBufferPool = new DirectBufferPool();
-
     /**
      * Sole constructor.
      *
@@ -519,11 +517,7 @@ class NioDatagramWorker implements Runnable {
                     }
 
                     ChannelBuffer origBuf = (ChannelBuffer) evt.getMessage();
-                    if (origBuf.isDirect()) {
-                        channel.currentWriteBuffer = buf = origBuf.toByteBuffer();
-                    } else {
-                        channel.currentWriteBuffer = buf = directBufferPool.acquire(origBuf);
-                    }
+                    channel.currentWriteBuffer = buf = origBuf.toByteBuffer();
                 } else {
                     buf = channel.currentWriteBuffer;
                 }

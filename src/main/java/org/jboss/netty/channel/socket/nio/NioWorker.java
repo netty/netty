@@ -78,7 +78,6 @@ class NioWorker implements Runnable {
     private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
     private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
-    private final DirectBufferPool directBufferPool = new DirectBufferPool();
 
     NioWorker(int bossId, int id, Executor executor) {
         this.bossId = bossId;
@@ -444,11 +443,7 @@ class NioWorker implements Runnable {
                     }
 
                     ChannelBuffer origBuf = (ChannelBuffer) evt.getMessage();
-                    if (origBuf.isDirect()) {
-                        channel.currentWriteBuffer = buf = origBuf.toByteBuffer();
-                    } else {
-                        channel.currentWriteBuffer = buf = directBufferPool.acquire(origBuf);
-                    }
+                    channel.currentWriteBuffer = buf = origBuf.toByteBuffer();
                 } else {
                     buf = channel.currentWriteBuffer;
                 }
