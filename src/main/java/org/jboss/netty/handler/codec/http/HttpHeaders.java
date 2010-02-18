@@ -412,36 +412,6 @@ public class HttpHeaders {
 
 
     /**
-     * Returns the length of the content.  Please note that this value is
-     * not retrieved from {@link HttpMessage#getContent()} but from the
-     * {@code "Content-Length"} header, and thus they are independent from each
-     * other.
-     *
-     * @return the content length or {@code 0} if this message does not have
-     *         the {@code "Content-Length"} header
-     */
-    public static long getContentLength(HttpMessage message) {
-        return getContentLength(message, 0L);
-    }
-
-    /**
-     * Returns the length of the content.  Please note that this value is
-     * not retrieved from {@link HttpMessage#getContent()} but from the
-     * {@code "Content-Length"} header, and thus they are independent from each
-     * other.
-     *
-     * @return the content length or {@code defaultValue} if this message does
-     *         not have the {@code "Content-Length"} header
-     */
-    public static long getContentLength(HttpMessage message, long defaultValue) {
-        String contentLength = message.getHeader(Names.CONTENT_LENGTH);
-        if (contentLength != null) {
-            return Long.parseLong(contentLength);
-        }
-        return defaultValue;
-    }
-
-    /**
      * Returns {@code true} if and only if the connection can remain open and
      * thus 'kept alive'.  This methods respects the value of the
      * {@code "Connection"} header first and then the return value of
@@ -497,8 +467,86 @@ public class HttpHeaders {
 
     // TODO Document me
 
-    public static void setContentLength(HttpMessage message, long value) {
-        message.setHeader(Names.CONTENT_LENGTH, value);
+    public static String getHeader(HttpMessage message, String name) {
+        return message.getHeader(name);
+    }
+
+    public static String getHeader(HttpMessage message, String name, String defaultValue) {
+        String value = message.getHeader(name);
+        if (value == null) {
+            return defaultValue;
+        }
+        return value;
+    }
+
+    public static void setHeader(HttpMessage message, String name, Object value) {
+        message.setHeader(name, value);
+    }
+
+    public static void setHeader(HttpMessage message, String name, Iterable<?> values) {
+        message.setHeader(name, values);
+    }
+
+    public static void addHeader(HttpMessage message, String name, Object value) {
+        message.addHeader(name, value);
+    }
+
+    public static int getIntHeader(HttpMessage message, String name) {
+        return Integer.parseInt(getHeader(message, name));
+    }
+
+    public static int getIntHeader(HttpMessage message, String name, int defaultValue) {
+        try {
+            return getIntHeader(message, name);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    public static void setIntHeader(HttpMessage message, String name, int value) {
+        message.setHeader(name, value);
+    }
+
+    public static void setIntHeader(HttpMessage message, String name, Iterable<Integer> values) {
+        message.setHeader(name, values);
+    }
+
+    public static void addIntHeader(HttpMessage message, String name, int value) {
+        message.addHeader(name, value);
+    }
+
+    /**
+     * Returns the length of the content.  Please note that this value is
+     * not retrieved from {@link HttpMessage#getContent()} but from the
+     * {@code "Content-Length"} header, and thus they are independent from each
+     * other.
+     *
+     * @return the content length or {@code 0} if this message does not have
+     *         the {@code "Content-Length"} header
+     */
+    public static long getContentLength(HttpMessage message) {
+        return getContentLength(message, 0L);
+    }
+
+    /**
+     * Returns the length of the content.  Please note that this value is
+     * not retrieved from {@link HttpMessage#getContent()} but from the
+     * {@code "Content-Length"} header, and thus they are independent from each
+     * other.
+     *
+     * @return the content length or {@code defaultValue} if this message does
+     *         not have the {@code "Content-Length"} header
+     */
+    public static long getContentLength(HttpMessage message, long defaultValue) {
+        String contentLength = message.getHeader(Names.CONTENT_LENGTH);
+        if (contentLength != null) {
+            return Long.parseLong(contentLength);
+        }
+        return defaultValue;
+    }
+
+    public static void setContentLength(HttpMessage message, long defaultValue) {
+        message.setHeader(Names.CONTENT_LENGTH, defaultValue);
     }
 
     public static String getHost(HttpMessage message) {
@@ -506,11 +554,7 @@ public class HttpHeaders {
     }
 
     public static String getHost(HttpMessage message, String defaultValue) {
-        String host = getHost(message);
-        if (host == null) {
-            return defaultValue;
-        }
-        return host;
+        return getHeader(message, Names.HOST, defaultValue);
     }
 
     public static void setHost(HttpMessage message, String value) {
