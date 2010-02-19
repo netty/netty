@@ -298,9 +298,9 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
     private final AtomicReference<ChannelBuffer> cumulation =
         new AtomicReference<ChannelBuffer>();
     private final boolean unfold;
-    private volatile ReplayingDecoderBuffer replayable;
-    private volatile T state;
-    private volatile int checkpoint;
+    private ReplayingDecoderBuffer replayable;
+    private T state;
+    private int checkpoint;
 
     /**
      * Creates a new instance with no initial state (i.e: {@code null}).

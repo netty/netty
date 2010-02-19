@@ -48,7 +48,7 @@ import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
  */
 public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
 
-    private volatile DecoderEmbedder<ChannelBuffer> decoder;
+    private DecoderEmbedder<ChannelBuffer> decoder;
 
     /**
      * Creates a new instance.

@@ -59,7 +59,7 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 public class CompatibleObjectDecoder extends ReplayingDecoder<CompatibleObjectDecoderState> {
 
     private final SwitchableInputStream bin = new SwitchableInputStream();
-    private volatile ObjectInputStream oin;
+    private ObjectInputStream oin;
 
     /**
      * Creates a new decoder.

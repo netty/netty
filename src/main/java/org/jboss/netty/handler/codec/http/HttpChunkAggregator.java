@@ -53,7 +53,7 @@ import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
 
     private final int maxContentLength;
-    private volatile HttpMessage currentMessage;
+    private HttpMessage currentMessage;
 
     /**
      * Creates a new instance.
