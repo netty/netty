@@ -18,8 +18,6 @@ package org.jboss.netty.channel.socket.nio;
 import java.lang.ref.SoftReference;
 import java.nio.ByteBuffer;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
@@ -34,13 +32,6 @@ final class ReadBufferPool {
 
     ReadBufferPool() {
         super();
-    }
-
-    final ByteBuffer acquire(ChannelBuffer src) {
-        ByteBuffer dst = acquire(src.readableBytes());
-        src.getBytes(src.readerIndex(), dst);
-        dst.rewind();
-        return dst;
     }
 
     final ByteBuffer acquire(int size) {
