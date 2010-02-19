@@ -250,9 +250,9 @@ public interface ChannelFuture {
     /**
      * Removes the specified listener from this future.
      * The specified listener is no longer notified when this
-     * future is {@linkplain #isDone() done}.  If this
-     * future is already completed, this method has no effect
-     * and returns silently.
+     * future is {@linkplain #isDone() done}.  If the specified
+     * listener is not associated with this future, this method
+     * does nothing and returns silently.
      */
     void removeListener(ChannelFutureListener listener);
 
