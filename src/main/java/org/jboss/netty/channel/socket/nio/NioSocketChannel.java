@@ -64,7 +64,7 @@ class NioSocketChannel extends AbstractChannel
     final Runnable writeTask = new WriteTask();
     final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
 
-    final Queue<MessageEvent> writeBuffer = new WriteBuffer();
+    final Queue<MessageEvent> writeBuffer = new WriteRequestQueue();
     final AtomicInteger writeBufferSize = new AtomicInteger();
     final AtomicInteger highWaterMarkCounter = new AtomicInteger();
     boolean inWriteNowLoop;
@@ -194,13 +194,13 @@ class NioSocketChannel extends AbstractChannel
         }
     }
 
-    private final class WriteBuffer extends LinkedTransferQueue<MessageEvent> {
+    private final class WriteRequestQueue extends LinkedTransferQueue<MessageEvent> {
 
         private static final long serialVersionUID = -246694024103520626L;
 
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
-        WriteBuffer() {
+        WriteRequestQueue() {
             super();
         }
 

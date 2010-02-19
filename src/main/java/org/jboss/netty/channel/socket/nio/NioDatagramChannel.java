@@ -74,7 +74,7 @@ class NioDatagramChannel extends AbstractChannel
     final Object interestOpsLock = new Object();
 
     /**
-     * Monitor object for synchronizing access to the {@link WriteBufferQueue}.
+     * Monitor object for synchronizing access to the {@link WriteRequestQueue}.
      */
     final Object writeLock = new Object();
 
@@ -91,10 +91,10 @@ class NioDatagramChannel extends AbstractChannel
     /**
      * Queue of write {@link MessageEvent}s.
      */
-    final Queue<MessageEvent> writeBufferQueue = new WriteBufferQueue();
+    final Queue<MessageEvent> writeBufferQueue = new WriteRequestQueue();
 
     /**
-     * Keeps track of the number of bytes that the {@link WriteBufferQueue} currently
+     * Keeps track of the number of bytes that the {@link WriteRequestQueue} currently
      * contains.
      */
     final AtomicInteger writeBufferSize = new AtomicInteger();
@@ -238,17 +238,17 @@ class NioDatagramChannel extends AbstractChannel
     }
 
     /**
-     * WriteBuffer is an extension of {@link LinkedTransferQueue} that adds
-     * support for highWaterMark checking of the write buffer size.
+     * {@link WriteRequestQueue} is an extension of {@link LinkedTransferQueue}
+     * that adds support for highWaterMark checking of the write buffer size.
      */
-    private final class WriteBufferQueue extends
+    private final class WriteRequestQueue extends
             LinkedTransferQueue<MessageEvent> {
 
         private static final long serialVersionUID = 5057413071460766376L;
 
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
-        WriteBufferQueue() {
+        WriteRequestQueue() {
             super();
         }
 
