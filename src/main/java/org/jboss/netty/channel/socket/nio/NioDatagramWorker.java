@@ -43,6 +43,7 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ThreadRenamingRunnable;
@@ -126,6 +127,8 @@ class NioDatagramWorker implements Runnable {
     private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
 
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
+
+    private final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
 
     /**
      * Sole constructor.
@@ -499,6 +502,7 @@ class NioDatagramWorker implements Runnable {
 
         int writtenBytes = 0;
 
+        final SocketSendBufferPool sendBufferPool = this.sendBufferPool;
         final DatagramChannel ch = channel.getDatagramChannel();
         final Queue<MessageEvent> writeBuffer = channel.writeBufferQueue;
         final int writeSpinCount = channel.getConfig().getWriteSpinCount();
@@ -509,7 +513,8 @@ class NioDatagramWorker implements Runnable {
             // loop forever...
             for (;;) {
                 MessageEvent evt = channel.currentWriteEvent;
-                ByteBuffer buf;
+                SendBuffer buf;
+                ByteBuffer bb;
                 if (evt == null) {
                     if ((channel.currentWriteEvent = evt = writeBuffer.poll()) == null) {
                         removeOpWrite = true;
@@ -518,9 +523,11 @@ class NioDatagramWorker implements Runnable {
                     }
 
                     ChannelBuffer origBuf = (ChannelBuffer) evt.getMessage();
-                    channel.currentWriteBuffer = buf = origBuf.toByteBuffer();
+                    channel.currentWriteBuffer = buf = sendBufferPool.acquire(origBuf);
+                    bb = buf.buffer;
                 } else {
                     buf = channel.currentWriteBuffer;
+                    bb = buf.buffer;
                 }
 
                 try {
@@ -528,7 +535,7 @@ class NioDatagramWorker implements Runnable {
                     SocketAddress raddr = evt.getRemoteAddress();
                     if (raddr == null) {
                         for (int i = writeSpinCount; i > 0; i --) {
-                            localWrittenBytes = ch.write(buf);
+                            localWrittenBytes = ch.write(bb);
                             if (localWrittenBytes != 0) {
                                 writtenBytes += localWrittenBytes;
                                 break;
@@ -536,7 +543,7 @@ class NioDatagramWorker implements Runnable {
                         }
                     } else {
                         for (int i = writeSpinCount; i > 0; i --) {
-                            localWrittenBytes = ch.send(buf, raddr);
+                            localWrittenBytes = ch.send(bb, raddr);
                             if (localWrittenBytes != 0) {
                                 writtenBytes += localWrittenBytes;
                                 break;
@@ -546,11 +553,13 @@ class NioDatagramWorker implements Runnable {
 
                     if (localWrittenBytes > 0) {
                         // Successful write - proceed to the next message.
+                        buf.release();
                         ChannelFuture future = evt.getFuture();
                         channel.currentWriteEvent = null;
                         channel.currentWriteBuffer = null;
                         evt = null;
                         buf = null;
+                        bb = null;
                         future.setSuccess();
                     } else {
                         // Not written at all - perhaps the kernel buffer is full.
@@ -561,11 +570,13 @@ class NioDatagramWorker implements Runnable {
                 } catch (final AsynchronousCloseException e) {
                     // Doesn't need a user attention - ignore.
                 } catch (final Throwable t) {
+                    buf.release();
                     ChannelFuture future = evt.getFuture();
                     channel.currentWriteEvent = null;
                     channel.currentWriteBuffer = null;
                     buf = null;
                     evt = null;
+                    bb = null;
                     future.setFailure(t);
                     fireExceptionCaught(channel, t);
                 }

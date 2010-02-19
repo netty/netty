@@ -22,7 +22,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -38,6 +37,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.socket.DatagramChannelConfig;
+import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
@@ -108,7 +108,7 @@ class NioDatagramChannel extends AbstractChannel
      * The current write {@link MessageEvent}
      */
     MessageEvent currentWriteEvent;
-    ByteBuffer currentWriteBuffer;
+    SendBuffer currentWriteBuffer;
 
     /**
      * Boolean that indicates that write operation is in progress.
