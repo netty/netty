@@ -485,7 +485,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
     private static final class MemoryAwareRunnable implements Runnable {
         final Runnable task;
-        volatile int estimatedSize;
+        int estimatedSize;
 
         MemoryAwareRunnable(Runnable task) {
             this.task = task;

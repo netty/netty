@@ -36,7 +36,7 @@ public class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper 
 
     private final ChannelHandlerContext ctx;
     private final ChannelEvent e;
-    volatile int estimatedSize;
+    int estimatedSize;
 
     /**
      * Creates a {@link Runnable} which sends the specified {@link ChannelEvent}
