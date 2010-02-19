@@ -56,7 +56,7 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * stream chunk by chunk and write the fetched chunk downstream:
  * <pre>
  * {@link Channel} ch = ...;
- * ch.write(new {@link ChunkedOioFile}(new File("video.mkv"));
+ * ch.write(new {@link ChunkedFile}(new File("video.mkv"));
  * </pre>
  *
  * <h3>Sending a stream which generates a chunk intermittently</h3>

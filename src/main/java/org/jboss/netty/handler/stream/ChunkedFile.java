@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 Red Hat, Inc.
+ * Copyright 2009 Red Hat, Inc.
  *
  * Red Hat licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -15,35 +15,138 @@
  */
 package org.jboss.netty.handler.stream;
 
-import java.nio.channels.FileChannel;
+import static org.jboss.netty.buffer.ChannelBuffers.*;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 
 /**
  * A {@link ChunkedInput} that fetches data from a file chunk by chunk.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2180 $, $Date: 2010-02-19 13:11:59 +0900 (Fri, 19 Feb 2010) $
+ * @version $Rev$, $Date$
  */
-public interface ChunkedFile extends ChunkedInput {
+public class ChunkedFile implements ChunkedInput {
+
+    private final RandomAccessFile file;
+    private final long startOffset;
+    private final long endOffset;
+    private final int chunkSize;
+    private volatile long offset;
 
     /**
-     * Returns the {@link FileChannel} that this input fetches chunks from.
+     * Creates a new instance that fetches data from the specified file.
      */
-    FileChannel getSource();
+    public ChunkedFile(File file) throws IOException {
+        this(file, ChunkedStream.DEFAULT_CHUNK_SIZE);
+    }
+
+    /**
+     * Creates a new instance that fetches data from the specified file.
+     *
+     * @param chunkSize the number of bytes to fetch on each
+     *                  {@link #nextChunk()} call
+     */
+    public ChunkedFile(File file, int chunkSize) throws IOException {
+        this(new RandomAccessFile(file, "r"), chunkSize);
+    }
+
+    /**
+     * Creates a new instance that fetches data from the specified file.
+     */
+    public ChunkedFile(RandomAccessFile file) throws IOException {
+        this(file, ChunkedStream.DEFAULT_CHUNK_SIZE);
+    }
+
+    /**
+     * Creates a new instance that fetches data from the specified file.
+     *
+     * @param chunkSize the number of bytes to fetch on each
+     *                  {@link #nextChunk()} call
+     */
+    public ChunkedFile(RandomAccessFile file, int chunkSize) throws IOException {
+        this(file, 0, file.length(), chunkSize);
+    }
+
+    /**
+     * Creates a new instance that fetches data from the specified file.
+     *
+     * @param offset the offset of the file where the transfer begins
+     * @param length the number of bytes to transfer
+     * @param chunkSize the number of bytes to fetch on each
+     *                  {@link #nextChunk()} call
+     */
+    public ChunkedFile(RandomAccessFile file, long offset, long length, int chunkSize) throws IOException {
+        if (file == null) {
+            throw new NullPointerException("file");
+        }
+        if (offset < 0) {
+            throw new IllegalArgumentException(
+                    "offset: " + offset + " (expected: 0 or greater)");
+        }
+        if (length < 0) {
+            throw new IllegalArgumentException(
+                    "length: " + length + " (expected: 0 or greater)");
+        }
+        if (chunkSize <= 0) {
+            throw new IllegalArgumentException(
+                    "chunkSize: " + chunkSize +
+                    " (expected: a positive integer)");
+        }
+
+        this.file = file;
+        this.offset = startOffset = offset;
+        endOffset = offset + length;
+        this.chunkSize = chunkSize;
+
+        file.seek(offset);
+    }
 
     /**
      * Returns the offset in the file where the transfer began.
      */
-    long getStartOffset();
+    public long getStartOffset() {
+        return startOffset;
+    }
 
     /**
      * Returns the offset in the file where the transfer will end.
      */
-    long getEndOffset();
+    public long getEndOffset() {
+        return endOffset;
+    }
 
     /**
      * Returns the offset in the file where the transfer is happening currently.
      */
-    long getCurrentOffset();
+    public long getCurrentOffset() {
+        return offset;
+    }
+
+    public boolean hasNextChunk() throws Exception {
+        return offset < endOffset && file.getChannel().isOpen();
+    }
+
+    public boolean isEndOfInput() throws Exception {
+        return hasNextChunk();
+    }
+
+    public void close() throws Exception {
+        file.close();
+    }
+
+    public Object nextChunk() throws Exception {
+        long offset = this.offset;
+        if (offset >= endOffset) {
+            return null;
+        }
+
+        int chunkSize = (int) Math.min(this.chunkSize, endOffset - offset);
+        byte[] chunk = new byte[chunkSize];
+        file.readFully(chunk);
+        this.offset = offset + chunkSize;
+        return wrappedBuffer(chunk);
+    }
 }

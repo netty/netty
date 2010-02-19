@@ -32,7 +32,7 @@ import java.nio.channels.FileChannel;
  * @author Frederic Bregier
  * @version $Rev$, $Date$
  */
-public class ChunkedNioFile implements ChunkedFile {
+public class ChunkedNioFile implements ChunkedInput {
 
     private final FileChannel in;
     private long startOffset;
@@ -110,18 +110,23 @@ public class ChunkedNioFile implements ChunkedFile {
         endOffset = offset + length;
     }
 
-    public FileChannel getSource() {
-        return in;
-    }
-
+    /**
+     * Returns the offset in the file where the transfer began.
+     */
     public long getStartOffset() {
         return startOffset;
     }
 
+    /**
+     * Returns the offset in the file where the transfer will end.
+     */
     public long getEndOffset() {
         return endOffset;
     }
 
+    /**
+     * Returns the offset in the file where the transfer is happening currently.
+     */
     public long getCurrentOffset() {
         return offset;
     }
