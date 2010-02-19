@@ -41,7 +41,7 @@ public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
 
     final ClientBootstrap bootstrap;
     private final Timer timer;
-    private volatile long startTime = -1;
+    private long startTime = -1;
 
     public UptimeClientHandler(ClientBootstrap bootstrap, Timer timer) {
         this.bootstrap = bootstrap;

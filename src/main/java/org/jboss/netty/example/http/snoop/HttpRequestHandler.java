@@ -53,8 +53,8 @@ import org.jboss.netty.util.CharsetUtil;
  */
 public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
 
-    private volatile HttpRequest request;
-    private volatile boolean readingChunks;
+    private HttpRequest request;
+    private boolean readingChunks;
     /** Buffer that stores the response content */
     private final StringBuilder buf = new StringBuilder();
 

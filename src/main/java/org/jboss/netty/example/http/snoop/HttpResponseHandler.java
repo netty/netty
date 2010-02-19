@@ -32,7 +32,7 @@ import org.jboss.netty.util.CharsetUtil;
  */
 public class HttpResponseHandler extends SimpleChannelUpstreamHandler {
 
-    private volatile boolean readingChunks;
+    private boolean readingChunks;
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {

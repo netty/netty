@@ -49,7 +49,7 @@ public class LocalTimeClientHandler extends SimpleChannelUpstreamHandler {
             LocalTimeClientHandler.class.getName());
 
     // Stateful properties
-    private volatile Channel channel;
+    private Channel channel;
     private final BlockingQueue<LocalTimes> answer = new LinkedBlockingQueue<LocalTimes>();
 
     public List<String> getLocalTimes(Collection<String> cities) {
@@ -106,10 +106,10 @@ public class LocalTimeClientHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
+    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         channel = e.getChannel();
-        super.channelOpen(ctx, e);
+        super.channelConnected(ctx, e);
     }
 
     @Override
