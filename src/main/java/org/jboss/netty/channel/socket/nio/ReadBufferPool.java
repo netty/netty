@@ -44,6 +44,7 @@ final class ReadBufferPool {
     }
 
     final ByteBuffer acquire(int size) {
+        final SoftReference<ByteBuffer>[] pool = this.pool;
         for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
             if (ref == null) {
@@ -73,6 +74,7 @@ final class ReadBufferPool {
     }
 
     final void release(ByteBuffer buffer) {
+        final SoftReference<ByteBuffer>[] pool = this.pool;
         for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
             if (ref == null || ref.get() == null) {
