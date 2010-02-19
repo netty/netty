@@ -24,9 +24,9 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
-import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
@@ -304,7 +304,7 @@ class NioWorker implements Runnable {
     }
 
     private boolean read(SelectionKey k) {
-        ScatteringByteChannel ch = (ScatteringByteChannel) k.channel();
+        SocketChannel ch = (SocketChannel) k.channel();
         NioSocketChannel channel = (NioSocketChannel) k.attachment();
 
         ReceiveBufferSizePredictor predictor =
@@ -452,6 +452,7 @@ class NioWorker implements Runnable {
 
         int writtenBytes = 0;
 
+        final SocketChannel ch = channel.socket;
         final Queue<MessageEvent> writeBuffer = channel.writeBuffer;
         final int writeSpinCount = channel.getConfig().getWriteSpinCount();
         synchronized (channel.writeLock) {
@@ -474,7 +475,7 @@ class NioWorker implements Runnable {
 
                 try {
                     for (int i = writeSpinCount; i > 0; i --) {
-                        int localWrittenBytes = channel.socket.write(buf);
+                        int localWrittenBytes = ch.write(buf);
                         if (localWrittenBytes != 0) {
                             writtenBytes += localWrittenBytes;
                             break;

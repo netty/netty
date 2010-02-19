@@ -499,6 +499,7 @@ class NioDatagramWorker implements Runnable {
 
         int writtenBytes = 0;
 
+        final DatagramChannel ch = channel.getDatagramChannel();
         final Queue<MessageEvent> writeBuffer = channel.writeBufferQueue;
         final int writeSpinCount = channel.getConfig().getWriteSpinCount();
         synchronized (channel.writeLock) {
@@ -524,11 +525,10 @@ class NioDatagramWorker implements Runnable {
 
                 try {
                     int localWrittenBytes = 0;
-                    java.nio.channels.DatagramChannel dch = channel.getDatagramChannel();
                     SocketAddress raddr = evt.getRemoteAddress();
                     if (raddr == null) {
                         for (int i = writeSpinCount; i > 0; i --) {
-                            localWrittenBytes = dch.write(buf);
+                            localWrittenBytes = ch.write(buf);
                             if (localWrittenBytes != 0) {
                                 writtenBytes += localWrittenBytes;
                                 break;
@@ -536,7 +536,7 @@ class NioDatagramWorker implements Runnable {
                         }
                     } else {
                         for (int i = writeSpinCount; i > 0; i --) {
-                            localWrittenBytes = dch.send(buf, raddr);
+                            localWrittenBytes = ch.send(buf, raddr);
                             if (localWrittenBytes != 0) {
                                 writtenBytes += localWrittenBytes;
                                 break;
