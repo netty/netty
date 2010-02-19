@@ -103,6 +103,10 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
         return true;
     }
 
+    public boolean setProgress(long amount, long current, long total) {
+        return false;
+    }
+
     public boolean setFailure(Throwable cause) {
         return false;
     }

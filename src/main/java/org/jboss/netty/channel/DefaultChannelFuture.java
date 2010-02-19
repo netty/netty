@@ -18,6 +18,7 @@ package org.jboss.netty.channel;
 import static java.util.concurrent.TimeUnit.*;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -73,6 +74,7 @@ public class DefaultChannelFuture implements ChannelFuture {
 
     private ChannelFutureListener firstListener;
     private List<ChannelFutureListener> otherListeners;
+    private Collection<ChannelFutureProgressListener> progressListeners;
     private boolean done;
     private Throwable cause;
     private int waiters;
@@ -132,6 +134,13 @@ public class DefaultChannelFuture implements ChannelFuture {
                     }
                     otherListeners.add(listener);
                 }
+
+                if (listener instanceof ChannelFutureProgressListener) {
+                    if (progressListeners == null) {
+                        progressListeners = new ArrayList<ChannelFutureProgressListener>(1);
+                    }
+                    progressListeners.add((ChannelFutureProgressListener) listener);
+                }
             }
         }
 
@@ -155,6 +164,10 @@ public class DefaultChannelFuture implements ChannelFuture {
                     }
                 } else if (otherListeners != null) {
                     otherListeners.remove(listener);
+                }
+
+                if (listener instanceof ChannelFutureProgressListener) {
+                    progressListeners.remove(listener);
                 }
             }
         }
@@ -370,6 +383,43 @@ public class DefaultChannelFuture implements ChannelFuture {
             logger.warn(
                     "An exception was thrown by " +
                     ChannelFutureListener.class.getSimpleName() + ".", t);
+        }
+    }
+
+    public boolean setProgress(long amount, long current, long total) {
+        ChannelFutureProgressListener[] plisteners;
+        synchronized (this) {
+            // Do not generate progress event after completion.
+            if (done) {
+                return false;
+            }
+
+            if (progressListeners.isEmpty()) {
+                // Nothing to notify - no need to create an empty array.
+                return true;
+            }
+
+            plisteners = progressListeners.toArray(
+                    new ChannelFutureProgressListener[progressListeners.size()]);
+        }
+
+        for (ChannelFutureProgressListener pl: plisteners) {
+            notifyProgressListener(pl, amount, current, total);
+        }
+
+        return true;
+    }
+
+    private void notifyProgressListener(
+            ChannelFutureProgressListener l,
+            long amount, long current, long total) {
+
+        try {
+            l.operationProgressed(this, amount, current, total);
+        } catch (Throwable t) {
+            logger.warn(
+                    "An exception was thrown by " +
+                    ChannelFutureProgressListener.class.getSimpleName() + ".", t);
         }
     }
 }

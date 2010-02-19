@@ -240,6 +240,16 @@ public interface ChannelFuture {
     boolean setFailure(Throwable cause);
 
     /**
+     * Notifies the progress of the operation to the listeners that implements
+     * {@link ChannelFutureProgressListener}. Please note that this method will
+     * not do anything and return {@code false} if this future is complete
+     * already.
+     *
+     * @return {@code true} if and only if notification was made.
+     */
+    boolean setProgress(long amount, long current, long total);
+
+    /**
      * Adds the specified listener to this future.  The
      * specified listener is notified when this future is
      * {@linkplain #isDone() done}.  If this future is already
