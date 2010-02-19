@@ -19,7 +19,6 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,6 +32,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
@@ -71,7 +71,7 @@ class NioSocketChannel extends AbstractChannel
     boolean writeSuspended;
 
     MessageEvent currentWriteEvent;
-    ByteBuffer currentWriteBuffer;
+    SendBuffer currentWriteBuffer;
 
     public NioSocketChannel(
             Channel parent, ChannelFactory factory,

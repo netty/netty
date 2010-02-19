@@ -43,6 +43,7 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ThreadRenamingRunnable;
@@ -79,7 +80,8 @@ class NioWorker implements Runnable {
     private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
-    private final ReadBufferPool readBufferPool = new ReadBufferPool();
+    private final SocketReceiveBufferPool recvBufferPool = new SocketReceiveBufferPool();
+    private final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
 
     NioWorker(int bossId, int id, Executor executor) {
         this.bossId = bossId;
@@ -334,7 +336,7 @@ class NioWorker implements Runnable {
                 fireExceptionCaught(channel, t);
             }
         } else {
-            ByteBuffer bb = readBufferPool.acquire(buffer.writableBytes());
+            ByteBuffer bb = recvBufferPool.acquire(buffer.writableBytes());
             try {
                 while ((ret = ch.read(bb)) > 0) {
                     readBytes += ret;
@@ -350,7 +352,7 @@ class NioWorker implements Runnable {
             } finally {
                 bb.flip();
                 buffer.writeBytes(bb);
-                readBufferPool.release(bb);
+                recvBufferPool.release(bb);
             }
         }
 
@@ -452,6 +454,7 @@ class NioWorker implements Runnable {
 
         int writtenBytes = 0;
 
+        final SocketSendBufferPool sendBufferPool = this.sendBufferPool;
         final SocketChannel ch = channel.socket;
         final Queue<MessageEvent> writeBuffer = channel.writeBuffer;
         final int writeSpinCount = channel.getConfig().getWriteSpinCount();
@@ -459,7 +462,8 @@ class NioWorker implements Runnable {
             channel.inWriteNowLoop = true;
             for (;;) {
                 MessageEvent evt = channel.currentWriteEvent;
-                ByteBuffer buf;
+                SendBuffer buf;
+                ByteBuffer bb;
                 if (evt == null) {
                     if ((channel.currentWriteEvent = evt = writeBuffer.poll()) == null) {
                         removeOpWrite = true;
@@ -468,27 +472,31 @@ class NioWorker implements Runnable {
                     }
 
                     ChannelBuffer origBuf = (ChannelBuffer) evt.getMessage();
-                    channel.currentWriteBuffer = buf = origBuf.toByteBuffer();
+                    channel.currentWriteBuffer = buf = sendBufferPool.acquire(origBuf);
+                    bb = buf.buffer;
                 } else {
                     buf = channel.currentWriteBuffer;
+                    bb = buf.buffer;
                 }
 
                 try {
                     for (int i = writeSpinCount; i > 0; i --) {
-                        int localWrittenBytes = ch.write(buf);
+                        int localWrittenBytes = ch.write(bb);
                         if (localWrittenBytes != 0) {
                             writtenBytes += localWrittenBytes;
                             break;
                         }
                     }
 
-                    if (!buf.hasRemaining()) {
+                    if (!bb.hasRemaining()) {
                         // Successful write - proceed to the next message.
+                        buf.release();
                         ChannelFuture future = evt.getFuture();
                         channel.currentWriteEvent = null;
                         channel.currentWriteBuffer = null;
                         evt = null;
                         buf = null;
+                        bb = null;
                         future.setSuccess();
                     } else {
                         // Not written fully - perhaps the kernel buffer is full.
@@ -499,11 +507,13 @@ class NioWorker implements Runnable {
                 } catch (AsynchronousCloseException e) {
                     // Doesn't need a user attention - ignore.
                 } catch (Throwable t) {
+                    buf.release();
                     ChannelFuture future = evt.getFuture();
                     channel.currentWriteEvent = null;
                     channel.currentWriteBuffer = null;
                     buf = null;
                     evt = null;
+                    bb = null;
                     future.setFailure(t);
                     fireExceptionCaught(channel, t);
                     if (t instanceof IOException) {

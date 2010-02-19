@@ -23,14 +23,14 @@ import java.nio.ByteBuffer;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
-final class ReadBufferPool {
+final class SocketReceiveBufferPool {
 
     private static final int POOL_SIZE = 4;
 
     @SuppressWarnings("unchecked")
     private final SoftReference<ByteBuffer>[] pool = new SoftReference[POOL_SIZE];
 
-    ReadBufferPool() {
+    SocketReceiveBufferPool() {
         super();
     }
 
