@@ -63,8 +63,8 @@ public interface ChannelFutureListener extends EventListener {
      * Invoked when the I/O operation associated with the {@link ChannelFuture}
      * has been completed.
      *
-     * @param future  The source {@link ChannelFuture} which called this
-     *                callback.
+     * @param future  the source {@link ChannelFuture} which called this
+     *                callback
      */
     void operationComplete(ChannelFuture future) throws Exception;
 }
