@@ -71,8 +71,8 @@ public class DefaultChannelFuture implements ChannelFuture {
     private final Channel channel;
     private final boolean cancellable;
 
-    private volatile ChannelFutureListener firstListener;
-    private volatile List<ChannelFutureListener> otherListeners;
+    private ChannelFutureListener firstListener;
+    private List<ChannelFutureListener> otherListeners;
     private boolean done;
     private Throwable cause;
     private int waiters;
@@ -345,9 +345,11 @@ public class DefaultChannelFuture implements ChannelFuture {
     }
 
     private void notifyListeners() {
-        // There won't be any visibility problem or concurrent modification
-        // because 'ready' flag will be checked against both addListener and
-        // removeListener calls.
+        // This method doesn't need synchronization because:
+        // 1) This method is always called after synchronized (this) block.
+        //    Hence any listener list modification happens-before this method.
+        // 2) This method is only when 'done' is true.  If 'done' is true,
+        //    the listener list is never modified - see add/removeListener().
         if (firstListener != null) {
             notifyListener(firstListener);
             firstListener = null;

@@ -48,8 +48,8 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
 
     private final ChannelGroup group;
     final Map<Integer, ChannelFuture> futures;
-    private volatile ChannelGroupFutureListener firstListener;
-    private volatile List<ChannelGroupFutureListener> otherListeners;
+    private ChannelGroupFutureListener firstListener;
+    private List<ChannelGroupFutureListener> otherListeners;
     private boolean done;
     int successCount;
     int failureCount;
@@ -346,9 +346,11 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     }
 
     private void notifyListeners() {
-        // There won't be any visibility problem or concurrent modification
-        // because 'ready' flag will be checked against both addListener and
-        // removeListener calls.
+        // This method doesn't need synchronization because:
+        // 1) This method is always called after synchronized (this) block.
+        //    Hence any listener list modification happens-before this method.
+        // 2) This method is only when 'done' is true.  If 'done' is true,
+        //    the listener list is never modified - see add/removeListener().
         if (firstListener != null) {
             notifyListener(firstListener);
             firstListener = null;
