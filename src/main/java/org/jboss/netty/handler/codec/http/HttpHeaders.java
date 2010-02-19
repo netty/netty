@@ -634,12 +634,8 @@ public class HttpHeaders {
         // Update the hash table.
         Entry e = entries[i];
         Entry newEntry;
-        if (e == null) {
-            entries[i] = newEntry = new Entry(h, name, value);
-        } else {
-            entries[i] = newEntry = new Entry(h, name, value);
-            newEntry.next = e;
-        }
+        entries[i] = newEntry = new Entry(h, name, value);
+        newEntry.next = e;
 
         // Update the linked list.
         newEntry.addBefore(head);
