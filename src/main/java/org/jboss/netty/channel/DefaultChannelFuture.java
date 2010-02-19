@@ -348,8 +348,8 @@ public class DefaultChannelFuture implements ChannelFuture {
         // This method doesn't need synchronization because:
         // 1) This method is always called after synchronized (this) block.
         //    Hence any listener list modification happens-before this method.
-        // 2) This method is only when 'done' is true.  If 'done' is true,
-        //    the listener list is never modified - see add/removeListener().
+        // 2) This method is called only when 'done' is true.  Once 'done'
+        //    becomes true, the listener list is never modified - see add/removeListener()
         if (firstListener != null) {
             notifyListener(firstListener);
             firstListener = null;
