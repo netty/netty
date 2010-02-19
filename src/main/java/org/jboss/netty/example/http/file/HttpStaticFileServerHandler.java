@@ -40,7 +40,7 @@ import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.stream.ChunkedFile;
+import org.jboss.netty.handler.stream.ChunkedOioFile;
 import org.jboss.netty.util.CharsetUtil;
 
 /**
@@ -91,7 +91,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         ch.write(response);
 
         // Write the content.
-        ChannelFuture writeFuture = ch.write(new ChunkedFile(raf, 0, fileLength, 8192));
+        ChannelFuture writeFuture = ch.write(new ChunkedOioFile(raf, 0, fileLength, 8192));
 
         // Decide whether to close the connection or not.
         if (!isKeepAlive(request)) {

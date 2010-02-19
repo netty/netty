@@ -28,7 +28,7 @@ import java.io.RandomAccessFile;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
-public class ChunkedFile implements ChunkedInput {
+public class ChunkedOioFile implements ChunkedInput {
 
     private final RandomAccessFile file;
     private final long startOffset;
@@ -39,7 +39,7 @@ public class ChunkedFile implements ChunkedInput {
     /**
      * Creates a new instance that fetches data from the specified file.
      */
-    public ChunkedFile(File file) throws IOException {
+    public ChunkedOioFile(File file) throws IOException {
         this(file, ChunkedStream.DEFAULT_CHUNK_SIZE);
     }
 
@@ -49,14 +49,14 @@ public class ChunkedFile implements ChunkedInput {
      * @param chunkSize the number of bytes to fetch on each
      *                  {@link #nextChunk()} call
      */
-    public ChunkedFile(File file, int chunkSize) throws IOException {
+    public ChunkedOioFile(File file, int chunkSize) throws IOException {
         this(new RandomAccessFile(file, "r"), chunkSize);
     }
 
     /**
      * Creates a new instance that fetches data from the specified file.
      */
-    public ChunkedFile(RandomAccessFile file) throws IOException {
+    public ChunkedOioFile(RandomAccessFile file) throws IOException {
         this(file, ChunkedStream.DEFAULT_CHUNK_SIZE);
     }
 
@@ -66,7 +66,7 @@ public class ChunkedFile implements ChunkedInput {
      * @param chunkSize the number of bytes to fetch on each
      *                  {@link #nextChunk()} call
      */
-    public ChunkedFile(RandomAccessFile file, int chunkSize) throws IOException {
+    public ChunkedOioFile(RandomAccessFile file, int chunkSize) throws IOException {
         this(file, 0, file.length(), chunkSize);
     }
 
@@ -78,7 +78,7 @@ public class ChunkedFile implements ChunkedInput {
      * @param chunkSize the number of bytes to fetch on each
      *                  {@link #nextChunk()} call
      */
-    public ChunkedFile(RandomAccessFile file, long offset, long length, int chunkSize) throws IOException {
+    public ChunkedOioFile(RandomAccessFile file, long offset, long length, int chunkSize) throws IOException {
         if (file == null) {
             throw new NullPointerException("file");
         }
