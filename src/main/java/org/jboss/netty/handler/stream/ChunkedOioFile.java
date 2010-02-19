@@ -20,6 +20,7 @@ import static org.jboss.netty.buffer.ChannelBuffers.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 
 /**
  * A {@link ChunkedInput} that fetches data from a file chunk by chunk.
@@ -28,7 +29,7 @@ import java.io.RandomAccessFile;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
-public class ChunkedOioFile implements ChunkedInput {
+public class ChunkedOioFile implements ChunkedFile {
 
     private final RandomAccessFile file;
     private final long startOffset;
@@ -104,23 +105,18 @@ public class ChunkedOioFile implements ChunkedInput {
         file.seek(offset);
     }
 
-    /**
-     * Returns the offset in the file where the transfer began.
-     */
+    public FileChannel getSource() {
+        return file.getChannel();
+    }
+
     public long getStartOffset() {
         return startOffset;
     }
 
-    /**
-     * Returns the offset in the file where the transfer will end.
-     */
     public long getEndOffset() {
         return endOffset;
     }
 
-    /**
-     * Returns the offset in the file where the transfer is happening currently.
-     */
     public long getCurrentOffset() {
         return offset;
     }
