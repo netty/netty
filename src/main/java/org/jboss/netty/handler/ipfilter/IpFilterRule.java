@@ -21,16 +21,17 @@ package org.jboss.netty.handler.ipfilter;
  * @author frederic bregier
  *
  */
-public interface IpFilterRule extends IpSet {
-    /**
-     *
-     * @return True if this Rule is an ALLOW rule
-     */
-    public boolean isAllowRule();
+public interface IpFilterRule extends IpSet
+{
+   /**
+    *
+    * @return True if this Rule is an ALLOW rule
+    */
+   public boolean isAllowRule();
 
-    /**
-     *
-     * @return True if this Rule is a DENY rule
-     */
-    public boolean isDenyRule();
+   /**
+    *
+    * @return True if this Rule is a DENY rule
+    */
+   public boolean isDenyRule();
 }

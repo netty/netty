@@ -23,13 +23,14 @@ import java.net.InetAddress;
  * @author frederic bregier
  *
  */
-public interface IpSet {
-    /**
-     * Compares the given InetAddress against the IpSet and returns true if
-     * the InetAddress is contained in this Rule and false if not.
-     * @param inetAddress1
-     * @return returns true if the given IP address is contained in the current
-     * IpSet.
-     */
-    public boolean contains(InetAddress inetAddress1);
+public interface IpSet
+{
+   /**
+    * Compares the given InetAddress against the IpSet and returns true if
+    * the InetAddress is contained in this Rule and false if not.
+    * @param inetAddress1
+    * @return returns true if the given IP address is contained in the current
+    * IpSet.
+    */
+   public boolean contains(InetAddress inetAddress1);
 }

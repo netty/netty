@@ -20,7 +20,7 @@
  *
  *
  * <P>The main goal of this package is to allow to filter connections based on IP rules.
- * The main class is <tt>IpFilteringHandler</tt> which all filters will extend.</P>
+ * The main interface is <tt>{@link IpFilteringHandler}</tt> which all filters will extend.</P>
  *
  * <P>Two IP filtering are proposed:<br>
  * <ul>
@@ -29,19 +29,19 @@
  *
  * <li> <tt>{@link IpFilterRuleHandler}</tt>: This filter proposes to allow or block IP range (based on standard notation
  * or on CIDR notation) when the connection is running. It relies on another class like
- * <tt>IpV4SubnetFilterRule</tt> (IPV4 support only) or <tt>IpSubnetFilterRule</tt> (IPV4 and IPV6 support)
+ * <tt>IpV4SubnetFilterRule</tt> (IPV4 support only), <tt>IpSubnetFilterRule</tt> (IPV4 and IPV6 support) or <tt>PatternRule</tt> (string pattern support)
  * which implements those Ip ranges.</li><br><br>
  *
  * </ul></P>
  *
- * <P>Standard use could be as follow: There are at least two methods that can be overridden (of course you can
- * overridden others).</P>
+ * <P>Standard use could be as follow: The accept method must be overridden (of course you can
+ * override others).</P>
  *
  * <P><ul>
- * <li><tt>accept</tt> method allow to specify your way of choosing if a new connection is
+ * <li><tt>accept</tt> method allows to specify your way of choosing if a new connection is
  * to be allowed or not.</li><br>
  * In <tt>OneIpFilterHandler</tt> and <tt>IpFilterRuleHandler</tt>,
- * this method is already made.<br>
+ * this method is already implemented.<br>
  * <br>
  *
  * <li><tt>handleRefusedChannel</tt> method is executed when the accept method filters (blocks, so returning false)
@@ -50,6 +50,8 @@
  * So if you want to send back a message to the client, <b>don't forget to return a respectful ChannelFuture,
  * otherwise the message could be missed since the channel will be closed immediately after this
  * call and the waiting on this channelFuture</b> (at least with respect of asynchronous operations).<br><br>
+ * Per default implementation this method invokes an {@link IpFilterListener} or returns null if no listener has been set.
+ * <br><br>
  *
  * <li><tt>continues</tt> is called when any event appears after CONNECTED event and only for
  * blocked channels.</li><br>
@@ -62,6 +64,8 @@
  * those events come out before the CONNECTED event, so there is no possibility to filter those two events
  * before the CONNECTED event shows up. Therefore, you might want to let CLOSED and UNBOUND be passed
  * to the next entry in the pipeline.</b><br><br>
+ * Per default implementation this method invokes an {@link IpFilterListener} or returns false if no listener has been set.
+ * <br><br>
  *
  * <li>Finally <tt>handleUpstream</tt> traps the CONNECTED and DISCONNECTED events.</li><br>
  * If in the CONNECTED events the channel is blocked (<tt>accept</tt> refused the channel),
@@ -72,8 +76,19 @@
 
  * </ul></P><br><br>
  *
+ * A typical setup for ip filter for TCP/IP socket would be:
+ * 
+ * <pre>
+ * {@link ChannelPipeline} pipeline = ...;
+ * 
+ * IpFilterRuleHandler firewall = new IpFilterRuleHandler();
+ * firewall.addAll(new IpFilterRuleList("+n:localhost, +c:192.168.0.0/27, -n:*"));
+ * pipeline.addFirst(&quot;firewall&quot;, firewall);
+ * </pre>
  *
  * @apiviz.exclude ^java\.lang\.
  */
 package org.jboss.netty.handler.ipfilter;
+
+import org.jboss.netty.channel.ChannelPipeline;
 

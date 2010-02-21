@@ -21,7 +21,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelState;
@@ -40,65 +39,54 @@ import org.jboss.netty.channel.ChannelStateEvent;
  *
  */
 @ChannelPipelineCoverage("all")
-public class OneIpFilterHandler extends IpFilteringHandler {
-    /**
-     * HashMap of current remote connected InetAddress
-     */
-    private final ConcurrentMap<InetAddress, Boolean> connectedSet = new ConcurrentHashMap<InetAddress, Boolean>();
+public class OneIpFilterHandler extends IpFilteringHandlerImpl
+{
+   /**
+    * HashMap of current remote connected InetAddress
+    */
+   private final ConcurrentMap<InetAddress, Boolean> connectedSet = new ConcurrentHashMap<InetAddress, Boolean>();
 
-    /* (non-Javadoc)
-     * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#accept(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent, java.net.InetSocketAddress)
-     */
-    @Override
-    protected boolean accept(ChannelHandlerContext ctx, ChannelEvent e,
-            InetSocketAddress inetSocketAddress) throws Exception {
-        InetAddress inetAddress = inetSocketAddress.getAddress();
-        if (connectedSet.containsKey(inetAddress)) {
-            return false;
-        }
-        connectedSet.put(inetAddress, Boolean.TRUE);
-        return true;
-    }
+   /* (non-Javadoc)
+    * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#accept(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent, java.net.InetSocketAddress)
+    */
+   @Override
+   protected boolean accept(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress)
+         throws Exception
+   {
+      InetAddress inetAddress = inetSocketAddress.getAddress();
+      if (connectedSet.containsKey(inetAddress))
+      {
+         return false;
+      }
+      connectedSet.put(inetAddress, Boolean.TRUE);
+      return true;
+   }
 
-    /* (non-Javadoc)
-     * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#handleRefusedChannel(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent, java.net.InetSocketAddress)
-     */
-    @Override
-    protected ChannelFuture handleRefusedChannel(ChannelHandlerContext ctx,
-            ChannelEvent e, InetSocketAddress inetSocketAddress)
-            throws Exception {
-        // Do nothing: could be overridden
-        return null;
-    }
-
-    @Override
-    protected boolean continues(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        return false;
-    }
-
-    /* (non-Javadoc)
-     * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#handleUpstream(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent)
-     */
-    @Override
-    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
-            throws Exception {
-        super.handleUpstream(ctx, e);
-        // Try to remove entry from Map if already exists
-        if (e instanceof ChannelStateEvent) {
-            ChannelStateEvent evt = (ChannelStateEvent) e;
-            if (evt.getState() == ChannelState.CONNECTED) {
-                if (evt.getValue() == null) {
-                    // DISCONNECTED but was this channel blocked or not
-                    if (isBlocked(ctx)) {
-                        // remove inetsocketaddress from set since this channel was not blocked before
-                        InetSocketAddress inetSocketAddress = (InetSocketAddress) e
-                                .getChannel().getRemoteAddress();
-                        connectedSet.remove(inetSocketAddress.getAddress());
-                    }
-                }
+   /* (non-Javadoc)
+    * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#handleUpstream(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent)
+    */
+   @Override
+   public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception
+   {
+      super.handleUpstream(ctx, e);
+      // Try to remove entry from Map if already exists
+      if (e instanceof ChannelStateEvent)
+      {
+         ChannelStateEvent evt = (ChannelStateEvent) e;
+         if (evt.getState() == ChannelState.CONNECTED)
+         {
+            if (evt.getValue() == null)
+            {
+               // DISCONNECTED but was this channel blocked or not
+               if (isBlocked(ctx))
+               {
+                  // remove inetsocketaddress from set since this channel was not blocked before
+                  InetSocketAddress inetSocketAddress = (InetSocketAddress) e.getChannel().getRemoteAddress();
+                  connectedSet.remove(inetSocketAddress.getAddress());
+               }
             }
-        }
-    }
+         }
+      }
+   }
 
 }

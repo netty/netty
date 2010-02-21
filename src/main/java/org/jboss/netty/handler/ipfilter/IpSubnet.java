@@ -54,129 +54,145 @@ import java.net.UnknownHostException;
  * @author frederic bregier
  *
  */
-public class IpSubnet implements IpSet, Comparable<IpSubnet> {
-    /**
-     * Internal representation
-     */
-    private CIDR cidr = null;
+public class IpSubnet implements IpSet, Comparable<IpSubnet>
+{
+   /**
+    * Internal representation
+    */
+   private CIDR cidr = null;
 
-    /**
-     * Create IpSubnet for ALL (used for ALLOW or DENY ALL)
-     */
-    public IpSubnet() {
-        // ALLOW or DENY ALL
-        cidr = null;
-    }
+   /**
+    * Create IpSubnet for ALL (used for ALLOW or DENY ALL)
+    */
+   public IpSubnet()
+   {
+      // ALLOW or DENY ALL
+      cidr = null;
+   }
 
-    /**
-     * Create IpSubnet using the CIDR or normal Notation<BR>
-     * i.e.:<br>
-     * IpSubnet subnet = new IpSubnet("10.10.10.0/24"); or<br>
-     * IpSubnet subnet = new IpSubnet("10.10.10.0/255.255.255.0"); or<br>
-     * IpSubnet subnet = new IpSubnet("1fff:0:0a88:85a3:0:0:0:0/24");
-     * @param netAddress a network address as string.
-     * @throws UnknownHostException
-     * */
-    public IpSubnet(String netAddress) throws UnknownHostException {
-        cidr = CIDR.newCIDR(netAddress);
-    }
+   /**
+    * Create IpSubnet using the CIDR or normal Notation<BR>
+    * i.e.:<br>
+    * IpSubnet subnet = new IpSubnet("10.10.10.0/24"); or<br>
+    * IpSubnet subnet = new IpSubnet("10.10.10.0/255.255.255.0"); or<br>
+    * IpSubnet subnet = new IpSubnet("1fff:0:0a88:85a3:0:0:0:0/24");
+    * @param netAddress a network address as string.
+    * @throws UnknownHostException
+    * */
+   public IpSubnet(String netAddress) throws UnknownHostException
+   {
+      cidr = CIDR.newCIDR(netAddress);
+   }
 
-    /**
-     * Create IpSubnet using the CIDR Notation
-     * @param inetAddress
-     * @param cidrNetMask
-     * @throws UnknownHostException
-     */
-    public IpSubnet(InetAddress inetAddress, int cidrNetMask)
-            throws UnknownHostException {
-        cidr = CIDR.newCIDR(inetAddress, cidrNetMask);
-    }
+   /**
+    * Create IpSubnet using the CIDR Notation
+    * @param inetAddress
+    * @param cidrNetMask
+    * @throws UnknownHostException
+    */
+   public IpSubnet(InetAddress inetAddress, int cidrNetMask) throws UnknownHostException
+   {
+      cidr = CIDR.newCIDR(inetAddress, cidrNetMask);
+   }
 
-    /**
-     * Create IpSubnet using the normal Notation
-     * @param inetAddress
-     * @param netMask
-     * @throws UnknownHostException
-     */
-    public IpSubnet(InetAddress inetAddress, String netMask)
-            throws UnknownHostException {
-        cidr = CIDR.newCIDR(inetAddress, netMask);
-    }
+   /**
+    * Create IpSubnet using the normal Notation
+    * @param inetAddress
+    * @param netMask
+    * @throws UnknownHostException
+    */
+   public IpSubnet(InetAddress inetAddress, String netMask) throws UnknownHostException
+   {
+      cidr = CIDR.newCIDR(inetAddress, netMask);
+   }
 
-    /**
-     * Compares the given IP-Address against the Subnet and returns true if
-     * the ip is in the subnet-ip-range and false if not.
-     * @param ipAddr an ipaddress
-     * @return returns true if the given IP address is inside the currently
-     * set network.
-     * @throws UnknownHostException
-     * */
-    public boolean contains(String ipAddr) throws UnknownHostException {
-        InetAddress inetAddress1 = InetAddress.getByName(ipAddr);
-        return this.contains(inetAddress1);
-    }
+   /**
+    * Compares the given IP-Address against the Subnet and returns true if
+    * the ip is in the subnet-ip-range and false if not.
+    * @param ipAddr an ipaddress
+    * @return returns true if the given IP address is inside the currently
+    * set network.
+    * @throws UnknownHostException
+    * */
+   public boolean contains(String ipAddr) throws UnknownHostException
+   {
+      InetAddress inetAddress1 = InetAddress.getByName(ipAddr);
+      return this.contains(inetAddress1);
+   }
 
-    /**
-     * Compares the given InetAddress against the Subnet and returns true if
-     * the ip is in the subnet-ip-range and false if not.
-     * @param inetAddress
-     * @return returns true if the given IP address is inside the currently
-     * set network.
-     * */
-    public boolean contains(InetAddress inetAddress) {
-        if (cidr == null) {
-            // ANY
-            return true;
-        }
-        return cidr.contains(inetAddress);
-    }
+   /**
+    * Compares the given InetAddress against the Subnet and returns true if
+    * the ip is in the subnet-ip-range and false if not.
+    * @param inetAddress
+    * @return returns true if the given IP address is inside the currently
+    * set network.
+    * */
+   public boolean contains(InetAddress inetAddress)
+   {
+      if (cidr == null)
+      {
+         // ANY
+         return true;
+      }
+      return cidr.contains(inetAddress);
+   }
 
-    @Override
-    public String toString() {
-        return cidr.toString();
-    }
+   @Override
+   public String toString()
+   {
+      return cidr.toString();
+   }
 
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof IpSubnet)) {
-            return false;
-        }
-        IpSubnet ipSubnet = (IpSubnet) o;
-        return ipSubnet.cidr.equals(cidr);
-    }
+   @Override
+   public boolean equals(Object o)
+   {
+      if (!(o instanceof IpSubnet))
+      {
+         return false;
+      }
+      IpSubnet ipSubnet = (IpSubnet) o;
+      return ipSubnet.cidr.equals(cidr);
+   }
 
-    /**
-     * Compare two IpSubnet
-     */
-    public int compareTo(IpSubnet o) {
-        return cidr.compareTo(o.cidr);
-    }
+   /**
+    * Compare two IpSubnet
+    */
+   public int compareTo(IpSubnet o)
+   {
+      return cidr.toString().compareTo(o.cidr.toString());
+   }
 
-    /**
-     * Simple test functions
-     * @param args
-     *          where args[0] is the netmask (standard or CIDR notation) and optional args[1] is
-     *          the inetAddress to test with this IpSubnet
-     */
-    public static void main(String[] args) {
-        if (args.length != 0) {
-            IpSubnet ipSubnet = null;
-            try {
-                ipSubnet = new IpSubnet(args[0]);
-            } catch (UnknownHostException e) {
-                return;
+   /**
+    * Simple test functions
+    * @param args
+    *          where args[0] is the netmask (standard or CIDR notation) and optional args[1] is
+    *          the inetAddress to test with this IpSubnet
+    */
+   public static void main(String[] args)
+   {
+      if (args.length != 0)
+      {
+         IpSubnet ipSubnet = null;
+         try
+         {
+            ipSubnet = new IpSubnet(args[0]);
+         }
+         catch (UnknownHostException e)
+         {
+            return;
+         }
+         System.out.println("IpSubnet: " + ipSubnet.toString() + " from " + ipSubnet.cidr.getBaseAddress() + " to "
+               + ipSubnet.cidr.getEndAddress() + " mask " + ipSubnet.cidr.getMask());
+         if (args.length > 1)
+         {
+            try
+            {
+               System.out.println("Is IN: " + args[1] + " " + ipSubnet.contains(args[1]));
             }
-            System.out.println("IpSubnet: " + ipSubnet.toString() + " from " +
-                    ipSubnet.cidr.getBaseAddress() + " to " +
-                    ipSubnet.cidr.getEndAddress() + " mask " +
-                    ipSubnet.cidr.getMask());
-            if (args.length > 1) {
-                try {
-                    System.out.println("Is IN: " + args[1] + " " +
-                            ipSubnet.contains(args[1]));
-                } catch (UnknownHostException e) {
-                }
+            catch (UnknownHostException e)
+            {
             }
-        }
-    }
+         }
+      }
+   }
 }
