@@ -17,12 +17,12 @@ package org.jboss.netty.channel;
 
 
 /**
- * Listens to the progress of a time-consuming I/O operation such as
- * {@link FileRegion} transfer.  If this listener is added to a
- * {@link ChannelFuture} of an I/O operation that supports progress
- * notification, the listener's {@link #operationProgressed(ChannelFuture, long, long, long)}
- * method will be called back by an I/O thread.  If the operation does not
- * support progress notification, {@link #operationProgressed(ChannelFuture, long, long, long)}
+ * Listens to the progress of a time-consuming I/O operation such as a large
+ * file transfer.  If this listener is added to a {@link ChannelFuture} of an
+ * I/O operation that supports progress notification, the listener's
+ * {@link #operationProgressed(ChannelFuture, long, long, long)} method will be
+ * called back by an I/O thread.  If the operation does not support progress
+ * notification, {@link #operationProgressed(ChannelFuture, long, long, long)}
  * will not be invoked.  Like a usual {@link ChannelFutureListener} that this
  * interface extends, {@link #operationComplete(ChannelFuture)} will be called
  * when the future is marked as complete.
