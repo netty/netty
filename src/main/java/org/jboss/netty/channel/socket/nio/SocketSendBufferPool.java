@@ -35,8 +35,8 @@ final class SocketSendBufferPool {
         assert (DEFAULT_PREALLOCATION_SIZE & ALIGN_MASK) == 0;
     }
 
-    private PreallocationRef poolHead = null;
-    private Preallocation current = new Preallocation(DEFAULT_PREALLOCATION_SIZE);
+    PreallocationRef poolHead = null;
+    Preallocation current = new Preallocation(DEFAULT_PREALLOCATION_SIZE);
 
     SocketSendBufferPool() {
         super();
