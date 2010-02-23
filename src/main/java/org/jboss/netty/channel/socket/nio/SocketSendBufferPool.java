@@ -145,10 +145,12 @@ final class SocketSendBufferPool {
     final class SendBuffer {
         private final Preallocation parent;
         final ByteBuffer buffer;
+        final int initialPos;
 
         SendBuffer(Preallocation parent, ByteBuffer buffer) {
             this.parent = parent;
             this.buffer = buffer;
+            initialPos = buffer.position();
         }
 
         void release() {

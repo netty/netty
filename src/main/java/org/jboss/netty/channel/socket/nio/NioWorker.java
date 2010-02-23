@@ -466,7 +466,9 @@ class NioWorker implements Runnable {
                     bb = buf.buffer;
                 }
 
+                ChannelFuture future = evt.getFuture();
                 try {
+                    int oldWrittenBytes = writtenBytes;
                     for (int i = writeSpinCount; i > 0; i --) {
                         int localWrittenBytes = ch.write(bb);
                         if (localWrittenBytes != 0) {
@@ -478,7 +480,6 @@ class NioWorker implements Runnable {
                     if (!bb.hasRemaining()) {
                         // Successful write - proceed to the next message.
                         buf.release();
-                        ChannelFuture future = evt.getFuture();
                         channel.currentWriteEvent = null;
                         channel.currentWriteBuffer = null;
                         evt = null;
@@ -489,13 +490,18 @@ class NioWorker implements Runnable {
                         // Not written fully - perhaps the kernel buffer is full.
                         addOpWrite = true;
                         channel.writeSuspended = true;
+
+                        // Notify progress listeners if necessary.
+                        future.setProgress(
+                                writtenBytes - oldWrittenBytes,
+                                bb.position() - buf.initialPos,
+                                bb.limit() - buf.initialPos);
                         break;
                     }
                 } catch (AsynchronousCloseException e) {
                     // Doesn't need a user attention - ignore.
                 } catch (Throwable t) {
                     buf.release();
-                    ChannelFuture future = evt.getFuture();
                     channel.currentWriteEvent = null;
                     channel.currentWriteBuffer = null;
                     buf = null;

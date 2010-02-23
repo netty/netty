@@ -394,7 +394,9 @@ public class DefaultChannelFuture implements ChannelFuture {
                 return false;
             }
 
-            if (progressListeners.isEmpty()) {
+            Collection<ChannelFutureProgressListener> progressListeners =
+                this.progressListeners;
+            if (progressListeners == null || progressListeners.isEmpty()) {
                 // Nothing to notify - no need to create an empty array.
                 return true;
             }
