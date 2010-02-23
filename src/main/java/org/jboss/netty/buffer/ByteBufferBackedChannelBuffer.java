@@ -204,7 +204,7 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
             return;
         }
 
-        if (!buffer.isReadOnly() && buffer.hasArray()) {
+        if (buffer.hasArray()) {
             out.write(
                     buffer.array(),
                     index + buffer.arrayOffset(),

@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
  */
 final class SocketReceiveBufferPool {
 
-    private static final int POOL_SIZE = 4;
+    private static final int POOL_SIZE = 8;
 
     @SuppressWarnings("unchecked")
     private final SoftReference<ByteBuffer>[] pool = new SoftReference[POOL_SIZE];
@@ -54,13 +54,12 @@ final class SocketReceiveBufferPool {
 
             pool[i] = null;
 
-            buf.rewind();
-            buf.limit(size);
+            buf.clear();
             return buf;
         }
 
         ByteBuffer buf = ByteBuffer.allocateDirect(normalizeCapacity(size));
-        buf.limit(size);
+        buf.clear();
         return buf;
     }
 

@@ -306,62 +306,49 @@ class NioWorker implements Runnable {
     }
 
     private boolean read(SelectionKey k) {
-        SocketChannel ch = (SocketChannel) k.channel();
-        NioSocketChannel channel = (NioSocketChannel) k.attachment();
+        final SocketChannel ch = (SocketChannel) k.channel();
+        final NioSocketChannel channel = (NioSocketChannel) k.attachment();
 
-        ReceiveBufferSizePredictor predictor =
+        final ReceiveBufferSizePredictor predictor =
             channel.getConfig().getReceiveBufferSizePredictor();
-        ChannelBufferFactory bufferFactory =
-            channel.getConfig().getBufferFactory();
-
-        ChannelBuffer buffer =
-            bufferFactory.getBuffer(predictor.nextReceiveBufferSize());
+        final int predictedRecvBufSize = predictor.nextReceiveBufferSize();
 
         int ret = 0;
         int readBytes = 0;
         boolean failure = true;
 
-        if (buffer.isDirect()) {
-            try {
-                while ((ret = buffer.writeBytes(ch, buffer.writableBytes())) > 0) {
-                    readBytes += ret;
-                    if (!buffer.writable()) {
-                        break;
-                    }
+        ByteBuffer bb = recvBufferPool.acquire(predictedRecvBufSize);
+        try {
+            while ((ret = ch.read(bb)) > 0) {
+                readBytes += ret;
+                if (!bb.hasRemaining()) {
+                    break;
                 }
-                failure = false;
-            } catch (ClosedChannelException e) {
-                // Can happen, and does not need a user attention.
-            } catch (Throwable t) {
-                fireExceptionCaught(channel, t);
             }
-        } else {
-            ByteBuffer bb = recvBufferPool.acquire(buffer.writableBytes());
-            try {
-                while ((ret = ch.read(bb)) > 0) {
-                    readBytes += ret;
-                    if (!bb.hasRemaining()) {
-                        break;
-                    }
-                }
-                failure = false;
-            } catch (ClosedChannelException e) {
-                // Can happen, and does not need a user attention.
-            } catch (Throwable t) {
-                fireExceptionCaught(channel, t);
-            } finally {
-                bb.flip();
-                buffer.writeBytes(bb);
-                recvBufferPool.release(bb);
-            }
+            failure = false;
+        } catch (ClosedChannelException e) {
+            // Can happen, and does not need a user attention.
+        } catch (Throwable t) {
+            fireExceptionCaught(channel, t);
         }
 
         if (readBytes > 0) {
+            bb.flip();
+
+            final ChannelBufferFactory bufferFactory =
+                channel.getConfig().getBufferFactory();
+            final ChannelBuffer buffer = bufferFactory.getBuffer(
+                    bb.order(bufferFactory.getDefaultOrder()));
+
+            recvBufferPool.release(bb);
+
             // Update the predictor.
             predictor.previousReceiveBufferSize(readBytes);
 
             // Fire the event.
             fireMessageReceived(channel, buffer);
+        } else {
+            recvBufferPool.release(bb);
         }
 
         if (ret < 0 || failure) {
