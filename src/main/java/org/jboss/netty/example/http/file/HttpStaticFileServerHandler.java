@@ -31,9 +31,11 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelFutureProgressListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.DefaultFileRegion;
 import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.FileRegion;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
@@ -41,6 +43,8 @@ import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.ssl.SslHandler;
+import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.util.CharsetUtil;
 
 /**
@@ -57,7 +61,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
             return;
         }
 
-        String path = sanitizeUri(request.getUri());
+        final String path = sanitizeUri(request.getUri());
         if (path == null) {
             sendError(ctx, FORBIDDEN);
             return;
@@ -91,8 +95,26 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         ch.write(response);
 
         // Write the content.
-        //ChannelFuture writeFuture = ch.write(new ChunkedFile(raf, 0, fileLength, 8192));
-        ChannelFuture writeFuture = ch.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength));
+        ChannelFuture writeFuture;
+        if (ch.getPipeline().get(SslHandler.class) != null) {
+            // Cannot use zero-copy with HTTPS.
+            writeFuture = ch.write(new ChunkedFile(raf, 0, fileLength, 8192));
+        } else {
+            // No encryption - use zero-copy.
+            final FileRegion region =
+                new DefaultFileRegion(raf.getChannel(), 0, fileLength);
+            writeFuture = ch.write(region);
+            writeFuture.addListener(new ChannelFutureProgressListener() {
+                public void operationComplete(ChannelFuture future) {
+                    region.releaseExternalResources();
+                }
+
+                public void operationProgressed(
+                        ChannelFuture future, long amount, long current, long total) {
+                    System.out.printf("%s: %d / %d (+%d)%n", path, current, total, amount);
+                }
+            });
+        }
 
         // Decide whether to close the connection or not.
         if (!isKeepAlive(request)) {
@@ -106,8 +128,6 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
             throws Exception {
         Channel ch = e.getChannel();
         Throwable cause = e.getCause();
-        cause.printStackTrace();
-        System.exit(1);
         if (cause instanceof TooLongFrameException) {
             sendError(ctx, BAD_REQUEST);
             return;
