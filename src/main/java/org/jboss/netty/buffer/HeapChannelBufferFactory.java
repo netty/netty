@@ -78,7 +78,7 @@ public class HeapChannelBufferFactory extends AbstractChannelBufferFactory {
     }
 
     public ChannelBuffer getBuffer(ByteBuffer nioBuffer) {
-        if (!nioBuffer.isReadOnly() && nioBuffer.hasArray()) {
+        if (nioBuffer.hasArray()) {
             return ChannelBuffers.wrappedBuffer(nioBuffer);
         }
 
