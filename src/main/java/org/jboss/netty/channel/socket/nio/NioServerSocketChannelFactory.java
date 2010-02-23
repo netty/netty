@@ -95,7 +95,7 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
 
     /**
      * Creates a new instance.  Calling this constructor is same with calling
-     * {@link #NioServerSocketChannelFactory(Executor, Executor, int)} with
+     * {@link #NioServerSocketChannelFactory(Executor, Executor, int)} with 2 *
      * the number of available processors in the machine.  The number of
      * available processors is obtained by {@link Runtime#availableProcessors()}.
      *
@@ -106,7 +106,7 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
      */
     public NioServerSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor) {
-        this(bossExecutor, workerExecutor, Runtime.getRuntime().availableProcessors());
+        this(bossExecutor, workerExecutor, SelectorUtil.DEFAULT_IO_THREADS);
     }
 
     /**

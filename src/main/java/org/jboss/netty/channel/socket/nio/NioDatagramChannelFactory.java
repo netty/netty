@@ -87,7 +87,7 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
 
     /**
      * Creates a new instance.  Calling this constructor is same with calling
-     * {@link #NioDatagramChannelFactory(Executor, int)} with the number of
+     * {@link #NioDatagramChannelFactory(Executor, int)} with 2 * the number of
      * available processors in the machine.  The number of available processors
      * is obtained by {@link Runtime#availableProcessors()}.
      *
@@ -95,7 +95,7 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      *        the {@link Executor} which will execute the I/O worker threads
      */
     public NioDatagramChannelFactory(final Executor workerExecutor) {
-        this(workerExecutor, Runtime.getRuntime().availableProcessors());
+        this(workerExecutor, SelectorUtil.DEFAULT_IO_THREADS);
     }
 
     /**

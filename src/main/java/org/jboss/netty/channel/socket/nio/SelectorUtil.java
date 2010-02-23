@@ -31,6 +31,8 @@ final class SelectorUtil {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SelectorUtil.class);
 
+    static final int DEFAULT_IO_THREADS = Runtime.getRuntime().availableProcessors() * 2;
+
     static void select(Selector selector) throws IOException {
         try {
             selector.select(500);

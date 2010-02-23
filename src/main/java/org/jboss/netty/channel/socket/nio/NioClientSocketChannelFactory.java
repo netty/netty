@@ -91,7 +91,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
 
     /**
      * Creates a new instance.  Calling this constructor is same with calling
-     * {@link #NioClientSocketChannelFactory(Executor, Executor, int)} with
+     * {@link #NioClientSocketChannelFactory(Executor, Executor, int)} with 2 *
      * the number of available processors in the machine.  The number of
      * available processors is obtained by {@link Runtime#availableProcessors()}.
      *
@@ -102,7 +102,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
      */
     public NioClientSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor) {
-        this(bossExecutor, workerExecutor, Runtime.getRuntime().availableProcessors());
+        this(bossExecutor, workerExecutor, SelectorUtil.DEFAULT_IO_THREADS);
     }
 
     /**
