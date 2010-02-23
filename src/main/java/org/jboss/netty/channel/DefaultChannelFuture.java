@@ -74,7 +74,7 @@ public class DefaultChannelFuture implements ChannelFuture {
 
     private ChannelFutureListener firstListener;
     private List<ChannelFutureListener> otherListeners;
-    private Collection<ChannelFutureProgressListener> progressListeners;
+    private List<ChannelFutureProgressListener> progressListeners;
     private boolean done;
     private Throwable cause;
     private int waiters;
