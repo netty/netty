@@ -209,7 +209,7 @@ class NioSocketChannel extends AbstractChannel
             boolean success = super.offer(e);
             assert success;
 
-            int messageSize = ((ChannelBuffer) e.getMessage()).readableBytes();
+            int messageSize = getMessageSize(e);
             int newWriteBufferSize = writeBufferSize.addAndGet(messageSize);
             int highWaterMark = getConfig().getWriteBufferHighWaterMark();
 
@@ -230,7 +230,7 @@ class NioSocketChannel extends AbstractChannel
         public MessageEvent poll() {
             MessageEvent e = super.poll();
             if (e != null) {
-                int messageSize = ((ChannelBuffer) e.getMessage()).readableBytes();
+                int messageSize = getMessageSize(e);
                 int newWriteBufferSize = writeBufferSize.addAndGet(-messageSize);
                 int lowWaterMark = getConfig().getWriteBufferLowWaterMark();
 
@@ -246,6 +246,14 @@ class NioSocketChannel extends AbstractChannel
                 }
             }
             return e;
+        }
+
+        private int getMessageSize(MessageEvent e) {
+            Object m = e.getMessage();
+            if (m instanceof ChannelBuffer) {
+                return ((ChannelBuffer) m).readableBytes();
+            }
+            return 0;
         }
     }
 

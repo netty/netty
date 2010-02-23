@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 Red Hat, Inc.
+ * Copyright 2010 Red Hat, Inc.
  *
  * Red Hat licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -15,24 +15,33 @@
  */
 package org.jboss.netty.channel;
 
+import java.io.IOException;
+import java.nio.channels.WritableByteChannel;
+
+import org.jboss.netty.util.ExternalResourceReleasable;
+
 /**
- * A {@link ChannelEvent} which represents the notification of the completion
- * of a write request on a {@link Channel}.  This event is for going upstream
- * only.  Please refer to the {@link ChannelEvent} documentation to find out
- * what an upstream event and a downstream event are and what fundamental
- * differences they have.
+ * A region of a file that is sent via a {@link Channel} which supports
+ * zero-copy file transfer.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
+ * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
  */
-public interface WriteCompletionEvent extends ChannelEvent {
+public interface FileRegion extends ExternalResourceReleasable {
+
     /**
-     * Returns the amount of data written.
-     *
-     * @return the number of written bytes or messages, depending on the
-     *         type of the transport
+     * Returns the offset in the file where the transfer began.
      */
-    long getWrittenAmount();
+    long getPosition();
+
+    /**
+     * Returns the number of bytes to transfer.
+     */
+    long getCount();
+
+    /**
+     * Transfers the content of this file region to the specified channel.
+     */
+    long transferTo(WritableByteChannel target) throws IOException;
 }

@@ -439,7 +439,7 @@ class NioWorker implements Runnable {
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
 
-        int writtenBytes = 0;
+        long writtenBytes = 0;
 
         final SocketSendBufferPool sendBufferPool = this.sendBufferPool;
         final SocketChannel ch = channel.socket;
@@ -450,7 +450,6 @@ class NioWorker implements Runnable {
             for (;;) {
                 MessageEvent evt = channel.currentWriteEvent;
                 SendBuffer buf;
-                ByteBuffer bb;
                 if (evt == null) {
                     if ((channel.currentWriteEvent = evt = writeBuffer.poll()) == null) {
                         removeOpWrite = true;
@@ -458,44 +457,41 @@ class NioWorker implements Runnable {
                         break;
                     }
 
-                    ChannelBuffer origBuf = (ChannelBuffer) evt.getMessage();
-                    channel.currentWriteBuffer = buf = sendBufferPool.acquire(origBuf);
-                    bb = buf.buffer;
+                    channel.currentWriteBuffer = buf = sendBufferPool.acquire(evt.getMessage());
                 } else {
                     buf = channel.currentWriteBuffer;
-                    bb = buf.buffer;
                 }
 
                 ChannelFuture future = evt.getFuture();
                 try {
-                    int oldWrittenBytes = writtenBytes;
+                    long localWrittenBytes = 0;
                     for (int i = writeSpinCount; i > 0; i --) {
-                        int localWrittenBytes = ch.write(bb);
+                        localWrittenBytes = buf.transferTo(ch);
                         if (localWrittenBytes != 0) {
                             writtenBytes += localWrittenBytes;
                             break;
                         }
                     }
 
-                    if (!bb.hasRemaining()) {
+                    if (buf.finished()) {
                         // Successful write - proceed to the next message.
                         buf.release();
                         channel.currentWriteEvent = null;
                         channel.currentWriteBuffer = null;
                         evt = null;
                         buf = null;
-                        bb = null;
                         future.setSuccess();
                     } else {
                         // Not written fully - perhaps the kernel buffer is full.
                         addOpWrite = true;
                         channel.writeSuspended = true;
 
-                        // Notify progress listeners if necessary.
-                        future.setProgress(
-                                writtenBytes - oldWrittenBytes,
-                                bb.position() - buf.initialPos,
-                                bb.limit() - buf.initialPos);
+                        if (localWrittenBytes > 0) {
+                            // Notify progress listeners if necessary.
+                            future.setProgress(
+                                    localWrittenBytes,
+                                    buf.writtenBytes(), buf.totalBytes());
+                        }
                         break;
                     }
                 } catch (AsynchronousCloseException e) {
@@ -506,7 +502,6 @@ class NioWorker implements Runnable {
                     channel.currentWriteBuffer = null;
                     buf = null;
                     evt = null;
-                    bb = null;
                     future.setFailure(t);
                     fireExceptionCaught(channel, t);
                     if (t instanceof IOException) {

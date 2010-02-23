@@ -32,6 +32,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.DefaultFileRegion;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -40,7 +41,6 @@ import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.util.CharsetUtil;
 
 /**
@@ -91,7 +91,8 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         ch.write(response);
 
         // Write the content.
-        ChannelFuture writeFuture = ch.write(new ChunkedFile(raf, 0, fileLength, 8192));
+        //ChannelFuture writeFuture = ch.write(new ChunkedFile(raf, 0, fileLength, 8192));
+        ChannelFuture writeFuture = ch.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength));
 
         // Decide whether to close the connection or not.
         if (!isKeepAlive(request)) {
@@ -105,6 +106,8 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
             throws Exception {
         Channel ch = e.getChannel();
         Throwable cause = e.getCause();
+        cause.printStackTrace();
+        System.exit(1);
         if (cause instanceof TooLongFrameException) {
             sendError(ctx, BAD_REQUEST);
             return;

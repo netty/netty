@@ -28,12 +28,20 @@ import static org.jboss.netty.channel.Channels.*;
 public class DefaultWriteCompletionEvent implements WriteCompletionEvent {
 
     private final Channel channel;
-    private final int writtenAmount;
+    private final long writtenAmount;
+
+    /**
+     * @deprecated Use {@link #DefaultWriteCompletionEvent(Channel, long)} instead.
+     */
+    @Deprecated
+    public DefaultWriteCompletionEvent(Channel channel, int writtenAmount) {
+        this(channel, (long) writtenAmount);
+    }
 
     /**
      * Creates a new instance.
      */
-    public DefaultWriteCompletionEvent(Channel channel, int writtenAmount) {
+    public DefaultWriteCompletionEvent(Channel channel, long writtenAmount) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
@@ -54,7 +62,7 @@ public class DefaultWriteCompletionEvent implements WriteCompletionEvent {
         return succeededFuture(getChannel());
     }
 
-    public int getWrittenAmount() {
+    public long getWrittenAmount() {
         return writtenAmount;
     }
 

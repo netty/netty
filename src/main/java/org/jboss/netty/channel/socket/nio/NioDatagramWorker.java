@@ -36,7 +36,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
@@ -500,7 +499,7 @@ class NioDatagramWorker implements Runnable {
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
 
-        int writtenBytes = 0;
+        long writtenBytes = 0;
 
         final SocketSendBufferPool sendBufferPool = this.sendBufferPool;
         final DatagramChannel ch = channel.getDatagramChannel();
@@ -514,7 +513,6 @@ class NioDatagramWorker implements Runnable {
             for (;;) {
                 MessageEvent evt = channel.currentWriteEvent;
                 SendBuffer buf;
-                ByteBuffer bb;
                 if (evt == null) {
                     if ((channel.currentWriteEvent = evt = writeBuffer.poll()) == null) {
                         removeOpWrite = true;
@@ -522,20 +520,17 @@ class NioDatagramWorker implements Runnable {
                         break;
                     }
 
-                    ChannelBuffer origBuf = (ChannelBuffer) evt.getMessage();
-                    channel.currentWriteBuffer = buf = sendBufferPool.acquire(origBuf);
-                    bb = buf.buffer;
+                    channel.currentWriteBuffer = buf = sendBufferPool.acquire(evt.getMessage());
                 } else {
                     buf = channel.currentWriteBuffer;
-                    bb = buf.buffer;
                 }
 
                 try {
-                    int localWrittenBytes = 0;
+                    long localWrittenBytes = 0;
                     SocketAddress raddr = evt.getRemoteAddress();
                     if (raddr == null) {
                         for (int i = writeSpinCount; i > 0; i --) {
-                            localWrittenBytes = ch.write(bb);
+                            localWrittenBytes = buf.transferTo(ch);
                             if (localWrittenBytes != 0) {
                                 writtenBytes += localWrittenBytes;
                                 break;
@@ -543,7 +538,7 @@ class NioDatagramWorker implements Runnable {
                         }
                     } else {
                         for (int i = writeSpinCount; i > 0; i --) {
-                            localWrittenBytes = ch.send(bb, raddr);
+                            localWrittenBytes = buf.transferTo(ch, raddr);
                             if (localWrittenBytes != 0) {
                                 writtenBytes += localWrittenBytes;
                                 break;
@@ -559,7 +554,6 @@ class NioDatagramWorker implements Runnable {
                         channel.currentWriteBuffer = null;
                         evt = null;
                         buf = null;
-                        bb = null;
                         future.setSuccess();
                     } else {
                         // Not written at all - perhaps the kernel buffer is full.
@@ -576,7 +570,6 @@ class NioDatagramWorker implements Runnable {
                     channel.currentWriteBuffer = null;
                     buf = null;
                     evt = null;
-                    bb = null;
                     future.setFailure(t);
                     fireExceptionCaught(channel, t);
                 }

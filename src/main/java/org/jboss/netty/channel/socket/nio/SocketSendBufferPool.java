@@ -15,10 +15,15 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
+import java.io.IOException;
 import java.lang.ref.SoftReference;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
+import java.nio.channels.WritableByteChannel;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.FileRegion;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
@@ -42,27 +47,34 @@ final class SocketSendBufferPool {
         super();
     }
 
-    final SendBuffer acquire(ChannelBuffer src) {
-        if (src.isDirect()) {
-            return new SendBuffer(null, src.toByteBuffer());
-        }
-        if (src.readableBytes() > DEFAULT_PREALLOCATION_SIZE) {
-            return new SendBuffer(null, src.toByteBuffer());
+    final SendBuffer acquire(Object message) {
+        if (message instanceof ChannelBuffer) {
+            return acquire((ChannelBuffer) message);
+        } else if (message instanceof FileRegion) {
+            return acquire((FileRegion) message);
         }
 
-        SendBuffer dst = acquire(src.readableBytes());
-        ByteBuffer dstbuf = dst.buffer;
-        dstbuf.mark();
-        src.getBytes(src.readerIndex(), dstbuf);
-        dstbuf.reset();
-        return dst;
+        throw new IllegalArgumentException(
+                "unsupported message type: " + message.getClass());
     }
 
-    private final SendBuffer acquire(int size) {
-        assert size <= DEFAULT_PREALLOCATION_SIZE;
+    private final SendBuffer acquire(FileRegion src) {
+        return new FileSendBuffer(src);
+    }
+
+    private final SendBuffer acquire(ChannelBuffer src) {
+        if (src.isDirect()) {
+            return new UnpooledSendBuffer(src.toByteBuffer());
+        }
+        if (src.readableBytes() > DEFAULT_PREALLOCATION_SIZE) {
+            return new UnpooledSendBuffer(src.toByteBuffer());
+        }
+
+        final int size = src.readableBytes();
         Preallocation current = this.current;
         ByteBuffer buffer = current.buffer;
         int remaining = buffer.remaining();
+        PooledSendBuffer dst;
 
         if (size < remaining) {
             int nextPos = buffer.position() + size;
@@ -70,7 +82,7 @@ final class SocketSendBufferPool {
             buffer.position(align(nextPos));
             slice.limit(nextPos);
             current.refCnt ++;
-            return new SendBuffer(current, slice);
+            dst = new PooledSendBuffer(current, slice);
         } else if (size > remaining) {
             this.current = current = getPreallocation();
             buffer = current.buffer;
@@ -78,12 +90,18 @@ final class SocketSendBufferPool {
             buffer.position(align(size));
             slice.limit(size);
             current.refCnt ++;
-            return new SendBuffer(current, slice);
+            dst = new PooledSendBuffer(current, slice);
         } else { // size == remaining
             current.refCnt ++;
             this.current = getPreallocation0();
-            return new SendBuffer(current, current.buffer);
+            dst = new PooledSendBuffer(current, current.buffer);
         }
+
+        ByteBuffer dstbuf = dst.buffer;
+        dstbuf.mark();
+        src.getBytes(src.readerIndex(), dstbuf);
+        dstbuf.reset();
+        return dst;
     }
 
     private final Preallocation getPreallocation() {
@@ -142,25 +160,128 @@ final class SocketSendBufferPool {
         }
     }
 
-    final class SendBuffer {
+    interface SendBuffer {
+        boolean finished();
+        long writtenBytes();
+        long totalBytes();
+
+        long transferTo(WritableByteChannel ch) throws IOException;
+        long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException;
+
+        void release();
+    }
+
+    class UnpooledSendBuffer implements SendBuffer {
+        final ByteBuffer buffer;
+        final int initialPos;
+
+        UnpooledSendBuffer(ByteBuffer buffer) {
+            this.buffer = buffer;
+            initialPos = buffer.position();
+        }
+
+        public final boolean finished() {
+            return !buffer.hasRemaining();
+        }
+
+        public final long writtenBytes() {
+            return buffer.position() - initialPos;
+        }
+
+        public final long totalBytes() {
+            return buffer.limit() - initialPos;
+        }
+
+        public final long transferTo(WritableByteChannel ch) throws IOException {
+            return ch.write(buffer);
+        }
+
+        public final long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
+            return ch.send(buffer, raddr);
+        }
+
+        public void release() {
+            // Unpooled.
+        }
+    }
+
+    final class PooledSendBuffer implements SendBuffer {
         private final Preallocation parent;
         final ByteBuffer buffer;
         final int initialPos;
 
-        SendBuffer(Preallocation parent, ByteBuffer buffer) {
+        PooledSendBuffer(Preallocation parent, ByteBuffer buffer) {
             this.parent = parent;
             this.buffer = buffer;
             initialPos = buffer.position();
         }
 
-        void release() {
+        public boolean finished() {
+            return !buffer.hasRemaining();
+        }
+
+        public long writtenBytes() {
+            return buffer.position() - initialPos;
+        }
+
+        public long totalBytes() {
+            return buffer.limit() - initialPos;
+        }
+
+        public long transferTo(WritableByteChannel ch) throws IOException {
+            return ch.write(buffer);
+        }
+
+        public long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
+            return ch.send(buffer, raddr);
+        }
+
+        public void release() {
             final Preallocation parent = this.parent;
-            if (parent != null && -- parent.refCnt == 0) {
+            if (-- parent.refCnt == 0) {
                 parent.buffer.clear();
                 if (parent != current) {
                     poolHead = new PreallocationRef(parent, poolHead);
                 }
             }
+        }
+    }
+
+    final class FileSendBuffer implements SendBuffer {
+
+        private final FileRegion file;
+        private long writtenBytes;
+
+
+        FileSendBuffer(FileRegion file) {
+            this.file = file;
+        }
+
+        public boolean finished() {
+            return writtenBytes >= file.getCount();
+        }
+
+        public long writtenBytes() {
+            return writtenBytes;
+        }
+
+        public long totalBytes() {
+            return file.getCount();
+        }
+
+        public long transferTo(WritableByteChannel ch) throws IOException {
+            long localWrittenBytes = file.transferTo(ch);
+            writtenBytes += localWrittenBytes;
+            return localWrittenBytes;
+        }
+
+        public long transferTo(DatagramChannel ch, SocketAddress raddr)
+                throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        public void release() {
+            // Unpooled.
         }
     }
 }
