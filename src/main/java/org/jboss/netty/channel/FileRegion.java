@@ -33,13 +33,13 @@ import org.jboss.netty.util.ExternalResourceReleasable;
  * zero-copy file transfer.
  * <ul>
  * <li><a href="http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=5103988">5103988</a>
- *   - FileChannel.transferTo should return -1 for EAGAIN instead throws IOException</li>
+ *   - FileChannel.transferTo() should return -1 for EAGAIN instead throws IOException</li>
  * <li><a href="http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6253145">6253145</a>
- *   - FileChannel.transferTo on Linux fails when going beyond 2GB boundary</li>
+ *   - FileChannel.transferTo() on Linux fails when going beyond 2GB boundary</li>
  * <li><a href="http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6427312">6427312</a>
- *   - FileChannel.transferTo() throws IOException "system call interrupted</li>
+ *   - FileChannel.transferTo() throws IOException "system call interrupted"</li>
  * <li><a href="http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6524172">6470086</a>
- *   - FileChannel.transferTo(2147483647, 1, channel) cause "Value too large" exception</li>
+ *   - FileChannel.transferTo(2147483647, 1, channel) causes "Value too large" exception</li>
  * </ul>
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
