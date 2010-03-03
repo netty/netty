@@ -512,21 +512,62 @@ public class SslHandler extends FrameDecoder
     @Override
     protected Object decode(
             final ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
-        if (buffer.readableBytes() < 2) {
+
+        if (buffer.readableBytes() < 5) {
             return null;
         }
 
-        int packetLength = buffer.getShort(buffer.readerIndex()) & 0xFFFF;
-        if ((packetLength & 0x8000) != 0) {
-            // Detected a SSLv2 packet
-            packetLength &= 0x7FFF;
-            packetLength += 2;
-        } else  if (buffer.readableBytes() < 5) {
-            return null;
-        } else {
-            // Detected a SSLv3 / TLSv1 packet
-            packetLength = (buffer.getShort(buffer.readerIndex() + 3) & 0xFFFF) + 5;
+        int packetLength = 0;
+
+        // SSLv3 or TLS - Check ContentType
+        boolean tls;
+        switch (buffer.getUnsignedByte(buffer.readerIndex())) {
+        case 20:  // change_cipher_spec
+        case 21:  // alert
+        case 22:  // handshake
+        case 23:  // application_data
+            tls = true;
+            break;
+        default:
+            // SSLv2 or bad data
+            tls = false;
         }
+
+        if (tls) {
+            // SSLv3 or TLS - Check ProtocolVersion
+            int majorVersion = buffer.getUnsignedByte(buffer.readerIndex() + 1);
+            if (majorVersion >= 3 && majorVersion < 10) {
+                // SSLv3 or TLS
+                packetLength = (buffer.getShort(buffer.readerIndex() + 3) & 0xFFFF) + 5;
+            } else {
+                // Neither SSLv2 or TLSv1 (i.e. SSLv2 or bad data)
+                tls = false;
+            }
+        }
+
+        if (!tls) {
+            // SSLv2 or bad data - Check the version
+            int headerLength = (buffer.getUnsignedByte(
+                    buffer.readerIndex()) & 0x80) != 0 ? 2 : 3;
+            int majorVersion = buffer.getUnsignedByte(
+                    buffer.readerIndex() + headerLength + 1);
+            if (majorVersion >= 2 && majorVersion < 10) {
+                // SSLv2
+                if (headerLength == 2) {
+                    packetLength = (buffer.getShort(buffer.readerIndex()) & 0x7FFF) + 2;
+                } else {
+                    packetLength = (buffer.getShort(buffer.readerIndex()) & 0x3FFF) + 3;
+                }
+            } else {
+                // Bad data - discard the buffer and raise an exception.
+                SSLException e = new SSLException(
+                        "not an SSL/TLS record: " + ChannelBuffers.hexDump(buffer));
+                buffer.skipBytes(buffer.readableBytes());
+                throw e;
+            }
+        }
+
+        assert packetLength > 0;
 
         if (buffer.readableBytes() < packetLength) {
             return null;
