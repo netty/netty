@@ -539,7 +539,8 @@ public class SslHandler extends FrameDecoder
             if (majorVersion >= 3 && majorVersion < 10) {
                 // SSLv3 or TLS
                 packetLength = (buffer.getShort(buffer.readerIndex() + 3) & 0xFFFF) + 5;
-                if (packetLength == 0) {
+                if (packetLength <= 5) {
+                    // Neither SSLv2 or TLSv1 (i.e. SSLv2 or bad data)
                     tls = false;
                 }
             } else {
@@ -562,14 +563,14 @@ public class SslHandler extends FrameDecoder
                 } else {
                     packetLength = (buffer.getShort(buffer.readerIndex()) & 0x3FFF) + 3;
                 }
-                if (packetLength == 0) {
+                if (packetLength <= headerLength) {
                     sslv2 = false;
                 }
             } else {
                 sslv2 = false;
             }
 
-            if (sslv2) {
+            if (!sslv2) {
                 // Bad data - discard the buffer and raise an exception.
                 SSLException e = new SSLException(
                         "not an SSL/TLS record: " + ChannelBuffers.hexDump(buffer));
