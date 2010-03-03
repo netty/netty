@@ -148,12 +148,12 @@ public class SlicedChannelBuffer extends AbstractChannelBuffer implements Wrappe
         buffer.getBytes(index + adjustment, dst);
     }
 
-    public void setByte(int index, byte value) {
+    public void setByte(int index, int value) {
         checkIndex(index);
         buffer.setByte(index + adjustment, value);
     }
 
-    public void setShort(int index, short value) {
+    public void setShort(int index, int value) {
         checkIndex(index, 2);
         buffer.setShort(index + adjustment, value);
     }

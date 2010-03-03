@@ -85,7 +85,7 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
         throw new ReadOnlyBufferException();
     }
 
-    public void setByte(int index, byte value) {
+    public void setByte(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
@@ -101,7 +101,7 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
         throw new ReadOnlyBufferException();
     }
 
-    public void setShort(int index, short value) {
+    public void setShort(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 

@@ -445,7 +445,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         throw new UnreplayableOperationException();
     }
 
-    public void setByte(int index, byte value) {
+    public void setByte(int index, int value) {
         throw new UnreplayableOperationException();
     }
 
@@ -503,11 +503,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         throw new UnreplayableOperationException();
     }
 
-    public void setShort(int index, short value) {
+    public void setShort(int index, int value) {
         throw new UnreplayableOperationException();
     }
 
-    public void setChar(int index, char value) {
+    public void setChar(int index, int value) {
         throw new UnreplayableOperationException();
     }
 
@@ -613,7 +613,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return 0;
     }
 
-    public void writeByte(byte value) {
+    public void writeByte(int value) {
         throw new UnreplayableOperationException();
     }
 
@@ -674,11 +674,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         throw new UnreplayableOperationException();
     }
 
-    public void writeShort(short value) {
+    public void writeShort(int value) {
         throw new UnreplayableOperationException();
     }
 
-    public void writeChar(char value) {
+    public void writeChar(int value) {
         throw new UnreplayableOperationException();
     }
 

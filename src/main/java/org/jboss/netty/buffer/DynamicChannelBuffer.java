@@ -156,11 +156,11 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         buffer.getBytes(index, out, length);
     }
 
-    public void setByte(int index, byte value) {
+    public void setByte(int index, int value) {
         buffer.setByte(index, value);
     }
 
-    public void setShort(int index, short value) {
+    public void setShort(int index, int value) {
         buffer.setShort(index, value);
     }
 
@@ -199,13 +199,13 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
     }
 
     @Override
-    public void writeByte(byte value) {
+    public void writeByte(int value) {
         ensureWritableBytes(1);
         super.writeByte(value);
     }
 
     @Override
-    public void writeShort(short value) {
+    public void writeShort(int value) {
         ensureWritableBytes(2);
         super.writeShort(value);
     }

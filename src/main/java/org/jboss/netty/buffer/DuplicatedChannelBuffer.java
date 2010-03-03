@@ -128,11 +128,11 @@ public class DuplicatedChannelBuffer extends AbstractChannelBuffer implements Wr
         buffer.getBytes(index, dst);
     }
 
-    public void setByte(int index, byte value) {
+    public void setByte(int index, int value) {
         buffer.setByte(index, value);
     }
 
-    public void setShort(int index, short value) {
+    public void setShort(int index, int value) {
         buffer.setShort(index, value);
     }
 

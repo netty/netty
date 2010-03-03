@@ -142,12 +142,12 @@ public class TruncatedChannelBuffer extends AbstractChannelBuffer implements Wra
         buffer.getBytes(index, dst);
     }
 
-    public void setByte(int index, byte value) {
+    public void setByte(int index, int value) {
         checkIndex(index);
         buffer.setByte(index, value);
     }
 
-    public void setShort(int index, short value) {
+    public void setShort(int index, int value) {
         checkIndex(index, 2);
         buffer.setShort(index, value);
     }

@@ -171,8 +171,8 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         dst.writerIndex(dst.writerIndex() + length);
     }
 
-    public void setChar(int index, char value) {
-        setShort(index, (short) value);
+    public void setChar(int index, int value) {
+        setShort(index, value);
     }
 
     public void setFloat(int index, float value) {
@@ -398,11 +398,11 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         return newReaderIndex - oldReaderIndex;
     }
 
-    public void writeByte(byte value) {
+    public void writeByte(int value) {
         setByte(writerIndex ++, value);
     }
 
-    public void writeShort(short value) {
+    public void writeShort(int value) {
         setShort(writerIndex, value);
         writerIndex += 2;
     }
@@ -422,8 +422,8 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         writerIndex += 8;
     }
 
-    public void writeChar(char value) {
-        writeShort((short) value);
+    public void writeChar(int value) {
+        writeShort(value);
     }
 
     public void writeFloat(float value) {

@@ -88,7 +88,7 @@ public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
                ((long) array[index+7] & 0xff) << 56;
     }
 
-    public void setShort(int index, short value) {
+    public void setShort(int index, int value) {
         array[index  ] = (byte) (value >>> 0);
         array[index+1] = (byte) (value >>> 8);
     }

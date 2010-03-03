@@ -151,12 +151,12 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
         dst.put(data);
     }
 
-    public void setByte(int index, byte value) {
-        buffer.put(index, value);
+    public void setByte(int index, int value) {
+        buffer.put(index, (byte) value);
     }
 
-    public void setShort(int index, short value) {
-        buffer.putShort(index, value);
+    public void setShort(int index, int value) {
+        buffer.putShort(index, (short) value);
     }
 
     public void setMedium(int index, int   value) {

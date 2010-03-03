@@ -88,7 +88,7 @@ public class BigEndianHeapChannelBuffer extends HeapChannelBuffer {
                 ((long) array[index+7] & 0xff) <<  0;
     }
 
-    public void setShort(int index, short value) {
+    public void setShort(int index, int value) {
         array[index  ] = (byte) (value >>> 8);
         array[index+1] = (byte) (value >>> 0);
     }

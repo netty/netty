@@ -718,7 +718,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 
     /**
      * Sets the specified byte at the specified absolute {@code index} in this
-     * buffer.
+     * buffer.  The 24 high-order bits of the specified value are ignored.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
      *
@@ -726,11 +726,12 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 1} is greater than {@code this.capacity}
      */
-    void setByte(int index, byte  value);
+    void setByte(int index, int   value);
 
     /**
      * Sets the specified 16-bit short integer at the specified absolute
-     * {@code index} in this buffer.
+     * {@code index} in this buffer.  The 16 high-order bits of the specified
+     * value are ignored.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
      *
@@ -738,7 +739,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 2} is greater than {@code this.capacity}
      */
-    void setShort(int index, short value);
+    void setShort(int index, int value);
 
     /**
      * Sets the specified 24-bit medium integer at the specified absolute
@@ -780,6 +781,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Sets the specified 2-byte UTF-16 character at the specified absolute
      * {@code index} in this buffer.
+     * The 16 high-order bits of the specified value are ignored.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
      *
@@ -787,7 +789,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 2} is greater than {@code this.capacity}
      */
-    void setChar(int index, char value);
+    void setChar(int index, int value);
 
     /**
      * Sets the specified 32-bit floating-point number at the specified
@@ -1244,21 +1246,22 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Sets the specified byte at the current {@code writerIndex}
      * and increases the {@code writerIndex} by {@code 1} in this buffer.
+     * The 24 high-order bits of the specified value are ignored.
      *
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 1}
      */
-    void writeByte(byte  value);
+    void writeByte(int   value);
 
     /**
      * Sets the specified 16-bit short integer at the current
      * {@code writerIndex} and increases the {@code writerIndex} by {@code 2}
-     * in this buffer.
+     * in this buffer.  The 16 high-order bits of the specified value are ignored.
      *
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 2}
      */
-    void writeShort(short value);
+    void writeShort(int value);
 
     /**
      * Sets the specified 24-bit medium integer at the current
@@ -1292,12 +1295,12 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     /**
      * Sets the specified 2-byte UTF-16 character at the current
      * {@code writerIndex} and increases the {@code writerIndex} by {@code 2}
-     * in this buffer.
+     * in this buffer.  The 16 high-order bits of the specified value are ignored.
      *
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 2}
      */
-    void writeChar(char value);
+    void writeChar(int value);
 
     /**
      * Sets the specified 32-bit floating point number at the current

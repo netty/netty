@@ -121,8 +121,8 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
         return out.write(ByteBuffer.wrap(array, index, length));
     }
 
-    public void setByte(int index, byte value) {
-        array[index] = value;
+    public void setByte(int index, int value) {
+        array[index] = (byte) value;
     }
 
     public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {

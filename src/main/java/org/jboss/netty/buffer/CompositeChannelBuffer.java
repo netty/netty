@@ -307,12 +307,12 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
-    public void setByte(int index, byte value) {
+    public void setByte(int index, int value) {
         int componentId = componentId(index);
         components[componentId].setByte(index - indices[componentId], value);
     }
 
-    public void setShort(int index, short value) {
+    public void setShort(int index, int value) {
         int componentId = componentId(index);
         if (index + 2 <= indices[componentId + 1]) {
             components[componentId].setShort(index - indices[componentId], value);
