@@ -31,14 +31,6 @@ public class DefaultWriteCompletionEvent implements WriteCompletionEvent {
     private final long writtenAmount;
 
     /**
-     * @deprecated Use {@link #DefaultWriteCompletionEvent(Channel, long)} instead.
-     */
-    @Deprecated
-    public DefaultWriteCompletionEvent(Channel channel, int writtenAmount) {
-        this(channel, (long) writtenAmount);
-    }
-
-    /**
      * Creates a new instance.
      */
     public DefaultWriteCompletionEvent(Channel channel, long writtenAmount) {

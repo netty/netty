@@ -308,20 +308,6 @@ public class Channels {
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
      */
-    public static void fireWriteComplete(Channel channel, int amount) {
-        if (amount == 0) {
-            return;
-        }
-
-        channel.getPipeline().sendUpstream(
-                new DefaultWriteCompletionEvent(channel, (long) amount));
-    }
-
-    /**
-     * Sends a {@code "writeComplete"} event to the first
-     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
-     * the specified {@link Channel}.
-     */
     public static void fireWriteComplete(Channel channel, long amount) {
         if (amount == 0) {
             return;
@@ -329,16 +315,6 @@ public class Channels {
 
         channel.getPipeline().sendUpstream(
                 new DefaultWriteCompletionEvent(channel, amount));
-    }
-
-    /**
-     * Sends a {@code "writeComplete"} event to the
-     * {@link ChannelUpstreamHandler} which is placed in the closest upstream
-     * from the handler associated with the specified
-     * {@link ChannelHandlerContext}.
-     */
-    public static void fireWriteComplete(ChannelHandlerContext ctx, int amount) {
-        ctx.sendUpstream(new DefaultWriteCompletionEvent(ctx.getChannel(), (long) amount));
     }
 
     /**
