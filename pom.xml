@@ -429,7 +429,7 @@
           <docletArtifact>
             <groupId>org.jboss.apiviz</groupId>
             <artifactId>apiviz</artifactId>
-            <version>1.3.0.GA</version>
+            <version>1.3.1.GA</version>
           </docletArtifact>
           <attach>false</attach>
           <stylesheetfile>${basedir}/src/javadoc/stylesheet.css</stylesheetfile>
