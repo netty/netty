@@ -309,6 +309,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         return buf;
     }
 
+    @Deprecated
     public ChannelBuffer readBytes(ChannelBufferIndexFinder endIndexFinder) {
         int endIndex = indexOf(readerIndex, writerIndex, endIndexFinder);
         if (endIndex < 0) {
@@ -323,6 +324,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         return slice;
     }
 
+    @Deprecated
     public ChannelBuffer readSlice(ChannelBufferIndexFinder endIndexFinder) {
         int endIndex = indexOf(readerIndex, writerIndex, endIndexFinder);
         if (endIndex < 0) {
@@ -388,6 +390,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         readerIndex = newReaderIndex;
     }
 
+    @Deprecated
     public int skipBytes(ChannelBufferIndexFinder firstIndexFinder) {
         int oldReaderIndex = readerIndex;
         int newReaderIndex = indexOf(oldReaderIndex, writerIndex, firstIndexFinder);

@@ -15,6 +15,10 @@
  */
 package org.jboss.netty.handler.codec.replay;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.buffer.ChannelBufferIndexFinder;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -23,10 +27,6 @@ import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
-
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.ChannelBufferIndexFinder;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
@@ -343,6 +343,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         throw new UnreplayableOperationException();
     }
 
+    @Deprecated
     public ChannelBuffer readBytes(ChannelBufferIndexFinder endIndexFinder) {
         int endIndex = buffer.indexOf(buffer.readerIndex(), buffer.writerIndex(), endIndexFinder);
         if (endIndex < 0) {
@@ -361,6 +362,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         return buffer.readBytes(length);
     }
 
+    @Deprecated
     public ChannelBuffer readSlice(
             ChannelBufferIndexFinder endIndexFinder) {
         int endIndex = buffer.indexOf(buffer.readerIndex(), buffer.writerIndex(), endIndexFinder);
@@ -519,6 +521,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         throw new UnreplayableOperationException();
     }
 
+    @Deprecated
     public int skipBytes(ChannelBufferIndexFinder firstIndexFinder) {
         int oldReaderIndex = buffer.readerIndex();
         int newReaderIndex = buffer.indexOf(oldReaderIndex, buffer.writerIndex(), firstIndexFinder);
