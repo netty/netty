@@ -56,7 +56,10 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
      * The {@link NioDatagramWorker}s take care of reading and writing for the {@link NioDatagramChannel}.
      *
      * @param workerExecutor
-     * @param workerCount The number of UdpWorkers for this sink.
+     *        the {@link Executor} that will run the {@link NioDatagramWorker}s
+     *        for this sink
+     * @param workerCount
+     *        the number of {@link NioDatagramWorker}s for this sink
      */
     NioDatagramPipelineSink(final Executor workerExecutor, final int workerCount) {
         workers = new NioDatagramWorker[workerCount];

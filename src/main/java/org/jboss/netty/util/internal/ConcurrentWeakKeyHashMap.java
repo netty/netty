@@ -303,8 +303,6 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
          * The load factor for the hash table.  Even though this value is same
          * for all segments, it is replicated to avoid needing links to outer
          * object.
-         *
-         * @serial
          */
         final float loadFactor;
 

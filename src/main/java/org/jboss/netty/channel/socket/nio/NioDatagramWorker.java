@@ -15,19 +15,18 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
+import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.*;
+import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.DatagramChannel;
+import java.nio.channels.NotYetConnectedException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
@@ -37,7 +36,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelException;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.ThreadRenamingRunnable;
+import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
  * A class responsible for registering channels with {@link Selector}.
@@ -137,8 +146,9 @@ class NioDatagramWorker implements Runnable {
     /**
      * Registers the passed-in channel with a selector.
      *
-     * @param channel The channel to register.
-     * @param future
+     * @param channel the channel to register
+     * @param future  the {@link ChannelFuture} that has to be notified on
+     *                completion
      */
     void register(final NioDatagramChannel channel, final ChannelFuture future) {
         final Runnable channelRegTask = new ChannelRegistionTask(channel,
