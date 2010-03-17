@@ -36,8 +36,8 @@ font {
   font-weight: inherit; }
 
 hr {
-  height: 1px;
-  color: #000;
+  border-top: 1px solid #E6E7E8;
+  border-bottom: 0 none;
 }
 
 tt, tt *, pre, pre *, code, code * {
