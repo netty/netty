@@ -126,7 +126,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.5.10</version>
+      <version>1.5.11</version>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
@@ -174,7 +174,7 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.7</version>
+      <version>4.8.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -192,7 +192,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
-      <version>1.5.10</version>
+      <version>1.5.11</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -217,7 +217,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>2.4.1</version>
+        <version>2.4.2</version>
         <configuration>
           <encoding>UTF-8</encoding>
         </configuration>
@@ -479,7 +479,7 @@
       <plugin>
         <groupId>org.jboss.maven.plugins</groupId>
         <artifactId>maven-jdocbook-plugin</artifactId>
-        <version>2.2.0</version>
+        <version>2.2.1</version>
         <executions>
           <execution>
             <id>generate-docbook</id>
@@ -598,7 +598,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-release-plugin</artifactId>
-        <version>2.0-beta-9</version>
+        <version>2.0</version>
         <configuration>
           <tagBase>https://svn.jboss.org/repos/netty/tags</tagBase>
           <!-- We don't want to use the default release profile because it
@@ -611,7 +611,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-eclipse-plugin</artifactId>
-        <version>2.7</version>
+        <version>2.8</version>
         <configuration>
           <downloadSources>true</downloadSources>
           <addVersionToProjectName>true</addVersionToProjectName>
@@ -656,7 +656,7 @@
     <repository>
       <id>repository.jboss.org</id>
       <name>JBoss.org Release Distribution Repository</name>
-      <url>dav:https://svn.jboss.org/repos/repository.jboss.org/maven2</url>
+      <url>scm:svn:https://svn.jboss.org/repos/repository.jboss.org/maven2</url>
     </repository>
     <snapshotRepository>
       <id>snapshots.jboss.org</id>
