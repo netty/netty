@@ -63,22 +63,6 @@
   </scm>
 
   <dependencies>
-    <!-- JBoss XNIO - completely optional -->
-    <dependency>
-      <groupId>org.jboss.xnio</groupId>
-      <artifactId>xnio-api</artifactId>
-      <version>1.2.1.GA</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.jboss.xnio</groupId>
-      <artifactId>xnio-nio</artifactId>
-      <version>1.2.1.GA</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-
     <!-- Google Protocol Buffers - completely optional -->
     <dependency>
       <groupId>com.google.protobuf</groupId>
