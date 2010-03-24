@@ -73,6 +73,7 @@
     </dependency>
 
     <!-- Servlet API - completely optional -->
+    <!-- Used for HTTP tunneling transport -->
     <dependency>
       <groupId>javax.servlet</groupId>
       <artifactId>servlet-api</artifactId>
@@ -82,13 +83,6 @@
     </dependency>
 
     <!-- IoC/DI containers - completely optional -->
-    <dependency>
-      <groupId>org.jboss.microcontainer</groupId>
-      <artifactId>jboss-kernel</artifactId>
-      <version>2.0.9.GA</version>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
     <dependency>
       <groupId>org.apache.felix</groupId>
       <artifactId>org.osgi.core</artifactId>
