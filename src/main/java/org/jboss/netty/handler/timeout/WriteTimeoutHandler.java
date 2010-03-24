@@ -51,7 +51,7 @@ import org.jboss.netty.util.TimerTask;
  *     public {@link ChannelPipeline} getPipeline() {
  *         // An example configuration that implements 30-second write timeout:
  *         return {@link Channels}.pipeline(
- *             new {@link WriteTimeoutHandler}(timer, 30),
+ *             <b>new {@link WriteTimeoutHandler}(timer, 30), // timer must be shared.</b>
  *             new MyHandler());
  *     }
  * }

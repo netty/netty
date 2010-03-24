@@ -79,7 +79,7 @@ import org.jboss.netty.util.TimerTask;
  *
  *     public {@link ChannelPipeline} getPipeline() {
  *         return {@link Channels}.pipeline(
- *             new {@link IdleStateHandler}(timer, 30, 30, 0),
+ *             <b>new {@link IdleStateHandler}(timer, 30, 30, 0), // timer must be shared.</b>
  *             new MyHandler());
  *     }
  * }
