@@ -66,8 +66,9 @@ import org.jboss.netty.util.TimerTask;
  * </table>
  *
  * <pre>
- * // An example that sends a ping message when there is no traffic
- * // (either inbound or outbound) for 30 seconds.
+ * // An example that sends a ping message when there is no outbound traffic
+ * // for 30 seconds.  The connection is closed when there is no inbound traffic
+ * // for 60 seconds.
  *
  * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
  *
@@ -79,17 +80,21 @@ import org.jboss.netty.util.TimerTask;
  *
  *     public {@link ChannelPipeline} getPipeline() {
  *         return {@link Channels}.pipeline(
- *             <b>new {@link IdleStateHandler}(timer, 30, 30, 0), // timer must be shared.</b>
+ *             <b>new {@link IdleStateHandler}(timer, 60, 30, 0), // timer must be shared.</b>
  *             new MyHandler());
  *     }
  * }
  *
- * // Handler should handle the IdleStateEvent triggered by IdleStateHandler.
+ * // Handler should handle the {@link IdleStateEvent} triggered by {@link IdleStateHandler}.
  * public class MyHandler extends {@link IdleStateAwareChannelHandler} {
  *
  *     {@code @Override}
  *     public void channelIdle({@link ChannelHandlerContext} ctx, {@link IdleStateEvent} e) {
- *         ctx.getChannel().write(new PingMessage());
+ *         if (e.getState() == {@link IdleState}.READER_IDLE) {
+ *             e.getChannel().close();
+ *         } else if (e.getState() == {@link IdleState}.WRITER_IDLE) {
+ *             e.getChannel().write(new PingMessage());
+ *         }
  *     }
  * }
  *
