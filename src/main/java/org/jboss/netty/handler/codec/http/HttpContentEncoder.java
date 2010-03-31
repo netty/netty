@@ -133,10 +133,8 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
                 if (!c.isLast()) {
                     content = encode(content);
                     if (content.readable()) {
-                        // Note that HttpChunk is immutable unlike HttpMessage.
-                        // XXX API inconsistency? I can live with it though.
-                        Channels.write(
-                                ctx, e.getFuture(), new DefaultHttpChunk(content), e.getRemoteAddress());
+                        c.setContent(content);
+                        ctx.sendDownstream(e);
                     }
                 } else {
                     ChannelBuffer lastProduct = finishEncode();
