@@ -73,7 +73,8 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
                 contentEncoding = HttpHeaders.Values.IDENTITY;
             }
 
-            if ((decoder = newContentDecoder(contentEncoding)) != null) {
+            boolean hasContent = m.isChunked() || m.getContent().readable();
+            if (hasContent && (decoder = newContentDecoder(contentEncoding)) != null) {
                 // Decode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
                 m.setHeader(
