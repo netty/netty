@@ -53,14 +53,21 @@ public class HttpClient {
         URI uri = new URI(args[0]);
         String scheme = uri.getScheme() == null? "http" : uri.getScheme();
         String host = uri.getHost() == null? "localhost" : uri.getHost();
-        int port = uri.getPort() == -1? 80 : uri.getPort();
+        int port = uri.getPort();
+        if (port == -1) {
+            if (scheme.equalsIgnoreCase("http")) {
+                port = 80;
+            } else if (scheme.equalsIgnoreCase("https")) {
+                port = 443;
+            }
+        }
 
-        if (!scheme.equals("http")) {
-            // We can actually support HTTPS fairly easily by inserting
-            // an SslHandler to the pipeline - left as an exercise.
-            System.err.println("Only HTTP is supported.");
+        if (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https")) {
+            System.err.println("Only HTTP(S) is supported.");
             return;
         }
+
+        boolean ssl = scheme.equalsIgnoreCase("https");
 
         // Configure the client.
         ClientBootstrap bootstrap = new ClientBootstrap(
@@ -69,7 +76,7 @@ public class HttpClient {
                         Executors.newCachedThreadPool()));
 
         // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new HttpClientPipelineFactory());
+        bootstrap.setPipelineFactory(new HttpClientPipelineFactory(ssl));
 
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
@@ -82,16 +89,20 @@ public class HttpClient {
             return;
         }
 
-        // Send the HTTP request.
+        // Prepare the HTTP request.
         HttpRequest request = new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, uri.toASCIIString());
         request.setHeader(HttpHeaders.Names.HOST, host);
         request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
         request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
+
+        // Set some example cookies.
         CookieEncoder httpCookieEncoder = new CookieEncoder(false);
         httpCookieEncoder.addCookie("my-cookie", "foo");
         httpCookieEncoder.addCookie("another-cookie", "bar");
         request.setHeader(HttpHeaders.Names.COOKIE, httpCookieEncoder.encode());
+
+        // Send the HTTP request.
         channel.write(request);
 
         // Wait for the server to close the connection.
