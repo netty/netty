@@ -108,10 +108,8 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
                 if (!c.isLast()) {
                     content = decode(content);
                     if (content.readable()) {
-                        // Note that HttpChunk is immutable unlike HttpMessage.
-                        // XXX API inconsistency? I can live with it though.
-                        Channels.fireMessageReceived(
-                                ctx, new DefaultHttpChunk(content), e.getRemoteAddress());
+                        c.setContent(content);
+                        ctx.sendUpstream(e);
                     }
                 } else {
                     ChannelBuffer lastProduct = finishDecode();
