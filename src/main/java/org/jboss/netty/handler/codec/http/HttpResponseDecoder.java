@@ -53,6 +53,34 @@ import org.jboss.netty.handler.codec.frame.TooLongFrameException;
  * </tr>
  * </table>
  *
+ * <h3>Decoding a response for a <tt>HEAD</tt> request</h3>
+ * <p>
+ * Unlike other HTTP requests, the successful response of a <tt>HEAD</tt>
+ * request does not have any content even if there is <tt>Content-Length</tt>
+ * header.  Because {@link HttpResponseDecoder} is not able to determine if the
+ * response currently being decoded is associated with a <tt>HEAD</tt> request,
+ * you must override {@link #isContentAlwaysEmpty(HttpMessage)} to return
+ * <tt>true</tt> for the response of the <tt>HEAD</tt> request.
+ * </p><p>
+ * If you are writing an HTTP client that issues a <tt>HEAD</tt> request,
+ * please use {@link HttpClientCodec} instead of this decoder.  It will perform
+ * additional state management to handle the responses for <tt>HEAD</tt>
+ * requests correctly.
+ * </p>
+ *
+ * <h3>Decoding a response for a <tt>CONNECT</tt> request</h3>
+ * <p>
+ * You also need to do additional state management to handle the response of a
+ * <tt>CONNECT</tt> request properly, like you did for <tt>HEAD</tt>.  One
+ * difference is that the decoder should stop decoding completely after decoding
+ * the successful 200 response since the connection is not an HTTP connection
+ * anymore.
+ * </p><p>
+ * {@link HttpClientCodec} also handles this edge case correctly, so you have to
+ * use {@link HttpClientCodec} if you are writing an HTTP client that issues a
+ * <tt>CONNECT</tt> request.
+ * </p>
+ *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
