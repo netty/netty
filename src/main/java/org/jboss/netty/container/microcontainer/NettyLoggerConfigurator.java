@@ -13,30 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.container.guice;
+package org.jboss.netty.container.microcontainer;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-import org.jboss.netty.channel.ChannelFactory;
-
-import com.google.inject.BindingAnnotation;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.logging.JBossLoggerFactory;
 
 /**
- * A parameter or a field annotated with this annotation will be injected with
- * the resource required to run a {@link ChannelFactory}.
+ * A bean that configures the default {@link InternalLoggerFactory}.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.FIELD, ElementType.PARAMETER})
-@BindingAnnotation
-@Documented
-public @interface ChannelFactoryResource {
-    // No value required
+public class NettyLoggerConfigurator {
+    public NettyLoggerConfigurator() {
+        InternalLoggerFactory.setDefaultFactory(new JBossLoggerFactory());
+    }
 }

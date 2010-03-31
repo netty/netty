@@ -13,10 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package org.jboss.netty.container.spring;
+
+import org.jboss.netty.logging.CommonsLoggerFactory;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
- * <a href="http://code.google.com/p/google-guice/">Google Guice</a> integration.
+ * A bean that configures the default {@link InternalLoggerFactory}.
  *
- * @apiviz.exclude
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @version $Rev$, $Date$
  */
-package org.jboss.netty.container.guice;
+public class NettyLoggerConfigurator {
+    public NettyLoggerConfigurator() {
+        InternalLoggerFactory.setDefaultFactory(new CommonsLoggerFactory());
+    }
+}
