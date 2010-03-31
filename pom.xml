@@ -425,7 +425,6 @@
             -group "Central interface for all I/O operations" ${project.groupId}.channel*
             -group "Client &amp; Server bootstrapping utilities" ${project.groupId}.bootstrap*
             -group "Reusable I/O event interceptors" ${project.groupId}.handler*
-            -group "IoC (Dependency Injection) container integration" ${project.groupId}.container*
             -group "Miscellaneous" ${project.groupId}.logging*:${project.groupId}.util*
 
             -sourceclasspath ${project.build.outputDirectory}
@@ -433,7 +432,7 @@
           </additionalparam>
           <encoding>UTF-8</encoding>
           <locale>en_US</locale>
-          <excludePackageNames>${project.groupId}.example*:${project.groupId}.util.internal*</excludePackageNames>
+          <excludePackageNames>${project.groupId}.example*:${project.groupId}.container*:${project.groupId}.util.internal*</excludePackageNames>
         </configuration>
       </plugin>
       <plugin>
