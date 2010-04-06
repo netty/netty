@@ -32,6 +32,7 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
 import org.jboss.netty.util.internal.ReusableIterator;
+import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
 
 /**
  * A {@link Timer} optimized for approximated I/O timeout scheduling.
@@ -77,10 +78,8 @@ public class HashedWheelTimer implements Timer {
         InternalLoggerFactory.getInstance(HashedWheelTimer.class);
     private static final AtomicInteger id = new AtomicInteger();
 
-    // I'd say 64 active timer threads are obvious misuse.
-    private static final int MISUSE_WARNING_THRESHOLD = 64;
-    private static final AtomicInteger activeInstances = new AtomicInteger();
-    private static final AtomicBoolean loggedMisuseWarning = new AtomicBoolean();
+    private static final SharedResourceMisuseDetector misuseDetector =
+        new SharedResourceMisuseDetector(HashedWheelTimer.class);
 
     private final Worker worker = new Worker();
     final Thread workerThread;
@@ -204,15 +203,7 @@ public class HashedWheelTimer implements Timer {
                         worker, "Hashed wheel timer #" + id.incrementAndGet()));
 
         // Misuse check
-        int activeInstances = HashedWheelTimer.activeInstances.incrementAndGet();
-        if (activeInstances >= MISUSE_WARNING_THRESHOLD &&
-            loggedMisuseWarning.compareAndSet(false, true)) {
-            logger.debug(
-                    "There are too many active " +
-                    HashedWheelTimer.class.getSimpleName() + " instances (" +
-                    activeInstances + ") - you should share the small number " +
-                    "of instances to avoid excessive resource consumption.");
-        }
+        misuseDetector.increase();
     }
 
     @SuppressWarnings("unchecked")
@@ -288,7 +279,7 @@ public class HashedWheelTimer implements Timer {
             Thread.currentThread().interrupt();
         }
 
-        activeInstances.decrementAndGet();
+        misuseDetector.decrease();
 
         Set<Timeout> unprocessedTimeouts = new HashSet<Timeout>();
         for (Set<HashedWheelTimeout> bucket: wheel) {
