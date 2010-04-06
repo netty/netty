@@ -248,8 +248,9 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                         break;
                     }
                 } else {
+                    MessageEvent currentEvent = this.currentEvent;
+                    this.currentEvent = null;
                     ctx.sendDownstream(currentEvent);
-                    currentEvent = null;
                 }
             }
 
