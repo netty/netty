@@ -101,8 +101,27 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
     }
 
     public int compareTo(LocalAddress o) {
-        // FIXME: Ephemeral port
-        return getId().compareTo(o.getId());
+        if (ephemeral) {
+            if (o.ephemeral) {
+                int a = System.identityHashCode(this);
+                int b = System.identityHashCode(this);
+                if (a < b) {
+                    return -1;
+                } else if (a > b) {
+                    return 1;
+                } else {
+                    return 0;
+                }
+            } else {
+                return -1;
+            }
+        } else {
+            if (o.ephemeral) {
+                return 1;
+            } else {
+                return getId().compareTo(o.getId());
+            }
+        }
     }
 
     @Override
