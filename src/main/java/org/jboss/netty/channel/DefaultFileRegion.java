@@ -29,8 +29,18 @@ public class DefaultFileRegion implements FileRegion {
         return count;
     }
 
-    public long transferTo(WritableByteChannel target) throws IOException {
-        return file.transferTo(position, count, target);
+    public long transferTo(WritableByteChannel target, long position) throws IOException {
+        long count = this.count - position;
+        if (count == 0) {
+            return 0L;
+        }
+        if (count < 0 || position < 0) {
+            throw new IllegalArgumentException(
+                    "position out of range: " + position +
+                    " (expected: 0 - " + (this.count - 1) + ")");
+        }
+
+        return file.transferTo(this.position + position, count, target);
     }
 
     public void releaseExternalResources() {

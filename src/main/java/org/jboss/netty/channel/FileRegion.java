@@ -60,6 +60,13 @@ public interface FileRegion extends ExternalResourceReleasable {
 
     /**
      * Transfers the content of this file region to the specified channel.
+     *
+     * @param target    the destination of the transfer
+     * @param position  the relative offset of the file where the transfer
+     *                  begins from.  For example, <tt>0</tt> will make the
+     *                  transfer start from {@link #getPosition()}th byte and
+     *                  <tt>{@link #getCount()} - 1</tt> will make the last
+     *                  byte of the region transferred.
      */
-    long transferTo(WritableByteChannel target) throws IOException;
+    long transferTo(WritableByteChannel target, long position) throws IOException;
 }

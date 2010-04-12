@@ -270,7 +270,7 @@ final class SocketSendBufferPool {
         }
 
         public long transferTo(WritableByteChannel ch) throws IOException {
-            long localWrittenBytes = file.transferTo(ch);
+            long localWrittenBytes = file.transferTo(ch, writtenBytes);
             writtenBytes += localWrittenBytes;
             return localWrittenBytes;
         }
