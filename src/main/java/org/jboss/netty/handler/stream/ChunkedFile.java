@@ -130,7 +130,7 @@ public class ChunkedFile implements ChunkedInput {
     }
 
     public boolean isEndOfInput() throws Exception {
-        return hasNextChunk();
+        return !hasNextChunk();
     }
 
     public void close() throws Exception {
