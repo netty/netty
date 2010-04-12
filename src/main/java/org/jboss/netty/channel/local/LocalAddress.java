@@ -26,7 +26,7 @@ import java.net.SocketAddress;
  *
  * An ephemeral address is an anonymous address which is assigned temporarily
  * and is released as soon as the connection is closed.  All ephemeral addresses
- * have the same ID, {@code "ephemeral"}, but they are not equals to each other.
+ * have the same ID, {@code "ephemeral"}, but they are not equal to each other.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
@@ -100,9 +100,17 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
         }
     }
 
+    // FIXME: This comparison is broken!  Assign distinct port numbers for
+    //        ephemeral ports, just like O/S does for port number 0.  It will
+    //        break backward compatibility though.
+
     public int compareTo(LocalAddress o) {
         if (ephemeral) {
             if (o.ephemeral) {
+                if (this == o){
+                    return 0;
+                }
+
                 int a = System.identityHashCode(this);
                 int b = System.identityHashCode(this);
                 if (a < b) {
@@ -110,14 +118,16 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
                 } else if (a > b) {
                     return 1;
                 } else {
-                    return 0;
+                    throw new Error(
+                            "Two different ephemeral addresses have " +
+                            "same identityHashCode.");
                 }
             } else {
-                return -1;
+                return 1;
             }
         } else {
             if (o.ephemeral) {
-                return 1;
+                return -1;
             } else {
                 return getId().compareTo(o.getId());
             }
