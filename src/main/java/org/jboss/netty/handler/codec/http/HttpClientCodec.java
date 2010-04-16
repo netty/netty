@@ -120,23 +120,30 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
             // current response.
             HttpMethod method = queue.poll();
 
-            // According to 4.3, RFC2616:
-            // All responses to the HEAD request method MUST NOT include a
-            // message-body, even though the presence of entity-header fields
-            // might lead one to believe they do.
-            if (HttpMethod.HEAD.equals(method)) {
-                return true;
-            }
-
-            // Successful CONNECT request results in a response with empty body.
-            if (((HttpResponse) msg).getStatus().getCode() == 200) {
-                if (HttpMethod.CONNECT.equals(method)) {
-                    // Proxy connection established - Not HTTP anymore.
-                    done = true;
-                    queue.clear();
+            char firstChar = method.getName().charAt(0);
+            switch (firstChar) {
+            case 'H':
+                // According to 4.3, RFC2616:
+                // All responses to the HEAD request method MUST NOT include a
+                // message-body, even though the presence of entity-header fields
+                // might lead one to believe they do.
+                if (HttpMethod.HEAD.equals(method)) {
                     return true;
                 }
+                break;
+            case 'C':
+                // Successful CONNECT request results in a response with empty body.
+                if (((HttpResponse) msg).getStatus().getCode() == 200) {
+                    if (HttpMethod.CONNECT.equals(method)) {
+                        // Proxy connection established - Not HTTP anymore.
+                        done = true;
+                        queue.clear();
+                        return true;
+                    }
+                }
+                break;
             }
+
             return super.isContentAlwaysEmpty(msg);
         }
     }
