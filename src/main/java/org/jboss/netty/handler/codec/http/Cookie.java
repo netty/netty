@@ -24,8 +24,6 @@ import java.util.Set;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @version $Rev$, $Date$
- *
- * @apiviz.landmark
  */
 public interface Cookie extends Comparable<Cookie> {
 

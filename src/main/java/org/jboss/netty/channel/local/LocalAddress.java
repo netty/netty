@@ -32,6 +32,8 @@ import java.net.SocketAddress;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 public final class LocalAddress extends SocketAddress implements Comparable<LocalAddress> {
 

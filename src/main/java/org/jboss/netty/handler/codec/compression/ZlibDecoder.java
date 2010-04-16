@@ -30,6 +30,9 @@ import org.jboss.netty.util.internal.jzlib.ZStream;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
+ * @apiviz.has org.jboss.netty.handler.codec.compression.ZlibWrapper
  */
 public class ZlibDecoder extends OneToOneDecoder {
 

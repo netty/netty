@@ -29,6 +29,9 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
  * @version $Rev$, $Date$
  *
  * @see HttpClientCodec
+ *
+ * @apiviz.has org.jboss.netty.handler.codec.http.HttpRequestDecoder
+ * @apiviz.has org.jboss.netty.handler.codec.http.HttpResponseEncoder
  */
 public class HttpServerCodec implements ChannelUpstreamHandler,
         ChannelDownstreamHandler {

@@ -39,6 +39,9 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * @version $Rev$, $Date$
  *
  * @see HttpServerCodec
+ *
+ * @apiviz.has org.jboss.netty.handler.codec.http.HttpResponseDecoder
+ * @apiviz.has org.jboss.netty.handler.codec.http.HttpRequestEncoder
  */
 public class HttpClientCodec implements ChannelUpstreamHandler,
         ChannelDownstreamHandler {

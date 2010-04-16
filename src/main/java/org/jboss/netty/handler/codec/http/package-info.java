@@ -19,9 +19,11 @@
  *
  * @apiviz.exclude ^java\.lang\.
  * @apiviz.exclude OneToOne(Encoder|Decoder)$
- * @apiviz.exclude HttpHeaders
- * @apiviz.exclude (QueryString|Cookie)(Encoder|Decoder)$
+ * @apiviz.exclude \.HttpHeaders\.
  * @apiviz.exclude \.codec\.replay\.
  * @apiviz.exclude \.(Simple)?Channel[A-Za-z]*Handler$
+ * @apiviz.exclude \.Rtsp
+ * @apiviz.exclude \.Default
+ * @apiviz.exclude \.Http(Client|Server)Codec$
  */
 package org.jboss.netty.handler.codec.http;

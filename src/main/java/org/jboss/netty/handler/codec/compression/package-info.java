@@ -22,6 +22,7 @@
  * @apiviz.exclude \.codec\.(?!compression)[a-z0-9]+\.
  * @apiviz.exclude ^java\.lang\.
  * @apiviz.exclude \.channel\.
+ * @apiviz.exclude Exception$
  */
 package org.jboss.netty.handler.codec.compression;
 // TODO Implement bzip2 and lzma handlers

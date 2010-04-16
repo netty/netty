@@ -21,7 +21,7 @@
  *
  * @apiviz.exclude OneToOne(Encoder|Decoder)$
  * @apiviz.exclude \.(Simple)?Channel[A-Za-z]*Handler$
- * @apiviz.exclude \.codec\.serialization\.
+ * @apiviz.exclude \.codec\.[a-eg-z][a-z0-9]*\.
  * @apiviz.exclude \.ssl\.
  */
 package org.jboss.netty.handler.codec.frame;
