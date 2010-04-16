@@ -75,19 +75,15 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
             throws Exception {
-        Object msg = e.getMessage();
-        if (!(msg instanceof HttpMessage) && !(msg instanceof HttpChunk)) {
-            ctx.sendUpstream(e);
-            return;
-        }
 
+        Object msg = e.getMessage();
         HttpMessage currentMessage = this.currentMessage;
-        if (currentMessage == null) {
+
+        if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
             if (m.isChunked()) {
                 // A chunked message - remove 'Transfer-Encoding' header,
                 // initialize the cumulative buffer, and wait for incoming chunks.
-                // TODO Add HttpMessage/HttpChunkTrailer.removeHeader(name, value)
                 List<String> encodings = m.getHeaders(HttpHeaders.Names.TRANSFER_ENCODING);
                 encodings.remove(HttpHeaders.Values.CHUNKED);
                 if (encodings.isEmpty()) {
@@ -97,9 +93,17 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
                 this.currentMessage = m;
             } else {
                 // Not a chunked message - pass through.
+                this.currentMessage = null;
                 ctx.sendUpstream(e);
             }
-        } else {
+        } else if (msg instanceof HttpChunk) {
+            // Sanity check
+            if (currentMessage == null) {
+                throw new IllegalStateException(
+                        "received " + HttpChunk.class.getSimpleName() +
+                        " without " + HttpMessage.class.getSimpleName());
+            }
+
             // Merge the received chunk into the content of the current message.
             HttpChunk chunk = (HttpChunk) msg;
             ChannelBuffer content = currentMessage.getContent();
@@ -118,6 +122,9 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
                         String.valueOf(content.readableBytes()));
                 Channels.fireMessageReceived(ctx, currentMessage, e.getRemoteAddress());
             }
+        } else {
+            // Neither HttpMessage or HttpChunk
+            ctx.sendUpstream(e);
         }
     }
 }
