@@ -24,5 +24,6 @@
  * *
  * @apiviz.exclude OneToOne(Encoder|Decoder)$
  * @apiviz.exclude \.codec\.replay\.
+ * @apiviz.exclude \.Default
  */
 package org.jboss.netty.handler.codec.http.websocket;

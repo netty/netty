@@ -17,5 +17,7 @@
 /**
  * An <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a>
  * extension based on the HTTP codec.
+ *
+ * @apiviz.exclude \.RtspHeaders\.
  */
 package org.jboss.netty.handler.codec.rtsp;

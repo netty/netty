@@ -17,5 +17,8 @@
 /**
  * The special-purpose handlers that store an event into an internal queue
  * instead of propagating the event immediately.
+ *
+ * @apiviz.exclude \.channel\.
+ * @apiviz.exclude Exception$
  */
 package org.jboss.netty.handler.queue;

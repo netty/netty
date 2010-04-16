@@ -23,7 +23,7 @@ import org.jboss.netty.util.ExternalResourceReleasable;
 
 /**
  * A region of a file that is sent via a {@link Channel} which supports
- * zero-copy file transfer.
+ * <a href="http://en.wikipedia.org/wiki/Zero-copy">zero-copy file transfer</a>.
  *
  * <h3>Upgrade your JDK / JRE</h3>
  *
@@ -41,6 +41,12 @@ import org.jboss.netty.util.ExternalResourceReleasable;
  * <li><a href="http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6524172">6470086</a>
  *   - FileChannel.transferTo(2147483647, 1, channel) causes "Value too large" exception</li>
  * </ul>
+ *
+ * <h3>Check your operating system and JDK / JRE</h3>
+ *
+ * If your operating system (or JDK / JRE) does not support zero-copy file
+ * transfer, sending a file with {@link FileRegion} might fail or yield worse
+ * performance.  For example, sending a large file doesn't work well in Windows.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>

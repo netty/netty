@@ -21,6 +21,5 @@
  *
  * @apiviz.exclude ^java\.io\.
  * @apiviz.exclude \.codec\.(?!serialization)[a-z0-9]+\.
- * @apiviz.exclude \.CompatibleObjectDecoder$
  */
 package org.jboss.netty.handler.codec.serialization;

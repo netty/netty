@@ -56,6 +56,8 @@ import org.jboss.netty.handler.codec.http.HttpMessageDecoder;
  * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 public abstract class RtspMessageDecoder extends HttpMessageDecoder {
 

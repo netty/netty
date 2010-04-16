@@ -37,7 +37,7 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
  * Emulates buffered write operation.  This handler stores all write requests
- * into an unbounded {@link Queue} and flushed them to the downstream when
+ * into an unbounded {@link Queue} and flushes them to the downstream when
  * {@link #flush()} method is called.
  * <p>
  * Here is an example that demonstrates the usage:
@@ -158,6 +158,8 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 public class BufferedWriteHandler extends SimpleChannelHandler {
 

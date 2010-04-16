@@ -25,6 +25,9 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
  * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
+ *
+ * @apiviz.exclude
+ * @apiviz.stereotype static
  */
 public final class RtspHeaders {
 
@@ -220,7 +223,7 @@ public final class RtspHeaders {
     }
 
     /**
-     * Standard RTSP header names.
+     * Standard RTSP header values.
      *
      * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
      * @author <a href="http://gleamynode.net/">Trustin Lee</a>

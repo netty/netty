@@ -30,6 +30,8 @@ import org.jboss.netty.handler.codec.http.HttpMessageEncoder;
  * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
+ *
+ * @apiviz.landmark
  */
 @Sharable
 public abstract class RtspMessageEncoder extends HttpMessageEncoder {

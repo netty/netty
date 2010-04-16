@@ -21,5 +21,6 @@
  * and vice versa.
  *
  * @apiviz.exclude \.oneone\.
+ * @apiviz.exclude \.frame\.
  */
 package org.jboss.netty.handler.codec.protobuf;
