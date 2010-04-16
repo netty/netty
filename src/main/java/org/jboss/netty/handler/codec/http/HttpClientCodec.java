@@ -128,7 +128,7 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
                 return true;
             }
 
-            // Successful CONNECT result in empty body.
+            // Successful CONNECT request results in a response with empty body.
             if (((HttpResponse) msg).getStatus().getCode() == 200) {
                 if (HttpMethod.CONNECT.equals(method)) {
                     // Proxy connection established - Not HTTP anymore.
