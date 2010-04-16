@@ -128,7 +128,11 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
                 // message-body, even though the presence of entity-header fields
                 // might lead one to believe they do.
                 if (HttpMethod.HEAD.equals(method)) {
-                    return true;
+                    // Interesting edge case:
+                    // Zero-byte chunk will appear if Transfer-Encoding of the
+                    // response is 'chunked'.  This is probably because of the
+                    // trailing headers.
+                    return !msg.isChunked();
                 }
                 break;
             case 'C':
