@@ -60,6 +60,13 @@ import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
  * share one socket connection, as <a href="http://beepcore.org/">BEEP</a> and
  * <a href="http://en.wikipedia.org/wiki/Secure_Shell">SSH</a> do.
  *
+ * <h3>Downcast to access transport-specific operations</h3>
+ * <p>
+ * Some transports exposes additional operations that is specific to the
+ * transport.  Down-cast the {@link Channel} to sub-type to invoke such
+ * operations.  For example, with the old I/O datagram transport, multicast
+ * join / leave operations are provided by {@link DatagramChannel}.
+ *
  * <h3>InterestOps</h3>
  * <p>
  * A {@link Channel} has a property called {@link #getInterestOps() interestOps}
