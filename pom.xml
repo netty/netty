@@ -225,7 +225,7 @@
               <goal>copy-resources</goal>
             </goals>
             <configuration>
-              <outputDirectory>${basedir}/src/target/classes/META-INF</outputDirectory>
+              <outputDirectory>${basedir}/target/classes/META-INF</outputDirectory>
               <resources>
                 <resource>
                   <directory>${basedir}</directory>
