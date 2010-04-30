@@ -180,6 +180,15 @@
   </properties>
 
   <build>
+    <resources>
+      <resource>
+        <directory>${basedir}/src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>${basedir}/target/license</directory>
+      </resource>
+    </resources>
+
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -225,7 +234,7 @@
               <goal>copy-resources</goal>
             </goals>
             <configuration>
-              <outputDirectory>${basedir}/target/classes/META-INF</outputDirectory>
+              <outputDirectory>${basedir}/target/license/META-INF</outputDirectory>
               <resources>
                 <resource>
                   <directory>${basedir}</directory>
