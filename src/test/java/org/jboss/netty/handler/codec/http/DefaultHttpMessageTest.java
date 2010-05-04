@@ -45,6 +45,7 @@ public class DefaultHttpMessageTest {
             Assert.assertNull(m.getHeader(String.valueOf(i)));
         }
 
+        // Check if sequential access returns nothing.
         Assert.assertTrue(m.getHeaders().isEmpty());
     }
 }
