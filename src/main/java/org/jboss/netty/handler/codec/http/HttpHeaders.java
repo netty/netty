@@ -659,13 +659,13 @@ public class HttpHeaders {
 
         for (;;) {
             if (e.hash == h && eq(name, e.key)) {
+                e.remove();
                 Entry next = e.next;
                 if (next != null) {
                     entries[i] = next;
                     e = next;
                 } else {
                     entries[i] = null;
-                    e.remove();
                     return;
                 }
             } else {
@@ -838,6 +838,11 @@ public class HttpHeaders {
             String oldValue = this.value;
             this.value = value;
             return oldValue;
+        }
+
+        @Override
+        public String toString() {
+            return key + "=" + value;
         }
     }
 }
