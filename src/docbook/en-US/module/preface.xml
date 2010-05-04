@@ -20,12 +20,7 @@
 ]>
 <preface id="preface">
   <title>Preface</title>
-  <para>
-    This user guide aims to give you the comprehensive introduction to
-    <ulink url="&Home;">Netty</ulink> so that you can start to build a network
-    application right away.
-  </para>
-  
+
   <section>
     <title>The Problem</title>
     <para>
