@@ -40,22 +40,16 @@
       above.  The latest version of Netty is available in
       <ulink url="&Downloads;">the project download page</ulink>.  To download
       the right version of JDK, please refer to your preferred JDK vendor's web
-      site.  
+      site.
     </para>
     <para>
-      Is that all?  To tell the truth, you should find these two are just
-      enough to implement almost any type of protocols.  Otherwise, please
-      feel free to <ulink url="&Community;">contact the Netty
-      project community</ulink> and let us know what's missing.
-    </para>
-    <para>
-      At last but not least, please refer to the API reference whenever you
-      want to know more about the classes introduced here.  All class names in
-      this document are linked to the online API reference for your
-      convenience.  Also, please don't hesitate to
+      As you read, you might have more questions about the classes introduced
+      in this chapter.  Please refer to the API reference whenever you want to
+      know more about them.  All class names in this document are linked to the
+      online API reference for your convenience.  Also, please don't hesitate to
       <ulink url="&Community;">contact the Netty project community</ulink> and
       let us know if there's any incorrect information, errors in grammar and
-      typo, and if you have a good idea to improve the documentation. 
+      typo, and if you have a good idea to improve the documentation.
     </para>
   </section>
   
