@@ -30,12 +30,12 @@
     </textobject>
   </mediaobject>
 
-      <para>
-        In this chapter, we will examine what core functionalities are provided
-        in Netty and how they constitute a complete network application
-        development stack on top of the core.  Please keep this diagram in mind
-        as you read this chapter.
-      </para>
+  <para>
+    In this chapter, we will examine what core functionalities are provided in
+    Netty and how they constitute a complete network application development
+    stack on top of the core.  Please keep this diagram in mind as you read this
+    chapter.
+  </para>
 
   <section>
     <title>Rich Buffer Data Structure</title>
