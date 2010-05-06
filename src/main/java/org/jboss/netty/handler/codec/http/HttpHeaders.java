@@ -466,12 +466,25 @@ public class HttpHeaders {
         }
     }
 
-    // TODO Document me
-
+    /**
+     * Returns the header value with the specified header name.  If there are
+     * more than one header value for the specified header name, the first
+     * value is returned.
+     *
+     * @return the header value or {@code null} if there is no such header
+     */
     public static String getHeader(HttpMessage message, String name) {
         return message.getHeader(name);
     }
 
+    /**
+     * Returns the header value with the specified header name.  If there are
+     * more than one header value for the specified header name, the first
+     * value is returned.
+     *
+     * @return the header value or the {@code defaultValue} if there is no such
+     *         header
+     */
     public static String getHeader(HttpMessage message, String name, String defaultValue) {
         String value = message.getHeader(name);
         if (value == null) {
@@ -480,38 +493,86 @@ public class HttpHeaders {
         return value;
     }
 
+    /**
+     * Sets a new header with the specified name and value.  If there is an
+     * existing header with the same name, the existing header is removed.
+     */
     public static void setHeader(HttpMessage message, String name, Object value) {
         message.setHeader(name, value);
     }
 
+    /**
+     * Sets a new header with the specified name and values.  If there is an
+     * existing header with the same name, the existing header is removed.
+     */
     public static void setHeader(HttpMessage message, String name, Iterable<?> values) {
         message.setHeader(name, values);
     }
 
+    /**
+     * Adds a new header with the specified name and value.
+     */
     public static void addHeader(HttpMessage message, String name, Object value) {
         message.addHeader(name, value);
     }
 
+    /**
+     * Returns the integer header value with the specified header name.  If
+     * there are more than one header value for the specified header name, the
+     * first value is returned.
+     *
+     * @return the header value
+     * @throws NumberFormatException
+     *         if there is no such header or the header value is not a number
+     */
     public static int getIntHeader(HttpMessage message, String name) {
-        return Integer.parseInt(getHeader(message, name));
+        String value = getHeader(message, name);
+        if (value == null) {
+            throw new NumberFormatException("null");
+        }
+        return Integer.parseInt(value);
     }
 
+    /**
+     * Returns the integer header value with the specified header name.  If
+     * there are more than one header value for the specified header name, the
+     * first value is returned.
+     *
+     * @return the header value or the {@code defaultValue} if there is no such
+     *         header or the header value is not a number
+     */
     public static int getIntHeader(HttpMessage message, String name, int defaultValue) {
+        String value = getHeader(message, name);
+        if (value == null) {
+            return defaultValue;
+        }
+
         try {
-            return getIntHeader(message, name);
+            return Integer.parseInt(value);
         } catch (NumberFormatException e) {
             return defaultValue;
         }
     }
 
+    /**
+     * Sets a new integer header with the specified name and value.  If there
+     * is an existing header with the same name, the existing header is removed.
+     */
     public static void setIntHeader(HttpMessage message, String name, int value) {
         message.setHeader(name, value);
     }
 
+    /**
+     * Sets a new integer header with the specified name and values.  If there
+     * is an existing header with the same name, the existing header is removed.
+     */
     public static void setIntHeader(HttpMessage message, String name, Iterable<Integer> values) {
         message.setHeader(name, values);
     }
 
+    /**
+     * Adds a new integer header with the specified name and value.
+     */
     public static void addIntHeader(HttpMessage message, String name, int value) {
         message.addHeader(name, value);
     }
@@ -546,18 +607,31 @@ public class HttpHeaders {
         return defaultValue;
     }
 
-    public static void setContentLength(HttpMessage message, long defaultValue) {
-        message.setHeader(Names.CONTENT_LENGTH, defaultValue);
+    /**
+     * Sets the {@code "Content-Length"} header.
+     */
+    public static void setContentLength(HttpMessage message, long length) {
+        message.setHeader(Names.CONTENT_LENGTH, length);
     }
 
+    /**
+     * Returns the value of the {@code "Host"} header.
+     */
     public static String getHost(HttpMessage message) {
         return message.getHeader(Names.HOST);
     }
 
+    /**
+     * Returns the value of the {@code "Host"} header.  If there is no such
+     * header, the {@code defaultValue} is returned.
+     */
     public static String getHost(HttpMessage message, String defaultValue) {
         return getHeader(message, Names.HOST, defaultValue);
     }
 
+    /**
+     * Sets the {@code "Host"} header.
+     */
     public static void setHost(HttpMessage message, String value) {
         message.setHeader(Names.HOST, value);
     }
