@@ -91,7 +91,6 @@ import org.jboss.netty.util.CharsetUtil;
  * @apiviz.has org.jboss.netty.buffer.ChannelBuffer oneway - - creates
  */
 public class ChannelBuffers {
-    // TODO Review the documentation before releasing 3.2.0
 
     /**
      * Big endian byte order.
@@ -213,6 +212,12 @@ public class ChannelBuffers {
         return new DynamicChannelBuffer(endianness, estimatedLength);
     }
 
+    /**
+     * Creates a new big-endian dynamic buffer with the specified estimated
+     * data length using the specified factory.  More accurate estimation yields
+     * less unexpected reallocation overhead.  The new buffer's {@code readerIndex}
+     * and {@code writerIndex} are {@code 0}.
+     */
     public static ChannelBuffer dynamicBuffer(int estimatedLength, ChannelBufferFactory factory) {
         if (factory == null) {
             throw new NullPointerException("factory");
@@ -221,6 +226,12 @@ public class ChannelBuffers {
         return new DynamicChannelBuffer(factory.getDefaultOrder(), estimatedLength, factory);
     }
 
+    /**
+     * Creates a new dynamic buffer with the specified endianness and
+     * the specified estimated data length using the specified factory.
+     * More accurate estimation yields less unexpected reallocation overhead.
+     * The new buffer's {@code readerIndex} and {@code writerIndex} are {@code 0}.
+     */
     public static ChannelBuffer dynamicBuffer(ByteOrder endianness, int estimatedLength, ChannelBufferFactory factory) {
         return new DynamicChannelBuffer(endianness, estimatedLength, factory);
     }
