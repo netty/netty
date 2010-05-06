@@ -205,13 +205,18 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * <h3>Conversion to existing JDK types</h3>
  *
+ * <h4>Byte array</h4>
+ *
+ * If a {@link ChannelBuffer} is backed by a byte array (i.e. {@code byte[]}),
+ * you can access it directly via the {@link #array()} method.  To determine
+ * if a buffer is backed by a byte array, {@link #hasArray()} should be used.
+ *
  * <h4>NIO Buffers</h4>
  *
  * Various {@link #toByteBuffer()} and {@link #toByteBuffers()} methods convert
  * a {@link ChannelBuffer} into one or more NIO buffers.  These methods avoid
  * buffer allocation and memory copy whenever possible, but there's no
- * guarantee that memory copy will not be involved or that an explicit memory
- * copy will be involved.
+ * guarantee that memory copy will not be involved.
  *
  * <h4>Strings</h4>
  *
@@ -232,7 +237,6 @@ import java.nio.charset.UnsupportedCharsetException;
  * @apiviz.landmark
  */
 public interface ChannelBuffer extends Comparable<ChannelBuffer> {
-    // TODO Review the documentation before releasing 3.2.0
 
     /**
      * Returns the factory which creates a {@link ChannelBuffer} whose
@@ -817,12 +821,12 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 
     /**
      * Transfers the specified source buffer's data to this buffer starting at
-     * the specified absolute {@code index} until the destination becomes
+     * the specified absolute {@code index} until the source buffer becomes
      * unreadable.  This method is basically same with
      * {@link #setBytes(int, ChannelBuffer, int, int)}, except that this
      * method increases the {@code readerIndex} of the source buffer by
      * the number of the transferred bytes while
-     * {@link #getBytes(int, ChannelBuffer, int, int)} does not.
+     * {@link #setBytes(int, ChannelBuffer, int, int)} does not.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * the source buffer (i.e. {@code this}).
      *
@@ -839,7 +843,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * with {@link #setBytes(int, ChannelBuffer, int, int)}, except that this
      * method increases the {@code readerIndex} of the source buffer by
      * the number of the transferred bytes while
-     * {@link #getBytes(int, ChannelBuffer, int, int)} does not.
+     * {@link #setBytes(int, ChannelBuffer, int, int)} does not.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * the source buffer (i.e. {@code this}).
      *
