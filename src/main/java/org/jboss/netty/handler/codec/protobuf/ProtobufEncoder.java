@@ -28,11 +28,12 @@ import org.jboss.netty.handler.codec.frame.LengthFieldPrepender;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 import com.google.protobuf.Message;
+import com.google.protobuf.MessageLite;
 
 /**
  * Encodes the requested <a href="http://code.google.com/p/protobuf/">Google
- * Protocol Buffers</a> {@link Message} into a {@link ChannelBuffer}.
- * A typical setup for TCP/IP would be:
+ * Protocol Buffers</a> {@link Message} and {@link MessageLite} into a
+ * {@link ChannelBuffer}. A typical setup for TCP/IP would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
  *
@@ -77,9 +78,9 @@ public class ProtobufEncoder extends OneToOneEncoder {
     @Override
     protected Object encode(
             ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof Message)) {
+        if (!(msg instanceof MessageLite)) {
             return msg;
         }
-        return wrappedBuffer(((Message) msg).toByteArray());
+        return wrappedBuffer(((MessageLite) msg).toByteArray());
     }
 }

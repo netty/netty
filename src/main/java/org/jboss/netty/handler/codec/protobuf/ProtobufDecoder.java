@@ -29,14 +29,15 @@ import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.Message;
+import com.google.protobuf.MessageLite;
 
 /**
  * Decodes a received {@link ChannelBuffer} into a
  * <a href="http://code.google.com/p/protobuf/">Google Protocol Buffers</a>
- * {@link Message}.  Please note that this decoder must be used with a proper
- * {@link FrameDecoder} such as {@link LengthFieldBasedFrameDecoder} if you are
- * using a stream-based transport such as TCP/IP.  A typical setup for TCP/IP
- * would be:
+ * {@link Message} and {@link MessageLite}.  Please note that this decoder must
+ * be used with a proper {@link FrameDecoder} such as {@link ProtobufVarint32FrameDecoder}
+ * or {@link LengthFieldBasedFrameDecoder} if you are using a stream-based
+ * transport such as TCP/IP.  A typical setup for TCP/IP would be:
  * <pre>
  * {@link ChannelPipeline} pipeline = ...;
  *
@@ -71,17 +72,17 @@ import com.google.protobuf.Message;
 @Sharable
 public class ProtobufDecoder extends OneToOneDecoder {
 
-    private final Message prototype;
+    private final MessageLite prototype;
     private final ExtensionRegistry extensionRegistry;
 
     /**
      * Creates a new instance.
      */
-    public ProtobufDecoder(Message prototype) {
+    public ProtobufDecoder(MessageLite prototype) {
         this(prototype, null);
     }
 
-    public ProtobufDecoder(Message prototype, ExtensionRegistry extensionRegistry) {
+    public ProtobufDecoder(MessageLite prototype, ExtensionRegistry extensionRegistry) {
         if (prototype == null) {
             throw new NullPointerException("prototype");
         }
