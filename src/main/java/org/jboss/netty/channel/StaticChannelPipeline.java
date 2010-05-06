@@ -61,16 +61,29 @@ public class StaticChannelPipeline implements ChannelPipeline {
             throw new IllegalArgumentException("no handlers specified");
         }
 
-        contexts = new StaticChannelHandlerContext[handlers.length];
-        lastIndex = contexts.length - 1;
-
-        for (int i = 0; i < contexts.length; i ++) {
-            ChannelHandler h = handlers[i];
+        // Get the number of first non-null handlers.
+        StaticChannelHandlerContext[] contexts =
+            new StaticChannelHandlerContext[handlers.length];
+        int nContexts;
+        for (nContexts = 0; nContexts < contexts.length; nContexts ++) {
+            ChannelHandler h = handlers[nContexts];
             if (h == null) {
-                // FIXME: Should just break the loop on null
-                throw new NullPointerException("handlers[" + i + ']');
+                break;
             }
+        }
 
+        if (nContexts == contexts.length) {
+            this.contexts = contexts;
+            lastIndex = contexts.length - 1;
+        } else {
+            this.contexts = contexts =
+                new StaticChannelHandlerContext[nContexts];
+            lastIndex = nContexts - 1;
+        }
+
+        // Initialize the first non-null handlers only.
+        for (int i = 0; i < nContexts; i ++) {
+            ChannelHandler h = handlers[i];
             String name = ConversionUtil.toString(i);
             StaticChannelHandlerContext ctx =
                 new StaticChannelHandlerContext(i, name, h);
