@@ -177,18 +177,6 @@
 
   <properties>
     <attach-distribution>false</attach-distribution>
-    <tracker-code><![CDATA[
-<script type="text/javascript">
-var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
-document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
-</script>
-<script type="text/javascript">
-try {
-var pageTracker = _gat._getTracker("UA-95307-3");
-pageTracker._trackPageview();
-} catch(err) {}
-</script>
-]]></tracker-code>
   </properties>
 
   <build>
@@ -418,7 +406,6 @@ pageTracker._trackPageview();
           <encoding>UTF-8</encoding>
           <locale>en_US</locale>
           <excludePackageNames>${project.groupId}.example*:${project.groupId}.container*:${project.groupId}.util.internal*</excludePackageNames>
-          <footer>${tracker-code}</footer>
         </configuration>
       </plugin>
       <plugin>
@@ -442,7 +429,6 @@ pageTracker._trackPageview();
           <stylesheet>${basedir}/src/xref/stylesheet.css</stylesheet>
           <docTitle>${project.name} Source Xref (${project.version}, r${buildNumber})</docTitle>
           <windowTitle>${project.name} Source Xref (${project.version}, r${buildNumber})</windowTitle>
-          <bottom><![CDATA[Copyright &copy; {inceptionYear}-{currentYear} ${project.organization.name} All Rights Reserved.]]> ${tracker-code}</bottom>
         </configuration>
       </plugin>
       <plugin>
