@@ -94,4 +94,9 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
         return new CompactObjectInputStream(
                 new ChannelBufferInputStream(frame), classLoader).readObject();
     }
+
+    @Override
+    protected ChannelBuffer extractFrame(ChannelBuffer buffer, int index, int length) {
+        return buffer.slice(index, length);
+    }
 }
