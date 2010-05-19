@@ -90,4 +90,18 @@ public abstract class RtspMessageDecoder extends HttpMessageDecoder {
             return null;
         }
     }
+
+    @Override
+    protected boolean isContentAlwaysEmpty(HttpMessage msg) {
+        // Unlike HTTP, RTSP always assumes zero-length body if Content-Length
+        // header is absent.
+        boolean empty = super.isContentAlwaysEmpty(msg);
+        if (empty) {
+            return true;
+        }
+        if (!msg.containsHeader(RtspHeaders.Names.CONTENT_LENGTH)) {
+            return true;
+        }
+        return empty;
+    }
 }
