@@ -59,7 +59,7 @@ public abstract class AbstractChannel implements Channel {
         }
     }
 
-    private final Integer id = allocateId(this);
+    private final Integer id;
     private final Channel parent;
     private final ChannelFactory factory;
     private final ChannelPipeline pipeline;
@@ -90,7 +90,36 @@ public abstract class AbstractChannel implements Channel {
         this.parent = parent;
         this.factory = factory;
         this.pipeline = pipeline;
+
+        id = allocateId(this);
         closeFuture.addListener(ID_DEALLOCATOR);
+
+        pipeline.attach(this, sink);
+    }
+
+    /**
+     * (Internal use only) Creates a new temporary instance with the specified
+     * ID.
+     *
+     * @param parent
+     *        the parent of this channel. {@code null} if there's no parent.
+     * @param factory
+     *        the factory which created this channel
+     * @param pipeline
+     *        the pipeline which is going to be attached to this channel
+     * @param sink
+     *        the sink which will receive downstream events from the pipeline
+     *        and send upstream events to the pipeline
+     */
+    protected AbstractChannel(
+            Integer id,
+            Channel parent, ChannelFactory factory,
+            ChannelPipeline pipeline, ChannelSink sink) {
+
+        this.id = id;
+        this.parent = parent;
+        this.factory = factory;
+        this.pipeline = pipeline;
         pipeline.attach(this, sink);
     }
 

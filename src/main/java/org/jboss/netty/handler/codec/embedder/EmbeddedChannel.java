@@ -24,18 +24,23 @@ import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.DefaultChannelConfig;
 
 /**
+ * TODO Make EmbeddedChannel implement ChannelConfig and ChannelSink to reduce overhead.
+ * TODO Do not extend AbstractChannel to reduce overhead and remove the internal-use-only constructor in AbstractChannel.
+ *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
 class EmbeddedChannel extends AbstractChannel {
 
+    private static final Integer DUMMY_ID = Integer.valueOf(0);
+
     private final ChannelConfig config;
     private final SocketAddress localAddress = new EmbeddedSocketAddress();
     private final SocketAddress remoteAddress = new EmbeddedSocketAddress();
 
     EmbeddedChannel(ChannelPipeline pipeline, ChannelSink sink) {
-        super(null, EmbeddedChannelFactory.INSTANCE, pipeline, sink);
+        super(DUMMY_ID, null, EmbeddedChannelFactory.INSTANCE, pipeline, sink);
         config = new DefaultChannelConfig();
     }
 
