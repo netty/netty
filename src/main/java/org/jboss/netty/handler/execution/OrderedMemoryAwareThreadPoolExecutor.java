@@ -132,6 +132,9 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
 public class OrderedMemoryAwareThreadPoolExecutor extends
         MemoryAwareThreadPoolExecutor {
 
+    // TODO Make OMATPE focus on the case where Channel is the key.
+    //      Add a new less-efficient TPE that allows custom key.
+
     private final ConcurrentMap<Object, Executor> childExecutors = newChildExecutorMap();
 
     /**
