@@ -219,6 +219,8 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
     }
 
     protected boolean removeChildExecutor(Object key) {
+        // FIXME: Succeed only when there is no task in the ChildExecutor's queue.
+        //        Note that it will need locking which might slow down task submission.
         return childExecutors.remove(key) != null;
     }
 
