@@ -418,6 +418,26 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
      * {@code reasonPhrase}.
      */
     public HttpResponseStatus(int code, String reasonPhrase) {
+        if (code < 0) {
+            throw new IllegalArgumentException(
+                    "code: " + code + " (expected: 0+)");
+        }
+
+        if (reasonPhrase == null) {
+            throw new NullPointerException("reasonPhrase");
+        }
+
+        for (int i = 0; i < reasonPhrase.length(); i ++) {
+            char c = reasonPhrase.charAt(i);
+            // Check prohibited characters.
+            switch (c) {
+            case '\n': case '\r':
+                throw new IllegalArgumentException(
+                        "reasonPhrase contains one of the following prohibited characters: " +
+                        "\\r\\n: " + reasonPhrase);
+            }
+        }
+
         this.code = code;
         this.reasonPhrase = reasonPhrase;
     }
