@@ -603,7 +603,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         return new String[] {
                 sb.substring(aStart, aEnd),
                 sb.substring(bStart, bEnd),
-                sb.substring(cStart, cEnd) };
+                cStart < cEnd? sb.substring(cStart, cEnd) : "" };
     }
 
     private String[] splitHeader(String sb) {
