@@ -309,11 +309,19 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
             public void operationComplete(ChannelFuture f) {
                 realChannel.close().addListener(new ChannelFutureListener() {
                     public void operationComplete(ChannelFuture f) {
+                        // Note: If 'future' refers to the closeFuture,
+                        // setSuccess() and setFailure() do nothing.
+                        // AbstractChannel.setClosed() should be called instead.
+                        // (See AbstractChannel.ChannelCloseFuture)
+
                         if (f.isSuccess()) {
                             future.setSuccess();
                         } else {
                             future.setFailure(f.getCause());
                         }
+
+                        // Notify the closeFuture.
+                        setClosed();
                     }
                 });
             }
