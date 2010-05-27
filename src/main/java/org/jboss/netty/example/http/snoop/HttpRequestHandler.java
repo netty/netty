@@ -152,7 +152,7 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
 
         // Write the response.
         ChannelFuture future = e.getChannel().write(response);
-        System.out.println(response.toString());
+
         // Close the non-keep-alive connection after the write operation is done.
         if (!keepAlive) {
             future.addListener(ChannelFutureListener.CLOSE);
