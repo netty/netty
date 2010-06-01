@@ -180,7 +180,7 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
         return slice;
     }
 
-    private synchronized ChannelBuffer allocateLittleEndianBuffer(int capacity) {
+    private ChannelBuffer allocateLittleEndianBuffer(int capacity) {
         ChannelBuffer slice;
         synchronized (littleEndianLock) {
             if (preallocatedLittleEndianBuffer == null) {
