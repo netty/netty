@@ -15,10 +15,6 @@
  */
 package org.jboss.netty.handler.codec.replay;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.ChannelBufferIndexFinder;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -27,6 +23,10 @@ import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
+
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.buffer.ChannelBufferIndexFinder;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
@@ -551,6 +551,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public ByteBuffer toByteBuffer(int index, int length) {
+        checkIndex(index, length);
         return buffer.toByteBuffer(index, length);
     }
 
