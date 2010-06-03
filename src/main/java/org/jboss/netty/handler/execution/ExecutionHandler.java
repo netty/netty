@@ -38,10 +38,10 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  * <p>
  * {@link ExecutionHandler} is often used when your {@link ChannelHandler}
  * performs a blocking operation that takes long time or accesses a resource
- * which is not CPU-bound.  Running such operations in a pipeline without an
- * {@link ExecutionHandler} will result in unwanted hiccup during I/O because
- * an I/O thread cannot perform I/O until your handler returns the control to
- * the I/O thread.
+ * which is not CPU-bound business logic such as DB access.  Running such
+ * operations in a pipeline without an {@link ExecutionHandler} will result in
+ * unwanted hiccup during I/O because an I/O thread cannot perform I/O until
+ * your handler returns the control to the I/O thread.
  * <p>
  * In most cases, an {@link ExecutionHandler} is coupled with an
  * {@link OrderedMemoryAwareThreadPoolExecutor} because it guarantees the
