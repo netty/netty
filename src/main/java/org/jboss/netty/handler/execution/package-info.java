@@ -16,7 +16,7 @@
 
 /**
  * {@link java.util.concurrent.Executor}-based implementation of various
- * thread models and memory overload prevention mechanisms.
+ * thread models that separate business logic from I/O threads
  *
  * @apiviz.exclude ^java\.lang\.
  * @apiviz.exclude \.netty\.channel\.
