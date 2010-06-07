@@ -547,7 +547,7 @@ class NioDatagramWorker implements Runnable {
                         }
                     }
 
-                    if (localWrittenBytes > 0) {
+                    if (localWrittenBytes > 0 || buf.finished()) {
                         // Successful write - proceed to the next message.
                         buf.release();
                         ChannelFuture future = evt.getFuture();

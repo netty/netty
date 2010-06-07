@@ -32,6 +32,8 @@ import org.jboss.netty.channel.FileRegion;
  */
 final class SocketSendBufferPool {
 
+    private static final SendBuffer EMPTY_BUFFER = new EmptySendBuffer();
+
     private static final int DEFAULT_PREALLOCATION_SIZE = 65536;
     private static final int ALIGN_SHIFT = 4;
     private static final int ALIGN_MASK = 15;
@@ -59,10 +61,18 @@ final class SocketSendBufferPool {
     }
 
     private final SendBuffer acquire(FileRegion src) {
+        if (src.getCount() == 0) {
+            return EMPTY_BUFFER;
+        }
         return new FileSendBuffer(src);
     }
 
     private final SendBuffer acquire(ChannelBuffer src) {
+        final int size = src.readableBytes();
+        if (size == 0) {
+            return EMPTY_BUFFER;
+        }
+
         if (src.isDirect()) {
             return new UnpooledSendBuffer(src.toByteBuffer());
         }
@@ -70,7 +80,6 @@ final class SocketSendBufferPool {
             return new UnpooledSendBuffer(src.toByteBuffer());
         }
 
-        final int size = src.readableBytes();
         Preallocation current = this.current;
         ByteBuffer buffer = current.buffer;
         int remaining = buffer.remaining();
@@ -172,6 +181,7 @@ final class SocketSendBufferPool {
     }
 
     class UnpooledSendBuffer implements SendBuffer {
+
         final ByteBuffer buffer;
         final int initialPos;
 
@@ -206,6 +216,7 @@ final class SocketSendBufferPool {
     }
 
     final class PooledSendBuffer implements SendBuffer {
+
         private final Preallocation parent;
         final ByteBuffer buffer;
         final int initialPos;
@@ -278,6 +289,37 @@ final class SocketSendBufferPool {
         public long transferTo(DatagramChannel ch, SocketAddress raddr)
                 throws IOException {
             throw new UnsupportedOperationException();
+        }
+
+        public void release() {
+            // Unpooled.
+        }
+    }
+
+    static final class EmptySendBuffer implements SendBuffer {
+
+        EmptySendBuffer() {
+            super();
+        }
+
+        public final boolean finished() {
+            return true;
+        }
+
+        public final long writtenBytes() {
+            return 0;
+        }
+
+        public final long totalBytes() {
+            return 0;
+        }
+
+        public final long transferTo(WritableByteChannel ch) throws IOException {
+            return 0;
+        }
+
+        public final long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
+            return 0;
         }
 
         public void release() {
