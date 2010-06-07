@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
@@ -57,6 +58,15 @@ import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
  * function is 'dead line of the task'.  The default number of ticks per wheel
  * (i.e. the size of the wheel) is 512.  You could specify a larger value
  * if you are going to schedule a lot of timeouts.
+ *
+ * <h3>Do not create many instances.</h3>
+ *
+ * {@link HashedWheelTimer} creates a new thread whenever it is instantiated and
+ * started.  Therefore, you should make sure to create only one instance and
+ * share it across your application.  One of the common mistakes, that makes
+ * your application unresponsive, is to create a new instance in
+ * {@link ChannelPipelineFactory}, which results in the creation of a new thread
+ * for every connection.
  *
  * <h3>Implementation Details</h3>
  *
