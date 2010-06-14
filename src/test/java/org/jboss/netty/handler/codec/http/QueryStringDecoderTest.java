@@ -64,6 +64,13 @@ public class QueryStringDecoderTest {
         Assert.assertEquals("1", d.getParameters().get("a").get(0));
         Assert.assertEquals("", d.getParameters().get("a").get(1));
         Assert.assertEquals("", d.getParameters().get("a").get(2));
+
+        d = new QueryStringDecoder("/foo?a=1=&a==2");
+        Assert.assertEquals("/foo", d.getPath());
+        Assert.assertEquals(1, d.getParameters().size());
+        Assert.assertEquals(2, d.getParameters().get("a").size());
+        Assert.assertEquals("1=", d.getParameters().get("a").get(0));
+        Assert.assertEquals("=2", d.getParameters().get("a").get(1));
     }
     @Test
     public void testExotic() throws Exception {
