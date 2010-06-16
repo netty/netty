@@ -530,7 +530,7 @@ class NioDatagramWorker implements Runnable {
                     long localWrittenBytes = 0;
                     SocketAddress raddr = evt.getRemoteAddress();
                     if (raddr == null) {
-                        for (int i = writeSpinCount; i > 0; i --) {
+                        for (int i = writeSpinCount; i > 0 && !buf.finished(); i --) {
                             localWrittenBytes = buf.transferTo(ch);
                             if (localWrittenBytes != 0) {
                                 writtenBytes += localWrittenBytes;
@@ -538,7 +538,7 @@ class NioDatagramWorker implements Runnable {
                             }
                         }
                     } else {
-                        for (int i = writeSpinCount; i > 0; i --) {
+                        for (int i = writeSpinCount; i > 0 && !buf.finished(); i --) {
                             localWrittenBytes = buf.transferTo(ch, raddr);
                             if (localWrittenBytes != 0) {
                                 writtenBytes += localWrittenBytes;
