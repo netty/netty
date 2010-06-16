@@ -465,10 +465,13 @@ class NioWorker implements Runnable {
                 ChannelFuture future = evt.getFuture();
                 try {
                     long localWrittenBytes = 0;
-                    for (int i = writeSpinCount; i > 0 && !buf.finished(); i --) {
+                    for (int i = writeSpinCount; i > 0; i --) {
                         localWrittenBytes = buf.transferTo(ch);
                         if (localWrittenBytes != 0) {
                             writtenBytes += localWrittenBytes;
+                            break;
+                        }
+                        if (buf.finished()) {
                             break;
                         }
                     }

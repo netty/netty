@@ -115,12 +115,10 @@ class OioWorker implements Runnable {
         try {
             ChannelBuffer a = (ChannelBuffer) message;
             int length = a.readableBytes();
-            if (length > 0) {
-                synchronized (out) {
-                    a.getBytes(a.readerIndex(), out, length);
-                }
-                fireWriteComplete(channel, length);
+            synchronized (out) {
+                a.getBytes(a.readerIndex(), out, length);
             }
+            fireWriteComplete(channel, length);
             future.setSuccess();
         } catch (Throwable t) {
             // Convert 'SocketException: Socket closed' to

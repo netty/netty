@@ -101,26 +101,24 @@ class OioDatagramWorker implements Runnable {
         try {
             ChannelBuffer buf = (ChannelBuffer) message;
             int length = buf.readableBytes();
-            if (length > 0) {
-                ByteBuffer nioBuf = buf.toByteBuffer();
-                DatagramPacket packet;
-                if (nioBuf.hasArray()) {
-                    // Avoid copy if the buffer is backed by an array.
-                    packet = new DatagramPacket(
-                            nioBuf.array(), nioBuf.arrayOffset(), length);
-                } else {
-                    // Otherwise it will be expensive.
-                    byte[] arrayBuf = new byte[length];
-                    buf.getBytes(0, arrayBuf);
-                    packet = new DatagramPacket(arrayBuf, length);
-                }
-
-                if (remoteAddress != null) {
-                    packet.setSocketAddress(remoteAddress);
-                }
-                channel.socket.send(packet);
-                fireWriteComplete(channel, length);
+            ByteBuffer nioBuf = buf.toByteBuffer();
+            DatagramPacket packet;
+            if (nioBuf.hasArray()) {
+                // Avoid copy if the buffer is backed by an array.
+                packet = new DatagramPacket(
+                        nioBuf.array(), nioBuf.arrayOffset(), length);
+            } else {
+                // Otherwise it will be expensive.
+                byte[] arrayBuf = new byte[length];
+                buf.getBytes(0, arrayBuf);
+                packet = new DatagramPacket(arrayBuf, length);
             }
+
+            if (remoteAddress != null) {
+                packet.setSocketAddress(remoteAddress);
+            }
+            channel.socket.send(packet);
+            fireWriteComplete(channel, length);
             future.setSuccess();
         } catch (Throwable t) {
             future.setFailure(t);
