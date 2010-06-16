@@ -50,6 +50,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.LinkedTransferQueue;
 import org.jboss.netty.util.internal.NonReentrantLock;
 
 /**
@@ -184,7 +185,7 @@ public class SslHandler extends FrameDecoder
     int ignoreClosedChannelException;
     final Object ignoreClosedChannelExceptionLock = new Object();
     private final Queue<PendingWrite> pendingUnencryptedWrites = new LinkedList<PendingWrite>();
-    private final Queue<MessageEvent> pendingEncryptedWrites = new LinkedList<MessageEvent>();
+    private final Queue<MessageEvent> pendingEncryptedWrites = new LinkedTransferQueue<MessageEvent>();
     private final NonReentrantLock pendingEncryptedWritesLock = new NonReentrantLock();
 
     /**
@@ -761,10 +762,6 @@ public class SslHandler extends FrameDecoder
         }
 
         try {
-            if (pendingEncryptedWrites.isEmpty()) {
-                return;
-            }
-
             MessageEvent e;
             while ((e = pendingEncryptedWrites.poll()) != null) {
                 ctx.sendDownstream(e);
