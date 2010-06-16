@@ -935,7 +935,8 @@ public class SslHandler extends FrameDecoder
     }
 
     private void handleRenegotiation(HandshakeStatus handshakeStatus) {
-        if (handshakeStatus == HandshakeStatus.NOT_HANDSHAKING) {
+        if (handshakeStatus == HandshakeStatus.NOT_HANDSHAKING ||
+            handshakeStatus == HandshakeStatus.FINISHED) {
             // Not handshaking
             return;
         }
