@@ -27,11 +27,13 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -43,16 +45,70 @@ import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
 
 /**
  * A {@link ThreadPoolExecutor} which blocks the task submission when there's
- * too many tasks in the queue.
+ * too many tasks in the queue.  Both per-{@link Channel} and per-{@link Executor}
+ * limitation can be applied.
  * <p>
- * Both per-{@link Channel} and per-{@link Executor} limitation can be applied.
- * If the total size of the unprocessed tasks (i.e. {@link Runnable}s) exceeds
- * either per-{@link Channel} or per-{@link Executor} threshold, any further
- * {@link #execute(Runnable)} call will block until the tasks in the queue
- * are processed so that the total size goes under the threshold.
+ * When a task (i.e. {@link Runnable}) is submitted,
+ * {@link MemoryAwareThreadPoolExecutor} calls {@link ObjectSizeEstimator#estimateSize(Object)}
+ * to get the estimated size of the task in bytes to calculate the amount of
+ * memory occupied by the unprocessed tasks.
  * <p>
- * {@link ObjectSizeEstimator} is used to calculate the size of each task.
- * <p>
+ * If the total size of the unprocessed tasks exceeds either per-{@link Channel}
+ * or per-{@link Executor} threshold, any further {@link #execute(Runnable)}
+ * call will block until the tasks in the queue are processed so that the total
+ * size goes under the threshold.
+ *
+ * <h3>Using an alternative task size estimation strategy</h3>
+ *
+ * Although the default implementation does its best to guess the size of an
+ * object of unknown type, it is always good idea to to use an alternative
+ * {@link ObjectSizeEstimator} implementation instead of the
+ * {@link DefaultObjectSizeEstimator} to avoid incorrect task size calculation,
+ * especially when:
+ * <ul>
+ *   <li>you are using {@link MemoryAwareThreadPoolExecutor} independently from
+ *       {@link ExecutionHandler},</li>
+ *   <li>you are submitting a task whose type is not {@link ChannelEventRunnable}, or</li>
+ *   <li>the message type of the {@link MessageEvent} in the {@link ChannelEventRunnable}
+ *       is not {@link ChannelBuffer}.</li>
+ * </ul>
+ * Here is an example that demonstrates how to implement an {@link ObjectSizeEstimator}
+ * which understands a user-defined object:
+ * <pre>
+ * public class MyRunnable implements {@link Runnable} {
+ *
+ *     <b>private final byte[] data;</b>
+ *
+ *     public MyRunnable(byte[] data) {
+ *         this.data = data;
+ *     }
+ *
+ *     public void run() {
+ *         // Process 'data' ..
+ *     }
+ * }
+ *
+ * public class MyObjectSizeEstimator extends {@link DefaultObjectSizeEstimator} {
+ *
+ *     {@literal @Override}
+ *     public int estimateSize(Object o) {
+ *         if (<b>o instanceof MyRunnable</b>) {
+ *             <b>return ((MyRunnable) o).data.length + 8;</b>
+ *         }
+ *         return super.estimateSize(o);
+ *     }
+ * }
+ *
+ * {@link ThreadPoolExecutor} pool = new {@link MemoryAwareThreadPoolExecutor}(
+ *         16, 65536, 1048576, 30, {@link TimeUnit}.SECONDS,
+ *         <b>new MyObjectSizeEstimator()</b>,
+ *         {@link Executors}.defaultThreadFactory());
+ *
+ * <b>pool.execute(new MyRunnable(data));</b>
+ * </pre>
+ *
+ * <h3>Event execution order</h3>
+ *
  * Please note that this executor does not maintain the order of the
  * {@link ChannelEvent}s for the same {@link Channel}.  For example,
  * you can even receive a {@code "channelClosed"} event before a

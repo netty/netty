@@ -35,6 +35,12 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  * A {@link MemoryAwareThreadPoolExecutor} which makes sure the events from the
  * same {@link Channel} are executed sequentially.
  * <p>
+ * <b>NOTE</b>: This thread pool inherits most characteristics of its super
+ * type, so please make sure to refer to {@link MemoryAwareThreadPoolExecutor}
+ * to understand how it works basically.
+ *
+ * <h3>Event execution order</h3>
+ *
  * For example, let's say there are two executor threads that handle the events
  * from the two channels:
  * <pre>
