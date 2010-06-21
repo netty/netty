@@ -214,6 +214,26 @@ public class HttpHeaders {
          */
         public static final String RETRY_AFTER = "Retry-After";
         /**
+         * {@code "Sec-WebSocket-Key1"}
+         */
+        public static final String SEC_WEBSOCKET_KEY1 = "Sec-WebSocket-Key1";
+        /**
+         * {@code "Sec-WebSocket-Key2"}
+         */
+        public static final String SEC_WEBSOCKET_KEY2 = "Sec-WebSocket-Key2";
+        /**
+         * {@code "Sec-WebSocket-Location"}
+         */
+        public static final String SEC_WEBSOCKET_LOCATION = "Sec-WebSocket-Location";
+        /**
+         * {@code "Sec-WebSocket-Origin"}
+         */
+        public static final String SEC_WEBSOCKET_ORIGIN = "Sec-WebSocket-Origin";
+        /**
+         * {@code "Sec-WebSocket-Protocol"}
+         */
+        public static final String SEC_WEBSOCKET_PROTOCOL = "Sec-WebSocket-Protocol";
+        /**
          * {@code "Server"}
          */
         public static final String SERVER = "Server";
@@ -604,6 +624,24 @@ public class HttpHeaders {
         if (contentLength != null) {
             return Long.parseLong(contentLength);
         }
+
+        // WebSockset messages have constant content-lengths.
+        if (message instanceof HttpRequest) {
+            HttpRequest req = (HttpRequest) message;
+            if (HttpMethod.GET.equals(req.getMethod()) &&
+                req.containsHeader(Names.SEC_WEBSOCKET_KEY1) &&
+                req.containsHeader(Names.SEC_WEBSOCKET_KEY2)) {
+                return 10;
+            }
+        } else if (message instanceof HttpResponse) {
+            HttpResponse res = (HttpResponse) message;
+            if (res.getStatus().getCode() == 101 &&
+                res.containsHeader(Names.SEC_WEBSOCKET_ORIGIN) &&
+                res.containsHeader(Names.SEC_WEBSOCKET_LOCATION)) {
+                return 18;
+            }
+        }
+
         return defaultValue;
     }
 
