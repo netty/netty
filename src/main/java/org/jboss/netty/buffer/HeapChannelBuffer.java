@@ -192,7 +192,9 @@ public abstract class HeapChannelBuffer extends AbstractChannelBuffer {
                 return ChannelBuffers.EMPTY_BUFFER;
             }
             if (length == array.length) {
-                return duplicate();
+                ChannelBuffer slice = duplicate();
+                slice.setIndex(0, length);
+                return slice;
             } else {
                 return new TruncatedChannelBuffer(this, length);
             }

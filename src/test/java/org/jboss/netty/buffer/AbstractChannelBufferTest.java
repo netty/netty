@@ -1472,8 +1472,24 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
-    public void testSlice() throws Exception {
+    public void testSliceEndianness() throws Exception {
+        assertEquals(buffer.order(), buffer.slice(0, buffer.capacity()).order());
+        assertEquals(buffer.order(), buffer.slice(0, buffer.capacity() - 1).order());
         assertEquals(buffer.order(), buffer.slice(1, buffer.capacity() - 1).order());
+        assertEquals(buffer.order(), buffer.slice(1, buffer.capacity() - 2).order());
+    }
+
+    @Test
+    public void testSliceIndex() throws Exception {
+        assertEquals(0, buffer.slice(0, buffer.capacity()).readerIndex());
+        assertEquals(0, buffer.slice(0, buffer.capacity() - 1).readerIndex());
+        assertEquals(0, buffer.slice(1, buffer.capacity() - 1).readerIndex());
+        assertEquals(0, buffer.slice(1, buffer.capacity() - 2).readerIndex());
+
+        assertEquals(buffer.capacity(), buffer.slice(0, buffer.capacity()).writerIndex());
+        assertEquals(buffer.capacity() - 1, buffer.slice(0, buffer.capacity() - 1).writerIndex());
+        assertEquals(buffer.capacity() - 1, buffer.slice(1, buffer.capacity() - 1).writerIndex());
+        assertEquals(buffer.capacity() - 2, buffer.slice(1, buffer.capacity() - 2).writerIndex());
     }
 
     @Test

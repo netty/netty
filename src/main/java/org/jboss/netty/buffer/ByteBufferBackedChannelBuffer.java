@@ -304,7 +304,9 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
 
     public ChannelBuffer slice(int index, int length) {
         if (index == 0 && length == capacity()) {
-            return duplicate();
+            ChannelBuffer slice = duplicate();
+            slice.setIndex(0, length);
+            return slice;
         } else {
             if (index >= 0 && length == 0) {
                 return ChannelBuffers.EMPTY_BUFFER;
