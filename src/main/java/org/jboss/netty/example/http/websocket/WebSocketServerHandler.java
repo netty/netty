@@ -123,8 +123,7 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
                 input.writeInt(b);
                 input.writeLong(c);
                 ChannelBuffer output = ChannelBuffers.wrappedBuffer(
-                        MessageDigest.getInstance("MD5").digest(input.array()),
-                        new byte[] { '\r', '\n' });
+                        MessageDigest.getInstance("MD5").digest(input.array()));
                 res.setContent(output);
             } else {
                 // Old handshake method with no challenge:
