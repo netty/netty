@@ -27,19 +27,33 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 import com.google.protobuf.CodedOutputStream;
 
 /**
- * An encoder that prepends the length of the message.  The length value is
- * prepended as a binary form. encoded as Google Protocol Buffer
+ * An encoder that prepends the the Google Protocol Buffers
  * <a href="http://code.google.com/apis/protocolbuffers/docs/encoding.html#varints">Base
- * 128 Varints</a> (32-bit).
+ * 128 Varints</a> integer length field.  For example:
+ * <pre>
+ * BEFORE DECODE (300 bytes)       AFTER DECODE (302 bytes)
+ * +---------------+               +--------+---------------+
+ * | Protobuf Data |-------------->| Length | Protobuf Data |
+ * |  (300 bytes)  |               | 0xAC02 |  (300 bytes)  |
+ * +---------------+               +--------+---------------+
+ * </pre> *
  *
  * @see com.google.protobuf.CodedOutputStream
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Tomasz Blachowicz (tblachowicz@gmail.com)
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
 @Sharable
 public class ProtobufVarint32LengthFieldPrepender extends OneToOneEncoder {
+
+    /**
+     * Creates a new instance.
+     */
+    public ProtobufVarint32LengthFieldPrepender() {
+        super();
+    }
 
     @Override
     protected Object encode(ChannelHandlerContext ctx, Channel channel,

@@ -19,10 +19,10 @@ import static org.jboss.netty.channel.Channels.*;
 
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
-import org.jboss.netty.handler.codec.frame.LengthFieldPrepender;
 import org.jboss.netty.handler.codec.protobuf.ProtobufDecoder;
 import org.jboss.netty.handler.codec.protobuf.ProtobufEncoder;
+import org.jboss.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
+import org.jboss.netty.handler.codec.protobuf.ProtobufVarint32LengthFieldPrepender;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
@@ -33,10 +33,10 @@ public class LocalTimeServerPipelineFactory implements ChannelPipelineFactory {
 
     public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline p = pipeline();
-        p.addLast("frameDecoder", new LengthFieldBasedFrameDecoder(1048576, 0, 4, 0, 4));
+        p.addLast("frameDecoder", new ProtobufVarint32FrameDecoder());
         p.addLast("protobufDecoder", new ProtobufDecoder(LocalTimeProtocol.Locations.getDefaultInstance()));
 
-        p.addLast("frameEncoder", new LengthFieldPrepender(4));
+        p.addLast("frameEncoder", new ProtobufVarint32LengthFieldPrepender());
         p.addLast("protobufEncoder", new ProtobufEncoder());
 
         p.addLast("handler", new LocalTimeServerHandler());

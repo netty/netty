@@ -24,20 +24,33 @@ import com.google.protobuf.CodedInputStream;
 
 /**
  * A decoder that splits the received {@link ChannelBuffer}s dynamically by the
- * value of the length field in the message. {@link ProtobufVarint32FrameDecoder}
- * should be used to decode a binary message which has an integer header field
- * encoded as Google Protocol Buffer <a href="http://code.google.com/apis/protocolbuffers/docs/encoding.html#varints">Base
- * 128 Varints</a> (32-bit) integer that represents the length of the message
- * body.
+ * value of the Google Protocol Buffers
+ * <a href="http://code.google.com/apis/protocolbuffers/docs/encoding.html#varints">Base
+ * 128 Varints</a> integer length field in the message.  For example:
+ * <pre>
+ * BEFORE DECODE (302 bytes)       AFTER DECODE (300 bytes)
+ * +--------+---------------+      +---------------+
+ * | Length | Protobuf Data |----->| Protobuf Data |
+ * | 0xAC02 |  (300 bytes)  |      |  (300 bytes)  |
+ * +--------+---------------+      +---------------+
+ * </pre>
  *
  * @see com.google.protobuf.CodedInputStream
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Tomasz Blachowicz (tblachowicz@gmail.com)
+ * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
  */
 public class ProtobufVarint32FrameDecoder extends FrameDecoder {
+
+    /**
+     * Creates a new instance.
+     */
+    public ProtobufVarint32FrameDecoder() {
+        super();
+    }
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
