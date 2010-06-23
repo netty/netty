@@ -45,6 +45,8 @@ import com.google.protobuf.CodedInputStream;
  */
 public class ProtobufVarint32FrameDecoder extends FrameDecoder {
 
+    // TODO maxFrameLength + safe skip (just like LengthFieldBasedFrameDecoder)
+
     /**
      * Creates a new instance.
      */
