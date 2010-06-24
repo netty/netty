@@ -83,6 +83,6 @@ public class ProtobufVarint32FrameDecoder extends FrameDecoder {
         }
 
         // Couldn't find the byte whose MSB is off.
-        throw new CorruptedFrameException("length larger than 32-bit");
+        throw new CorruptedFrameException("length wider than 32-bit");
     }
 }
