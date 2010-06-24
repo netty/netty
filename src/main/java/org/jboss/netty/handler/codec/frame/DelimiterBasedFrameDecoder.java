@@ -214,13 +214,13 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
             Channels.fireExceptionCaught(
                     ctx.getChannel(),
                     new TooLongFrameException(
-                            "The frame length exceeds " + maxFrameLength +
+                            "frame length exceeds " + maxFrameLength +
                             ": " + frameLength + " - discarded"));
         } else {
             Channels.fireExceptionCaught(
                     ctx.getChannel(),
                     new TooLongFrameException(
-                            "The frame length exceeds " + maxFrameLength +
+                            "frame length exceeds " + maxFrameLength +
                             " - discarding"));
         }
     }

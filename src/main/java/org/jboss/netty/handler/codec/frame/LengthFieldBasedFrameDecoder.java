@@ -19,6 +19,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 
 /**
@@ -292,16 +293,15 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             if (bytesToDiscard == 0) {
                 // Reset to the initial state and tell the handlers that
                 // the frame was too large.
-                discardingTooLongFrame = false;
+                // TODO Let user choose when the exception should be raised - early or late?
+                //      If early, fail() should be called when discardingTooLongFrame is set to true.
                 long tooLongFrameLength = this.tooLongFrameLength;
                 this.tooLongFrameLength = 0;
-                throw new TooLongFrameException(
-                        "Adjusted frame length exceeds " + maxFrameLength +
-                        ": " + tooLongFrameLength);
+                fail(ctx, tooLongFrameLength);
             } else {
                 // Keep discarding.
-                return null;
             }
+            return null;
         }
 
         if (buffer.readableBytes() < lengthFieldEndOffset) {
@@ -394,5 +394,21 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
         ChannelBuffer frame = buffer.factory().getBuffer(length);
         frame.writeBytes(buffer, index, length);
         return frame;
+    }
+
+    private void fail(ChannelHandlerContext ctx, long frameLength) {
+        if (frameLength > 0) {
+            Channels.fireExceptionCaught(
+                    ctx.getChannel(),
+                    new TooLongFrameException(
+                            "Adjusted frame length exceeds " + maxFrameLength +
+                            ": " + frameLength + " - discarded"));
+        } else {
+            Channels.fireExceptionCaught(
+                    ctx.getChannel(),
+                    new TooLongFrameException(
+                            "Adjusted frame length exceeds " + maxFrameLength +
+                            " - discarding"));
+        }
     }
 }
