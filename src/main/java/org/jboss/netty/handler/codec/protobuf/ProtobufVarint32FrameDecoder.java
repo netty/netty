@@ -18,6 +18,7 @@ package org.jboss.netty.handler.codec.protobuf;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.handler.codec.frame.CorruptedFrameException;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 
 import com.google.protobuf.CodedInputStream;
@@ -45,7 +46,8 @@ import com.google.protobuf.CodedInputStream;
  */
 public class ProtobufVarint32FrameDecoder extends FrameDecoder {
 
-    // TODO maxFrameLength + safe skip (just like LengthFieldBasedFrameDecoder)
+    // TODO maxFrameLength + safe skip + fail-fast option
+    //      (just like LengthFieldBasedFrameDecoder)
 
     /**
      * Creates a new instance.
@@ -57,24 +59,30 @@ public class ProtobufVarint32FrameDecoder extends FrameDecoder {
     @Override
     protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
         buffer.markReaderIndex();
-        byte[] buf = new byte[5];
-        for (int i = 0; i < 5; i ++) {
+        final byte[] buf = new byte[5];
+        for (int i = 0; i < buf.length; i ++) {
             if (!buffer.readable()) {
-                break;
+                buffer.resetReaderIndex();
+                return null;
             }
 
             buf[i] = buffer.readByte();
             if (buf[i] >= 0) {
-                int messageSize = CodedInputStream.newInstance(buf, 0, i + 1).readRawVarint32();
-                if (buffer.readableBytes() < messageSize) {
-                    break;
+                int length = CodedInputStream.newInstance(buf, 0, i + 1).readRawVarint32();
+                if (length < 0) {
+                    throw new CorruptedFrameException("negative length: " + length);
                 }
 
-                return buffer.readBytes(messageSize);
+                if (buffer.readableBytes() < length) {
+                    buffer.resetReaderIndex();
+                    return null;
+                } else {
+                    return buffer.readBytes(length);
+                }
             }
         }
 
-        buffer.resetReaderIndex();
-        return null;
+        // Couldn't find the byte whose MSB is off.
+        throw new CorruptedFrameException("length larger than 32-bit");
     }
 }
