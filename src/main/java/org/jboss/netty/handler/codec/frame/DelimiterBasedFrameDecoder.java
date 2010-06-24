@@ -18,6 +18,7 @@ package org.jboss.netty.handler.codec.frame;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channels;
 
 /**
  * A decoder that splits the received {@link ChannelBuffer}s by one or more
@@ -67,7 +68,7 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
     private final int maxFrameLength;
     private final boolean stripDelimiter;
     private boolean discardingTooLongFrame;
-    private long tooLongFrameLength;
+    private int tooLongFrameLength;
 
     /**
      * Creates a new instance.
@@ -164,18 +165,23 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
 
             if (discardingTooLongFrame) {
                 // We've just finished discarding a very large frame.
-                // Throw an exception and go back to the initial state.
-                long tooLongFrameLength = this.tooLongFrameLength;
-                this.tooLongFrameLength = 0L;
+                // Go back to the initial state.
                 discardingTooLongFrame = false;
                 buffer.skipBytes(minFrameLength + minDelimLength);
-                fail(tooLongFrameLength + minFrameLength + minDelimLength);
+
+                // TODO Let user choose when the exception should be raised - early or late?
+                //      If early, fail() should be called when discardingTooLongFrame is set to true.
+                int tooLongFrameLength = this.tooLongFrameLength;
+                this.tooLongFrameLength = 0;
+                fail(ctx, tooLongFrameLength);
+                return null;
             }
 
             if (minFrameLength > maxFrameLength) {
                 // Discard read frame.
                 buffer.skipBytes(minFrameLength + minDelimLength);
-                fail(minFrameLength);
+                fail(ctx, minFrameLength);
+                return null;
             }
 
             if (stripDelimiter) {
@@ -187,20 +193,36 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
 
             return frame;
         } else {
-            if (buffer.readableBytes() > maxFrameLength) {
-                // Discard the content of the buffer until a delimiter is found.
-                tooLongFrameLength = buffer.readableBytes();
+            if (!discardingTooLongFrame) {
+                if (buffer.readableBytes() > maxFrameLength) {
+                    // Discard the content of the buffer until a delimiter is found.
+                    tooLongFrameLength = buffer.readableBytes();
+                    buffer.skipBytes(buffer.readableBytes());
+                    discardingTooLongFrame = true;
+                }
+            } else {
+                // Still discarding the buffer since a delimiter is not found.
+                tooLongFrameLength += buffer.readableBytes();
                 buffer.skipBytes(buffer.readableBytes());
-                discardingTooLongFrame = true;
             }
-
             return null;
         }
     }
 
-    private void fail(long frameLength) throws TooLongFrameException {
-        throw new TooLongFrameException(
-                "The frame length exceeds " + maxFrameLength + ": " + frameLength);
+    private void fail(ChannelHandlerContext ctx, long frameLength) {
+        if (frameLength > 0) {
+            Channels.fireExceptionCaught(
+                    ctx.getChannel(),
+                    new TooLongFrameException(
+                            "The frame length exceeds " + maxFrameLength +
+                            ": " + frameLength + " - discarded"));
+        } else {
+            Channels.fireExceptionCaught(
+                    ctx.getChannel(),
+                    new TooLongFrameException(
+                            "The frame length exceeds " + maxFrameLength +
+                            " - discarding"));
+        }
     }
 
     /**
