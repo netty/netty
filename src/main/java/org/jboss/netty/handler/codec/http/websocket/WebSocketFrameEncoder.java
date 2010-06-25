@@ -51,7 +51,7 @@ public class WebSocketFrameEncoder extends OneToOneEncoder {
                     channel.getConfig().getBufferFactory().getBuffer(
                             data.order(), data.readableBytes() + 2);
                 encoded.writeByte((byte) type);
-                encoded.writeBytes(data, data.readableBytes());
+                encoded.writeBytes(data, data.readerIndex(), data.readableBytes());
                 encoded.writeByte((byte) 0xFF);
                 return encoded;
             } else {
@@ -66,7 +66,7 @@ public class WebSocketFrameEncoder extends OneToOneEncoder {
                 encoded.writeByte((byte) (dataLen >>> 14 & 0x7F | 0x80));
                 encoded.writeByte((byte) (dataLen >>> 7 & 0x7F | 0x80));
                 encoded.writeByte((byte) (dataLen & 0x7F));
-                encoded.writeBytes(data, dataLen);
+                encoded.writeBytes(data, data.readerIndex(), dataLen);
                 return encoded;
             }
         }
