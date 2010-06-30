@@ -68,9 +68,9 @@ public interface ThreadNameDeterminer {
      * Overrides the thread name proposed by {@link ThreadRenamingRunnable}.
      *
      * @param current   the current thread name
-     * @param service   the service name (e.g. <tt>"New I/O"</tt>)
-     * @param category  the category name (e.g. <tt>"server boss"</tt>)
-     * @param id        the thread ID (e.g. <tt>"3"</tt> or <tt>"1-3"</tt>)
+     * @param service   the service name (e.g. <tt>"New I/O"</tt> or <tt>"Old I/O"</tt>)
+     * @param category  the category name (e.g. <tt>"server boss"</tt> or <tt>"client worker"</tt>)
+     * @param id        the thread ID (e.g. <tt>"1"</tt> or <tt>"1-3"</tt>)
      * @param comment   the optional comment which might help debugging
      *
      * @return the actual new thread name.
