@@ -66,35 +66,41 @@ public class ThreadRenamingRunnable implements Runnable {
         ThreadRenamingRunnable.threadNameDeterminer = threadNameDeterminer;
     }
 
-    private final Runnable runnable;
-    private final String proposedThreadName;
-
     /**
-     * Creates a new instance which wraps the specified {@code runnable}
-     * and changes the thread name to the specified thread name when the
-     * specified {@code runnable} is running.
+     * Renames the specified thread.
+     *
+     * @return {@code true} if and only if the thread was renamed
      */
-    public ThreadRenamingRunnable(Runnable runnable, String proposedThreadName) {
-        if (runnable == null) {
-            throw new NullPointerException("runnable");
+    public static boolean renameThread(Thread thread, String service, String category, String id, String comment) {
+        if (thread == null) {
+            throw new NullPointerException("thread");
         }
-        if (proposedThreadName == null) {
-            throw new NullPointerException("proposedThreadName");
-        }
-        this.runnable = runnable;
-        this.proposedThreadName = proposedThreadName;
-    }
 
-    public void run() {
-        final Thread currentThread = Thread.currentThread();
-        final String oldThreadName = currentThread.getName();
-        final String newThreadName = getNewThreadName(oldThreadName);
+        // Normalize the parameters.
+        service = service != null? service : "";
+        category = category != null? category : "";
+        id = id != null? id : "";
+        comment = comment != null? comment : "";
+
+        // Get the old & new thread names.
+        String oldThreadName = thread.getName();
+        String newThreadName = null;
+        try {
+            newThreadName = getThreadNameDeterminer().determineThreadName(
+                    oldThreadName, service, category, id, comment);
+        } catch (Throwable t) {
+            logger.warn("Failed to determine the thread name", t);
+        }
+        if (newThreadName == null || newThreadName.length() == 0) {
+            newThreadName = oldThreadName;
+        }
 
         // Change the thread name before starting the actual runnable.
         boolean renamed = false;
         if (!oldThreadName.equals(newThreadName)) {
             try {
-                currentThread.setName(newThreadName);
+                System.out.println(newThreadName);
+                thread.setName(newThreadName);
                 renamed = true;
             } catch (SecurityException e) {
                 logger.debug(
@@ -102,6 +108,42 @@ public class ThreadRenamingRunnable implements Runnable {
                         "due to security restriction.", e);
             }
         }
+
+        return renamed;
+    }
+
+    private final Runnable runnable;
+    private final String service;
+    private final String category;
+    private final String id;
+    private final String comment;
+
+    /**
+     * Creates a new instance which wraps the specified {@code runnable}
+     * and changes the thread name to the specified thread name when the
+     * specified {@code runnable} is running.
+     */
+    public ThreadRenamingRunnable(
+            Runnable runnable,
+            String service, String category, String id, String comment) {
+        if (runnable == null) {
+            throw new NullPointerException("runnable");
+        }
+
+        this.runnable = runnable;
+        this.service = service;
+        this.category = category;
+        this.id = id;
+        this.comment = comment;
+    }
+
+    public void run() {
+        final Thread currentThread = Thread.currentThread();
+        final String oldThreadName = currentThread.getName();
+
+        // Change the thread name before starting the actual runnable.
+        final boolean renamed = renameThread(
+                Thread.currentThread(), service, category, id, comment);
 
         // Run the actual runnable and revert the name back when it ends.
         try {
@@ -113,19 +155,5 @@ public class ThreadRenamingRunnable implements Runnable {
                 currentThread.setName(oldThreadName);
             }
         }
-    }
-
-    private String getNewThreadName(String currentThreadName) {
-        String newThreadName = null;
-
-        try {
-            newThreadName =
-                getThreadNameDeterminer().determineThreadName(
-                        currentThreadName, proposedThreadName);
-        } catch (Throwable t) {
-            logger.warn("Failed to determine the thread name", t);
-        }
-
-        return newThreadName == null? currentThreadName : newThreadName;
     }
 }

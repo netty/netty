@@ -68,6 +68,7 @@ public abstract class AbstractChannel implements Channel {
     private volatile int interestOps = OP_READ;
 
     /** Cache for the string representation of this channel */
+    private boolean strValConnected;
     private String strVal;
 
     /**
@@ -271,7 +272,7 @@ public abstract class AbstractChannel implements Channel {
     @Override
     public String toString() {
         boolean connected = isConnected();
-        if (connected && strVal != null) {
+        if (strValConnected == connected && strVal != null) {
             return strVal;
         }
 
@@ -285,11 +286,11 @@ public abstract class AbstractChannel implements Channel {
             buf.append(", ");
             if (getParent() == null) {
                 buf.append(localAddress);
-                buf.append(" => ");
+                buf.append(connected? " => " : " :> ");
                 buf.append(remoteAddress);
             } else {
                 buf.append(remoteAddress);
-                buf.append(" => ");
+                buf.append(connected? " => " : " :> ");
                 buf.append(localAddress);
             }
         } else if (localAddress != null) {
@@ -300,11 +301,8 @@ public abstract class AbstractChannel implements Channel {
         buf.append(']');
 
         String strVal = buf.toString();
-        if (connected) {
-            this.strVal = strVal;
-        } else {
-            this.strVal = null;
-        }
+        this.strVal = strVal;
+        strValConnected = connected;
         return strVal;
     }
 

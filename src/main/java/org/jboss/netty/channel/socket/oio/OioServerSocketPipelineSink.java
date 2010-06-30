@@ -22,6 +22,7 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.Channel;
@@ -49,6 +50,9 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(OioServerSocketPipelineSink.class);
 
+    private static final AtomicInteger nextId = new AtomicInteger();
+
+    final int id = nextId.incrementAndGet();
     final Executor workerExecutor;
 
     OioServerSocketPipelineSink(Executor workerExecutor) {
@@ -147,8 +151,8 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                     new IoWorkerRunnable(
                             new ThreadRenamingRunnable(
                                     new Boss(channel),
-                                    "Old I/O server boss (channelId: " +
-                                    channel.getId() + ", " + localAddress + ')')));
+                                    "Old I/O", "server boss", String.valueOf(id),
+                                    channel.toString())));
             bossStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
@@ -214,11 +218,8 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                                 new IoWorkerRunnable(
                                         new ThreadRenamingRunnable(
                                                 new OioWorker(acceptedChannel),
-                                                "Old I/O server worker (parentId: " +
-                                                channel.getId() + ", channelId: " +
-                                                acceptedChannel.getId() + ", " +
-                                                channel.getRemoteAddress() + " => " +
-                                                channel.getLocalAddress() + ')')));
+                                                "Old I/O", "server worker", id + "-" + acceptedChannel.getId(),
+                                                acceptedChannel.toString())));
                     } catch (Exception e) {
                         logger.warn(
                                 "Failed to initialize an accepted socket.", e);

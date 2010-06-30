@@ -25,23 +25,41 @@ package org.jboss.netty.util;
 public interface ThreadNameDeterminer {
 
     /**
-     * {@link ThreadNameDeterminer} that accepts the proposed thread name
-     * as is.
+     * The default {@link ThreadNameDeterminer} that generates a thread name
+     * which contains all specified information.
      */
     ThreadNameDeterminer PROPOSED = new ThreadNameDeterminer() {
-        public String determineThreadName(String currentThreadName,
-                String proposedThreadName) throws Exception {
-            return proposedThreadName;
+        public String determineThreadName(String current, String service,
+                String category, String id, String comment) throws Exception {
+
+            String newName =
+                (format("",  service,  " ") +
+                 format("",  category, " ") +
+                 format("#", id,       " ") +
+                 format("(", comment,  ")")).trim();
+            if (newName.length() == 0) {
+                return null;
+            } else {
+                return newName;
+            }
+        }
+
+        private String format(String prefix, String s, String postfix) {
+            if (s.length() == 0) {
+                return "";
+            } else {
+                return prefix + s + postfix;
+            }
         }
     };
 
     /**
-     * {@link ThreadNameDeterminer} that rejects the proposed thread name and
-     * retains the current one.
+     * An alternative {@link ThreadNameDeterminer} that rejects the proposed
+     * thread name and retains the current one.
      */
     ThreadNameDeterminer CURRENT = new ThreadNameDeterminer() {
-        public String determineThreadName(String currentThreadName,
-                String proposedThreadName) throws Exception {
+        public String determineThreadName(String current, String service,
+                String category, String id, String comment) throws Exception {
             return null;
         }
     };
@@ -49,11 +67,17 @@ public interface ThreadNameDeterminer {
     /**
      * Overrides the thread name proposed by {@link ThreadRenamingRunnable}.
      *
-     * @param currentThreadName   the current thread name
-     * @param proposedThreadName  the proposed new thread name
+     * @param current   the current thread name
+     * @param service   the service name (e.g. <tt>"New I/O"</tt>)
+     * @param category  the category name (e.g. <tt>"server boss"</tt>)
+     * @param id        the thread ID (e.g. <tt>"3"</tt> or <tt>"1-3"</tt>)
+     * @param comment   the optional comment which might help debugging
+     *
      * @return the actual new thread name.
      *         If {@code null} is returned, the proposed thread name is
      *         discarded (i.e. no rename).
      */
-    String determineThreadName(String currentThreadName, String proposedThreadName) throws Exception;
+    String determineThreadName(
+            String current,
+            String service, String category, String id, String comment) throws Exception;
 }

@@ -195,9 +195,8 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                     boolean success = false;
                     try {
                         bossExecutor.execute(
-                                new IoWorkerRunnable(
-                                        new ThreadRenamingRunnable(
-                                                this, "New I/O client boss #" + id)));
+                                new IoWorkerRunnable(new ThreadRenamingRunnable(
+                                        this, "New I/O", "client boss", String.valueOf(id), null)));
                         success = true;
                     } finally {
                         if (!success) {

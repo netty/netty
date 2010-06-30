@@ -27,6 +27,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 
 /**
  *
@@ -171,20 +172,18 @@ class OioDatagramWorker implements Runnable {
             channel.socket.disconnect();
             future.setSuccess();
             if (connected) {
+                // Update the worker's thread name to reflect the state change.
+                Thread workerThread = channel.workerThread;
+                if (workerThread != null) {
+                    ThreadRenamingRunnable.renameThread(
+                            workerThread, "Old I/O", "datagram worker",
+                            ((OioDatagramChannelFactory) channel.getFactory()).id + "-" + channel.getId(),
+                            channel.toString());
+                }
+
+                // Notify.
                 fireChannelDisconnected(channel);
             }
-
-            Thread workerThread = channel.workerThread;
-            if (workerThread != null) {
-                try {
-                    workerThread.setName(
-                            "Old I/O datagram worker (channelId: " +
-                            channel.getId() + ", " + channel.getLocalAddress() + ')');
-                } catch (SecurityException e) {
-                    // Ignore.
-                }
-            }
-
         } catch (Throwable t) {
             future.setFailure(t);
             fireExceptionCaught(channel, t);

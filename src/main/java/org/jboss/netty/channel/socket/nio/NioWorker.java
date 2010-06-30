@@ -106,15 +106,13 @@ class NioWorker implements Runnable {
                 }
 
                 // Start the worker thread with the new Selector.
-                String threadName =
-                    (server ? "New I/O server worker #"
-                            : "New I/O client worker #") + bossId + '-' + id;
-
                 boolean success = false;
                 try {
                     executor.execute(
-                            new IoWorkerRunnable(
-                                    new ThreadRenamingRunnable(this, threadName)));
+                            new IoWorkerRunnable(new ThreadRenamingRunnable(
+                                    this, "New I/O",
+                                    server? "server worker" : "client worker",
+                                    bossId + "-" + id, null)));
                     success = true;
                 } finally {
                     if (!success) {

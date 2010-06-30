@@ -41,9 +41,11 @@ import org.jboss.netty.util.internal.IoWorkerRunnable;
  */
 class OioDatagramPipelineSink extends AbstractChannelSink {
 
+    private final int id;
     private final Executor workerExecutor;
 
-    OioDatagramPipelineSink(Executor workerExecutor) {
+    OioDatagramPipelineSink(int id, Executor workerExecutor) {
+        this.id = id;
         this.workerExecutor = workerExecutor;
     }
 
@@ -104,9 +106,10 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
                     new IoWorkerRunnable(
                             new ThreadRenamingRunnable(
                                     new OioDatagramWorker(channel),
-                                    "Old I/O datagram worker (channelId: " +
-                                    channel.getId() + ", " +
-                                    channel.getLocalAddress() + ')')));
+                                    "Old I/O",
+                                    "datagram worker",
+                                    id + "-" + channel.getId(),
+                                    channel.toString())));
             workerStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
@@ -143,25 +146,21 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
             }
             fireChannelConnected(channel, channel.getRemoteAddress());
 
-            String threadName =
-                "Old I/O datagram worker (channelId: " + channel.getId() + ", " +
-                channel.getLocalAddress() + " => " +
-                channel.getRemoteAddress() + ')';
+            final String service = "Old I/O";
+            final String category = "datagram worker";
+            final String comment = channel.toString();
+
             if (!bound) {
                 // Start the business.
-                workerExecutor.execute(
-                        new IoWorkerRunnable(
-                                new ThreadRenamingRunnable(
-                                        new OioDatagramWorker(channel), threadName)));
+                workerExecutor.execute(new IoWorkerRunnable(new ThreadRenamingRunnable(
+                        new OioDatagramWorker(channel),
+                        service, category, id + "-" + channel.getId(), comment)));
             } else {
                 // Worker started by bind() - just rename.
                 Thread workerThread = channel.workerThread;
                 if (workerThread != null) {
-                    try {
-                        workerThread.setName(threadName);
-                    } catch (SecurityException e) {
-                        // Ignore.
-                    }
+                    ThreadRenamingRunnable.renameThread(
+                            workerThread, service, category, id + "-" + channel.getId(), comment);
                 }
             }
 

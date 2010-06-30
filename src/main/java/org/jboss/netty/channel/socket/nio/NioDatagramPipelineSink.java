@@ -46,9 +46,7 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
     private static final AtomicInteger nextId = new AtomicInteger();
 
     private final int id = nextId.incrementAndGet();
-
     private final NioDatagramWorker[] workers;
-
     private final AtomicInteger workerIndex = new AtomicInteger();
 
     /**
