@@ -99,7 +99,7 @@ public class ThreadRenamingRunnable implements Runnable {
         boolean renamed = false;
         if (!oldThreadName.equals(newThreadName)) {
             try {
-                System.out.println(newThreadName);
+                //System.out.println(newThreadName);
                 thread.setName(newThreadName);
                 renamed = true;
             } catch (SecurityException e) {
