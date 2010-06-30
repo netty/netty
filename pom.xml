@@ -50,8 +50,8 @@
 
   <scm>
     <url>http://fisheye.jboss.org/browse/Netty</url>
-    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/trunk</connection>
-    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/trunk</developerConnection>
+    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/branches/3.2</connection>
+    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/branches/3.2</developerConnection>
   </scm>
 
   <dependencies>
