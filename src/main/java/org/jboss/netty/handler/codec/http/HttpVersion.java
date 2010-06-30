@@ -75,14 +75,6 @@ public class HttpVersion implements Comparable<HttpVersion> {
     private final boolean keepAliveDefault;
 
     /**
-     * @deprecated Use {@link #HttpVersion(String, boolean)} instead.
-     */
-    @Deprecated
-    public HttpVersion(String text) {
-        this(text, true);
-    }
-
-    /**
      * Creates a new HTTP version with the specified version string.  You will
      * not need to create a new instance unless you are implementing a protocol
      * derived from HTTP, such as
@@ -113,15 +105,6 @@ public class HttpVersion implements Comparable<HttpVersion> {
         minorVersion = Integer.parseInt(m.group(3));
         this.text = protocolName + '/' + majorVersion + '.' + minorVersion;
         this.keepAliveDefault = keepAliveDefault;
-    }
-
-    /**
-     * @deprecated Use {@link #HttpVersion(String, int, int, boolean)} instead.
-     */
-    @Deprecated
-    public HttpVersion(
-            String protocolName, int majorVersion, int minorVersion) {
-        this(protocolName, majorVersion, minorVersion, true);
     }
 
     /**

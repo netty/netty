@@ -81,14 +81,6 @@ public class StringEncoder extends OneToOneEncoder {
         this.charset = charset;
     }
 
-    /**
-     * @deprecated Use {@link #StringEncoder(Charset)} instead.
-     */
-    @Deprecated
-    public StringEncoder(String charsetName) {
-        this(Charset.forName(charsetName));
-    }
-
     @Override
     protected Object encode(
             ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {

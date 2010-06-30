@@ -61,16 +61,6 @@ public class DefaultHttpMessage implements HttpMessage {
         headers.removeHeader(name);
     }
 
-    @Deprecated
-    public long getContentLength() {
-        return HttpHeaders.getContentLength(this);
-    }
-
-    @Deprecated
-    public long getContentLength(long defaultValue) {
-        return HttpHeaders.getContentLength(this, defaultValue);
-    }
-
     public boolean isChunked() {
         if (chunked) {
             return true;
@@ -84,11 +74,6 @@ public class DefaultHttpMessage implements HttpMessage {
         if (chunked) {
             setContent(ChannelBuffers.EMPTY_BUFFER);
         }
-    }
-
-    @Deprecated
-    public boolean isKeepAlive() {
-        return HttpHeaders.isKeepAlive(this);
     }
 
     public void clearHeaders() {
@@ -149,7 +134,7 @@ public class DefaultHttpMessage implements HttpMessage {
         buf.append("(version: ");
         buf.append(getProtocolVersion().getText());
         buf.append(", keepAlive: ");
-        buf.append(isKeepAlive());
+        buf.append(HttpHeaders.isKeepAlive(this));
         buf.append(", chunked: ");
         buf.append(isChunked());
         buf.append(')');

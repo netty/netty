@@ -22,7 +22,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
-import java.util.NoSuchElementException;
 
 
 /**
@@ -309,28 +308,10 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         return buf;
     }
 
-    @Deprecated
-    public ChannelBuffer readBytes(ChannelBufferIndexFinder endIndexFinder) {
-        int endIndex = indexOf(readerIndex, writerIndex, endIndexFinder);
-        if (endIndex < 0) {
-            throw new NoSuchElementException();
-        }
-        return readBytes(endIndex - readerIndex);
-    }
-
     public ChannelBuffer readSlice(int length) {
         ChannelBuffer slice = slice(readerIndex, length);
         readerIndex += length;
         return slice;
-    }
-
-    @Deprecated
-    public ChannelBuffer readSlice(ChannelBufferIndexFinder endIndexFinder) {
-        int endIndex = indexOf(readerIndex, writerIndex, endIndexFinder);
-        if (endIndex < 0) {
-            throw new NoSuchElementException();
-        }
-        return readSlice(endIndex - readerIndex);
     }
 
     public void readBytes(byte[] dst, int dstIndex, int length) {
@@ -388,17 +369,6 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
             throw new IndexOutOfBoundsException();
         }
         readerIndex = newReaderIndex;
-    }
-
-    @Deprecated
-    public int skipBytes(ChannelBufferIndexFinder firstIndexFinder) {
-        int oldReaderIndex = readerIndex;
-        int newReaderIndex = indexOf(oldReaderIndex, writerIndex, firstIndexFinder);
-        if (newReaderIndex < 0) {
-            throw new NoSuchElementException();
-        }
-        readerIndex(newReaderIndex);
-        return newReaderIndex - oldReaderIndex;
     }
 
     public void writeByte(int value) {
@@ -545,37 +515,6 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
         return ChannelBuffers.decodeString(
                 toByteBuffer(index, length), charset);
-    }
-
-    @Deprecated
-    public String toString(int index, int length, String charsetName,
-            ChannelBufferIndexFinder terminatorFinder) {
-        if (terminatorFinder == null) {
-            return toString(index, length, charsetName);
-        }
-
-        int terminatorIndex = indexOf(index, index + length, terminatorFinder);
-        if (terminatorIndex < 0) {
-            return toString(index, length, charsetName);
-        }
-
-        return toString(index, terminatorIndex - index, charsetName);
-    }
-
-    @Deprecated
-    public String toString(int index, int length, String charsetName) {
-        return toString(index, length, Charset.forName(charsetName));
-    }
-
-    @Deprecated
-    public String toString(String charsetName,
-            ChannelBufferIndexFinder terminatorFinder) {
-        return toString(readerIndex, readableBytes(), charsetName, terminatorFinder);
-    }
-
-    @Deprecated
-    public String toString(String charsetName) {
-        return toString(Charset.forName(charsetName));
     }
 
     public int indexOf(int fromIndex, int toIndex, byte value) {

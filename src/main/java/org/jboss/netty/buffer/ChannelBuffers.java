@@ -812,22 +812,6 @@ public class ChannelBuffers {
     }
 
     /**
-     * @deprecated Use {@link #copiedBuffer(CharSequence, Charset)} instead.
-     */
-    @Deprecated
-    public static ChannelBuffer copiedBuffer(String string, String charsetName) {
-        return copiedBuffer(string, Charset.forName(charsetName));
-    }
-
-    /**
-     * @deprecated Use {@link #copiedBuffer(ByteOrder, CharSequence, Charset)} instead.
-     */
-    @Deprecated
-    public static ChannelBuffer copiedBuffer(ByteOrder endianness, String string, String charsetName) {
-        return copiedBuffer(endianness, string, Charset.forName(charsetName));
-    }
-
-    /**
      * Creates a read-only buffer which disallows any modification operations
      * on the specified {@code buffer}.  The new buffer has the same
      * {@code readerIndex} and {@code writerIndex} with the specified

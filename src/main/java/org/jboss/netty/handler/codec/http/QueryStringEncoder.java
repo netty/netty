@@ -75,14 +75,6 @@ public class QueryStringEncoder {
     }
 
     /**
-     * @deprecated Use {@link #QueryStringEncoder(String, Charset)} instead.
-     */
-    @Deprecated
-    public QueryStringEncoder(String uri, String charset) {
-        this(uri, Charset.forName(charset));
-    }
-
-    /**
      * Adds a parameter with the specified name and value to this encoder.
      */
     public void addParam(String name, String value) {

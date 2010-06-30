@@ -353,14 +353,6 @@ public class SslHandler extends FrameDecoder
     }
 
     /**
-     * @deprecated Use {@link #handshake()} instead.
-     */
-    @Deprecated
-    public ChannelFuture handshake(@SuppressWarnings("unused") Channel channel) {
-        return handshake();
-    }
-
-    /**
      * Sends an SSL {@code close_notify} message to the specified channel and
      * destroys the underlying {@link SSLEngine}.
      */
@@ -373,14 +365,6 @@ public class SslHandler extends FrameDecoder
         } catch (SSLException e) {
             return failedFuture(channel, e);
         }
-    }
-
-    /**
-     * @deprecated Use {@link #close()} instead.
-     */
-    @Deprecated
-    public ChannelFuture close(@SuppressWarnings("unused") Channel channel) {
-        return close();
     }
 
     /**

@@ -343,15 +343,6 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         throw new UnreplayableOperationException();
     }
 
-    @Deprecated
-    public ChannelBuffer readBytes(ChannelBufferIndexFinder endIndexFinder) {
-        int endIndex = buffer.indexOf(buffer.readerIndex(), buffer.writerIndex(), endIndexFinder);
-        if (endIndex < 0) {
-            throw REPLAY;
-        }
-        return buffer.readBytes(endIndex - buffer.readerIndex());
-    }
-
     public int readBytes(GatheringByteChannel out, int length)
             throws IOException {
         throw new UnreplayableOperationException();
@@ -360,16 +351,6 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     public ChannelBuffer readBytes(int length) {
         checkReadableBytes(length);
         return buffer.readBytes(length);
-    }
-
-    @Deprecated
-    public ChannelBuffer readSlice(
-            ChannelBufferIndexFinder endIndexFinder) {
-        int endIndex = buffer.indexOf(buffer.readerIndex(), buffer.writerIndex(), endIndexFinder);
-        if (endIndex < 0) {
-            throw REPLAY;
-        }
-        return buffer.readSlice(endIndex - buffer.readerIndex());
     }
 
     public ChannelBuffer readSlice(int length) {
@@ -521,17 +502,6 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         throw new UnreplayableOperationException();
     }
 
-    @Deprecated
-    public int skipBytes(ChannelBufferIndexFinder firstIndexFinder) {
-        int oldReaderIndex = buffer.readerIndex();
-        int newReaderIndex = buffer.indexOf(oldReaderIndex, buffer.writerIndex(), firstIndexFinder);
-        if (newReaderIndex < 0) {
-            throw REPLAY;
-        }
-        buffer.readerIndex(newReaderIndex);
-        return newReaderIndex - oldReaderIndex;
-    }
-
     public void skipBytes(int length) {
         checkReadableBytes(length);
         buffer.skipBytes(length);
@@ -570,31 +540,6 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     }
 
     public String toString(Charset charsetName) {
-        throw new UnreplayableOperationException();
-    }
-
-    @Deprecated
-    public String toString(int index, int length, String charsetName) {
-        checkIndex(index, length);
-        return buffer.toString(index, length, charsetName);
-    }
-
-    @Deprecated
-    public String toString(
-            int index, int length, String charsetName,
-            ChannelBufferIndexFinder terminatorFinder) {
-        checkIndex(index, length);
-        return buffer.toString(index, length, charsetName, terminatorFinder);
-    }
-
-    @Deprecated
-    public String toString(String charsetName) {
-        throw new UnreplayableOperationException();
-    }
-
-    @Deprecated
-    public String toString(
-            String charsetName, ChannelBufferIndexFinder terminatorFinder) {
         throw new UnreplayableOperationException();
     }
 
