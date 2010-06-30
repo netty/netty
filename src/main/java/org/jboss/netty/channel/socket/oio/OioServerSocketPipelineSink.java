@@ -217,8 +217,8 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                                                 "Old I/O server worker (parentId: " +
                                                 channel.getId() + ", channelId: " +
                                                 acceptedChannel.getId() + ", " +
-                                                channel.getRemoteAddress() + " => " +
-                                                channel.getLocalAddress() + ')')));
+                                                acceptedChannel.getRemoteAddress() + " => " +
+                                                acceptedChannel.getLocalAddress() + ')')));
                     } catch (Exception e) {
                         logger.warn(
                                 "Failed to initialize an accepted socket.", e);
