@@ -95,7 +95,7 @@ public class ThreadRenamingRunnable implements Runnable {
             newThreadName = oldThreadName;
         }
 
-        // Change the thread name before starting the actual runnable.
+        // Change the thread name.
         boolean renamed = false;
         if (!oldThreadName.equals(newThreadName)) {
             try {
