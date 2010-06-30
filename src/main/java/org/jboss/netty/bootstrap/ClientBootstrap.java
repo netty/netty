@@ -46,7 +46,7 @@ import org.jboss.netty.channel.Channels;
  * </pre>
  *
  * For the detailed list of available options, please refer to
- * {@link ChannelConfig} and its sub-types
+ * {@link ChannelConfig} and its sub-types.
  *
  * <h3>Configuring a channel pipeline</h3>
  *
