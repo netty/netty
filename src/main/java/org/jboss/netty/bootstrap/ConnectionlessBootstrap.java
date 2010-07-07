@@ -144,7 +144,7 @@ public class ConnectionlessBootstrap extends Bootstrap {
      *
      * <pre>
      * {@link ConnectionlessBootstrap} b = ...;
-     * b.connect(b.getOption("localAddress"));
+     * b.bind(b.getOption("localAddress"));
      * </pre>
      *
      * @return a new bound channel which accepts incoming connections
