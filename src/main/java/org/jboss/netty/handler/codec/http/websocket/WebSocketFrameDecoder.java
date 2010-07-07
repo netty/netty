@@ -42,6 +42,7 @@ public class WebSocketFrameDecoder extends ReplayingDecoder<VoidEnum> {
     public static final int DEFAULT_MAX_FRAME_SIZE = 16384;
 
     private final int maxFrameSize;
+    private boolean receivedClosingHandshake;
 
     public WebSocketFrameDecoder() {
         this(DEFAULT_MAX_FRAME_SIZE);
@@ -60,6 +61,14 @@ public class WebSocketFrameDecoder extends ReplayingDecoder<VoidEnum> {
     @Override
     protected Object decode(ChannelHandlerContext ctx, Channel channel,
             ChannelBuffer buffer, VoidEnum state) throws Exception {
+
+        // Discard all data received if closing handshake was received before.
+        if (receivedClosingHandshake) {
+            buffer.skipBytes(actualReadableBytes());
+            return null;
+        }
+
+        // Decode a frame otherwise.
         byte type = buffer.readByte();
         if ((type & 0x80) == 0x80) {
             // If the MSB on type is set, decode the frame length
@@ -87,6 +96,10 @@ public class WebSocketFrameDecoder extends ReplayingDecoder<VoidEnum> {
                 throw new TooLongFrameException();
             }
         } while ((b & 0x80) == 0x80);
+
+        if (type == 0xFF && frameSize == 0) {
+            receivedClosingHandshake = true;
+        }
 
         return new DefaultWebSocketFrame(
                 type, buffer.readBytes((int) frameSize));
