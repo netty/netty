@@ -61,11 +61,36 @@ public class WebSocketFrameEncoder extends OneToOneEncoder {
                 ChannelBuffer encoded =
                     channel.getConfig().getBufferFactory().getBuffer(
                             data.order(), dataLen + 5);
+
+                // Encode type.
                 encoded.writeByte((byte) type);
-                encoded.writeByte((byte) (dataLen >>> 28 & 0x7F | 0x80));
-                encoded.writeByte((byte) (dataLen >>> 14 & 0x7F | 0x80));
-                encoded.writeByte((byte) (dataLen >>> 7 & 0x7F | 0x80));
-                encoded.writeByte((byte) (dataLen & 0x7F));
+
+                // Encode length.
+                int b1 = dataLen >>> 28 & 0x7F;
+                int b2 = dataLen >>> 14 & 0x7F;
+                int b3 = dataLen >>> 7 & 0x7F;
+                int b4 = dataLen & 0x7F;
+                if (b1 == 0) {
+                    if (b2 == 0) {
+                        if (b3 == 0) {
+                            encoded.writeByte(b4);
+                        } else {
+                            encoded.writeByte(b3);
+                            encoded.writeByte(b4);
+                        }
+                    } else {
+                        encoded.writeByte(b2);
+                        encoded.writeByte(b3);
+                        encoded.writeByte(b4);
+                    }
+                } else {
+                    encoded.writeByte(b1);
+                    encoded.writeByte(b2);
+                    encoded.writeByte(b3);
+                    encoded.writeByte(b4);
+                }
+
+                // Encode binary data.
                 encoded.writeBytes(data, data.readerIndex(), dataLen);
                 return encoded;
             }
