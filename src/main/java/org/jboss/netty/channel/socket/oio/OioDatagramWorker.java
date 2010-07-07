@@ -171,20 +171,20 @@ class OioDatagramWorker implements Runnable {
             channel.socket.disconnect();
             future.setSuccess();
             if (connected) {
+                // Update the worker's thread name to reflect the state change.
+                Thread workerThread = channel.workerThread;
+                if (workerThread != null) {
+                    try {
+                        workerThread.setName(
+                                "Old I/O datagram worker (" + channel + ')');
+                    } catch (SecurityException e) {
+                        // Ignore.
+                    }
+                }
+
+                // Notify.
                 fireChannelDisconnected(channel);
             }
-
-            Thread workerThread = channel.workerThread;
-            if (workerThread != null) {
-                try {
-                    workerThread.setName(
-                            "Old I/O datagram worker (channelId: " +
-                            channel.getId() + ", " + channel.getLocalAddress() + ')');
-                } catch (SecurityException e) {
-                    // Ignore.
-                }
-            }
-
         } catch (Throwable t) {
             future.setFailure(t);
             fireExceptionCaught(channel, t);

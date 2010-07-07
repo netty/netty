@@ -147,8 +147,7 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                     new IoWorkerRunnable(
                             new ThreadRenamingRunnable(
                                     new Boss(channel),
-                                    "Old I/O server boss (channelId: " +
-                                    channel.getId() + ", " + localAddress + ')')));
+                                    "Old I/O server boss (" + channel + ')')));
             bossStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
@@ -215,10 +214,7 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                                         new ThreadRenamingRunnable(
                                                 new OioWorker(acceptedChannel),
                                                 "Old I/O server worker (parentId: " +
-                                                channel.getId() + ", channelId: " +
-                                                acceptedChannel.getId() + ", " +
-                                                acceptedChannel.getRemoteAddress() + " => " +
-                                                acceptedChannel.getLocalAddress() + ')')));
+                                                channel.getId() + ", " + channel + ')')));
                     } catch (Exception e) {
                         logger.warn(
                                 "Failed to initialize an accepted socket.", e);

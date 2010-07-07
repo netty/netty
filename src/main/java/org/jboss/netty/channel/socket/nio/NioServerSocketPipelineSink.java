@@ -158,8 +158,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                             new ThreadRenamingRunnable(
                                     new Boss(channel),
                                     "New I/O server boss #" + id +
-                                    " (channelId: " + channel.getId() +
-                                    ", " + channel.getLocalAddress() + ')')));
+                                    " (" + channel + ')')));
             bossStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);

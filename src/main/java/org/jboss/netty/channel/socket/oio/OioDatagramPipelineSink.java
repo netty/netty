@@ -104,9 +104,7 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
                     new IoWorkerRunnable(
                             new ThreadRenamingRunnable(
                                     new OioDatagramWorker(channel),
-                                    "Old I/O datagram worker (channelId: " +
-                                    channel.getId() + ", " +
-                                    channel.getLocalAddress() + ')')));
+                                    "Old I/O datagram worker (" + channel + ')')));
             workerStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
@@ -143,10 +141,7 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
             }
             fireChannelConnected(channel, channel.getRemoteAddress());
 
-            String threadName =
-                "Old I/O datagram worker (channelId: " + channel.getId() + ", " +
-                channel.getLocalAddress() + " => " +
-                channel.getRemoteAddress() + ')';
+            String threadName = "Old I/O datagram worker (" + channel + ')';
             if (!bound) {
                 // Start the business.
                 workerExecutor.execute(
