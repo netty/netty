@@ -428,24 +428,30 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         headerSize = 0;
         final HttpMessage message = this.message;
         String line = readHeader(buffer);
-        String lastHeader = null;
+        String name = null;
+        String value = null;
         if (line.length() != 0) {
             message.clearHeaders();
             do {
                 char firstChar = line.charAt(0);
-                if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
-                    List<String> current = message.getHeaders(lastHeader);
-                    int lastPos = current.size() - 1;
-                    String newString = current.get(lastPos) + line.trim();
-                    current.set(lastPos, newString);
+                if (name != null && (firstChar == ' ' || firstChar == '\t')) {
+                    value = value + ' ' + line.trim();
                 } else {
+                    if (name != null) {
+                        message.addHeader(name, value);
+                    }
                     String[] header = splitHeader(line);
-                    message.addHeader(header[0], header[1]);
-                    lastHeader = header[0];
+                    name = header[0];
+                    value = header[1];
                 }
 
                 line = readHeader(buffer);
             } while (line.length() != 0);
+
+            // Add the last header.
+            if (name != null) {
+                message.addHeader(name, value);
+            }
         }
 
         State nextState;
