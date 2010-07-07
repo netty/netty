@@ -41,7 +41,6 @@ import org.jboss.netty.channel.ChildChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.ServerChannelFactory;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.channel.StaticChannelPipeline;
 
 /**
  * A helper class which creates a new server-side {@link Channel} and accepts
@@ -271,15 +270,13 @@ public class ServerBootstrap extends Bootstrap {
         final BlockingQueue<ChannelFuture> futureQueue =
             new LinkedBlockingQueue<ChannelFuture>();
 
-        ChannelPipeline bossPipeline;
         ChannelHandler binder = new Binder(localAddress, futureQueue);
         ChannelHandler parentHandler = getParentHandler();
+
+        ChannelPipeline bossPipeline = pipeline();
+        bossPipeline.addLast("binder", binder);
         if (parentHandler != null) {
-            bossPipeline = pipeline();
-            bossPipeline.addLast("binder", binder);
             bossPipeline.addLast("userHandler", parentHandler);
-        } else {
-            bossPipeline = new StaticChannelPipeline(binder);
         }
 
         Channel channel = getFactory().newChannel(bossPipeline);
