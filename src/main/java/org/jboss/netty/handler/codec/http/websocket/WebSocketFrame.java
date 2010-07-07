@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.codec.http.websocket;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
  * A Web Socket frame that represents either text or binary data.
@@ -25,6 +26,11 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * @version $Rev$, $Date$
  */
 public interface WebSocketFrame {
+
+    /**
+     * Closing handshake message (<tt>0xFF, 0x00</tt>)
+     */
+    WebSocketFrame CLOSING_HANDSHAKE = new DefaultWebSocketFrame(0xFF, ChannelBuffers.EMPTY_BUFFER);
 
     /**
      * Returns the type of this frame.
