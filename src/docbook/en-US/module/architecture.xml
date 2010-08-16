@@ -144,7 +144,7 @@
           </para>
         </listitem>
       </itemizedlist>
-      Switching from one transport from the other usually takes just a couple
+      Switching from one transport to the other usually takes just a couple
       lines of changes such as choosing a different &ChannelFactory;
       implementation.
     </para>
