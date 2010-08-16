@@ -97,13 +97,23 @@ public class ProtobufDecoder extends OneToOneDecoder {
             return msg;
         }
 
-        if (extensionRegistry == null) {
-            return prototype.newBuilderForType().mergeFrom(
-                    new ChannelBufferInputStream((ChannelBuffer) msg)).build();
+        ChannelBuffer buf = (ChannelBuffer) msg;
+        if (buf.hasArray()) {
+            if(extensionRegistry == null) {
+                return prototype.newBuilderForType().mergeFrom(
+                        buf.array(),buf.arrayOffset(), buf.readableBytes()).build();
+            } else {
+                return prototype.newBuilderForType().mergeFrom(
+                        buf.array(), buf.arrayOffset(), buf.readableBytes(), extensionRegistry).build();
+            }
         } else {
-            return prototype.newBuilderForType().mergeFrom(
-                    new ChannelBufferInputStream((ChannelBuffer) msg),
-                    extensionRegistry).build();
+            if (extensionRegistry == null) {
+                return prototype.newBuilderForType().mergeFrom(
+                        new ChannelBufferInputStream((ChannelBuffer) msg)).build();
+            } else {
+                return prototype.newBuilderForType().mergeFrom(
+                        new ChannelBufferInputStream((ChannelBuffer) msg), extensionRegistry).build();
+            }
         }
     }
 }
