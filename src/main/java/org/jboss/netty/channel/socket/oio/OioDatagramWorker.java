@@ -177,7 +177,8 @@ class OioDatagramWorker implements Runnable {
                 if (workerThread != null) {
                     ThreadRenamingRunnable.renameThread(
                             workerThread, "OldIO", "DatagramWorker",
-                            ((OioDatagramChannelFactory) channel.getFactory()).id + "-" + channel.getId(),
+                            String.valueOf(((OioDatagramChannelFactory) channel.getFactory()).id),
+                            String.valueOf(channel.getId()),
                             channel.toString());
                 }
 

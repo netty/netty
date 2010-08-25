@@ -196,7 +196,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                     try {
                         bossExecutor.execute(
                                 new IoWorkerRunnable(new ThreadRenamingRunnable(
-                                        this, "NewIO", "ClientBoss", String.valueOf(id), null)));
+                                        this, "NewIO", "ClientBoss", null, String.valueOf(id), null)));
                         success = true;
                     } finally {
                         if (!success) {

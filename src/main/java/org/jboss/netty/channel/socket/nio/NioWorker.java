@@ -112,7 +112,7 @@ class NioWorker implements Runnable {
                             new IoWorkerRunnable(new ThreadRenamingRunnable(
                                     this, "NewIO",
                                     server? "ServerWorker" : "ClientWorker",
-                                    bossId + "-" + id, null)));
+                                    String.valueOf(bossId), String.valueOf(id), null)));
                     success = true;
                 } finally {
                     if (!success) {

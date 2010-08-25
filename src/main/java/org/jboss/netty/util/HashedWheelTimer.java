@@ -211,7 +211,7 @@ public class HashedWheelTimer implements Timer {
 
         workerThread = threadFactory.newThread(new ThreadRenamingRunnable(
                         worker,
-                        "HashedWheelTimer", null,
+                        "HashedWheelTimer", null, null,
                         String.valueOf(id.incrementAndGet()), null));
 
         // Misuse check

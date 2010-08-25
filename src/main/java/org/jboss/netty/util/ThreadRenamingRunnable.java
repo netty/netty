@@ -42,8 +42,7 @@ public class ThreadRenamingRunnable implements Runnable {
 
     private static final Pattern SERVICE_PATTERN = Pattern.compile("[a-zA-Z0-9]*");
     private static final Pattern CATEGORY_PATTERN = SERVICE_PATTERN;
-    private static final Pattern ID_PATTERN = Pattern.compile("^[-_a-zA-Z0-9]*$");
-
+    private static final Pattern ID_PATTERN = SERVICE_PATTERN;
 
     private static volatile ThreadNameDeterminer threadNameDeterminer =
         ThreadNameDeterminer.PROPOSED;
@@ -78,16 +77,17 @@ public class ThreadRenamingRunnable implements Runnable {
      *
      * @return {@code true} if and only if the thread was renamed
      */
-    public static boolean renameThread(Thread thread, String service, String category, String id, String comment) {
+    public static boolean renameThread(Thread thread, String service, String category, String parentId, String id, String comment) {
         if (thread == null) {
             throw new NullPointerException("thread");
         }
 
-        validateNameComponents(service, category, id);
+        validateNameComponents(service, category, parentId, id);
 
         // Normalize the parameters.
         service = service != null? service : "";
         category = category != null? category : "";
+        parentId = parentId != null? parentId : "";
         id = id != null? id : "";
         comment = comment != null? comment : "";
 
@@ -96,7 +96,7 @@ public class ThreadRenamingRunnable implements Runnable {
         String newThreadName = null;
         try {
             newThreadName = getThreadNameDeterminer().determineThreadName(
-                    oldThreadName, service, category, id, comment);
+                    oldThreadName, service, category, parentId, id, comment);
         } catch (Throwable t) {
             logger.warn("Failed to determine the thread name", t);
         }
@@ -121,7 +121,7 @@ public class ThreadRenamingRunnable implements Runnable {
         return renamed;
     }
 
-    private static void validateNameComponents(String service, String category, String id) {
+    private static void validateNameComponents(String service, String category, String parentId, String id) {
         if (service != null && !SERVICE_PATTERN.matcher(service).matches()) {
             throw new IllegalArgumentException(
                     "service: " + service +
@@ -134,6 +134,12 @@ public class ThreadRenamingRunnable implements Runnable {
                     " (expected: " + CATEGORY_PATTERN.pattern() + ')');
         }
 
+        if (parentId != null && !ID_PATTERN.matcher(parentId).matches()) {
+            throw new IllegalArgumentException(
+                    "parentId: " + parentId +
+                    " (expected: " + ID_PATTERN.pattern() + ')');
+        }
+
         if (id != null && !ID_PATTERN.matcher(id).matches()) {
             throw new IllegalArgumentException(
                     "id: " + id +
@@ -144,6 +150,7 @@ public class ThreadRenamingRunnable implements Runnable {
     private final Runnable runnable;
     private final String service;
     private final String category;
+    private final String parentId;
     private final String id;
     private final String comment;
 
@@ -154,15 +161,16 @@ public class ThreadRenamingRunnable implements Runnable {
      */
     public ThreadRenamingRunnable(
             Runnable runnable,
-            String service, String category, String id, String comment) {
+            String service, String category, String parentId, String id, String comment) {
         if (runnable == null) {
             throw new NullPointerException("runnable");
         }
 
-        validateNameComponents(service, category, id);
+        validateNameComponents(service, category, parentId, id);
         this.runnable = runnable;
         this.service = service;
         this.category = category;
+        this.parentId = parentId;
         this.id = id;
         this.comment = comment;
     }
@@ -173,7 +181,7 @@ public class ThreadRenamingRunnable implements Runnable {
 
         // Change the thread name before starting the actual runnable.
         final boolean renamed = renameThread(
-                Thread.currentThread(), service, category, id, comment);
+                Thread.currentThread(), service, category, parentId, id, comment);
 
         // Run the actual runnable and revert the name back when it ends.
         try {

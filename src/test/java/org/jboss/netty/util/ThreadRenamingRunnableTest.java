@@ -34,7 +34,7 @@ public class ThreadRenamingRunnableTest {
 
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullRunnable() throws Exception {
-        new ThreadRenamingRunnable(null, "a", "b", "c", "d");
+        new ThreadRenamingRunnable(null, "a", "b", "c", "d", "e");
     }
 
     @Test
@@ -46,7 +46,7 @@ public class ThreadRenamingRunnableTest {
                     public void run() {
                         assertEquals(oldThreadName, Thread.currentThread().getName());
                     }
-                }, null, null, null, null));
+                }, null, null, null, null, null));
 
         assertEquals(oldThreadName, Thread.currentThread().getName());
     }
@@ -60,7 +60,7 @@ public class ThreadRenamingRunnableTest {
                     public void run() {
                         assertEquals(oldThreadName, Thread.currentThread().getName());
                     }
-                }, "", "", "", ""));
+                }, "", "", "", "", ""));
 
         assertEquals(oldThreadName, Thread.currentThread().getName());
     }
@@ -72,10 +72,10 @@ public class ThreadRenamingRunnableTest {
         e.execute(new ThreadRenamingRunnable(
                 new Runnable() {
                     public void run() {
-                        assertEquals("a b #c (d)", Thread.currentThread().getName());
+                        assertEquals("a b #c:d (e)", Thread.currentThread().getName());
                         assertFalse(oldThreadName.equals(Thread.currentThread().getName()));
                     }
-                }, "a", "b", "c", "d"));
+                }, "a", "b", "c", "d", "e"));
 
         assertEquals(oldThreadName, Thread.currentThread().getName());
     }
@@ -107,7 +107,7 @@ public class ThreadRenamingRunnableTest {
                         public void run() {
                             assertEquals(oldThreadName, Thread.currentThread().getName());
                         }
-                    }, "a", "b", "c", "d"));
+                    }, "a", "b", "c", "d", "e"));
         } finally {
             System.setSecurityManager(null);
             assertEquals(oldThreadName, Thread.currentThread().getName());

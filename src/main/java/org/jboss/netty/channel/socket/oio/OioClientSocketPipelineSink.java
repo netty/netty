@@ -136,7 +136,7 @@ class OioClientSocketPipelineSink extends AbstractChannelSink {
                             new ThreadRenamingRunnable(
                                     new OioWorker(channel),
                                     "OldIO", "ClientWorker",
-                                    id + "-" + channel.getId(),
+                                    String.valueOf(id), String.valueOf(channel.getId()),
                                     channel.toString())));
             workerStarted = true;
         } catch (Throwable t) {

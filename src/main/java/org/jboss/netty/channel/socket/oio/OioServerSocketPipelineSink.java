@@ -151,8 +151,8 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                     new IoWorkerRunnable(
                             new ThreadRenamingRunnable(
                                     new Boss(channel),
-                                    "OldIO", "ServerBoss", String.valueOf(id),
-                                    channel.toString())));
+                                    "OldIO", "ServerBoss", null,
+                                    String.valueOf(id), channel.toString())));
             bossStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
@@ -218,7 +218,9 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                                 new IoWorkerRunnable(
                                         new ThreadRenamingRunnable(
                                                 new OioWorker(acceptedChannel),
-                                                "OldIO", "ServerWorker", id + "-" + acceptedChannel.getId(),
+                                                "OldIO", "ServerWorker",
+                                                String.valueOf(id),
+                                                String.valueOf(acceptedChannel.getId()),
                                                 acceptedChannel.toString())));
                     } catch (Exception e) {
                         logger.warn(

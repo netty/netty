@@ -30,13 +30,13 @@ public interface ThreadNameDeterminer {
      */
     ThreadNameDeterminer PROPOSED = new ThreadNameDeterminer() {
         public String determineThreadName(String current, String service,
-                String category, String id, String comment) throws Exception {
+                String category, String parentId, String id, String comment) throws Exception {
 
             String newName =
-                (format("",  service,  " ") +
-                 format("",  category, " ") +
-                 format("#", id,       " ") +
-                 format("(", comment,  ")")).trim();
+                (format("",  " ", service) +
+                 format("",  " ", category) +
+                 format("#", " ", parentId, id) +
+                 format("(", ")", comment)).trim();
             if (newName.length() == 0) {
                 return null;
             } else {
@@ -44,12 +44,22 @@ public interface ThreadNameDeterminer {
             }
         }
 
-        private String format(String prefix, String s, String postfix) {
-            if (s.length() == 0) {
-                return "";
-            } else {
-                return prefix + s + postfix;
+        private String format(String prefix, String postfix, String... components) {
+            StringBuilder buf = new StringBuilder();
+            for (String c: components) {
+                if (c.length() == 0) {
+                    continue;
+                }
+                buf.append(c);
+                buf.append(':');
             }
+
+            if (buf.length() == 0) {
+                return "";
+            }
+
+            buf.setLength(buf.length() - 1); // Remove trailing ':'
+            return prefix + buf + postfix;
         }
     };
 
@@ -59,7 +69,7 @@ public interface ThreadNameDeterminer {
      */
     ThreadNameDeterminer CURRENT = new ThreadNameDeterminer() {
         public String determineThreadName(String current, String service,
-                String category, String id, String comment) throws Exception {
+                String category, String parentId, String id, String comment) throws Exception {
             return null;
         }
     };
@@ -68,9 +78,10 @@ public interface ThreadNameDeterminer {
      * Overrides the thread name proposed by {@link ThreadRenamingRunnable}.
      *
      * @param current   the current thread name
-     * @param service   the service name (e.g. <tt>"New I/O"</tt> or <tt>"Old I/O"</tt>)
-     * @param category  the category name (e.g. <tt>"server boss"</tt> or <tt>"client worker"</tt>)
-     * @param id        the thread ID (e.g. <tt>"1"</tt> or <tt>"1-3"</tt>)
+     * @param service   the service name (e.g. <tt>"NewIO"</tt> or <tt>"OldIO"</tt>)
+     * @param category  the category name (e.g. <tt>"ServerBoss"</tt> or <tt>"ClientWorker"</tt>)
+     * @param parentId  the parent thread ID (e.g. <tt>"1"</tt>)
+     * @param id        the thread ID (e.g. <tt>"3"</tt>)
      * @param comment   the optional comment which might help debugging
      *
      * @return the actual new thread name.
@@ -79,5 +90,5 @@ public interface ThreadNameDeterminer {
      */
     String determineThreadName(
             String current,
-            String service, String category, String id, String comment) throws Exception;
+            String service, String category, String parentId, String id, String comment) throws Exception;
 }

@@ -108,7 +108,7 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
                                     new OioDatagramWorker(channel),
                                     "OldIO",
                                     "DatagramWorker",
-                                    id + "-" + channel.getId(),
+                                    String.valueOf(id), String.valueOf(channel.getId()),
                                     channel.toString())));
             workerStarted = true;
         } catch (Throwable t) {
@@ -154,13 +154,13 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
                 // Start the business.
                 workerExecutor.execute(new IoWorkerRunnable(new ThreadRenamingRunnable(
                         new OioDatagramWorker(channel),
-                        service, category, id + "-" + channel.getId(), comment)));
+                        service, category, String.valueOf(id), String.valueOf(channel.getId()), comment)));
             } else {
                 // Worker started by bind() - just rename.
                 Thread workerThread = channel.workerThread;
                 if (workerThread != null) {
                     ThreadRenamingRunnable.renameThread(
-                            workerThread, service, category, id + "-" + channel.getId(), comment);
+                            workerThread, service, category, String.valueOf(id), String.valueOf(channel.getId()), comment);
                 }
             }
 
