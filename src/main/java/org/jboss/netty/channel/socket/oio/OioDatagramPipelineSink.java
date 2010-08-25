@@ -106,8 +106,8 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
                     new IoWorkerRunnable(
                             new ThreadRenamingRunnable(
                                     new OioDatagramWorker(channel),
-                                    "Old I/O",
-                                    "datagram worker",
+                                    "OldIO",
+                                    "DatagramWorker",
                                     id + "-" + channel.getId(),
                                     channel.toString())));
             workerStarted = true;
@@ -146,8 +146,8 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
             }
             fireChannelConnected(channel, channel.getRemoteAddress());
 
-            final String service = "Old I/O";
-            final String category = "datagram worker";
+            final String service = "OldIO";
+            final String category = "DatagramWorker";
             final String comment = channel.toString();
 
             if (!bound) {

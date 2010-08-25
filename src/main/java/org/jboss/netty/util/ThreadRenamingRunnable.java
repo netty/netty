@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.util;
 
+import java.util.regex.Pattern;
+
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
@@ -37,6 +39,11 @@ public class ThreadRenamingRunnable implements Runnable {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ThreadRenamingRunnable.class);
+
+    private static final Pattern SERVICE_PATTERN = Pattern.compile("[a-zA-Z0-9]*");
+    private static final Pattern CATEGORY_PATTERN = SERVICE_PATTERN;
+    private static final Pattern ID_PATTERN = Pattern.compile("^[-_a-zA-Z0-9]*$");
+
 
     private static volatile ThreadNameDeterminer threadNameDeterminer =
         ThreadNameDeterminer.PROPOSED;
@@ -76,6 +83,8 @@ public class ThreadRenamingRunnable implements Runnable {
             throw new NullPointerException("thread");
         }
 
+        validateNameComponents(service, category, id);
+
         // Normalize the parameters.
         service = service != null? service : "";
         category = category != null? category : "";
@@ -112,6 +121,26 @@ public class ThreadRenamingRunnable implements Runnable {
         return renamed;
     }
 
+    private static void validateNameComponents(String service, String category, String id) {
+        if (service != null && !SERVICE_PATTERN.matcher(service).matches()) {
+            throw new IllegalArgumentException(
+                    "service: " + service +
+                    " (expected: " + SERVICE_PATTERN.pattern() + ')');
+        }
+
+        if (category != null && !CATEGORY_PATTERN.matcher(category).matches()) {
+            throw new IllegalArgumentException(
+                    "category: " + category +
+                    " (expected: " + CATEGORY_PATTERN.pattern() + ')');
+        }
+
+        if (id != null && !ID_PATTERN.matcher(id).matches()) {
+            throw new IllegalArgumentException(
+                    "id: " + id +
+                    " (expected: " + ID_PATTERN.pattern() + ')');
+        }
+    }
+
     private final Runnable runnable;
     private final String service;
     private final String category;
@@ -130,6 +159,7 @@ public class ThreadRenamingRunnable implements Runnable {
             throw new NullPointerException("runnable");
         }
 
+        validateNameComponents(service, category, id);
         this.runnable = runnable;
         this.service = service;
         this.category = category;

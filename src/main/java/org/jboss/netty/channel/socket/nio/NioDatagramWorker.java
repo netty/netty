@@ -169,7 +169,7 @@ class NioDatagramWorker implements Runnable {
                 try {
                     // Start the main selector loop. See run() for details.
                     executor.execute(new ThreadRenamingRunnable(
-                            this, "New I/O", "datagram worker", bossId + "-" + id, null));
+                            this, "NewIO", "DatagramWorker", bossId + "-" + id, null));
                     success = true;
                 } finally {
                     if (!success) {

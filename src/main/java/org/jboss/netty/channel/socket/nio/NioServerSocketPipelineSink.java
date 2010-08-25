@@ -156,7 +156,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
             bossExecutor.execute(
                     new IoWorkerRunnable(new ThreadRenamingRunnable(
                             new Boss(channel),
-                            "New I/O", "server boss", String.valueOf(id),
+                            "NewIO", "ServerBoss", String.valueOf(id),
                             channel.toString())));
             bossStarted = true;
         } catch (Throwable t) {

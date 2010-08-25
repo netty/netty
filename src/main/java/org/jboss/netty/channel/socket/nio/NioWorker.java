@@ -110,8 +110,8 @@ class NioWorker implements Runnable {
                 try {
                     executor.execute(
                             new IoWorkerRunnable(new ThreadRenamingRunnable(
-                                    this, "New I/O",
-                                    server? "server worker" : "client worker",
+                                    this, "NewIO",
+                                    server? "ServerWorker" : "ClientWorker",
                                     bossId + "-" + id, null)));
                     success = true;
                 } finally {
