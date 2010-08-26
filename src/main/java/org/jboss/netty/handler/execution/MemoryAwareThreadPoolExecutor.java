@@ -438,7 +438,9 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         //System.out.println("D: " + totalCounter + ", " + increment);
         if (maxTotalMemorySize != 0 && totalCounter + increment >= maxTotalMemorySize) {
             //System.out.println("RELEASE: " + task);
-            semaphore.release();
+            while (semaphore.hasQueuedThreads()) {
+                semaphore.release();
+            }
         }
 
         if (task instanceof ChannelEventRunnable) {
