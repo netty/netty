@@ -164,7 +164,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         if (maxHeaderSize <= 0) {
             throw new IllegalArgumentException(
                     "maxHeaderSize must be a positive integer: " +
-                    maxChunkSize);
+                    maxHeaderSize);
         }
         if (maxChunkSize < 0) {
             throw new IllegalArgumentException(
