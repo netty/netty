@@ -102,6 +102,7 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
     }
 
     public boolean finish() {
+        close(channel);
         fireChannelDisconnected(channel);
         fireChannelUnbound(channel);
         fireChannelClosed(channel);
