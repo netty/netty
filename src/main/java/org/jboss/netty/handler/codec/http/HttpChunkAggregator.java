@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.util.List;
+import java.util.Map.Entry;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -118,9 +119,21 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
             content.writeBytes(chunk.getContent());
             if (chunk.isLast()) {
                 this.currentMessage = null;
+
+                // Merge trailing headers into the message.
+                if (chunk instanceof HttpChunkTrailer) {
+                    HttpChunkTrailer trailer = (HttpChunkTrailer) chunk;
+                    for (Entry<String, String> header: trailer.getHeaders()) {
+                        currentMessage.setHeader(header.getKey(), header.getValue());
+                    }
+                }
+
+                // Set the 'Content-Length' header.
                 currentMessage.setHeader(
                         HttpHeaders.Names.CONTENT_LENGTH,
                         String.valueOf(content.readableBytes()));
+
+                // All done - generate the event.
                 Channels.fireMessageReceived(ctx, currentMessage, e.getRemoteAddress());
             }
         } else {
