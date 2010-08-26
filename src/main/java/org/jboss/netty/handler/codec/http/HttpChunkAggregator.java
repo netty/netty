@@ -89,6 +89,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
                 if (encodings.isEmpty()) {
                     m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
                 }
+                m.setChunked(false);
                 m.setContent(ChannelBuffers.dynamicBuffer(e.getChannel().getConfig().getBufferFactory()));
                 this.currentMessage = m;
             } else {
