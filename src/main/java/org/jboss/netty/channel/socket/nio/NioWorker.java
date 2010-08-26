@@ -335,8 +335,9 @@ class NioWorker implements Runnable {
 
             final ChannelBufferFactory bufferFactory =
                 channel.getConfig().getBufferFactory();
-            final ChannelBuffer buffer = bufferFactory.getBuffer(
-                    bb.order(bufferFactory.getDefaultOrder()));
+            final ChannelBuffer buffer = bufferFactory.getBuffer(readBytes);
+            buffer.setBytes(0, bb);
+            buffer.writerIndex(readBytes);
 
             recvBufferPool.release(bb);
 
