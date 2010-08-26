@@ -201,57 +201,60 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
 
         public void run() {
             channel.shutdownLock.lock();
-            while (channel.isBound()) {
-                try {
-                    Socket acceptedSocket = channel.socket.accept();
+            try {
+                while (channel.isBound()) {
                     try {
-                        ChannelPipeline pipeline =
-                            channel.getConfig().getPipelineFactory().getPipeline();
-                        final OioAcceptedSocketChannel acceptedChannel =
-                            new OioAcceptedSocketChannel(
-                                    channel,
-                                    channel.getFactory(),
-                                    pipeline,
-                                    OioServerSocketPipelineSink.this,
-                                    acceptedSocket);
-                        workerExecutor.execute(
-                                new IoWorkerRunnable(
-                                        new ThreadRenamingRunnable(
-                                                new OioWorker(acceptedChannel),
-                                                "OldIO", "ServerWorker",
-                                                String.valueOf(id),
-                                                String.valueOf(acceptedChannel.getId()),
-                                                acceptedChannel.toString())));
-                    } catch (Exception e) {
-                        logger.warn(
-                                "Failed to initialize an accepted socket.", e);
+                        Socket acceptedSocket = channel.socket.accept();
                         try {
-                            acceptedSocket.close();
-                        } catch (IOException e2) {
+                            ChannelPipeline pipeline =
+                                channel.getConfig().getPipelineFactory().getPipeline();
+                            final OioAcceptedSocketChannel acceptedChannel =
+                                new OioAcceptedSocketChannel(
+                                        channel,
+                                        channel.getFactory(),
+                                        pipeline,
+                                        OioServerSocketPipelineSink.this,
+                                        acceptedSocket);
+                            workerExecutor.execute(
+                                    new IoWorkerRunnable(
+                                            new ThreadRenamingRunnable(
+                                                    new OioWorker(acceptedChannel),
+                                                    "OldIO", "ServerWorker",
+                                                    String.valueOf(id),
+                                                    String.valueOf(acceptedChannel.getId()),
+                                                    acceptedChannel.toString())));
+                        } catch (Exception e) {
                             logger.warn(
-                                    "Failed to close a partially accepted socket.",
-                                    e2);
+                                    "Failed to initialize an accepted socket.", e);
+                            try {
+                                acceptedSocket.close();
+                            } catch (IOException e2) {
+                                logger.warn(
+                                        "Failed to close a partially accepted socket.",
+                                        e2);
+                            }
+                        }
+                    } catch (SocketTimeoutException e) {
+                        // Thrown every second to stop when requested.
+                    } catch (Throwable e) {
+                        // Do not log the exception if the server socket was closed
+                        // by a user.
+                        if (!channel.socket.isBound() || channel.socket.isClosed()) {
+                            break;
+                        }
+
+                        logger.warn(
+                                "Failed to accept a connection.", e);
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e1) {
+                            // Ignore
                         }
                     }
-                } catch (SocketTimeoutException e) {
-                    // Thrown every second to stop when requested.
-                } catch (IOException e) {
-                    // Do not log the exception if the server socket was closed
-                    // by a user.
-                    if (!channel.socket.isBound() || channel.socket.isClosed()) {
-                        break;
-                    }
-
-                    logger.warn(
-                            "Failed to accept a connection.", e);
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e1) {
-                        // Ignore
-                    }
                 }
+            } finally {
+                channel.shutdownLock.unlock();
             }
-            channel.shutdownLock.unlock();
         }
     }
 }

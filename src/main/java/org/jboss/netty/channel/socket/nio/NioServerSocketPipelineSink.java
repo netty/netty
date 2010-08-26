@@ -234,39 +234,41 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
             final Thread currentThread = Thread.currentThread();
 
             channel.shutdownLock.lock();
-            for (;;) {
-                try {
-                    if (selector.select(1000) > 0) {
-                        selector.selectedKeys().clear();
-                    }
-
-                    SocketChannel acceptedSocket = channel.socket.accept();
-                    if (acceptedSocket != null) {
-                        registerAcceptedChannel(acceptedSocket, currentThread);
-                    }
-                } catch (SocketTimeoutException e) {
-                    // Thrown every second to get ClosedChannelException
-                    // raised.
-                } catch (CancelledKeyException e) {
-                    // Raised by accept() when the server socket was closed.
-                } catch (ClosedSelectorException e) {
-                    // Raised by accept() when the server socket was closed.
-                } catch (ClosedChannelException e) {
-                    // Closed as requested.
-                    break;
-                } catch (IOException e) {
-                    logger.warn(
-                            "Failed to accept a connection.", e);
+            try {
+                for (;;) {
                     try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e1) {
-                        // Ignore
+                        if (selector.select(1000) > 0) {
+                            selector.selectedKeys().clear();
+                        }
+
+                        SocketChannel acceptedSocket = channel.socket.accept();
+                        if (acceptedSocket != null) {
+                            registerAcceptedChannel(acceptedSocket, currentThread);
+                        }
+                    } catch (SocketTimeoutException e) {
+                        // Thrown every second to get ClosedChannelException
+                        // raised.
+                    } catch (CancelledKeyException e) {
+                        // Raised by accept() when the server socket was closed.
+                    } catch (ClosedSelectorException e) {
+                        // Raised by accept() when the server socket was closed.
+                    } catch (ClosedChannelException e) {
+                        // Closed as requested.
+                        break;
+                    } catch (Throwable e) {
+                        logger.warn(
+                                "Failed to accept a connection.", e);
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e1) {
+                            // Ignore
+                        }
                     }
                 }
+            } finally {
+                channel.shutdownLock.unlock();
+                closeSelector();
             }
-
-            channel.shutdownLock.unlock();
-            closeSelector();
         }
 
         private void registerAcceptedChannel(SocketChannel acceptedSocket, Thread currentThread) {
