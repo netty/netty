@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -365,17 +366,26 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
     }
 
     /**
-     * Returns the actual number of readable bytes in the cumulative buffer
-     * of this decoder.  You do not need to rely on this value to write a
-     * decoder.  Use it only when necessary.
+     * Returns the actual number of readable bytes in the internal cumulative
+     * buffer of this decoder.  You usually do not need to rely on this value
+     * to write a decoder.  Use it only when you muse use it at your own risk.
+     * This method is a shortcut to {@link #internalBuffer() internalBuffer().readableBytes()}.
      */
     protected int actualReadableBytes() {
+        return internalBuffer().readableBytes();
+    }
+
+    /**
+     * Returns the internal cumulative buffer of this decoder.  You usually
+     * do not need to access the internal buffer directly to write a decoder.
+     * Use it only when you must use it at your own risk.
+     */
+    protected ChannelBuffer internalBuffer() {
         ChannelBuffer buf = cumulation.get();
         if (buf == null) {
-            return 0;
+            return ChannelBuffers.EMPTY_BUFFER;
         }
-
-        return buf.readableBytes();
+        return buf;
     }
 
     /**
