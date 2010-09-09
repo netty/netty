@@ -75,18 +75,18 @@ public class WebSocketFrameEncoder extends OneToOneEncoder {
                         if (b3 == 0) {
                             encoded.writeByte(b4);
                         } else {
-                            encoded.writeByte(b3);
+                            encoded.writeByte(b3 | 0x80);
                             encoded.writeByte(b4);
                         }
                     } else {
-                        encoded.writeByte(b2);
-                        encoded.writeByte(b3);
+                        encoded.writeByte(b2 | 0x80);
+                        encoded.writeByte(b3 | 0x80);
                         encoded.writeByte(b4);
                     }
                 } else {
-                    encoded.writeByte(b1);
-                    encoded.writeByte(b2);
-                    encoded.writeByte(b3);
+                    encoded.writeByte(b1 | 0x80);
+                    encoded.writeByte(b2 | 0x80);
+                    encoded.writeByte(b3 | 0x80);
                     encoded.writeByte(b4);
                 }
 
