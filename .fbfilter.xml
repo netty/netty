@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+  <!-- Tests -->
+  <Match>
+    <Class name="~.*Test(\$[^\$]+)*"/>
+  </Match>
+  <!-- Generated code -->
+  <Match>
+    <Class name="~.*\.LocalTimeProtocol(\$[^\$]+)*"/>
+  </Match>
+  <!-- Noise -->
+  <Match>
+    <Bug code="Co,SF"
+         category="I18N"
+         pattern="REC_CATCH_EXCEPTION,UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR,DB_DUPLICATE_SWITCH_CLAUSES,VO_VOLATILE_REFERENCE_TO_ARRAY" />
+  </Match>
+  <!-- Known false positives -->
+  <Match>
+    <Class name="~.*Channel(Group)?Future"/>
+    <Method name="~await.*"/>
+    <Bug pattern="PS_PUBLIC_SEMAPHORES"/>
+  </Match>
+  <Match>
+    <Class name="~.*SelectorLoop"/>
+    <Method name="run"/>
+    <Bug code="ESync"/>
+  </Match>
+  <Match>
+    <Class name="~.*Channel"/>
+    <Or>
+      <Method name="setClosed"/>
+      <Method name="setInterestOpsNow"/>
+    </Or>
+    <Bug pattern="USM_USELESS_SUBCLASS_METHOD"/>
+  </Match>
+  <Match>
+    <Class name="~.*HttpTunnelingChannelHandler"/>
+    <Method name="~await.*"/>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE,RV_RETURN_VALUE_IGNORED2"/>
+  </Match>
+  <!-- Known issues that don't matter -->
+  <Match>
+    <Or>
+      <Class name="~.*\.util\.internal\.Concurrent[A-Za-z]*HashMap(\$[^\$]+)*"/>
+      <Class name="~.*\.util\.internal\..*TransferQueue(\$[^\$]+)*"/>
+      <Class name="~.*\.util\.internal\.MapBackedSet"/>
+    </Or>
+    <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED,SE_BAD_FIELD"/>
+  </Match>
+</FindBugsFilter>

@@ -1,0 +1,16 @@
+The Netty Project - Copyright 2009 Red Hat, Inc, and is licensed under the
+Apache License version 2.0 as published by the Apache Software Foundation.
+
+A summary of the individual contributors is given below. Any omission should be
+sent to Trustin Lee <trustin@gmail.com>.
+
+SVN Login(s)            Name
+-------------------------------------------------------------------------------
+amit.bhayani@jboss.com  Amit Bhayani
+ataylor                 Andy Taylor
+beve                    Daniel Bevenius
+fredbregier             Frederic Bregier
+trustin                 Trustin Heuiseung Lee
+-------------------------------------------------------------------------------
+
+* JBoss is a registered trademark of Red Hat, Inc.

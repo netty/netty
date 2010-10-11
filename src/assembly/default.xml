@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * Copyright 2009 Red Hat, Inc.
+ *
+ * Red Hat licenses this file to you under the Apache License, version 2.0
+ * (the "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at:
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+-->
+<assembly>
+  <id>dist</id>
+  <formats>
+    <format>tar.bz2</format>
+    <format>zip</format>
+  </formats>
+  <includeSiteDirectory>false</includeSiteDirectory>
+  <fileSets>
+    <!-- Source Code -->
+    <fileSet>
+      <includes>
+        <include>**/README*</include>
+        <include>**/LICENSE*</include>
+        <include>**/NOTICE*</include>
+        <include>**/COPYRIGHT*</include>
+        <include>**/*.txt</include>
+        <include>**/*.xml</include>
+        <include>**/license/**</include>
+        <include>**/src/**</include>
+      </includes>
+      <excludes>
+        <exclude>**/target/**</exclude>
+        <exclude>**/.*/**</exclude>
+      </excludes>
+    </fileSet>
+
+    <!-- JARs -->
+    <fileSet>
+      <directory>target</directory>
+      <outputDirectory>jar</outputDirectory>
+      <includes>
+        <include>${project.build.finalName}*.jar</include>
+      </includes>
+      <excludes>
+        <exclude>${project.build.finalName}*-javadoc.jar</exclude>
+      </excludes>
+    </fileSet>
+
+    <!-- Documentation (API) -->
+    <fileSet>
+      <directory>target/api</directory>
+      <outputDirectory>doc/api</outputDirectory>
+      <includes>
+        <include>**/**</include>
+      </includes>
+    </fileSet>
+
+    <!-- Documentation (XRef) -->
+    <fileSet>
+      <directory>target/xref</directory>
+      <outputDirectory>doc/xref</outputDirectory>
+      <includes>
+        <include>**/**</include>
+      </includes>
+    </fileSet>
+
+    <!-- Documentation (Docbook) -->
+    <fileSet>
+      <directory>target/docbook/publish/en-US</directory>
+      <outputDirectory>doc/guide</outputDirectory>
+      <includes>
+        <include>**/**</include>
+      </includes>
+    </fileSet>
+  </fileSets>
+</assembly>
+

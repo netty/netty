@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * Copyright 2009 Red Hat, Inc.
+ *
+ * Red Hat licenses this file to you under the Apache License, version 2.0
+ * (the "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at:
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+-->
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.docbook.org/xml/4.5/docbookx.dtd" [
+<!ENTITY % CustomDTD SYSTEM "../custom.dtd">
+%CustomDTD;
+]>
+<chapter id="architecture">
+  <title>Architectural Overview</title>
+
+  <mediaobject>
+    <imageobject>
+    <imagedata fileref="images/architecture.png" format="PNG" scale="50" scalefit="1" align="center" />
+    </imageobject>
+    <textobject>
+      <phrase>The Architecture Diagram of Netty</phrase>
+    </textobject>
+  </mediaobject>
+
+  <para>
+    In this chapter, we will examine what core functionalities are provided in
+    Netty and how they constitute a complete network application development
+    stack on top of the core.  Please keep this diagram in mind as you read this
+    chapter.
+  </para>
+
+  <section>
+    <title>Rich Buffer Data Structure</title>
+    <para>
+      Netty uses its own buffer API instead of NIO <classname>ByteBuffer</classname>
+      to represent a sequence of bytes. This approach has significant advantage
+      over using <classname>ByteBuffer</classname>.  Netty's new buffer type,
+      &ChannelBuffer; has been designed from ground up to address the problems
+      of <classname>ByteBuffer</classname> and to meet the daily needs of
+      network application developers.  To list a few cool features:
+      <itemizedlist>
+        <listitem>
+          <para>
+            You can define your buffer type if necessary.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Transparent zero copy is achieved by built-in composite buffer type.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            A dynamic buffer type is provided out-of-the-box, whose capacity is
+            expanded on demand, just like <classname>StringBuffer</classname>.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            There's no need to call <methodname>flip()</methodname> anymore.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            It is often faster than <classname>ByteBuffer</classname>.
+          </para>
+        </listitem>
+      </itemizedlist>
+    </para>
+    <para>
+      For more information, please refer to the
+      <ulink url="&API;buffer/package-summary.html#package_description"><literal>org.jboss.netty.buffer</literal> package description</ulink>.
+    </para>
+  </section>
+
+  <section>
+    <title>Universal Asynchronous I/O API</title>
+    <para>
+      Traditional I/O APIs in Java provided different types and methods for
+      different transport types.  For example,
+      <classname>java.net.Socket</classname> and
+      <classname>java.net.DatagramSocket</classname> do not have any common
+      super type and therefore they have very different ways to perform socket
+      I/O.
+    </para>
+    <para>
+      This mismatch makes porting a network application from one transport to
+      the other tedious and difficult.  The lack of portability between
+      transports becomes a problem when you need to support more transports not
+      rewriting the network layer of the application.  Logically, many protocols
+      can run on more than one transport such as TCP/IP, UDP/IP, SCTP, and
+      serial port communication.
+    </para>
+    <para>
+      To make the matter worse, Java New I/O (NIO) API introduced the
+      incompatibility with the old blocking I/O (OIO) API, and so will NIO.2
+      (AIO).  Because all these APIs are different from each other in design
+      and performance characteristics, you are often forced to determine which
+      API your application will depend on before you even begin the
+      implementation phase.
+    </para>
+    <para>
+      For instance, you might want to start with OIO because the number of
+      clients you are going to serve will be very small and writing a socket
+      server using OIO is much easier than using NIO.  However, you are going
+      to be in trouble when your business grows up exponentially and your server
+      starts to serve tens of thousand clients simultaneously.  You could
+      start with NIO, but it might take much longer time to implement due to
+      the complexity of the NIO Selector API, hindering rapid development.
+    </para>
+    <para>
+      Netty has a universal asynchronous I/O interface called &Channel;, which
+      abstracts away all operations required to point-to-point communication.
+      That is, once you wrote your application on one Netty transport, your
+      application can run on other Netty transports.  Netty provides a number
+      of essential transports via one universal API:
+      <itemizedlist>
+        <listitem>
+          <para>
+            NIO-based TCP/IP transport
+            (See <literal>org.jboss.netty.channel.socket.nio</literal>),
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            OIO-based TCP/IP transport
+            (See <literal>org.jboss.netty.channel.socket.oio</literal>),
+          </para>
+        </listitem>
+        <listitem>
+          <para>OIO-based UDP/IP transport, and</para>
+        </listitem>
+        <listitem>
+          <para>
+            Local transport (See <literal>org.jboss.netty.channel.local</literal>).
+          </para>
+        </listitem>
+      </itemizedlist>
+      Switching from one transport to the other usually takes just a couple
+      lines of changes such as choosing a different &ChannelFactory;
+      implementation.
+    </para>
+    <para>
+      Also, you are even able to take advantage of a new transport which is
+      not written yet, serial port communication transport for instance, again
+      by replacing just a couple lines of constructor calls.  Moreover, you can
+      write your own transport by extending the core API because it is highly
+      extensible.
+    </para>
+  </section>
+
+  <section>
+    <title>Event Model based on the Interceptor Chain Pattern</title>
+    <para>
+      Well-defined and extensible event model is a must for an event-driven
+      application.  Netty does have a well-defined event model focused on I/O.
+      It also allows you to implement your own event type without breaking the
+      existing code at all because each event type is distinguished from
+      each other by strict type hierarchy.  This is another differentiator
+      against other frameworks.  Many NIO frameworks have no or very limited
+      notion of event model; they often break the existing code when you try
+      to add a new custom event type, or just do not allow extension.
+    </para>
+    <para>
+      A &ChannelEvent; is handled by a list of &ChannelHandler;s in a
+      &ChannelPipeline;. The pipeline implements an advanced form of the
+      <ulink url="http://java.sun.com/blueprints/corej2eepatterns/Patterns/InterceptingFilter.html">Intercepting Filter</ulink>
+      pattern to give a user full control over how an event is handled and how
+      the handlers in the pipeline interact with each other.  For example,
+      you can define what to do when a data is read from a socket:
+    </para>
+    <programlisting>public class MyReadHandler implements &SimpleChannelHandler; {
+    public void messageReceived(&ChannelHandlerContext; ctx, &MessageEvent; evt) {
+        Object message = evt.getMessage();
+        // Do something with the received message.
+        ...
+
+        // And forward the event to the next handler.
+        ctx.sendUpstream(evt);
+    }
+}</programlisting>
+    <para>
+      You can also define what to do when other handler requested a write
+      operation:
+    </para>
+    <programlisting>public class MyWriteHandler implements &SimpleChannelHandler; {
+    public void writeRequested(&ChannelHandlerContext; ctx, &MessageEvent; evt) {
+        Object message = evt.getMessage();
+        // Do something with the message to be written.
+        ...
+
+        // And forward the event to the next handler.
+        ctx.sendDownstream(evt);
+    }
+}</programlisting>
+    <para>
+      For more information about the event model, please refer to the
+      API documentation of &ChannelEvent; and &ChannelPipeline;.
+    </para>
+  </section>
+
+  <section>
+    <title>Advanced Components for More Rapid Development</title>
+    <para>
+      On top of the core components mentioned above, that already enable the
+      implementation of all types of network applications, Netty provides a set
+      of advanced features to accelerate the development pace even more.
+    </para>
+
+    <section>
+      <title>Codec framework</title>
+      <para>
+        As demonstrated in <xref linkend="start.pojo"/>, it is always a good
+        idea to separate a protocol codec from a business logic. However, there
+        are some complications when implementing this idea from scratch.  You
+        have to deal with the fragmentation of messages. Some protocols are
+        multi-layered (i.e. built on top of other lower level protocol). Some
+        are too complicated to be implemented in a single state machine.
+      </para>
+      <para>
+        Consequently, a good network application framework should provide an
+        extensible, reusable, unit-testable, and multi-layered codec framework
+        that generates maintainable user codec.
+      </para>
+      <para>
+        Netty provides a number of basic and advanced codecs built on top of
+        its core to address most issues you will encounter when you write a
+        protocol codec regardless if it is simple or not, binary or text -
+        simply whatever.
+      </para>
+    </section>
+
+    <section>
+      <title>SSL / TLS Support</title>
+      <para>
+        Unlike old blocking I/O, it is a non-trivial task to support SSL in NIO.
+        You can't simply wrap a stream to encrypt or decrypt data but you have
+        to use <classname>javax.net.ssl.SSLEngine</classname>.
+        <classname>SSLEngine</classname> is a state machine which is as complex
+        as SSL is.  You have to manage all possible states such as cipher suite
+        and encryption key negotiation (or re-negotiation), certificate
+        exchange and validation.  Moreover, <classname>SSLEngine</classname> is
+        not even completely thread-safe unlike usual expectation.
+      </para>
+      <para>
+        In Netty, &SslHandler; takes care of all the gory details and pitfalls
+        of <classname>SSLEngine</classname>.  All you need to do is to configure
+        and insert the &SslHandler; to your &ChannelPipeline;.  It also allows
+        you to implement advanced features like
+        <ulink url="http://en.wikipedia.org/wiki/Starttls">StartTLS</ulink>
+        very easily.
+      </para>
+    </section>
+
+    <section>
+      <title>HTTP Implementation</title>
+      <para>
+        HTTP is definitely the most popular protocol in the Internet. There are
+        already a number of HTTP implementations such as a Servlet container.
+        Then why does Netty have HTTP on top of its core?
+      </para>
+      <para>
+        Netty's HTTP support is very different from the existing HTTP libraries.
+        It gives you complete control over how HTTP messages are exchanged in a
+        low level.  Because it is basically the combination of HTTP codec and
+        HTTP message classes, there is no restriction such as enforced thread
+        model.  That is, you can write your own HTTP client or server that works
+        exactly the way you want.  You have full control over thread model,
+        connection life cycle, chunked encoding, and as much as what HTTP
+        specification allows you to do.
+      </para>
+      <para>
+        Thanks to its highly customizable nature, you can write a very efficient
+        HTTP server such as:
+        <itemizedlist>
+          <listitem>
+            <para>
+              Chat server that requires persistent connections and server push
+              technology (e.g. <ulink url="http://en.wikipedia.org/wiki/Comet_%28programming%29">Comet</ulink>
+              and <ulink url="http://en.wikipedia.org/wiki/WebSockets">WebSockets</ulink>)
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              Media streaming server that needs to keep the connection open
+              until the whole media is streamed (e.g. 2 hours of movie)
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              File server that allows the upload of large files without memory
+              pressure (e.g. uploading 1GB per request)
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              Scalable mash-up client that connects to tens of thousand 3rd
+              party web services asynchronously
+            </para>
+          </listitem>
+        </itemizedlist>
+      </para>
+    </section>
+
+    <section>
+      <title>Google Protocol Buffer Integration</title>
+      <para>
+        <ulink url="http://code.google.com/apis/protocolbuffers/docs/overview.html">Google Protocol Buffers</ulink>
+        are an ideal solution for the rapid implementation of a highly efficient
+        binary protocol that evolves over time.  With &ProtobufEncoder; and
+        &ProtobufDecoder;, you can turn the message classes generated by Google
+        Protocol Buffers Compiler (protoc) into Netty codec.  Please take a look
+        into the <ulink url="&XRef;example/localtime/package-summary.html">'LocalTime' example</ulink>
+        that shows how easily you can create a high-performing binary protocol
+        client and server from the
+        <ulink url="http://anonsvn.jboss.org/repos/netty/trunk/src/main/java/org/jboss/netty/example/localtime/LocalTimeProtocol.proto">sample protocol definition</ulink>.
+      </para>
+    </section>
+  </section>
+
+  <section>
+    <title>Summary</title>
+    <para>
+      In this chapter, we reviewed the overall architecture of Netty from the
+      feature-wise standpoint.  Netty has simple yet powerful architecture.
+      It is composed of three components - buffer, channel, and event model -
+      and all advanced features are built on top of the three core components.
+      Once you understood how these three work together, it should not be
+      difficult to understand more advanced features which were covered briefly
+      in this chapter.
+    </para>
+    <para>
+      You might still have an unanswered question about what the overall
+      architecture looks exactly like and how each feature work together.
+      If so, it is a good idea to <ulink url="&Community;">talk to us</ulink>
+      to improve this guide.
+    </para>
+  </section>
+</chapter>
