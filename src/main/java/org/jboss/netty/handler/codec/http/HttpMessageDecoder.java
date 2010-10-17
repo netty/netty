@@ -221,7 +221,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
 
                 switch (nextState) {
                 case READ_FIXED_LENGTH_CONTENT:
-                    if (contentLength > maxChunkSize) {
+                    if (contentLength > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
                         // Generate HttpMessage first.  HttpChunks will follow.
                         checkpoint(State.READ_FIXED_LENGTH_CONTENT_AS_CHUNKS);
                         message.setChunked(true);
@@ -232,13 +232,15 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                     }
                     break;
                 case READ_VARIABLE_LENGTH_CONTENT:
-                    if (buffer.readableBytes() > maxChunkSize) {
+                    if (buffer.readableBytes() > maxChunkSize || HttpHeaders.is100ContinueExpected(message)) {
                         // Generate HttpMessage first.  HttpChunks will follow.
                         checkpoint(State.READ_VARIABLE_LENGTH_CONTENT_AS_CHUNKS);
                         message.setChunked(true);
                         return message;
                     }
                     break;
+                default:
+                    throw new IllegalStateException("Unexpected state: " + nextState);
                 }
             }
             // We return null here, this forces decode to be called again where we will decode the content

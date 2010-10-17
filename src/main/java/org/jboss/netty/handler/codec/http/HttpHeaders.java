@@ -674,6 +674,53 @@ public class HttpHeaders {
         message.setHeader(Names.HOST, value);
     }
 
+    /**
+     * Returns {@code true} if and only if the specified message contains the
+     * {@code "Expect: 100-continue"} header.
+     */
+    public static boolean is100ContinueExpected(HttpMessage message) {
+        // In most cases, there will be one or zero 'Expect' header.
+        String value = message.getHeader(Names.EXPECT);
+        if (value == null) {
+            return false;
+        }
+        if (Values.CONTINUE.equalsIgnoreCase(value)) {
+            return true;
+        }
+
+        // Multiple 'Expect' headers.  Search through them.
+        for (String v: message.getHeaders(Names.EXPECT)) {
+            if (Values.CONTINUE.equalsIgnoreCase(v)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Sets the {@code "Expect: 100-continue"} header to the specified message.
+     * If there is any existing {@code "Expect"} header, they are replaced with
+     * the new one.
+     */
+    public static void set100ContinueExpected(HttpMessage message) {
+        set100ContinueExpected(message, true);
+    }
+
+    /**
+     * Sets or removes the {@code "Expect: 100-continue"} header to / from the
+     * specified message.  If the specified {@code value} is {@code true},
+     * the {@code "Expect: 100-continue"} header is set and all other previous
+     * {@code "Expect"} headers are removed.  Otherwise, all {@code "Expect"}
+     * headers are removed completely.
+     */
+    public static void set100ContinueExpected(HttpMessage message, boolean set) {
+        if (set) {
+            message.setHeader(Names.EXPECT, Values.CONTINUE);
+        } else {
+            message.removeHeader(Names.EXPECT);
+        }
+    }
+
     private static final int BUCKET_SIZE = 17;
 
     private static int hash(String name) {
