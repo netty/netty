@@ -116,6 +116,12 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
 
         @Override
         protected boolean isContentAlwaysEmpty(HttpMessage msg) {
+            final int statusCode = ((HttpResponse) msg).getStatus().getCode();
+            if (statusCode == 100) {
+                // 100-continue response should be excluded from paired comparison.
+                return true;
+            }
+
             // Get the method of the HTTP request that corresponds to the
             // current response.
             HttpMethod method = queue.poll();
@@ -137,7 +143,7 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
                 break;
             case 'C':
                 // Successful CONNECT request results in a response with empty body.
-                if (((HttpResponse) msg).getStatus().getCode() == 200) {
+                if (statusCode == 200) {
                     if (HttpMethod.CONNECT.equals(method)) {
                         // Proxy connection established - Not HTTP anymore.
                         done = true;

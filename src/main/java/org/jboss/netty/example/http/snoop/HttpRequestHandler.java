@@ -22,8 +22,8 @@ import static org.jboss.netty.handler.codec.http.HttpVersion.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -62,6 +62,11 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (!readingChunks) {
             HttpRequest request = this.request = (HttpRequest) e.getMessage();
+
+            if (is100ContinueExpected(request)) {
+                send100Continue(e);
+            }
+
             buf.setLength(0);
             buf.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
             buf.append("===================================\r\n");
@@ -157,6 +162,11 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
         if (!keepAlive) {
             future.addListener(ChannelFutureListener.CLOSE);
         }
+    }
+
+    private void send100Continue(MessageEvent e) {
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, CONTINUE);
+        e.getChannel().write(response);
     }
 
     @Override
