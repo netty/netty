@@ -60,7 +60,10 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         Object msg = e.getMessage();
-        if (msg instanceof HttpMessage) {
+        if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
+            // 100-continue response must be passed through.
+            ctx.sendDownstream(e);
+        } else if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
             decoder = null;
