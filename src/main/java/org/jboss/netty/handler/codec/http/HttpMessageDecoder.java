@@ -536,6 +536,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
 
             // Abort decoding if the header part is too large.
             if (headerSize >= maxHeaderSize) {
+                // TODO: Respond with Bad Request and discard the traffic
+                //    or close the connection.
+                //       No need to notify the upstream handlers - just log.
+                //       If decoding a response, just throw an exception.
                 throw new TooLongFrameException(
                         "HTTP header is larger than " +
                         maxHeaderSize + " bytes.");
@@ -581,6 +585,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             }
             else {
                 if (lineLength >= maxLineLength) {
+                    // TODO: Respond with Bad Request and discard the traffic
+                    //    or close the connection.
+                    //       No need to notify the upstream handlers - just log.
+                    //       If decoding a response, just throw an exception.
                     throw new TooLongFrameException(
                             "An HTTP line is larger than " + maxLineLength +
                             " bytes.");
