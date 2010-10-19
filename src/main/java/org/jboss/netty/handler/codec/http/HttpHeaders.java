@@ -679,6 +679,16 @@ public class HttpHeaders {
      * {@code "Expect: 100-continue"} header.
      */
     public static boolean is100ContinueExpected(HttpMessage message) {
+        // Expect: 100-continue is for requests only.
+        if (!(message instanceof HttpRequest)) {
+            return false;
+        }
+
+        // It works only on HTTP/1.1 or later.
+        if (message.getProtocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
+            return false;
+        }
+
         // In most cases, there will be one or zero 'Expect' header.
         String value = message.getHeader(Names.EXPECT);
         if (value == null) {

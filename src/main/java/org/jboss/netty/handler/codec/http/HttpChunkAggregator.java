@@ -15,6 +15,9 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import static org.jboss.netty.channel.Channels.*;
+import static org.jboss.netty.handler.codec.http.HttpHeaders.*;
+
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -27,6 +30,7 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
+import org.jboss.netty.util.CharsetUtil;
 
 /**
  * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
@@ -52,6 +56,9 @@ import org.jboss.netty.handler.codec.frame.TooLongFrameException;
  * @apiviz.has org.jboss.netty.handler.codec.http.HttpChunk oneway - - filters out
  */
 public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
+
+    private static final ChannelBuffer CONTINUE = ChannelBuffers.copiedBuffer(
+            "HTTP/1.1 100 Continue\r\n\r\n", CharsetUtil.US_ASCII);
 
     private final int maxContentLength;
     private HttpMessage currentMessage;
@@ -82,6 +89,16 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
 
         if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
+
+            // Handle the 'Expect: 100-continue' header if necessary.
+            // TODO: Respond with 413 Request Entity Too Large
+            //   and discard the traffic or close the connection.
+            //       No need to notify the upstream handlers - just log.
+            //       If decoding a response, just throw an exception.
+            if (is100ContinueExpected(m)) {
+                write(ctx, succeededFuture(ctx.getChannel()), CONTINUE.duplicate());
+            }
+
             if (m.isChunked()) {
                 // A chunked message - remove 'Transfer-Encoding' header,
                 // initialize the cumulative buffer, and wait for incoming chunks.
@@ -111,6 +128,10 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
             ChannelBuffer content = currentMessage.getContent();
 
             if (content.readableBytes() > maxContentLength - chunk.getContent().readableBytes()) {
+                // TODO: Respond with 413 Request Entity Too Large
+                //   and discard the traffic or close the connection.
+                //       No need to notify the upstream handlers - just log.
+                //       If decoding a response, just throw an exception.
                 throw new TooLongFrameException(
                         "HTTP content length exceeded " + maxContentLength +
                         " bytes.");
