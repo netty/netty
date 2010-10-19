@@ -35,7 +35,7 @@ import org.junit.Test;
 public class MapBackedSetTest {
 
     @Test
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public void testSize() {
         Map map = createStrictMock(Map.class);
         expect(map.size()).andReturn(0);
@@ -46,7 +46,7 @@ public class MapBackedSetTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public void testContains() {
         Map map = createStrictMock(Map.class);
         expect(map.containsKey("key")).andReturn(true);
@@ -58,7 +58,7 @@ public class MapBackedSetTest {
 
 
     @Test
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public void testRemove() {
         Map map = createStrictMock(Map.class);
         expect(map.remove("key")).andReturn(true);
@@ -71,7 +71,7 @@ public class MapBackedSetTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public void testAdd() {
         Map map = createStrictMock(Map.class);
         expect(map.put("key", true)).andReturn(null);
@@ -84,7 +84,7 @@ public class MapBackedSetTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public void testClear() {
         Map map = createStrictMock(Map.class);
         map.clear();
@@ -95,7 +95,7 @@ public class MapBackedSetTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public void testIterator() {
         Map map = createStrictMock(Map.class);
         Set keySet = createStrictMock(Set.class);

@@ -1337,13 +1337,13 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<LinkedTransferQueue, Node> headUpdater =
         AtomicFieldUpdaterUtil.newRefUpdater(LinkedTransferQueue.class, Node.class, "head");
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<LinkedTransferQueue, Node> tailUpdater =
         AtomicFieldUpdaterUtil.newRefUpdater(LinkedTransferQueue.class, Node.class, "tail");
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<LinkedTransferQueue> sweepVotesUpdater =
         AtomicFieldUpdaterUtil.newIntUpdater(LinkedTransferQueue.class, "sweepVotes");
 }
