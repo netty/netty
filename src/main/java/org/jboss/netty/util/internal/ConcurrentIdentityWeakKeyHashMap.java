@@ -617,7 +617,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
             }
         }
 
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings("rawtypes")
         final void removeStale() {
             WeakKeyReference ref;
             while ((ref = (WeakKeyReference) refQueue.poll()) != null) {
@@ -1333,7 +1333,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
             if (!(o instanceof Map.Entry<?, ?>)) {
                 return false;
             }
-            @SuppressWarnings("unchecked")
+            @SuppressWarnings("rawtypes")
             Map.Entry e = (Map.Entry) o;
             return eq(key, e.getKey()) && eq(value, e.getValue());
         }

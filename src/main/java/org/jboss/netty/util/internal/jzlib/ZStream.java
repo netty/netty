@@ -78,8 +78,7 @@ public final class ZStream {
         return inflateInit(w, WrapperType.ZLIB);
     }
 
-    @SuppressWarnings("unchecked")
-    public int inflateInit(int w, Enum wrapperType) {
+    public int inflateInit(int w, Enum<?> wrapperType) {
         istate = new Inflate();
         return istate.inflateInit(this, w, (WrapperType) wrapperType);
     }
@@ -118,8 +117,7 @@ public final class ZStream {
         return deflateInit(level, JZlib.MAX_WBITS);
     }
 
-    @SuppressWarnings("unchecked")
-    public int deflateInit(int level, Enum wrapperType) {
+    public int deflateInit(int level, Enum<?> wrapperType) {
         return deflateInit(level, JZlib.MAX_WBITS, wrapperType);
     }
 
@@ -127,8 +125,7 @@ public final class ZStream {
         return deflateInit(level, bits, WrapperType.ZLIB);
     }
 
-    @SuppressWarnings("unchecked")
-    public int deflateInit(int level, int bits, Enum wrapperType) {
+    public int deflateInit(int level, int bits, Enum<?> wrapperType) {
         dstate = new Deflate();
         return dstate.deflateInit(this, level, bits, (WrapperType) wrapperType);
     }

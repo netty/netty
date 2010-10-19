@@ -329,7 +329,7 @@ public class Bootstrap implements ExternalResourceReleasable {
      * Returns {@code true} if and only if the specified {@code map} is an
      * ordered map, like {@link LinkedHashMap} is.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     static boolean isOrderedMap(Map<?, ?> map) {
         Class<?> mapType = map.getClass();
         if (LinkedHashMap.class.isAssignableFrom(mapType)) {
