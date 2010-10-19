@@ -28,9 +28,9 @@ import java.util.regex.Pattern;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
+import javax.net.ssl.SSLException;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -927,24 +927,34 @@ public class SslHandler extends FrameDecoder
             return;
         }
 
-        if (handshaking) {
-            // Renegotiation in progress or failed already.
-            // i.e. Renegotiation check has been done already below.
-            return;
+        final boolean renegotiate;
+        synchronized (handshakeLock) {
+            if (handshaking) {
+                // Renegotiation in progress or failed already.
+                // i.e. Renegotiation check has been done already below.
+                return;
+            }
+
+            if (engine.isInboundDone() || engine.isOutboundDone()) {
+                // Not handshaking but closing.
+                return;
+            }
+
+            if (isEnableRenegotiation()) {
+                // Continue renegotiation.
+                renegotiate = true;
+            } else {
+                // Do not renegotiate.
+                renegotiate = false;
+                // Prevent reentrance of this method.
+                handshaking = true;
+            }
         }
 
-        if (engine.isInboundDone() || engine.isOutboundDone()) {
-            // Not handshaking but closing.
-            return;
-        }
-
-        if (isEnableRenegotiation()) {
-            // Continue renegotiation.
+        if (renegotiate) {
+            // Renegotiate.
             handshake();
         } else {
-            // Prevent reentrance of this method.
-            handshaking = true;
-
             // Raise an exception.
             fireExceptionCaught(
                     ctx, new SSLException(
