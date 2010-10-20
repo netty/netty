@@ -63,7 +63,7 @@ import java.util.concurrent.locks.LockSupport;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Doug Lea
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$ (Upstream: 1.71)
+ * @version $Rev$, $Date$ (Upstream: 1.79)
  *
  * @param <E> the type of elements held in this collection
  */
@@ -341,7 +341,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * situations in which we cannot guarantee to make node s
      * unreachable in this way: (1) If s is the trailing node of list
      * (i.e., with null next), then it is pinned as the target node
-     * for appends, so can only be removed later when other nodes are
+     * for appends, so can only be removed later after other nodes are
      * appended. (2) We cannot necessarily unlink s given a
      * predecessor node that is matched (including the case of being
      * cancelled): the predecessor may already be unspliced, in which
@@ -363,18 +363,18 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * When these cases arise, rather than always retraversing the
      * entire list to find an actual predecessor to unlink (which
      * won't help for case (1) anyway), we record a conservative
-     * estimate of possible unsplice failures (in "sweepVotes").  We
-     * trigger a full sweep when the estimate exceeds a threshold
-     * indicating the maximum number of estimated removal failures to
-     * tolerate before sweeping through, unlinking cancelled nodes
-     * that were not unlinked upon initial removal. We perform sweeps
-     * by the thread hitting threshold (rather than background threads
-     * or by spreading work to other threads) because in the main
-     * contexts in which removal occurs, the caller is already
-     * timed-out, cancelled, or performing a potentially O(n)
-     * operation (i.e., remove(x)), none of which are time-critical
-     * enough to warrant the overhead that alternatives would impose
-     * on other threads.
+     * estimate of possible unsplice failures (in "sweepVotes").
+     * We trigger a full sweep when the estimate exceeds a threshold
+     * ("SWEEP_THRESHOLD") indicating the maximum number of estimated
+     * removal failures to tolerate before sweeping through, unlinking
+     * cancelled nodes that were not unlinked upon initial removal.
+     * We perform sweeps by the thread hitting threshold (rather than
+     * background threads or by spreading work to other threads)
+     * because in the main contexts in which removal occurs, the
+     * caller is already timed-out, cancelled, or performing a
+     * potentially O(n) operation (e.g. remove(x)), none of which are
+     * time-critical enough to warrant the overhead that alternatives
+     * would impose on other threads.
      *
      * Because the sweepVotes estimate is conservative, and because
      * nodes become unlinked "naturally" as they fall off the head of
@@ -453,7 +453,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         }
 
         final boolean casItem(Object cmp, Object val) {
-            assert cmp == null || cmp.getClass() != Node.class;
+            // assert cmp == null || cmp.getClass() != Node.class;
             if (AtomicFieldUpdaterUtil.isAvailable()) {
                 return itemUpdater.compareAndSet(this, cmp, val);
             } else {
@@ -469,8 +469,8 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         }
 
         /**
-         * Creates a new node. Uses relaxed write because item can only
-         * be seen if followed by CAS.
+         * Constructs a new node.  Uses relaxed write because item can
+         * only be seen after publication via casNext.
          */
         Node(Object item, boolean isData) {
             this.item = item;
@@ -530,7 +530,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
          * Tries to artificially match a data node -- used by remove.
          */
         final boolean tryMatchData() {
-            assert isData;
+            // assert isData;
             Object x = item;
             if (x != null && x != this && casItem(x, null)) {
                 LockSupport.unpark(waiter);
@@ -612,7 +612,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
 
     @SuppressWarnings("unchecked")
     static <E> E cast(Object item) {
-        assert item == null || item.getClass() != Node.class;
+        // assert item == null || item.getClass() != Node.class;
         return (E) item;
     }
 
@@ -638,7 +638,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
                 boolean isData = p.isData;
                 Object item = p.item;
                 if (item != p && item != null == isData) { // unmatched
-                    if (isData == haveData) {
+                    if (isData == haveData) { // can't match
                         break;
                     }
                     if (p.casItem(item, e)) { // match
@@ -696,7 +696,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
             }
             else if (p.cannotPrecede(haveData)) {
                 return null;                  // lost race vs opposite mode
-            } else if ((n = p.next) != null) {
+            } else if ((n = p.next) != null) { // not last; keep traversing
                 p = p != t && t != (u = tail) ? (t = u) : // stale tail
                     p != n ? n : null;      // restart if off list
             } else if (!p.casNext(null, s)) {
@@ -736,7 +736,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         for (;;) {
             Object item = s.item;
             if (item != e) {                  // matched
-                assert item != s;
+                // assert item != s;
                 s.forgetContents();           // avoid garbage
                 return LinkedTransferQueue.<E>cast(item);
             }
@@ -779,13 +779,13 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      */
     private static int spinsFor(Node pred, boolean haveData) {
         if (MP && pred != null) {
-            if (pred.isData != haveData) {
+            if (pred.isData != haveData) {    // phase change
                 return FRONT_SPINS + CHAINED_SPINS;
             }
-            if (pred.isMatched()) {
+            if (pred.isMatched()) {           // probably at front
                 return FRONT_SPINS;
             }
-            if (pred.waiter == null) {
+            if (pred.waiter == null) {        // pred apparently spinning
                 return CHAINED_SPINS;
             }
         }
@@ -847,7 +847,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
                 if (p.isData != data) {
                     return 0;
                 }
-                if (++count == Integer.MAX_VALUE) {
+                if (++count == Integer.MAX_VALUE) { // saturated
                     break;
                 }
             }
@@ -978,16 +978,19 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
     }
 
     /**
-     * Unlinks matched nodes encountered in a traversal from head.
+     * Unlinks matched (typically cancelled) nodes encountered in a
+     * traversal from head.
      */
     private void sweep() {
         for (Node p = head, s, n; p != null && (s = p.next) != null; ) {
-            if (p == s) {
-                p = head;
-            } else if (!s.isMatched()) {
+            if (!s.isMatched()) {
+                // Unmatched nodes are never self-linked
                 p = s;
-            } else if ((n = s.next) == null) {
+            } else if ((n = s.next) == null) { // trailing node is pinned
                 break;
+            } else if (s == n) { // stale
+                // No need to also check for p == s, since that implies s == n
+                p = head;
             } else {
                 p.casNext(s, n);
             }
