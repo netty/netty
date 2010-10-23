@@ -83,6 +83,21 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
         ChannelBuffer msg = (ChannelBuffer) e.getMessage();
         System.out.println(">>> " + ChannelBuffers.hexDump(msg));
         outboundChannel.write(msg);
+        // If outboundChannel is saturated, do not read until notified in
+        // OutboundHandler.channelInterestChanged().
+        if (!outboundChannel.isWritable()) {
+            e.getChannel().setReadable(false);
+        }
+    }
+
+    @Override
+    public void channelInterestChanged(ChannelHandlerContext ctx,
+            ChannelStateEvent e) throws Exception {
+        // If inboundChannel is not saturated anymore, continue accepting
+        // the incoming traffic from the outboundChannel.
+        if (e.getChannel().isWritable()) {
+            outboundChannel.setReadable(true);
+        }
     }
 
     @Override
@@ -114,6 +129,21 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
             ChannelBuffer msg = (ChannelBuffer) e.getMessage();
             System.out.println("<<< " + ChannelBuffers.hexDump(msg));
             inboundChannel.write(msg);
+            // If inboundChannel is saturated, do not read until notified in
+            // HexDumpProxyInboundHandler.channelInterestChanged().
+            if (!inboundChannel.isWritable()) {
+                e.getChannel().setReadable(false);
+            }
+        }
+
+        @Override
+        public void channelInterestChanged(ChannelHandlerContext ctx,
+                ChannelStateEvent e) throws Exception {
+            // If outboundChannel is not saturated anymore, continue accepting
+            // the incoming traffic from the inboundChannel.
+            if (e.getChannel().isWritable()) {
+                inboundChannel.setReadable(true);
+            }
         }
 
         @Override
