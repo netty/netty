@@ -28,7 +28,7 @@ This product contains the extensions to Java Collections Framework which has
 been derived from the works by JSR-166 EG, Doug Lea, and Jason T. Greene:
 
   * LICENSE:
-    * license/LICENSE.jsr177y.txt (Public Domain)
+    * license/LICENSE.jsr166y.txt (Public Domain)
   * HOMEPAGE:
     * http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/
     * http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/
