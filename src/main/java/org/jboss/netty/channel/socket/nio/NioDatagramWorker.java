@@ -604,22 +604,16 @@ class NioDatagramWorker implements Runnable {
             close(key);
             return;
         }
-        int interestOps;
-        boolean changed = false;
 
         // interestOps can change at any time and at any thread.
         // Acquire a lock to avoid possible race condition.
         synchronized (channel.interestOpsLock) {
-            interestOps = channel.getRawInterestOps();
+            int interestOps = channel.getRawInterestOps();
             if ((interestOps & SelectionKey.OP_WRITE) == 0) {
                 interestOps |= SelectionKey.OP_WRITE;
                 key.interestOps(interestOps);
-                changed = true;
+                channel.setRawInterestOpsNow(interestOps);
             }
-        }
-
-        if (changed) {
-            channel.setRawInterestOpsNow(interestOps);
         }
     }
 
@@ -633,22 +627,16 @@ class NioDatagramWorker implements Runnable {
             close(key);
             return;
         }
-        int interestOps;
-        boolean changed = false;
 
         // interestOps can change at any time and at any thread.
         // Acquire a lock to avoid possible race condition.
         synchronized (channel.interestOpsLock) {
-            interestOps = channel.getRawInterestOps();
+            int interestOps = channel.getRawInterestOps();
             if ((interestOps & SelectionKey.OP_WRITE) != 0) {
                 interestOps &= ~SelectionKey.OP_WRITE;
                 key.interestOps(interestOps);
-                changed = true;
+                channel.setRawInterestOpsNow(interestOps);
             }
-        }
-
-        if (changed) {
-            channel.setRawInterestOpsNow(interestOps);
         }
     }
 
@@ -811,11 +799,13 @@ class NioDatagramWorker implements Runnable {
                 default:
                     throw new Error();
                 }
+                if (changed) {
+                    channel.setRawInterestOpsNow(interestOps);
+                }
             }
 
             future.setSuccess();
             if (changed) {
-                channel.setRawInterestOpsNow(interestOps);
                 fireChannelInterestChanged(channel);
             }
         } catch (final CancelledKeyException e) {
