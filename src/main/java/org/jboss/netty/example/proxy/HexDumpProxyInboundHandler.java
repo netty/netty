@@ -41,6 +41,11 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
     private final String remoteHost;
     private final int remotePort;
 
+    // This lock guards against the race condition that overrides the
+    // OP_READ flag incorrectly.
+    // See the related discussion: http://markmail.org/message/x7jc6mqx6ripynqf
+    final Object trafficLock = new Object();
+
     private volatile Channel outboundChannel;
 
     public HexDumpProxyInboundHandler(
@@ -78,15 +83,17 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+    public void messageReceived(ChannelHandlerContext ctx, final MessageEvent e)
             throws Exception {
         ChannelBuffer msg = (ChannelBuffer) e.getMessage();
-        System.out.println(">>> " + ChannelBuffers.hexDump(msg));
-        outboundChannel.write(msg);
-        // If outboundChannel is saturated, do not read until notified in
-        // OutboundHandler.channelInterestChanged().
-        if (!outboundChannel.isWritable()) {
-            e.getChannel().setReadable(false);
+        //System.out.println(">>> " + ChannelBuffers.hexDump(msg));
+        synchronized (trafficLock) {
+            outboundChannel.write(msg);
+            // If outboundChannel is saturated, do not read until notified in
+            // OutboundHandler.channelInterestChanged().
+            if (!outboundChannel.isWritable()) {
+                e.getChannel().setReadable(false);
+            }
         }
     }
 
@@ -95,8 +102,10 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
             ChannelStateEvent e) throws Exception {
         // If inboundChannel is not saturated anymore, continue accepting
         // the incoming traffic from the outboundChannel.
-        if (e.getChannel().isWritable()) {
-            outboundChannel.setReadable(true);
+        synchronized (trafficLock) {
+            if (e.getChannel().isWritable()) {
+                outboundChannel.setReadable(true);
+            }
         }
     }
 
@@ -115,7 +124,7 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
         closeOnFlush(e.getChannel());
     }
 
-    private static class OutboundHandler extends SimpleChannelUpstreamHandler {
+    private class OutboundHandler extends SimpleChannelUpstreamHandler {
 
         private final Channel inboundChannel;
 
@@ -124,15 +133,17 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+        public void messageReceived(ChannelHandlerContext ctx, final MessageEvent e)
                 throws Exception {
             ChannelBuffer msg = (ChannelBuffer) e.getMessage();
-            System.out.println("<<< " + ChannelBuffers.hexDump(msg));
-            inboundChannel.write(msg);
-            // If inboundChannel is saturated, do not read until notified in
-            // HexDumpProxyInboundHandler.channelInterestChanged().
-            if (!inboundChannel.isWritable()) {
-                e.getChannel().setReadable(false);
+            //System.out.println("<<< " + ChannelBuffers.hexDump(msg));
+            synchronized (trafficLock) {
+                inboundChannel.write(msg);
+                // If inboundChannel is saturated, do not read until notified in
+                // HexDumpProxyInboundHandler.channelInterestChanged().
+                if (!inboundChannel.isWritable()) {
+                    e.getChannel().setReadable(false);
+                }
             }
         }
 
@@ -141,8 +152,10 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
                 ChannelStateEvent e) throws Exception {
             // If outboundChannel is not saturated anymore, continue accepting
             // the incoming traffic from the inboundChannel.
-            if (e.getChannel().isWritable()) {
-                inboundChannel.setReadable(true);
+            synchronized (trafficLock) {
+                if (e.getChannel().isWritable()) {
+                    inboundChannel.setReadable(true);
+                }
             }
         }
 
