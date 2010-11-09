@@ -96,10 +96,9 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * the {@code decode(..)} method again when more data is received into the
  * buffer.
  * <p>
- * Please note that the overhead of throwing an {@link Error} is minimal unlike
- * throwing a new {@link Exception} in an ordinary way. {@link ReplayingDecoder}
- * reuses the same {@link Error} instance so that it does not need to fill its
- * stack trace, which takes most of {@link Exception} initialization time.
+ * Please note that {@link ReplayingDecoder} always throws the same cached
+ * {@link Error} instance to avoid the overhead of creating a new {@link Error}
+ * and filling its stack trace for every throw.
  *
  * <h3>Limitations</h3>
  * <p>
