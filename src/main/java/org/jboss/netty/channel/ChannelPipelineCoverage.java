@@ -15,45 +15,44 @@
  */
 package org.jboss.netty.channel;
 
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+import org.jboss.netty.channel.ChannelHandler.Sharable;
+
 /**
- * A {@link RuntimeException} which is thrown when an I/O operation fails.
- *
+ * @deprecated Use the {@link Sharable} annotation instead.
+
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
+ * @version $Rev: 2124 $, $Date: 2010-02-02 11:13:06 +0900 (Tue, 02 Feb 2010) $
  *
- * @apiviz.hidden
+ * @apiviz.exclude
  */
-public class ChannelException extends RuntimeException {
-
-    private static final long serialVersionUID = 2908618315971075004L;
-
-    /**
-     * Creates a new exception.
-     */
-    public ChannelException() {
-        super();
-    }
+@Inherited
+@Documented
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Deprecated
+public @interface ChannelPipelineCoverage {
 
     /**
-     * Creates a new exception.
+     * {@code "all"}
      */
-    public ChannelException(String message, Throwable cause) {
-        super(message, cause);
-    }
+    public static final String ALL = "all";
 
     /**
-     * Creates a new exception.
+     * {@code "one"}
      */
-    public ChannelException(String message) {
-        super(message);
-    }
+    public static final String ONE = "one";
 
     /**
-     * Creates a new exception.
+     * The value of this annotation
      */
-    public ChannelException(Throwable cause) {
-        super(cause);
-    }
+    String value();
 }

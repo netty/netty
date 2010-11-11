@@ -136,7 +136,7 @@ import org.jboss.netty.util.internal.NonReentrantLock;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2369 $, $Date: 2010-10-19 13:05:28 +0900 (Tue, 19 Oct 2010) $
  *
  * @apiviz.landmark
  * @apiviz.uses org.jboss.netty.handler.ssl.SslBufferPool
@@ -353,6 +353,14 @@ public class SslHandler extends FrameDecoder
     }
 
     /**
+     * @deprecated Use {@link #handshake()} instead.
+     */
+    @Deprecated
+    public ChannelFuture handshake(@SuppressWarnings("unused") Channel channel) {
+        return handshake();
+    }
+
+    /**
      * Sends an SSL {@code close_notify} message to the specified channel and
      * destroys the underlying {@link SSLEngine}.
      */
@@ -365,6 +373,14 @@ public class SslHandler extends FrameDecoder
         } catch (SSLException e) {
             return failedFuture(channel, e);
         }
+    }
+
+    /**
+     * @deprecated Use {@link #close()} instead.
+     */
+    @Deprecated
+    public ChannelFuture close(@SuppressWarnings("unused") Channel channel) {
+        return close();
     }
 
     /**

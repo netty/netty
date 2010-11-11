@@ -32,7 +32,7 @@ import java.nio.channels.ScatteringByteChannel;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2206M $, $Date: 2010-11-09 15:04:10 +0900 (Tue, 09 Nov 2010) $
  *
  */
 public class DynamicChannelBuffer extends AbstractChannelBuffer {
@@ -266,7 +266,7 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
     }
 
     public ChannelBuffer duplicate() {
-        return new DuplicatedChannelBuffer(this);
+        return new DuplicatedChannelBuffer(buffer);
     }
 
     public ChannelBuffer copy(int index, int length) {
@@ -281,12 +281,12 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
             if (length == 0) {
                 return ChannelBuffers.EMPTY_BUFFER;
             }
-            return new TruncatedChannelBuffer(this, length);
+            return new TruncatedChannelBuffer(buffer, length);
         } else {
             if (length == 0) {
                 return ChannelBuffers.EMPTY_BUFFER;
             }
-            return new SlicedChannelBuffer(this, index, length);
+            return new SlicedChannelBuffer(buffer, index, length);
         }
     }
 

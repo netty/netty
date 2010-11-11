@@ -40,7 +40,7 @@ import org.jboss.netty.util.internal.SystemPropertyUtil;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2162 $, $Date: 2010-02-18 11:23:51 +0900 (Thu, 18 Feb 2010) $
  *
  */
 class NioProviderMetadata {
@@ -49,6 +49,9 @@ class NioProviderMetadata {
 
     private static final String CONSTRAINT_LEVEL_PROPERTY =
         "org.jboss.netty.channel.socket.nio.constraintLevel";
+
+    private static final String OLD_CONSTRAINT_LEVEL_PROPERTY =
+        "java.nio.channels.spi.constraintLevel";
 
     /**
      * 0 - no need to wake up to get / set interestOps (most cases)
@@ -63,7 +66,17 @@ class NioProviderMetadata {
         // Use the system property if possible.
         constraintLevel = SystemPropertyUtil.get(CONSTRAINT_LEVEL_PROPERTY, -1);
         if (constraintLevel < 0 || constraintLevel > 2) {
-            constraintLevel = -1;
+            // Try the old property.
+            constraintLevel = SystemPropertyUtil.get(OLD_CONSTRAINT_LEVEL_PROPERTY, -1);
+            if (constraintLevel < 0 || constraintLevel > 2) {
+                constraintLevel = -1;
+            } else {
+                logger.warn(
+                        "System property '" +
+                        OLD_CONSTRAINT_LEVEL_PROPERTY +
+                        "' has been deprecated.  Use '" +
+                        CONSTRAINT_LEVEL_PROPERTY + "' instead.");
+            }
         }
 
         if (constraintLevel >= 0) {

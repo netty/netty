@@ -22,7 +22,6 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.Channel;
@@ -42,7 +41,7 @@ import org.jboss.netty.util.internal.IoWorkerRunnable;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2352 $, $Date: 2010-08-26 12:13:14 +0900 (Thu, 26 Aug 2010) $
  *
  */
 class OioServerSocketPipelineSink extends AbstractChannelSink {
@@ -50,9 +49,6 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(OioServerSocketPipelineSink.class);
 
-    private static final AtomicInteger nextId = new AtomicInteger();
-
-    final int id = nextId.incrementAndGet();
     final Executor workerExecutor;
 
     OioServerSocketPipelineSink(Executor workerExecutor) {
@@ -151,8 +147,7 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                     new IoWorkerRunnable(
                             new ThreadRenamingRunnable(
                                     new Boss(channel),
-                                    "OldIO", "ServerBoss", null,
-                                    String.valueOf(id), channel.toString())));
+                                    "Old I/O server boss (" + channel + ')')));
             bossStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
@@ -219,10 +214,8 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                                     new IoWorkerRunnable(
                                             new ThreadRenamingRunnable(
                                                     new OioWorker(acceptedChannel),
-                                                    "OldIO", "ServerWorker",
-                                                    String.valueOf(id),
-                                                    String.valueOf(acceptedChannel.getId()),
-                                                    acceptedChannel.toString())));
+                                                    "Old I/O server worker (parentId: " +
+                                                    channel.getId() + ", " + channel + ')')));
                         } catch (Exception e) {
                             logger.warn(
                                     "Failed to initialize an accepted socket.", e);

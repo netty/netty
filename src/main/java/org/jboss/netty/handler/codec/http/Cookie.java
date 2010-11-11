@@ -23,7 +23,7 @@ import java.util.Set;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
- * @version $Rev$, $Date$
+ * @version $Rev: 2241 $, $Date: 2010-04-16 13:12:43 +0900 (Fri, 16 Apr 2010) $
  */
 public interface Cookie extends Comparable<Cookie> {
 

@@ -29,7 +29,7 @@ import org.jboss.netty.util.internal.StringUtil;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
+ * @version $Rev: 2088 $, $Date: 2010-01-27 11:38:17 +0900 (Wed, 27 Jan 2010) $
  */
 public class DefaultHttpMessage implements HttpMessage {
 
@@ -61,6 +61,16 @@ public class DefaultHttpMessage implements HttpMessage {
         headers.removeHeader(name);
     }
 
+    @Deprecated
+    public long getContentLength() {
+        return HttpHeaders.getContentLength(this);
+    }
+
+    @Deprecated
+    public long getContentLength(long defaultValue) {
+        return HttpHeaders.getContentLength(this, defaultValue);
+    }
+
     public boolean isChunked() {
         if (chunked) {
             return true;
@@ -74,6 +84,11 @@ public class DefaultHttpMessage implements HttpMessage {
         if (chunked) {
             setContent(ChannelBuffers.EMPTY_BUFFER);
         }
+    }
+
+    @Deprecated
+    public boolean isKeepAlive() {
+        return HttpHeaders.isKeepAlive(this);
     }
 
     public void clearHeaders() {
@@ -134,7 +149,7 @@ public class DefaultHttpMessage implements HttpMessage {
         buf.append("(version: ");
         buf.append(getProtocolVersion().getText());
         buf.append(", keepAlive: ");
-        buf.append(HttpHeaders.isKeepAlive(this));
+        buf.append(isKeepAlive());
         buf.append(", chunked: ");
         buf.append(isChunked());
         buf.append(')');

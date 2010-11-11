@@ -30,7 +30,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Frederic Bregier
- * @version $Rev$, $Date$
+ * @version $Rev: 2236 $, $Date: 2010-04-12 19:22:51 +0900 (Mon, 12 Apr 2010) $
  */
 public class ChunkedNioStream implements ChunkedInput {
 

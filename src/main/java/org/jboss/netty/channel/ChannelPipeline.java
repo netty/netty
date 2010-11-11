@@ -203,7 +203,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2153 $, $Date: 2010-02-17 17:24:25 +0900 (Wed, 17 Feb 2010) $
  *
  * @apiviz.landmark
  * @apiviz.composedOf org.jboss.netty.channel.ChannelHandlerContext

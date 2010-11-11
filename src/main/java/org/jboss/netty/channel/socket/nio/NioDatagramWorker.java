@@ -56,7 +56,7 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Daniel Bevenius (dbevenius@jboss.com)
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2376 $, $Date: 2010-10-25 03:24:20 +0900 (Mon, 25 Oct 2010) $
  */
 class NioDatagramWorker implements Runnable {
     /**
@@ -168,9 +168,8 @@ class NioDatagramWorker implements Runnable {
                 boolean success = false;
                 try {
                     // Start the main selector loop. See run() for details.
-                    executor.execute(new ThreadRenamingRunnable(
-                            this, "NewIO", "DatagramWorker",
-                            String.valueOf(bossId), String.valueOf(id), null));
+                    executor.execute(new ThreadRenamingRunnable(this,
+                            "New I/O datagram worker #" + bossId + "'-'" + id));
                     success = true;
                 } finally {
                     if (!success) {

@@ -26,7 +26,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
+ * @version $Rev: 2234 $, $Date: 2010-04-06 18:23:25 +0900 (Tue, 06 Apr 2010) $
  */
 public class SharedResourceMisuseDetector {
 

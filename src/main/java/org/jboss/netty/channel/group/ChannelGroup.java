@@ -90,7 +90,7 @@ import org.jboss.netty.util.CharsetUtil;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
+ * @version $Rev: 2122 $, $Date: 2010-02-02 11:00:04 +0900 (Tue, 02 Feb 2010) $
  *
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.channel.group.ChannelGroupFuture oneway - - returns

@@ -29,7 +29,7 @@ import org.jboss.netty.util.EstimatableObjectWrapper;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2187 $, $Date: 2010-02-19 17:43:13 +0900 (Fri, 19 Feb 2010) $
  *
  */
 public class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper {

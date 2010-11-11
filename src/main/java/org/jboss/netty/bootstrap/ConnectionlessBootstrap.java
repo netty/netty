@@ -115,7 +115,7 @@ import org.jboss.netty.channel.Channels;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2338 $, $Date: 2010-07-07 13:33:47 +0900 (Wed, 07 Jul 2010) $
  *
  * @apiviz.landmark
  */

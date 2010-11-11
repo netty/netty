@@ -20,56 +20,28 @@ package org.jboss.netty.util;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
+ * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
  */
 public interface ThreadNameDeterminer {
 
     /**
-     * The default {@link ThreadNameDeterminer} that generates a thread name
-     * which contains all specified information.
+     * {@link ThreadNameDeterminer} that accepts the proposed thread name
+     * as is.
      */
     ThreadNameDeterminer PROPOSED = new ThreadNameDeterminer() {
-        public String determineThreadName(String current, String service,
-                String category, String parentId, String id, String comment) throws Exception {
-
-            String newName =
-                (format("",  " ", service) +
-                 format("",  " ", category) +
-                 format("#", " ", parentId, id) +
-                 format("(", ")", comment)).trim();
-            if (newName.length() == 0) {
-                return null;
-            } else {
-                return newName;
-            }
-        }
-
-        private String format(String prefix, String postfix, String... components) {
-            StringBuilder buf = new StringBuilder();
-            for (String c: components) {
-                if (c.length() == 0) {
-                    continue;
-                }
-                buf.append(c);
-                buf.append(':');
-            }
-
-            if (buf.length() == 0) {
-                return "";
-            }
-
-            buf.setLength(buf.length() - 1); // Remove trailing ':'
-            return prefix + buf + postfix;
+        public String determineThreadName(String currentThreadName,
+                String proposedThreadName) throws Exception {
+            return proposedThreadName;
         }
     };
 
     /**
-     * An alternative {@link ThreadNameDeterminer} that rejects the proposed
-     * thread name and retains the current one.
+     * {@link ThreadNameDeterminer} that rejects the proposed thread name and
+     * retains the current one.
      */
     ThreadNameDeterminer CURRENT = new ThreadNameDeterminer() {
-        public String determineThreadName(String current, String service,
-                String category, String parentId, String id, String comment) throws Exception {
+        public String determineThreadName(String currentThreadName,
+                String proposedThreadName) throws Exception {
             return null;
         }
     };
@@ -77,18 +49,11 @@ public interface ThreadNameDeterminer {
     /**
      * Overrides the thread name proposed by {@link ThreadRenamingRunnable}.
      *
-     * @param current   the current thread name
-     * @param service   the service name (e.g. <tt>"NewIO"</tt> or <tt>"OldIO"</tt>)
-     * @param category  the category name (e.g. <tt>"ServerBoss"</tt> or <tt>"ClientWorker"</tt>)
-     * @param parentId  the parent thread ID (e.g. <tt>"1"</tt>)
-     * @param id        the thread ID (e.g. <tt>"3"</tt>)
-     * @param comment   the optional comment which might help debugging
-     *
+     * @param currentThreadName   the current thread name
+     * @param proposedThreadName  the proposed new thread name
      * @return the actual new thread name.
      *         If {@code null} is returned, the proposed thread name is
      *         discarded (i.e. no rename).
      */
-    String determineThreadName(
-            String current,
-            String service, String category, String parentId, String id, String comment) throws Exception;
+    String determineThreadName(String currentThreadName, String proposedThreadName) throws Exception;
 }

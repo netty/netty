@@ -103,7 +103,7 @@ import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2244 $, $Date: 2010-04-16 14:07:37 +0900 (Fri, 16 Apr 2010) $
  *
  * @apiviz.landmark
  * @apiviz.composedOf org.jboss.netty.channel.ChannelConfig

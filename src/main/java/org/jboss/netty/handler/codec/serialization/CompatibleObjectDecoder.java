@@ -53,7 +53,7 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2188 $, $Date: 2010-02-19 18:00:00 +0900 (Fri, 19 Feb 2010) $
  */
 @Deprecated
 public class CompatibleObjectDecoder extends ReplayingDecoder<CompatibleObjectDecoderState> {

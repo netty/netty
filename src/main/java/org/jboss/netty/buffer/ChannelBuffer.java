@@ -220,7 +220,7 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * <h4>Strings</h4>
  *
- * Various {@link #toString(Charset)} methods convert a {@link ChannelBuffer}
+ * Various {@link #toString(String)} methods convert a {@link ChannelBuffer}
  * into a {@link String}.  Please note that {@link #toString()} is not a
  * conversion method.
  *
@@ -232,7 +232,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2268 $, $Date: 2010-05-06 16:33:26 +0900 (Thu, 06 May 2010) $
  *
  * @apiviz.landmark
  */
@@ -1095,6 +1095,12 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     ChannelBuffer readBytes(int length);
 
     /**
+     * @deprecated Use {@link #bytesBefore(ChannelBufferIndexFinder)} and {@link #readBytes(int)} instead.
+     */
+    @Deprecated
+    ChannelBuffer readBytes(ChannelBufferIndexFinder indexFinder);
+
+    /**
      * Returns a new slice of this buffer's sub-region starting at the current
      * {@code readerIndex} and increases the {@code readerIndex} by the size
      * of the new slice (= {@code length}).
@@ -1107,6 +1113,12 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code length} is greater than {@code this.readableBytes}
      */
     ChannelBuffer readSlice(int length);
+
+    /**
+     * @deprecated Use {@link #bytesBefore(ChannelBufferIndexFinder)} and {@link #readSlice(int)} instead.
+     */
+    @Deprecated
+    ChannelBuffer readSlice(ChannelBufferIndexFinder indexFinder);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -1228,6 +1240,12 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code length} is greater than {@code this.readableBytes}
      */
     void skipBytes(int length);
+
+    /**
+     * @deprecated Use {@link #bytesBefore(ChannelBufferIndexFinder)} and {@link #skipBytes(int)} instead.
+     */
+    @Deprecated
+    int  skipBytes(ChannelBufferIndexFinder indexFinder);
 
     /**
      * Sets the specified byte at the current {@code writerIndex}
@@ -1698,6 +1716,33 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * {@code writerIndex} of this buffer.
      */
     String toString(int index, int length, Charset charset);
+
+    /**
+     * @deprecated Use {@link #toString(Charset)} instead.
+     */
+    @Deprecated
+    String toString(String charsetName);
+
+    /**
+     * @deprecated Use {@link #bytesBefore(ChannelBufferIndexFinder)} and {@link #toString(int, int, Charset)} instead.
+     */
+    @Deprecated
+    String toString(
+            String charsetName, ChannelBufferIndexFinder terminatorFinder);
+
+    /**
+     * @deprecated Use {@link #bytesBefore(int, int, ChannelBufferIndexFinder)} and {@link #toString(int, int, Charset)} instead.
+     */
+    @Deprecated
+    String toString(int index, int length, String charsetName);
+
+    /**
+     * @deprecated Use {@link #bytesBefore(int, int, ChannelBufferIndexFinder)} and {@link #toString(int, int, Charset)} instead.
+     */
+    @Deprecated
+    String toString(
+            int index, int length, String charsetName,
+            ChannelBufferIndexFinder terminatorFinder);
 
     /**
      * Returns a hash code which was calculated from the content of this

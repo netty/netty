@@ -51,7 +51,7 @@ import org.jboss.netty.util.internal.ConversionUtil;
  *
  * @apiviz.landmark
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2210 $, $Date: 2010-03-04 08:11:39 +0900 (Thu, 04 Mar 2010) $
  */
 public class Channels {
 

@@ -33,7 +33,7 @@ import java.util.EventListener;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2185 $, $Date: 2010-02-19 14:13:48 +0900 (Fri, 19 Feb 2010) $
  */
 public interface ChannelFutureListener extends EventListener {
 

@@ -35,7 +35,7 @@ import org.jboss.netty.util.TimerTask;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2189 $, $Date: 2010-02-19 18:02:57 +0900 (Fri, 19 Feb 2010) $
  */
 public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
 

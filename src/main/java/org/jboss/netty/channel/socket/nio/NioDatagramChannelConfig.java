@@ -48,7 +48,7 @@ import org.jboss.netty.channel.socket.DatagramChannelConfig;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Daniel Bevenius (dbevenius@jboss.com)
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
  */
 public interface NioDatagramChannelConfig extends DatagramChannelConfig {
 

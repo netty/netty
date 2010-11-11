@@ -80,7 +80,7 @@ import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
+ * @version $Rev: 2297 $, $Date: 2010-06-07 10:50:02 +0900 (Mon, 07 Jun 2010) $
  */
 public class HashedWheelTimer implements Timer {
 
@@ -210,9 +210,7 @@ public class HashedWheelTimer implements Timer {
         roundDuration = tickDuration * wheel.length;
 
         workerThread = threadFactory.newThread(new ThreadRenamingRunnable(
-                        worker,
-                        "HashedWheelTimer", null, null,
-                        String.valueOf(id.incrementAndGet()), null));
+                        worker, "Hashed wheel timer #" + id.incrementAndGet()));
 
         // Misuse check
         misuseDetector.increase();

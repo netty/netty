@@ -51,7 +51,7 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2144 $, $Date: 2010-02-09 12:41:12 +0900 (Tue, 09 Feb 2010) $
  *
  */
 class NioClientSocketPipelineSink extends AbstractChannelSink {
@@ -195,8 +195,9 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                     boolean success = false;
                     try {
                         bossExecutor.execute(
-                                new IoWorkerRunnable(new ThreadRenamingRunnable(
-                                        this, "NewIO", "ClientBoss", null, String.valueOf(id), null)));
+                                new IoWorkerRunnable(
+                                        new ThreadRenamingRunnable(
+                                                this, "New I/O client boss #" + id)));
                         success = true;
                     } finally {
                         if (!success) {

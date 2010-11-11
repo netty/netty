@@ -23,7 +23,7 @@ import org.junit.Test;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://tsunanet.net/">Benoit Sigoure</a>
- * @version $Rev$, $Date$
+ * @version $Rev: 2302 $, $Date: 2010-06-14 20:07:44 +0900 (Mon, 14 Jun 2010) $
  */
 public class QueryStringDecoderTest {
 

@@ -23,7 +23,7 @@ import java.util.concurrent.locks.Lock;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
+ * @version $Rev: 2115 $, $Date: 2010-02-01 15:21:49 +0900 (Mon, 01 Feb 2010) $
  */
 public final class NonReentrantLock extends AbstractQueuedSynchronizer
                              implements Lock {

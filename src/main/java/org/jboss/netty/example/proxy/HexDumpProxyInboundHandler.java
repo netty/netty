@@ -33,7 +33,7 @@ import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
+ * @version $Rev: 2376 $, $Date: 2010-10-25 03:24:20 +0900 (Mon, 25 Oct 2010) $
  */
 public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
 

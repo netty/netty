@@ -34,7 +34,7 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2126 $, $Date: 2010-02-02 13:27:33 +0900 (Tue, 02 Feb 2010) $
  */
 public class PortUnificationServer {
 

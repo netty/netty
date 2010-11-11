@@ -32,7 +32,7 @@ import java.nio.ByteOrder;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
+ * @version $Rev: 2293 $, $Date: 2010-06-01 17:38:51 +0900 (Tue, 01 Jun 2010) $
  */
 public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
 

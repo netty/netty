@@ -36,7 +36,7 @@ import java.util.List;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Frederic Bregier (fredbregier@free.fr)
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2206 $, $Date: 2010-03-03 14:35:01 +0900 (Wed, 03 Mar 2010) $
  *
  */
 public class CompositeChannelBuffer extends AbstractChannelBuffer {

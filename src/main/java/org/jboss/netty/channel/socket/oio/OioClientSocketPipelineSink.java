@@ -20,7 +20,6 @@ import static org.jboss.netty.channel.Channels.*;
 import java.io.PushbackInputStream;
 import java.net.SocketAddress;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.ChannelEvent;
@@ -38,14 +37,11 @@ import org.jboss.netty.util.internal.IoWorkerRunnable;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2341 $, $Date: 2010-07-07 13:44:23 +0900 (Wed, 07 Jul 2010) $
  *
  */
 class OioClientSocketPipelineSink extends AbstractChannelSink {
 
-    private static final AtomicInteger nextId = new AtomicInteger();
-
-    private final int id = nextId.incrementAndGet();
     private final Executor workerExecutor;
 
     OioClientSocketPipelineSink(Executor workerExecutor) {
@@ -135,9 +131,7 @@ class OioClientSocketPipelineSink extends AbstractChannelSink {
                     new IoWorkerRunnable(
                             new ThreadRenamingRunnable(
                                     new OioWorker(channel),
-                                    "OldIO", "ClientWorker",
-                                    String.valueOf(id), String.valueOf(channel.getId()),
-                                    channel.toString())));
+                                    "Old I/O client worker (" + channel + ')')));
             workerStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);

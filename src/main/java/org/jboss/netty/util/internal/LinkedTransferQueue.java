@@ -63,7 +63,7 @@ import java.util.concurrent.locks.LockSupport;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Doug Lea
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$ (Upstream: 1.79)
+ * @version $Rev: 2373 $, $Date: 2010-10-20 20:33:23 +0900 (Wed, 20 Oct 2010) $ (Upstream: 1.79)
  *
  * @param <E> the type of elements held in this collection
  */

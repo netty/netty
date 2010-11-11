@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
+ * @version $Rev: 2089 $, $Date: 2010-01-27 11:39:28 +0900 (Wed, 27 Jan 2010) $
  *
  * @apiviz.exclude
  */
@@ -75,6 +75,14 @@ public class HttpVersion implements Comparable<HttpVersion> {
     private final boolean keepAliveDefault;
 
     /**
+     * @deprecated Use {@link #HttpVersion(String, boolean)} instead.
+     */
+    @Deprecated
+    public HttpVersion(String text) {
+        this(text, true);
+    }
+
+    /**
      * Creates a new HTTP version with the specified version string.  You will
      * not need to create a new instance unless you are implementing a protocol
      * derived from HTTP, such as
@@ -105,6 +113,15 @@ public class HttpVersion implements Comparable<HttpVersion> {
         minorVersion = Integer.parseInt(m.group(3));
         this.text = protocolName + '/' + majorVersion + '.' + minorVersion;
         this.keepAliveDefault = keepAliveDefault;
+    }
+
+    /**
+     * @deprecated Use {@link #HttpVersion(String, int, int, boolean)} instead.
+     */
+    @Deprecated
+    public HttpVersion(
+            String protocolName, int majorVersion, int minorVersion) {
+        this(protocolName, majorVersion, minorVersion, true);
     }
 
     /**

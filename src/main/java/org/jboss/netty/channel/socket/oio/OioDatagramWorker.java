@@ -27,14 +27,13 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
-import org.jboss.netty.util.ThreadRenamingRunnable;
 
 /**
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2341 $, $Date: 2010-07-07 13:44:23 +0900 (Wed, 07 Jul 2010) $
  *
  */
 class OioDatagramWorker implements Runnable {
@@ -175,11 +174,12 @@ class OioDatagramWorker implements Runnable {
                 // Update the worker's thread name to reflect the state change.
                 Thread workerThread = channel.workerThread;
                 if (workerThread != null) {
-                    ThreadRenamingRunnable.renameThread(
-                            workerThread, "OldIO", "DatagramWorker",
-                            String.valueOf(((OioDatagramChannelFactory) channel.getFactory()).id),
-                            String.valueOf(channel.getId()),
-                            channel.toString());
+                    try {
+                        workerThread.setName(
+                                "Old I/O datagram worker (" + channel + ')');
+                    } catch (SecurityException e) {
+                        // Ignore.
+                    }
                 }
 
                 // Notify.

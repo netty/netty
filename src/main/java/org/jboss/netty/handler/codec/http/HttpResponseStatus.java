@@ -23,7 +23,7 @@ package org.jboss.netty.handler.codec.http;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
+ * @version $Rev: 2286 $, $Date: 2010-05-27 21:34:44 +0900 (Thu, 27 May 2010) $
  *
  * @apiviz.exclude
  */

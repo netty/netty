@@ -55,7 +55,7 @@ import org.jboss.netty.handler.codec.http.HttpMessageDecoder;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
+ * @version $Rev: 2282 $, $Date: 2010-05-19 16:51:38 +0900 (Wed, 19 May 2010) $
  *
  * @apiviz.landmark
  */

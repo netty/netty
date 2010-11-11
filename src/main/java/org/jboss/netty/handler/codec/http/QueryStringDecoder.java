@@ -39,7 +39,7 @@ import java.util.Map;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://tsunanet.net/">Benoit Sigoure</a>
- * @version $Rev$, $Date$
+ * @version $Rev: 2302 $, $Date: 2010-06-14 20:07:44 +0900 (Mon, 14 Jun 2010) $
  *
  * @see QueryStringEncoder
  *
@@ -78,6 +78,14 @@ public class QueryStringDecoder {
     }
 
     /**
+     * @deprecated Use {@link #QueryStringDecoder(String, Charset)} instead.
+     */
+    @Deprecated
+    public QueryStringDecoder(String uri, String charset) {
+        this(uri, Charset.forName(charset));
+    }
+
+    /**
      * Creates a new decoder that decodes the specified URI. The decoder will
      * assume that the query string is encoded in UTF-8.
      */
@@ -99,6 +107,14 @@ public class QueryStringDecoder {
 
         this.uri = uri.toASCIIString();
         this.charset = charset;
+    }
+
+    /**
+     * @deprecated Use {@link #QueryStringDecoder(URI, Charset)} instead.
+     */
+    @Deprecated
+    public QueryStringDecoder(URI uri, String charset){
+        this(uri, Charset.forName(charset));
     }
 
     /**

@@ -38,7 +38,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2226 $, $Date: 2010-03-31 11:26:51 +0900 (Wed, 31 Mar 2010) $
  */
 public class HttpClient {
 

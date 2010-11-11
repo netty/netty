@@ -47,7 +47,7 @@ import org.jboss.netty.util.internal.IoWorkerRunnable;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2352 $, $Date: 2010-08-26 12:13:14 +0900 (Thu, 26 Aug 2010) $
  *
  */
 class NioServerSocketPipelineSink extends AbstractChannelSink {
@@ -154,10 +154,11 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
             Executor bossExecutor =
                 ((NioServerSocketChannelFactory) channel.getFactory()).bossExecutor;
             bossExecutor.execute(
-                    new IoWorkerRunnable(new ThreadRenamingRunnable(
-                            new Boss(channel),
-                            "NewIO", "ServerBoss", null, String.valueOf(id),
-                            channel.toString())));
+                    new IoWorkerRunnable(
+                            new ThreadRenamingRunnable(
+                                    new Boss(channel),
+                                    "New I/O server boss #" + id +
+                                    " (" + channel + ')')));
             bossStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);

@@ -55,7 +55,7 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2376 $, $Date: 2010-10-25 03:24:20 +0900 (Mon, 25 Oct 2010) $
  *
  */
 class NioWorker implements Runnable {
@@ -106,13 +106,15 @@ class NioWorker implements Runnable {
                 }
 
                 // Start the worker thread with the new Selector.
+                String threadName =
+                    (server ? "New I/O server worker #"
+                            : "New I/O client worker #") + bossId + '-' + id;
+
                 boolean success = false;
                 try {
                     executor.execute(
-                            new IoWorkerRunnable(new ThreadRenamingRunnable(
-                                    this, "NewIO",
-                                    server? "ServerWorker" : "ClientWorker",
-                                    String.valueOf(bossId), String.valueOf(id), null)));
+                            new IoWorkerRunnable(
+                                    new ThreadRenamingRunnable(this, threadName)));
                     success = true;
                 } finally {
                     if (!success) {

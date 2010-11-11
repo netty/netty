@@ -32,7 +32,7 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2125 $, $Date: 2010-02-02 12:13:15 +0900 (Tue, 02 Feb 2010) $
  */
 public class BigIntegerDecoder extends FrameDecoder {
 

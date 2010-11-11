@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2161 $, $Date: 2010-02-18 11:12:15 +0900 (Thu, 18 Feb 2010) $
  *
  */
 public class SystemPropertyUtil {

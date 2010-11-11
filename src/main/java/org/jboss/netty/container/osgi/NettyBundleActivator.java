@@ -25,7 +25,7 @@ import org.osgi.framework.BundleContext;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
+ * @version $Rev: 2231 $, $Date: 2010-03-31 12:20:47 +0900 (Wed, 31 Mar 2010) $
  */
 public class NettyBundleActivator implements BundleActivator {
 

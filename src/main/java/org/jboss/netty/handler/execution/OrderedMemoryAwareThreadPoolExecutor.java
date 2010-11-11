@@ -131,7 +131,7 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author David M. Lloyd (david.lloyd@redhat.com)
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2308 $, $Date: 2010-06-17 23:23:59 +0900 (Thu, 17 Jun 2010) $
  *
  * @apiviz.landmark
  */

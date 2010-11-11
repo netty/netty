@@ -28,7 +28,7 @@ import org.junit.Test;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2116 $, $Date: 2010-02-01 15:25:23 +0900 (Mon, 01 Feb 2010) $
  *
  */
 public class SwitchableInputStreamTest {

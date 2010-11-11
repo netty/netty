@@ -15,6 +15,7 @@
  */
 package org.jboss.netty.util;
 
+import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
 import java.security.Permission;
@@ -27,42 +28,19 @@ import org.junit.Test;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
+ * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
  *
  */
 public class ThreadRenamingRunnableTest {
 
     @Test(expected = NullPointerException.class)
+    public void shouldNotAllowNullName() throws Exception {
+        new ThreadRenamingRunnable(createMock(Runnable.class), null);
+    }
+
+    @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullRunnable() throws Exception {
-        new ThreadRenamingRunnable(null, "a", "b", "c", "d", "e");
-    }
-
-    @Test
-    public void testWithNulls() throws Exception {
-        final String oldThreadName = Thread.currentThread().getName();
-        Executor e = new ImmediateExecutor();
-        e.execute(new ThreadRenamingRunnable(
-                new Runnable() {
-                    public void run() {
-                        assertEquals(oldThreadName, Thread.currentThread().getName());
-                    }
-                }, null, null, null, null, null));
-
-        assertEquals(oldThreadName, Thread.currentThread().getName());
-    }
-
-    @Test
-    public void testWithEmptyNames() throws Exception {
-        final String oldThreadName = Thread.currentThread().getName();
-        Executor e = new ImmediateExecutor();
-        e.execute(new ThreadRenamingRunnable(
-                new Runnable() {
-                    public void run() {
-                        assertEquals(oldThreadName, Thread.currentThread().getName());
-                    }
-                }, "", "", "", "", ""));
-
-        assertEquals(oldThreadName, Thread.currentThread().getName());
+        new ThreadRenamingRunnable(null, "foo");
     }
 
     @Test
@@ -72,10 +50,10 @@ public class ThreadRenamingRunnableTest {
         e.execute(new ThreadRenamingRunnable(
                 new Runnable() {
                     public void run() {
-                        assertEquals("a b #c:d (e)", Thread.currentThread().getName());
+                        assertEquals("foo", Thread.currentThread().getName());
                         assertFalse(oldThreadName.equals(Thread.currentThread().getName()));
                     }
-                }, "a", "b", "c", "d", "e"));
+                }, "foo"));
 
         assertEquals(oldThreadName, Thread.currentThread().getName());
     }
@@ -107,7 +85,7 @@ public class ThreadRenamingRunnableTest {
                         public void run() {
                             assertEquals(oldThreadName, Thread.currentThread().getName());
                         }
-                    }, "a", "b", "c", "d", "e"));
+                    }, "foo"));
         } finally {
             System.setSecurityManager(null);
             assertEquals(oldThreadName, Thread.currentThread().getName());
