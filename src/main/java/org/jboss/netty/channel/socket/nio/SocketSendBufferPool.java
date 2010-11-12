@@ -186,26 +186,32 @@ final class SocketSendBufferPool {
             initialPos = buffer.position();
         }
 
+        @Override
         public final boolean finished() {
             return !buffer.hasRemaining();
         }
 
+        @Override
         public final long writtenBytes() {
             return buffer.position() - initialPos;
         }
 
+        @Override
         public final long totalBytes() {
             return buffer.limit() - initialPos;
         }
 
+        @Override
         public final long transferTo(WritableByteChannel ch) throws IOException {
             return ch.write(buffer);
         }
 
+        @Override
         public final long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
             return ch.send(buffer, raddr);
         }
 
+        @Override
         public void release() {
             // Unpooled.
         }
@@ -223,26 +229,32 @@ final class SocketSendBufferPool {
             initialPos = buffer.position();
         }
 
+        @Override
         public boolean finished() {
             return !buffer.hasRemaining();
         }
 
+        @Override
         public long writtenBytes() {
             return buffer.position() - initialPos;
         }
 
+        @Override
         public long totalBytes() {
             return buffer.limit() - initialPos;
         }
 
+        @Override
         public long transferTo(WritableByteChannel ch) throws IOException {
             return ch.write(buffer);
         }
 
+        @Override
         public long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
             return ch.send(buffer, raddr);
         }
 
+        @Override
         public void release() {
             final Preallocation parent = this.parent;
             if (-- parent.refCnt == 0) {
@@ -264,29 +276,35 @@ final class SocketSendBufferPool {
             this.file = file;
         }
 
+        @Override
         public boolean finished() {
             return writtenBytes >= file.getCount();
         }
 
+        @Override
         public long writtenBytes() {
             return writtenBytes;
         }
 
+        @Override
         public long totalBytes() {
             return file.getCount();
         }
 
+        @Override
         public long transferTo(WritableByteChannel ch) throws IOException {
             long localWrittenBytes = file.transferTo(ch, writtenBytes);
             writtenBytes += localWrittenBytes;
             return localWrittenBytes;
         }
 
+        @Override
         public long transferTo(DatagramChannel ch, SocketAddress raddr)
                 throws IOException {
             throw new UnsupportedOperationException();
         }
 
+        @Override
         public void release() {
             // Unpooled.
         }
@@ -298,26 +316,32 @@ final class SocketSendBufferPool {
             super();
         }
 
+        @Override
         public final boolean finished() {
             return true;
         }
 
+        @Override
         public final long writtenBytes() {
             return 0;
         }
 
+        @Override
         public final long totalBytes() {
             return 0;
         }
 
+        @Override
         public final long transferTo(WritableByteChannel ch) throws IOException {
             return 0;
         }
 
+        @Override
         public final long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
             return 0;
         }
 
+        @Override
         public void release() {
             // Unpooled.
         }

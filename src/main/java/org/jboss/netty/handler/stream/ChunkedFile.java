@@ -131,18 +131,22 @@ public class ChunkedFile implements ChunkedInput {
         return offset;
     }
 
+    @Override
     public boolean hasNextChunk() throws Exception {
         return offset < endOffset && file.getChannel().isOpen();
     }
 
+    @Override
     public boolean isEndOfInput() throws Exception {
         return !hasNextChunk();
     }
 
+    @Override
     public void close() throws Exception {
         file.close();
     }
 
+    @Override
     public Object nextChunk() throws Exception {
         long offset = this.offset;
         if (offset >= endOffset) {

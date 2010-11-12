@@ -30,5 +30,6 @@ import org.jboss.netty.channel.ServerChannelFactory;
  * @apiviz.has org.jboss.netty.channel.socket.ServerSocketChannel oneway - - creates
  */
 public interface ServerSocketChannelFactory extends ServerChannelFactory {
+    @Override
     ServerSocketChannel newChannel(ChannelPipeline pipeline);
 }

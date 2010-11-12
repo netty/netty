@@ -75,6 +75,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         }
     }
 
+    @Override
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
@@ -141,6 +142,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                 channel.worker.register(channel, cf);
             } else {
                 channel.getCloseFuture().addListener(new ChannelFutureListener() {
+                    @Override
                     public void operationComplete(ChannelFuture f)
                             throws Exception {
                         if (!cf.isDone()) {
@@ -227,6 +229,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             }
         }
 
+        @Override
         public void run() {
             boolean shutdown = false;
             Selector selector = this.selector;
@@ -406,6 +409,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             this.channel = channel;
         }
 
+        @Override
         public void run() {
             try {
                 channel.socket.register(

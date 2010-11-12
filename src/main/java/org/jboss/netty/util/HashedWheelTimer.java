@@ -272,6 +272,7 @@ public class HashedWheelTimer implements Timer {
         }
     }
 
+    @Override
     public synchronized Set<Timeout> stop() {
         if (!shutdown.compareAndSet(false, true)) {
             return Collections.emptySet();
@@ -302,6 +303,7 @@ public class HashedWheelTimer implements Timer {
         return Collections.unmodifiableSet(unprocessedTimeouts);
     }
 
+    @Override
     public Timeout newTimeout(TimerTask task, long delay, TimeUnit unit) {
         final long currentTime = System.currentTimeMillis();
 
@@ -358,6 +360,7 @@ public class HashedWheelTimer implements Timer {
             super();
         }
 
+        @Override
         public void run() {
             List<HashedWheelTimeout> expiredTimeouts =
                 new ArrayList<HashedWheelTimeout>();
@@ -470,14 +473,17 @@ public class HashedWheelTimer implements Timer {
             this.remainingRounds = remainingRounds;
         }
 
+        @Override
         public Timer getTimer() {
             return HashedWheelTimer.this;
         }
 
+        @Override
         public TimerTask getTask() {
             return task;
         }
 
+        @Override
         public void cancel() {
             if (isExpired()) {
                 return;
@@ -489,10 +495,12 @@ public class HashedWheelTimer implements Timer {
             wheel[stopIndex].remove(this);
         }
 
+        @Override
         public boolean isCancelled() {
             return cancelled;
         }
 
+        @Override
         public boolean isExpired() {
             return cancelled || System.currentTimeMillis() > deadline;
         }

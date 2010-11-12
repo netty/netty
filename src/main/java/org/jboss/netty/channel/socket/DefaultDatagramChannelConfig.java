@@ -92,6 +92,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         return true;
     }
 
+    @Override
     public boolean isBroadcast() {
         try {
             return socket.getBroadcast();
@@ -100,6 +101,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setBroadcast(boolean broadcast) {
         try {
             socket.setBroadcast(broadcast);
@@ -108,6 +110,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public InetAddress getInterface() {
         if (socket instanceof MulticastSocket) {
             try {
@@ -120,6 +123,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setInterface(InetAddress interfaceAddress) {
         if (socket instanceof MulticastSocket) {
             try {
@@ -132,6 +136,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public boolean isLoopbackModeDisabled() {
         if (socket instanceof MulticastSocket) {
             try {
@@ -144,6 +149,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setLoopbackModeDisabled(boolean loopbackModeDisabled) {
         if (socket instanceof MulticastSocket) {
             try {
@@ -156,6 +162,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public NetworkInterface getNetworkInterface() {
         if (socket instanceof MulticastSocket) {
             try {
@@ -168,6 +175,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setNetworkInterface(NetworkInterface networkInterface) {
         if (socket instanceof MulticastSocket) {
             try {
@@ -180,6 +188,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public boolean isReuseAddress() {
         try {
             return socket.getReuseAddress();
@@ -188,6 +197,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setReuseAddress(boolean reuseAddress) {
         try {
             socket.setReuseAddress(reuseAddress);
@@ -196,6 +206,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public int getReceiveBufferSize() {
         try {
             return socket.getReceiveBufferSize();
@@ -204,6 +215,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
         try {
             socket.setReceiveBufferSize(receiveBufferSize);
@@ -212,6 +224,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public int getSendBufferSize() {
         try {
             return socket.getSendBufferSize();
@@ -220,6 +233,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setSendBufferSize(int sendBufferSize) {
         try {
             socket.setSendBufferSize(sendBufferSize);
@@ -228,6 +242,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public int getTimeToLive() {
         if (socket instanceof MulticastSocket) {
             try {
@@ -240,6 +255,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setTimeToLive(int ttl) {
         if (socket instanceof MulticastSocket) {
             try {
@@ -252,6 +268,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public int getTrafficClass() {
         try {
             return socket.getTrafficClass();
@@ -260,6 +277,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setTrafficClass(int trafficClass) {
         try {
             socket.setTrafficClass(trafficClass);
@@ -268,6 +286,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public ReceiveBufferSizePredictor getReceiveBufferSizePredictor() {
         ReceiveBufferSizePredictor predictor = this.predictor;
         if (predictor == null) {
@@ -283,6 +302,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         return predictor;
     }
 
+    @Override
     public void setReceiveBufferSizePredictor(
             ReceiveBufferSizePredictor predictor) {
         if (predictor == null) {
@@ -291,10 +311,12 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig
         this.predictor = predictor;
     }
 
+    @Override
     public ReceiveBufferSizePredictorFactory getReceiveBufferSizePredictorFactory() {
         return predictorFactory;
     }
 
+    @Override
     public void setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory predictorFactory) {
         if (predictorFactory == null) {
             throw new NullPointerException("predictorFactory");

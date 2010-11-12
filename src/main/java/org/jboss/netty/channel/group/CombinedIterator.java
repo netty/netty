@@ -41,6 +41,7 @@ final class CombinedIterator<E> implements Iterator<E> {
         currentIterator = i1;
     }
 
+    @Override
     public boolean hasNext() {
         boolean hasNext = currentIterator.hasNext();
         if (hasNext) {
@@ -55,6 +56,7 @@ final class CombinedIterator<E> implements Iterator<E> {
         }
     }
 
+    @Override
     public E next() {
         try {
             E e = currentIterator.next();
@@ -69,6 +71,7 @@ final class CombinedIterator<E> implements Iterator<E> {
         }
     }
 
+    @Override
     public void remove() {
         currentIterator.remove();
     }

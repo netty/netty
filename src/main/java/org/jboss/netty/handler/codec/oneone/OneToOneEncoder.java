@@ -54,6 +54,7 @@ public abstract class OneToOneEncoder implements ChannelDownstreamHandler {
         super();
     }
 
+    @Override
     public void handleDownstream(
             ChannelHandlerContext ctx, ChannelEvent evt) throws Exception {
         if (!(evt instanceof MessageEvent)) {

@@ -78,6 +78,7 @@ public class ChunkedNioStream implements ChunkedInput {
         return offset;
     }
 
+    @Override
     public boolean hasNextChunk() throws Exception {
         if (byteBuffer.position() > 0) {
             // A previous read was not over, so there is a next chunk in the buffer at least
@@ -96,14 +97,17 @@ public class ChunkedNioStream implements ChunkedInput {
         return false;
     }
 
+    @Override
     public boolean isEndOfInput() throws Exception {
         return !hasNextChunk();
     }
 
+    @Override
     public void close() throws Exception {
         in.close();
     }
 
+    @Override
     public Object nextChunk() throws Exception {
         if (!hasNextChunk()) {
             return null;

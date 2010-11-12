@@ -31,6 +31,7 @@ import org.jboss.netty.handler.codec.protobuf.ProtobufVarint32LengthFieldPrepend
  */
 public class LocalTimeServerPipelineFactory implements ChannelPipelineFactory {
 
+    @Override
     public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline p = pipeline();
         p.addLast("frameDecoder", new ProtobufVarint32FrameDecoder());

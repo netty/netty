@@ -53,18 +53,22 @@ public class DefaultIdleStateEvent implements IdleStateEvent {
         this.lastActivityTimeMillis = lastActivityTimeMillis;
     }
 
+    @Override
     public Channel getChannel() {
         return channel;
     }
 
+    @Override
     public ChannelFuture getFuture() {
         return succeededFuture(getChannel());
     }
 
+    @Override
     public IdleState getState() {
         return state;
     }
 
+    @Override
     public long getLastActivityTimeMillis() {
         return lastActivityTimeMillis;
     }

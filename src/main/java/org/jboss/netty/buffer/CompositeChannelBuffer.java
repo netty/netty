@@ -140,39 +140,48 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
 
+    @Override
     public ChannelBufferFactory factory() {
         return HeapChannelBufferFactory.getInstance(order());
     }
 
+    @Override
     public ByteOrder order() {
         return order;
     }
 
+    @Override
     public boolean isDirect() {
         return false;
     }
 
+    @Override
     public boolean hasArray() {
         return false;
     }
 
+    @Override
     public byte[] array() {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public int arrayOffset() {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public int capacity() {
         return indices[components.length];
     }
 
+    @Override
     public byte getByte(int index) {
         int componentId = componentId(index);
         return components[componentId].getByte(index - indices[componentId]);
     }
 
+    @Override
     public short getShort(int index) {
         int componentId = componentId(index);
         if (index + 2 <= indices[componentId + 1]) {
@@ -184,6 +193,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public int getUnsignedMedium(int index) {
         int componentId = componentId(index);
         if (index + 3 <= indices[componentId + 1]) {
@@ -195,6 +205,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public int getInt(int index) {
         int componentId = componentId(index);
         if (index + 4 <= indices[componentId + 1]) {
@@ -206,6 +217,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public long getLong(int index) {
         int componentId = componentId(index);
         if (index + 8 <= indices[componentId + 1]) {
@@ -217,6 +229,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public void getBytes(int index, byte[] dst, int dstIndex, int length) {
         int componentId = componentId(index);
         if (index > capacity() - length || dstIndex > dst.length - length) {
@@ -236,6 +249,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public void getBytes(int index, ByteBuffer dst) {
         int componentId = componentId(index);
         int limit = dst.limit();
@@ -261,6 +275,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
         int componentId = componentId(index);
         if (index > capacity() - length || dstIndex > dst.capacity() - length) {
@@ -280,6 +295,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
         // XXX Gathering write is not supported because of a known issue.
@@ -288,6 +304,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         return out.write(toByteBuffer(index, length));
     }
 
+    @Override
     public void getBytes(int index, OutputStream out, int length)
             throws IOException {
         int componentId = componentId(index);
@@ -307,11 +324,13 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public void setByte(int index, int value) {
         int componentId = componentId(index);
         components[componentId].setByte(index - indices[componentId], value);
     }
 
+    @Override
     public void setShort(int index, int value) {
         int componentId = componentId(index);
         if (index + 2 <= indices[componentId + 1]) {
@@ -325,6 +344,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public void setMedium(int index, int value) {
         int componentId = componentId(index);
         if (index + 3 <= indices[componentId + 1]) {
@@ -338,6 +358,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public void setInt(int index, int value) {
         int componentId = componentId(index);
         if (index + 4 <= indices[componentId + 1]) {
@@ -351,6 +372,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public void setLong(int index, long value) {
         int componentId = componentId(index);
         if (index + 8 <= indices[componentId + 1]) {
@@ -364,6 +386,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public void setBytes(int index, byte[] src, int srcIndex, int length) {
         int componentId = componentId(index);
         if (index > capacity() - length || srcIndex > src.length - length) {
@@ -383,6 +406,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public void setBytes(int index, ByteBuffer src) {
         int componentId = componentId(index);
         int limit = src.limit();
@@ -408,6 +432,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
         int componentId = componentId(index);
         if (index > capacity() - length || srcIndex > src.capacity() - length) {
@@ -427,6 +452,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public int setBytes(int index, InputStream in, int length)
             throws IOException {
         int componentId = componentId(index);
@@ -465,6 +491,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         return readBytes;
     }
 
+    @Override
     public int setBytes(int index, ScatteringByteChannel in, int length)
             throws IOException {
         int componentId = componentId(index);
@@ -495,12 +522,14 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         return readBytes;
     }
 
+    @Override
     public ChannelBuffer duplicate() {
         ChannelBuffer duplicate = new CompositeChannelBuffer(this);
         duplicate.setIndex(readerIndex(), writerIndex());
         return duplicate;
     }
 
+    @Override
     public ChannelBuffer copy(int index, int length) {
         int componentId = componentId(index);
         if (index > capacity() - length) {
@@ -530,6 +559,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         dst.writerIndex(dst.capacity());
     }
 
+    @Override
     public ChannelBuffer slice(int index, int length) {
         if (index == 0) {
             if (length == 0) {
@@ -552,6 +582,7 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public ByteBuffer toByteBuffer(int index, int length) {
         if (components.length == 1) {
             return components[0].toByteBuffer(index, length);

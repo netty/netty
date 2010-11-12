@@ -59,6 +59,7 @@ public class CompleteChannelFutureTest {
     @Test
     public void shouldNotRethrowListenerException() {
         ChannelFutureListener l = new ChannelFutureListener() {
+            @Override
             public void operationComplete(ChannelFuture future)
                     throws Exception {
                 throw new ExpectedError();
@@ -97,10 +98,12 @@ public class CompleteChannelFutureTest {
             super(channel);
         }
 
+        @Override
         public Throwable getCause() {
             throw new Error();
         }
 
+        @Override
         public boolean isSuccess() {
             throw new Error();
         }

@@ -60,6 +60,7 @@ public abstract class OneToOneDecoder implements ChannelUpstreamHandler {
         super();
     }
 
+    @Override
     public void handleUpstream(
             ChannelHandlerContext ctx, ChannelEvent evt) throws Exception {
         if (!(evt instanceof MessageEvent)) {

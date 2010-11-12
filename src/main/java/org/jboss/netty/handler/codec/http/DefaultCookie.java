@@ -98,14 +98,17 @@ public class DefaultCookie implements Cookie {
         setValue(value);
     }
 
+    @Override
     public String getName() {
         return name;
     }
 
+    @Override
     public String getValue() {
         return value;
     }
 
+    @Override
     public void setValue(String value) {
         if (value == null) {
             throw new NullPointerException("value");
@@ -113,46 +116,57 @@ public class DefaultCookie implements Cookie {
         this.value = value;
     }
 
+    @Override
     public String getDomain() {
         return domain;
     }
 
+    @Override
     public void setDomain(String domain) {
         this.domain = validateValue("domain", domain);
     }
 
+    @Override
     public String getPath() {
         return path;
     }
 
+    @Override
     public void setPath(String path) {
         this.path = validateValue("path", path);
     }
 
+    @Override
     public String getComment() {
         return comment;
     }
 
+    @Override
     public void setComment(String comment) {
         this.comment = validateValue("comment", comment);
     }
 
+    @Override
     public String getCommentUrl() {
         return commentUrl;
     }
 
+    @Override
     public void setCommentUrl(String commentUrl) {
         this.commentUrl = validateValue("commentUrl", commentUrl);
     }
 
+    @Override
     public boolean isDiscard() {
         return discard;
     }
 
+    @Override
     public void setDiscard(boolean discard) {
         this.discard = discard;
     }
 
+    @Override
     public Set<Integer> getPorts() {
         if (unmodifiablePorts == null) {
             unmodifiablePorts = Collections.unmodifiableSet(ports);
@@ -160,6 +174,7 @@ public class DefaultCookie implements Cookie {
         return unmodifiablePorts;
     }
 
+    @Override
     public void setPorts(int... ports) {
         if (ports == null) {
             throw new NullPointerException("ports");
@@ -181,6 +196,7 @@ public class DefaultCookie implements Cookie {
         }
     }
 
+    @Override
     public void setPorts(Iterable<Integer> ports) {
         Set<Integer> newPorts = new TreeSet<Integer>();
         for (int p: ports) {
@@ -197,10 +213,12 @@ public class DefaultCookie implements Cookie {
         }
     }
 
+    @Override
     public int getMaxAge() {
         return maxAge;
     }
 
+    @Override
     public void setMaxAge(int maxAge) {
         if (maxAge < -1) {
             throw new IllegalArgumentException(
@@ -210,26 +228,32 @@ public class DefaultCookie implements Cookie {
         this.maxAge = maxAge;
     }
 
+    @Override
     public int getVersion() {
         return version;
     }
 
+    @Override
     public void setVersion(int version) {
         this.version = version;
     }
 
+    @Override
     public boolean isSecure() {
         return secure;
     }
 
+    @Override
     public void setSecure(boolean secure) {
         this.secure = secure;
     }
 
+    @Override
     public boolean isHttpOnly() {
         return httpOnly;
     }
 
+    @Override
     public void setHttpOnly(boolean httpOnly) {
         this.httpOnly = httpOnly;
     }
@@ -271,6 +295,7 @@ public class DefaultCookie implements Cookie {
         return true;
     }
 
+    @Override
     public int compareTo(Cookie c) {
         int v;
         v = getName().compareToIgnoreCase(c.getName());

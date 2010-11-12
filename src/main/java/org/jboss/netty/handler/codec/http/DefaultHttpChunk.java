@@ -37,10 +37,12 @@ public class DefaultHttpChunk implements HttpChunk {
         setContent(content);
     }
 
+    @Override
     public ChannelBuffer getContent() {
         return content;
     }
 
+    @Override
     public void setContent(ChannelBuffer content) {
         if (content == null) {
             throw new NullPointerException("content");
@@ -49,6 +51,7 @@ public class DefaultHttpChunk implements HttpChunk {
         this.content = content;
     }
 
+    @Override
     public boolean isLast() {
         return last;
     }

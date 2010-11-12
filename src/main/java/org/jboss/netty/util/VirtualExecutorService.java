@@ -103,18 +103,21 @@ public class VirtualExecutorService extends AbstractExecutorService {
         }
     }
 
+    @Override
     public boolean isShutdown() {
         synchronized (startStopLock) {
             return shutdown;
         }
     }
 
+    @Override
     public boolean isTerminated() {
         synchronized (startStopLock) {
             return shutdown && activeThreads.isEmpty();
         }
     }
 
+    @Override
     public void shutdown() {
         synchronized (startStopLock) {
             if (shutdown) {
@@ -124,6 +127,7 @@ public class VirtualExecutorService extends AbstractExecutorService {
         }
     }
 
+    @Override
     public List<Runnable> shutdownNow() {
         synchronized (startStopLock) {
             if (!isTerminated()) {
@@ -137,6 +141,7 @@ public class VirtualExecutorService extends AbstractExecutorService {
         return Collections.emptyList();
     }
 
+    @Override
     public boolean awaitTermination(long timeout, TimeUnit unit)
             throws InterruptedException {
         synchronized (startStopLock) {
@@ -148,6 +153,7 @@ public class VirtualExecutorService extends AbstractExecutorService {
         }
     }
 
+    @Override
     public void execute(Runnable command) {
         if (command == null) {
             throw new NullPointerException("command");
@@ -172,6 +178,7 @@ public class VirtualExecutorService extends AbstractExecutorService {
             this.runnable = runnable;
         }
 
+        @Override
         public void run() {
             Thread thread = Thread.currentThread();
             synchronized (startStopLock) {

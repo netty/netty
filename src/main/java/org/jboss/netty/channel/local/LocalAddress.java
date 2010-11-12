@@ -106,6 +106,7 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
     //        ephemeral ports, just like O/S does for port number 0.  It will
     //        break backward compatibility though.
 
+    @Override
     public int compareTo(LocalAddress o) {
         if (ephemeral) {
             if (o.ephemeral) {

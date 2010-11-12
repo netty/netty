@@ -67,6 +67,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
         }
     }
 
+    @Override
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         Channel channel = e.getChannel();
@@ -230,6 +231,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
             channel.selector = selector;
         }
 
+        @Override
         public void run() {
             final Thread currentThread = Thread.currentThread();
 

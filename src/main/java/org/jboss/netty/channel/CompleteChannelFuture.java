@@ -48,6 +48,7 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
         this.channel = channel;
     }
 
+    @Override
     public void addListener(ChannelFutureListener listener) {
         try {
             listener.operationComplete(this);
@@ -58,10 +59,12 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
         }
     }
 
+    @Override
     public void removeListener(ChannelFutureListener listener) {
         // NOOP
     }
 
+    @Override
     public ChannelFuture await() throws InterruptedException {
         if (Thread.interrupted()) {
             throw new InterruptedException();
@@ -69,6 +72,7 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
         return this;
     }
 
+    @Override
     public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
         if (Thread.interrupted()) {
             throw new InterruptedException();
@@ -76,6 +80,7 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
         return true;
     }
 
+    @Override
     public boolean await(long timeoutMillis) throws InterruptedException {
         if (Thread.interrupted()) {
             throw new InterruptedException();
@@ -83,42 +88,52 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
         return true;
     }
 
+    @Override
     public ChannelFuture awaitUninterruptibly() {
         return this;
     }
 
+    @Override
     public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
         return true;
     }
 
+    @Override
     public boolean awaitUninterruptibly(long timeoutMillis) {
         return true;
     }
 
+    @Override
     public Channel getChannel() {
         return channel;
     }
 
+    @Override
     public boolean isDone() {
         return true;
     }
 
+    @Override
     public boolean setProgress(long amount, long current, long total) {
         return false;
     }
 
+    @Override
     public boolean setFailure(Throwable cause) {
         return false;
     }
 
+    @Override
     public boolean setSuccess() {
         return false;
     }
 
+    @Override
     public boolean cancel() {
         return false;
     }
 
+    @Override
     public boolean isCancelled() {
         return false;
     }

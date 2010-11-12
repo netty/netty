@@ -33,6 +33,7 @@ public interface ChildChannelStateEvent extends ChannelEvent {
      * with this event.  Please note that you should use {@link #getChildChannel()}
      * to get the {@link Channel} created or accepted by the parent {@link Channel}.
      */
+    @Override
     Channel getChannel();
 
     /**

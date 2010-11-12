@@ -42,10 +42,12 @@ public class FixedReceiveBufferSizePredictor implements
         this.bufferSize = bufferSize;
     }
 
+    @Override
     public int nextReceiveBufferSize() {
         return bufferSize;
     }
 
+    @Override
     public void previousReceiveBufferSize(int previousReceiveBufferSize) {
         // Ignore
     }

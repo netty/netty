@@ -91,6 +91,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
         return getUnsupportedOperationFuture();
     }
 
+    @Override
     public boolean isConnected() {
         return false;
     }

@@ -79,10 +79,12 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
         return true;
     }
 
+    @Override
     public int getWriteBufferHighWaterMark() {
         return writeBufferHighWaterMark;
     }
 
+    @Override
     public void setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         if (writeBufferHighWaterMark < getWriteBufferLowWaterMark()) {
             throw new IllegalArgumentException(
@@ -102,10 +104,12 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
         this.writeBufferHighWaterMark = writeBufferHighWaterMark;
     }
 
+    @Override
     public int getWriteBufferLowWaterMark() {
         return writeBufferLowWaterMark;
     }
 
+    @Override
     public void setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         if (writeBufferLowWaterMark > getWriteBufferHighWaterMark()) {
             throw new IllegalArgumentException(
@@ -125,10 +129,12 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
         this.writeBufferLowWaterMark = writeBufferLowWaterMark;
     }
 
+    @Override
     public int getWriteSpinCount() {
         return writeSpinCount;
     }
 
+    @Override
     public void setWriteSpinCount(int writeSpinCount) {
         if (writeSpinCount <= 0) {
             throw new IllegalArgumentException(

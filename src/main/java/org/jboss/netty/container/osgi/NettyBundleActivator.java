@@ -31,12 +31,14 @@ public class NettyBundleActivator implements BundleActivator {
 
     private OsgiLoggerFactory loggerFactory;
 
+    @Override
     public void start(BundleContext ctx) throws Exception {
         // Switch the internal logger to the OSGi LogService.
         loggerFactory = new OsgiLoggerFactory(ctx);
         InternalLoggerFactory.setDefaultFactory(loggerFactory);
     }
 
+    @Override
     public void stop(BundleContext ctx) throws Exception {
         if (loggerFactory != null) {
             InternalLoggerFactory.setDefaultFactory(loggerFactory.getFallback());

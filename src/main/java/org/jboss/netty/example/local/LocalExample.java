@@ -60,6 +60,7 @@ public class LocalExample {
 
         // Set up the client-side pipeline factory.
         cb.setPipelineFactory(new ChannelPipelineFactory() {
+            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(
                         new StringDecoder(),

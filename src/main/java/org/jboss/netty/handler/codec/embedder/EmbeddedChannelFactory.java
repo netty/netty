@@ -32,10 +32,12 @@ class EmbeddedChannelFactory implements ChannelFactory {
         super();
     }
 
+    @Override
     public Channel newChannel(ChannelPipeline pipeline) {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public void releaseExternalResources() {
         // No external resources
     }

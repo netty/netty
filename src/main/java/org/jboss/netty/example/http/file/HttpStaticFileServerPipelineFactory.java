@@ -29,6 +29,7 @@ import org.jboss.netty.handler.stream.ChunkedWriteHandler;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class HttpStaticFileServerPipelineFactory implements ChannelPipelineFactory {
+    @Override
     public ChannelPipeline getPipeline() throws Exception {
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();

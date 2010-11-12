@@ -97,10 +97,12 @@ public class StaticChannelPipeline implements ChannelPipeline {
         }
     }
 
+    @Override
     public Channel getChannel() {
         return channel;
     }
 
+    @Override
     public ChannelSink getSink() {
         ChannelSink sink = this.sink;
         if (sink == null) {
@@ -109,6 +111,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         return sink;
     }
 
+    @Override
     public void attach(Channel channel, ChannelSink sink) {
         if (channel == null) {
             throw new NullPointerException("channel");
@@ -123,54 +126,67 @@ public class StaticChannelPipeline implements ChannelPipeline {
         this.sink = sink;
     }
 
+    @Override
     public boolean isAttached() {
         return sink != null;
     }
 
+    @Override
     public void addFirst(String name, ChannelHandler handler) {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public void addLast(String name, ChannelHandler handler) {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public void addBefore(String baseName, String name, ChannelHandler handler) {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public void addAfter(String baseName, String name, ChannelHandler handler) {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public void remove(ChannelHandler handler) {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public ChannelHandler remove(String name) {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public <T extends ChannelHandler> T remove(Class<T> handlerType) {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public ChannelHandler removeFirst() {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public ChannelHandler removeLast() {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public void replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler) {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public ChannelHandler replace(String oldName, String newName, ChannelHandler newHandler) {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public <T extends ChannelHandler> T replace(
             Class<T> oldHandlerType, String newName, ChannelHandler newHandler) {
         throw new UnsupportedOperationException();
@@ -259,14 +275,17 @@ public class StaticChannelPipeline implements ChannelPipeline {
         }
     }
 
+    @Override
     public ChannelHandler getFirst() {
         return contexts[0].getHandler();
     }
 
+    @Override
     public ChannelHandler getLast() {
         return contexts[contexts.length - 1].getHandler();
     }
 
+    @Override
     public ChannelHandler get(String name) {
         StaticChannelHandlerContext ctx = name2ctx.get(name);
         if (ctx == null) {
@@ -276,6 +295,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         }
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public <T extends ChannelHandler> T get(Class<T> handlerType) {
         ChannelHandlerContext ctx = getContext(handlerType);
@@ -286,6 +306,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         }
     }
 
+    @Override
     public ChannelHandlerContext getContext(String name) {
         if (name == null) {
             throw new NullPointerException("name");
@@ -293,6 +314,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         return name2ctx.get(name);
     }
 
+    @Override
     public ChannelHandlerContext getContext(ChannelHandler handler) {
         if (handler == null) {
             throw new NullPointerException("handler");
@@ -305,6 +327,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         return null;
     }
 
+    @Override
     public ChannelHandlerContext getContext(Class<? extends ChannelHandler> handlerType) {
         if (handlerType == null) {
             throw new NullPointerException("handlerType");
@@ -317,6 +340,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         return null;
     }
 
+    @Override
     public Map<String, ChannelHandler> toMap() {
         Map<String, ChannelHandler> map = new LinkedHashMap<String, ChannelHandler>();
         for (StaticChannelHandlerContext ctx: contexts) {
@@ -346,6 +370,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         return buf.toString();
     }
 
+    @Override
     public void sendUpstream(ChannelEvent e) {
         StaticChannelHandlerContext head = getActualUpstreamContext(0);
         if (head == null) {
@@ -365,6 +390,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
         }
     }
 
+    @Override
     public void sendDownstream(ChannelEvent e) {
         StaticChannelHandlerContext tail = getActualDownstreamContext(lastIndex);
         if (tail == null) {
@@ -463,38 +489,47 @@ public class StaticChannelPipeline implements ChannelPipeline {
             this.handler = handler;
         }
 
+        @Override
         public Channel getChannel() {
             return getPipeline().getChannel();
         }
 
+        @Override
         public ChannelPipeline getPipeline() {
             return StaticChannelPipeline.this;
         }
 
+        @Override
         public boolean canHandleDownstream() {
             return canHandleDownstream;
         }
 
+        @Override
         public boolean canHandleUpstream() {
             return canHandleUpstream;
         }
 
+        @Override
         public ChannelHandler getHandler() {
             return handler;
         }
 
+        @Override
         public String getName() {
             return name;
         }
 
+        @Override
         public Object getAttachment() {
             return attachment;
         }
 
+        @Override
         public void setAttachment(Object attachment) {
             this.attachment = attachment;
         }
 
+        @Override
         public void sendDownstream(ChannelEvent e) {
             StaticChannelHandlerContext prev = getActualDownstreamContext(index - 1);
             if (prev == null) {
@@ -508,6 +543,7 @@ public class StaticChannelPipeline implements ChannelPipeline {
             }
         }
 
+        @Override
         public void sendUpstream(ChannelEvent e) {
             StaticChannelHandlerContext next = getActualUpstreamContext(index + 1);
             if (next != null) {

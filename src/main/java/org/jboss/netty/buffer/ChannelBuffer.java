@@ -1705,6 +1705,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * {@linkplain #equals(Object) equal to} this array, both arrays should
      * return the same value.
      */
+    @Override
     int hashCode();
 
     /**
@@ -1719,6 +1720,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * {@code null} and an object which is not an instance of
      * {@link ChannelBuffer} type.
      */
+    @Override
     boolean equals(Object obj);
 
     /**
@@ -1727,6 +1729,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * comparison functions of various languages such as {@code strcmp},
      * {@code memcmp} and {@link String#compareTo(String)}.
      */
+    @Override
     int compareTo(ChannelBuffer buffer);
 
     /**
@@ -1735,5 +1738,6 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * the values of the key properties such as {@link #readerIndex()},
      * {@link #writerIndex()} and {@link #capacity()}.
      */
+    @Override
     String toString();
 }

@@ -40,6 +40,7 @@ public class FactorialClientPipelineFactory implements
         this.count = count;
     }
 
+    @Override
     public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline pipeline = pipeline();
 

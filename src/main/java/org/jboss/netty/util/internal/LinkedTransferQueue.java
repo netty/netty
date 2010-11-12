@@ -895,10 +895,12 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
             advance(null);
         }
 
+        @Override
         public final boolean hasNext() {
             return nextNode != null;
         }
 
+        @Override
         public final E next() {
             Node p = nextNode;
             if (p == null) {
@@ -909,6 +911,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
             return e;
         }
 
+        @Override
         public final void remove() {
             Node p = lastRet;
             if (p == null) {
@@ -1052,6 +1055,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      *
      * @throws NullPointerException if the specified element is null
      */
+    @Override
     public void put(E e) {
         xfer(e, true, ASYNC, 0);
     }
@@ -1065,6 +1069,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      *  {@link BlockingQueue#offer(Object,long,TimeUnit) BlockingQueue.offer})
      * @throws NullPointerException if the specified element is null
      */
+    @Override
     public boolean offer(E e, long timeout, TimeUnit unit) {
         xfer(e, true, ASYNC, 0);
         return true;
@@ -1078,6 +1083,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      *         {@link BlockingQueue#offer(Object) BlockingQueue.offer})
      * @throws NullPointerException if the specified element is null
      */
+    @Override
     public boolean offer(E e) {
         xfer(e, true, ASYNC, 0);
         return true;
@@ -1154,6 +1160,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         throw new InterruptedException();
     }
 
+    @Override
     public E take() throws InterruptedException {
         E e = xfer(null, false, SYNC, 0);
         if (e != null) {
@@ -1163,6 +1170,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         throw new InterruptedException();
     }
 
+    @Override
     public E poll(long timeout, TimeUnit unit) throws InterruptedException {
         E e = xfer(null, false, TIMED, unit.toNanos(timeout));
         if (e != null || !Thread.interrupted()) {
@@ -1171,6 +1179,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         throw new InterruptedException();
     }
 
+    @Override
     public E poll() {
         return xfer(null, false, NOW, 0);
     }
@@ -1179,6 +1188,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * @throws NullPointerException     {@inheritDoc}
      * @throws IllegalArgumentException {@inheritDoc}
      */
+    @Override
     public int drainTo(Collection<? super E> c) {
         if (c == null) {
             throw new NullPointerException();
@@ -1199,6 +1209,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * @throws NullPointerException     {@inheritDoc}
      * @throws IllegalArgumentException {@inheritDoc}
      */
+    @Override
     public int drainTo(Collection<? super E> c, int maxElements) {
         if (c == null) {
             throw new NullPointerException();
@@ -1233,6 +1244,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         return new Itr();
     }
 
+    @Override
     public E peek() {
         return firstDataItem();
     }
@@ -1300,6 +1312,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * @return {@code Integer.MAX_VALUE} (as specified by
      *         {@link BlockingQueue#remainingCapacity()})
      */
+    @Override
     public int remainingCapacity() {
         return Integer.MAX_VALUE;
     }

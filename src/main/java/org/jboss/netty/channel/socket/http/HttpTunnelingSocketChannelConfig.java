@@ -206,12 +206,14 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
         enableSslSessionCreation = flag;
     }
 
+    @Override
     public void setOptions(Map<String, Object> options) {
         for (Entry<String, Object> e: options.entrySet()) {
             setOption(e.getKey(), e.getValue());
         }
     }
 
+    @Override
     public boolean setOption(String key, Object value) {
         if (channel.realChannel.getConfig().setOption(key, value)) {
             return true;
@@ -236,88 +238,109 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
         return true;
     }
 
+    @Override
     public int getReceiveBufferSize() {
         return channel.realChannel.getConfig().getReceiveBufferSize();
     }
 
+    @Override
     public int getSendBufferSize() {
         return channel.realChannel.getConfig().getSendBufferSize();
     }
 
+    @Override
     public int getSoLinger() {
         return channel.realChannel.getConfig().getSoLinger();
     }
 
+    @Override
     public int getTrafficClass() {
         return channel.realChannel.getConfig().getTrafficClass();
     }
 
+    @Override
     public boolean isKeepAlive() {
         return channel.realChannel.getConfig().isKeepAlive();
     }
 
+    @Override
     public boolean isReuseAddress() {
         return channel.realChannel.getConfig().isReuseAddress();
     }
 
+    @Override
     public boolean isTcpNoDelay() {
         return channel.realChannel.getConfig().isTcpNoDelay();
     }
 
+    @Override
     public void setKeepAlive(boolean keepAlive) {
         channel.realChannel.getConfig().setKeepAlive(keepAlive);
     }
 
+    @Override
     public void setPerformancePreferences(
           int connectionTime, int latency, int bandwidth) {
         channel.realChannel.getConfig().setPerformancePreferences(connectionTime, latency, bandwidth);
     }
 
+    @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
         channel.realChannel.getConfig().setReceiveBufferSize(receiveBufferSize);
     }
 
+    @Override
     public void setReuseAddress(boolean reuseAddress) {
         channel.realChannel.getConfig().setReuseAddress(reuseAddress);
     }
 
+    @Override
     public void setSendBufferSize(int sendBufferSize) {
         channel.realChannel.getConfig().setSendBufferSize(sendBufferSize);
 
     }
 
+    @Override
     public void setSoLinger(int soLinger) {
         channel.realChannel.getConfig().setSoLinger(soLinger);
     }
 
+    @Override
     public void setTcpNoDelay(boolean tcpNoDelay) {
         channel.realChannel.getConfig().setTcpNoDelay(tcpNoDelay);
     }
 
+    @Override
     public void setTrafficClass(int trafficClass) {
         channel.realChannel.getConfig().setTrafficClass(trafficClass);
     }
 
+    @Override
     public ChannelBufferFactory getBufferFactory() {
         return channel.realChannel.getConfig().getBufferFactory();
     }
 
+    @Override
     public int getConnectTimeoutMillis() {
         return channel.realChannel.getConfig().getConnectTimeoutMillis();
     }
 
+    @Override
     public ChannelPipelineFactory getPipelineFactory() {
         return channel.realChannel.getConfig().getPipelineFactory();
     }
 
+    @Override
     public void setBufferFactory(ChannelBufferFactory bufferFactory) {
         channel.realChannel.getConfig().setBufferFactory(bufferFactory);
     }
 
+    @Override
     public void setConnectTimeoutMillis(int connectTimeoutMillis) {
         channel.realChannel.getConfig().setConnectTimeoutMillis(connectTimeoutMillis);
     }
 
+    @Override
     public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
         channel.realChannel.getConfig().setPipelineFactory(pipelineFactory);
     }

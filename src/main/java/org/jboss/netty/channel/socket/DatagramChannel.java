@@ -33,8 +33,11 @@ import org.jboss.netty.channel.Channel;
  * @apiviz.composedOf org.jboss.netty.channel.socket.DatagramChannelConfig
  */
 public interface DatagramChannel extends Channel {
+    @Override
     DatagramChannelConfig getConfig();
+    @Override
     InetSocketAddress getLocalAddress();
+    @Override
     InetSocketAddress getRemoteAddress();
 
     /**

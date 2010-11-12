@@ -35,6 +35,7 @@ import org.jboss.netty.handler.codec.compression.ZlibWrapper;
 public class FactorialServerPipelineFactory implements
         ChannelPipelineFactory {
 
+    @Override
     public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline pipeline = pipeline();
 

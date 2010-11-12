@@ -44,22 +44,27 @@ class EmbeddedChannel extends AbstractChannel {
         config = new DefaultChannelConfig();
     }
 
+    @Override
     public ChannelConfig getConfig() {
         return config;
     }
 
+    @Override
     public SocketAddress getLocalAddress() {
         return localAddress;
     }
 
+    @Override
     public SocketAddress getRemoteAddress() {
         return remoteAddress;
     }
 
+    @Override
     public boolean isBound() {
         return true;
     }
 
+    @Override
     public boolean isConnected() {
         return true;
     }

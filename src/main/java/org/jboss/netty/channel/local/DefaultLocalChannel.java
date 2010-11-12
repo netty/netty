@@ -57,22 +57,27 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
         fireChannelOpen(this);
     }
 
+    @Override
     public ChannelConfig getConfig() {
         return config;
     }
 
+    @Override
     public boolean isBound() {
         return bound.get() && isOpen();
     }
 
+    @Override
     public boolean isConnected() {
         return pairedChannel != null && isOpen();
     }
 
+    @Override
     public LocalAddress getLocalAddress() {
         return localAddress;
     }
 
+    @Override
     public LocalAddress getRemoteAddress() {
         return remoteAddress;
     }

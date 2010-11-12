@@ -82,5 +82,6 @@ public interface WebSocketFrame {
      * Returns the string representation of this frame.  Please note that this
      * method is not identical to {@link #getTextData()}.
      */
+    @Override
     String toString();
 }

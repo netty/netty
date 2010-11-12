@@ -105,10 +105,12 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
                 new DefaultFileRegion(raf.getChannel(), 0, fileLength);
             writeFuture = ch.write(region);
             writeFuture.addListener(new ChannelFutureProgressListener() {
+                @Override
                 public void operationComplete(ChannelFuture future) {
                     region.releaseExternalResources();
                 }
 
+                @Override
                 public void operationProgressed(
                         ChannelFuture future, long amount, long current, long total) {
                     System.out.printf("%s: %d / %d (+%d)%n", path, current, total, amount);

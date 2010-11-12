@@ -65,10 +65,12 @@ public class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper 
     /**
      * Sends the event upstream.
      */
+    @Override
     public void run() {
         ctx.sendUpstream(e);
     }
 
+    @Override
     public Object unwrap() {
         return e;
     }

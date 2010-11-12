@@ -64,6 +64,7 @@ public class DefaultServerSocketChannelConfig extends DefaultServerChannelConfig
         return true;
     }
 
+    @Override
     public boolean isReuseAddress() {
         try {
             return socket.getReuseAddress();
@@ -72,6 +73,7 @@ public class DefaultServerSocketChannelConfig extends DefaultServerChannelConfig
         }
     }
 
+    @Override
     public void setReuseAddress(boolean reuseAddress) {
         try {
             socket.setReuseAddress(reuseAddress);
@@ -80,6 +82,7 @@ public class DefaultServerSocketChannelConfig extends DefaultServerChannelConfig
         }
     }
 
+    @Override
     public int getReceiveBufferSize() {
         try {
             return socket.getReceiveBufferSize();
@@ -88,6 +91,7 @@ public class DefaultServerSocketChannelConfig extends DefaultServerChannelConfig
         }
     }
 
+    @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
         try {
             socket.setReceiveBufferSize(receiveBufferSize);
@@ -96,14 +100,17 @@ public class DefaultServerSocketChannelConfig extends DefaultServerChannelConfig
         }
     }
 
+    @Override
     public void setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
         socket.setPerformancePreferences(connectionTime, latency, bandwidth);
     }
 
+    @Override
     public int getBacklog() {
         return backlog;
     }
 
+    @Override
     public void setBacklog(int backlog) {
         if (backlog < 0) {
             throw new IllegalArgumentException("backlog: " + backlog);

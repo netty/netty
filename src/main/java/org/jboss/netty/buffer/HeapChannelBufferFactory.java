@@ -69,14 +69,17 @@ public class HeapChannelBufferFactory extends AbstractChannelBufferFactory {
         super(defaultOrder);
     }
 
+    @Override
     public ChannelBuffer getBuffer(ByteOrder order, int capacity) {
         return ChannelBuffers.buffer(order, capacity);
     }
 
+    @Override
     public ChannelBuffer getBuffer(ByteOrder order, byte[] array, int offset, int length) {
         return ChannelBuffers.wrappedBuffer(order, array, offset, length);
     }
 
+    @Override
     public ChannelBuffer getBuffer(ByteBuffer nioBuffer) {
         if (nioBuffer.hasArray()) {
             return ChannelBuffers.wrappedBuffer(nioBuffer);

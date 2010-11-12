@@ -140,6 +140,7 @@ class NioDatagramChannel extends AbstractChannel
         }
     }
 
+    @Override
     public InetSocketAddress getLocalAddress() {
         InetSocketAddress localAddress = this.localAddress;
         if (localAddress == null) {
@@ -154,6 +155,7 @@ class NioDatagramChannel extends AbstractChannel
         return localAddress;
     }
 
+    @Override
     public InetSocketAddress getRemoteAddress() {
         InetSocketAddress remoteAddress = this.remoteAddress;
         if (remoteAddress == null) {
@@ -168,10 +170,12 @@ class NioDatagramChannel extends AbstractChannel
         return remoteAddress;
     }
 
+    @Override
     public boolean isBound() {
         return isOpen() && datagramChannel.socket().isBound();
     }
 
+    @Override
     public boolean isConnected() {
         return datagramChannel.isConnected();
     }
@@ -181,6 +185,7 @@ class NioDatagramChannel extends AbstractChannel
         return super.setClosed();
     }
 
+    @Override
     public NioDatagramChannelConfig getConfig() {
         return config;
     }
@@ -322,25 +327,30 @@ class NioDatagramChannel extends AbstractChannel
             super();
         }
 
+        @Override
         public void run() {
             writeTaskInTaskQueue.set(false);
             worker.writeFromTaskLoop(NioDatagramChannel.this);
         }
     }
 
+    @Override
     public void joinGroup(InetAddress multicastAddress) {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public void joinGroup(InetSocketAddress multicastAddress,
             NetworkInterface networkInterface) {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public void leaveGroup(InetAddress multicastAddress) {
         throw new UnsupportedOperationException();
     }
 
+    @Override
     public void leaveGroup(InetSocketAddress multicastAddress,
             NetworkInterface networkInterface) {
         throw new UnsupportedOperationException();

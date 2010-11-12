@@ -39,6 +39,7 @@ public class HexDumpProxyPipelineFactory implements ChannelPipelineFactory {
         this.remotePort = remotePort;
     }
 
+    @Override
     public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline p = pipeline(); // Note the static import.
         p.addLast("handler", new HexDumpProxyInboundHandler(cf, remoteHost, remotePort));

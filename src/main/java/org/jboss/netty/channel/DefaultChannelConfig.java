@@ -44,12 +44,14 @@ public class DefaultChannelConfig implements ChannelConfig {
         super();
     }
 
+    @Override
     public void setOptions(Map<String, Object> options) {
         for (Entry<String, Object> e: options.entrySet()) {
             setOption(e.getKey(), e.getValue());
         }
     }
 
+    @Override
     public boolean setOption(String key, Object value) {
         if (key.equals("pipelineFactory")) {
             setPipelineFactory((ChannelPipelineFactory) value);
@@ -63,14 +65,17 @@ public class DefaultChannelConfig implements ChannelConfig {
         return true;
     }
 
+    @Override
     public int getConnectTimeoutMillis() {
         return connectTimeoutMillis;
     }
 
+    @Override
     public ChannelBufferFactory getBufferFactory() {
         return bufferFactory;
     }
 
+    @Override
     public void setBufferFactory(ChannelBufferFactory bufferFactory) {
         if (bufferFactory == null) {
             throw new NullPointerException("bufferFactory");
@@ -78,10 +83,12 @@ public class DefaultChannelConfig implements ChannelConfig {
         this.bufferFactory = bufferFactory;
     }
 
+    @Override
     public ChannelPipelineFactory getPipelineFactory() {
         return null;
     }
 
+    @Override
     public void setConnectTimeoutMillis(int connectTimeoutMillis) {
         if (connectTimeoutMillis < 0) {
             throw new IllegalArgumentException("connectTimeoutMillis: " + connectTimeoutMillis);
@@ -89,6 +96,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         this.connectTimeoutMillis = connectTimeoutMillis;
     }
 
+    @Override
     public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
         // Unused
     }

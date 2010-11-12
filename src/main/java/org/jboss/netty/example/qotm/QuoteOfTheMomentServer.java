@@ -49,6 +49,7 @@ public class QuoteOfTheMomentServer {
 
         // Configure the pipeline factory.
         b.setPipelineFactory(new ChannelPipelineFactory() {
+            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(
                         new StringEncoder(CharsetUtil.ISO_8859_1),

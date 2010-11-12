@@ -108,6 +108,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         }
     }
 
+    @Override
     public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
             throws Exception {
         if (!(e instanceof MessageEvent)) {
@@ -124,6 +125,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         }
     }
 
+    @Override
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
             throws Exception {
         if (e instanceof ChannelStateEvent) {
@@ -228,6 +230,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                     } else {
                         writeFuture = future(channel);
                         writeFuture.addListener(new ChannelFutureListener() {
+                            @Override
                             public void operationComplete(ChannelFuture future)
                                     throws Exception {
                                 if (!future.isSuccess()) {

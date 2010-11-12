@@ -84,10 +84,12 @@ class NioSocketChannel extends AbstractChannel
         config = new DefaultNioSocketChannelConfig(socket.socket());
     }
 
+    @Override
     public NioSocketChannelConfig getConfig() {
         return config;
     }
 
+    @Override
     public InetSocketAddress getLocalAddress() {
         InetSocketAddress localAddress = this.localAddress;
         if (localAddress == null) {
@@ -102,6 +104,7 @@ class NioSocketChannel extends AbstractChannel
         return localAddress;
     }
 
+    @Override
     public InetSocketAddress getRemoteAddress() {
         InetSocketAddress remoteAddress = this.remoteAddress;
         if (remoteAddress == null) {
@@ -121,10 +124,12 @@ class NioSocketChannel extends AbstractChannel
         return state >= ST_OPEN;
     }
 
+    @Override
     public boolean isBound() {
         return state >= ST_BOUND;
     }
 
+    @Override
     public boolean isConnected() {
         return state == ST_CONNECTED;
     }
@@ -263,6 +268,7 @@ class NioSocketChannel extends AbstractChannel
             super();
         }
 
+        @Override
         public void run() {
             writeTaskInTaskQueue.set(false);
             worker.writeFromTaskLoop(NioSocketChannel.this);

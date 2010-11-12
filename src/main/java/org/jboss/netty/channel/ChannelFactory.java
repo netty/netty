@@ -82,5 +82,6 @@ public interface ChannelFactory extends ExternalResourceReleasable {
      * behavior will be resulted in if the resources are released when there's
      * an open channel which is managed by this factory.
      */
+    @Override
     void releaseExternalResources();
 }

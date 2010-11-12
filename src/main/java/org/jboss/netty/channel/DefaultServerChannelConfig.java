@@ -42,6 +42,7 @@ public class DefaultServerChannelConfig implements ChannelConfig {
         super();
     }
 
+    @Override
     public void setOptions(Map<String, Object> options) {
         for (Entry<String, Object> e: options.entrySet()) {
             setOption(e.getKey(), e.getValue());
@@ -52,6 +53,7 @@ public class DefaultServerChannelConfig implements ChannelConfig {
      * Sets an individual option.  You can override this method to support
      * additional configuration parameters.
      */
+    @Override
     public boolean setOption(String key, Object value) {
         if (key.equals("pipelineFactory")) {
             setPipelineFactory((ChannelPipelineFactory) value);
@@ -63,10 +65,12 @@ public class DefaultServerChannelConfig implements ChannelConfig {
         return true;
     }
 
+    @Override
     public ChannelPipelineFactory getPipelineFactory() {
         return pipelineFactory;
     }
 
+    @Override
     public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
         if (pipelineFactory == null) {
             throw new NullPointerException("pipelineFactory");
@@ -74,10 +78,12 @@ public class DefaultServerChannelConfig implements ChannelConfig {
         this.pipelineFactory = pipelineFactory;
     }
 
+    @Override
     public ChannelBufferFactory getBufferFactory() {
         return bufferFactory;
     }
 
+    @Override
     public void setBufferFactory(ChannelBufferFactory bufferFactory) {
         if (bufferFactory == null) {
             throw new NullPointerException("bufferFactory");
@@ -86,10 +92,12 @@ public class DefaultServerChannelConfig implements ChannelConfig {
         this.bufferFactory = bufferFactory;
     }
 
+    @Override
     public int getConnectTimeoutMillis() {
         return 0;
     }
 
+    @Override
     public void setConnectTimeoutMillis(int connectTimeoutMillis) {
         // Unused
     }

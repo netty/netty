@@ -26,5 +26,6 @@ import org.jboss.netty.channel.ChannelPipeline;
  * @version $Rev$, $Date$
  */
 public interface LocalClientChannelFactory extends ChannelFactory {
+    @Override
     LocalChannel newChannel(ChannelPipeline pipeline);
 }

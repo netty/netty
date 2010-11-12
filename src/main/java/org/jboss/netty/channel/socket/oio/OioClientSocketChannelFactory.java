@@ -95,10 +95,12 @@ public class OioClientSocketChannelFactory implements ClientSocketChannelFactory
         sink = new OioClientSocketPipelineSink(workerExecutor);
     }
 
+    @Override
     public SocketChannel newChannel(ChannelPipeline pipeline) {
         return new OioClientSocketChannel(this, pipeline, sink);
     }
 
+    @Override
     public void releaseExternalResources() {
         ExecutorUtil.terminate(workerExecutor);
     }

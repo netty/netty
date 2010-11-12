@@ -43,10 +43,12 @@ public class FailedChannelFuture extends CompleteChannelFuture {
         this.cause = cause;
     }
 
+    @Override
     public Throwable getCause() {
         return cause;
     }
 
+    @Override
     public boolean isSuccess() {
         return false;
     }

@@ -73,6 +73,7 @@ public class SimpleChannelUpstreamHandler implements ChannelUpstreamHandler {
      * meaningful sub-type event and calls an appropriate handler method with
      * the down-casted event.
      */
+    @Override
     public void handleUpstream(
             ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
 

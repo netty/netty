@@ -225,12 +225,14 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
         }
     }
 
+    @Override
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
             throws Exception {
         log(e);
         ctx.sendUpstream(e);
     }
 
+    @Override
     public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
             throws Exception {
         log(e);

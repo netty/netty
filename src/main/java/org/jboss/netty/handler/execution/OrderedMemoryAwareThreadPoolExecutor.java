@@ -290,6 +290,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
             super();
         }
 
+        @Override
         public void execute(Runnable command) {
             boolean needsExecution;
             synchronized (tasks) {
@@ -302,6 +303,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
             }
         }
 
+        @Override
         public void run() {
             Thread thread = Thread.currentThread();
             for (;;) {

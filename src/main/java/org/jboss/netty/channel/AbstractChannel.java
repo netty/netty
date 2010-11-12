@@ -54,6 +54,7 @@ public abstract class AbstractChannel implements Channel {
             super();
         }
 
+        @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             allChannels.remove(future.getChannel().getId());
         }
@@ -124,18 +125,22 @@ public abstract class AbstractChannel implements Channel {
         pipeline.attach(this, sink);
     }
 
+    @Override
     public final Integer getId() {
         return id;
     }
 
+    @Override
     public Channel getParent() {
         return parent;
     }
 
+    @Override
     public ChannelFactory getFactory() {
         return factory;
     }
 
+    @Override
     public ChannelPipeline getPipeline() {
         return pipeline;
     }
@@ -176,10 +181,12 @@ public abstract class AbstractChannel implements Channel {
     /**
      * Compares the {@linkplain #getId() ID} of the two channels.
      */
+    @Override
     public final int compareTo(Channel o) {
         return getId().compareTo(o.getId());
     }
 
+    @Override
     public boolean isOpen() {
         return !closeFuture.isDone();
     }
@@ -196,36 +203,44 @@ public abstract class AbstractChannel implements Channel {
         return closeFuture.setClosed();
     }
 
+    @Override
     public ChannelFuture bind(SocketAddress localAddress) {
         return Channels.bind(this, localAddress);
     }
 
+    @Override
     public ChannelFuture unbind() {
         return Channels.unbind(this);
     }
 
+    @Override
     public ChannelFuture close() {
         ChannelFuture returnedCloseFuture = Channels.close(this);
         assert closeFuture == returnedCloseFuture;
         return closeFuture;
     }
 
+    @Override
     public ChannelFuture getCloseFuture() {
         return closeFuture;
     }
 
+    @Override
     public ChannelFuture connect(SocketAddress remoteAddress) {
         return Channels.connect(this, remoteAddress);
     }
 
+    @Override
     public ChannelFuture disconnect() {
         return Channels.disconnect(this);
     }
 
+    @Override
     public int getInterestOps() {
         return interestOps;
     }
 
+    @Override
     public ChannelFuture setInterestOps(int interestOps) {
         return Channels.setInterestOps(this, interestOps);
     }
@@ -239,14 +254,17 @@ public abstract class AbstractChannel implements Channel {
         this.interestOps = interestOps;
     }
 
+    @Override
     public boolean isReadable() {
         return (getInterestOps() & OP_READ) != 0;
     }
 
+    @Override
     public boolean isWritable() {
         return (getInterestOps() & OP_WRITE) == 0;
     }
 
+    @Override
     public ChannelFuture setReadable(boolean readable) {
         if (readable) {
             return setInterestOps(getInterestOps() | OP_READ);
@@ -255,10 +273,12 @@ public abstract class AbstractChannel implements Channel {
         }
     }
 
+    @Override
     public ChannelFuture write(Object message) {
         return Channels.write(this, message);
     }
 
+    @Override
     public ChannelFuture write(Object message, SocketAddress remoteAddress) {
         return Channels.write(this, message, remoteAddress);
     }

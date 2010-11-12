@@ -48,14 +48,17 @@ public class DefaultExceptionEvent implements ExceptionEvent {
         StackTraceSimplifier.simplify(cause);
     }
 
+    @Override
     public Channel getChannel() {
         return channel;
     }
 
+    @Override
     public ChannelFuture getFuture() {
         return succeededFuture(getChannel());
     }
 
+    @Override
     public Throwable getCause() {
         return cause;
     }

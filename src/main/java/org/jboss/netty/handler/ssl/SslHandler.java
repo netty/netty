@@ -381,6 +381,7 @@ public class SslHandler extends FrameDecoder
         this.enableRenegotiation = enableRenegotiation;
     }
 
+    @Override
     public void handleDownstream(
             final ChannelHandlerContext context, final ChannelEvent evt) throws Exception {
         if (evt instanceof ChannelStateEvent) {
@@ -774,6 +775,7 @@ public class SslHandler extends FrameDecoder
 
                     future = future(channel);
                     future.addListener(new ChannelFutureListener() {
+                        @Override
                         public void operationComplete(ChannelFuture future)
                                 throws Exception {
                             if (future.getCause() instanceof ClosedChannelException) {
@@ -978,6 +980,7 @@ public class SslHandler extends FrameDecoder
             }
 
             delegatedTaskExecutor.execute(new Runnable() {
+                @Override
                 public void run() {
                     synchronized (handshakeLock) {
                         task.run();
@@ -1057,6 +1060,7 @@ public class SslHandler extends FrameDecoder
             this.e = e;
         }
 
+        @Override
         public void operationComplete(ChannelFuture closeNotifyFuture) throws Exception {
             if (!(closeNotifyFuture.getCause() instanceof ClosedChannelException)) {
                 Channels.close(context, e.getFuture());
@@ -1064,18 +1068,22 @@ public class SslHandler extends FrameDecoder
         }
     }
 
+    @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
     }
 
+    @Override
     public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         // Unused
     }
 
+    @Override
     public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
         // Unused
     }
 
+    @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         // Unused
     }

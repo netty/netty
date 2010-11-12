@@ -123,6 +123,7 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
             this.sslHandler = sslHandler;
         }
 
+        @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             if (future.isSuccess()) {
                 // Once session is secured, send a greeting.

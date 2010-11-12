@@ -74,6 +74,7 @@ public class ChunkedStream implements ChunkedInput {
         return offset;
     }
 
+    @Override
     public boolean hasNextChunk() throws Exception {
         int b = in.read();
         if (b < 0) {
@@ -84,14 +85,17 @@ public class ChunkedStream implements ChunkedInput {
         }
     }
 
+    @Override
     public boolean isEndOfInput() throws Exception {
         return !hasNextChunk();
     }
 
+    @Override
     public void close() throws Exception {
         in.close();
     }
 
+    @Override
     public Object nextChunk() throws Exception {
         if (!hasNextChunk()) {
             return null;

@@ -123,10 +123,12 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
         sink = new NioDatagramPipelineSink(workerExecutor, workerCount);
     }
 
+    @Override
     public DatagramChannel newChannel(final ChannelPipeline pipeline) {
         return new NioDatagramChannel(this, pipeline, sink, sink.nextWorker());
     }
 
+    @Override
     public void releaseExternalResources() {
         ExecutorUtil.terminate(workerExecutor);
     }

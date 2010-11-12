@@ -38,6 +38,7 @@ public class FixedReceiveBufferSizePredictorFactory implements
         predictor = new FixedReceiveBufferSizePredictor(bufferSize);
     }
 
+    @Override
     public ReceiveBufferSizePredictor getPredictor() throws Exception {
         return predictor;
     }

@@ -39,6 +39,7 @@ final class LocalServerChannelSink extends AbstractChannelSink {
         super();
     }
 
+    @Override
     public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         Channel channel = e.getChannel();
         if (channel instanceof DefaultLocalServerChannel) {

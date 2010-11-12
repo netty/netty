@@ -45,6 +45,7 @@ class OioDatagramWorker implements Runnable {
         this.channel = channel;
     }
 
+    @Override
     public void run() {
         channel.workerThread = Thread.currentThread();
         final MulticastSocket socket = channel.socket;

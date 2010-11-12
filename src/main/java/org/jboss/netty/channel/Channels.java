@@ -111,6 +111,7 @@ public class Channels {
     public static ChannelPipelineFactory pipelineFactory(
             final ChannelPipeline pipeline) {
         return new ChannelPipelineFactory() {
+            @Override
             public ChannelPipeline getPipeline() {
                 return pipeline(pipeline);
             }

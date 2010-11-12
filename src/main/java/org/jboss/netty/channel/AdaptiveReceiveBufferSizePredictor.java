@@ -149,10 +149,12 @@ public class AdaptiveReceiveBufferSizePredictor implements
         nextReceiveBufferSize = SIZE_TABLE[index];
     }
 
+    @Override
     public int nextReceiveBufferSize() {
         return nextReceiveBufferSize;
     }
 
+    @Override
     public void previousReceiveBufferSize(int previousReceiveBufferSize) {
         if (previousReceiveBufferSize <= SIZE_TABLE[Math.max(0, index - INDEX_DECREMENT - 1)]) {
             if (decreaseNow) {

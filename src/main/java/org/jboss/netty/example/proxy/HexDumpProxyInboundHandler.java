@@ -69,6 +69,7 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
 
         outboundChannel = f.getChannel();
         f.addListener(new ChannelFutureListener() {
+            @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
                     // Connection attempt succeeded:

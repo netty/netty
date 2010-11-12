@@ -32,7 +32,10 @@ import org.jboss.netty.channel.Channel;
  * @apiviz.composedOf org.jboss.netty.channel.socket.SocketChannelConfig
  */
 public interface SocketChannel extends Channel {
+    @Override
     SocketChannelConfig getConfig();
+    @Override
     InetSocketAddress getLocalAddress();
+    @Override
     InetSocketAddress getRemoteAddress();
 }

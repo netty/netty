@@ -91,10 +91,12 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
         return true;
     }
 
+    @Override
     public int getWriteBufferHighWaterMark() {
         return writeBufferHighWaterMark;
     }
 
+    @Override
     public void setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         if (writeBufferHighWaterMark < getWriteBufferLowWaterMark()) {
             throw new IllegalArgumentException(
@@ -113,10 +115,12 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
         this.writeBufferHighWaterMark = writeBufferHighWaterMark;
     }
 
+    @Override
     public int getWriteBufferLowWaterMark() {
         return writeBufferLowWaterMark;
     }
 
+    @Override
     public void setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         if (writeBufferLowWaterMark > getWriteBufferHighWaterMark()) {
             throw new IllegalArgumentException(
@@ -135,10 +139,12 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
         this.writeBufferLowWaterMark = writeBufferLowWaterMark;
     }
 
+    @Override
     public int getWriteSpinCount() {
         return writeSpinCount;
     }
 
+    @Override
     public void setWriteSpinCount(int writeSpinCount) {
         if (writeSpinCount <= 0) {
             throw new IllegalArgumentException(
@@ -147,6 +153,7 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
         this.writeSpinCount = writeSpinCount;
     }
 
+    @Override
     public ReceiveBufferSizePredictor getReceiveBufferSizePredictor() {
         ReceiveBufferSizePredictor predictor = this.predictor;
         if (predictor == null) {
@@ -162,6 +169,7 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
         return predictor;
     }
 
+    @Override
     public void setReceiveBufferSizePredictor(
             ReceiveBufferSizePredictor predictor) {
         if (predictor == null) {
@@ -170,10 +178,12 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
         this.predictor = predictor;
     }
 
+    @Override
     public ReceiveBufferSizePredictorFactory getReceiveBufferSizePredictorFactory() {
         return predictorFactory;
     }
 
+    @Override
     public void setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory predictorFactory) {
         if (predictorFactory == null) {
             throw new NullPointerException("predictorFactory");

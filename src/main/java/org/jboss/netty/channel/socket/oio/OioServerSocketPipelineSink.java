@@ -59,6 +59,7 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
         this.workerExecutor = workerExecutor;
     }
 
+    @Override
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         Channel channel = e.getChannel();
@@ -199,6 +200,7 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
             this.channel = channel;
         }
 
+        @Override
         public void run() {
             channel.shutdownLock.lock();
             try {

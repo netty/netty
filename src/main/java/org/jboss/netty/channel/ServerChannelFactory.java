@@ -26,5 +26,6 @@ package org.jboss.netty.channel;
  * @apiviz.has        org.jboss.netty.channel.ServerChannel oneway - - creates
  */
 public interface ServerChannelFactory extends ChannelFactory {
+    @Override
     ServerChannel newChannel(ChannelPipeline pipeline);
 }

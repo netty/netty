@@ -301,6 +301,7 @@ public class BufferedWriteHandler extends SimpleChannelHandler {
         ChannelBuffer composite = ChannelBuffers.wrappedBuffer(data);
         ChannelFuture future = Channels.future(ctx.getChannel());
         future.addListener(new ChannelFutureListener() {
+            @Override
             public void operationComplete(ChannelFuture future)
                     throws Exception {
                 if (future.isSuccess()) {

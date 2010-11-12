@@ -72,11 +72,13 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
         decoder = new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize);
     }
 
+    @Override
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
             throws Exception {
         decoder.handleUpstream(ctx, e);
     }
 
+    @Override
     public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
             throws Exception {
         encoder.handleDownstream(ctx, e);

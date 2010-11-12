@@ -55,6 +55,7 @@ public class DefaultObjectSizeEstimator implements ObjectSizeEstimator {
         class2size.put(void.class, 0);
     }
 
+    @Override
     public int estimateSize(Object o) {
         if (o == null) {
             return 8;

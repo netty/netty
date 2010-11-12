@@ -66,6 +66,7 @@ public class AdaptiveReceiveBufferSizePredictorFactory implements
         this.maximum = maximum;
     }
 
+    @Override
     public ReceiveBufferSizePredictor getPredictor() throws Exception {
         return new AdaptiveReceiveBufferSizePredictor(minimum, initial, maximum);
     }

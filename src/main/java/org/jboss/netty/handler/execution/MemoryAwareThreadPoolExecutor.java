@@ -518,6 +518,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             super();
         }
 
+        @Override
         public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
             try {
                 final Thread t = new Thread(r, "Temporary task executor");
@@ -537,6 +538,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             this.task = task;
         }
 
+        @Override
         public void run() {
             task.run();
         }

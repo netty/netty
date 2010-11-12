@@ -48,6 +48,7 @@ public interface ChannelBufferIndexFinder {
      * Index finder which locates a {@code NUL (0x00)} byte.
      */
     static ChannelBufferIndexFinder NUL = new ChannelBufferIndexFinder() {
+        @Override
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             return buffer.getByte(guessedIndex) == 0;
         }
@@ -57,6 +58,7 @@ public interface ChannelBufferIndexFinder {
      * Index finder which locates a non-{@code NUL (0x00)} byte.
      */
     static ChannelBufferIndexFinder NOT_NUL = new ChannelBufferIndexFinder() {
+        @Override
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             return buffer.getByte(guessedIndex) != 0;
         }
@@ -66,6 +68,7 @@ public interface ChannelBufferIndexFinder {
      * Index finder which locates a {@code CR ('\r')} byte.
      */
     static ChannelBufferIndexFinder CR = new ChannelBufferIndexFinder() {
+        @Override
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             return buffer.getByte(guessedIndex) == '\r';
         }
@@ -75,6 +78,7 @@ public interface ChannelBufferIndexFinder {
      * Index finder which locates a non-{@code CR ('\r')} byte.
      */
     static ChannelBufferIndexFinder NOT_CR = new ChannelBufferIndexFinder() {
+        @Override
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             return buffer.getByte(guessedIndex) != '\r';
         }
@@ -84,6 +88,7 @@ public interface ChannelBufferIndexFinder {
      * Index finder which locates a {@code LF ('\n')} byte.
      */
     static ChannelBufferIndexFinder LF = new ChannelBufferIndexFinder() {
+        @Override
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             return buffer.getByte(guessedIndex) == '\n';
         }
@@ -93,6 +98,7 @@ public interface ChannelBufferIndexFinder {
      * Index finder which locates a non-{@code LF ('\n')} byte.
      */
     static ChannelBufferIndexFinder NOT_LF = new ChannelBufferIndexFinder() {
+        @Override
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             return buffer.getByte(guessedIndex) != '\n';
         }
@@ -102,6 +108,7 @@ public interface ChannelBufferIndexFinder {
      * Index finder which locates a {@code CR ('\r')} or {@code LF ('\n')}.
      */
     static ChannelBufferIndexFinder CRLF = new ChannelBufferIndexFinder() {
+        @Override
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             byte b = buffer.getByte(guessedIndex);
             return b == '\r' || b == '\n';
@@ -113,6 +120,7 @@ public interface ChannelBufferIndexFinder {
      * nor a {@code LF ('\n')}.
      */
     static ChannelBufferIndexFinder NOT_CRLF = new ChannelBufferIndexFinder() {
+        @Override
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             byte b = buffer.getByte(guessedIndex);
             return b != '\r' && b != '\n';
@@ -124,6 +132,7 @@ public interface ChannelBufferIndexFinder {
      * ({@code ' '} and {@code '\t'}).
      */
     static ChannelBufferIndexFinder LINEAR_WHITESPACE = new ChannelBufferIndexFinder() {
+        @Override
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             byte b = buffer.getByte(guessedIndex);
             return b == ' ' || b == '\t';
@@ -135,6 +144,7 @@ public interface ChannelBufferIndexFinder {
      * (neither {@code ' '} nor {@code '\t'}).
      */
     static ChannelBufferIndexFinder NOT_LINEAR_WHITESPACE = new ChannelBufferIndexFinder() {
+        @Override
         public boolean find(ChannelBuffer buffer, int guessedIndex) {
             byte b = buffer.getByte(guessedIndex);
             return b != ' ' && b != '\t';

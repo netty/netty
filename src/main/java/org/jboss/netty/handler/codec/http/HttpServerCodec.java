@@ -56,11 +56,13 @@ public class HttpServerCodec implements ChannelUpstreamHandler,
         decoder = new HttpRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize);
     }
 
+    @Override
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
             throws Exception {
         decoder.handleUpstream(ctx, e);
     }
 
+    @Override
     public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
             throws Exception {
         encoder.handleDownstream(ctx, e);

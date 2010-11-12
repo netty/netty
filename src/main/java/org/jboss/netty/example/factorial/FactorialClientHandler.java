@@ -99,6 +99,7 @@ public class FactorialClientHandler extends SimpleChannelUpstreamHandler {
         if (receivedMessages == count) {
             // Offer the answer after closing the connection.
             e.getChannel().close().addListener(new ChannelFutureListener() {
+                @Override
                 public void operationComplete(ChannelFuture future) {
                     boolean offered = answer.offer((BigInteger) e.getMessage());
                     assert offered;

@@ -62,26 +62,32 @@ public class DefaultWebSocketFrame implements WebSocketFrame {
         setData(type, binaryData);
     }
 
+    @Override
     public int getType() {
         return type;
     }
 
+    @Override
     public boolean isText() {
         return (getType() & 0x80) == 0;
     }
 
+    @Override
     public boolean isBinary() {
         return !isText();
     }
 
+    @Override
     public ChannelBuffer getBinaryData() {
         return binaryData;
     }
 
+    @Override
     public String getTextData() {
         return getBinaryData().toString(CharsetUtil.UTF_8);
     }
 
+    @Override
     public void setData(int type, ChannelBuffer binaryData) {
         if (binaryData == null) {
             throw new NullPointerException("binaryData");

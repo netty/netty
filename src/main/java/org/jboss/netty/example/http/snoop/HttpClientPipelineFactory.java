@@ -43,6 +43,7 @@ public class HttpClientPipelineFactory implements ChannelPipelineFactory {
         this.ssl = ssl;
     }
 
+    @Override
     public ChannelPipeline getPipeline() throws Exception {
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();

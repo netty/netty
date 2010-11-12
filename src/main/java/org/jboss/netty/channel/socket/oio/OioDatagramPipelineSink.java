@@ -49,6 +49,7 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
         this.workerExecutor = workerExecutor;
     }
 
+    @Override
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         OioDatagramChannel channel = (OioDatagramChannel) e.getChannel();

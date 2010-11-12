@@ -78,10 +78,12 @@ final class OioDatagramChannel extends AbstractChannel
         fireChannelOpen(this);
     }
 
+    @Override
     public DatagramChannelConfig getConfig() {
         return config;
     }
 
+    @Override
     public InetSocketAddress getLocalAddress() {
         InetSocketAddress localAddress = this.localAddress;
         if (localAddress == null) {
@@ -96,6 +98,7 @@ final class OioDatagramChannel extends AbstractChannel
         return localAddress;
     }
 
+    @Override
     public InetSocketAddress getRemoteAddress() {
         InetSocketAddress remoteAddress = this.remoteAddress;
         if (remoteAddress == null) {
@@ -110,10 +113,12 @@ final class OioDatagramChannel extends AbstractChannel
         return remoteAddress;
     }
 
+    @Override
     public boolean isBound() {
         return isOpen() && socket.isBound();
     }
 
+    @Override
     public boolean isConnected() {
         return isOpen() && socket.isConnected();
     }
@@ -137,6 +142,7 @@ final class OioDatagramChannel extends AbstractChannel
         }
     }
 
+    @Override
     public void joinGroup(InetAddress multicastAddress) {
         ensureBound();
         try {
@@ -146,6 +152,7 @@ final class OioDatagramChannel extends AbstractChannel
         }
     }
 
+    @Override
     public void joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
         ensureBound();
@@ -164,6 +171,7 @@ final class OioDatagramChannel extends AbstractChannel
         }
     }
 
+    @Override
     public void leaveGroup(InetAddress multicastAddress) {
         try {
             socket.leaveGroup(multicastAddress);
@@ -172,6 +180,7 @@ final class OioDatagramChannel extends AbstractChannel
         }
     }
 
+    @Override
     public void leaveGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
         try {

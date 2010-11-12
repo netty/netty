@@ -86,113 +86,140 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         buffer = newBuffer;
     }
 
+    @Override
     public ChannelBufferFactory factory() {
         return factory;
     }
 
+    @Override
     public ByteOrder order() {
         return endianness;
     }
 
+    @Override
     public boolean isDirect() {
         return buffer.isDirect();
     }
 
+    @Override
     public int capacity() {
         return buffer.capacity();
     }
 
+    @Override
     public boolean hasArray() {
         return buffer.hasArray();
     }
 
+    @Override
     public byte[] array() {
         return buffer.array();
     }
 
+    @Override
     public int arrayOffset() {
         return buffer.arrayOffset();
     }
 
+    @Override
     public byte getByte(int index) {
         return buffer.getByte(index);
     }
 
+    @Override
     public short getShort(int index) {
         return buffer.getShort(index);
     }
 
+    @Override
     public int getUnsignedMedium(int index) {
         return buffer.getUnsignedMedium(index);
     }
 
+    @Override
     public int getInt(int index) {
         return buffer.getInt(index);
     }
 
+    @Override
     public long getLong(int index) {
         return buffer.getLong(index);
     }
 
+    @Override
     public void getBytes(int index, byte[] dst, int dstIndex, int length) {
         buffer.getBytes(index, dst, dstIndex, length);
     }
 
+    @Override
     public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
         buffer.getBytes(index, dst, dstIndex, length);
     }
 
+    @Override
     public void getBytes(int index, ByteBuffer dst) {
         buffer.getBytes(index, dst);
     }
 
+    @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
         return buffer.getBytes(index, out, length);
     }
 
+    @Override
     public void getBytes(int index, OutputStream out, int length)
             throws IOException {
         buffer.getBytes(index, out, length);
     }
 
+    @Override
     public void setByte(int index, int value) {
         buffer.setByte(index, value);
     }
 
+    @Override
     public void setShort(int index, int value) {
         buffer.setShort(index, value);
     }
 
+    @Override
     public void setMedium(int index, int value) {
         buffer.setMedium(index, value);
     }
 
+    @Override
     public void setInt(int index, int value) {
         buffer.setInt(index, value);
     }
 
+    @Override
     public void setLong(int index, long value) {
         buffer.setLong(index, value);
     }
 
+    @Override
     public void setBytes(int index, byte[] src, int srcIndex, int length) {
         buffer.setBytes(index, src, srcIndex, length);
     }
 
+    @Override
     public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
         buffer.setBytes(index, src, srcIndex, length);
     }
 
+    @Override
     public void setBytes(int index, ByteBuffer src) {
         buffer.setBytes(index, src);
     }
 
+    @Override
     public int setBytes(int index, InputStream in, int length)
             throws IOException {
         return buffer.setBytes(index, in, length);
     }
 
+    @Override
     public int setBytes(int index, ScatteringByteChannel in, int length)
             throws IOException {
         return buffer.setBytes(index, in, length);
@@ -265,10 +292,12 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         super.writeZero(length);
     }
 
+    @Override
     public ChannelBuffer duplicate() {
         return new DuplicatedChannelBuffer(this);
     }
 
+    @Override
     public ChannelBuffer copy(int index, int length) {
         DynamicChannelBuffer copiedBuffer = new DynamicChannelBuffer(order(), Math.max(length, 64), factory());
         copiedBuffer.buffer = buffer.copy(index, length);
@@ -276,6 +305,7 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         return copiedBuffer;
     }
 
+    @Override
     public ChannelBuffer slice(int index, int length) {
         if (index == 0) {
             if (length == 0) {
@@ -290,6 +320,7 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         }
     }
 
+    @Override
     public ByteBuffer toByteBuffer(int index, int length) {
         return buffer.toByteBuffer(index, length);
     }

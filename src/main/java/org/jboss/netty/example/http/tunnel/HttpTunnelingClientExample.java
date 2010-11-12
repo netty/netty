@@ -66,6 +66,7 @@ public class HttpTunnelingClientExample {
                         new OioClientSocketChannelFactory(Executors.newCachedThreadPool())));
 
         b.setPipelineFactory(new ChannelPipelineFactory() {
+            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(
                         new StringDecoder(),

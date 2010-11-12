@@ -49,14 +49,17 @@ public abstract class AbstractChannelBufferFactory implements ChannelBufferFacto
         this.defaultOrder = defaultOrder;
     }
 
+    @Override
     public ChannelBuffer getBuffer(int capacity) {
         return getBuffer(getDefaultOrder(), capacity);
     }
 
+    @Override
     public ChannelBuffer getBuffer(byte[] array, int offset, int length) {
         return getBuffer(getDefaultOrder(), array, offset, length);
     }
 
+    @Override
     public ByteOrder getDefaultOrder() {
         return defaultOrder;
     }

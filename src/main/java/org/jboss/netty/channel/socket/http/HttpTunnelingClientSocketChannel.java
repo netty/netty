@@ -90,22 +90,27 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         fireChannelOpen(this);
     }
 
+    @Override
     public HttpTunnelingSocketChannelConfig getConfig() {
         return config;
     }
 
+    @Override
     public InetSocketAddress getLocalAddress() {
         return realChannel.getLocalAddress();
     }
 
+    @Override
     public InetSocketAddress getRemoteAddress() {
         return realChannel.getRemoteAddress();
     }
 
+    @Override
     public boolean isBound() {
         return realChannel.isBound();
     }
 
+    @Override
     public boolean isConnected() {
         return realChannel.isConnected();
     }
@@ -137,6 +142,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
 
     void bindReal(final SocketAddress localAddress, final ChannelFuture future) {
         realChannel.bind(localAddress).addListener(new ChannelFutureListener() {
+            @Override
             public void operationComplete(ChannelFuture f) {
                 if (f.isSuccess()) {
                     future.setSuccess();
@@ -150,6 +156,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
     void connectReal(final SocketAddress remoteAddress, final ChannelFuture future) {
         final SocketChannel virtualChannel = this;
         realChannel.connect(remoteAddress).addListener(new ChannelFutureListener() {
+            @Override
             public void operationComplete(ChannelFuture f) {
                 final String serverName = config.getServerName();
                 final int serverPort = ((InetSocketAddress) remoteAddress).getPort();
@@ -203,6 +210,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
                         fireChannelConnected(virtualChannel, remoteAddress);
                     } else {
                         sslHandshakeFuture.addListener(new ChannelFutureListener() {
+                            @Override
                             public void operationComplete(ChannelFuture f) {
                                 if (f.isSuccess()) {
                                     realChannel.write(req);
@@ -239,6 +247,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
         }
 
         f.addListener(new ChannelFutureListener() {
+            @Override
             public void operationComplete(ChannelFuture f) {
                 if (f.isSuccess()) {
                     future.setSuccess();
@@ -262,6 +271,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
 
     void setInterestOpsReal(final int interestOps, final ChannelFuture future) {
         realChannel.setInterestOps(interestOps).addListener(new ChannelFutureListener() {
+            @Override
             public void operationComplete(ChannelFuture f) {
                 if (f.isSuccess()) {
                     future.setSuccess();
@@ -274,8 +284,10 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
 
     void disconnectReal(final ChannelFuture future) {
         writeLastChunk().addListener(new ChannelFutureListener() {
+            @Override
             public void operationComplete(ChannelFuture f) {
                 realChannel.disconnect().addListener(new ChannelFutureListener() {
+                    @Override
                     public void operationComplete(ChannelFuture f) {
                         if (f.isSuccess()) {
                             future.setSuccess();
@@ -290,8 +302,10 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
 
     void unbindReal(final ChannelFuture future) {
         writeLastChunk().addListener(new ChannelFutureListener() {
+            @Override
             public void operationComplete(ChannelFuture f) {
                 realChannel.unbind().addListener(new ChannelFutureListener() {
+                    @Override
                     public void operationComplete(ChannelFuture f) {
                         if (f.isSuccess()) {
                             future.setSuccess();
@@ -306,8 +320,10 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
 
     void closeReal(final ChannelFuture future) {
         writeLastChunk().addListener(new ChannelFutureListener() {
+            @Override
             public void operationComplete(ChannelFuture f) {
                 realChannel.close().addListener(new ChannelFutureListener() {
+                    @Override
                     public void operationComplete(ChannelFuture f) {
                         // Note: If 'future' refers to the closeFuture,
                         // setSuccess() and setFailure() do nothing.

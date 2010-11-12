@@ -253,5 +253,6 @@ public interface ChannelGroupFuture extends Iterable<ChannelFuture> {
      * {@link Iterator} is is unmodifiable, which means a {@link ChannelFuture}
      * cannot be removed from this future.
      */
+    @Override
     Iterator<ChannelFuture> iterator();
 }

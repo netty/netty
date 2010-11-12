@@ -61,18 +61,22 @@ public class DownstreamMessageEvent implements MessageEvent {
         }
     }
 
+    @Override
     public Channel getChannel() {
         return channel;
     }
 
+    @Override
     public ChannelFuture getFuture() {
         return future;
     }
 
+    @Override
     public Object getMessage() {
         return message;
     }
 
+    @Override
     public SocketAddress getRemoteAddress() {
         return remoteAddress;
     }

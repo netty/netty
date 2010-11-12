@@ -45,18 +45,22 @@ final class DefaultLocalServerChannel extends AbstractServerChannel
         fireChannelOpen(this);
     }
 
+    @Override
     public ChannelConfig getConfig() {
         return channelConfig;
     }
 
+    @Override
     public boolean isBound() {
         return isOpen() && bound.get();
     }
 
+    @Override
     public LocalAddress getLocalAddress() {
         return isBound()? localAddress : null;
     }
 
+    @Override
     public LocalAddress getRemoteAddress() {
         return null;
     }

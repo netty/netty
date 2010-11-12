@@ -56,6 +56,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     private int waiters;
 
     private final ChannelFutureListener childListener = new ChannelFutureListener() {
+        @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             boolean success = future.isSuccess();
             boolean callSetDone = false;
@@ -119,42 +120,52 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         }
     }
 
+    @Override
     public ChannelGroup getGroup() {
         return group;
     }
 
+    @Override
     public ChannelFuture find(Integer channelId) {
         return futures.get(channelId);
     }
 
+    @Override
     public ChannelFuture find(Channel channel) {
         return futures.get(channel.getId());
     }
 
+    @Override
     public Iterator<ChannelFuture> iterator() {
         return futures.values().iterator();
     }
 
+    @Override
     public synchronized boolean isDone() {
         return done;
     }
 
+    @Override
     public synchronized boolean isCompleteSuccess() {
         return successCount == futures.size();
     }
 
+    @Override
     public synchronized boolean isPartialSuccess() {
         return !futures.isEmpty() && successCount != 0;
     }
 
+    @Override
     public synchronized boolean isPartialFailure() {
         return !futures.isEmpty() && failureCount != 0;
     }
 
+    @Override
     public synchronized boolean isCompleteFailure() {
         return failureCount == futures.size();
     }
 
+    @Override
     public void addListener(ChannelGroupFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
@@ -181,6 +192,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         }
     }
 
+    @Override
     public void removeListener(ChannelGroupFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
@@ -201,6 +213,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         }
     }
 
+    @Override
     public ChannelGroupFuture await() throws InterruptedException {
         if (Thread.interrupted()) {
             throw new InterruptedException();
@@ -220,15 +233,18 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         return this;
     }
 
+    @Override
     public boolean await(long timeout, TimeUnit unit)
             throws InterruptedException {
         return await0(unit.toNanos(timeout), true);
     }
 
+    @Override
     public boolean await(long timeoutMillis) throws InterruptedException {
         return await0(MILLISECONDS.toNanos(timeoutMillis), true);
     }
 
+    @Override
     public ChannelGroupFuture awaitUninterruptibly() {
         boolean interrupted = false;
         synchronized (this) {
@@ -252,6 +268,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         return this;
     }
 
+    @Override
     public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
         try {
             return await0(unit.toNanos(timeout), false);
@@ -260,6 +277,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         }
     }
 
+    @Override
     public boolean awaitUninterruptibly(long timeoutMillis) {
         try {
             return await0(MILLISECONDS.toNanos(timeoutMillis), false);

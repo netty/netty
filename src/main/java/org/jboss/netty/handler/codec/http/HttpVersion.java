@@ -213,6 +213,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
                getProtocolName().equals(that.getProtocolName());
     }
 
+    @Override
     public int compareTo(HttpVersion o) {
         int v = getProtocolName().compareTo(o.getProtocolName());
         if (v != 0) {

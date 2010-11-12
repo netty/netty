@@ -137,15 +137,18 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
      * Shuts down the {@link Executor} which was specified with the constructor
      * and wait for its termination.
      */
+    @Override
     public void releaseExternalResources() {
         ExecutorUtil.terminate(getExecutor());
     }
 
+    @Override
     public void handleUpstream(
             ChannelHandlerContext context, ChannelEvent e) throws Exception {
         executor.execute(new ChannelEventRunnable(context, e));
     }
 
+    @Override
     public void handleDownstream(
             ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {

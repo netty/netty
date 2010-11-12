@@ -42,6 +42,7 @@ public interface ChannelFutureListener extends EventListener {
      * associated with the specified {@link ChannelFuture}.
      */
     static ChannelFutureListener CLOSE = new ChannelFutureListener() {
+        @Override
         public void operationComplete(ChannelFuture future) {
             future.getChannel().close();
         }
@@ -52,6 +53,7 @@ public interface ChannelFutureListener extends EventListener {
      * operation ended up with a failure or cancellation rather than a success.
      */
     static ChannelFutureListener CLOSE_ON_FAILURE = new ChannelFutureListener() {
+        @Override
         public void operationComplete(ChannelFuture future) {
             if (!future.isSuccess()) {
                 future.getChannel().close();

@@ -137,11 +137,13 @@ public class ChannelBufferInputStream extends InputStream implements DataInput {
         }
     }
 
+    @Override
     public boolean readBoolean() throws IOException {
         checkAvailable(1);
         return read() != 0;
     }
 
+    @Override
     public byte readByte() throws IOException {
         if (!buffer.readable()) {
             throw new EOFException();
@@ -149,27 +151,33 @@ public class ChannelBufferInputStream extends InputStream implements DataInput {
         return buffer.readByte();
     }
 
+    @Override
     public char readChar() throws IOException {
         return (char) readShort();
     }
 
+    @Override
     public double readDouble() throws IOException {
         return Double.longBitsToDouble(readLong());
     }
 
+    @Override
     public float readFloat() throws IOException {
         return Float.intBitsToFloat(readInt());
     }
 
+    @Override
     public void readFully(byte[] b) throws IOException {
         readFully(b, 0, b.length);
     }
 
+    @Override
     public void readFully(byte[] b, int off, int len) throws IOException {
         checkAvailable(len);
         buffer.readBytes(b, off, len);
     }
 
+    @Override
     public int readInt() throws IOException {
         checkAvailable(4);
         return buffer.readInt();
@@ -177,6 +185,7 @@ public class ChannelBufferInputStream extends InputStream implements DataInput {
 
     private final StringBuilder lineBuf = new StringBuilder();
 
+    @Override
     public String readLine() throws IOException {
         lineBuf.setLength(0);
         for (;;) {
@@ -195,28 +204,34 @@ public class ChannelBufferInputStream extends InputStream implements DataInput {
         return lineBuf.toString();
     }
 
+    @Override
     public long readLong() throws IOException {
         checkAvailable(8);
         return buffer.readLong();
     }
 
+    @Override
     public short readShort() throws IOException {
         checkAvailable(2);
         return buffer.readShort();
     }
 
+    @Override
     public String readUTF() throws IOException {
         return DataInputStream.readUTF(this);
     }
 
+    @Override
     public int readUnsignedByte() throws IOException {
         return readByte() & 0xff;
     }
 
+    @Override
     public int readUnsignedShort() throws IOException {
         return readShort() & 0xffff;
     }
 
+    @Override
     public int skipBytes(int n) throws IOException {
         int nBytes = Math.min(available(), n);
         buffer.skipBytes(nBytes);

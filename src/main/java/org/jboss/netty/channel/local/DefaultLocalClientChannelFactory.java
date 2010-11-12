@@ -39,6 +39,7 @@ public class DefaultLocalClientChannelFactory implements LocalClientChannelFacto
         sink = new LocalClientChannelSink();
     }
 
+    @Override
     public LocalChannel newChannel(ChannelPipeline pipeline) {
         return new DefaultLocalChannel(null, this, pipeline, sink, null);
     }
@@ -47,6 +48,7 @@ public class DefaultLocalClientChannelFactory implements LocalClientChannelFacto
      * Does nothing because this implementation does not require any external
      * resources.
      */
+    @Override
     public void releaseExternalResources() {
         // No external resources.
     }

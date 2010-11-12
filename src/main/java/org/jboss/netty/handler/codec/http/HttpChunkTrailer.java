@@ -31,6 +31,7 @@ public interface HttpChunkTrailer extends HttpChunk {
     /**
      * Always returns {@code true}.
      */
+    @Override
     boolean isLast();
 
     /**

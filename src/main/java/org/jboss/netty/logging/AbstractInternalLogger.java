@@ -33,6 +33,7 @@ public abstract class AbstractInternalLogger implements InternalLogger {
         super();
     }
 
+    @Override
     public boolean isEnabled(InternalLogLevel level) {
         switch (level) {
         case DEBUG:
@@ -48,6 +49,7 @@ public abstract class AbstractInternalLogger implements InternalLogger {
         }
     }
 
+    @Override
     public void log(InternalLogLevel level, String msg, Throwable cause) {
         switch (level) {
         case DEBUG:
@@ -67,6 +69,7 @@ public abstract class AbstractInternalLogger implements InternalLogger {
         }
     }
 
+    @Override
     public void log(InternalLogLevel level, String msg) {
         switch (level) {
         case DEBUG:

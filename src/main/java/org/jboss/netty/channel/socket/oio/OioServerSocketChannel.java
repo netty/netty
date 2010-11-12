@@ -84,18 +84,22 @@ class OioServerSocketChannel extends AbstractServerChannel
         fireChannelOpen(this);
     }
 
+    @Override
     public ServerSocketChannelConfig getConfig() {
         return config;
     }
 
+    @Override
     public InetSocketAddress getLocalAddress() {
         return (InetSocketAddress) socket.getLocalSocketAddress();
     }
 
+    @Override
     public InetSocketAddress getRemoteAddress() {
         return null;
     }
 
+    @Override
     public boolean isBound() {
         return isOpen() && socket.isBound();
     }

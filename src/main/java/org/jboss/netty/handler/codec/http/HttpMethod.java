@@ -176,6 +176,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
         return getName();
     }
 
+    @Override
     public int compareTo(HttpMethod o) {
         return getName().compareTo(o.getName());
     }

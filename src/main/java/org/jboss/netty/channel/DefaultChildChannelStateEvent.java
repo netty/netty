@@ -45,14 +45,17 @@ public class DefaultChildChannelStateEvent implements ChildChannelStateEvent {
         this.childChannel = childChannel;
     }
 
+    @Override
     public Channel getChannel() {
         return parentChannel;
     }
 
+    @Override
     public ChannelFuture getFuture() {
         return succeededFuture(getChannel());
     }
 
+    @Override
     public Channel getChildChannel() {
         return childChannel;
     }

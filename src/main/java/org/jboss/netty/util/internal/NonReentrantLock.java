@@ -32,23 +32,28 @@ public final class NonReentrantLock extends AbstractQueuedSynchronizer
 
     private Thread owner;
 
+    @Override
     public void lock() {
         acquire(1);
     }
 
+    @Override
     public void lockInterruptibly() throws InterruptedException {
         acquireInterruptibly(1);
     }
 
+    @Override
     public boolean tryLock() {
         return tryAcquire(1);
     }
 
+    @Override
     public boolean tryLock(long time, TimeUnit unit)
             throws InterruptedException {
         return tryAcquireNanos(1, unit.toNanos(time));
     }
 
+    @Override
     public void unlock() {
         release(1);
     }
@@ -57,6 +62,7 @@ public final class NonReentrantLock extends AbstractQueuedSynchronizer
         return isHeldExclusively();
     }
 
+    @Override
     public Condition newCondition() {
         return new ConditionObject();
     }

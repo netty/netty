@@ -39,6 +39,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
 public class SecureChatClientPipelineFactory implements
         ChannelPipelineFactory {
 
+    @Override
     public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline pipeline = pipeline();
 

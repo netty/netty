@@ -26,6 +26,8 @@ import org.jboss.netty.channel.Channel;
  * @version $Rev$, $Date$
  */
 public interface LocalChannel extends Channel {
+    @Override
     LocalAddress getLocalAddress();
+    @Override
     LocalAddress getRemoteAddress();
 }

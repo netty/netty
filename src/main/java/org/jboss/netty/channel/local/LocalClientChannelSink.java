@@ -45,6 +45,7 @@ final class LocalClientChannelSink extends AbstractChannelSink {
         super();
     }
 
+    @Override
     public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent event = (ChannelStateEvent) e;

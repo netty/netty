@@ -61,6 +61,7 @@ public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
         println("Sleeping for: " + UptimeClient.RECONNECT_DELAY + "s");
         timer.newTimeout(new TimerTask() {
+            @Override
             public void run(Timeout timeout) throws Exception {
                 println("Reconnecting to: " + getRemoteAddress());
                 bootstrap.connect();

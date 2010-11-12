@@ -36,10 +36,12 @@ public class SucceededChannelFuture extends CompleteChannelFuture {
         super(channel);
     }
 
+    @Override
     public Throwable getCause() {
         return null;
     }
 
+    @Override
     public boolean isSuccess() {
         return true;
     }

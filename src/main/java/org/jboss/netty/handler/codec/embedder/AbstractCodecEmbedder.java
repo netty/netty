@@ -101,6 +101,7 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
         pipeline.addLast("SINK", sink);
     }
 
+    @Override
     public boolean finish() {
         close(channel);
         fireChannelDisconnected(channel);
@@ -125,16 +126,19 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
         return productQueue.isEmpty();
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public final E poll() {
         return (E) productQueue.poll();
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public final E peek() {
         return (E) productQueue.peek();
     }
 
+    @Override
     public final Object[] pollAll() {
         final int size = size();
         Object[] a = new Object[size];
@@ -148,6 +152,7 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
         return a;
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public final <T> T[] pollAll(T[] a) {
         if (a == null) {
@@ -177,6 +182,7 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
         return a;
     }
 
+    @Override
     public final int size() {
         return productQueue.size();
     }
@@ -186,10 +192,12 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
             super();
         }
 
+        @Override
         public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) {
             handleEvent(e);
         }
 
+        @Override
         public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) {
             handleEvent(e);
         }
@@ -205,6 +213,7 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
             // Swallow otherwise.
         }
 
+        @Override
         public void exceptionCaught(
                 ChannelPipeline pipeline, ChannelEvent e,
                 ChannelPipelineException cause) throws Exception {

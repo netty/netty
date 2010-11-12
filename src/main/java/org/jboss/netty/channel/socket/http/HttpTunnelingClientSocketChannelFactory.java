@@ -46,10 +46,12 @@ public class HttpTunnelingClientSocketChannelFactory implements ClientSocketChan
         this.clientSocketChannelFactory = clientSocketChannelFactory;
     }
 
+    @Override
     public SocketChannel newChannel(ChannelPipeline pipeline) {
         return new HttpTunnelingClientSocketChannel(this, pipeline, sink, clientSocketChannelFactory);
     }
 
+    @Override
     public void releaseExternalResources() {
         clientSocketChannelFactory.releaseExternalResources();
     }

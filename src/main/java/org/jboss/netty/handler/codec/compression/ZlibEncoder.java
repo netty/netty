@@ -303,6 +303,7 @@ public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChanne
 
         if (evt != null) {
             future.addListener(new ChannelFutureListener() {
+                @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
                     ctx.sendDownstream(evt);
                 }
@@ -312,18 +313,22 @@ public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChanne
         return future;
     }
 
+    @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
     }
 
+    @Override
     public void afterAdd(ChannelHandlerContext ctx) throws Exception {
         // Unused
     }
 
+    @Override
     public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
         // Unused
     }
 
+    @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         // Unused
     }

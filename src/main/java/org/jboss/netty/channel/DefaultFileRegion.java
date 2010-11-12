@@ -21,14 +21,17 @@ public class DefaultFileRegion implements FileRegion {
         this.count = count;
     }
 
+    @Override
     public long getPosition() {
         return position;
     }
 
+    @Override
     public long getCount() {
         return count;
     }
 
+    @Override
     public long transferTo(WritableByteChannel target, long position) throws IOException {
         long count = this.count - position;
         if (count < 0 || position < 0) {
@@ -43,6 +46,7 @@ public class DefaultFileRegion implements FileRegion {
         return file.transferTo(this.position + position, count, target);
     }
 
+    @Override
     public void releaseExternalResources() {
         try {
             file.close();

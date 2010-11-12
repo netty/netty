@@ -66,6 +66,7 @@ public class EchoClient {
 
         // Set up the pipeline factory.
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(
                         new EchoClientHandler(firstMessageSize));

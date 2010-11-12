@@ -175,6 +175,7 @@ public class ThreadRenamingRunnable implements Runnable {
         this.comment = comment;
     }
 
+    @Override
     public void run() {
         final Thread currentThread = Thread.currentThread();
         final String oldThreadName = currentThread.getName();

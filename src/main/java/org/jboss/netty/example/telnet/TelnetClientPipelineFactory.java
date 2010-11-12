@@ -36,6 +36,7 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
 public class TelnetClientPipelineFactory implements
         ChannelPipelineFactory {
 
+    @Override
     public ChannelPipeline getPipeline() throws Exception {
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();

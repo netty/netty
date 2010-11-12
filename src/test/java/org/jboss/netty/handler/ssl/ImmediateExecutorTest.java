@@ -34,6 +34,7 @@ public class ImmediateExecutorTest {
         ImmediateExecutor e = ImmediateExecutor.INSTANCE;
         long startTime = System.nanoTime();
         e.execute(new Runnable() {
+            @Override
             public void run() {
                 long startTime = System.nanoTime();
                 for (;;) {

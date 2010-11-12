@@ -92,18 +92,22 @@ public class DefaultChannelFuture implements ChannelFuture {
         this.cancellable = cancellable;
     }
 
+    @Override
     public Channel getChannel() {
         return channel;
     }
 
+    @Override
     public synchronized boolean isDone() {
         return done;
     }
 
+    @Override
     public synchronized boolean isSuccess() {
         return done && cause == null;
     }
 
+    @Override
     public synchronized Throwable getCause() {
         if (cause != CANCELLED) {
             return cause;
@@ -112,10 +116,12 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
     }
 
+    @Override
     public synchronized boolean isCancelled() {
         return cause == CANCELLED;
     }
 
+    @Override
     public void addListener(ChannelFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
@@ -149,6 +155,7 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
     }
 
+    @Override
     public void removeListener(ChannelFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
@@ -173,6 +180,7 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
     }
 
+    @Override
     public ChannelFuture await() throws InterruptedException {
         if (Thread.interrupted()) {
             throw new InterruptedException();
@@ -192,15 +200,18 @@ public class DefaultChannelFuture implements ChannelFuture {
         return this;
     }
 
+    @Override
     public boolean await(long timeout, TimeUnit unit)
             throws InterruptedException {
         return await0(unit.toNanos(timeout), true);
     }
 
+    @Override
     public boolean await(long timeoutMillis) throws InterruptedException {
         return await0(MILLISECONDS.toNanos(timeoutMillis), true);
     }
 
+    @Override
     public ChannelFuture awaitUninterruptibly() {
         boolean interrupted = false;
         synchronized (this) {
@@ -224,6 +235,7 @@ public class DefaultChannelFuture implements ChannelFuture {
         return this;
     }
 
+    @Override
     public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
         try {
             return await0(unit.toNanos(timeout), false);
@@ -232,6 +244,7 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
     }
 
+    @Override
     public boolean awaitUninterruptibly(long timeoutMillis) {
         try {
             return await0(MILLISECONDS.toNanos(timeoutMillis), false);
@@ -300,6 +313,7 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
     }
 
+    @Override
     public boolean setSuccess() {
         synchronized (this) {
             // Allow only once.
@@ -317,6 +331,7 @@ public class DefaultChannelFuture implements ChannelFuture {
         return true;
     }
 
+    @Override
     public boolean setFailure(Throwable cause) {
         synchronized (this) {
             // Allow only once.
@@ -335,6 +350,7 @@ public class DefaultChannelFuture implements ChannelFuture {
         return true;
     }
 
+    @Override
     public boolean cancel() {
         if (!cancellable) {
             return false;
@@ -386,6 +402,7 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
     }
 
+    @Override
     public boolean setProgress(long amount, long current, long total) {
         ChannelFutureProgressListener[] plisteners;
         synchronized (this) {

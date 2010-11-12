@@ -44,6 +44,7 @@ public class EchoServer {
 
         // Set up the pipeline factory.
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(new EchoServerHandler());
             }

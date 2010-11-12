@@ -33,6 +33,7 @@ import org.jboss.netty.logging.InternalLogLevel;
  * @version $Rev$, $Date$
  */
 public class HttpServerPipelineFactory implements ChannelPipelineFactory {
+    @Override
     public ChannelPipeline getPipeline() throws Exception {
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();

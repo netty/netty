@@ -470,6 +470,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         return getCode() == ((HttpResponseStatus) o).getCode();
     }
 
+    @Override
     public int compareTo(HttpResponseStatus o) {
         return getCode() - o.getCode();
     }

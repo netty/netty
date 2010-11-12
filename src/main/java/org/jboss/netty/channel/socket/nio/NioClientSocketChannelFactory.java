@@ -135,10 +135,12 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
         sink = new NioClientSocketPipelineSink(bossExecutor, workerExecutor, workerCount);
     }
 
+    @Override
     public SocketChannel newChannel(ChannelPipeline pipeline) {
         return new NioClientSocketChannel(this, pipeline, sink, sink.nextWorker());
     }
 
+    @Override
     public void releaseExternalResources() {
         ExecutorUtil.terminate(bossExecutor, workerExecutor);
     }

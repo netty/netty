@@ -40,10 +40,12 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
         setStatus(status);
     }
 
+    @Override
     public HttpResponseStatus getStatus() {
         return status;
     }
 
+    @Override
     public void setStatus(HttpResponseStatus status) {
         if (status == null) {
             throw new NullPointerException("status");

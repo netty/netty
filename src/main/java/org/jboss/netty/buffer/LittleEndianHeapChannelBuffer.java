@@ -52,24 +52,29 @@ public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
         super(array, readerIndex, writerIndex);
     }
 
+    @Override
     public ChannelBufferFactory factory() {
         return HeapChannelBufferFactory.getInstance(ByteOrder.LITTLE_ENDIAN);
     }
 
+    @Override
     public ByteOrder order() {
         return ByteOrder.LITTLE_ENDIAN;
     }
 
+    @Override
     public short getShort(int index) {
         return (short) (array[index] & 0xFF | array[index+1] << 8);
     }
 
+    @Override
     public int getUnsignedMedium(int index) {
         return (array[index  ] & 0xff) <<  0 |
                (array[index+1] & 0xff) <<  8 |
                (array[index+2] & 0xff) << 16;
     }
 
+    @Override
     public int getInt(int index) {
         return (array[index  ] & 0xff) <<  0 |
                (array[index+1] & 0xff) <<  8 |
@@ -77,6 +82,7 @@ public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
                (array[index+3] & 0xff) << 24;
     }
 
+    @Override
     public long getLong(int index) {
         return ((long) array[index]   & 0xff) <<  0 |
                ((long) array[index+1] & 0xff) <<  8 |
@@ -88,17 +94,20 @@ public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
                ((long) array[index+7] & 0xff) << 56;
     }
 
+    @Override
     public void setShort(int index, int value) {
         array[index  ] = (byte) (value >>> 0);
         array[index+1] = (byte) (value >>> 8);
     }
 
+    @Override
     public void setMedium(int index, int   value) {
         array[index  ] = (byte) (value >>> 0);
         array[index+1] = (byte) (value >>> 8);
         array[index+2] = (byte) (value >>> 16);
     }
 
+    @Override
     public void setInt(int index, int   value) {
         array[index  ] = (byte) (value >>> 0);
         array[index+1] = (byte) (value >>> 8);
@@ -106,6 +115,7 @@ public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
         array[index+3] = (byte) (value >>> 24);
     }
 
+    @Override
     public void setLong(int index, long  value) {
         array[index  ] = (byte) (value >>> 0);
         array[index+1] = (byte) (value >>> 8);
@@ -117,10 +127,12 @@ public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
         array[index+7] = (byte) (value >>> 56);
     }
 
+    @Override
     public ChannelBuffer duplicate() {
         return new LittleEndianHeapChannelBuffer(array, readerIndex(), writerIndex());
     }
 
+    @Override
     public ChannelBuffer copy(int index, int length) {
         if (index < 0 || length < 0 || index + length > array.length) {
             throw new IndexOutOfBoundsException();

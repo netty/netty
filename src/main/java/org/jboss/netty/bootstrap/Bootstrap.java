@@ -318,6 +318,7 @@ public class Bootstrap implements ExternalResourceReleasable {
      * {@inheritDoc}  This method simply delegates the call to
      * {@link ChannelFactory#releaseExternalResources()}.
      */
+    @Override
     public void releaseExternalResources() {
         ChannelFactory factory = this.factory;
         if (factory != null) {

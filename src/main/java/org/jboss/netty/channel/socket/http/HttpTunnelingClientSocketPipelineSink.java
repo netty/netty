@@ -38,6 +38,7 @@ final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
         super();
     }
 
+    @Override
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         HttpTunnelingClientSocketChannel channel = (HttpTunnelingClientSocketChannel) e.getChannel();

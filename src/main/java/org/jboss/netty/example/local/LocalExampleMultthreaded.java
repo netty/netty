@@ -58,6 +58,7 @@ public class LocalExampleMultthreaded {
                 new DefaultLocalClientChannelFactory());
 
         cb.setPipelineFactory(new ChannelPipelineFactory() {
+            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(
                         new StringDecoder(),

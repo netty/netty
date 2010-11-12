@@ -72,6 +72,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         return true;
     }
 
+    @Override
     public int getReceiveBufferSize() {
         try {
             return socket.getReceiveBufferSize();
@@ -80,6 +81,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public int getSendBufferSize() {
         try {
             return socket.getSendBufferSize();
@@ -88,6 +90,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public int getSoLinger() {
         try {
             return socket.getSoLinger();
@@ -96,6 +99,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public int getTrafficClass() {
         try {
             return socket.getTrafficClass();
@@ -104,6 +108,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public boolean isKeepAlive() {
         try {
             return socket.getKeepAlive();
@@ -112,6 +117,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public boolean isReuseAddress() {
         try {
             return socket.getReuseAddress();
@@ -120,6 +126,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public boolean isTcpNoDelay() {
         try {
             return socket.getTcpNoDelay();
@@ -128,6 +135,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setKeepAlive(boolean keepAlive) {
         try {
             socket.setKeepAlive(keepAlive);
@@ -136,11 +144,13 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setPerformancePreferences(
             int connectionTime, int latency, int bandwidth) {
         socket.setPerformancePreferences(connectionTime, latency, bandwidth);
     }
 
+    @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
         try {
             socket.setReceiveBufferSize(receiveBufferSize);
@@ -149,6 +159,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setReuseAddress(boolean reuseAddress) {
         try {
             socket.setReuseAddress(reuseAddress);
@@ -157,6 +168,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setSendBufferSize(int sendBufferSize) {
         try {
             socket.setSendBufferSize(sendBufferSize);
@@ -165,6 +177,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setSoLinger(int soLinger) {
         try {
             if (soLinger < 0) {
@@ -177,6 +190,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setTcpNoDelay(boolean tcpNoDelay) {
         try {
             socket.setTcpNoDelay(tcpNoDelay);
@@ -185,6 +199,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
         }
     }
 
+    @Override
     public void setTrafficClass(int trafficClass) {
         try {
             socket.setTrafficClass(trafficClass);

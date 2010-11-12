@@ -45,22 +45,27 @@ public class DefaultHttpMessage implements HttpMessage {
         setProtocolVersion(version);
     }
 
+    @Override
     public void addHeader(final String name, final Object value) {
         headers.addHeader(name, value);
     }
 
+    @Override
     public void setHeader(final String name, final Object value) {
         headers.setHeader(name, value);
     }
 
+    @Override
     public void setHeader(final String name, final Iterable<?> values) {
         headers.setHeader(name, values);
     }
 
+    @Override
     public void removeHeader(final String name) {
         headers.removeHeader(name);
     }
 
+    @Override
     public boolean isChunked() {
         if (chunked) {
             return true;
@@ -69,6 +74,7 @@ public class DefaultHttpMessage implements HttpMessage {
         }
     }
 
+    @Override
     public void setChunked(boolean chunked) {
         this.chunked = chunked;
         if (chunked) {
@@ -76,10 +82,12 @@ public class DefaultHttpMessage implements HttpMessage {
         }
     }
 
+    @Override
     public void clearHeaders() {
         headers.clearHeaders();
     }
 
+    @Override
     public void setContent(ChannelBuffer content) {
         if (content == null) {
             content = ChannelBuffers.EMPTY_BUFFER;
@@ -91,31 +99,38 @@ public class DefaultHttpMessage implements HttpMessage {
         this.content = content;
     }
 
+    @Override
     public String getHeader(final String name) {
         List<String> values = getHeaders(name);
         return values.size() > 0 ? values.get(0) : null;
     }
 
+    @Override
     public List<String> getHeaders(final String name) {
         return headers.getHeaders(name);
     }
 
+    @Override
     public List<Map.Entry<String, String>> getHeaders() {
         return headers.getHeaders();
     }
 
+    @Override
     public boolean containsHeader(final String name) {
         return headers.containsHeader(name);
     }
 
+    @Override
     public Set<String> getHeaderNames() {
         return headers.getHeaderNames();
     }
 
+    @Override
     public HttpVersion getProtocolVersion() {
         return version;
     }
 
+    @Override
     public void setProtocolVersion(HttpVersion version) {
         if (version == null) {
             throw new NullPointerException("version");
@@ -123,6 +138,7 @@ public class DefaultHttpMessage implements HttpMessage {
         this.version = version;
     }
 
+    @Override
     public ChannelBuffer getContent() {
         return content;
     }

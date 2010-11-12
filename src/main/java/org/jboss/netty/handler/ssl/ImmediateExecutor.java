@@ -33,6 +33,7 @@ final class ImmediateExecutor implements Executor {
      */
     static final ImmediateExecutor INSTANCE = new ImmediateExecutor();
 
+    @Override
     public void execute(Runnable command) {
         command.run();
     }

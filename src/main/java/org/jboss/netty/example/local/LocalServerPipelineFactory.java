@@ -43,6 +43,7 @@ public class LocalServerPipelineFactory implements ChannelPipelineFactory {
         executionHandler = new ExecutionHandler(eventExecutor);
     }
 
+    @Override
     public ChannelPipeline getPipeline() throws Exception {
         final ChannelPipeline pipeline = Channels.pipeline();
         pipeline.addLast("decoder", new StringDecoder());
@@ -53,6 +54,7 @@ public class LocalServerPipelineFactory implements ChannelPipelineFactory {
     }
 
     static class EchoCloseServerHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
+        @Override
         public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
                 throws Exception {
             if (e instanceof MessageEvent) {
@@ -66,6 +68,7 @@ public class LocalServerPipelineFactory implements ChannelPipelineFactory {
             ctx.sendUpstream(e);
         }
 
+        @Override
         public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e) {
             if (e instanceof MessageEvent) {
                 final MessageEvent evt = (MessageEvent) e;

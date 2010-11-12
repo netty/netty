@@ -29,5 +29,6 @@ import org.jboss.netty.channel.ChannelPipeline;
  * @apiviz.has org.jboss.netty.channel.socket.DatagramChannel oneway - - creates
  */
 public interface DatagramChannelFactory extends ChannelFactory {
+    @Override
     DatagramChannel newChannel(ChannelPipeline pipeline);
 }

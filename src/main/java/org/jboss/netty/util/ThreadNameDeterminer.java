@@ -29,6 +29,7 @@ public interface ThreadNameDeterminer {
      * which contains all specified information.
      */
     ThreadNameDeterminer PROPOSED = new ThreadNameDeterminer() {
+        @Override
         public String determineThreadName(String current, String service,
                 String category, String parentId, String id, String comment) throws Exception {
 
@@ -68,6 +69,7 @@ public interface ThreadNameDeterminer {
      * thread name and retains the current one.
      */
     ThreadNameDeterminer CURRENT = new ThreadNameDeterminer() {
+        @Override
         public String determineThreadName(String current, String service,
                 String category, String parentId, String id, String comment) throws Exception {
             return null;

@@ -53,18 +53,22 @@ public class DownstreamChannelStateEvent implements ChannelStateEvent {
         this.value = value;
     }
 
+    @Override
     public Channel getChannel() {
         return channel;
     }
 
+    @Override
     public ChannelFuture getFuture() {
         return future;
     }
 
+    @Override
     public ChannelState getState() {
         return state;
     }
 
+    @Override
     public Object getValue() {
         return value;
     }

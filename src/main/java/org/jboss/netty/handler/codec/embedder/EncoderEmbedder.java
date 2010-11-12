@@ -71,6 +71,7 @@ public class EncoderEmbedder<E> extends AbstractCodecEmbedder<E> {
         super(bufferFactory, handlers);
     }
 
+    @Override
     public boolean offer(Object input) {
         write(getChannel(), input).setSuccess();
         return !isEmpty();

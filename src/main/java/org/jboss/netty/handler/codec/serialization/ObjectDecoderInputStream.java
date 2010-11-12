@@ -108,6 +108,7 @@ public class ObjectDecoderInputStream extends InputStream implements
         this.maxObjectSize = maxObjectSize;
     }
 
+    @Override
     public Object readObject() throws ClassNotFoundException, IOException {
         int dataLen = readInt();
         if (dataLen <= 0) {
@@ -156,59 +157,73 @@ public class ObjectDecoderInputStream extends InputStream implements
         return in.read(b);
     }
 
+    @Override
     public final boolean readBoolean() throws IOException {
         return in.readBoolean();
     }
 
+    @Override
     public final byte readByte() throws IOException {
         return in.readByte();
     }
 
+    @Override
     public final char readChar() throws IOException {
         return in.readChar();
     }
 
+    @Override
     public final double readDouble() throws IOException {
         return in.readDouble();
     }
 
+    @Override
     public final float readFloat() throws IOException {
         return in.readFloat();
     }
 
+    @Override
     public final void readFully(byte[] b, int off, int len) throws IOException {
         in.readFully(b, off, len);
     }
 
+    @Override
     public final void readFully(byte[] b) throws IOException {
         in.readFully(b);
     }
 
+    @Override
     public final int readInt() throws IOException {
         return in.readInt();
     }
 
+    @Override
     @Deprecated
     public final String readLine() throws IOException {
         return in.readLine();
     }
 
+    @Override
     public final long readLong() throws IOException {
         return in.readLong();
     }
 
+    @Override
     public final short readShort() throws IOException {
         return in.readShort();
     }
 
+    @Override
     public final int readUnsignedByte() throws IOException {
         return in.readUnsignedByte();
     }
 
+    @Override
     public final int readUnsignedShort() throws IOException {
         return in.readUnsignedShort();
     }
 
+    @Override
     public final String readUTF() throws IOException {
         return in.readUTF();
     }
@@ -223,6 +238,7 @@ public class ObjectDecoderInputStream extends InputStream implements
         return in.skip(n);
     }
 
+    @Override
     public final int skipBytes(int n) throws IOException {
         return in.skipBytes(n);
     }

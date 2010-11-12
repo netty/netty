@@ -53,10 +53,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         super();
     }
 
+    @Override
     public Channel getChannel() {
         return channel;
     }
 
+    @Override
     public ChannelSink getSink() {
         ChannelSink sink = this.sink;
         if (sink == null) {
@@ -65,6 +67,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return sink;
     }
 
+    @Override
     public void attach(Channel channel, ChannelSink sink) {
         if (channel == null) {
             throw new NullPointerException("channel");
@@ -79,10 +82,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         this.sink = sink;
     }
 
+    @Override
     public boolean isAttached() {
         return sink != null;
     }
 
+    @Override
     public synchronized void addFirst(String name, ChannelHandler handler) {
         if (name2ctx.isEmpty()) {
             init(name, handler);
@@ -101,6 +106,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    @Override
     public synchronized void addLast(String name, ChannelHandler handler) {
         if (name2ctx.isEmpty()) {
             init(name, handler);
@@ -119,6 +125,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    @Override
     public synchronized void addBefore(String baseName, String name, ChannelHandler handler) {
         DefaultChannelHandlerContext ctx = getContextOrDie(baseName);
         if (ctx == head) {
@@ -137,6 +144,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    @Override
     public synchronized void addAfter(String baseName, String name, ChannelHandler handler) {
         DefaultChannelHandlerContext ctx = getContextOrDie(baseName);
         if (ctx == tail) {
@@ -155,14 +163,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    @Override
     public synchronized void remove(ChannelHandler handler) {
         remove(getContextOrDie(handler));
     }
 
+    @Override
     public synchronized ChannelHandler remove(String name) {
         return remove(getContextOrDie(name)).getHandler();
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public synchronized <T extends ChannelHandler> T remove(Class<T> handlerType) {
         return (T) remove(getContextOrDie(handlerType)).getHandler();
@@ -190,6 +201,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return ctx;
     }
 
+    @Override
     public synchronized ChannelHandler removeFirst() {
         if (name2ctx.isEmpty()) {
             throw new NoSuchElementException();
@@ -216,6 +228,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return oldHead.getHandler();
     }
 
+    @Override
     public synchronized ChannelHandler removeLast() {
         if (name2ctx.isEmpty()) {
             throw new NoSuchElementException();
@@ -242,14 +255,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return oldTail.getHandler();
     }
 
+    @Override
     public synchronized void replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler) {
         replace(getContextOrDie(oldHandler), newName, newHandler);
     }
 
+    @Override
     public synchronized ChannelHandler replace(String oldName, String newName, ChannelHandler newHandler) {
         return replace(getContextOrDie(oldName), newName, newHandler);
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public synchronized <T extends ChannelHandler> T replace(
             Class<T> oldHandlerType, String newName, ChannelHandler newHandler) {
@@ -401,6 +417,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    @Override
     public synchronized ChannelHandler getFirst() {
         DefaultChannelHandlerContext head = this.head;
         if (head == null) {
@@ -409,6 +426,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return head.getHandler();
     }
 
+    @Override
     public synchronized ChannelHandler getLast() {
         DefaultChannelHandlerContext tail = this.tail;
         if (tail == null) {
@@ -417,6 +435,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return tail.getHandler();
     }
 
+    @Override
     public synchronized ChannelHandler get(String name) {
         DefaultChannelHandlerContext ctx = name2ctx.get(name);
         if (ctx == null) {
@@ -426,6 +445,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public synchronized <T extends ChannelHandler> T get(Class<T> handlerType) {
         ChannelHandlerContext ctx = getContext(handlerType);
@@ -436,6 +456,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    @Override
     public synchronized ChannelHandlerContext getContext(String name) {
         if (name == null) {
             throw new NullPointerException("name");
@@ -443,6 +464,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return name2ctx.get(name);
     }
 
+    @Override
     public synchronized ChannelHandlerContext getContext(ChannelHandler handler) {
         if (handler == null) {
             throw new NullPointerException("handler");
@@ -464,6 +486,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return null;
     }
 
+    @Override
     public synchronized ChannelHandlerContext getContext(
             Class<? extends ChannelHandler> handlerType) {
         if (handlerType == null) {
@@ -487,6 +510,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return null;
     }
 
+    @Override
     public Map<String, ChannelHandler> toMap() {
         Map<String, ChannelHandler> map = new LinkedHashMap<String, ChannelHandler>();
         if (name2ctx.isEmpty()) {
@@ -529,6 +553,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return buf.toString();
     }
 
+    @Override
     public void sendUpstream(ChannelEvent e) {
         DefaultChannelHandlerContext head = getActualUpstreamContext(this.head);
         if (head == null) {
@@ -548,6 +573,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    @Override
     public void sendDownstream(ChannelEvent e) {
         DefaultChannelHandlerContext tail = getActualDownstreamContext(this.tail);
         if (tail == null) {
@@ -703,38 +729,47 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             this.handler = handler;
         }
 
+        @Override
         public Channel getChannel() {
             return getPipeline().getChannel();
         }
 
+        @Override
         public ChannelPipeline getPipeline() {
             return DefaultChannelPipeline.this;
         }
 
+        @Override
         public boolean canHandleDownstream() {
             return canHandleDownstream;
         }
 
+        @Override
         public boolean canHandleUpstream() {
             return canHandleUpstream;
         }
 
+        @Override
         public ChannelHandler getHandler() {
             return handler;
         }
 
+        @Override
         public String getName() {
             return name;
         }
 
+        @Override
         public Object getAttachment() {
             return attachment;
         }
 
+        @Override
         public void setAttachment(Object attachment) {
             this.attachment = attachment;
         }
 
+        @Override
         public void sendDownstream(ChannelEvent e) {
             DefaultChannelHandlerContext prev = getActualDownstreamContext(this.prev);
             if (prev == null) {
@@ -748,6 +783,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
 
+        @Override
         public void sendUpstream(ChannelEvent e) {
             DefaultChannelHandlerContext next = getActualUpstreamContext(this.next);
             if (next != null) {
@@ -761,10 +797,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             super();
         }
 
+        @Override
         public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) {
             logger.warn("Not attached yet; discarding: " + e);
         }
 
+        @Override
         public void exceptionCaught(ChannelPipeline pipeline,
                 ChannelEvent e, ChannelPipelineException cause) throws Exception {
             throw cause;

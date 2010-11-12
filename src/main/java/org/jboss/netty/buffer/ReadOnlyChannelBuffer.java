@@ -52,30 +52,37 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
         setIndex(buffer.readerIndex(), buffer.writerIndex());
     }
 
+    @Override
     public ChannelBuffer unwrap() {
         return buffer;
     }
 
+    @Override
     public ChannelBufferFactory factory() {
         return buffer.factory();
     }
 
+    @Override
     public ByteOrder order() {
         return buffer.order();
     }
 
+    @Override
     public boolean isDirect() {
         return buffer.isDirect();
     }
 
+    @Override
     public boolean hasArray() {
         return false;
     }
 
+    @Override
     public byte[] array() {
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     public int arrayOffset() {
         throw new ReadOnlyBufferException();
     }
@@ -85,102 +92,126 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     public void setByte(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     public void setBytes(int index, ChannelBuffer src, int srcIndex, int length) {
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     public void setBytes(int index, byte[] src, int srcIndex, int length) {
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     public void setBytes(int index, ByteBuffer src) {
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     public void setShort(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     public void setMedium(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     public void setInt(int index, int value) {
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     public void setLong(int index, long value) {
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     public int setBytes(int index, InputStream in, int length)
             throws IOException {
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     public int setBytes(int index, ScatteringByteChannel in, int length)
             throws IOException {
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
         return buffer.getBytes(index, out, length);
     }
 
+    @Override
     public void getBytes(int index, OutputStream out, int length)
             throws IOException {
         buffer.getBytes(index, out, length);
     }
 
+    @Override
     public void getBytes(int index, byte[] dst, int dstIndex, int length) {
         buffer.getBytes(index, dst, dstIndex, length);
     }
 
+    @Override
     public void getBytes(int index, ChannelBuffer dst, int dstIndex, int length) {
         buffer.getBytes(index, dst, dstIndex, length);
     }
 
+    @Override
     public void getBytes(int index, ByteBuffer dst) {
         buffer.getBytes(index, dst);
     }
 
+    @Override
     public ChannelBuffer duplicate() {
         return new ReadOnlyChannelBuffer(this);
     }
 
+    @Override
     public ChannelBuffer copy(int index, int length) {
         return buffer.copy(index, length);
     }
 
+    @Override
     public ChannelBuffer slice(int index, int length) {
         return new ReadOnlyChannelBuffer(buffer.slice(index, length));
     }
 
+    @Override
     public byte getByte(int index) {
         return buffer.getByte(index);
     }
 
+    @Override
     public short getShort(int index) {
         return buffer.getShort(index);
     }
 
+    @Override
     public int getUnsignedMedium(int index) {
         return buffer.getUnsignedMedium(index);
     }
 
+    @Override
     public int getInt(int index) {
         return buffer.getInt(index);
     }
 
+    @Override
     public long getLong(int index) {
         return buffer.getLong(index);
     }
 
+    @Override
     public ByteBuffer toByteBuffer(int index, int length) {
         return buffer.toByteBuffer(index, length).asReadOnlyBuffer();
     }
@@ -194,6 +225,7 @@ public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements Wrap
         return bufs;
     }
 
+    @Override
     public int capacity() {
         return buffer.capacity();
     }

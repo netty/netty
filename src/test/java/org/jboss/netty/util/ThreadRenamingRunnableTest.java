@@ -43,6 +43,7 @@ public class ThreadRenamingRunnableTest {
         Executor e = new ImmediateExecutor();
         e.execute(new ThreadRenamingRunnable(
                 new Runnable() {
+                    @Override
                     public void run() {
                         assertEquals(oldThreadName, Thread.currentThread().getName());
                     }
@@ -57,6 +58,7 @@ public class ThreadRenamingRunnableTest {
         Executor e = new ImmediateExecutor();
         e.execute(new ThreadRenamingRunnable(
                 new Runnable() {
+                    @Override
                     public void run() {
                         assertEquals(oldThreadName, Thread.currentThread().getName());
                     }
@@ -71,6 +73,7 @@ public class ThreadRenamingRunnableTest {
         Executor e = new ImmediateExecutor();
         e.execute(new ThreadRenamingRunnable(
                 new Runnable() {
+                    @Override
                     public void run() {
                         assertEquals("a b #c:d (e)", Thread.currentThread().getName());
                         assertFalse(oldThreadName.equals(Thread.currentThread().getName()));
@@ -104,6 +107,7 @@ public class ThreadRenamingRunnableTest {
         try {
             e.execute(new ThreadRenamingRunnable(
                     new Runnable() {
+                        @Override
                         public void run() {
                             assertEquals(oldThreadName, Thread.currentThread().getName());
                         }
@@ -120,6 +124,7 @@ public class ThreadRenamingRunnableTest {
             super();
         }
 
+        @Override
         public void execute(Runnable command) {
             command.run();
         }

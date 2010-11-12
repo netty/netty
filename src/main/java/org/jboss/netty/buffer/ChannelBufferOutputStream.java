@@ -82,14 +82,17 @@ public class ChannelBufferOutputStream extends OutputStream implements DataOutpu
         buffer.writeByte((byte) b);
     }
 
+    @Override
     public void writeBoolean(boolean v) throws IOException {
         write(v? (byte) 1 : (byte) 0);
     }
 
+    @Override
     public void writeByte(int v) throws IOException {
         write(v);
     }
 
+    @Override
     public void writeBytes(String s) throws IOException {
         int len = s.length();
         for (int i = 0; i < len; i ++) {
@@ -97,10 +100,12 @@ public class ChannelBufferOutputStream extends OutputStream implements DataOutpu
         }
     }
 
+    @Override
     public void writeChar(int v) throws IOException {
         writeShort((short) v);
     }
 
+    @Override
     public void writeChars(String s) throws IOException {
         int len = s.length();
         for (int i = 0 ; i < len ; i ++) {
@@ -108,26 +113,32 @@ public class ChannelBufferOutputStream extends OutputStream implements DataOutpu
         }
     }
 
+    @Override
     public void writeDouble(double v) throws IOException {
         writeLong(Double.doubleToLongBits(v));
     }
 
+    @Override
     public void writeFloat(float v) throws IOException {
         writeInt(Float.floatToIntBits(v));
     }
 
+    @Override
     public void writeInt(int v) throws IOException {
         buffer.writeInt(v);
     }
 
+    @Override
     public void writeLong(long v) throws IOException {
         buffer.writeLong(v);
     }
 
+    @Override
     public void writeShort(int v) throws IOException {
         buffer.writeShort((short) v);
     }
 
+    @Override
     public void writeUTF(String s) throws IOException {
         utf8out.writeUTF(s);
     }

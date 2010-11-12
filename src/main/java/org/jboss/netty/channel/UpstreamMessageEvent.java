@@ -57,18 +57,22 @@ public class UpstreamMessageEvent implements MessageEvent {
         }
     }
 
+    @Override
     public Channel getChannel() {
         return channel;
     }
 
+    @Override
     public ChannelFuture getFuture() {
         return succeededFuture(getChannel());
     }
 
+    @Override
     public Object getMessage() {
         return message;
     }
 
+    @Override
     public SocketAddress getRemoteAddress() {
         return remoteAddress;
     }

@@ -131,6 +131,7 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
      * handler.  You should not call this method if the {@link Timer} is in use
      * by other objects.
      */
+    @Override
     public void releaseExternalResources() {
         timer.stop();
     }
@@ -171,6 +172,7 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
             this.future = future;
         }
 
+        @Override
         public void run(Timeout timeout) throws Exception {
             if (timeout.isCancelled()) {
                 return;
@@ -204,6 +206,7 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
             this.timeout = timeout;
         }
 
+        @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             timeout.cancel();
         }

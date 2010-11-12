@@ -106,6 +106,7 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
         this.preallocatedBufferCapacity = preallocatedBufferCapacity;
     }
 
+    @Override
     public ChannelBuffer getBuffer(ByteOrder order, int capacity) {
         if (order == null) {
             throw new NullPointerException("order");
@@ -130,6 +131,7 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
         return slice;
     }
 
+    @Override
     public ChannelBuffer getBuffer(ByteOrder order, byte[] array, int offset, int length) {
         if (array == null) {
             throw new NullPointerException("array");
@@ -149,6 +151,7 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
         return buf;
     }
 
+    @Override
     public ChannelBuffer getBuffer(ByteBuffer nioBuffer) {
         if (!nioBuffer.isReadOnly() && nioBuffer.isDirect()) {
             return ChannelBuffers.wrappedBuffer(nioBuffer);

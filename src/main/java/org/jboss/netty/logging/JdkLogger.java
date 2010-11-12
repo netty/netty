@@ -38,50 +38,62 @@ class JdkLogger extends AbstractInternalLogger {
         this.loggerName = loggerName;
     }
 
+    @Override
     public void debug(String msg) {
         logger.logp(Level.FINE, loggerName, null, msg);
     }
 
+    @Override
     public void debug(String msg, Throwable cause) {
         logger.logp(Level.FINE, loggerName, null, msg, cause);
     }
 
+    @Override
     public void error(String msg) {
         logger.logp(Level.SEVERE, loggerName, null, msg);
     }
 
+    @Override
     public void error(String msg, Throwable cause) {
         logger.logp(Level.SEVERE, loggerName, null, msg, cause);
     }
 
+    @Override
     public void info(String msg) {
         logger.logp(Level.INFO, loggerName, null, msg);
     }
 
+    @Override
     public void info(String msg, Throwable cause) {
         logger.logp(Level.INFO, loggerName, null, msg, cause);
     }
 
+    @Override
     public boolean isDebugEnabled() {
         return logger.isLoggable(Level.FINE);
     }
 
+    @Override
     public boolean isErrorEnabled() {
         return logger.isLoggable(Level.SEVERE);
     }
 
+    @Override
     public boolean isInfoEnabled() {
         return logger.isLoggable(Level.INFO);
     }
 
+    @Override
     public boolean isWarnEnabled() {
         return logger.isLoggable(Level.WARNING);
     }
 
+    @Override
     public void warn(String msg) {
         logger.logp(Level.WARNING, loggerName, null, msg);
     }
 
+    @Override
     public void warn(String msg, Throwable cause) {
         logger.logp(Level.WARNING, loggerName, null, msg, cause);
     }

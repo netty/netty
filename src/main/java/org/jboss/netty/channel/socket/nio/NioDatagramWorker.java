@@ -205,6 +205,7 @@ class NioDatagramWorker implements Runnable {
     /**
      * Selector loop.
      */
+    @Override
     public void run() {
         // Store a ref to the current thread.
         thread = Thread.currentThread();
@@ -839,6 +840,7 @@ class NioDatagramWorker implements Runnable {
          * underlying DatagramChannels peer DatagramSocket register method.
          *
          */
+        @Override
         public void run() {
             final SocketAddress localAddress = channel.getLocalAddress();
             if (localAddress == null) {

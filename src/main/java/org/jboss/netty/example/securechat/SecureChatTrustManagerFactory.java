@@ -38,10 +38,12 @@ import javax.net.ssl.X509TrustManager;
 public class SecureChatTrustManagerFactory extends TrustManagerFactorySpi {
 
     private static final TrustManager DUMMY_TRUST_MANAGER = new X509TrustManager() {
+        @Override
         public X509Certificate[] getAcceptedIssuers() {
             return new X509Certificate[0];
         }
 
+        @Override
         public void checkClientTrusted(
                 X509Certificate[] chain, String authType) throws CertificateException {
             // Always trust - it is an example.
@@ -52,6 +54,7 @@ public class SecureChatTrustManagerFactory extends TrustManagerFactorySpi {
                     "UNKNOWN CLIENT CERTIFICATE: " + chain[0].getSubjectDN());
         }
 
+        @Override
         public void checkServerTrusted(
                 X509Certificate[] chain, String authType) throws CertificateException {
             // Always trust - it is an example.

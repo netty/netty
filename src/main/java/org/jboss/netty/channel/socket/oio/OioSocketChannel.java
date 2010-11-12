@@ -62,10 +62,12 @@ abstract class OioSocketChannel extends AbstractChannel
         config = new DefaultSocketChannelConfig(socket);
     }
 
+    @Override
     public SocketChannelConfig getConfig() {
         return config;
     }
 
+    @Override
     public InetSocketAddress getLocalAddress() {
         InetSocketAddress localAddress = this.localAddress;
         if (localAddress == null) {
@@ -80,6 +82,7 @@ abstract class OioSocketChannel extends AbstractChannel
         return localAddress;
     }
 
+    @Override
     public InetSocketAddress getRemoteAddress() {
         InetSocketAddress remoteAddress = this.remoteAddress;
         if (remoteAddress == null) {
@@ -94,10 +97,12 @@ abstract class OioSocketChannel extends AbstractChannel
         return remoteAddress;
     }
 
+    @Override
     public boolean isBound() {
         return isOpen() && socket.isBound();
     }
 
+    @Override
     public boolean isConnected() {
         return isOpen() && socket.isConnected();
     }

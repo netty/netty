@@ -42,6 +42,7 @@ public abstract class AbstractChannelSink implements ChannelSink {
      *              {@link ChannelHandler} to raise an exception
      * @param cause the exception raised by a {@link ChannelHandler}
      */
+    @Override
     public void exceptionCaught(ChannelPipeline pipeline,
             ChannelEvent event, ChannelPipelineException cause) throws Exception {
         Throwable actualCause = cause.getCause();

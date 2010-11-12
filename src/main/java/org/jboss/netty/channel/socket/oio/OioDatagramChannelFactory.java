@@ -98,10 +98,12 @@ public class OioDatagramChannelFactory implements DatagramChannelFactory {
         sink = new OioDatagramPipelineSink(id, workerExecutor);
     }
 
+    @Override
     public DatagramChannel newChannel(ChannelPipeline pipeline) {
         return new OioDatagramChannel(this, pipeline, sink);
     }
 
+    @Override
     public void releaseExternalResources() {
         ExecutorUtil.terminate(workerExecutor);
     }

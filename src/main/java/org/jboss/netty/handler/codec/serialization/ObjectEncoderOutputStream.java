@@ -84,6 +84,7 @@ public class ObjectEncoderOutputStream extends OutputStream implements
         this.estimatedLength = estimatedLength;
     }
 
+    @Override
     public void writeObject(Object obj) throws IOException {
         ChannelBufferOutputStream bout = new ChannelBufferOutputStream(
                 ChannelBuffers.dynamicBuffer(estimatedLength));
@@ -127,46 +128,57 @@ public class ObjectEncoderOutputStream extends OutputStream implements
         out.write(b);
     }
 
+    @Override
     public final void writeBoolean(boolean v) throws IOException {
         out.writeBoolean(v);
     }
 
+    @Override
     public final void writeByte(int v) throws IOException {
         out.writeByte(v);
     }
 
+    @Override
     public final void writeBytes(String s) throws IOException {
         out.writeBytes(s);
     }
 
+    @Override
     public final void writeChar(int v) throws IOException {
         out.writeChar(v);
     }
 
+    @Override
     public final void writeChars(String s) throws IOException {
         out.writeChars(s);
     }
 
+    @Override
     public final void writeDouble(double v) throws IOException {
         out.writeDouble(v);
     }
 
+    @Override
     public final void writeFloat(float v) throws IOException {
         out.writeFloat(v);
     }
 
+    @Override
     public final void writeInt(int v) throws IOException {
         out.writeInt(v);
     }
 
+    @Override
     public final void writeLong(long v) throws IOException {
         out.writeLong(v);
     }
 
+    @Override
     public final void writeShort(int v) throws IOException {
         out.writeShort(v);
     }
 
+    @Override
     public final void writeUTF(String str) throws IOException {
         out.writeUTF(str);
     }

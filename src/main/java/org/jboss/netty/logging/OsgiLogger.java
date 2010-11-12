@@ -40,6 +40,7 @@ class OsgiLogger extends AbstractInternalLogger {
         prefix = "[" + name + "] ";
     }
 
+    @Override
     public void debug(String msg) {
         LogService logService = parent.getLogService();
         if (logService != null) {
@@ -49,6 +50,7 @@ class OsgiLogger extends AbstractInternalLogger {
         }
     }
 
+    @Override
     public void debug(String msg, Throwable cause) {
         LogService logService = parent.getLogService();
         if (logService != null) {
@@ -58,6 +60,7 @@ class OsgiLogger extends AbstractInternalLogger {
         }
     }
 
+    @Override
     public void error(String msg) {
         LogService logService = parent.getLogService();
         if (logService != null) {
@@ -67,6 +70,7 @@ class OsgiLogger extends AbstractInternalLogger {
         }
     }
 
+    @Override
     public void error(String msg, Throwable cause) {
         LogService logService = parent.getLogService();
         if (logService != null) {
@@ -76,6 +80,7 @@ class OsgiLogger extends AbstractInternalLogger {
         }
     }
 
+    @Override
     public void info(String msg) {
         LogService logService = parent.getLogService();
         if (logService != null) {
@@ -85,6 +90,7 @@ class OsgiLogger extends AbstractInternalLogger {
         }
     }
 
+    @Override
     public void info(String msg, Throwable cause) {
         LogService logService = parent.getLogService();
         if (logService != null) {
@@ -94,22 +100,27 @@ class OsgiLogger extends AbstractInternalLogger {
         }
     }
 
+    @Override
     public boolean isDebugEnabled() {
         return true;
     }
 
+    @Override
     public boolean isErrorEnabled() {
         return true;
     }
 
+    @Override
     public boolean isInfoEnabled() {
         return true;
     }
 
+    @Override
     public boolean isWarnEnabled() {
         return true;
     }
 
+    @Override
     public void warn(String msg) {
         LogService logService = parent.getLogService();
         if (logService != null) {
@@ -119,6 +130,7 @@ class OsgiLogger extends AbstractInternalLogger {
         }
     }
 
+    @Override
     public void warn(String msg, Throwable cause) {
         LogService logService = parent.getLogService();
         if (logService != null) {

@@ -73,6 +73,7 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
      *                 downstream event.
      * @param e The downstream event.
      */
+    @Override
     public void eventSunk(final ChannelPipeline pipeline, final ChannelEvent e)
             throws Exception {
         final NioDatagramChannel channel = (NioDatagramChannel) e.getChannel();
