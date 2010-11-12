@@ -1,7 +1,6 @@
-
-# /
 /.project
 /.classpath
 /.settings
 /target
 /reports
+/src/main/java/org/jboss/netty/util/Version.java
