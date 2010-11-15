@@ -266,7 +266,7 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
     }
 
     public ChannelBuffer duplicate() {
-        return new DuplicatedChannelBuffer(buffer);
+        return new DuplicatedChannelBuffer(this);
     }
 
     public ChannelBuffer copy(int index, int length) {
@@ -281,12 +281,12 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
             if (length == 0) {
                 return ChannelBuffers.EMPTY_BUFFER;
             }
-            return new TruncatedChannelBuffer(buffer, length);
+            return new TruncatedChannelBuffer(this, length);
         } else {
             if (length == 0) {
                 return ChannelBuffers.EMPTY_BUFFER;
             }
-            return new SlicedChannelBuffer(buffer, index, length);
+            return new SlicedChannelBuffer(this, index, length);
         }
     }
 
