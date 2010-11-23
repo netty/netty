@@ -37,9 +37,9 @@ import org.jboss.netty.util.CharsetUtil;
  * {@link EncoderEmbedder}&lt;{@link ChannelBuffer}&gt; embedder = new {@link EncoderEmbedder}&lt;{@link ChannelBuffer}&gt;(
  *         new {@link Base64Encoder}(), new {@link StringEncoder}());
  *
- * embedded.offer(data);
+ * embedder.offer(data);
  *
- * {@link ChannelBuffer} encoded = embedded.poll();
+ * {@link ChannelBuffer} encoded = embedder.poll();
  * assert encoded.toString({@link CharsetUtil}.US_ASCII).equals("Zm9vYmFy");
  * </pre>
  *
