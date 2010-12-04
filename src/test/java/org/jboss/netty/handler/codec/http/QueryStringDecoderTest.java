@@ -73,6 +73,7 @@ public class QueryStringDecoderTest {
         Assert.assertEquals("1=", d.getParameters().get("a").get(0));
         Assert.assertEquals("=2", d.getParameters().get("a").get(1));
     }
+
     @Test
     public void testExotic() throws Exception {
         assertQueryString("", "");
@@ -95,6 +96,43 @@ public class QueryStringDecoderTest {
         assertQueryString("/foo?a=", "/foo?&a=");
         assertQueryString("/foo?a=b&c=d", "/foo?a=b&c=d");
         assertQueryString("/foo?a=1&a=&a=", "/foo?a=1&a&a=");
+    }
+
+    @Test
+    public void testUrlDecoding() throws Exception {
+        final String caffe = new String(
+                // "Caffé" but instead of putting the literal E-acute in the
+                // source file, we directly use the UTF-8 encoding so as to
+                // not rely on the platform's default encoding (not portable).
+                new byte[] {'C', 'a', 'f', 'f', (byte) 0xC3, (byte) 0xA9},
+                "UTF-8");
+        final String[] tests = new String[] {
+            // Encoded   ->   Decoded or error message substring
+            "",               "",
+            "foo",            "foo",
+            "f%%b",           "f%b",
+            "f+o",            "f o",
+            "f++",            "f  ",
+            "fo%",            "unterminated escape sequence",
+            "%42",            "B",
+            "%5f",            "_",
+            "f%4",            "partial escape sequence",
+            "%x2",            "invalid escape sequence `%x2' at index 0 of: %x2",
+            "%4x",            "invalid escape sequence `%4x' at index 0 of: %4x",
+            "Caff%C3%A9",     caffe,
+        };
+        for (int i = 0; i < tests.length; i += 2) {
+            final String encoded = tests[i];
+            final String expected = tests[i + 1];
+            try {
+                final String decoded = QueryStringDecoder.decodeComponent(encoded);
+                Assert.assertEquals(expected, decoded);
+            } catch (IllegalArgumentException e) {
+                Assert.assertTrue("String \"" + e.getMessage() + "\" does"
+                                  + " not contain \"" + expected + '"',
+                                  e.getMessage().contains(expected));
+            }
+        }
     }
 
     private static void assertQueryString(String expected, String actual) {
