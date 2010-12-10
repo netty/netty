@@ -259,7 +259,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.6</version>
+        <version>2.5</version>
         <configuration>
           <forkMode>once</forkMode>
           <excludes>
