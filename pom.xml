@@ -168,6 +168,12 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+  	  <groupId>org.jmock</groupId>
+  	  <artifactId>jmock-junit4</artifactId>
+  	  <version>2.5.1</version>
+  	  <scope>test</scope>
+	</dependency>
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
       <version>1.5.11</version>
@@ -253,9 +259,9 @@
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.5</version>
+        <version>2.6</version>
         <configuration>
-          <forkMode>never</forkMode>
+          <forkMode>once</forkMode>
           <excludes>
             <exclude>**/Abstract*</exclude>
             <exclude>**/TestUtil*</exclude>
