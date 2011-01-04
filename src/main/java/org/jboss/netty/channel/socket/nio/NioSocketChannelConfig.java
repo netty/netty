@@ -59,36 +59,36 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  */
 public interface NioSocketChannelConfig extends SocketChannelConfig {
 
-   /**
-    * Returns the high water mark of the write buffer.  If the number of bytes
-    * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
-    * will start to return {@code false}.
-    */
+    /**
+     * Returns the high water mark of the write buffer.  If the number of bytes
+     * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
+     * will start to return {@code false}.
+     */
     int getWriteBufferHighWaterMark();
 
-   /**
-    * Sets the high water mark of the write buffer.  If the number of bytes
-    * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
-    * will start to return {@code false}.
-    */
+    /**
+     * Sets the high water mark of the write buffer.  If the number of bytes
+     * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
+     * will start to return {@code false}.
+     */
     void setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
-   /**
-    * Returns the low water mark of the write buffer.  Once the number of bytes
-    * queued in the write buffer exceeded the
-    * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-    * dropped down below this value, {@link Channel#isWritable()} will return
-    * {@code true} again.
-    */
+    /**
+     * Returns the low water mark of the write buffer.  Once the number of bytes
+     * queued in the write buffer exceeded the
+     * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
+     * dropped down below this value, {@link Channel#isWritable()} will return
+     * {@code true} again.
+     */
     int getWriteBufferLowWaterMark();
 
-   /**
-    * Sets the low water mark of the write buffer.  Once the number of bytes
-    * queued in the write buffer exceeded the
-    * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-    * dropped down below this value, {@link Channel#isWritable()} will return
-    * {@code true} again.
-    */
+    /**
+     * Sets the low water mark of the write buffer.  Once the number of bytes
+     * queued in the write buffer exceeded the
+     * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
+     * dropped down below this value, {@link Channel#isWritable()} will return
+     * {@code true} again.
+     */
     void setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
 
     /**
