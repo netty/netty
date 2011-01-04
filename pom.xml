@@ -340,20 +340,20 @@
                   </or>
                   <then>
                     <move file="${project.build.directory}/${project.build.finalName}.jar" tofile="${project.build.directory}/${project.build.finalName}.orig.jar" />
-                    <zip destfile="${project.build.directory}/${project.build.finalName}.jar">
+                    <jar destfile="${project.build.directory}/${project.build.finalName}.jar">
                       <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}.orig.jar" dirmode="755">
                         <exclude name="*/*/*/example/**" />
                       </zipfileset>
-                    </zip>
+                    </jar>
                     <delete file="${project.build.directory}/${project.build.finalName}.orig.jar" />
                     <checksum file="${project.build.directory}/${project.build.finalName}.jar" algorithm="md5" forceoverwrite="yes" />
                     <checksum file="${project.build.directory}/${project.build.finalName}.jar" algorithm="sha1" forceoverwrite="yes" />
                     <move file="${project.build.directory}/${project.build.finalName}-sources.jar" tofile="${project.build.directory}/${project.build.finalName}-sources.orig.jar" />
-                    <zip destfile="${project.build.directory}/${project.build.finalName}-sources.jar">
+                    <jar destfile="${project.build.directory}/${project.build.finalName}-sources.jar">
                       <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}-sources.orig.jar" dirmode="755">
                         <exclude name="*/*/*/example/**" />
                       </zipfileset>
-                    </zip>
+                    </jar>
                     <delete file="${project.build.directory}/${project.build.finalName}-sources.orig.jar" />
                     <checksum file="${project.build.directory}/${project.build.finalName}-sources.jar" algorithm="md5" forceoverwrite="yes" />
                     <checksum file="${project.build.directory}/${project.build.finalName}-sources.jar" algorithm="sha1" forceoverwrite="yes" />
