@@ -203,24 +203,6 @@
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>buildnumber-maven-plugin</artifactId>
-        <version>1.0-beta-4</version>
-        <executions>
-          <execution>
-            <phase>validate</phase>
-            <goals>
-              <goal>create</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <doCheck>false</doCheck>
-          <doUpdate>true</doUpdate>
-          <revisionOnScmFailure>-1</revisionOnScmFailure>
-        </configuration>
-      </plugin>
-      <plugin>
         <artifactId>maven-resources-plugin</artifactId>
         <version>2.4.2</version>
         <configuration>
@@ -269,7 +251,6 @@
         <extensions>true</extensions>
         <configuration>
           <instructions>
-            <SCM-Revision>${buildNumber}</SCM-Revision>
             <Bundle-SymbolicName>${project.groupId}</Bundle-SymbolicName>
             <Bundle-DocURL>${project.url}</Bundle-DocURL>
             <Bundle-Activator>
@@ -318,9 +299,14 @@
             </goals>
             <configuration>
               <tasks>
+                <exec executable="git" outputproperty="buildNumber">
+                  <arg value="log"/>
+                  <arg value="-1"/>
+                  <arg value="--format=format:%h"/>
+                </exec>
                 <mkdir dir="${project.build.directory}" />
-                <echo message="${project.version}, r${buildNumber}" file="${project.build.directory}/version.txt" />
-                <echo message="// DO NOT MODIFY - WILL BE OVERWRITTEN DURING THE BUILD PROCESS${line.separator}package org.jboss.netty.util;${line.separator}/**${line.separator} * Provides the version information of Netty.${line.separator} * @apiviz.landmark${line.separator} */${line.separator}public final class Version {${line.separator} /** The version identifier. */${line.separator} public static final String ID = &quot;${project.version}-r${buildNumber}&quot;;${line.separator} /** Prints out the version identifier to stdout. */${line.separator} public static void main(String[] args) { System.out.println(ID); }${line.separator} private Version() { super(); }${line.separator}}${line.separator}" file="${basedir}/src/main/java/org/jboss/netty/util/Version.java" />
+                <echo message="${project.version}" file="${project.build.directory}/version.txt" />
+                <echo message="// DO NOT MODIFY - WILL BE OVERWRITTEN DURING THE BUILD PROCESS${line.separator}package org.jboss.netty.util;${line.separator}/**${line.separator} * Provides the version information of Netty.${line.separator} * @apiviz.landmark${line.separator} */${line.separator}public final class Version {${line.separator} /** The version identifier. */${line.separator} public static final String ID = &quot;${project.version}-${buildNumber}&quot;;${line.separator} /** Prints out the version identifier to stdout. */${line.separator} public static void main(String[] args) { System.out.println(ID); }${line.separator} private Version() { super(); }${line.separator}}${line.separator}" file="${basedir}/src/main/java/org/jboss/netty/util/Version.java" />
               </tasks>
             </configuration>
           </execution>
@@ -340,20 +326,28 @@
                   </or>
                   <then>
                     <move file="${project.build.directory}/${project.build.finalName}.jar" tofile="${project.build.directory}/${project.build.finalName}.orig.jar" />
-                    <jar destfile="${project.build.directory}/${project.build.finalName}.jar">
+                    <zip destfile="${project.build.directory}/${project.build.finalName}.jar">
                       <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}.orig.jar" dirmode="755">
+                        <include name="META-INF/MANIFEST.MF" />
+                      </zipfileset>
+                      <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}.orig.jar" dirmode="755">
+                        <exclude name="META-INF/MANIFEST.MF" />
                         <exclude name="*/*/*/example/**" />
                       </zipfileset>
-                    </jar>
+                    </zip>
                     <delete file="${project.build.directory}/${project.build.finalName}.orig.jar" />
                     <checksum file="${project.build.directory}/${project.build.finalName}.jar" algorithm="md5" forceoverwrite="yes" />
                     <checksum file="${project.build.directory}/${project.build.finalName}.jar" algorithm="sha1" forceoverwrite="yes" />
                     <move file="${project.build.directory}/${project.build.finalName}-sources.jar" tofile="${project.build.directory}/${project.build.finalName}-sources.orig.jar" />
-                    <jar destfile="${project.build.directory}/${project.build.finalName}-sources.jar">
+                    <zip destfile="${project.build.directory}/${project.build.finalName}-sources.jar">
                       <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}-sources.orig.jar" dirmode="755">
+                        <include name="META-INF/MANIFEST.MF" />
+                      </zipfileset>
+                      <zipfileset filemode="644" src="${project.build.directory}/${project.build.finalName}-sources.orig.jar" dirmode="755">
+                        <exclude name="META-INF/MANIFEST.MF" />
                         <exclude name="*/*/*/example/**" />
                       </zipfileset>
-                    </jar>
+                    </zip>
                     <delete file="${project.build.directory}/${project.build.finalName}-sources.orig.jar" />
                     <checksum file="${project.build.directory}/${project.build.finalName}-sources.jar" algorithm="md5" forceoverwrite="yes" />
                     <checksum file="${project.build.directory}/${project.build.finalName}-sources.jar" algorithm="sha1" forceoverwrite="yes" />
@@ -421,8 +415,8 @@
           <author>true</author>
           <keywords>true</keywords>
           <overview>${basedir}/src/javadoc/overview.html</overview>
-          <doctitle>${project.name} API Reference (${project.version}, r${buildNumber})</doctitle>
-          <windowtitle>${project.name} API Reference (${project.version}, r${buildNumber})</windowtitle>
+          <doctitle>${project.name} API Reference (${project.version})</doctitle>
+          <windowtitle>${project.name} API Reference (${project.version})</windowtitle>
           <additionalparam>
             -link http://java.sun.com/javase/6/docs/api/
             -link http://code.google.com/apis/protocolbuffers/docs/reference/java/
@@ -465,8 +459,8 @@
           <destDir>${project.build.directory}/xref</destDir>
           <javadocDir>${project.build.directory}/api</javadocDir>
           <stylesheet>${basedir}/src/xref/stylesheet.css</stylesheet>
-          <docTitle>${project.name} Source Xref (${project.version}, r${buildNumber})</docTitle>
-          <windowTitle>${project.name} Source Xref (${project.version}, r${buildNumber})</windowTitle>
+          <docTitle>${project.name} Source Xref (${project.version})</docTitle>
+          <windowTitle>${project.name} Source Xref (${project.version})</windowTitle>
         </configuration>
       </plugin>
       <plugin>
