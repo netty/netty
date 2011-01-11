@@ -49,9 +49,9 @@
   <inceptionYear>2008</inceptionYear>
 
   <scm>
-    <url>http://fisheye.jboss.org/browse/Netty</url>
-    <connection>scm:svn:http://anonsvn.jboss.org/repos/netty/trunk</connection>
-    <developerConnection>scm:svn:https://svn.jboss.org/repos/netty/trunk</developerConnection>
+    <url>https://github.com/netty/netty</url>
+    <connection>scm:git:git://github.com/netty/netty.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com:netty/netty.git</developerConnection>
   </scm>
 
   <dependencies>
@@ -587,7 +587,6 @@
         <artifactId>maven-release-plugin</artifactId>
         <version>2.0</version>
         <configuration>
-          <tagBase>https://svn.jboss.org/repos/netty/tags</tagBase>
           <!-- We don't want to use the default release profile because it
                causes the JavaDoc and source jars to be deployed twice. -->
           <useReleaseProfile>false</useReleaseProfile>
