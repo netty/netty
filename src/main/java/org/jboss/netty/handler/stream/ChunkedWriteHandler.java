@@ -119,9 +119,13 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         boolean offered = queue.offer((MessageEvent) e);
         assert offered;
 
-        if (ctx.getChannel().isWritable()) {
+        final Channel channel = ctx.getChannel();
+        if (channel.isWritable()) {
             this.ctx = ctx;
             flush(ctx);
+        } else if (!channel.isConnected()) {
+            this.ctx = ctx;
+            discard(ctx);
         }
     }
 
