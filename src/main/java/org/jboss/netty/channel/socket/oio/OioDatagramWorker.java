@@ -102,13 +102,14 @@ class OioDatagramWorker implements Runnable {
             Object message, SocketAddress remoteAddress) {
         try {
             ChannelBuffer buf = (ChannelBuffer) message;
+            int offset = buf.readerIndex();
             int length = buf.readableBytes();
             ByteBuffer nioBuf = buf.toByteBuffer();
             DatagramPacket packet;
             if (nioBuf.hasArray()) {
                 // Avoid copy if the buffer is backed by an array.
                 packet = new DatagramPacket(
-                        nioBuf.array(), nioBuf.arrayOffset(), length);
+                        nioBuf.array(), nioBuf.arrayOffset() + offset, length);
             } else {
                 // Otherwise it will be expensive.
                 byte[] arrayBuf = new byte[length];
