@@ -18,10 +18,10 @@ package org.jboss.netty.handler.codec.protobuf;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.LengthFieldPrepender;
@@ -99,12 +99,13 @@ public class ProtobufDecoder extends OneToOneDecoder {
 
         ChannelBuffer buf = (ChannelBuffer) msg;
         if (buf.hasArray()) {
+            final int offset = buf.readerIndex();
             if(extensionRegistry == null) {
                 return prototype.newBuilderForType().mergeFrom(
-                        buf.array(),buf.arrayOffset(), buf.readableBytes()).build();
+                        buf.array(), buf.arrayOffset() + offset, buf.readableBytes()).build();
             } else {
                 return prototype.newBuilderForType().mergeFrom(
-                        buf.array(), buf.arrayOffset(), buf.readableBytes(), extensionRegistry).build();
+                        buf.array(), buf.arrayOffset() + offset, buf.readableBytes(), extensionRegistry).build();
             }
         } else {
             if (extensionRegistry == null) {
