@@ -268,6 +268,8 @@
             <Import-Package>
               *;resolution:=optional
             </Import-Package>
+            <Eclipse-BuddyPolicy>registered</Eclipse-BuddyPolicy>
+            <Bundle-BuddyPolicy>registered</Bundle-BuddyPolicy>
           </instructions>
         </configuration>
       </plugin>
