@@ -15,15 +15,16 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.nio.charset.Charset;
-import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.jboss.netty.util.CharsetUtil;
 
 /**
  * Splits an HTTP query string into a path string and key-value parameter pairs.
@@ -173,7 +174,7 @@ public class QueryStringDecoder {
     /**
      * Decodes a bit of an URL encoded by a browser.
      * <p>
-     * This is equivalent to calling {@link decodeComponent(String, Charset)}
+     * This is equivalent to calling {@link #decodeComponent(String, Charset)}
      * with the UTF-8 charset (recommended to comply with RFC 3986, Section 2).
      * @param s The string to decode (can be empty).
      * @return The decoded string, or {@code s} if there's nothing to decode.
@@ -195,14 +196,13 @@ public class QueryStringDecoder {
      * {@code 0xC3 0xA9}) is encoded as {@code %C3%A9} or {@code %c3%a9}.
      * <p>
      * This is essentially equivalent to calling
-     *   <code>{@link java.net.URLDecoder URLDecoder}.{@link
-     *   java.net.URLDecoder.decode}(s, charset.name())</code>
+     *   <code>{@link URLDecoder#decode(String, String) URLDecoder.decode}(s, charset.name())</code>
      * except that it's over 2x faster and generates less garbage for the GC.
      * Actually this function doesn't allocate any memory if there's nothing
      * to decode, the argument itself is returned.
      * @param s The string to decode (can be empty).
      * @param charset The charset to use to decode the string (should really
-     * be {@link CharsetUtil.UTF_8}.
+     * be {@link CharsetUtil#UTF_8}.
      * @return The decoded string, or {@code s} if there's nothing to decode.
      * If the string to decode is {@code null}, returns an empty string.
      * @throws IllegalArgumentException if the string contains a malformed
@@ -274,7 +274,7 @@ public class QueryStringDecoder {
      * @param c The ASCII character of the hexadecimal number to decode.
      * Must be in the range {@code [0-9a-fA-F]}.
      * @return The hexadecimal value represented in the ASCII character
-     * given, or {@link Character.MAX_VALUE} if the character is invalid.
+     * given, or {@link Character#MAX_VALUE} if the character is invalid.
      */
     private static char decodeHexNibble(final char c) {
         if ('0' <= c && c <= '9') {
