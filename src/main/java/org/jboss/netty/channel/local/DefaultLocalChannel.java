@@ -20,10 +20,11 @@ import static org.jboss.netty.channel.Channels.*;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.channel.ChannelConfig;
+import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -41,9 +42,16 @@ import org.jboss.netty.util.internal.ThreadLocalBoolean;
  */
 final class DefaultLocalChannel extends AbstractChannel implements LocalChannel {
 
+    // TODO Move the state management up to AbstractChannel to remove duplication.
+    private static final int ST_OPEN = 0;
+    private static final int ST_BOUND = 1;
+    private static final int ST_CONNECTED = 2;
+    private static final int ST_CLOSED = -1;
+    private final AtomicInteger state = new AtomicInteger(ST_OPEN);
+
     private final ChannelConfig config;
     private final ThreadLocalBoolean delivering = new ThreadLocalBoolean();
-    final AtomicBoolean bound = new AtomicBoolean();
+
     final Queue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>();
 
     volatile DefaultLocalChannel pairedChannel;
@@ -63,13 +71,41 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
     }
 
     @Override
+    public boolean isOpen() {
+        return state.get() >= ST_OPEN;
+    }
+
+    @Override
     public boolean isBound() {
-        return bound.get() && isOpen();
+        return state.get() >= ST_BOUND;
     }
 
     @Override
     public boolean isConnected() {
-        return pairedChannel != null && isOpen();
+        return state.get() == ST_CONNECTED;
+    }
+
+    final void setBound() throws ClosedChannelException {
+        if (!state.compareAndSet(ST_OPEN, ST_BOUND)) {
+            switch (state.get()) {
+            case ST_CLOSED:
+                throw new ClosedChannelException();
+            default:
+                throw new ChannelException("already bound");
+            }
+        }
+    }
+
+    final void setConnected() {
+        if (state.get() != ST_CLOSED) {
+            state.set(ST_CONNECTED);
+        }
+    }
+
+    @Override
+    protected boolean setClosed() {
+        state.set(ST_CLOSED);
+        return super.setClosed();
     }
 
     @Override
