@@ -17,8 +17,11 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 import com.google.protobuf.MessageLite;
 
 /** 
- * A protobuf encoder implementation that can encode any number of message types by appending an adding a header to the stream.
- * Assumes that the remote decoder has the same message to index mapping as this encoder.
+ * A protobuf encoder implementation that can encode any number of 
+ * message types by appending an adding a header to the stream.
+ * Assumes that the remote decoder has the same message to index 
+ * mapping as this encoder. If the header does not map to a MessageLite 
+ * type then a {@link IllegalStateException} is thrown.
  *
  * @author Ant Len
  *
@@ -60,6 +63,10 @@ public class MultiProtobufEncoder extends OneToOneEncoder {
      */
 	public MultiProtobufEncoder(Map<Integer, MessageLite> messages, int headerFieldLength) {
 		super();
+		
+        if(headerFieldLength <1 || headerFieldLength >4)
+        	throw new IllegalArgumentException("Incorrect field length " + headerFieldLength + ". Only values 1-4 are supported.");
+		
 		this.messages = messages;
 		this.headerFieldLength = headerFieldLength;
 	}
@@ -76,20 +83,21 @@ public class MultiProtobufEncoder extends OneToOneEncoder {
 	
 	
     @Override
-    protected final Object encode(final ChannelHandlerContext ctx, final Channel channel, final Object msg) throws Exception {
+    protected final Object encode(final ChannelHandlerContext ctx, 
+    								final Channel channel, final Object msg) throws Exception {
     	
          if (!(msg instanceof MessageLite)) {
             return msg;
          }
          
-    	 final ChannelBuffer header = channel.getConfig().getBufferFactory().getBuffer(headerFieldLength);
-    	 final MessageLite thisMessage = (MessageLite) msg;
+         final ChannelBuffer header = channel.getConfig().getBufferFactory().getBuffer(headerFieldLength);
+         final MessageLite thisMessage = (MessageLite) msg;
          final ChannelBuffer body = wrappedBuffer(thisMessage.toByteArray());
     	 
          final int headerValue = getHeaderValue(thisMessage);
          
          if(headerValue == INVALID){
-        	 RuntimeException error = new RuntimeException("Cannot find Header type for message " + thisMessage);
+        	 IllegalStateException error = new IllegalStateException("Cannot find Header type for message " + thisMessage);
         	 LOGGER.error(error.getMessage());
         	 throw error;
          }
@@ -108,14 +116,16 @@ public class MultiProtobufEncoder extends OneToOneEncoder {
             header.writeInt(headerValue);
             break;
         default:
+        	//Should never get here because headerFieldLength should be validated in the constructor
             throw new Error("Invalid encoding type " + headerFieldLength);
         }
  	    
          final ChannelBuffer wrapped=  wrappedBuffer(header, body);
 		
          if(LOGGER.isDebugEnabled()){
-        	 LOGGER.debug("ENCODING [message=" + thisMessage + ", body size=" + body.readableBytes()+ ", header value=" + 
-					headerValue + ", header size=" +header.readableBytes() + ", message size=" + wrapped.readableBytes() + "]");
+        	 LOGGER.debug("ENCODING [message=" + thisMessage + ", body size=" +
+        			 body.readableBytes()+ ", header value=" + headerValue + 
+        			 ", header size=" +header.readableBytes() + ", message size=" + wrapped.readableBytes() + "]");
          }
          
          return wrapped;
@@ -129,12 +139,12 @@ public class MultiProtobufEncoder extends OneToOneEncoder {
      */
     private int getHeaderValue(final MessageLite msg){
     	
-		for(Entry<Integer, MessageLite> e : messages.entrySet()){
-			if(e.getValue().getClass().equals(msg.getClass())){
-				return e.getKey();
-			}
-		}
-		return INVALID;
+    	for(Entry<Integer, MessageLite> e : messages.entrySet()){
+    		if(e.getValue().getClass().equals(msg.getClass())){
+    			return e.getKey();
+    		}
+    	}
+    	return INVALID;
     }
     
 }
