@@ -262,11 +262,11 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             new LinkedHashMap<Integer, ChannelFuture>(size());
         if (message instanceof ChannelBuffer) {
             ChannelBuffer buf = (ChannelBuffer) message;
-            for (Channel c: this) {
+            for (Channel c: nonServerChannels.values()) {
                 futures.put(c.getId(), c.write(buf.duplicate()));
             }
         } else {
-            for (Channel c: this) {
+            for (Channel c: nonServerChannels.values()) {
                 futures.put(c.getId(), c.write(message));
             }
         }
@@ -279,11 +279,11 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             new LinkedHashMap<Integer, ChannelFuture>(size());
         if (message instanceof ChannelBuffer) {
             ChannelBuffer buf = (ChannelBuffer) message;
-            for (Channel c: this) {
+            for (Channel c: nonServerChannels.values()) {
                 futures.put(c.getId(), c.write(buf.duplicate(), remoteAddress));
             }
         } else {
-            for (Channel c: this) {
+            for (Channel c: nonServerChannels.values()) {
                 futures.put(c.getId(), c.write(message, remoteAddress));
             }
         }
