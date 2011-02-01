@@ -29,7 +29,7 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.IoWorkerRunnable;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 /**
  *
@@ -103,14 +103,13 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
             fireChannelBound(channel, channel.getLocalAddress());
 
             // Start the business.
-            workerExecutor.execute(
-                    new IoWorkerRunnable(
-                            new ThreadRenamingRunnable(
-                                    new OioDatagramWorker(channel),
-                                    "OldIO",
-                                    "DatagramWorker",
-                                    String.valueOf(id), String.valueOf(channel.getId()),
-                                    channel.toString())));
+            DeadLockProofWorker.start(
+                    workerExecutor,
+                    new ThreadRenamingRunnable(
+                            new OioDatagramWorker(channel),
+                            "OldIO", "DatagramWorker",
+                            String.valueOf(id), String.valueOf(channel.getId()),
+                            channel.toString()));
             workerStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
@@ -153,9 +152,12 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
 
             if (!bound) {
                 // Start the business.
-                workerExecutor.execute(new IoWorkerRunnable(new ThreadRenamingRunnable(
-                        new OioDatagramWorker(channel),
-                        service, category, String.valueOf(id), String.valueOf(channel.getId()), comment)));
+                DeadLockProofWorker.start(
+                        workerExecutor,
+                        new ThreadRenamingRunnable(
+                                new OioDatagramWorker(channel),
+                                service, category, String.valueOf(id),
+                                String.valueOf(channel.getId()), comment));
             } else {
                 // Worker started by bind() - just rename.
                 Thread workerThread = channel.workerThread;

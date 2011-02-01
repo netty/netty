@@ -15,38 +15,42 @@
  */
 package org.jboss.netty.util.internal;
 
-import org.jboss.netty.channel.ChannelFuture;
+import java.util.concurrent.Executor;
 
 /**
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  */
-public class IoWorkerRunnable implements Runnable {
+public final class DeadLockProofWorker {
 
     /**
-     * An <em>internal use only</em> thread-local variable that determines if
-     * the caller is running on an I/O worker thread, which is the case where
-     * the caller enters a dead lock if the caller calls
-     * {@link ChannelFuture#await()} or {@link ChannelFuture#awaitUninterruptibly()}.
+     * An <em>internal use only</em> thread-local variable that tells the
+     * {@link Executor} that this worker acquired a worker thread from.
      */
-    public static final ThreadLocal<Boolean> IN_IO_THREAD = new ThreadLocalBoolean();
+    public static final ThreadLocal<Executor> PARENT = new ThreadLocal<Executor>();
 
-    private final Runnable runnable;
-
-    public IoWorkerRunnable(Runnable runnable) {
+    public static void start(final Executor parent, final Runnable runnable) {
+        if (parent == null) {
+            throw new NullPointerException("parent");
+        }
         if (runnable == null) {
             throw new NullPointerException("runnable");
         }
-        this.runnable = runnable;
+
+        parent.execute(new Runnable() {
+            @Override
+            public void run() {
+                PARENT.set(parent);
+                try {
+                    runnable.run();
+                } finally {
+                    PARENT.remove();
+                }
+            }
+        });
     }
 
-    @Override
-    public void run() {
-        IN_IO_THREAD.set(Boolean.TRUE);
-        try {
-            runnable.run();
-        } finally {
-            IN_IO_THREAD.remove();
-        }
+    private DeadLockProofWorker() {
+        super();
     }
 }

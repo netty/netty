@@ -28,7 +28,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.util.internal.IoWorkerRunnable;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
@@ -244,7 +244,7 @@ public class BlockingReadHandler<E> extends SimpleChannelUpstreamHandler {
     }
 
     private void detectDeadLock() {
-        if (IoWorkerRunnable.IN_IO_THREAD.get()) {
+        if (DeadLockProofWorker.PARENT.get() != null) {
             throw new IllegalStateException(
                     "read*(...) in I/O thread causes a dead lock or " +
                     "sudden performance drop. Implement a state machine or " +

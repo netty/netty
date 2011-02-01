@@ -42,8 +42,8 @@ public class StackTraceSimplifier {
     private static final Pattern EXCLUDED_STACK_TRACE =
         Pattern.compile(
                 "^org\\.jboss\\.netty\\." +
-                "(util\\.(ThreadRenamingRunnable)" +
-                "|channel\\.(SimpleChannel(Upstream|Downstream)?Handler|(Default|Static)ChannelPipeline.*))$");
+                "(util\\.(ThreadRenamingRunnable|internal\\.DeadLockProofWorker)" +
+                "|channel\\.(SimpleChannel(Upstream|Downstream)?Handler|(Default|Static)ChannelPipeline.*))(\\$.*)?$");
 
     /**
      * Removes unnecessary {@link StackTraceElement}s from the specified
