@@ -24,7 +24,7 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
-import java.nio.channels.NotYetConnectedException;
+import java.nio.channels.NotYetBoundException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
@@ -442,7 +442,7 @@ class NioDatagramWorker implements Runnable {
          * has a different meaning in UDP and means that the channels socket is
          * configured to only send and receive from a given remote peer.
          */
-        if (!channel.isOpen()) {
+        if (!channel.isBound()) {
             cleanUpWriteBuffer(channel);
             return;
         }
@@ -694,7 +694,7 @@ class NioDatagramWorker implements Runnable {
                 // Create the exception only once to avoid the excessive overhead
                 // caused by fillStackTrace.
                 if (channel.isOpen()) {
-                    cause = new NotYetConnectedException();
+                    cause = new NotYetBoundException();
                 } else {
                     cause = new ClosedChannelException();
                 }
@@ -714,7 +714,7 @@ class NioDatagramWorker implements Runnable {
                 // caused by fillStackTrace.
                 if (cause == null) {
                     if (channel.isOpen()) {
-                        cause = new NotYetConnectedException();
+                        cause = new NotYetBoundException();
                     } else {
                         cause = new ClosedChannelException();
                     }
