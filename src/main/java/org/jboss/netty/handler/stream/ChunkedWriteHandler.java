@@ -197,6 +197,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                 // attempt for the current request has been failed.
                 currentEvent = null;
             } else {
+                final MessageEvent currentEvent = this.currentEvent;
                 Object m = currentEvent.getMessage();
                 if (m instanceof ChunkedInput) {
                     ChunkedInput chunks = (ChunkedInput) m;
@@ -213,7 +214,6 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                         }
                         endOfInput = chunks.isEndOfInput();
                     } catch (Throwable t) {
-                        MessageEvent currentEvent = this.currentEvent;
                         this.currentEvent = null;
 
                         currentEvent.getFuture().setFailure(t);
@@ -224,7 +224,6 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                     }
 
                     ChannelFuture writeFuture;
-                    final MessageEvent currentEvent = this.currentEvent;
                     if (endOfInput) {
                         this.currentEvent = null;
                         closeInput(chunks);
@@ -252,7 +251,6 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                         break;
                     }
                 } else {
-                    MessageEvent currentEvent = this.currentEvent;
                     this.currentEvent = null;
                     ctx.sendDownstream(currentEvent);
                 }
