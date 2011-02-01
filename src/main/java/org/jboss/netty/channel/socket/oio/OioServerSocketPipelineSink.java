@@ -34,7 +34,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.IoWorkerRunnable;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 /**
  *
@@ -143,11 +143,11 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
 
             Executor bossExecutor =
                 ((OioServerSocketChannelFactory) channel.getFactory()).bossExecutor;
-            bossExecutor.execute(
-                    new IoWorkerRunnable(
-                            new ThreadRenamingRunnable(
-                                    new Boss(channel),
-                                    "Old I/O server boss (" + channel + ')')));
+            DeadLockProofWorker.start(
+                    bossExecutor,
+                    new ThreadRenamingRunnable(
+                            new Boss(channel),
+                            "Old I/O server boss (" + channel + ')'));
             bossStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
@@ -210,12 +210,12 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                                         pipeline,
                                         OioServerSocketPipelineSink.this,
                                         acceptedSocket);
-                            workerExecutor.execute(
-                                    new IoWorkerRunnable(
-                                            new ThreadRenamingRunnable(
-                                                    new OioWorker(acceptedChannel),
-                                                    "Old I/O server worker (parentId: " +
-                                                    channel.getId() + ", " + channel + ')')));
+                            DeadLockProofWorker.start(
+                                    workerExecutor,
+                                    new ThreadRenamingRunnable(
+                                            new OioWorker(acceptedChannel),
+                                            "Old I/O server worker (parentId: " +
+                                            channel.getId() + ", " + channel + ')'));
                         } catch (Exception e) {
                             logger.warn(
                                     "Failed to initialize an accepted socket.", e);

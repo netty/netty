@@ -50,6 +50,11 @@ public class ExecutorUtil {
      * Shuts down the specified executors.
      */
     public static void terminate(Executor... executors) {
+        // Check nulls.
+        if (executors == null) {
+            throw new NullPointerException("executors");
+        }
+
         Executor[] executorsCopy = new Executor[executors.length];
         for (int i = 0; i < executors.length; i ++) {
             if (executors[i] == null) {
@@ -58,6 +63,21 @@ public class ExecutorUtil {
             executorsCopy[i] = executors[i];
         }
 
+        // Check dead lock.
+        final Executor currentParent = DeadLockProofWorker.PARENT.get();
+        if (currentParent != null) {
+            for (Executor e: executorsCopy) {
+                if (e == currentParent) {
+                    throw new IllegalStateException(
+                            "An Executor cannot be shut down from the thread " +
+                            "acquired from itself.  Please make sure you are " +
+                            "not calling releaseExternalResources() from an " +
+                            "I/O worker thread.");
+                }
+            }
+        }
+
+        // Shut down all executors.
         boolean interrupted = false;
         for (Executor e: executorsCopy) {
             if (!(e instanceof ExecutorService)) {

@@ -47,7 +47,7 @@ import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.IoWorkerRunnable;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
@@ -112,9 +112,8 @@ class NioWorker implements Runnable {
 
                 boolean success = false;
                 try {
-                    executor.execute(
-                            new IoWorkerRunnable(
-                                    new ThreadRenamingRunnable(this, threadName)));
+                    DeadLockProofWorker.start(
+                            executor, new ThreadRenamingRunnable(this, threadName));
                     success = true;
                 } finally {
                     if (!success) {
