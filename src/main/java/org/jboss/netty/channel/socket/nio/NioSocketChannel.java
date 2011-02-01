@@ -29,6 +29,7 @@ import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.MessageEvent;
@@ -50,7 +51,7 @@ class NioSocketChannel extends AbstractChannel
     private static final int ST_BOUND = 1;
     private static final int ST_CONNECTED = 2;
     private static final int ST_CLOSED = -1;
-    private volatile int state = ST_OPEN;
+    volatile int state = ST_OPEN;
 
     final SocketChannel socket;
     final NioWorker worker;
@@ -82,6 +83,14 @@ class NioSocketChannel extends AbstractChannel
         this.socket = socket;
         this.worker = worker;
         config = new DefaultNioSocketChannelConfig(socket.socket());
+
+        // TODO Move the state variable to AbstractChannel so that we don't need
+        //      to add many listeners.
+        getCloseFuture().addListener(new ChannelFutureListener() {
+            public void operationComplete(ChannelFuture future) throws Exception {
+                state = ST_CLOSED;
+            }
+        });
     }
 
     @Override
@@ -147,7 +156,6 @@ class NioSocketChannel extends AbstractChannel
 
     @Override
     protected boolean setClosed() {
-        state = ST_CLOSED;
         return super.setClosed();
     }
 

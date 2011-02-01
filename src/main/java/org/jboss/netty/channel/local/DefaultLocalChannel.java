@@ -27,6 +27,7 @@ import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.DefaultChannelConfig;
@@ -47,7 +48,7 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
     private static final int ST_BOUND = 1;
     private static final int ST_CONNECTED = 2;
     private static final int ST_CLOSED = -1;
-    private final AtomicInteger state = new AtomicInteger(ST_OPEN);
+    final AtomicInteger state = new AtomicInteger(ST_OPEN);
 
     private final ChannelConfig config;
     private final ThreadLocalBoolean delivering = new ThreadLocalBoolean();
@@ -62,6 +63,15 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
         super(parent, factory, pipeline, sink);
         this.pairedChannel = pairedChannel;
         config = new DefaultChannelConfig();
+
+        // TODO Move the state variable to AbstractChannel so that we don't need
+        //      to add many listeners.
+        getCloseFuture().addListener(new ChannelFutureListener() {
+            public void operationComplete(ChannelFuture future) throws Exception {
+                state.set(ST_CLOSED);
+            }
+        });
+
         fireChannelOpen(this);
     }
 
@@ -104,7 +114,6 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
 
     @Override
     protected boolean setClosed() {
-        state.set(ST_CLOSED);
         return super.setClosed();
     }
 
