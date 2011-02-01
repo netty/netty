@@ -242,7 +242,7 @@ class NioSocketChannel extends AbstractChannel
                 if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
                     if (newWriteBufferSize + messageSize >= lowWaterMark) {
                         highWaterMarkCounter.decrementAndGet();
-                        if (!notifying.get()) {
+                        if (isConnected() && !notifying.get()) {
                             notifying.set(Boolean.TRUE);
                             fireChannelInterestChanged(NioSocketChannel.this);
                             notifying.set(Boolean.FALSE);

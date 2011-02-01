@@ -298,7 +298,7 @@ class NioDatagramChannel extends AbstractChannel
                 if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
                     if (newWriteBufferSize + messageSize >= lowWaterMark) {
                         highWaterMarkCounter.decrementAndGet();
-                        if (!notifying.get()) {
+                        if (isBound() && !notifying.get()) {
                             notifying.set(Boolean.TRUE);
                             fireChannelInterestChanged(NioDatagramChannel.this);
                             notifying.set(Boolean.FALSE);
