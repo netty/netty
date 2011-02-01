@@ -105,7 +105,7 @@ import org.jboss.netty.util.TimerTask;
  * ...
  * </pre>
  *
- * The {@link Timer} which was specified when the {@link ReadTimeoutHandler} is
+ * The {@link Timer} which was specified when the {@link IdleStateHandler} is
  * created should be stopped manually by calling {@link #releaseExternalResources()}
  * or {@link Timer#stop()} when your application shuts down.
  *
