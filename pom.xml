@@ -270,6 +270,7 @@
             </Import-Package>
             <Eclipse-BuddyPolicy>registered</Eclipse-BuddyPolicy>
             <Bundle-BuddyPolicy>registered</Bundle-BuddyPolicy>
+            <Main-Class>${project.groupId}.util.Version</Main-Class>
           </instructions>
         </configuration>
       </plugin>
