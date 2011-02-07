@@ -67,6 +67,7 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
         // TODO Move the state variable to AbstractChannel so that we don't need
         //      to add many listeners.
         getCloseFuture().addListener(new ChannelFutureListener() {
+            @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 state.set(ST_CLOSED);
             }
