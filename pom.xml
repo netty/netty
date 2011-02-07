@@ -176,6 +176,8 @@
   </dependencies>
 
   <properties>
+    <jdk.min.version>1.6</jdk.min.version>
+    <maven.min.version>2.2.1</maven.min.version>
     <attach-distribution>false</attach-distribution>
   </properties>
 
@@ -190,6 +192,11 @@
     </resources>
 
     <plugins>
+      <plugin>
+        <!-- See org.jboss:jboss-parent -->
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>1.0</version>
+      </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>2.3.2</version>
