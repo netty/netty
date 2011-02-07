@@ -51,7 +51,7 @@
   <scm>
     <url>https://github.com/netty/netty</url>
     <connection>scm:git:git://github.com/netty/netty.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com:netty/netty.git</developerConnection>
+    <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
   </scm>
 
   <dependencies>
