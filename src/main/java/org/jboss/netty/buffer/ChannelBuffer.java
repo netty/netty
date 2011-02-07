@@ -48,7 +48,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * <pre>
  * {@link ChannelBuffer} buffer = ...;
  * for (int i = 0; i &lt; buffer.capacity(); i ++</strong>) {
- *     byte b = array.getByte(i);
+ *     byte b = buffer.getByte(i);
  *     System.out.println((char) b);
  * }
  * </pre>
