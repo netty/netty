@@ -692,35 +692,41 @@ public class TimeClientHandler extends &SimpleChannelHandler; {
       </para>
       <programlisting>package org.jboss.netty.example.time;
 
-public class TimeDecoder extends &FrameDecoder; {
+public class TimeDecoder extends &FrameDecoder;<co id="example.time4.co1"/> {
 
     @Override
     protected Object decode(
-            &ChannelHandlerContext; ctx, &Channel; channel, &ChannelBuffer; buffer)<co id="example.time4.co1"/> {
+            &ChannelHandlerContext; ctx, &Channel; channel, &ChannelBuffer; buffer)<co id="example.time4.co2"/> {
             
         if (buffer.readableBytes() &lt; 4) {
-            return null; <co id="example.time4.co2"/>
+            return null; <co id="example.time4.co3"/>
         }
         
-        return buffer.readBytes(4);<co id="example.time4.co3"/>
+        return buffer.readBytes(4);<co id="example.time4.co4"/>
     }
 }</programlisting>
       <calloutlist>
         <callout arearefs="example.time4.co1">
+          <para>
+            &FrameDecoder; is an implementation of &ChannelHandler; which
+            makes it easy to which deals with the fragmentation issue.
+          </para>
+        </callout>
+        <callout arearefs="example.time4.co2">
           <para>
             &FrameDecoder; calls <methodname>decode</methodname> method with
             an internally maintained cumulative buffer whenever new data is
             received.
           </para>
         </callout>
-        <callout arearefs="example.time4.co2">
+        <callout arearefs="example.time4.co3">
           <para>
             If <literal>null</literal> is returned, it means there's not 
             enough data yet.  &FrameDecoder; will call again when there is a
             sufficient amount of data.
           </para>
         </callout>
-        <callout arearefs="example.time4.co3">
+        <callout arearefs="example.time4.co4">
           <para>
             If non-<literal>null</literal> is returned, it means the
             <methodname>decode</methodname> method has decoded a message
@@ -873,10 +879,11 @@ public void channelConnected(&ChannelHandlerContext; ctx, &ChannelStateEvent; e)
     f.addListener(&ChannelFutureListener;.CLOSE);
 }</programlisting>
     <para>
-      Now, the only missing piece is the &ChannelHandler; which translates a
-      <classname>UnixTime</classname> back into a &ChannelBuffer;.  It's much
-      simpler than writing a decoder because there's no need to deal with 
-      packet fragmentation and assembly when encoding a message.
+      Now, the only missing piece is an encoder, which is an implementation of
+      &ChannelHandler; that translates a <classname>UnixTime</classname> back
+      into a &ChannelBuffer;.  It's much simpler than writing a decoder because
+      there's no need to deal with packet fragmentation and assembly when
+      encoding a message.
     </para>
     <programlisting>package org.jboss.netty.example.time;
     
