@@ -26,7 +26,7 @@
   <groupId>org.jboss.netty</groupId>
   <artifactId>netty</artifactId>
   <packaging>bundle</packaging>
-  <version>3.2.4.Final-SNAPSHOT</version>
+  <version>3.2.4.Final</version>
 
   <name>The Netty Project</name>
   <url>http://www.jboss.org/netty/</url>
@@ -311,17 +311,17 @@
               <tasks>
                 <taskdef resource="net/sf/antcontrib/antlib.xml" />
                 <exec executable="git" outputproperty="gitOutput" resultproperty="gitExitCode" failonerror="false" failifexecutionfails="false">
-                  <arg value="log"/>
-                  <arg value="-1"/>
-                  <arg value="--format=format:%h"/>
+                  <arg value="log" />
+                  <arg value="-1" />
+                  <arg value="--format=format:%h" />
                 </exec>
                 <if>
-                  <equals arg2="0" arg1="${gitExitCode}"/>
+                  <equals arg2="0" arg1="${gitExitCode}" />
                   <then>
-                    <property name="buildNumber" value="${gitOutput}"/>
+                    <property name="buildNumber" value="${gitOutput}" />
                   </then>
                   <else>
-                    <property name="buildNumber" value="unknown"/>
+                    <property name="buildNumber" value="unknown" />
                   </else>
                 </if>
                 <echo>Build number: ${buildNumber}</echo>
