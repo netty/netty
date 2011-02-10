@@ -112,7 +112,7 @@ public class NioDatagramChannelTest {
         assertFalse("The payload should have been cleared", expectedPayload
                 .equals(new String(dp.getData())));
 
-        udpClient.receive(dp);
+        udpClient.receive(dp, 4000);
 
         assertEquals(expectedPayload, new String(dp.getData()));
         udpClient.close();
