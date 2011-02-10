@@ -48,7 +48,8 @@ public class UdpClient {
         return dp;
     }
 
-    public void receive(final DatagramPacket dp) throws IOException {
+    public void receive(final DatagramPacket dp, final int timeout) throws IOException {
+        clientSocket.setSoTimeout(timeout);
         clientSocket.receive(dp);
     }
 
