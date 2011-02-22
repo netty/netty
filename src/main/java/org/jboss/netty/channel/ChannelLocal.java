@@ -110,14 +110,23 @@ public class ChannelLocal<T> {
     }
 
     /**
-     * Removes the variable.
+     * Removes the variable and returns the removed value.  If no value was set,
+     * this method returns the return value of {@link #initialValue(Channel)},
+     * which is {@code null} by default.
      *
-     * @return the removed value. {@code null} if no value was set.
+     * @return the removed value.
+     *         {@linkplain #initialValue(Channel) an initial value} (by default
+     *         {@code null}) if no value was set.
      */
     public T remove(Channel channel) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-        return map.remove(channel);
+        T removed = map.remove(channel);
+        if (removed == null) {
+            return initialValue(channel);
+        } else {
+            return removed;
+        }
     }
 }
