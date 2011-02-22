@@ -54,6 +54,7 @@ public final class JZlib {
     public static final Enum<?> W_NONE = WrapperType.NONE;
     public static final Enum<?> W_ZLIB = WrapperType.ZLIB;
     public static final Enum<?> W_GZIP = WrapperType.GZIP;
+    public static final Enum<?> W_ZLIB_OR_NONE = WrapperType.ZLIB_OR_NONE;
 
     // compression levels
     public static final int Z_NO_COMPRESSION = 0;
@@ -103,6 +104,6 @@ public final class JZlib {
     static final int MAX_BL_BITS = 7;
 
     static enum WrapperType {
-        NONE, ZLIB, GZIP;
+        NONE, ZLIB, GZIP, ZLIB_OR_NONE;
     }
 }
