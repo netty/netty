@@ -104,6 +104,11 @@ public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChanne
         if (wrapper == null) {
             throw new NullPointerException("wrapper");
         }
+        if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
+            throw new IllegalArgumentException(
+                    "wrapper '" + ZlibWrapper.ZLIB_OR_NONE + "' is not " +
+                    "allowed for compression.");
+        }
 
         synchronized (z) {
             int resultCode = z.deflateInit(compressionLevel, ZlibUtil.convertWrapperType(wrapper));

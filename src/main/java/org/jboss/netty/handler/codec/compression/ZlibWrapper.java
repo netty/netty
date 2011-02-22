@@ -35,5 +35,10 @@ public enum ZlibWrapper {
     /**
      * Raw DEFLATE stream only (no header and no footer).
      */
-    NONE;
+    NONE,
+    /**
+     * Try {@link #ZLIB} first and then {@link #NONE} if the first attempt fails.
+     * Please note that you can specify this wrapper type only when decompressing.
+     */
+    ZLIB_OR_NONE;
 }

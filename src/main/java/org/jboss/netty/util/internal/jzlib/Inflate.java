@@ -111,6 +111,7 @@ final class Inflate {
             z.istate.mode = BLOCKS;
             break;
         case ZLIB:
+        case ZLIB_OR_NONE:
             z.istate.mode = METHOD;
             break;
         case GZIP:
@@ -174,6 +175,19 @@ final class Inflate {
                 if (z.avail_in == 0) {
                     return r;
                 }
+
+                // Switch from zlib to none if necessary.
+                if (z.istate.wrapperType == WrapperType.ZLIB_OR_NONE) {
+                    if ((z.next_in[z.next_in_index] & 0xf) != JZlib.Z_DEFLATED ||
+                        (z.next_in[z.next_in_index] >> 4) + 8 > z.istate.wbits) {
+                        z.istate.wrapperType = WrapperType.NONE;
+                        z.istate.mode = BLOCKS;
+                        break;
+                    } else {
+                        z.istate.wrapperType = WrapperType.ZLIB;
+                    }
+                }
+
                 r = f;
 
                 z.avail_in --;
@@ -286,16 +300,22 @@ final class Inflate {
                     gzipUncompressedBytes += decompressedBytes;
                     z.crc32 = CRC32.crc32(z.crc32, z.next_out, old_next_out_index, decompressedBytes);
                 }
+
                 if (z.istate.wrapperType == WrapperType.NONE) {
                     z.istate.mode = DONE;
                     break;
                 } else if (z.istate.wrapperType == WrapperType.ZLIB) {
                     z.istate.mode = CHECK4;
-                } else {
+                } else if (z.istate.wrapperType == WrapperType.GZIP){
                     gzipCRC32 = 0;
                     gzipISize = 0;
                     gzipBytesToRead = 4;
                     z.istate.mode = GZIP_CRC32;
+                    break;
+                } else {
+                    z.istate.mode = BAD;
+                    z.msg = "unexpected state";
+                    z.istate.marker = 0;
                     break;
                 }
             case CHECK4:

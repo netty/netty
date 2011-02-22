@@ -1306,6 +1306,11 @@ final class Deflate {
 
     private int deflateInit2(ZStream strm, int level, int method, int windowBits,
             int memLevel, int strategy, WrapperType wrapperType) {
+
+        if (wrapperType == WrapperType.ZLIB_OR_NONE) {
+            throw new IllegalArgumentException("ZLIB_OR_NONE allowed only for inflate");
+        }
+
         //    byte[] my_version=ZLIB_VERSION;
 
         //
