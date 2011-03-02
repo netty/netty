@@ -205,16 +205,17 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                     ChunkedInput chunks = (ChunkedInput) m;
                     Object chunk;
                     boolean endOfInput;
-                    boolean later;
+                    boolean suspend;
                     try {
                         chunk = chunks.nextChunk();
+                        endOfInput = chunks.isEndOfInput();
                         if (chunk == null) {
                             chunk = ChannelBuffers.EMPTY_BUFFER;
-                            later = true;
+                            // No need to suspend when reached at the end.
+                            suspend = !endOfInput;
                         } else {
-                            later = false;
+                            suspend = false;
                         }
-                        endOfInput = chunks.isEndOfInput();
                     } catch (Throwable t) {
                         this.currentEvent = null;
 
@@ -248,9 +249,10 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                             ctx, writeFuture, chunk,
                             currentEvent.getRemoteAddress());
 
-                    if (later) {
-                        // ChunkedInput.nextChunk() returned null.
-                        // Let's wait until more chunks arrive.
+                    if (suspend) {
+                        // ChunkedInput.nextChunk() returned null and it has
+                        // not reached at the end of input.  Let's wait until
+                        // more chunks arrive.
                         break;
                     }
                 } else {
