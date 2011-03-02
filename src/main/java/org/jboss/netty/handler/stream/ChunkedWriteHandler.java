@@ -226,34 +226,34 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                         break;
                     }
 
-                    ChannelFuture writeFuture;
-                    if (endOfInput) {
-                        this.currentEvent = null;
-                        closeInput(chunks);
-                        writeFuture = currentEvent.getFuture();
-                    } else {
-                        writeFuture = future(channel);
-                        writeFuture.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future)
-                                    throws Exception {
-                                if (!future.isSuccess()) {
-                                    currentEvent.getFuture().setFailure(future.getCause());
-                                    closeInput((ChunkedInput) currentEvent.getMessage());
-                                }
-                            }
-                        });
-                    }
-
-                    Channels.write(
-                            ctx, writeFuture, chunk,
-                            currentEvent.getRemoteAddress());
-
                     if (suspend) {
                         // ChunkedInput.nextChunk() returned null and it has
                         // not reached at the end of input.  Let's wait until
-                        // more chunks arrive.
+                        // more chunks arrive.  Nothing to write or notify.
                         break;
+                    } else {
+                        ChannelFuture writeFuture;
+                        if (endOfInput) {
+                            this.currentEvent = null;
+                            closeInput(chunks);
+                            writeFuture = currentEvent.getFuture();
+                        } else {
+                            writeFuture = future(channel);
+                            writeFuture.addListener(new ChannelFutureListener() {
+                                @Override
+                                public void operationComplete(ChannelFuture future)
+                                        throws Exception {
+                                    if (!future.isSuccess()) {
+                                        currentEvent.getFuture().setFailure(future.getCause());
+                                        closeInput((ChunkedInput) currentEvent.getMessage());
+                                    }
+                                }
+                            });
+                        }
+
+                        Channels.write(
+                                ctx, writeFuture, chunk,
+                                currentEvent.getRemoteAddress());
                     }
                 } else {
                     this.currentEvent = null;
