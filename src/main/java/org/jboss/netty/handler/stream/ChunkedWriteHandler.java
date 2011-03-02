@@ -62,8 +62,8 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * <h3>Sending a stream which generates a chunk intermittently</h3>
  *
  * Some {@link ChunkedInput} generates a chunk on a certain event or timing.
- * Such {@link ChunkedInput} implementation often returns {@code false} on
- * {@link ChunkedInput#hasNextChunk()}, resulting in the indefinitely suspended
+ * Such {@link ChunkedInput} implementation often returns {@code null} on
+ * {@link ChunkedInput#nextChunk()}, resulting in the indefinitely suspended
  * transfer.  To resume the transfer when a new chunk is available, you have to
  * call {@link #resumeTransfer()}.
  *
