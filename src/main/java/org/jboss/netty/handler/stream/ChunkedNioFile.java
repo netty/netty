@@ -138,13 +138,8 @@ public class ChunkedNioFile implements ChunkedInput {
     }
 
     @Override
-    public boolean hasNextChunk() throws Exception {
-        return offset < endOffset && in.isOpen();
-    }
-
-    @Override
     public boolean isEndOfInput() throws Exception {
-        return !hasNextChunk();
+        return !(offset < endOffset && in.isOpen());
     }
 
     @Override

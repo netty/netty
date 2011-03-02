@@ -29,14 +29,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 public interface ChunkedInput {
 
     /**
-     * Returns {@code true} if and only if there is any data left in the
-     * stream.  Please note that {@code false} does not necessarily mean that
-     * the stream has reached at its end.  In a slow stream, the next chunk
-     * might be unavailable just momentarily.
-     */
-    boolean hasNextChunk() throws Exception;
-
-    /**
      * Fetches a chunked data from the stream.  The returned chunk is usually
      * a {@link ChannelBuffer}, but you could extend an existing implementation
      * to convert the {@link ChannelBuffer} into a different type that your
