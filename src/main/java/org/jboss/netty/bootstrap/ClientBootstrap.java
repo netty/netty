@@ -182,7 +182,7 @@ public class ClientBootstrap extends Bootstrap {
      */
     public ChannelFuture connect(SocketAddress remoteAddress) {
         if (remoteAddress == null) {
-            throw new NullPointerException("remotedAddress");
+            throw new NullPointerException("remoteAddress");
         }
         SocketAddress localAddress = (SocketAddress) getOption("localAddress");
         return connect(remoteAddress, localAddress);
