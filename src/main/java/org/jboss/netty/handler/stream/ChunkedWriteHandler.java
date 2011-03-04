@@ -238,7 +238,6 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                         } else {
                             writeFuture = future(channel);
                             writeFuture.addListener(new ChannelFutureListener() {
-                                @Override
                                 public void operationComplete(ChannelFuture future)
                                         throws Exception {
                                     if (!future.isSuccess()) {
