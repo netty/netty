@@ -26,6 +26,13 @@ import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.TimeZone;
+
+import javax.activation.MimetypesFileTypeMap;
 
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -40,6 +47,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -48,10 +56,49 @@ import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.util.CharsetUtil;
 
 /**
+ * Web browser caching works with HTTP headers as illustrated by the following sample.  
+ * <ul>
+ * <li>Request #1 returns the content of <code>/file1.txt</code>.</li>
+ * <li>Contents of <code>/file1.txt</code> is cached by the browser.</li>
+ * <li>Request #2 for <code>/file1.txt</code> does return the contents of the file again. Rather,
+ * a 304 Not Modified is returned. This tells the browser to use the contents stored in its cache.</li>
+ * <li>The server knows the file has not been modified because the <code>If-Modified-Since</code> date is the 
+ * same as the file's last modified date.</li>
+ * </ul>
+ * 
+ * <pre>
+ * Request #1 Headers
+ * ===================
+ * GET /file1.txt HTTP/1.1
+ * 
+ * Response #1 Headers
+ * ===================
+ * HTTP/1.1 200 OK
+ * Date:               Tue, 01 Mar 2011 22:44:26 GMT
+ * Last-Modified:      Wed, 30 Jun 2010 21:36:48 GMT
+ * Expires:            Tue, 01 Mar 2012 22:44:26 GMT
+ * Cache-Control:      private, max-age=31536000
+ * 
+ * Request #2 Headers
+ * ===================
+ * GET /file1.txt HTTP/1.1
+ * If-Modified-Since:  Wed, 30 Jun 2010 21:36:48 GMT
+ * 
+ * Response #2 Headers
+ * ===================
+ * HTTP/1.1 304 Not Modified
+ * Date:               Tue, 01 Mar 2011 22:44:28 GMT
+ * 
+ * </pre>
+ * 
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
+
+    public static final String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
+    public static final String HTTP_DATE_GMT_TIMEZONE = "GMT";
+    public static final int HTTP_CACHE_SECONDS = 60;
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
@@ -77,6 +124,19 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
             return;
         }
 
+        // Cache Validation
+        String ifModifiedSince = request.getHeader(HttpHeaders.Names.IF_MODIFIED_SINCE);
+        if (ifModifiedSince != null && !ifModifiedSince.equals(""))
+        {
+            SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT);
+            Date ifModifiedSinceDate = dateFormatter.parse(ifModifiedSince);
+            if (ifModifiedSinceDate.getTime() == file.lastModified())
+            {
+                sendNotModified(ctx);
+                return;
+            }
+        }
+        
         RandomAccessFile raf;
         try {
             raf = new RandomAccessFile(file, "r");
@@ -88,7 +148,9 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
 
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
         setContentLength(response, fileLength);
-
+        setContentTypeHeader(response, file);
+        setDateAndCacheHeaders(response, file);
+        
         Channel ch = e.getChannel();
 
         // Write the initial line and the header.
@@ -178,4 +240,73 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         // Close the connection as soon as the error message is sent.
         ctx.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);
     }
+    
+    /**
+     * When file timestamp is the same as what the browser is sending up, send a "304 Not Modified"
+     * 
+     * @param ctx
+     *            Context
+     */
+    private void sendNotModified(ChannelHandlerContext ctx) {
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.NOT_MODIFIED);
+        setDateHeader(response);
+
+        // Close the connection as soon as the error message is sent.
+        ctx.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);
+    }
+    
+    /**
+     * Sets the Date header for the HTTP response
+     * 
+     * @param response
+     *            HTTP response
+     * @param file
+     *            file to extract content type
+     */
+    private void setDateHeader(HttpResponse response) {
+        SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT);
+        dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
+
+        Calendar time = new GregorianCalendar();
+        response.setHeader(HttpHeaders.Names.DATE, dateFormatter.format(time.getTime()));
+    }
+    
+    /**
+     * Sets the Date and Cache headers for the HTTP Response
+     * 
+     * @param response
+     *            HTTP response
+     * @param file
+     *            file to extract content type
+     */
+    private void setDateAndCacheHeaders(HttpResponse response, File filetoCache) {
+        SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT);
+        dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
+
+        // Date header
+        Calendar time = new GregorianCalendar();
+        response.setHeader(HttpHeaders.Names.DATE, dateFormatter.format(time.getTime()));
+
+        // Add cache headers
+        time.add(Calendar.SECOND, HTTP_CACHE_SECONDS);
+        response.setHeader(HttpHeaders.Names.EXPIRES, dateFormatter.format(time.getTime()));
+
+        response.setHeader(HttpHeaders.Names.CACHE_CONTROL, "private, max-age=" + HTTP_CACHE_SECONDS);
+
+        response.setHeader(HttpHeaders.Names.LAST_MODIFIED, dateFormatter.format(new Date(filetoCache.lastModified())));
+    }
+
+    /**
+     * Sets the content type header for the HTTP Response
+     * 
+     * @param response
+     *            HTTP response
+     * @param file
+     *            file to extract content type
+     */
+    private void setContentTypeHeader(HttpResponse response, File file) {
+    	MimetypesFileTypeMap mimeTypesMap = new MimetypesFileTypeMap();
+        response.setHeader(HttpHeaders.Names.CONTENT_TYPE, mimeTypesMap.getContentType(file.getPath()));
+    }
+
 }
