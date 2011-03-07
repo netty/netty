@@ -30,6 +30,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.Locale;
 import java.util.TimeZone;
 
 import javax.activation.MimetypesFileTypeMap;
@@ -128,7 +129,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         String ifModifiedSince = request.getHeader(HttpHeaders.Names.IF_MODIFIED_SINCE);
         if (ifModifiedSince != null && !ifModifiedSince.equals(""))
         {
-            SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT);
+            SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
             Date ifModifiedSinceDate = dateFormatter.parse(ifModifiedSince);
             if (ifModifiedSinceDate.getTime() == file.lastModified())
             {
@@ -264,7 +265,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
      *            file to extract content type
      */
     private void setDateHeader(HttpResponse response) {
-        SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT);
+        SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
         dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
 
         Calendar time = new GregorianCalendar();
@@ -280,7 +281,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
      *            file to extract content type
      */
     private void setDateAndCacheHeaders(HttpResponse response, File filetoCache) {
-        SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT);
+        SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
         dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
 
         // Date header
