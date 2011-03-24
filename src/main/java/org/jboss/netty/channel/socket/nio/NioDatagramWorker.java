@@ -424,6 +424,7 @@ class NioDatagramWorker implements Runnable {
         }
 
         if (failure) {
+            key.cancel(); // Some JDK implementations run into an infinite loop without this.
             close(channel, succeededFuture(channel));
             return false;
         }
