@@ -352,6 +352,7 @@ class NioWorker implements Runnable {
         }
 
         if (ret < 0 || failure) {
+            k.cancel(); // Some JDK implementations run into an infinite loop without this.
             close(channel, succeededFuture(channel));
             return false;
         }
