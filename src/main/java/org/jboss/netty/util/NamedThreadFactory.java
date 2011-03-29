@@ -39,15 +39,38 @@ public class NamedThreadFactory implements ThreadFactory {
     private final ThreadGroup group;
     private final AtomicInteger threadId = new AtomicInteger(1);
     private final String prefix;
+    private final boolean daemon;
+    private final int priority;
 
     /**
      * Creates a new factory that creates a {@link Thread} with the specified name prefix.
+     *
+     * @param prefix the prefix of the new thread's name
      */
     public NamedThreadFactory(String prefix) {
+         this(prefix, false, Thread.NORM_PRIORITY);
+    }
+
+    /**
+     * Creates a new factory that creates a {@link Thread} with the specified name prefix.
+     *
+     * @param prefix the prefix of the new thread's name
+     * @param daemon {@code true} if the new thread is a daemon thread
+     * @param priority the priority of the new thread
+     */
+    public NamedThreadFactory(String prefix, boolean daemon, int priority) {
         if (prefix == null) {
             throw new NullPointerException("prefix");
         }
+        if (priority < Thread.MIN_PRIORITY || priority > Thread.MAX_PRIORITY) {
+            throw new IllegalArgumentException(
+                    "priority: " + priority +
+                    " (expected: >= " + Thread.MIN_PRIORITY + " && <= " + Thread.MAX_PRIORITY);
+        }
+
         this.prefix = prefix;
+        this.daemon = daemon;
+        this.priority = priority;
 
         SecurityManager s = System.getSecurityManager();
         if (s != null) {
@@ -63,13 +86,8 @@ public class NamedThreadFactory implements ThreadFactory {
      */
     public Thread newThread(Runnable r) {
         Thread t = new Thread(group, r, prefix + threadId.getAndIncrement());
-        if (t.isDaemon()) {
-            t.setDaemon(false);
-        }
-
-        if (t.getPriority() != Thread.NORM_PRIORITY) {
-            t.setPriority(Thread.NORM_PRIORITY);
-        }
+        t.setDaemon(daemon);
+        t.setPriority(priority);
         return t;
     }
 }
