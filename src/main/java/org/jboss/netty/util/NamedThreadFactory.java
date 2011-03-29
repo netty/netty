@@ -65,7 +65,7 @@ public class NamedThreadFactory implements ThreadFactory {
         if (priority < Thread.MIN_PRIORITY || priority > Thread.MAX_PRIORITY) {
             throw new IllegalArgumentException(
                     "priority: " + priority +
-                    " (expected: >= " + Thread.MIN_PRIORITY + " && <= " + Thread.MAX_PRIORITY);
+                    " (expected: >= " + Thread.MIN_PRIORITY + " && <= " + Thread.MAX_PRIORITY + ')');
         }
 
         this.prefix = prefix;
