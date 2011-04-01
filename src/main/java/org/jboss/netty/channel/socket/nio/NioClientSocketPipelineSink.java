@@ -42,7 +42,6 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 
@@ -196,10 +195,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                     // Start the worker thread with the new Selector.
                     boolean success = false;
                     try {
-                        DeadLockProofWorker.start(
-                                bossExecutor,
-                                new ThreadRenamingRunnable(
-                                        this, "NewIO", "ClientBoss", null, String.valueOf(id), null));
+                        DeadLockProofWorker.start(bossExecutor, this);
                         success = true;
                     } finally {
                         if (!success) {

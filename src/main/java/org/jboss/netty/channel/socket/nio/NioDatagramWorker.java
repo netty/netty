@@ -45,7 +45,6 @@ import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
@@ -168,9 +167,7 @@ class NioDatagramWorker implements Runnable {
                 boolean success = false;
                 try {
                     // Start the main selector loop. See run() for details.
-                    executor.execute(new ThreadRenamingRunnable(
-                            this, "NewIO", "DatagramWorker",
-                            String.valueOf(bossId), String.valueOf(id), null));
+                    executor.execute(this);
                     success = true;
                 } finally {
                     if (!success) {

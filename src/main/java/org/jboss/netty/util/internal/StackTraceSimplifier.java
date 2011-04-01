@@ -23,7 +23,6 @@ import org.jboss.netty.channel.DefaultChannelPipeline;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.StaticChannelPipeline;
 import org.jboss.netty.util.DebugUtil;
-import org.jboss.netty.util.ThreadRenamingRunnable;
 
 /**
  * Simplifies an exception stack trace by removing unnecessary
@@ -42,14 +41,13 @@ public class StackTraceSimplifier {
     private static final Pattern EXCLUDED_STACK_TRACE =
         Pattern.compile(
                 "^org\\.jboss\\.netty\\." +
-                "(util\\.(ThreadRenamingRunnable|internal\\.DeadLockProofWorker)" +
+                "(util\\.internal\\.DeadLockProofWorker" +
                 "|channel\\.(SimpleChannel(Upstream|Downstream)?Handler|(Default|Static)ChannelPipeline.*))(\\$.*)?$");
 
     /**
      * Removes unnecessary {@link StackTraceElement}s from the specified
-     * exception. {@link ThreadRenamingRunnable}, {@link SimpleChannelHandler},
-     * {@link DefaultChannelPipeline}, and {@link StaticChannelPipeline}
-     * will be dropped from the trace.
+     * exception.  {@link SimpleChannelHandler}, {@link DefaultChannelPipeline},
+     * and {@link StaticChannelPipeline} will be dropped from the trace.
      */
     public static void simplify(Throwable e) {
         if (!SIMPLIFY_STACK_TRACE) {

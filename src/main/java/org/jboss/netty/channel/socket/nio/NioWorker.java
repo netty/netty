@@ -46,7 +46,6 @@ import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 
@@ -108,12 +107,7 @@ class NioWorker implements Runnable {
                 // Start the worker thread with the new Selector.
                 boolean success = false;
                 try {
-                    DeadLockProofWorker.start(
-                            executor,
-                            new ThreadRenamingRunnable(
-                                    this, "NewIO",
-                                    server? "ServerWorker" : "ClientWorker",
-                                    String.valueOf(bossId), String.valueOf(id), null));
+                    DeadLockProofWorker.start(executor, this);
                     success = true;
                 } finally {
                     if (!success) {

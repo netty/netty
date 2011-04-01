@@ -30,7 +30,6 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 /**
@@ -132,13 +131,7 @@ class OioClientSocketPipelineSink extends AbstractChannelSink {
             fireChannelConnected(channel, channel.getRemoteAddress());
 
             // Start the business.
-            DeadLockProofWorker.start(
-                    workerExecutor,
-                    new ThreadRenamingRunnable(
-                            new OioWorker(channel),
-                            "OldIO", "ClientWorker",
-                            String.valueOf(id), String.valueOf(channel.getId()),
-                            channel.toString()));
+            DeadLockProofWorker.start(workerExecutor, new OioWorker(channel));
             workerStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);

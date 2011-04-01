@@ -23,7 +23,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.DefaultChannelPipeline;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.junit.Test;
 
 
@@ -43,7 +42,6 @@ public class StackTraceSimplifierTest {
                 new StackTraceElement(ChannelBuffer.class.getName(), "a", null, 1),
                 new StackTraceElement("com.example.Foo", "b", null, 1),
                 new StackTraceElement(SimpleChannelHandler.class.getName(), "c", null, 1),
-                new StackTraceElement(ThreadRenamingRunnable.class.getName(), "d", null, 1),
         });
 
         StackTraceSimplifier.simplify(e);
@@ -62,7 +60,6 @@ public class StackTraceSimplifierTest {
                 new StackTraceElement("com.example.Foo", "b", null, 1),
                 new StackTraceElement(SimpleChannelHandler.class.getName(), "c", null, 1),
                 new StackTraceElement(DefaultChannelPipeline.class.getName(), "d", null, 1),
-                new StackTraceElement(ThreadRenamingRunnable.class.getName(), "e", null, 1),
         });
 
         Exception e2 = new Exception(e1);
@@ -71,7 +68,6 @@ public class StackTraceSimplifierTest {
                 new StackTraceElement("com.example.Bar", "b", null, 1),
                 new StackTraceElement(SimpleChannelHandler.class.getName(), "c", null, 1),
                 new StackTraceElement(DefaultChannelPipeline.class.getName(), "d", null, 1),
-                new StackTraceElement(ThreadRenamingRunnable.class.getName(), "e", null, 1),
         });
 
         StackTraceSimplifier.simplify(e2);
@@ -95,13 +91,15 @@ public class StackTraceSimplifierTest {
                 new StackTraceElement(ChannelBuffer.class.getName(), "a", null, 1),
                 new StackTraceElement("com.example.Foo", "b", null, 1),
                 new StackTraceElement(SimpleChannelHandler.class.getName(), "c", null, 1),
-                new StackTraceElement(ThreadRenamingRunnable.class.getName(), "d", null, 1),
         });
 
         StackTraceSimplifier.simplify(e);
 
         StackTraceElement[] simplified = e.getStackTrace();
-        assertEquals(5, simplified.length);
+        for (StackTraceElement ste: simplified) {
+            System.out.println(ste);
+        }
+        assertEquals(4, simplified.length);
     }
 
     @Test
