@@ -43,9 +43,6 @@ import org.jboss.netty.channel.MessageEvent;
  */
 class NioDatagramPipelineSink extends AbstractChannelSink {
 
-    private static final AtomicInteger nextId = new AtomicInteger();
-
-    private final int id = nextId.incrementAndGet();
     private final NioDatagramWorker[] workers;
     private final AtomicInteger workerIndex = new AtomicInteger();
 
@@ -62,7 +59,7 @@ class NioDatagramPipelineSink extends AbstractChannelSink {
     NioDatagramPipelineSink(final Executor workerExecutor, final int workerCount) {
         workers = new NioDatagramWorker[workerCount];
         for (int i = 0; i < workers.length; i ++) {
-            workers[i] = new NioDatagramWorker(id, i + 1, workerExecutor);
+            workers[i] = new NioDatagramWorker(workerExecutor);
         }
     }
 

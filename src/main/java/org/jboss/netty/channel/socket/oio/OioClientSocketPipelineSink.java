@@ -20,7 +20,6 @@ import static org.jboss.netty.channel.Channels.*;
 import java.io.PushbackInputStream;
 import java.net.SocketAddress;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.ChannelEvent;
@@ -42,9 +41,6 @@ import org.jboss.netty.util.internal.DeadLockProofWorker;
  */
 class OioClientSocketPipelineSink extends AbstractChannelSink {
 
-    private static final AtomicInteger nextId = new AtomicInteger();
-
-    private final int id = nextId.incrementAndGet();
     private final Executor workerExecutor;
 
     OioClientSocketPipelineSink(Executor workerExecutor) {

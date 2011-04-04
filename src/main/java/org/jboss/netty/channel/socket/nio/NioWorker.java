@@ -66,8 +66,6 @@ class NioWorker implements Runnable {
 
     static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
-    private final int bossId;
-    private final int id;
     private final Executor executor;
     private boolean started;
     private volatile Thread thread;
@@ -82,9 +80,7 @@ class NioWorker implements Runnable {
     private final SocketReceiveBufferPool recvBufferPool = new SocketReceiveBufferPool();
     private final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
 
-    NioWorker(int bossId, int id, Executor executor) {
-        this.bossId = bossId;
-        this.id = id;
+    NioWorker(Executor executor) {
         this.executor = executor;
     }
 

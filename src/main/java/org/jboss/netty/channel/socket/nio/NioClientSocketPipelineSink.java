@@ -57,9 +57,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioClientSocketPipelineSink.class);
-    private static final AtomicInteger nextId = new AtomicInteger();
 
-    final int id = nextId.incrementAndGet();
     final Executor bossExecutor;
     private final Boss boss = new Boss();
     private final NioWorker[] workers;
@@ -70,7 +68,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         this.bossExecutor = bossExecutor;
         workers = new NioWorker[workerCount];
         for (int i = 0; i < workers.length; i ++) {
-            workers[i] = new NioWorker(id, i + 1, workerExecutor);
+            workers[i] = new NioWorker(workerExecutor);
         }
     }
 

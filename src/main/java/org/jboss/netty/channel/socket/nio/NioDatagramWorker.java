@@ -65,16 +65,6 @@ class NioDatagramWorker implements Runnable {
             .getInstance(NioDatagramWorker.class);
 
     /**
-     * This id of this worker.
-     */
-    private final int id;
-
-    /**
-     * This id of the NioDatagramPipelineSink.
-     */
-    private final int bossId;
-
-    /**
      * Executor used to execute {@link Runnable}s such as
      * {@link ChannelRegistionTask}.
      */
@@ -131,14 +121,10 @@ class NioDatagramWorker implements Runnable {
     /**
      * Sole constructor.
      *
-     * @param bossId This id of the NioDatagramPipelineSink
-     * @param id The id of this worker
      * @param executor the {@link Executor} used to execute {@link Runnable}s
      *                 such as {@link ChannelRegistionTask}
      */
-    NioDatagramWorker(final int bossId, final int id, final Executor executor) {
-        this.bossId = bossId;
-        this.id = id;
+    NioDatagramWorker(final Executor executor) {
         this.executor = executor;
     }
 

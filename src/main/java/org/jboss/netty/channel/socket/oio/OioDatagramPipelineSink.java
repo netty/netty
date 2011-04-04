@@ -40,11 +40,9 @@ import org.jboss.netty.util.internal.DeadLockProofWorker;
  */
 class OioDatagramPipelineSink extends AbstractChannelSink {
 
-    private final int id;
     private final Executor workerExecutor;
 
-    OioDatagramPipelineSink(int id, Executor workerExecutor) {
-        this.id = id;
+    OioDatagramPipelineSink(Executor workerExecutor) {
         this.workerExecutor = workerExecutor;
     }
 
@@ -140,10 +138,6 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
                 fireChannelBound(channel, channel.getLocalAddress());
             }
             fireChannelConnected(channel, channel.getRemoteAddress());
-
-            final String service = "OldIO";
-            final String category = "DatagramWorker";
-            final String comment = channel.toString();
 
             if (!bound) {
                 // Start the business.

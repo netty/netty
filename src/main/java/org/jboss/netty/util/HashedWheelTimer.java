@@ -24,7 +24,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -86,7 +85,6 @@ public class HashedWheelTimer implements Timer {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(HashedWheelTimer.class);
-    private static final AtomicInteger id = new AtomicInteger();
 
     private static final SharedResourceMisuseDetector misuseDetector =
         new SharedResourceMisuseDetector(HashedWheelTimer.class);
@@ -209,10 +207,7 @@ public class HashedWheelTimer implements Timer {
 
         roundDuration = tickDuration * wheel.length;
 
-        workerThread = threadFactory.newThread(new ThreadRenamingRunnable(
-                        worker,
-                        "HashedWheelTimer", null, null,
-                        String.valueOf(id.incrementAndGet()), null));
+        workerThread = threadFactory.newThread(worker);
 
         // Misuse check
         misuseDetector.increase();

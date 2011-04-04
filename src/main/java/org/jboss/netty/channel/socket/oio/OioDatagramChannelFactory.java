@@ -17,7 +17,6 @@ package org.jboss.netty.channel.socket.oio;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -78,11 +77,8 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  */
 public class OioDatagramChannelFactory implements DatagramChannelFactory {
 
-    private static final AtomicInteger nextId = new AtomicInteger();
-
     private final Executor workerExecutor;
     final OioDatagramPipelineSink sink;
-    final int id = nextId.incrementAndGet();
 
     /**
      * Creates a new instance.
@@ -95,7 +91,7 @@ public class OioDatagramChannelFactory implements DatagramChannelFactory {
             throw new NullPointerException("workerExecutor");
         }
         this.workerExecutor = workerExecutor;
-        sink = new OioDatagramPipelineSink(id, workerExecutor);
+        sink = new OioDatagramPipelineSink(workerExecutor);
     }
 
     @Override

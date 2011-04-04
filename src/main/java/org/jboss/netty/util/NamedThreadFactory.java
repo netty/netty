@@ -15,12 +15,12 @@
  */
 package org.jboss.netty.util;
 
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 /**
  * A {@link ThreadFactory} that creates a new {@link Thread} with the specified name and thread ID.
@@ -84,6 +84,7 @@ public class NamedThreadFactory implements ThreadFactory {
      * {@inheritDoc} The name of the thread is {@code "prefix + threadId"}. (e.g. {@code "ioThread-1"} if
      * {@code prefix} is {@code "ioThread-"}.
      */
+    @Override
     public Thread newThread(Runnable r) {
         Thread t = new Thread(group, r, prefix + threadId.getAndIncrement());
         t.setDaemon(daemon);
