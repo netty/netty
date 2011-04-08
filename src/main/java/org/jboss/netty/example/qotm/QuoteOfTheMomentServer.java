@@ -58,7 +58,7 @@ public class QuoteOfTheMomentServer {
             }
         });
 
-        // Enable broadcast
+        // Server doesn't need to enable broadcast to listen to a broadcast.
         b.setOption("broadcast", "false");
 
         // Allow packets as large as up to 1024 bytes (default is 768).

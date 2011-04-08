@@ -42,8 +42,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.IoWorkerRunnable;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
@@ -58,9 +57,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioClientSocketPipelineSink.class);
-    private static final AtomicInteger nextId = new AtomicInteger();
 
-    final int id = nextId.incrementAndGet();
     final Executor bossExecutor;
     private final Boss boss = new Boss();
     private final NioWorker[] workers;
@@ -71,7 +68,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         this.bossExecutor = bossExecutor;
         workers = new NioWorker[workerCount];
         for (int i = 0; i < workers.length; i ++) {
-            workers[i] = new NioWorker(id, i + 1, workerExecutor);
+            workers[i] = new NioWorker(workerExecutor);
         }
     }
 
@@ -196,9 +193,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                     // Start the worker thread with the new Selector.
                     boolean success = false;
                     try {
-                        bossExecutor.execute(
-                                new IoWorkerRunnable(new ThreadRenamingRunnable(
-                                        this, "NewIO", "ClientBoss", null, String.valueOf(id), null)));
+                        DeadLockProofWorker.start(bossExecutor, this);
                         success = true;
                     } finally {
                         if (!success) {
@@ -390,6 +385,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             } catch (Throwable t) {
                 ch.connectFuture.setFailure(t);
                 fireExceptionCaught(ch, t);
+                k.cancel(); // Some JDK implementations run into an infinite loop without this.
                 ch.worker.close(ch, succeededFuture(ch));
             }
         }

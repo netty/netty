@@ -24,7 +24,7 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
-import java.nio.channels.NotYetConnectedException;
+import java.nio.channels.NotYetBoundException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
@@ -45,7 +45,6 @@ import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
@@ -64,16 +63,6 @@ class NioDatagramWorker implements Runnable {
      */
     private static final InternalLogger logger = InternalLoggerFactory
             .getInstance(NioDatagramWorker.class);
-
-    /**
-     * This id of this worker.
-     */
-    private final int id;
-
-    /**
-     * This id of the NioDatagramPipelineSink.
-     */
-    private final int bossId;
 
     /**
      * Executor used to execute {@link Runnable}s such as
@@ -132,14 +121,10 @@ class NioDatagramWorker implements Runnable {
     /**
      * Sole constructor.
      *
-     * @param bossId This id of the NioDatagramPipelineSink
-     * @param id The id of this worker
      * @param executor the {@link Executor} used to execute {@link Runnable}s
      *                 such as {@link ChannelRegistionTask}
      */
-    NioDatagramWorker(final int bossId, final int id, final Executor executor) {
-        this.bossId = bossId;
-        this.id = id;
+    NioDatagramWorker(final Executor executor) {
         this.executor = executor;
     }
 
@@ -168,9 +153,7 @@ class NioDatagramWorker implements Runnable {
                 boolean success = false;
                 try {
                     // Start the main selector loop. See run() for details.
-                    executor.execute(new ThreadRenamingRunnable(
-                            this, "NewIO", "DatagramWorker",
-                            String.valueOf(bossId), String.valueOf(id), null));
+                    executor.execute(this);
                     success = true;
                 } finally {
                     if (!success) {
@@ -424,6 +407,7 @@ class NioDatagramWorker implements Runnable {
         }
 
         if (failure) {
+            key.cancel(); // Some JDK implementations run into an infinite loop without this.
             close(channel, succeededFuture(channel));
             return false;
         }
@@ -442,7 +426,7 @@ class NioDatagramWorker implements Runnable {
          * has a different meaning in UDP and means that the channels socket is
          * configured to only send and receive from a given remote peer.
          */
-        if (!channel.isOpen()) {
+        if (!channel.isBound()) {
             cleanUpWriteBuffer(channel);
             return;
         }
@@ -694,7 +678,7 @@ class NioDatagramWorker implements Runnable {
                 // Create the exception only once to avoid the excessive overhead
                 // caused by fillStackTrace.
                 if (channel.isOpen()) {
-                    cause = new NotYetConnectedException();
+                    cause = new NotYetBoundException();
                 } else {
                     cause = new ClosedChannelException();
                 }
@@ -714,7 +698,7 @@ class NioDatagramWorker implements Runnable {
                 // caused by fillStackTrace.
                 if (cause == null) {
                     if (channel.isOpen()) {
-                        cause = new NotYetConnectedException();
+                        cause = new NotYetBoundException();
                     } else {
                         cause = new ClosedChannelException();
                     }

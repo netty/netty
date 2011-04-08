@@ -48,6 +48,9 @@ final class ZlibUtil {
         case GZIP:
             convertedWrapperType = JZlib.W_GZIP;
             break;
+        case ZLIB_OR_NONE:
+            convertedWrapperType = JZlib.W_ZLIB_OR_NONE;
+            break;
         default:
             throw new Error();
         }

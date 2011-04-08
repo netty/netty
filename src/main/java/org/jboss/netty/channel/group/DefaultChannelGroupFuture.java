@@ -31,7 +31,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.IoWorkerRunnable;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 /**
  * The default {@link ChannelGroupFuture} implementation.
@@ -338,7 +338,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
     }
 
     private void checkDeadLock() {
-        if (IoWorkerRunnable.IN_IO_THREAD.get()) {
+        if (DeadLockProofWorker.PARENT.get() != null) {
             throw new IllegalStateException(
                     "await*() in I/O thread causes a dead lock or " +
                     "sudden performance drop. Use addListener() instead or " +

@@ -34,8 +34,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.IoWorkerRunnable;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 /**
  *
@@ -148,12 +147,7 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
 
             Executor bossExecutor =
                 ((OioServerSocketChannelFactory) channel.getFactory()).bossExecutor;
-            bossExecutor.execute(
-                    new IoWorkerRunnable(
-                            new ThreadRenamingRunnable(
-                                    new Boss(channel),
-                                    "OldIO", "ServerBoss", null,
-                                    String.valueOf(id), channel.toString())));
+            DeadLockProofWorker.start(bossExecutor, new Boss(channel));
             bossStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
@@ -217,14 +211,9 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                                         pipeline,
                                         OioServerSocketPipelineSink.this,
                                         acceptedSocket);
-                            workerExecutor.execute(
-                                    new IoWorkerRunnable(
-                                            new ThreadRenamingRunnable(
-                                                    new OioWorker(acceptedChannel),
-                                                    "OldIO", "ServerWorker",
-                                                    String.valueOf(id),
-                                                    String.valueOf(acceptedChannel.getId()),
-                                                    acceptedChannel.toString())));
+                            DeadLockProofWorker.start(
+                                    workerExecutor,
+                                    new OioWorker(acceptedChannel));
                         } catch (Exception e) {
                             logger.warn(
                                     "Failed to initialize an accepted socket.", e);

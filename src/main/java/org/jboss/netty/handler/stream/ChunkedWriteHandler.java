@@ -62,8 +62,8 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  * <h3>Sending a stream which generates a chunk intermittently</h3>
  *
  * Some {@link ChunkedInput} generates a chunk on a certain event or timing.
- * Such {@link ChunkedInput} implementation often returns {@code false} on
- * {@link ChunkedInput#hasNextChunk()}, resulting in the indefinitely suspended
+ * Such {@link ChunkedInput} implementation often returns {@code null} on
+ * {@link ChunkedInput#nextChunk()}, resulting in the indefinitely suspended
  * transfer.  To resume the transfer when a new chunk is available, you have to
  * call {@link #resumeTransfer()}.
  *
@@ -119,9 +119,13 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         boolean offered = queue.offer((MessageEvent) e);
         assert offered;
 
-        if (ctx.getChannel().isWritable()) {
+        final Channel channel = ctx.getChannel();
+        if (channel.isWritable()) {
             this.ctx = ctx;
             flush(ctx);
+        } else if (!channel.isConnected()) {
+            this.ctx = ctx;
+            discard(ctx);
         }
     }
 
@@ -195,23 +199,24 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                 // attempt for the current request has been failed.
                 currentEvent = null;
             } else {
+                final MessageEvent currentEvent = this.currentEvent;
                 Object m = currentEvent.getMessage();
                 if (m instanceof ChunkedInput) {
                     ChunkedInput chunks = (ChunkedInput) m;
                     Object chunk;
                     boolean endOfInput;
-                    boolean later;
+                    boolean suspend;
                     try {
                         chunk = chunks.nextChunk();
+                        endOfInput = chunks.isEndOfInput();
                         if (chunk == null) {
                             chunk = ChannelBuffers.EMPTY_BUFFER;
-                            later = true;
+                            // No need to suspend when reached at the end.
+                            suspend = !endOfInput;
                         } else {
-                            later = false;
+                            suspend = false;
                         }
-                        endOfInput = chunks.isEndOfInput();
                     } catch (Throwable t) {
-                        MessageEvent currentEvent = this.currentEvent;
                         this.currentEvent = null;
 
                         currentEvent.getFuture().setFailure(t);
@@ -221,37 +226,36 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                         break;
                     }
 
-                    ChannelFuture writeFuture;
-                    final MessageEvent currentEvent = this.currentEvent;
-                    if (endOfInput) {
-                        this.currentEvent = null;
-                        closeInput(chunks);
-                        writeFuture = currentEvent.getFuture();
-                    } else {
-                        writeFuture = future(channel);
-                        writeFuture.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future)
-                                    throws Exception {
-                                if (!future.isSuccess()) {
-                                    currentEvent.getFuture().setFailure(future.getCause());
-                                    closeInput((ChunkedInput) currentEvent.getMessage());
-                                }
-                            }
-                        });
-                    }
-
-                    Channels.write(
-                            ctx, writeFuture, chunk,
-                            currentEvent.getRemoteAddress());
-
-                    if (later) {
-                        // ChunkedInput.nextChunk() returned null.
-                        // Let's wait until more chunks arrive.
+                    if (suspend) {
+                        // ChunkedInput.nextChunk() returned null and it has
+                        // not reached at the end of input.  Let's wait until
+                        // more chunks arrive.  Nothing to write or notify.
                         break;
+                    } else {
+                        ChannelFuture writeFuture;
+                        if (endOfInput) {
+                            this.currentEvent = null;
+                            closeInput(chunks);
+                            writeFuture = currentEvent.getFuture();
+                        } else {
+                            writeFuture = future(channel);
+                            writeFuture.addListener(new ChannelFutureListener() {
+                                @Override
+                                public void operationComplete(ChannelFuture future)
+                                        throws Exception {
+                                    if (!future.isSuccess()) {
+                                        currentEvent.getFuture().setFailure(future.getCause());
+                                        closeInput((ChunkedInput) currentEvent.getMessage());
+                                    }
+                                }
+                            });
+                        }
+
+                        Channels.write(
+                                ctx, writeFuture, chunk,
+                                currentEvent.getRemoteAddress());
                     }
                 } else {
-                    MessageEvent currentEvent = this.currentEvent;
                     this.currentEvent = null;
                     ctx.sendDownstream(currentEvent);
                 }

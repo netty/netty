@@ -20,7 +20,6 @@ import static org.jboss.netty.channel.Channels.*;
 import java.io.PushbackInputStream;
 import java.net.SocketAddress;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.ChannelEvent;
@@ -30,8 +29,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.IoWorkerRunnable;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 /**
  *
@@ -43,9 +41,6 @@ import org.jboss.netty.util.internal.IoWorkerRunnable;
  */
 class OioClientSocketPipelineSink extends AbstractChannelSink {
 
-    private static final AtomicInteger nextId = new AtomicInteger();
-
-    private final int id = nextId.incrementAndGet();
     private final Executor workerExecutor;
 
     OioClientSocketPipelineSink(Executor workerExecutor) {
@@ -132,13 +127,7 @@ class OioClientSocketPipelineSink extends AbstractChannelSink {
             fireChannelConnected(channel, channel.getRemoteAddress());
 
             // Start the business.
-            workerExecutor.execute(
-                    new IoWorkerRunnable(
-                            new ThreadRenamingRunnable(
-                                    new OioWorker(channel),
-                                    "OldIO", "ClientWorker",
-                                    String.valueOf(id), String.valueOf(channel.getId()),
-                                    channel.toString())));
+            DeadLockProofWorker.start(workerExecutor, new OioWorker(channel));
             workerStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);

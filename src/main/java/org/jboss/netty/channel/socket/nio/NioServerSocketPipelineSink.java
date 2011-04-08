@@ -39,8 +39,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.IoWorkerRunnable;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 /**
  *
@@ -54,16 +53,14 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioServerSocketPipelineSink.class);
-    private static final AtomicInteger nextId = new AtomicInteger();
 
-    private final int id = nextId.incrementAndGet();
     private final NioWorker[] workers;
     private final AtomicInteger workerIndex = new AtomicInteger();
 
     NioServerSocketPipelineSink(Executor workerExecutor, int workerCount) {
         workers = new NioWorker[workerCount];
         for (int i = 0; i < workers.length; i ++) {
-            workers[i] = new NioWorker(id, i + 1, workerExecutor);
+            workers[i] = new NioWorker(workerExecutor);
         }
     }
 
@@ -154,11 +151,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
 
             Executor bossExecutor =
                 ((NioServerSocketChannelFactory) channel.getFactory()).bossExecutor;
-            bossExecutor.execute(
-                    new IoWorkerRunnable(new ThreadRenamingRunnable(
-                            new Boss(channel),
-                            "NewIO", "ServerBoss", null, String.valueOf(id),
-                            channel.toString())));
+            DeadLockProofWorker.start(bossExecutor, new Boss(channel));
             bossStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);

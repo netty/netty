@@ -28,8 +28,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.IoWorkerRunnable;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 /**
  *
@@ -41,11 +40,9 @@ import org.jboss.netty.util.internal.IoWorkerRunnable;
  */
 class OioDatagramPipelineSink extends AbstractChannelSink {
 
-    private final int id;
     private final Executor workerExecutor;
 
-    OioDatagramPipelineSink(int id, Executor workerExecutor) {
-        this.id = id;
+    OioDatagramPipelineSink(Executor workerExecutor) {
         this.workerExecutor = workerExecutor;
     }
 
@@ -103,14 +100,9 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
             fireChannelBound(channel, channel.getLocalAddress());
 
             // Start the business.
-            workerExecutor.execute(
-                    new IoWorkerRunnable(
-                            new ThreadRenamingRunnable(
-                                    new OioDatagramWorker(channel),
-                                    "OldIO",
-                                    "DatagramWorker",
-                                    String.valueOf(id), String.valueOf(channel.getId()),
-                                    channel.toString())));
+            DeadLockProofWorker.start(
+                    workerExecutor,
+                    new OioDatagramWorker(channel));
             workerStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
@@ -147,22 +139,13 @@ class OioDatagramPipelineSink extends AbstractChannelSink {
             }
             fireChannelConnected(channel, channel.getRemoteAddress());
 
-            final String service = "OldIO";
-            final String category = "DatagramWorker";
-            final String comment = channel.toString();
-
             if (!bound) {
                 // Start the business.
-                workerExecutor.execute(new IoWorkerRunnable(new ThreadRenamingRunnable(
-                        new OioDatagramWorker(channel),
-                        service, category, String.valueOf(id), String.valueOf(channel.getId()), comment)));
+                DeadLockProofWorker.start(
+                        workerExecutor,
+                        new OioDatagramWorker(channel));
             } else {
-                // Worker started by bind() - just rename.
-                Thread workerThread = channel.workerThread;
-                if (workerThread != null) {
-                    ThreadRenamingRunnable.renameThread(
-                            workerThread, service, category, String.valueOf(id), String.valueOf(channel.getId()), comment);
-                }
+                // Worker started by bind() - nothing to do.
             }
 
             workerStarted = true;

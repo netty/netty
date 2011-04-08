@@ -27,7 +27,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
-import org.jboss.netty.util.ThreadRenamingRunnable;
 
 /**
  *
@@ -102,13 +101,14 @@ class OioDatagramWorker implements Runnable {
             Object message, SocketAddress remoteAddress) {
         try {
             ChannelBuffer buf = (ChannelBuffer) message;
+            int offset = buf.readerIndex();
             int length = buf.readableBytes();
             ByteBuffer nioBuf = buf.toByteBuffer();
             DatagramPacket packet;
             if (nioBuf.hasArray()) {
                 // Avoid copy if the buffer is backed by an array.
                 packet = new DatagramPacket(
-                        nioBuf.array(), nioBuf.arrayOffset(), length);
+                        nioBuf.array(), nioBuf.arrayOffset() + offset, length);
             } else {
                 // Otherwise it will be expensive.
                 byte[] arrayBuf = new byte[length];
@@ -173,16 +173,6 @@ class OioDatagramWorker implements Runnable {
             channel.socket.disconnect();
             future.setSuccess();
             if (connected) {
-                // Update the worker's thread name to reflect the state change.
-                Thread workerThread = channel.workerThread;
-                if (workerThread != null) {
-                    ThreadRenamingRunnable.renameThread(
-                            workerThread, "OldIO", "DatagramWorker",
-                            String.valueOf(((OioDatagramChannelFactory) channel.getFactory()).id),
-                            String.valueOf(channel.getId()),
-                            channel.toString());
-                }
-
                 // Notify.
                 fireChannelDisconnected(channel);
             }

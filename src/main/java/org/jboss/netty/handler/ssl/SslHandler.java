@@ -524,7 +524,7 @@ public class SslHandler extends FrameDecoder
             int majorVersion = buffer.getUnsignedByte(buffer.readerIndex() + 1);
             if (majorVersion >= 3 && majorVersion < 10) {
                 // SSLv3 or TLS
-                packetLength = (buffer.getShort(buffer.readerIndex() + 3) & 0xFFFF) + 5;
+                packetLength = (getShort(buffer, buffer.readerIndex() + 3) & 0xFFFF) + 5;
                 if (packetLength <= 5) {
                     // Neither SSLv2 or TLSv1 (i.e. SSLv2 or bad data)
                     tls = false;
@@ -545,9 +545,9 @@ public class SslHandler extends FrameDecoder
             if (majorVersion >= 2 && majorVersion < 10) {
                 // SSLv2
                 if (headerLength == 2) {
-                    packetLength = (buffer.getShort(buffer.readerIndex()) & 0x7FFF) + 2;
+                    packetLength = (getShort(buffer, buffer.readerIndex()) & 0x7FFF) + 2;
                 } else {
-                    packetLength = (buffer.getShort(buffer.readerIndex()) & 0x3FFF) + 3;
+                    packetLength = (getShort(buffer, buffer.readerIndex()) & 0x3FFF) + 3;
                 }
                 if (packetLength <= headerLength) {
                     sslv2 = false;
@@ -588,6 +588,14 @@ public class SslHandler extends FrameDecoder
         final int packetOffset = buffer.readerIndex();
         buffer.skipBytes(packetLength);
         return unwrap(ctx, channel, buffer, packetOffset, packetLength);
+    }
+
+    /**
+     * Reads a big-endian short integer from the buffer.  Please note that we do not use
+     * {@link ChannelBuffer#getShort(int)} because it might be a little-endian buffer.
+     */
+    private static short getShort(ChannelBuffer buf, int offset) {
+        return (short) (buf.getByte(offset) << 8 | buf.getByte(offset + 1) & 0xFF);
     }
 
     private ChannelFuture wrap(ChannelHandlerContext context, Channel channel)

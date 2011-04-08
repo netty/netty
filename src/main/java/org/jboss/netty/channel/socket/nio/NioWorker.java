@@ -46,8 +46,7 @@ import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ThreadRenamingRunnable;
-import org.jboss.netty.util.internal.IoWorkerRunnable;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 /**
@@ -67,8 +66,6 @@ class NioWorker implements Runnable {
 
     static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
-    private final int bossId;
-    private final int id;
     private final Executor executor;
     private boolean started;
     private volatile Thread thread;
@@ -83,9 +80,7 @@ class NioWorker implements Runnable {
     private final SocketReceiveBufferPool recvBufferPool = new SocketReceiveBufferPool();
     private final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
 
-    NioWorker(int bossId, int id, Executor executor) {
-        this.bossId = bossId;
-        this.id = id;
+    NioWorker(Executor executor) {
         this.executor = executor;
     }
 
@@ -108,11 +103,7 @@ class NioWorker implements Runnable {
                 // Start the worker thread with the new Selector.
                 boolean success = false;
                 try {
-                    executor.execute(
-                            new IoWorkerRunnable(new ThreadRenamingRunnable(
-                                    this, "NewIO",
-                                    server? "ServerWorker" : "ClientWorker",
-                                    String.valueOf(bossId), String.valueOf(id), null)));
+                    DeadLockProofWorker.start(executor, this);
                     success = true;
                 } finally {
                     if (!success) {
@@ -352,6 +343,7 @@ class NioWorker implements Runnable {
         }
 
         if (ret < 0 || failure) {
+            k.cancel(); // Some JDK implementations run into an infinite loop without this.
             close(channel, succeededFuture(channel));
             return false;
         }

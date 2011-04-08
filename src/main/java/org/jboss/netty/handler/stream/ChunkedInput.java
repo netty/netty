@@ -18,7 +18,7 @@ package org.jboss.netty.handler.stream;
 import org.jboss.netty.buffer.ChannelBuffer;
 
 /**
- * A large data stream which is consumed by {@link ChunkedWriteHandler}.
+ * A data stream of indefinite length which is consumed by {@link ChunkedWriteHandler}.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
@@ -29,18 +29,12 @@ import org.jboss.netty.buffer.ChannelBuffer;
 public interface ChunkedInput {
 
     /**
-     * Returns {@code true} if and only if there is any data left in the
-     * stream.  Please note that {@code false} does not necessarily mean that
-     * the stream has reached at its end.  In a slow stream, the next chunk
-     * might be unavailable just momentarily.
-     */
-    boolean hasNextChunk() throws Exception;
-
-    /**
      * Fetches a chunked data from the stream.  The returned chunk is usually
      * a {@link ChannelBuffer}, but you could extend an existing implementation
      * to convert the {@link ChannelBuffer} into a different type that your
-     * handler or encoder understands.
+     * handler or encoder understands.  Once this method returns the last chunk
+     * and thus the stream has reached at its end, any subsequent {@link #isEndOfInput()}
+     * call must return {@code false}.
      *
      * @return the fetched chunk, which is usually {@link ChannelBuffer}.
      *         {@code null} if there is no data left in the stream.

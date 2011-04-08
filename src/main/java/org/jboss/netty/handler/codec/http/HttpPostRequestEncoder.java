@@ -867,11 +867,6 @@ public class HttpPostRequestEncoder implements ChunkedInput {
         //NO since the user can want to reuse (broadcast for instance) cleanFiles();
     }
 
-    @Override
-    public boolean hasNextChunk() throws Exception {
-        return !isLastChunkSent;
-    }
-
     /**
      * Returns the next available HttpChunk. The caller is responsible to test if this chunk is the
      * last one (isLast()), in order to stop calling this method.
@@ -949,10 +944,10 @@ public class HttpPostRequestEncoder implements ChunkedInput {
         return new DefaultHttpChunk(buffer);
     }
 
-	@Override
+    @Override
     public boolean isEndOfInput() throws Exception {
-		return isLastChunkSent;
-	}
+        return isLastChunkSent;
+    }
 
     /**
      * Exception when an error occurs while encoding

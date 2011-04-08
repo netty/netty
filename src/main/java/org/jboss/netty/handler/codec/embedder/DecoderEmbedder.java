@@ -37,9 +37,9 @@ import org.jboss.netty.handler.codec.string.StringDecoder;
  * {@link DecoderEmbedder}&lt;String&gt; embedder = new {@link DecoderEmbedder}&lt;String&gt;(
  *         new {@link Base64Decoder}(), new {@link StringDecoder}());
  *
- * embedded.offer(base64Data);
+ * embedder.offer(base64Data);
  *
- * String decoded = embedded.poll();
+ * String decoded = embedder.poll();
  * assert decoded.equals("foobar");
  * </pre>
  *

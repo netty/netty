@@ -313,7 +313,7 @@ public class ChannelBuffers {
             return EMPTY_BUFFER;
         }
         if (buffer.hasArray()) {
-            return wrappedBuffer(buffer.order(), buffer.array(), buffer.arrayOffset(),buffer.remaining());
+            return wrappedBuffer(buffer.order(), buffer.array(), buffer.arrayOffset() + buffer.position(),buffer.remaining());
         } else {
             return new ByteBufferBackedChannelBuffer(buffer);
         }

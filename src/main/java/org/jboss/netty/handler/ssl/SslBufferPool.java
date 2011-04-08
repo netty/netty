@@ -40,8 +40,8 @@ import javax.net.ssl.SSLEngine;
  */
 public class SslBufferPool {
 
-    // Add 1024 as a room for compressed data.
-    private static final int MAX_PACKET_SIZE = 16665 + 1024;
+    // Add 1024 as a room for compressed data and another 1024 for Apache Harmony compatibility.
+    private static final int MAX_PACKET_SIZE = 16665 + 2048;
     private static final int DEFAULT_POOL_SIZE = MAX_PACKET_SIZE * 1024;
 
     private final ByteBuffer[] pool;

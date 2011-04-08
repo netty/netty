@@ -503,11 +503,11 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             }
 
             // A successful decode
-            unfoldAndfireMessageReceived(context, result, remoteAddress);
+            unfoldAndFireMessageReceived(context, result, remoteAddress);
         }
     }
 
-    private void unfoldAndfireMessageReceived(
+    private void unfoldAndFireMessageReceived(
             ChannelHandlerContext context, Object result, SocketAddress remoteAddress) {
         if (unfold) {
             if (result instanceof Object[]) {
@@ -546,7 +546,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             // notify a user that the connection was closed explicitly.
             Object partiallyDecoded = decodeLast(ctx, e.getChannel(), replayable, state);
             if (partiallyDecoded != null) {
-                unfoldAndfireMessageReceived(ctx, partiallyDecoded, null);
+                unfoldAndFireMessageReceived(ctx, partiallyDecoded, null);
             }
         } catch (ReplayError replay) {
             // Ignore
