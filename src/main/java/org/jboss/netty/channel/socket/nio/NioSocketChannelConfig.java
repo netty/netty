@@ -144,5 +144,6 @@ public interface NioSocketChannelConfig extends SocketChannelConfig {
      * will be called with the new predictor.  The default factory is
      * <tt>{@link AdaptiveReceiveBufferSizePredictorFactory}(64, 1024, 65536)</tt>.
      */
-    void setReceiveBufferSizePredictorFactory(ReceiveBufferSizePredictorFactory predictorFactory);
+    void setReceiveBufferSizePredictorFactory(
+            ReceiveBufferSizePredictorFactory predictorFactory);
 }
