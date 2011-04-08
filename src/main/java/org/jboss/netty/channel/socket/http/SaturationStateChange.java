@@ -25,7 +25,5 @@ package org.jboss.netty.channel.socket.http;
  * @author OneDrum Ltd.
  */
 enum SaturationStateChange {
-   NO_CHANGE,
-   DESATURATED,
-   SATURATED
+    NO_CHANGE, DESATURATED, SATURATED
 }

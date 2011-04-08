@@ -31,59 +31,49 @@ import org.jboss.netty.channel.MessageEvent;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-class HttpTunnelClientChannelSink extends AbstractChannelSink
-{
+class HttpTunnelClientChannelSink extends AbstractChannelSink {
 
-   public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception
-   {
-      if (e instanceof ChannelStateEvent)
-      {
-         handleChannelStateEvent((ChannelStateEvent) e);
-      }
-      else if (e instanceof MessageEvent)
-      {
-         handleMessageEvent((MessageEvent) e);
-      }
-   }
+    public void eventSunk(ChannelPipeline pipeline, ChannelEvent e)
+            throws Exception {
+        if (e instanceof ChannelStateEvent) {
+            handleChannelStateEvent((ChannelStateEvent) e);
+        } else if (e instanceof MessageEvent) {
+            handleMessageEvent((MessageEvent) e);
+        }
+    }
 
-   private void handleMessageEvent(MessageEvent e)
-   {
-      HttpTunnelClientChannel channel = (HttpTunnelClientChannel) e.getChannel();
-      channel.sendData(e);
-   }
+    private void handleMessageEvent(MessageEvent e) {
+        HttpTunnelClientChannel channel =
+                (HttpTunnelClientChannel) e.getChannel();
+        channel.sendData(e);
+    }
 
-   private void handleChannelStateEvent(ChannelStateEvent e)
-   {
-      HttpTunnelClientChannel channel = (HttpTunnelClientChannel) e.getChannel();
+    private void handleChannelStateEvent(ChannelStateEvent e) {
+        HttpTunnelClientChannel channel =
+                (HttpTunnelClientChannel) e.getChannel();
 
-      switch (e.getState())
-      {
-         case CONNECTED :
-            if (e.getValue() != null)
-            {
-               channel.onConnectRequest(e.getFuture(), (InetSocketAddress) e.getValue());
-            }
-            else
-            {
-               channel.onDisconnectRequest(e.getFuture());
+        switch (e.getState()) {
+        case CONNECTED:
+            if (e.getValue() != null) {
+                channel.onConnectRequest(e.getFuture(),
+                        (InetSocketAddress) e.getValue());
+            } else {
+                channel.onDisconnectRequest(e.getFuture());
             }
             break;
-         case BOUND :
-            if (e.getValue() != null)
-            {
-               channel.onBindRequest((InetSocketAddress) e.getValue(), e.getFuture());
-            }
-            else
-            {
-               channel.onUnbindRequest(e.getFuture());
+        case BOUND:
+            if (e.getValue() != null) {
+                channel.onBindRequest((InetSocketAddress) e.getValue(),
+                        e.getFuture());
+            } else {
+                channel.onUnbindRequest(e.getFuture());
             }
             break;
-         case OPEN :
-            if (Boolean.FALSE.equals(e.getValue()))
-            {
-               channel.onCloseRequest(e.getFuture());
+        case OPEN:
+            if (Boolean.FALSE.equals(e.getValue())) {
+                channel.onCloseRequest(e.getFuture());
             }
             break;
-      }
-   }
+        }
+    }
 }

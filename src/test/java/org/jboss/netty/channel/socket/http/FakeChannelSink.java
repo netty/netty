@@ -27,14 +27,13 @@ import org.jboss.netty.channel.ChannelPipeline;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
-public class FakeChannelSink extends AbstractChannelSink
-{
+public class FakeChannelSink extends AbstractChannelSink {
 
-   public Queue<ChannelEvent> events = new LinkedList<ChannelEvent>();
+    public Queue<ChannelEvent> events = new LinkedList<ChannelEvent>();
 
-   public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception
-   {
-      events.add(e);
-   }
+    public void eventSunk(ChannelPipeline pipeline, ChannelEvent e)
+            throws Exception {
+        events.add(e);
+    }
 
 }

@@ -32,73 +32,66 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-class HttpTunnelClientPollHandler extends SimpleChannelHandler
-{
+class HttpTunnelClientPollHandler extends SimpleChannelHandler {
 
-   public static final String NAME = "server2client";
+    public static final String NAME = "server2client";
 
-   private static final InternalLogger LOG = InternalLoggerFactory.getInstance(HttpTunnelClientPollHandler.class);
+    private static final InternalLogger LOG = InternalLoggerFactory
+            .getInstance(HttpTunnelClientPollHandler.class);
 
-   private String tunnelId;
+    private String tunnelId;
 
-   private final HttpTunnelClientWorkerOwner tunnelChannel;
+    private final HttpTunnelClientWorkerOwner tunnelChannel;
 
-   private long pollTime;
+    private long pollTime;
 
-   public HttpTunnelClientPollHandler(HttpTunnelClientWorkerOwner tunnelChannel)
-   {
-      this.tunnelChannel = tunnelChannel;
-   }
+    public HttpTunnelClientPollHandler(HttpTunnelClientWorkerOwner tunnelChannel) {
+        this.tunnelChannel = tunnelChannel;
+    }
 
-   public void setTunnelId(String tunnelId)
-   {
-      this.tunnelId = tunnelId;
-   }
+    public void setTunnelId(String tunnelId) {
+        this.tunnelId = tunnelId;
+    }
 
-   @Override
-   public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception
-   {
-      if (LOG.isDebugEnabled())
-      {
-         LOG.debug("Poll channel for tunnel " + tunnelId + " established");
-      }
-      tunnelChannel.fullyEstablished();
-      sendPoll(ctx);
-   }
+    @Override
+    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e)
+            throws Exception {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Poll channel for tunnel " + tunnelId + " established");
+        }
+        tunnelChannel.fullyEstablished();
+        sendPoll(ctx);
+    }
 
-   @Override
-   public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception
-   {
-      HttpResponse response = (HttpResponse) e.getMessage();
+    @Override
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+            throws Exception {
+        HttpResponse response = (HttpResponse) e.getMessage();
 
-      if (HttpTunnelMessageUtils.isOKResponse(response))
-      {
-         long rtTime = System.nanoTime() - pollTime;
-         if (LOG.isDebugEnabled())
-         {
-            LOG.debug("OK response received for poll on tunnel " + tunnelId + " after " + rtTime + " ns");
-         }
-         tunnelChannel.onMessageReceived(response.getContent());
-         sendPoll(ctx);
-      }
-      else
-      {
-         if (LOG.isWarnEnabled())
-         {
-            LOG.warn("non-OK response received for poll on tunnel " + tunnelId);
-         }
-      }
-   }
+        if (HttpTunnelMessageUtils.isOKResponse(response)) {
+            long rtTime = System.nanoTime() - pollTime;
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("OK response received for poll on tunnel " +
+                        tunnelId + " after " + rtTime + " ns");
+            }
+            tunnelChannel.onMessageReceived(response.getContent());
+            sendPoll(ctx);
+        } else {
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("non-OK response received for poll on tunnel " +
+                        tunnelId);
+            }
+        }
+    }
 
-   private void sendPoll(ChannelHandlerContext ctx)
-   {
-      pollTime = System.nanoTime();
-      if (LOG.isDebugEnabled())
-      {
-         LOG.debug("sending poll request for tunnel " + tunnelId);
-      }
-      HttpRequest request = HttpTunnelMessageUtils
-            .createReceiveDataRequest(tunnelChannel.getServerHostName(), tunnelId);
-      Channels.write(ctx, Channels.future(ctx.getChannel()), request);
-   }
+    private void sendPoll(ChannelHandlerContext ctx) {
+        pollTime = System.nanoTime();
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("sending poll request for tunnel " + tunnelId);
+        }
+        HttpRequest request =
+                HttpTunnelMessageUtils.createReceiveDataRequest(
+                        tunnelChannel.getServerHostName(), tunnelId);
+        Channels.write(ctx, Channels.future(ctx.getChannel()), request);
+    }
 }

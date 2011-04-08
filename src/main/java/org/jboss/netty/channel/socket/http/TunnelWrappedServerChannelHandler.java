@@ -29,56 +29,56 @@ import org.jboss.netty.channel.group.ChannelGroup;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-class TunnelWrappedServerChannelHandler extends SimpleChannelUpstreamHandler
-{
+class TunnelWrappedServerChannelHandler extends SimpleChannelUpstreamHandler {
 
-   public static final String NAME = "TunnelWrappedServerChannelHandler";
+    public static final String NAME = "TunnelWrappedServerChannelHandler";
 
-   private final HttpTunnelServerChannel tunnelChannel;
+    private final HttpTunnelServerChannel tunnelChannel;
 
-   private final AcceptedServerChannelPipelineFactory pipelineFactory;
+    private final AcceptedServerChannelPipelineFactory pipelineFactory;
 
-   private final ChannelGroup allChannels;
+    private final ChannelGroup allChannels;
 
-   public TunnelWrappedServerChannelHandler(HttpTunnelServerChannel tunnelChannel,
-         AcceptedServerChannelPipelineFactory pipelineFactory, ChannelGroup allChannels)
-   {
-      this.tunnelChannel = tunnelChannel;
-      this.pipelineFactory = pipelineFactory;
-      this.allChannels = allChannels;
-   }
+    public TunnelWrappedServerChannelHandler(
+            HttpTunnelServerChannel tunnelChannel,
+            AcceptedServerChannelPipelineFactory pipelineFactory,
+            ChannelGroup allChannels) {
+        this.tunnelChannel = tunnelChannel;
+        this.pipelineFactory = pipelineFactory;
+        this.allChannels = allChannels;
+    }
 
-   @Override
-   public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception
-   {
-      e.getChannel().getConfig().setPipelineFactory(pipelineFactory);
-      super.channelOpen(ctx, e);
-   }
+    @Override
+    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
+            throws Exception {
+        e.getChannel().getConfig().setPipelineFactory(pipelineFactory);
+        super.channelOpen(ctx, e);
+    }
 
-   @Override
-   public void channelBound(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception
-   {
-      Channels.fireChannelBound(tunnelChannel, (SocketAddress) e.getValue());
-      super.channelBound(ctx, e);
-   }
+    @Override
+    public void channelBound(ChannelHandlerContext ctx, ChannelStateEvent e)
+            throws Exception {
+        Channels.fireChannelBound(tunnelChannel, (SocketAddress) e.getValue());
+        super.channelBound(ctx, e);
+    }
 
-   @Override
-   public void channelUnbound(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception
-   {
-      Channels.fireChannelUnbound(tunnelChannel);
-      super.channelUnbound(ctx, e);
-   }
+    @Override
+    public void channelUnbound(ChannelHandlerContext ctx, ChannelStateEvent e)
+            throws Exception {
+        Channels.fireChannelUnbound(tunnelChannel);
+        super.channelUnbound(ctx, e);
+    }
 
-   @Override
-   public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception
-   {
-      Channels.fireChannelClosed(tunnelChannel);
-      super.channelClosed(ctx, e);
-   }
+    @Override
+    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
+            throws Exception {
+        Channels.fireChannelClosed(tunnelChannel);
+        super.channelClosed(ctx, e);
+    }
 
-   @Override
-   public void childChannelOpen(ChannelHandlerContext ctx, ChildChannelStateEvent e) throws Exception
-   {
-      allChannels.add(e.getChildChannel());
-   }
+    @Override
+    public void childChannelOpen(ChannelHandlerContext ctx,
+            ChildChannelStateEvent e) throws Exception {
+        allChannels.add(e.getChildChannel());
+    }
 }

@@ -27,16 +27,15 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
-public class UpstreamEventCatcher implements ChannelUpstreamHandler
-{
+public class UpstreamEventCatcher implements ChannelUpstreamHandler {
 
-   public static final String NAME = "upstreamCatcher";
+    public static final String NAME = "upstreamCatcher";
 
-   public Queue<ChannelEvent> events = new LinkedList<ChannelEvent>();
+    public Queue<ChannelEvent> events = new LinkedList<ChannelEvent>();
 
-   public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception
-   {
-      events.add(e);
-   }
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
+            throws Exception {
+        events.add(e);
+    }
 
 }

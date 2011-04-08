@@ -43,226 +43,215 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface, ServerMessageSwitchDownstreamInterface
-{
+class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
+        ServerMessageSwitchDownstreamInterface {
 
-   private static final InternalLogger LOG = InternalLoggerFactory.getInstance(ServerMessageSwitch.class.getName());
+    private static final InternalLogger LOG = InternalLoggerFactory
+            .getInstance(ServerMessageSwitch.class.getName());
 
-   private final String tunnelIdPrefix;
+    private final String tunnelIdPrefix;
 
-   private final HttpTunnelAcceptedChannelFactory newChannelFactory;
+    private final HttpTunnelAcceptedChannelFactory newChannelFactory;
 
-   private final ConcurrentHashMap<String, TunnelInfo> tunnelsById;
+    private final ConcurrentHashMap<String, TunnelInfo> tunnelsById;
 
-   public ServerMessageSwitch(HttpTunnelAcceptedChannelFactory newChannelFactory)
-   {
-      this.newChannelFactory = newChannelFactory;
-      tunnelIdPrefix = Long.toHexString(new Random().nextLong());
-      tunnelsById = new ConcurrentHashMap<String, TunnelInfo>();
-   }
+    public ServerMessageSwitch(
+            HttpTunnelAcceptedChannelFactory newChannelFactory) {
+        this.newChannelFactory = newChannelFactory;
+        tunnelIdPrefix = Long.toHexString(new Random().nextLong());
+        tunnelsById = new ConcurrentHashMap<String, TunnelInfo>();
+    }
 
-   public String createTunnel(InetSocketAddress remoteAddress)
-   {
-      String newTunnelId = String.format("%s_%s", tunnelIdPrefix, newChannelFactory.generateTunnelId());
-      TunnelInfo newTunnel = new TunnelInfo();
-      newTunnel.tunnelId = newTunnelId;
-      tunnelsById.put(newTunnelId, newTunnel);
-      newTunnel.localChannel = newChannelFactory.newChannel(newTunnelId, remoteAddress);
-      return newTunnelId;
-   }
+    public String createTunnel(InetSocketAddress remoteAddress) {
+        String newTunnelId =
+                String.format("%s_%s", tunnelIdPrefix,
+                        newChannelFactory.generateTunnelId());
+        TunnelInfo newTunnel = new TunnelInfo();
+        newTunnel.tunnelId = newTunnelId;
+        tunnelsById.put(newTunnelId, newTunnel);
+        newTunnel.localChannel =
+                newChannelFactory.newChannel(newTunnelId, remoteAddress);
+        return newTunnelId;
+    }
 
-   public boolean isOpenTunnel(String tunnelId)
-   {
-      TunnelInfo tunnel = tunnelsById.get(tunnelId);
-      return tunnel != null;
-   }
+    public boolean isOpenTunnel(String tunnelId) {
+        TunnelInfo tunnel = tunnelsById.get(tunnelId);
+        return tunnel != null;
+    }
 
-   public void pollOutboundData(String tunnelId, Channel channel)
-   {
-      TunnelInfo tunnel = tunnelsById.get(tunnelId);
-      if (tunnel == null)
-      {
-         if (LOG.isWarnEnabled())
-         {
-            LOG.warn("Poll request for tunnel " + tunnelId + " which does not exist or already closed");
-         }
-         respondAndClose(channel,
-               HttpTunnelMessageUtils.createRejection(null, "Unknown tunnel, possibly already closed"));
-         return;
-      }
+    public void pollOutboundData(String tunnelId, Channel channel) {
+        TunnelInfo tunnel = tunnelsById.get(tunnelId);
+        if (tunnel == null) {
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("Poll request for tunnel " + tunnelId +
+                        " which does not exist or already closed");
+            }
+            respondAndClose(channel, HttpTunnelMessageUtils.createRejection(
+                    null, "Unknown tunnel, possibly already closed"));
+            return;
+        }
 
-      if (!tunnel.responseChannel.compareAndSet(null, channel))
-      {
-         if (LOG.isWarnEnabled())
-         {
-            LOG.warn("Duplicate poll request detected for tunnel " + tunnelId);
-         }
-         respondAndClose(channel,
-               HttpTunnelMessageUtils.createRejection(null, "Only one poll request at a time per tunnel allowed"));
-         return;
-      }
+        if (!tunnel.responseChannel.compareAndSet(null, channel)) {
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("Duplicate poll request detected for tunnel " +
+                        tunnelId);
+            }
+            respondAndClose(channel, HttpTunnelMessageUtils.createRejection(
+                    null, "Only one poll request at a time per tunnel allowed"));
+            return;
+        }
 
-      sendQueuedData(tunnel);
-   }
+        sendQueuedData(tunnel);
+    }
 
-   private void respondAndClose(Channel channel, HttpResponse response)
-   {
-      Channels.write(channel, response).addListener(ChannelFutureListener.CLOSE);
-   }
+    private void respondAndClose(Channel channel, HttpResponse response) {
+        Channels.write(channel, response).addListener(
+                ChannelFutureListener.CLOSE);
+    }
 
-   private void sendQueuedData(TunnelInfo state)
-   {
-      Queue<QueuedResponse> queuedData = state.queuedResponses;
-      Channel responseChannel = state.responseChannel.getAndSet(null);
-      if (responseChannel == null)
-      {
-         // no response channel, or another thread has already used it
-         return;
-      }
+    private void sendQueuedData(TunnelInfo state) {
+        Queue<QueuedResponse> queuedData = state.queuedResponses;
+        Channel responseChannel = state.responseChannel.getAndSet(null);
+        if (responseChannel == null) {
+            // no response channel, or another thread has already used it
+            return;
+        }
 
-      if (LOG.isDebugEnabled())
-      {
-         LOG.debug("sending response for tunnel id " + state.tunnelId + " to " + responseChannel.getRemoteAddress());
-      }
-      QueuedResponse messageToSend = queuedData.poll();
-      if (messageToSend == null)
-      {
-         // no data to send, restore the response channel and bail out
-         state.responseChannel.set(responseChannel);
-         return;
-      }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("sending response for tunnel id " + state.tunnelId +
+                    " to " + responseChannel.getRemoteAddress());
+        }
+        QueuedResponse messageToSend = queuedData.poll();
+        if (messageToSend == null) {
+            // no data to send, restore the response channel and bail out
+            state.responseChannel.set(responseChannel);
+            return;
+        }
 
-      HttpResponse response = HttpTunnelMessageUtils.createRecvDataResponse(messageToSend.data);
-      final ChannelFuture originalFuture = messageToSend.writeFuture;
-      Channels.write(responseChannel, response).addListener(new RelayedChannelFutureListener(originalFuture));
-   }
+        HttpResponse response =
+                HttpTunnelMessageUtils
+                        .createRecvDataResponse(messageToSend.data);
+        final ChannelFuture originalFuture = messageToSend.writeFuture;
+        Channels.write(responseChannel, response).addListener(
+                new RelayedChannelFutureListener(originalFuture));
+    }
 
-   public TunnelStatus routeInboundData(String tunnelId, ChannelBuffer inboundData)
-   {
-      TunnelInfo tunnel = tunnelsById.get(tunnelId);
-      if (tunnel == null)
-      {
-         return TunnelStatus.CLOSED;
-      }
+    public TunnelStatus routeInboundData(String tunnelId,
+            ChannelBuffer inboundData) {
+        TunnelInfo tunnel = tunnelsById.get(tunnelId);
+        if (tunnel == null) {
+            return TunnelStatus.CLOSED;
+        }
 
-      if (tunnel.closing.get())
-      {
-         // client has now been notified, forget the tunnel
-         tunnelsById.remove(tunnel);
-         return TunnelStatus.CLOSED;
-      }
+        if (tunnel.closing.get()) {
+            // client has now been notified, forget the tunnel
+            tunnelsById.remove(tunnel);
+            return TunnelStatus.CLOSED;
+        }
 
-      if (LOG.isDebugEnabled())
-      {
-         LOG.debug("routing inbound data for tunnel " + tunnelId);
-      }
-      tunnel.localChannel.dataReceived(inboundData);
-      return TunnelStatus.ALIVE;
-   }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("routing inbound data for tunnel " + tunnelId);
+        }
+        tunnel.localChannel.dataReceived(inboundData);
+        return TunnelStatus.ALIVE;
+    }
 
-   public void clientCloseTunnel(String tunnelId)
-   {
-      TunnelInfo tunnel = tunnelsById.get(tunnelId);
-      tunnel.localChannel.clientClosed();
-      tunnelsById.remove(tunnelId);
-   }
+    public void clientCloseTunnel(String tunnelId) {
+        TunnelInfo tunnel = tunnelsById.get(tunnelId);
+        tunnel.localChannel.clientClosed();
+        tunnelsById.remove(tunnelId);
+    }
 
-   public void serverCloseTunnel(String tunnelId)
-   {
-      TunnelInfo tunnel = tunnelsById.get(tunnelId);
-      tunnel.closing.set(true);
+    public void serverCloseTunnel(String tunnelId) {
+        TunnelInfo tunnel = tunnelsById.get(tunnelId);
+        tunnel.closing.set(true);
 
-      Channel responseChannel = tunnel.responseChannel.getAndSet(null);
-      if (responseChannel == null)
-      {
-         // response channel is already in use, client will be notified
-         // of close at next opportunity
-         return;
-      }
+        Channel responseChannel = tunnel.responseChannel.getAndSet(null);
+        if (responseChannel == null) {
+            // response channel is already in use, client will be notified
+            // of close at next opportunity
+            return;
+        }
 
-      respondAndClose(responseChannel, HttpTunnelMessageUtils.createTunnelCloseResponse());
-      // client has been notified, forget the tunnel
-      tunnelsById.remove(tunnelId);
-   }
+        respondAndClose(responseChannel,
+                HttpTunnelMessageUtils.createTunnelCloseResponse());
+        // client has been notified, forget the tunnel
+        tunnelsById.remove(tunnelId);
+    }
 
-   public void routeOutboundData(String tunnelId, ChannelBuffer data, ChannelFuture writeFuture)
-   {
-      TunnelInfo tunnel = tunnelsById.get(tunnelId);
-      if (tunnel == null)
-      {
-         // tunnel is closed
-         if (LOG.isWarnEnabled())
-         {
-            LOG.warn("attempt made to send data out on tunnel id " + tunnelId + " which is unknown or closed");
-         }
-         return;
-      }
+    public void routeOutboundData(String tunnelId, ChannelBuffer data,
+            ChannelFuture writeFuture) {
+        TunnelInfo tunnel = tunnelsById.get(tunnelId);
+        if (tunnel == null) {
+            // tunnel is closed
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("attempt made to send data out on tunnel id " +
+                        tunnelId + " which is unknown or closed");
+            }
+            return;
+        }
 
-      ChannelFutureAggregator aggregator = new ChannelFutureAggregator(writeFuture);
-      List<ChannelBuffer> fragments = WriteSplitter.split(data, HttpTunnelMessageUtils.MAX_BODY_SIZE);
+        ChannelFutureAggregator aggregator =
+                new ChannelFutureAggregator(writeFuture);
+        List<ChannelBuffer> fragments =
+                WriteSplitter.split(data, HttpTunnelMessageUtils.MAX_BODY_SIZE);
 
-      if (LOG.isDebugEnabled())
-      {
-         LOG.debug("routing outbound data for tunnel " + tunnelId);
-      }
-      for (ChannelBuffer fragment : fragments)
-      {
-         ChannelFuture fragmentFuture = Channels.future(writeFuture.getChannel());
-         aggregator.addFuture(fragmentFuture);
-         tunnel.queuedResponses.offer(new QueuedResponse(fragment, fragmentFuture));
-      }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("routing outbound data for tunnel " + tunnelId);
+        }
+        for (ChannelBuffer fragment: fragments) {
+            ChannelFuture fragmentFuture =
+                    Channels.future(writeFuture.getChannel());
+            aggregator.addFuture(fragmentFuture);
+            tunnel.queuedResponses.offer(new QueuedResponse(fragment,
+                    fragmentFuture));
+        }
 
-      sendQueuedData(tunnel);
-   }
+        sendQueuedData(tunnel);
+    }
 
-   /**
-    * Used to pass the result received from one ChannelFutureListener to another verbatim.
-    */
-   private final class RelayedChannelFutureListener implements ChannelFutureListener
-   {
-      private final ChannelFuture originalFuture;
+    /**
+     * Used to pass the result received from one ChannelFutureListener to another verbatim.
+     */
+    private final class RelayedChannelFutureListener implements
+            ChannelFutureListener {
+        private final ChannelFuture originalFuture;
 
-      private RelayedChannelFutureListener(ChannelFuture originalFuture)
-      {
-         this.originalFuture = originalFuture;
-      }
+        private RelayedChannelFutureListener(ChannelFuture originalFuture) {
+            this.originalFuture = originalFuture;
+        }
 
-      public void operationComplete(ChannelFuture future) throws Exception
-      {
-         if (future.isSuccess())
-         {
-            originalFuture.setSuccess();
-         }
-         else
-         {
-            originalFuture.setFailure(future.getCause());
-         }
-      }
-   }
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (future.isSuccess()) {
+                originalFuture.setSuccess();
+            } else {
+                originalFuture.setFailure(future.getCause());
+            }
+        }
+    }
 
-   private static final class TunnelInfo
-   {
-      public String tunnelId;
+    private static final class TunnelInfo {
+        public String tunnelId;
 
-      public HttpTunnelAcceptedChannelReceiver localChannel;
+        public HttpTunnelAcceptedChannelReceiver localChannel;
 
-      public final AtomicReference<Channel> responseChannel = new AtomicReference<Channel>(null);
+        public final AtomicReference<Channel> responseChannel =
+                new AtomicReference<Channel>(null);
 
-      public final Queue<QueuedResponse> queuedResponses = new ConcurrentLinkedQueue<QueuedResponse>();
+        public final Queue<QueuedResponse> queuedResponses =
+                new ConcurrentLinkedQueue<QueuedResponse>();
 
-      public final AtomicBoolean closing = new AtomicBoolean(false);
-   }
+        public final AtomicBoolean closing = new AtomicBoolean(false);
+    }
 
-   private static final class QueuedResponse
-   {
-      public ChannelBuffer data;
+    private static final class QueuedResponse {
+        public ChannelBuffer data;
 
-      public ChannelFuture writeFuture;
+        public ChannelFuture writeFuture;
 
-      QueuedResponse(ChannelBuffer data, ChannelFuture writeFuture)
-      {
-         this.data = data;
-         this.writeFuture = writeFuture;
-      }
-   }
+        QueuedResponse(ChannelBuffer data, ChannelFuture writeFuture) {
+            this.data = data;
+            this.writeFuture = writeFuture;
+        }
+    }
 }

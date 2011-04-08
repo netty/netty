@@ -42,132 +42,118 @@ import org.junit.runner.RunWith;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 @RunWith(JMock.class)
-public class HttpTunnelServerChannelSinkTest
-{
+public class HttpTunnelServerChannelSinkTest {
 
-   private final JUnit4Mockery mockContext = new JUnit4Mockery();
+    private final JUnit4Mockery mockContext = new JUnit4Mockery();
 
-   private HttpTunnelServerChannelSink sink;
+    private HttpTunnelServerChannelSink sink;
 
-   private ChannelPipeline pipeline;
+    private ChannelPipeline pipeline;
 
-   private FakeSocketChannel channel;
+    private FakeSocketChannel channel;
 
-   ServerSocketChannel realChannel;
+    ServerSocketChannel realChannel;
 
-   ChannelFuture realFuture;
+    ChannelFuture realFuture;
 
-   Throwable exceptionInPipeline;
+    Throwable exceptionInPipeline;
 
-   @Before
-   public void setUp() throws Exception
-   {
-      realChannel = mockContext.mock(ServerSocketChannel.class);
-      pipeline = Channels.pipeline();
-      pipeline.addLast("exceptioncatcher", new ExceptionCatcher());
-      sink = new HttpTunnelServerChannelSink();
-      sink.setRealChannel(realChannel);
-      channel = new FakeSocketChannel(null, null, pipeline, sink);
-      realFuture = Channels.future(realChannel);
-   }
+    @Before
+    public void setUp() throws Exception {
+        realChannel = mockContext.mock(ServerSocketChannel.class);
+        pipeline = Channels.pipeline();
+        pipeline.addLast("exceptioncatcher", new ExceptionCatcher());
+        sink = new HttpTunnelServerChannelSink();
+        sink.setRealChannel(realChannel);
+        channel = new FakeSocketChannel(null, null, pipeline, sink);
+        realFuture = Channels.future(realChannel);
+    }
 
-   @After
-   public void teardown() throws Exception
-   {
-      assertTrue("exception caught in pipeline: " + exceptionInPipeline, exceptionInPipeline == null);
-   }
+    @After
+    public void teardown() throws Exception {
+        assertTrue("exception caught in pipeline: " + exceptionInPipeline,
+                exceptionInPipeline == null);
+    }
 
-   public void testCloseRequest() throws Exception
-   {
-      mockContext.checking(new Expectations()
-      {
-         {
-            one(realChannel).close();
-            will(returnValue(realFuture));
-         }
-      });
+    public void testCloseRequest() throws Exception {
+        mockContext.checking(new Expectations() {
+            {
+                one(realChannel).close();
+                will(returnValue(realFuture));
+            }
+        });
 
-      ChannelFuture virtualFuture1 = Channels.close(channel);
-      mockContext.assertIsSatisfied();
-      ChannelFuture virtualFuture = virtualFuture1;
-      realFuture.setSuccess();
-      assertTrue(virtualFuture.isSuccess());
-   }
+        ChannelFuture virtualFuture1 = Channels.close(channel);
+        mockContext.assertIsSatisfied();
+        ChannelFuture virtualFuture = virtualFuture1;
+        realFuture.setSuccess();
+        assertTrue(virtualFuture.isSuccess());
+    }
 
-   @Test
-   public void testUnbindRequest_withSuccess() throws Exception
-   {
-      ChannelFuture virtualFuture = checkUnbind();
-      realFuture.setSuccess();
-      assertTrue(virtualFuture.isSuccess());
-   }
+    @Test
+    public void testUnbindRequest_withSuccess() throws Exception {
+        ChannelFuture virtualFuture = checkUnbind();
+        realFuture.setSuccess();
+        assertTrue(virtualFuture.isSuccess());
+    }
 
-   @Test
-   public void testUnbindRequest_withFailure() throws Exception
-   {
-      ChannelFuture virtualFuture = checkUnbind();
-      realFuture.setFailure(new Exception("Something bad happened"));
-      assertFalse(virtualFuture.isSuccess());
-   }
+    @Test
+    public void testUnbindRequest_withFailure() throws Exception {
+        ChannelFuture virtualFuture = checkUnbind();
+        realFuture.setFailure(new Exception("Something bad happened"));
+        assertFalse(virtualFuture.isSuccess());
+    }
 
-   private ChannelFuture checkUnbind()
-   {
-      mockContext.checking(new Expectations()
-      {
-         {
-            one(realChannel).unbind();
-            will(returnValue(realFuture));
-         }
-      });
+    private ChannelFuture checkUnbind() {
+        mockContext.checking(new Expectations() {
+            {
+                one(realChannel).unbind();
+                will(returnValue(realFuture));
+            }
+        });
 
-      ChannelFuture virtualFuture = Channels.unbind(channel);
-      mockContext.assertIsSatisfied();
-      return virtualFuture;
-   }
+        ChannelFuture virtualFuture = Channels.unbind(channel);
+        mockContext.assertIsSatisfied();
+        return virtualFuture;
+    }
 
-   @Test
-   public void testBindRequest_withSuccess()
-   {
-      ChannelFuture virtualFuture = checkBind();
-      realFuture.setSuccess();
-      assertTrue(virtualFuture.isSuccess());
-   }
+    @Test
+    public void testBindRequest_withSuccess() {
+        ChannelFuture virtualFuture = checkBind();
+        realFuture.setSuccess();
+        assertTrue(virtualFuture.isSuccess());
+    }
 
-   @Test
-   public void testBindRequest_withFailure()
-   {
-      ChannelFuture virtualFuture = checkBind();
-      realFuture.setFailure(new Exception("Something bad happened"));
-      assertFalse(virtualFuture.isSuccess());
-   }
+    @Test
+    public void testBindRequest_withFailure() {
+        ChannelFuture virtualFuture = checkBind();
+        realFuture.setFailure(new Exception("Something bad happened"));
+        assertFalse(virtualFuture.isSuccess());
+    }
 
-   private ChannelFuture checkBind()
-   {
-      final SocketAddress toAddress = new InetSocketAddress(80);
-      mockContext.checking(new Expectations()
-      {
-         {
-            one(realChannel).bind(toAddress);
-            will(returnValue(realFuture));
-         }
-      });
+    private ChannelFuture checkBind() {
+        final SocketAddress toAddress = new InetSocketAddress(80);
+        mockContext.checking(new Expectations() {
+            {
+                one(realChannel).bind(toAddress);
+                will(returnValue(realFuture));
+            }
+        });
 
-      ChannelFuture virtualFuture = Channels.bind(channel, toAddress);
-      return virtualFuture;
-   }
+        ChannelFuture virtualFuture = Channels.bind(channel, toAddress);
+        return virtualFuture;
+    }
 
-   private final class ExceptionCatcher extends SimpleChannelUpstreamHandler
-   {
+    private final class ExceptionCatcher extends SimpleChannelUpstreamHandler {
 
-      ExceptionCatcher()
-      {
-         super();
-      }
+        ExceptionCatcher() {
+            super();
+        }
 
-      @Override
-      public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception
-      {
-         exceptionInPipeline = e.getCause();
-      }
-   }
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+                throws Exception {
+            exceptionInPipeline = e.getCause();
+        }
+    }
 }

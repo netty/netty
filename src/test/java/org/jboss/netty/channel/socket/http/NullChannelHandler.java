@@ -25,17 +25,17 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
-public class NullChannelHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler
-{
+public class NullChannelHandler implements ChannelUpstreamHandler,
+        ChannelDownstreamHandler {
 
-   public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception
-   {
-      ctx.sendUpstream(e);
-   }
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
+            throws Exception {
+        ctx.sendUpstream(e);
+    }
 
-   public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception
-   {
-      ctx.sendDownstream(e);
-   }
+    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
+            throws Exception {
+        ctx.sendDownstream(e);
+    }
 
 }

@@ -30,70 +30,57 @@ import org.jboss.netty.channel.socket.ServerSocketChannel;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-class HttpTunnelServerChannelSink extends AbstractChannelSink
-{
+class HttpTunnelServerChannelSink extends AbstractChannelSink {
 
-   private ChannelFutureListener closeHook;
+    private ChannelFutureListener closeHook;
 
-   private ServerSocketChannel realChannel;
+    private ServerSocketChannel realChannel;
 
-   public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception
-   {
+    public void eventSunk(ChannelPipeline pipeline, ChannelEvent e)
+            throws Exception {
 
-      if (e instanceof ChannelStateEvent)
-      {
-         ChannelStateEvent ev = (ChannelStateEvent) e;
-         switch (ev.getState())
-         {
-            case OPEN :
-               if (Boolean.FALSE.equals(ev.getValue()))
-               {
-                  realChannel.close().addListener(closeHook);
-               }
-               break;
-            case BOUND :
-               if (ev.getValue() != null)
-               {
-                  realChannel.bind((SocketAddress) ev.getValue()).addListener(new ChannelFutureProxy(e.getFuture()));
-               }
-               else
-               {
-                  realChannel.unbind().addListener(new ChannelFutureProxy(e.getFuture()));
-               }
-               break;
-         }
-      }
-   }
+        if (e instanceof ChannelStateEvent) {
+            ChannelStateEvent ev = (ChannelStateEvent) e;
+            switch (ev.getState()) {
+            case OPEN:
+                if (Boolean.FALSE.equals(ev.getValue())) {
+                    realChannel.close().addListener(closeHook);
+                }
+                break;
+            case BOUND:
+                if (ev.getValue() != null) {
+                    realChannel.bind((SocketAddress) ev.getValue())
+                            .addListener(new ChannelFutureProxy(e.getFuture()));
+                } else {
+                    realChannel.unbind().addListener(
+                            new ChannelFutureProxy(e.getFuture()));
+                }
+                break;
+            }
+        }
+    }
 
-   private final class ChannelFutureProxy implements ChannelFutureListener
-   {
-      private final ChannelFuture upstreamFuture;
+    private final class ChannelFutureProxy implements ChannelFutureListener {
+        private final ChannelFuture upstreamFuture;
 
-      ChannelFutureProxy(ChannelFuture upstreamFuture)
-      {
-         this.upstreamFuture = upstreamFuture;
-      }
+        ChannelFutureProxy(ChannelFuture upstreamFuture) {
+            this.upstreamFuture = upstreamFuture;
+        }
 
-      public void operationComplete(ChannelFuture future) throws Exception
-      {
-         if (future.isSuccess())
-         {
-            upstreamFuture.setSuccess();
-         }
-         else
-         {
-            upstreamFuture.setFailure(future.getCause());
-         }
-      }
-   }
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (future.isSuccess()) {
+                upstreamFuture.setSuccess();
+            } else {
+                upstreamFuture.setFailure(future.getCause());
+            }
+        }
+    }
 
-   public void setRealChannel(ServerSocketChannel realChannel)
-   {
-      this.realChannel = realChannel;
-   }
+    public void setRealChannel(ServerSocketChannel realChannel) {
+        this.realChannel = realChannel;
+    }
 
-   public void setCloseListener(ChannelFutureListener closeHook)
-   {
-      this.closeHook = closeHook;
-   }
+    public void setCloseListener(ChannelFutureListener closeHook) {
+        this.closeHook = closeHook;
+    }
 }

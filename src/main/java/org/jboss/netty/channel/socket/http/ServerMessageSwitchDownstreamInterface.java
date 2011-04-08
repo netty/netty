@@ -26,11 +26,11 @@ import org.jboss.netty.channel.ChannelFuture;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-interface ServerMessageSwitchDownstreamInterface
-{
+interface ServerMessageSwitchDownstreamInterface {
 
-   public void serverCloseTunnel(String tunnelId);
+    public void serverCloseTunnel(String tunnelId);
 
-   public void routeOutboundData(String tunnelId, ChannelBuffer data, ChannelFuture writeFuture);
+    public void routeOutboundData(String tunnelId, ChannelBuffer data,
+            ChannelFuture writeFuture);
 
 }

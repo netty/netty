@@ -41,207 +41,216 @@ import org.junit.runner.RunWith;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 @RunWith(JMock.class)
-public class AcceptedServerChannelRequestDispatchTest
-{
+public class AcceptedServerChannelRequestDispatchTest {
 
-   private static final String HOST = "test.server.com";
+    private static final String HOST = "test.server.com";
 
-   private static final String KNOWN_TUNNEL_ID = "1";
+    private static final String KNOWN_TUNNEL_ID = "1";
 
-   protected static final String UNKNOWN_TUNNEL_ID = "unknownTunnel";
+    protected static final String UNKNOWN_TUNNEL_ID = "unknownTunnel";
 
-   JUnit4Mockery mockContext = new JUnit4Mockery();
+    JUnit4Mockery mockContext = new JUnit4Mockery();
 
-   private AcceptedServerChannelRequestDispatch handler;
+    private AcceptedServerChannelRequestDispatch handler;
 
-   FakeSocketChannel channel;
+    FakeSocketChannel channel;
 
-   private FakeChannelSink sink;
+    private FakeChannelSink sink;
 
-   ServerMessageSwitchUpstreamInterface messageSwitch;
+    ServerMessageSwitchUpstreamInterface messageSwitch;
 
-   @Before
-   public void setUp() throws Exception
-   {
-      ChannelPipeline pipeline = Channels.pipeline();
-      messageSwitch = mockContext.mock(ServerMessageSwitchUpstreamInterface.class);
-      handler = new AcceptedServerChannelRequestDispatch(messageSwitch);
-      pipeline.addLast(AcceptedServerChannelRequestDispatch.NAME, handler);
-      sink = new FakeChannelSink();
-      channel = new FakeSocketChannel(null, null, pipeline, sink);
-      channel.remoteAddress = InetSocketAddress.createUnresolved("test.client.com", 51231);
+    @Before
+    public void setUp() throws Exception {
+        ChannelPipeline pipeline = Channels.pipeline();
+        messageSwitch =
+                mockContext.mock(ServerMessageSwitchUpstreamInterface.class);
+        handler = new AcceptedServerChannelRequestDispatch(messageSwitch);
+        pipeline.addLast(AcceptedServerChannelRequestDispatch.NAME, handler);
+        sink = new FakeChannelSink();
+        channel = new FakeSocketChannel(null, null, pipeline, sink);
+        channel.remoteAddress =
+                InetSocketAddress.createUnresolved("test.client.com", 51231);
 
-      mockContext.checking(new Expectations()
-      {
-         {
-            ignoring(messageSwitch).isOpenTunnel(KNOWN_TUNNEL_ID);
-            will(returnValue(true));
-         }
-      });
-   }
+        mockContext.checking(new Expectations() {
+            {
+                ignoring(messageSwitch).isOpenTunnel(KNOWN_TUNNEL_ID);
+                will(returnValue(true));
+            }
+        });
+    }
 
-   @Test
-   public void testTunnelOpenRequest()
-   {
-      mockContext.checking(new Expectations()
-      {
-         {
-            one(messageSwitch).createTunnel(channel.remoteAddress);
-            will(returnValue(KNOWN_TUNNEL_ID));
-         }
-      });
+    @Test
+    public void testTunnelOpenRequest() {
+        mockContext.checking(new Expectations() {
+            {
+                one(messageSwitch).createTunnel(channel.remoteAddress);
+                will(returnValue(KNOWN_TUNNEL_ID));
+            }
+        });
 
-      Channels.fireMessageReceived(channel, HttpTunnelMessageUtils.createOpenTunnelRequest(HOST));
-      assertEquals(1, sink.events.size());
-      HttpResponse response = NettyTestUtils.checkIsDownstreamMessageEvent(sink.events.poll(), HttpResponse.class);
-      assertTrue(HttpTunnelMessageUtils.isTunnelOpenResponse(response));
-   }
+        Channels.fireMessageReceived(channel,
+                HttpTunnelMessageUtils.createOpenTunnelRequest(HOST));
+        assertEquals(1, sink.events.size());
+        HttpResponse response =
+                NettyTestUtils.checkIsDownstreamMessageEvent(
+                        sink.events.poll(), HttpResponse.class);
+        assertTrue(HttpTunnelMessageUtils.isTunnelOpenResponse(response));
+    }
 
-   @Test
-   public void testTunnelCloseRequest()
-   {
-      mockContext.checking(new Expectations()
-      {
-         {
-            one(messageSwitch).clientCloseTunnel(KNOWN_TUNNEL_ID);
-         }
-      });
+    @Test
+    public void testTunnelCloseRequest() {
+        mockContext.checking(new Expectations() {
+            {
+                one(messageSwitch).clientCloseTunnel(KNOWN_TUNNEL_ID);
+            }
+        });
 
-      HttpRequest request = HttpTunnelMessageUtils.createCloseTunnelRequest(HOST, KNOWN_TUNNEL_ID);
-      Channels.fireMessageReceived(channel, request);
-      assertEquals(1, sink.events.size());
-      ChannelEvent responseEvent = sink.events.poll();
-      HttpResponse response = NettyTestUtils.checkIsDownstreamMessageEvent(responseEvent, HttpResponse.class);
-      assertTrue(HttpTunnelMessageUtils.isTunnelCloseResponse(response));
-      checkClosesAfterWrite(responseEvent);
-   }
+        HttpRequest request =
+                HttpTunnelMessageUtils.createCloseTunnelRequest(HOST,
+                        KNOWN_TUNNEL_ID);
+        Channels.fireMessageReceived(channel, request);
+        assertEquals(1, sink.events.size());
+        ChannelEvent responseEvent = sink.events.poll();
+        HttpResponse response =
+                NettyTestUtils.checkIsDownstreamMessageEvent(responseEvent,
+                        HttpResponse.class);
+        assertTrue(HttpTunnelMessageUtils.isTunnelCloseResponse(response));
+        checkClosesAfterWrite(responseEvent);
+    }
 
-   @Test
-   public void testTunnelCloseRequestWithoutTunnelIdRejected()
-   {
-      HttpRequest request = HttpTunnelMessageUtils.createCloseTunnelRequest(HOST, null);
-      checkRequestWithoutTunnelIdIsRejected(request);
-   }
+    @Test
+    public void testTunnelCloseRequestWithoutTunnelIdRejected() {
+        HttpRequest request =
+                HttpTunnelMessageUtils.createCloseTunnelRequest(HOST, null);
+        checkRequestWithoutTunnelIdIsRejected(request);
+    }
 
-   @Test
-   public void testTunnelCloseRequestWithUnknownTunnelId()
-   {
-      HttpRequest request = HttpTunnelMessageUtils.createCloseTunnelRequest(HOST, UNKNOWN_TUNNEL_ID);
-      checkRequestWithUnknownTunnelIdIsRejected(request);
-   }
+    @Test
+    public void testTunnelCloseRequestWithUnknownTunnelId() {
+        HttpRequest request =
+                HttpTunnelMessageUtils.createCloseTunnelRequest(HOST,
+                        UNKNOWN_TUNNEL_ID);
+        checkRequestWithUnknownTunnelIdIsRejected(request);
+    }
 
-   @Test
-   public void testSendDataRequest()
-   {
-      final ChannelBuffer expectedData = ChannelBuffers.dynamicBuffer();
-      expectedData.writeLong(1234L);
-      mockContext.checking(new Expectations()
-      {
-         {
-            one(messageSwitch).routeInboundData(KNOWN_TUNNEL_ID, expectedData);
-         }
-      });
+    @Test
+    public void testSendDataRequest() {
+        final ChannelBuffer expectedData = ChannelBuffers.dynamicBuffer();
+        expectedData.writeLong(1234L);
+        mockContext.checking(new Expectations() {
+            {
+                one(messageSwitch).routeInboundData(KNOWN_TUNNEL_ID,
+                        expectedData);
+            }
+        });
 
-      HttpRequest request = HttpTunnelMessageUtils.createSendDataRequest(HOST, KNOWN_TUNNEL_ID, expectedData);
-      Channels.fireMessageReceived(channel, request);
+        HttpRequest request =
+                HttpTunnelMessageUtils.createSendDataRequest(HOST,
+                        KNOWN_TUNNEL_ID, expectedData);
+        Channels.fireMessageReceived(channel, request);
 
-      assertEquals(1, sink.events.size());
-      HttpResponse response = NettyTestUtils.checkIsDownstreamMessageEvent(sink.events.poll(), HttpResponse.class);
-      assertTrue(HttpTunnelMessageUtils.isOKResponse(response));
-   }
+        assertEquals(1, sink.events.size());
+        HttpResponse response =
+                NettyTestUtils.checkIsDownstreamMessageEvent(
+                        sink.events.poll(), HttpResponse.class);
+        assertTrue(HttpTunnelMessageUtils.isOKResponse(response));
+    }
 
-   @Test
-   public void testSendDataRequestWithNoContentRejected()
-   {
-      HttpRequest request = HttpTunnelMessageUtils.createSendDataRequest(HOST, KNOWN_TUNNEL_ID,
-            ChannelBuffers.dynamicBuffer());
-      Channels.fireMessageReceived(channel, request);
+    @Test
+    public void testSendDataRequestWithNoContentRejected() {
+        HttpRequest request =
+                HttpTunnelMessageUtils.createSendDataRequest(HOST,
+                        KNOWN_TUNNEL_ID, ChannelBuffers.dynamicBuffer());
+        Channels.fireMessageReceived(channel, request);
 
-      assertEquals(1, sink.events.size());
-      checkResponseIsRejection("Send data requests must contain data");
-   }
+        assertEquals(1, sink.events.size());
+        checkResponseIsRejection("Send data requests must contain data");
+    }
 
-   @Test
-   public void testSendDataRequestForUnknownTunnelIdRejected()
-   {
-      HttpRequest request = HttpTunnelMessageUtils.createSendDataRequest(HOST, UNKNOWN_TUNNEL_ID,
-            ChannelBuffers.dynamicBuffer());
-      checkRequestWithUnknownTunnelIdIsRejected(request);
-   }
+    @Test
+    public void testSendDataRequestForUnknownTunnelIdRejected() {
+        HttpRequest request =
+                HttpTunnelMessageUtils.createSendDataRequest(HOST,
+                        UNKNOWN_TUNNEL_ID, ChannelBuffers.dynamicBuffer());
+        checkRequestWithUnknownTunnelIdIsRejected(request);
+    }
 
-   @Test
-   public void testSendDataRequestWithoutTunnelIdRejected()
-   {
-      HttpRequest request = HttpTunnelMessageUtils.createSendDataRequest(HOST, null, ChannelBuffers.dynamicBuffer());
-      checkRequestWithoutTunnelIdIsRejected(request);
-   }
+    @Test
+    public void testSendDataRequestWithoutTunnelIdRejected() {
+        HttpRequest request =
+                HttpTunnelMessageUtils.createSendDataRequest(HOST, null,
+                        ChannelBuffers.dynamicBuffer());
+        checkRequestWithoutTunnelIdIsRejected(request);
+    }
 
-   @Test
-   public void testReceiveDataRequest()
-   {
-      mockContext.checking(new Expectations()
-      {
-         {
-            one(messageSwitch).pollOutboundData(KNOWN_TUNNEL_ID, channel);
-         }
-      });
-      HttpRequest request = HttpTunnelMessageUtils.createReceiveDataRequest(HOST, KNOWN_TUNNEL_ID);
-      Channels.fireMessageReceived(channel, request);
-   }
+    @Test
+    public void testReceiveDataRequest() {
+        mockContext.checking(new Expectations() {
+            {
+                one(messageSwitch).pollOutboundData(KNOWN_TUNNEL_ID, channel);
+            }
+        });
+        HttpRequest request =
+                HttpTunnelMessageUtils.createReceiveDataRequest(HOST,
+                        KNOWN_TUNNEL_ID);
+        Channels.fireMessageReceived(channel, request);
+    }
 
-   @Test
-   public void testReceiveDataRequestWithoutTunnelIdRejected()
-   {
-      HttpRequest request = HttpTunnelMessageUtils.createReceiveDataRequest(HOST, null);
-      checkRequestWithoutTunnelIdIsRejected(request);
-   }
+    @Test
+    public void testReceiveDataRequestWithoutTunnelIdRejected() {
+        HttpRequest request =
+                HttpTunnelMessageUtils.createReceiveDataRequest(HOST, null);
+        checkRequestWithoutTunnelIdIsRejected(request);
+    }
 
-   @Test
-   public void testReceiveDataRequestForUnknownTunnelIdRejected()
-   {
-      HttpRequest request = HttpTunnelMessageUtils.createReceiveDataRequest(HOST, UNKNOWN_TUNNEL_ID);
-      checkRequestWithUnknownTunnelIdIsRejected(request);
-   }
+    @Test
+    public void testReceiveDataRequestForUnknownTunnelIdRejected() {
+        HttpRequest request =
+                HttpTunnelMessageUtils.createReceiveDataRequest(HOST,
+                        UNKNOWN_TUNNEL_ID);
+        checkRequestWithUnknownTunnelIdIsRejected(request);
+    }
 
-   private void checkRequestWithoutTunnelIdIsRejected(HttpRequest request)
-   {
-      Channels.fireMessageReceived(channel, request);
-      assertEquals(1, sink.events.size());
-      ChannelEvent responseEvent = checkResponseIsRejection("no tunnel id specified in request");
-      checkClosesAfterWrite(responseEvent);
-   }
+    private void checkRequestWithoutTunnelIdIsRejected(HttpRequest request) {
+        Channels.fireMessageReceived(channel, request);
+        assertEquals(1, sink.events.size());
+        ChannelEvent responseEvent =
+                checkResponseIsRejection("no tunnel id specified in request");
+        checkClosesAfterWrite(responseEvent);
+    }
 
-   private void checkRequestWithUnknownTunnelIdIsRejected(HttpRequest request)
-   {
-      mockContext.checking(new Expectations()
-      {
-         {
-            one(messageSwitch).isOpenTunnel(UNKNOWN_TUNNEL_ID);
-            will(returnValue(false));
-         }
-      });
+    private void checkRequestWithUnknownTunnelIdIsRejected(HttpRequest request) {
+        mockContext.checking(new Expectations() {
+            {
+                one(messageSwitch).isOpenTunnel(UNKNOWN_TUNNEL_ID);
+                will(returnValue(false));
+            }
+        });
 
-      Channels.fireMessageReceived(channel, request);
-      assertEquals(1, sink.events.size());
-      ChannelEvent responseEvent = checkResponseIsRejection("specified tunnel is either closed or does not exist");
-      checkClosesAfterWrite(responseEvent);
-   }
+        Channels.fireMessageReceived(channel, request);
+        assertEquals(1, sink.events.size());
+        ChannelEvent responseEvent =
+                checkResponseIsRejection("specified tunnel is either closed or does not exist");
+        checkClosesAfterWrite(responseEvent);
+    }
 
-   private ChannelEvent checkResponseIsRejection(String errorMessage)
-   {
-      ChannelEvent responseEvent = sink.events.poll();
+    private ChannelEvent checkResponseIsRejection(String errorMessage) {
+        ChannelEvent responseEvent = sink.events.poll();
 
-      HttpResponse response = NettyTestUtils.checkIsDownstreamMessageEvent(responseEvent, HttpResponse.class);
-      assertTrue(HttpTunnelMessageUtils.isRejection(response));
-      assertEquals(errorMessage, HttpTunnelMessageUtils.extractErrorMessage(response));
+        HttpResponse response =
+                NettyTestUtils.checkIsDownstreamMessageEvent(responseEvent,
+                        HttpResponse.class);
+        assertTrue(HttpTunnelMessageUtils.isRejection(response));
+        assertEquals(errorMessage,
+                HttpTunnelMessageUtils.extractErrorMessage(response));
 
-      return responseEvent;
-   }
+        return responseEvent;
+    }
 
-   private void checkClosesAfterWrite(ChannelEvent responseEvent)
-   {
-      responseEvent.getFuture().setSuccess();
-      assertEquals(1, sink.events.size());
-      NettyTestUtils.checkIsStateEvent(sink.events.poll(), ChannelState.OPEN, false);
-   }
+    private void checkClosesAfterWrite(ChannelEvent responseEvent) {
+        responseEvent.getFuture().setSuccess();
+        assertEquals(1, sink.events.size());
+        NettyTestUtils.checkIsStateEvent(sink.events.poll(), ChannelState.OPEN,
+                false);
+    }
 }

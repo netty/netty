@@ -37,42 +37,38 @@ import org.jboss.netty.channel.SimpleChannelDownstreamHandler;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-public class WriteFragmenter extends SimpleChannelDownstreamHandler
-{
+public class WriteFragmenter extends SimpleChannelDownstreamHandler {
 
-   public static final String NAME = "writeFragmenter";
+    public static final String NAME = "writeFragmenter";
 
-   private int splitThreshold;
+    private int splitThreshold;
 
-   public WriteFragmenter(int splitThreshold)
-   {
-      this.splitThreshold = splitThreshold;
-   }
+    public WriteFragmenter(int splitThreshold) {
+        this.splitThreshold = splitThreshold;
+    }
 
-   public void setSplitThreshold(int splitThreshold)
-   {
-      this.splitThreshold = splitThreshold;
-   }
+    public void setSplitThreshold(int splitThreshold) {
+        this.splitThreshold = splitThreshold;
+    }
 
-   @Override
-   public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception
-   {
-      ChannelBuffer data = (ChannelBuffer) e.getMessage();
+    @Override
+    public void writeRequested(ChannelHandlerContext ctx, MessageEvent e)
+            throws Exception {
+        ChannelBuffer data = (ChannelBuffer) e.getMessage();
 
-      if (data.readableBytes() <= splitThreshold)
-      {
-         super.writeRequested(ctx, e);
-      }
-      else
-      {
-         List<ChannelBuffer> fragments = WriteSplitter.split(data, splitThreshold);
-         ChannelFutureAggregator aggregator = new ChannelFutureAggregator(e.getFuture());
-         for (ChannelBuffer fragment : fragments)
-         {
-            ChannelFuture fragmentFuture = Channels.future(ctx.getChannel(), true);
-            aggregator.addFuture(fragmentFuture);
-            Channels.write(ctx, fragmentFuture, fragment);
-         }
-      }
-   }
+        if (data.readableBytes() <= splitThreshold) {
+            super.writeRequested(ctx, e);
+        } else {
+            List<ChannelBuffer> fragments =
+                    WriteSplitter.split(data, splitThreshold);
+            ChannelFutureAggregator aggregator =
+                    new ChannelFutureAggregator(e.getFuture());
+            for (ChannelBuffer fragment: fragments) {
+                ChannelFuture fragmentFuture =
+                        Channels.future(ctx.getChannel(), true);
+                aggregator.addFuture(fragmentFuture);
+                Channels.write(ctx, fragmentFuture, fragment);
+            }
+        }
+    }
 }

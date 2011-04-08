@@ -29,31 +29,29 @@ import org.jboss.netty.buffer.ChannelBuffers;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-public final class WriteSplitter
-{
+public final class WriteSplitter {
 
-   public static List<ChannelBuffer> split(ChannelBuffer buffer, int splitThreshold)
-   {
-      int listSize = (int) ((float) buffer.readableBytes() / splitThreshold);
-      ArrayList<ChannelBuffer> fragmentList = new ArrayList<ChannelBuffer>(listSize);
+    public static List<ChannelBuffer> split(ChannelBuffer buffer,
+            int splitThreshold) {
+        int listSize = (int) ((float) buffer.readableBytes() / splitThreshold);
+        ArrayList<ChannelBuffer> fragmentList =
+                new ArrayList<ChannelBuffer>(listSize);
 
-      if (buffer.readableBytes() > splitThreshold)
-      {
-         int slicePosition = buffer.readerIndex();
-         while (slicePosition < buffer.writerIndex())
-         {
-            int chunkSize = Math.min(splitThreshold, buffer.writerIndex() - slicePosition);
-            ChannelBuffer chunk = buffer.slice(slicePosition, chunkSize);
-            fragmentList.add(chunk);
-            slicePosition += chunkSize;
-         }
-      }
-      else
-      {
-         fragmentList.add(ChannelBuffers.wrappedBuffer(buffer));
-      }
+        if (buffer.readableBytes() > splitThreshold) {
+            int slicePosition = buffer.readerIndex();
+            while (slicePosition < buffer.writerIndex()) {
+                int chunkSize =
+                        Math.min(splitThreshold, buffer.writerIndex() -
+                                slicePosition);
+                ChannelBuffer chunk = buffer.slice(slicePosition, chunkSize);
+                fragmentList.add(chunk);
+                slicePosition += chunkSize;
+            }
+        } else {
+            fragmentList.add(ChannelBuffers.wrappedBuffer(buffer));
+        }
 
-      return fragmentList;
-   }
+        return fragmentList;
+    }
 
 }

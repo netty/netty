@@ -30,28 +30,28 @@ import org.jboss.netty.channel.Channel;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-interface ServerMessageSwitchUpstreamInterface
-{
+interface ServerMessageSwitchUpstreamInterface {
 
-   public String createTunnel(InetSocketAddress remoteAddress);
+    public String createTunnel(InetSocketAddress remoteAddress);
 
-   public boolean isOpenTunnel(String tunnelId);
+    public boolean isOpenTunnel(String tunnelId);
 
-   public void clientCloseTunnel(String tunnelId);
+    public void clientCloseTunnel(String tunnelId);
 
-   /**
-    * Passes some received data from a client for forwarding to the server's view
-    * of the tunnel.
-    * @return the current status of the tunnel. ALIVE indicates the tunnel is still
-    * functional, CLOSED indicates it is closed and the client should be notified
-    * of this (and will be forgotten after this notification).
-    */
-   public TunnelStatus routeInboundData(String tunnelId, ChannelBuffer inboundData);
+    /**
+     * Passes some received data from a client for forwarding to the server's view
+     * of the tunnel.
+     * @return the current status of the tunnel. ALIVE indicates the tunnel is still
+     * functional, CLOSED indicates it is closed and the client should be notified
+     * of this (and will be forgotten after this notification).
+     */
+    public TunnelStatus routeInboundData(String tunnelId,
+            ChannelBuffer inboundData);
 
-   public void pollOutboundData(String tunnelId, Channel responseChannel);
+    public void pollOutboundData(String tunnelId, Channel responseChannel);
 
-   public static enum TunnelStatus {
-      ALIVE, CLOSED
-   }
+    public static enum TunnelStatus {
+        ALIVE, CLOSED
+    }
 
 }

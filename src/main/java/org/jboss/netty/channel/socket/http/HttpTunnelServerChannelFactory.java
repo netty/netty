@@ -27,39 +27,40 @@ import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-public class HttpTunnelServerChannelFactory implements ServerSocketChannelFactory
-{
+public class HttpTunnelServerChannelFactory implements
+        ServerSocketChannelFactory {
 
-   private final ServerSocketChannelFactory realConnectionFactory;
+    private final ServerSocketChannelFactory realConnectionFactory;
 
-   private final ChannelGroup realConnections;
+    private final ChannelGroup realConnections;
 
-   public HttpTunnelServerChannelFactory(ServerSocketChannelFactory realConnectionFactory)
-   {
-      this.realConnectionFactory = realConnectionFactory;
-      realConnections = new DefaultChannelGroup();
-   }
+    public HttpTunnelServerChannelFactory(
+            ServerSocketChannelFactory realConnectionFactory) {
+        this.realConnectionFactory = realConnectionFactory;
+        realConnections = new DefaultChannelGroup();
+    }
 
-   public HttpTunnelServerChannel newChannel(ChannelPipeline pipeline)
-   {
-      return new HttpTunnelServerChannel(this, pipeline);
-   }
+    public HttpTunnelServerChannel newChannel(ChannelPipeline pipeline) {
+        return new HttpTunnelServerChannel(this, pipeline);
+    }
 
-   ServerSocketChannel createRealChannel(HttpTunnelServerChannel channel, ServerMessageSwitch messageSwitch)
-   {
-      ChannelPipeline realChannelPipeline = Channels.pipeline();
-      AcceptedServerChannelPipelineFactory realPipelineFactory = new AcceptedServerChannelPipelineFactory(messageSwitch);
-      realChannelPipeline.addFirst(TunnelWrappedServerChannelHandler.NAME, new TunnelWrappedServerChannelHandler(
-            channel, realPipelineFactory, realConnections));
-      ServerSocketChannel newChannel = realConnectionFactory.newChannel(realChannelPipeline);
-      realConnections.add(newChannel);
-      return newChannel;
-   }
+    ServerSocketChannel createRealChannel(HttpTunnelServerChannel channel,
+            ServerMessageSwitch messageSwitch) {
+        ChannelPipeline realChannelPipeline = Channels.pipeline();
+        AcceptedServerChannelPipelineFactory realPipelineFactory =
+                new AcceptedServerChannelPipelineFactory(messageSwitch);
+        realChannelPipeline.addFirst(TunnelWrappedServerChannelHandler.NAME,
+                new TunnelWrappedServerChannelHandler(channel,
+                        realPipelineFactory, realConnections));
+        ServerSocketChannel newChannel =
+                realConnectionFactory.newChannel(realChannelPipeline);
+        realConnections.add(newChannel);
+        return newChannel;
+    }
 
-   public void releaseExternalResources()
-   {
-      realConnections.close().awaitUninterruptibly();
-      realConnectionFactory.releaseExternalResources();
-   }
+    public void releaseExternalResources() {
+        realConnections.close().awaitUninterruptibly();
+        realConnectionFactory.releaseExternalResources();
+    }
 
 }

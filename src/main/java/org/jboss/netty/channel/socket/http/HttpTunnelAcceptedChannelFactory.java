@@ -26,9 +26,9 @@ import java.net.InetSocketAddress;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-interface HttpTunnelAcceptedChannelFactory
-{
-   public HttpTunnelAcceptedChannelReceiver newChannel(String newTunnelId, InetSocketAddress remoteAddress);
+interface HttpTunnelAcceptedChannelFactory {
+    public HttpTunnelAcceptedChannelReceiver newChannel(String newTunnelId,
+            InetSocketAddress remoteAddress);
 
-   public String generateTunnelId();
+    public String generateTunnelId();
 }

@@ -37,97 +37,95 @@ import org.jboss.netty.channel.MessageEvent;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-class HttpTunnelAcceptedChannelSink extends AbstractChannelSink
-{
-   
-   private final SaturationManager saturationManager;
-   private final ServerMessageSwitchDownstreamInterface messageSwitch;
+class HttpTunnelAcceptedChannelSink extends AbstractChannelSink {
 
-   private final String tunnelId;
+    private final SaturationManager saturationManager;
 
-   private AtomicBoolean active = new AtomicBoolean(false);
-   private HttpTunnelAcceptedChannelConfig config;
+    private final ServerMessageSwitchDownstreamInterface messageSwitch;
 
-   public HttpTunnelAcceptedChannelSink(ServerMessageSwitchDownstreamInterface messageSwitch, String tunnelId, HttpTunnelAcceptedChannelConfig config)
-   {
-      this.messageSwitch = messageSwitch;
-      this.tunnelId = tunnelId;
-      this.config = config;
-      this.saturationManager = new SaturationManager(config.getWriteBufferLowWaterMark(), config.getWriteBufferHighWaterMark());
-   }
+    private final String tunnelId;
 
-   public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) throws Exception
-   {
-      if (e instanceof MessageEvent)
-      {
-         handleMessageEvent((MessageEvent) e);
-      }
-      else if (e instanceof ChannelStateEvent)
-      {
-         handleStateEvent((ChannelStateEvent) e);
-      }
-   }
+    private AtomicBoolean active = new AtomicBoolean(false);
 
-   private void handleMessageEvent(MessageEvent ev)
-   {
-      if (!(ev.getMessage() instanceof ChannelBuffer))
-      {
-         throw new IllegalArgumentException("Attempt to send data which is not a ChannelBuffer:" + ev.getMessage());
-      }
-      
-      final HttpTunnelAcceptedChannelReceiver channel = (HttpTunnelAcceptedChannelReceiver) ev.getChannel();
-      final ChannelBuffer message = (ChannelBuffer) ev.getMessage();
-      final int messageSize = message.readableBytes();
-      final ChannelFuture future = ev.getFuture();
-      
-      saturationManager.updateThresholds(config.getWriteBufferLowWaterMark(), config.getWriteBufferHighWaterMark());
-      channel.updateInterestOps(saturationManager.queueSizeChanged(messageSize));
-      future.addListener(new ChannelFutureListener()
-      {
-         
-         @Override
-         public void operationComplete(ChannelFuture future) throws Exception
-         {
-            channel.updateInterestOps(saturationManager.queueSizeChanged(-messageSize));
-         }
-      });
-      messageSwitch.routeOutboundData(tunnelId, message, future);
-   }
+    private HttpTunnelAcceptedChannelConfig config;
 
-   private void handleStateEvent(ChannelStateEvent ev)
-   {
-      /* TODO: as any of disconnect, unbind or close destroys a server
-         channel, should we fire all three events always? */
-      Channel owner = ev.getChannel();
-      switch (ev.getState())
-      {
-         case OPEN :
-            if (Boolean.FALSE.equals(ev.getValue()))
-            {
-               messageSwitch.serverCloseTunnel(tunnelId);
-               active.set(false);
-               Channels.fireChannelClosed(owner);
+    public HttpTunnelAcceptedChannelSink(
+            ServerMessageSwitchDownstreamInterface messageSwitch,
+            String tunnelId, HttpTunnelAcceptedChannelConfig config) {
+        this.messageSwitch = messageSwitch;
+        this.tunnelId = tunnelId;
+        this.config = config;
+        this.saturationManager =
+                new SaturationManager(config.getWriteBufferLowWaterMark(),
+                        config.getWriteBufferHighWaterMark());
+    }
+
+    public void eventSunk(ChannelPipeline pipeline, ChannelEvent e)
+            throws Exception {
+        if (e instanceof MessageEvent) {
+            handleMessageEvent((MessageEvent) e);
+        } else if (e instanceof ChannelStateEvent) {
+            handleStateEvent((ChannelStateEvent) e);
+        }
+    }
+
+    private void handleMessageEvent(MessageEvent ev) {
+        if (!(ev.getMessage() instanceof ChannelBuffer)) {
+            throw new IllegalArgumentException(
+                    "Attempt to send data which is not a ChannelBuffer:" +
+                            ev.getMessage());
+        }
+
+        final HttpTunnelAcceptedChannelReceiver channel =
+                (HttpTunnelAcceptedChannelReceiver) ev.getChannel();
+        final ChannelBuffer message = (ChannelBuffer) ev.getMessage();
+        final int messageSize = message.readableBytes();
+        final ChannelFuture future = ev.getFuture();
+
+        saturationManager.updateThresholds(config.getWriteBufferLowWaterMark(),
+                config.getWriteBufferHighWaterMark());
+        channel.updateInterestOps(saturationManager
+                .queueSizeChanged(messageSize));
+        future.addListener(new ChannelFutureListener() {
+
+            @Override
+            public void operationComplete(ChannelFuture future)
+                    throws Exception {
+                channel.updateInterestOps(saturationManager
+                        .queueSizeChanged(-messageSize));
+            }
+        });
+        messageSwitch.routeOutboundData(tunnelId, message, future);
+    }
+
+    private void handleStateEvent(ChannelStateEvent ev) {
+        /* TODO: as any of disconnect, unbind or close destroys a server
+           channel, should we fire all three events always? */
+        Channel owner = ev.getChannel();
+        switch (ev.getState()) {
+        case OPEN:
+            if (Boolean.FALSE.equals(ev.getValue())) {
+                messageSwitch.serverCloseTunnel(tunnelId);
+                active.set(false);
+                Channels.fireChannelClosed(owner);
             }
             break;
-         case BOUND :
-            if (ev.getValue() == null)
-            {
-               messageSwitch.serverCloseTunnel(tunnelId);
-               active.set(false);
-               Channels.fireChannelUnbound(owner);
+        case BOUND:
+            if (ev.getValue() == null) {
+                messageSwitch.serverCloseTunnel(tunnelId);
+                active.set(false);
+                Channels.fireChannelUnbound(owner);
             }
-         case CONNECTED :
-            if (ev.getValue() == null)
-            {
-               messageSwitch.serverCloseTunnel(tunnelId);
-               active.set(false);
-               Channels.fireChannelDisconnected(owner);
+        case CONNECTED:
+            if (ev.getValue() == null) {
+                messageSwitch.serverCloseTunnel(tunnelId);
+                active.set(false);
+                Channels.fireChannelDisconnected(owner);
             }
-      }
-   }
+        }
+    }
 
-   public boolean isActive()
-   {
-      return active.get();
-   }
+    public boolean isActive() {
+        return active.get();
+    }
 }
