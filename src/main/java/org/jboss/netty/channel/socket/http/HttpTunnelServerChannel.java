@@ -31,83 +31,80 @@ import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-public class HttpTunnelServerChannel extends AbstractServerChannel implements ServerSocketChannel
-{
+public class HttpTunnelServerChannel extends AbstractServerChannel implements
+        ServerSocketChannel {
 
-   private final ServerSocketChannel realChannel;
+    private final ServerSocketChannel realChannel;
 
-   private final HttpTunnelServerChannelConfig config;
+    private final HttpTunnelServerChannelConfig config;
 
-   private final ServerMessageSwitch messageSwitch;
+    private final ServerMessageSwitch messageSwitch;
 
-   private final ChannelFutureListener CLOSE_FUTURE_PROXY = new ChannelFutureListener()
-   {
-      public void operationComplete(ChannelFuture future) throws Exception
-      {
-         HttpTunnelServerChannel.this.setClosed();
-      }
-   };
+    private final ChannelFutureListener CLOSE_FUTURE_PROXY =
+            new ChannelFutureListener() {
+                public void operationComplete(ChannelFuture future)
+                        throws Exception {
+                    HttpTunnelServerChannel.this.setClosed();
+                }
+            };
 
-   protected HttpTunnelServerChannel(HttpTunnelServerChannelFactory factory, ChannelPipeline pipeline)
-   {
-      super(factory, pipeline, new HttpTunnelServerChannelSink());
+    protected HttpTunnelServerChannel(HttpTunnelServerChannelFactory factory,
+            ChannelPipeline pipeline) {
+        super(factory, pipeline, new HttpTunnelServerChannelSink());
 
-      messageSwitch = new ServerMessageSwitch(new TunnelCreator());
-      realChannel = factory.createRealChannel(this, messageSwitch);
-      HttpTunnelServerChannelSink sink = (HttpTunnelServerChannelSink) getPipeline().getSink();
-      sink.setRealChannel(realChannel);
-      sink.setCloseListener(CLOSE_FUTURE_PROXY);
-      config = new HttpTunnelServerChannelConfig(realChannel);
-      Channels.fireChannelOpen(this);
-   }
+        messageSwitch = new ServerMessageSwitch(new TunnelCreator());
+        realChannel = factory.createRealChannel(this, messageSwitch);
+        HttpTunnelServerChannelSink sink =
+                (HttpTunnelServerChannelSink) getPipeline().getSink();
+        sink.setRealChannel(realChannel);
+        sink.setCloseListener(CLOSE_FUTURE_PROXY);
+        config = new HttpTunnelServerChannelConfig(realChannel);
+        Channels.fireChannelOpen(this);
+    }
 
-   public ServerSocketChannelConfig getConfig()
-   {
-      return config;
-   }
+    public ServerSocketChannelConfig getConfig() {
+        return config;
+    }
 
-   public InetSocketAddress getLocalAddress()
-   {
-      return realChannel.getLocalAddress();
-   }
+    public InetSocketAddress getLocalAddress() {
+        return realChannel.getLocalAddress();
+    }
 
-   public InetSocketAddress getRemoteAddress()
-   {
-      // server channels never have a remote address
-      return null;
-   }
+    public InetSocketAddress getRemoteAddress() {
+        // server channels never have a remote address
+        return null;
+    }
 
-   public boolean isBound()
-   {
-      return realChannel.isBound();
-   }
+    public boolean isBound() {
+        return realChannel.isBound();
+    }
 
-   /**
-    * Used to hide the newChannel method from the public API.
-    */
-   private final class TunnelCreator implements HttpTunnelAcceptedChannelFactory
-   {
+    /**
+     * Used to hide the newChannel method from the public API.
+     */
+    private final class TunnelCreator implements
+            HttpTunnelAcceptedChannelFactory {
 
-      public HttpTunnelAcceptedChannelReceiver newChannel(String newTunnelId, InetSocketAddress remoteAddress)
-      {
-         ChannelPipeline childPipeline = null;
-         try
-         {
-            childPipeline = getConfig().getPipelineFactory().getPipeline();
-         }
-         catch (Exception e)
-         {
-            throw new ChannelPipelineException("Failed to initialize a pipeline.", e);
-         }
-         HttpTunnelAcceptedChannelConfig config = new HttpTunnelAcceptedChannelConfig();
-         HttpTunnelAcceptedChannelSink sink = new HttpTunnelAcceptedChannelSink(messageSwitch, newTunnelId, config);
-         return new HttpTunnelAcceptedChannel(HttpTunnelServerChannel.this, getFactory(), childPipeline, sink,
-               remoteAddress, config);
-      }
+        public HttpTunnelAcceptedChannelReceiver newChannel(String newTunnelId,
+                InetSocketAddress remoteAddress) {
+            ChannelPipeline childPipeline = null;
+            try {
+                childPipeline = getConfig().getPipelineFactory().getPipeline();
+            } catch (Exception e) {
+                throw new ChannelPipelineException(
+                        "Failed to initialize a pipeline.", e);
+            }
+            HttpTunnelAcceptedChannelConfig config =
+                    new HttpTunnelAcceptedChannelConfig();
+            HttpTunnelAcceptedChannelSink sink =
+                    new HttpTunnelAcceptedChannelSink(messageSwitch,
+                            newTunnelId, config);
+            return new HttpTunnelAcceptedChannel(HttpTunnelServerChannel.this,
+                    getFactory(), childPipeline, sink, remoteAddress, config);
+        }
 
-      public String generateTunnelId()
-      {
-         return config.getTunnelIdGenerator().generateId();
-      }
-   }
+        public String generateTunnelId() {
+            return config.getTunnelIdGenerator().generateId();
+        }
+    }
 }

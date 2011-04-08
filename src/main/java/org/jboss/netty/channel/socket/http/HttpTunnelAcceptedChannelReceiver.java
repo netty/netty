@@ -25,13 +25,12 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-interface HttpTunnelAcceptedChannelReceiver
-{
+interface HttpTunnelAcceptedChannelReceiver {
 
-   public void updateInterestOps(SaturationStateChange transition);
-   
-   public void dataReceived(ChannelBuffer data);
+    public void updateInterestOps(SaturationStateChange transition);
 
-   public void clientClosed();
+    public void dataReceived(ChannelBuffer data);
+
+    public void clientClosed();
 
 }

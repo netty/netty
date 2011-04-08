@@ -45,341 +45,333 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-public class HttpTunnelClientChannel extends AbstractChannel implements SocketChannel
-{
+public class HttpTunnelClientChannel extends AbstractChannel implements
+        SocketChannel {
 
-   private static final InternalLogger LOG = InternalLoggerFactory.getInstance(HttpTunnelClientChannel.class);
+    private static final InternalLogger LOG = InternalLoggerFactory
+            .getInstance(HttpTunnelClientChannel.class);
 
-   private final HttpTunnelClientChannelConfig config;
+    private final HttpTunnelClientChannelConfig config;
 
-   private final SocketChannel sendChannel;
+    private final SocketChannel sendChannel;
 
-   private final SocketChannel pollChannel;
+    private final SocketChannel pollChannel;
 
-   private volatile String tunnelId;
+    private volatile String tunnelId;
 
-   private volatile ChannelFuture connectFuture;
+    private volatile ChannelFuture connectFuture;
 
-   private volatile boolean connected;
+    private volatile boolean connected;
 
-   private volatile boolean bound;
+    private volatile boolean bound;
 
-   volatile InetSocketAddress serverAddress;
+    volatile InetSocketAddress serverAddress;
 
-   private volatile String serverHostName;
+    private volatile String serverHostName;
 
-   private final WorkerCallbacks callbackProxy;
+    private final WorkerCallbacks callbackProxy;
 
-   private final SaturationManager saturationManager;
+    private final SaturationManager saturationManager;
 
-   /**
-    * @see {@link HttpTunnelClientChannelFactory#newChannel(ChannelPipeline)}
-    */
-   protected HttpTunnelClientChannel(ChannelFactory factory, ChannelPipeline pipeline,
-         HttpTunnelClientChannelSink sink, ClientSocketChannelFactory outboundFactory, ChannelGroup realConnections)
-   {
-      super(null, factory, pipeline, sink);
+    /**
+     * @see {@link HttpTunnelClientChannelFactory#newChannel(ChannelPipeline)}
+     */
+    protected HttpTunnelClientChannel(ChannelFactory factory,
+            ChannelPipeline pipeline, HttpTunnelClientChannelSink sink,
+            ClientSocketChannelFactory outboundFactory,
+            ChannelGroup realConnections) {
+        super(null, factory, pipeline, sink);
 
-      this.callbackProxy = new WorkerCallbacks();
+        this.callbackProxy = new WorkerCallbacks();
 
-      sendChannel = outboundFactory.newChannel(createSendPipeline());
-      pollChannel = outboundFactory.newChannel(createPollPipeline());
-      config = new HttpTunnelClientChannelConfig(sendChannel.getConfig(), pollChannel.getConfig());
-      saturationManager = new SaturationManager(config.getWriteBufferLowWaterMark(), config.getWriteBufferHighWaterMark());
-      serverAddress = null;
+        sendChannel = outboundFactory.newChannel(createSendPipeline());
+        pollChannel = outboundFactory.newChannel(createPollPipeline());
+        config =
+                new HttpTunnelClientChannelConfig(sendChannel.getConfig(),
+                        pollChannel.getConfig());
+        saturationManager =
+                new SaturationManager(config.getWriteBufferLowWaterMark(),
+                        config.getWriteBufferHighWaterMark());
+        serverAddress = null;
 
-      realConnections.add(sendChannel);
-      realConnections.add(pollChannel);
+        realConnections.add(sendChannel);
+        realConnections.add(pollChannel);
 
-      Channels.fireChannelOpen(this);
-   }
+        Channels.fireChannelOpen(this);
+    }
 
-   public HttpTunnelClientChannelConfig getConfig()
-   {
-      return config;
-   }
+    public HttpTunnelClientChannelConfig getConfig() {
+        return config;
+    }
 
-   public boolean isBound()
-   {
-      return bound;
-   }
+    public boolean isBound() {
+        return bound;
+    }
 
-   public boolean isConnected()
-   {
-      return connected;
-   }
+    public boolean isConnected() {
+        return connected;
+    }
 
-   public InetSocketAddress getLocalAddress()
-   {
-      return sendChannel.getLocalAddress();
-   }
+    public InetSocketAddress getLocalAddress() {
+        return sendChannel.getLocalAddress();
+    }
 
-   public InetSocketAddress getRemoteAddress()
-   {
-      return serverAddress;
-   }
+    public InetSocketAddress getRemoteAddress() {
+        return serverAddress;
+    }
 
-   void onConnectRequest(ChannelFuture connectFuture, InetSocketAddress remoteAddress)
-   {
-      this.connectFuture = connectFuture;
-      /* if we are using a proxy, the remoteAddress is swapped here for the address of the proxy.
-       * The send and poll channels can later ask for the correct server address using
-       * getServerHostName().
-       */
-      serverAddress = remoteAddress;
+    void onConnectRequest(ChannelFuture connectFuture,
+            InetSocketAddress remoteAddress) {
+        this.connectFuture = connectFuture;
+        /* if we are using a proxy, the remoteAddress is swapped here for the address of the proxy.
+         * The send and poll channels can later ask for the correct server address using
+         * getServerHostName().
+         */
+        serverAddress = remoteAddress;
 
-      SocketAddress connectTarget;
-      if (config.getProxyAddress() != null)
-      {
-         connectTarget = config.getProxyAddress();
-      }
-      else
-      {
-         connectTarget = remoteAddress;
-      }
+        SocketAddress connectTarget;
+        if (config.getProxyAddress() != null) {
+            connectTarget = config.getProxyAddress();
+        } else {
+            connectTarget = remoteAddress;
+        }
 
-      Channels.connect(sendChannel, connectTarget);
-   }
+        Channels.connect(sendChannel, connectTarget);
+    }
 
-   void onDisconnectRequest(final ChannelFuture disconnectFuture)
-   {
-      ChannelFutureListener disconnectListener = new ConsolidatingFutureListener(disconnectFuture, 2);
-      sendChannel.disconnect().addListener(disconnectListener);
-      pollChannel.disconnect().addListener(disconnectListener);
+    void onDisconnectRequest(final ChannelFuture disconnectFuture) {
+        ChannelFutureListener disconnectListener =
+                new ConsolidatingFutureListener(disconnectFuture, 2);
+        sendChannel.disconnect().addListener(disconnectListener);
+        pollChannel.disconnect().addListener(disconnectListener);
 
-      disconnectFuture.addListener(new ChannelFutureListener()
-      {
-         public void operationComplete(ChannelFuture future) throws Exception
-         {
-            serverAddress = null;
-         }
-      });
-   }
-
-   void onBindRequest(InetSocketAddress localAddress, final ChannelFuture bindFuture)
-   {
-      ChannelFutureListener bindListener = new ConsolidatingFutureListener(bindFuture, 2);
-      // bind the send channel to the specified local address, and the poll channel to
-      // an ephemeral port on the same interface as the send channel
-      sendChannel.bind(localAddress).addListener(bindListener);
-      InetSocketAddress pollBindAddress;
-      if (localAddress.isUnresolved())
-      {
-         pollBindAddress = InetSocketAddress.createUnresolved(localAddress.getHostName(), 0);
-      }
-      else
-      {
-         pollBindAddress = new InetSocketAddress(localAddress.getAddress(), 0);
-      }
-      pollChannel.bind(pollBindAddress).addListener(bindListener);
-   }
-
-   void onUnbindRequest(final ChannelFuture unbindFuture)
-   {
-      ChannelFutureListener unbindListener = new ConsolidatingFutureListener(unbindFuture, 2);
-      sendChannel.unbind().addListener(unbindListener);
-      pollChannel.unbind().addListener(unbindListener);
-   }
-
-   void onCloseRequest(final ChannelFuture closeFuture)
-   {
-      ChannelFutureListener closeListener = new CloseConsolidatingFutureListener(closeFuture, 2);
-      sendChannel.close().addListener(closeListener);
-      pollChannel.close().addListener(closeListener);
-   }
-
-   private ChannelPipeline createSendPipeline()
-   {
-      ChannelPipeline pipeline = Channels.pipeline();
-
-      pipeline.addLast("reqencoder", new HttpRequestEncoder()); // downstream
-      pipeline.addLast("respdecoder", new HttpResponseDecoder()); // upstream
-      pipeline.addLast("aggregator", new HttpChunkAggregator(HttpTunnelMessageUtils.MAX_BODY_SIZE)); // upstream
-      pipeline.addLast("sendHandler", new HttpTunnelClientSendHandler(callbackProxy)); // both
-      pipeline.addLast("writeFragmenter", new WriteFragmenter(HttpTunnelMessageUtils.MAX_BODY_SIZE));
-
-      return pipeline;
-   }
-
-   private ChannelPipeline createPollPipeline()
-   {
-      ChannelPipeline pipeline = Channels.pipeline();
-
-      pipeline.addLast("reqencoder", new HttpRequestEncoder()); // downstream
-      pipeline.addLast("respdecoder", new HttpResponseDecoder()); // upstream
-      pipeline.addLast("aggregator", new HttpChunkAggregator(HttpTunnelMessageUtils.MAX_BODY_SIZE)); // upstream
-      pipeline.addLast(HttpTunnelClientPollHandler.NAME, new HttpTunnelClientPollHandler(callbackProxy)); // both
-
-      return pipeline;
-   }
-
-   private void setTunnelIdForPollChannel()
-   {
-      HttpTunnelClientPollHandler pollHandler = pollChannel.getPipeline().get(HttpTunnelClientPollHandler.class);
-      pollHandler.setTunnelId(tunnelId);
-   }
-
-   void sendData(final MessageEvent e)
-   {
-      saturationManager.updateThresholds(config.getWriteBufferLowWaterMark(), 
-                                         config.getWriteBufferHighWaterMark());
-      final ChannelFuture originalFuture = e.getFuture();
-      final ChannelBuffer message = (ChannelBuffer) e.getMessage();
-      final int messageSize = message.readableBytes();
-      updateSaturationStatus(messageSize);
-      Channels.write(sendChannel, e.getMessage()).addListener(new ChannelFutureListener()
-      {
-         public void operationComplete(ChannelFuture future) throws Exception
-         {
-            if (future.isSuccess())
-            {
-               originalFuture.setSuccess();
+        disconnectFuture.addListener(new ChannelFutureListener() {
+            public void operationComplete(ChannelFuture future)
+                    throws Exception {
+                serverAddress = null;
             }
-            else
-            {
-               originalFuture.setFailure(future.getCause());
+        });
+    }
+
+    void onBindRequest(InetSocketAddress localAddress,
+            final ChannelFuture bindFuture) {
+        ChannelFutureListener bindListener =
+                new ConsolidatingFutureListener(bindFuture, 2);
+        // bind the send channel to the specified local address, and the poll channel to
+        // an ephemeral port on the same interface as the send channel
+        sendChannel.bind(localAddress).addListener(bindListener);
+        InetSocketAddress pollBindAddress;
+        if (localAddress.isUnresolved()) {
+            pollBindAddress =
+                    InetSocketAddress.createUnresolved(
+                            localAddress.getHostName(), 0);
+        } else {
+            pollBindAddress =
+                    new InetSocketAddress(localAddress.getAddress(), 0);
+        }
+        pollChannel.bind(pollBindAddress).addListener(bindListener);
+    }
+
+    void onUnbindRequest(final ChannelFuture unbindFuture) {
+        ChannelFutureListener unbindListener =
+                new ConsolidatingFutureListener(unbindFuture, 2);
+        sendChannel.unbind().addListener(unbindListener);
+        pollChannel.unbind().addListener(unbindListener);
+    }
+
+    void onCloseRequest(final ChannelFuture closeFuture) {
+        ChannelFutureListener closeListener =
+                new CloseConsolidatingFutureListener(closeFuture, 2);
+        sendChannel.close().addListener(closeListener);
+        pollChannel.close().addListener(closeListener);
+    }
+
+    private ChannelPipeline createSendPipeline() {
+        ChannelPipeline pipeline = Channels.pipeline();
+
+        pipeline.addLast("reqencoder", new HttpRequestEncoder()); // downstream
+        pipeline.addLast("respdecoder", new HttpResponseDecoder()); // upstream
+        pipeline.addLast("aggregator", new HttpChunkAggregator(
+                HttpTunnelMessageUtils.MAX_BODY_SIZE)); // upstream
+        pipeline.addLast("sendHandler", new HttpTunnelClientSendHandler(
+                callbackProxy)); // both
+        pipeline.addLast("writeFragmenter", new WriteFragmenter(
+                HttpTunnelMessageUtils.MAX_BODY_SIZE));
+
+        return pipeline;
+    }
+
+    private ChannelPipeline createPollPipeline() {
+        ChannelPipeline pipeline = Channels.pipeline();
+
+        pipeline.addLast("reqencoder", new HttpRequestEncoder()); // downstream
+        pipeline.addLast("respdecoder", new HttpResponseDecoder()); // upstream
+        pipeline.addLast("aggregator", new HttpChunkAggregator(
+                HttpTunnelMessageUtils.MAX_BODY_SIZE)); // upstream
+        pipeline.addLast(HttpTunnelClientPollHandler.NAME,
+                new HttpTunnelClientPollHandler(callbackProxy)); // both
+
+        return pipeline;
+    }
+
+    private void setTunnelIdForPollChannel() {
+        HttpTunnelClientPollHandler pollHandler =
+                pollChannel.getPipeline()
+                        .get(HttpTunnelClientPollHandler.class);
+        pollHandler.setTunnelId(tunnelId);
+    }
+
+    void sendData(final MessageEvent e) {
+        saturationManager.updateThresholds(config.getWriteBufferLowWaterMark(),
+                config.getWriteBufferHighWaterMark());
+        final ChannelFuture originalFuture = e.getFuture();
+        final ChannelBuffer message = (ChannelBuffer) e.getMessage();
+        final int messageSize = message.readableBytes();
+        updateSaturationStatus(messageSize);
+        Channels.write(sendChannel, e.getMessage()).addListener(
+                new ChannelFutureListener() {
+                    public void operationComplete(ChannelFuture future)
+                            throws Exception {
+                        if (future.isSuccess()) {
+                            originalFuture.setSuccess();
+                        } else {
+                            originalFuture.setFailure(future.getCause());
+                        }
+                        updateSaturationStatus(-messageSize);
+                    }
+                });
+    }
+
+    private void updateSaturationStatus(int queueSizeDelta) {
+        SaturationStateChange transition =
+                saturationManager.queueSizeChanged(queueSizeDelta);
+        switch (transition) {
+        case SATURATED:
+            fireWriteEnabled(false);
+            break;
+        case DESATURATED:
+            fireWriteEnabled(true);
+            break;
+        case NO_CHANGE:
+            break;
+        }
+    }
+
+    private void fireWriteEnabled(boolean enabled) {
+        int ops = OP_READ;
+        if (!enabled) {
+            ops |= OP_WRITE;
+        }
+
+        setInterestOpsNow(ops);
+        Channels.fireChannelInterestChanged(this);
+    }
+
+    private class ConsolidatingFutureListener implements ChannelFutureListener {
+
+        private final ChannelFuture completionFuture;
+
+        private final AtomicInteger eventsLeft;
+
+        public ConsolidatingFutureListener(ChannelFuture completionFuture,
+                int numToConsolidate) {
+            this.completionFuture = completionFuture;
+            eventsLeft = new AtomicInteger(numToConsolidate);
+        }
+
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (!future.isSuccess()) {
+                futureFailed(future);
+            } else {
+                if (eventsLeft.decrementAndGet() == 0) {
+                    allFuturesComplete();
+                }
             }
-            updateSaturationStatus(-messageSize);
-         }
-      });
-   }
-   
-   private void updateSaturationStatus(int queueSizeDelta) {
-      SaturationStateChange transition = saturationManager.queueSizeChanged(queueSizeDelta);
-      switch(transition) {
-         case SATURATED: fireWriteEnabled(false); break;
-         case DESATURATED: fireWriteEnabled(true); break;
-         case NO_CHANGE: break;
-      }
-   }
-   
-   private void fireWriteEnabled(boolean enabled) {
-      int ops = OP_READ;
-      if(!enabled) {
-         ops |= OP_WRITE;
-      }
-      
-      setInterestOpsNow(ops);
-      Channels.fireChannelInterestChanged(this);
-   }
+        }
 
-   private class ConsolidatingFutureListener implements ChannelFutureListener
-   {
+        protected void allFuturesComplete() {
+            completionFuture.setSuccess();
+        }
 
-      private final ChannelFuture completionFuture;
+        protected void futureFailed(ChannelFuture future) {
+            completionFuture.setFailure(future.getCause());
+        }
+    }
 
-      private final AtomicInteger eventsLeft;
+    /**
+     * Close futures are a special case, as marking them as successful or failed has no effect.
+     * Instead, we must call setClosed() on the channel itself, once all the child channels are
+     * closed or if we fail to close them for whatever reason.
+     */
+    private final class CloseConsolidatingFutureListener extends
+            ConsolidatingFutureListener {
 
-      public ConsolidatingFutureListener(ChannelFuture completionFuture, int numToConsolidate)
-      {
-         this.completionFuture = completionFuture;
-         eventsLeft = new AtomicInteger(numToConsolidate);
-      }
+        public CloseConsolidatingFutureListener(ChannelFuture completionFuture,
+                int numToConsolidate) {
+            super(completionFuture, numToConsolidate);
+        }
 
-      public void operationComplete(ChannelFuture future) throws Exception
-      {
-         if (!future.isSuccess())
-         {
-            futureFailed(future);
-         }
-         else
-         {
-            if (eventsLeft.decrementAndGet() == 0)
-            {
-               allFuturesComplete();
+        @Override
+        protected void futureFailed(ChannelFuture future) {
+            LOG.warn("Failed to close one of the child channels of tunnel " +
+                    tunnelId);
+            HttpTunnelClientChannel.this.setClosed();
+        }
+
+        @Override
+        protected void allFuturesComplete() {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Tunnel " + tunnelId + " closed");
             }
-         }
-      }
+            HttpTunnelClientChannel.this.setClosed();
+        }
 
-      protected void allFuturesComplete()
-      {
-         completionFuture.setSuccess();
-      }
+    }
 
-      protected void futureFailed(ChannelFuture future)
-      {
-         completionFuture.setFailure(future.getCause());
-      }
-   }
+    /**
+     * Contains the implementing methods of HttpTunnelClientWorkerOwner, so that these are hidden
+     * from the public API.
+     */
+    private class WorkerCallbacks implements HttpTunnelClientWorkerOwner {
 
-   /**
-    * Close futures are a special case, as marking them as successful or failed has no effect.
-    * Instead, we must call setClosed() on the channel itself, once all the child channels are
-    * closed or if we fail to close them for whatever reason.
-    */
-   private final class CloseConsolidatingFutureListener extends ConsolidatingFutureListener
-   {
+        public void onConnectRequest(ChannelFuture connectFuture,
+                InetSocketAddress remoteAddress) {
+            HttpTunnelClientChannel.this.onConnectRequest(connectFuture,
+                    remoteAddress);
+        }
 
-      public CloseConsolidatingFutureListener(ChannelFuture completionFuture, int numToConsolidate)
-      {
-         super(completionFuture, numToConsolidate);
-      }
+        public void onTunnelOpened(String tunnelId) {
+            HttpTunnelClientChannel.this.tunnelId = tunnelId;
+            setTunnelIdForPollChannel();
+            Channels.connect(pollChannel, sendChannel.getRemoteAddress());
+        }
 
-      @Override
-      protected void futureFailed(ChannelFuture future)
-      {
-         LOG.warn("Failed to close one of the child channels of tunnel " + tunnelId);
-         HttpTunnelClientChannel.this.setClosed();
-      }
+        public void fullyEstablished() {
+            if (!bound) {
+                bound = true;
+                Channels.fireChannelBound(HttpTunnelClientChannel.this,
+                        getLocalAddress());
+            }
 
-      @Override
-      protected void allFuturesComplete()
-      {
-         if (LOG.isDebugEnabled())
-         {
-            LOG.debug("Tunnel " + tunnelId + " closed");
-         }
-         HttpTunnelClientChannel.this.setClosed();
-      }
+            connected = true;
+            connectFuture.setSuccess();
+            Channels.fireChannelConnected(HttpTunnelClientChannel.this,
+                    getRemoteAddress());
+        }
 
-   }
+        public void onMessageReceived(ChannelBuffer content) {
+            Channels.fireMessageReceived(HttpTunnelClientChannel.this, content);
+        }
 
-   /**
-    * Contains the implementing methods of HttpTunnelClientWorkerOwner, so that these are hidden
-    * from the public API.
-    */
-   private class WorkerCallbacks implements HttpTunnelClientWorkerOwner
-   {
+        public String getServerHostName() {
+            if (serverHostName == null) {
+                serverHostName =
+                        HttpTunnelMessageUtils
+                                .convertToHostString(serverAddress);
+            }
 
-      public void onConnectRequest(ChannelFuture connectFuture, InetSocketAddress remoteAddress)
-      {
-         HttpTunnelClientChannel.this.onConnectRequest(connectFuture, remoteAddress);
-      }
+            return serverHostName;
+        }
 
-      public void onTunnelOpened(String tunnelId)
-      {
-         HttpTunnelClientChannel.this.tunnelId = tunnelId;
-         setTunnelIdForPollChannel();
-         Channels.connect(pollChannel, sendChannel.getRemoteAddress());
-      }
-
-      public void fullyEstablished()
-      {
-         if (!bound)
-         {
-            bound = true;
-            Channels.fireChannelBound(HttpTunnelClientChannel.this, getLocalAddress());
-         }
-
-         connected = true;
-         connectFuture.setSuccess();
-         Channels.fireChannelConnected(HttpTunnelClientChannel.this, getRemoteAddress());
-      }
-
-      public void onMessageReceived(ChannelBuffer content)
-      {
-         Channels.fireMessageReceived(HttpTunnelClientChannel.this, content);
-      }
-
-      public String getServerHostName()
-      {
-         if (serverHostName == null)
-         {
-            serverHostName = HttpTunnelMessageUtils.convertToHostString(serverAddress);
-         }
-
-         return serverHostName;
-      }
-
-   }
+    }
 }

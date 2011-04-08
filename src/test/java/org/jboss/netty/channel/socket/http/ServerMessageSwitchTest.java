@@ -38,144 +38,147 @@ import org.junit.runner.RunWith;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 @RunWith(JMock.class)
-public class ServerMessageSwitchTest
-{
+public class ServerMessageSwitchTest {
 
-   public static final InetSocketAddress REMOTE_ADDRESS = InetSocketAddress.createUnresolved("test.client.com", 52354);
+    public static final InetSocketAddress REMOTE_ADDRESS = InetSocketAddress
+            .createUnresolved("test.client.com", 52354);
 
-   private final JUnit4Mockery mockContext = new JUnit4Mockery();
+    private final JUnit4Mockery mockContext = new JUnit4Mockery();
 
-   private ServerMessageSwitch messageSwitch;
+    private ServerMessageSwitch messageSwitch;
 
-   HttpTunnelAcceptedChannelFactory newChannelFactory;
+    HttpTunnelAcceptedChannelFactory newChannelFactory;
 
-   private FakeChannelSink responseCatcher;
+    private FakeChannelSink responseCatcher;
 
-   private FakeSocketChannel htunChannel;
+    private FakeSocketChannel htunChannel;
 
-   private FakeSocketChannel requesterChannel;
+    private FakeSocketChannel requesterChannel;
 
-   private HttpTunnelAcceptedChannelReceiver htunAcceptedChannel;
+    private HttpTunnelAcceptedChannelReceiver htunAcceptedChannel;
 
-   @Before
-   public void setUp() throws Exception
-   {
-      newChannelFactory = mockContext.mock(HttpTunnelAcceptedChannelFactory.class);
-      messageSwitch = new ServerMessageSwitch(newChannelFactory);
+    @Before
+    public void setUp() throws Exception {
+        newChannelFactory =
+                mockContext.mock(HttpTunnelAcceptedChannelFactory.class);
+        messageSwitch = new ServerMessageSwitch(newChannelFactory);
 
-      htunAcceptedChannel = mockContext.mock(HttpTunnelAcceptedChannelReceiver.class);
-      createRequesterChannel();
+        htunAcceptedChannel =
+                mockContext.mock(HttpTunnelAcceptedChannelReceiver.class);
+        createRequesterChannel();
 
-      mockContext.checking(new Expectations()
-      {
-         {
-            one(newChannelFactory).newChannel(with(any(String.class)), with(equal(REMOTE_ADDRESS)));
-            will(returnValue(htunAcceptedChannel));
-            ignoring(newChannelFactory).generateTunnelId();
-            will(returnValue("TEST_TUNNEL"));
-         }
-      });
-   }
+        mockContext.checking(new Expectations() {
+            {
+                one(newChannelFactory).newChannel(with(any(String.class)),
+                        with(equal(REMOTE_ADDRESS)));
+                will(returnValue(htunAcceptedChannel));
+                ignoring(newChannelFactory).generateTunnelId();
+                will(returnValue("TEST_TUNNEL"));
+            }
+        });
+    }
 
-   private FakeSocketChannel createRequesterChannel()
-   {
-      ChannelPipeline requesterChannelPipeline = Channels.pipeline();
-      responseCatcher = new FakeChannelSink();
-      requesterChannel = new FakeSocketChannel(null, null, requesterChannelPipeline, responseCatcher);
-      responseCatcher.events.clear();
+    private FakeSocketChannel createRequesterChannel() {
+        ChannelPipeline requesterChannelPipeline = Channels.pipeline();
+        responseCatcher = new FakeChannelSink();
+        requesterChannel =
+                new FakeSocketChannel(null, null, requesterChannelPipeline,
+                        responseCatcher);
+        responseCatcher.events.clear();
 
-      return requesterChannel;
-   }
+        return requesterChannel;
+    }
 
-   @Test
-   public void testRouteInboundData()
-   {
-      final ChannelBuffer inboundData = ChannelBuffers.dynamicBuffer();
-      inboundData.writeLong(1234L);
+    @Test
+    public void testRouteInboundData() {
+        final ChannelBuffer inboundData = ChannelBuffers.dynamicBuffer();
+        inboundData.writeLong(1234L);
 
-      mockContext.checking(new Expectations()
-      {
-         {
-            one(htunAcceptedChannel).dataReceived(with(same(inboundData)));
-         }
-      });
+        mockContext.checking(new Expectations() {
+            {
+                one(htunAcceptedChannel).dataReceived(with(same(inboundData)));
+            }
+        });
 
-      String tunnelId = messageSwitch.createTunnel(REMOTE_ADDRESS);
-      messageSwitch.routeInboundData(tunnelId, inboundData);
-      mockContext.assertIsSatisfied();
-   }
+        String tunnelId = messageSwitch.createTunnel(REMOTE_ADDRESS);
+        messageSwitch.routeInboundData(tunnelId, inboundData);
+        mockContext.assertIsSatisfied();
+    }
 
-   @Test
-   public void testRouteOutboundData_onPoll()
-   {
-      ChannelBuffer outboundData = ChannelBuffers.dynamicBuffer();
-      outboundData.writeLong(1234L);
+    @Test
+    public void testRouteOutboundData_onPoll() {
+        ChannelBuffer outboundData = ChannelBuffers.dynamicBuffer();
+        outboundData.writeLong(1234L);
 
-      String tunnelId = messageSwitch.createTunnel(REMOTE_ADDRESS);
-      messageSwitch.routeOutboundData(tunnelId, outboundData, Channels.future(htunChannel));
-      messageSwitch.pollOutboundData(tunnelId, requesterChannel);
+        String tunnelId = messageSwitch.createTunnel(REMOTE_ADDRESS);
+        messageSwitch.routeOutboundData(tunnelId, outboundData,
+                Channels.future(htunChannel));
+        messageSwitch.pollOutboundData(tunnelId, requesterChannel);
 
-      assertEquals(1, responseCatcher.events.size());
-      HttpResponse response = NettyTestUtils.checkIsDownstreamMessageEvent(responseCatcher.events.poll(),
-            HttpResponse.class);
-      NettyTestUtils.assertEquals(outboundData, response.getContent());
-   }
+        assertEquals(1, responseCatcher.events.size());
+        HttpResponse response =
+                NettyTestUtils.checkIsDownstreamMessageEvent(
+                        responseCatcher.events.poll(), HttpResponse.class);
+        NettyTestUtils.assertEquals(outboundData, response.getContent());
+    }
 
-   @Test
-   public void testRouteOutboundData_withDanglingRequest()
-   {
-      String tunnelId = messageSwitch.createTunnel(REMOTE_ADDRESS);
-      messageSwitch.pollOutboundData(tunnelId, requesterChannel);
-      assertEquals(0, responseCatcher.events.size());
+    @Test
+    public void testRouteOutboundData_withDanglingRequest() {
+        String tunnelId = messageSwitch.createTunnel(REMOTE_ADDRESS);
+        messageSwitch.pollOutboundData(tunnelId, requesterChannel);
+        assertEquals(0, responseCatcher.events.size());
 
-      ChannelBuffer outboundData = ChannelBuffers.dynamicBuffer();
-      outboundData.writeLong(1234L);
+        ChannelBuffer outboundData = ChannelBuffers.dynamicBuffer();
+        outboundData.writeLong(1234L);
 
-      messageSwitch.routeOutboundData(tunnelId, outboundData, Channels.future(htunChannel));
-      assertEquals(1, responseCatcher.events.size());
-      HttpResponse response = NettyTestUtils.checkIsDownstreamMessageEvent(responseCatcher.events.poll(),
-            HttpResponse.class);
-      NettyTestUtils.assertEquals(outboundData, response.getContent());
-   }
+        messageSwitch.routeOutboundData(tunnelId, outboundData,
+                Channels.future(htunChannel));
+        assertEquals(1, responseCatcher.events.size());
+        HttpResponse response =
+                NettyTestUtils.checkIsDownstreamMessageEvent(
+                        responseCatcher.events.poll(), HttpResponse.class);
+        NettyTestUtils.assertEquals(outboundData, response.getContent());
+    }
 
-   @Test
-   public void testCloseTunnel()
-   {
-      String tunnelId = messageSwitch.createTunnel(REMOTE_ADDRESS);
-      messageSwitch.serverCloseTunnel(tunnelId);
-      assertEquals(TunnelStatus.CLOSED, messageSwitch.routeInboundData(tunnelId, ChannelBuffers.dynamicBuffer()));
-   }
+    @Test
+    public void testCloseTunnel() {
+        String tunnelId = messageSwitch.createTunnel(REMOTE_ADDRESS);
+        messageSwitch.serverCloseTunnel(tunnelId);
+        assertEquals(
+                TunnelStatus.CLOSED,
+                messageSwitch.routeInboundData(tunnelId,
+                        ChannelBuffers.dynamicBuffer()));
+    }
 
-   /* TODO: require tests that check the various permutations of a client sending or polling
-      data after the server has closed the connection */
+    /* TODO: require tests that check the various permutations of a client sending or polling
+       data after the server has closed the connection */
 
-   /* TODO: require tests that check what happens when a client closes a connection */
+    /* TODO: require tests that check what happens when a client closes a connection */
 
-   @Test
-   public void testRouteInboundDataIgnoredAfterClose()
-   {
-      ChannelBuffer data = NettyTestUtils.createData(1234L);
-      String tunnelId = messageSwitch.createTunnel(REMOTE_ADDRESS);
-      messageSwitch.serverCloseTunnel(tunnelId);
+    @Test
+    public void testRouteInboundDataIgnoredAfterClose() {
+        ChannelBuffer data = NettyTestUtils.createData(1234L);
+        String tunnelId = messageSwitch.createTunnel(REMOTE_ADDRESS);
+        messageSwitch.serverCloseTunnel(tunnelId);
 
-      mockContext.checking(new Expectations()
-      {
-         {
-            never(htunAcceptedChannel).dataReceived(with(any(ChannelBuffer.class)));
-         }
-      });
+        mockContext.checking(new Expectations() {
+            {
+                never(htunAcceptedChannel).dataReceived(
+                        with(any(ChannelBuffer.class)));
+            }
+        });
 
-      messageSwitch.routeInboundData(tunnelId, data);
-      mockContext.assertIsSatisfied();
-   }
+        messageSwitch.routeInboundData(tunnelId, data);
+        mockContext.assertIsSatisfied();
+    }
 
-   @Test
-   public void testRouteOutboundDataIgnoredAfterClose()
-   {
-      ChannelBuffer data = NettyTestUtils.createData(1234L);
-      String tunnelId = messageSwitch.createTunnel(REMOTE_ADDRESS);
-      messageSwitch.serverCloseTunnel(tunnelId);
-      messageSwitch.routeOutboundData(tunnelId, data, Channels.future(htunChannel));
-      assertEquals(0, responseCatcher.events.size());
-   }
+    @Test
+    public void testRouteOutboundDataIgnoredAfterClose() {
+        ChannelBuffer data = NettyTestUtils.createData(1234L);
+        String tunnelId = messageSwitch.createTunnel(REMOTE_ADDRESS);
+        messageSwitch.serverCloseTunnel(tunnelId);
+        messageSwitch.routeOutboundData(tunnelId, data,
+                Channels.future(htunChannel));
+        assertEquals(0, responseCatcher.events.size());
+    }
 }

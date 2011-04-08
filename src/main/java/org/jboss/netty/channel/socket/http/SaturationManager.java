@@ -31,38 +31,39 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-class SaturationManager
-{
-   private AtomicLong desaturationPoint;
-   private AtomicLong saturationPoint;
-   private final AtomicLong queueSize;
-   private final AtomicBoolean saturated;
-   
-   public SaturationManager(long desaturationPoint, long saturationPoint)
-   {
-      this.desaturationPoint = new AtomicLong(desaturationPoint);
-      this.saturationPoint = new AtomicLong(saturationPoint);
-      queueSize = new AtomicLong(0);
-      saturated = new AtomicBoolean(false);
-   }
-   
-   public SaturationStateChange queueSizeChanged(long sizeDelta) {
-      long newQueueSize = queueSize.addAndGet(sizeDelta);
-      if(newQueueSize <= desaturationPoint.get()) {
-         if(saturated.compareAndSet(true, false)) {
-            return DESATURATED; 
-         }
-      } else if(newQueueSize > saturationPoint.get()) {
-         if(saturated.compareAndSet(false, true)) {
-            return SATURATED;
-         }
-      }
-      
-      return NO_CHANGE;
-   }
-   
-   public void updateThresholds(long desaturationPoint, long saturationPoint) {
-      this.desaturationPoint.set(desaturationPoint);
-      this.saturationPoint.set(saturationPoint);
-   }
+class SaturationManager {
+    private AtomicLong desaturationPoint;
+
+    private AtomicLong saturationPoint;
+
+    private final AtomicLong queueSize;
+
+    private final AtomicBoolean saturated;
+
+    public SaturationManager(long desaturationPoint, long saturationPoint) {
+        this.desaturationPoint = new AtomicLong(desaturationPoint);
+        this.saturationPoint = new AtomicLong(saturationPoint);
+        queueSize = new AtomicLong(0);
+        saturated = new AtomicBoolean(false);
+    }
+
+    public SaturationStateChange queueSizeChanged(long sizeDelta) {
+        long newQueueSize = queueSize.addAndGet(sizeDelta);
+        if (newQueueSize <= desaturationPoint.get()) {
+            if (saturated.compareAndSet(true, false)) {
+                return DESATURATED;
+            }
+        } else if (newQueueSize > saturationPoint.get()) {
+            if (saturated.compareAndSet(false, true)) {
+                return SATURATED;
+            }
+        }
+
+        return NO_CHANGE;
+    }
+
+    public void updateThresholds(long desaturationPoint, long saturationPoint) {
+        this.desaturationPoint.set(desaturationPoint);
+        this.saturationPoint.set(saturationPoint);
+    }
 }

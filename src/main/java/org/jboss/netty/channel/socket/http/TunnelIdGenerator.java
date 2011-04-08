@@ -24,15 +24,14 @@ package org.jboss.netty.channel.socket.http;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-public interface TunnelIdGenerator
-{
+public interface TunnelIdGenerator {
 
-   /**
-    * Generates the next tunnel ID to be used, which must be unique
-    * (i.e. ensure with high probability that it will not clash with
-    * an existing tunnel ID). This method must be thread safe, and
-    * preferably lock free.
-    */
-   public String generateId();
+    /**
+     * Generates the next tunnel ID to be used, which must be unique
+     * (i.e. ensure with high probability that it will not clash with
+     * an existing tunnel ID). This method must be thread safe, and
+     * preferably lock free.
+     */
+    public String generateId();
 
 }

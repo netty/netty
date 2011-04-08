@@ -40,78 +40,78 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-class HttpTunnelAcceptedChannel extends AbstractChannel implements SocketChannel, HttpTunnelAcceptedChannelReceiver
-{
-   private final HttpTunnelAcceptedChannelConfig config;
+class HttpTunnelAcceptedChannel extends AbstractChannel implements
+        SocketChannel, HttpTunnelAcceptedChannelReceiver {
+    private final HttpTunnelAcceptedChannelConfig config;
 
-   private final HttpTunnelAcceptedChannelSink sink;
+    private final HttpTunnelAcceptedChannelSink sink;
 
-   private final InetSocketAddress remoteAddress;
+    private final InetSocketAddress remoteAddress;
 
-   protected HttpTunnelAcceptedChannel(HttpTunnelServerChannel parent, ChannelFactory factory,
-         ChannelPipeline pipeline, HttpTunnelAcceptedChannelSink sink, InetSocketAddress remoteAddress, HttpTunnelAcceptedChannelConfig config)
-   {
-      super(parent, factory, pipeline, sink);
-      this.config = config;
-      this.sink = sink;
-      this.remoteAddress = remoteAddress;
-      fireChannelOpen(this);
-      fireChannelBound(this, getLocalAddress());
-      fireChannelConnected(this, getRemoteAddress());
-   }
+    protected HttpTunnelAcceptedChannel(HttpTunnelServerChannel parent,
+            ChannelFactory factory, ChannelPipeline pipeline,
+            HttpTunnelAcceptedChannelSink sink,
+            InetSocketAddress remoteAddress,
+            HttpTunnelAcceptedChannelConfig config) {
+        super(parent, factory, pipeline, sink);
+        this.config = config;
+        this.sink = sink;
+        this.remoteAddress = remoteAddress;
+        fireChannelOpen(this);
+        fireChannelBound(this, getLocalAddress());
+        fireChannelConnected(this, getRemoteAddress());
+    }
 
-   public SocketChannelConfig getConfig()
-   {
-      return config;
-   }
+    public SocketChannelConfig getConfig() {
+        return config;
+    }
 
-   public InetSocketAddress getLocalAddress()
-   {
-      
-      return ((HttpTunnelServerChannel) getParent()).getLocalAddress();
-   }
+    public InetSocketAddress getLocalAddress() {
 
-   public InetSocketAddress getRemoteAddress()
-   {
-      return remoteAddress;
-   }
+        return ((HttpTunnelServerChannel) getParent()).getLocalAddress();
+    }
 
-   public boolean isBound()
-   {
-      return sink.isActive();
-   }
+    public InetSocketAddress getRemoteAddress() {
+        return remoteAddress;
+    }
 
-   public boolean isConnected()
-   {
-      return sink.isActive();
-   }
+    public boolean isBound() {
+        return sink.isActive();
+    }
 
-   public void clientClosed()
-   {
-      this.setClosed();
-      Channels.fireChannelClosed(this);
-   }
+    public boolean isConnected() {
+        return sink.isActive();
+    }
 
-   public void dataReceived(ChannelBuffer data)
-   {
-      Channels.fireMessageReceived(this, data);
-   }
+    public void clientClosed() {
+        this.setClosed();
+        Channels.fireChannelClosed(this);
+    }
 
-   public void updateInterestOps(SaturationStateChange transition) {
-      switch(transition) {
-         case SATURATED: fireWriteEnabled(false); break;
-         case DESATURATED: fireWriteEnabled(true); break;
-         case NO_CHANGE: break;
-      }
-   }
-   
-   private void fireWriteEnabled(boolean enabled) {
-      int ops = OP_READ;
-      if(!enabled) {
-         ops |= OP_WRITE;
-      }
-      
-      setInterestOpsNow(ops);
-      Channels.fireChannelInterestChanged(this);
-   }
+    public void dataReceived(ChannelBuffer data) {
+        Channels.fireMessageReceived(this, data);
+    }
+
+    public void updateInterestOps(SaturationStateChange transition) {
+        switch (transition) {
+        case SATURATED:
+            fireWriteEnabled(false);
+            break;
+        case DESATURATED:
+            fireWriteEnabled(true);
+            break;
+        case NO_CHANGE:
+            break;
+        }
+    }
+
+    private void fireWriteEnabled(boolean enabled) {
+        int ops = OP_READ;
+        if (!enabled) {
+            ops |= OP_WRITE;
+        }
+
+        setInterestOpsNow(ops);
+        Channels.fireChannelInterestChanged(this);
+    }
 }

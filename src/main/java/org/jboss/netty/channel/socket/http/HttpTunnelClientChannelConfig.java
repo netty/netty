@@ -39,142 +39,123 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-public class HttpTunnelClientChannelConfig extends HttpTunnelChannelConfig
-{
+public class HttpTunnelClientChannelConfig extends HttpTunnelChannelConfig {
 
-   static final String PROXY_ADDRESS_OPTION = "proxyAddress";
+    static final String PROXY_ADDRESS_OPTION = "proxyAddress";
 
-   private final SocketChannelConfig sendChannelConfig;
+    private final SocketChannelConfig sendChannelConfig;
 
-   private final SocketChannelConfig pollChannelConfig;
+    private final SocketChannelConfig pollChannelConfig;
 
-   private volatile SocketAddress proxyAddress;
+    private volatile SocketAddress proxyAddress;
 
-   HttpTunnelClientChannelConfig(SocketChannelConfig sendChannelConfig, SocketChannelConfig pollChannelConfig)
-   {
-      this.sendChannelConfig = sendChannelConfig;
-      this.pollChannelConfig = pollChannelConfig;
-   }
+    HttpTunnelClientChannelConfig(SocketChannelConfig sendChannelConfig,
+            SocketChannelConfig pollChannelConfig) {
+        this.sendChannelConfig = sendChannelConfig;
+        this.pollChannelConfig = pollChannelConfig;
+    }
 
-   /* HTTP TUNNEL SPECIFIC CONFIGURATION */
-   // TODO Support all options in the old tunnel (see HttpTunnelingSocketChannelConfig)
-   //      Mostly SSL, virtual host, and URL prefix
-   @Override
-   public boolean setOption(String key, Object value)
-   {
-      if (PROXY_ADDRESS_OPTION.equals(key))
-      {
-         setProxyAddress((SocketAddress) value);
-      }
-      else
-      {
-         return super.setOption(key, value);
-      }
+    /* HTTP TUNNEL SPECIFIC CONFIGURATION */
+    // TODO Support all options in the old tunnel (see HttpTunnelingSocketChannelConfig)
+    //      Mostly SSL, virtual host, and URL prefix
+    @Override
+    public boolean setOption(String key, Object value) {
+        if (PROXY_ADDRESS_OPTION.equals(key)) {
+            setProxyAddress((SocketAddress) value);
+        } else {
+            return super.setOption(key, value);
+        }
 
-      return true;
-   }
+        return true;
+    }
 
-   /**
-    * @return the address of the http proxy. If this is null, then no proxy
-    * should be used.
-    */
-   public SocketAddress getProxyAddress()
-   {
-      return proxyAddress;
-   }
+    /**
+     * @return the address of the http proxy. If this is null, then no proxy
+     * should be used.
+     */
+    public SocketAddress getProxyAddress() {
+        return proxyAddress;
+    }
 
-   /**
-    * Specify a proxy to be used for the http tunnel. If this is null, then
-    * no proxy should be used, otherwise this should be a directly accessible IPv4/IPv6
-    * address and port.
-    */
-   public void setProxyAddress(SocketAddress proxyAddress)
-   {
-      this.proxyAddress = proxyAddress;
-   }
+    /**
+     * Specify a proxy to be used for the http tunnel. If this is null, then
+     * no proxy should be used, otherwise this should be a directly accessible IPv4/IPv6
+     * address and port.
+     */
+    public void setProxyAddress(SocketAddress proxyAddress) {
+        this.proxyAddress = proxyAddress;
+    }
 
-   /* GENERIC SOCKET CHANNEL CONFIGURATION */
+    /* GENERIC SOCKET CHANNEL CONFIGURATION */
 
-   public int getReceiveBufferSize()
-   {
-      return pollChannelConfig.getReceiveBufferSize();
-   }
+    public int getReceiveBufferSize() {
+        return pollChannelConfig.getReceiveBufferSize();
+    }
 
-   public int getSendBufferSize()
-   {
-      return pollChannelConfig.getSendBufferSize();
-   }
+    public int getSendBufferSize() {
+        return pollChannelConfig.getSendBufferSize();
+    }
 
-   public int getSoLinger()
-   {
-      return pollChannelConfig.getSoLinger();
-   }
+    public int getSoLinger() {
+        return pollChannelConfig.getSoLinger();
+    }
 
-   public int getTrafficClass()
-   {
-      return pollChannelConfig.getTrafficClass();
-   }
+    public int getTrafficClass() {
+        return pollChannelConfig.getTrafficClass();
+    }
 
-   public boolean isKeepAlive()
-   {
-      return pollChannelConfig.isKeepAlive();
-   }
+    public boolean isKeepAlive() {
+        return pollChannelConfig.isKeepAlive();
+    }
 
-   public boolean isReuseAddress()
-   {
-      return pollChannelConfig.isReuseAddress();
-   }
+    public boolean isReuseAddress() {
+        return pollChannelConfig.isReuseAddress();
+    }
 
-   public boolean isTcpNoDelay()
-   {
-      return pollChannelConfig.isTcpNoDelay();
-   }
+    public boolean isTcpNoDelay() {
+        return pollChannelConfig.isTcpNoDelay();
+    }
 
-   public void setKeepAlive(boolean keepAlive)
-   {
-      pollChannelConfig.setKeepAlive(keepAlive);
-      sendChannelConfig.setKeepAlive(keepAlive);
-   }
+    public void setKeepAlive(boolean keepAlive) {
+        pollChannelConfig.setKeepAlive(keepAlive);
+        sendChannelConfig.setKeepAlive(keepAlive);
+    }
 
-   public void setPerformancePreferences(int connectionTime, int latency, int bandwidth)
-   {
-      pollChannelConfig.setPerformancePreferences(connectionTime, latency, bandwidth);
-      sendChannelConfig.setPerformancePreferences(connectionTime, latency, bandwidth);
-   }
+    public void setPerformancePreferences(int connectionTime, int latency,
+            int bandwidth) {
+        pollChannelConfig.setPerformancePreferences(connectionTime, latency,
+                bandwidth);
+        sendChannelConfig.setPerformancePreferences(connectionTime, latency,
+                bandwidth);
+    }
 
-   public void setReceiveBufferSize(int receiveBufferSize)
-   {
-      pollChannelConfig.setReceiveBufferSize(receiveBufferSize);
-      sendChannelConfig.setReceiveBufferSize(receiveBufferSize);
-   }
+    public void setReceiveBufferSize(int receiveBufferSize) {
+        pollChannelConfig.setReceiveBufferSize(receiveBufferSize);
+        sendChannelConfig.setReceiveBufferSize(receiveBufferSize);
+    }
 
-   public void setReuseAddress(boolean reuseAddress)
-   {
-      pollChannelConfig.setReuseAddress(reuseAddress);
-      sendChannelConfig.setReuseAddress(reuseAddress);
-   }
+    public void setReuseAddress(boolean reuseAddress) {
+        pollChannelConfig.setReuseAddress(reuseAddress);
+        sendChannelConfig.setReuseAddress(reuseAddress);
+    }
 
-   public void setSendBufferSize(int sendBufferSize)
-   {
-      pollChannelConfig.setSendBufferSize(sendBufferSize);
-      sendChannelConfig.setSendBufferSize(sendBufferSize);
-   }
+    public void setSendBufferSize(int sendBufferSize) {
+        pollChannelConfig.setSendBufferSize(sendBufferSize);
+        sendChannelConfig.setSendBufferSize(sendBufferSize);
+    }
 
-   public void setSoLinger(int soLinger)
-   {
-      pollChannelConfig.setSoLinger(soLinger);
-      sendChannelConfig.setSoLinger(soLinger);
-   }
+    public void setSoLinger(int soLinger) {
+        pollChannelConfig.setSoLinger(soLinger);
+        sendChannelConfig.setSoLinger(soLinger);
+    }
 
-   public void setTcpNoDelay(boolean tcpNoDelay)
-   {
-      pollChannelConfig.setTcpNoDelay(true);
-      sendChannelConfig.setTcpNoDelay(true);
-   }
+    public void setTcpNoDelay(boolean tcpNoDelay) {
+        pollChannelConfig.setTcpNoDelay(true);
+        sendChannelConfig.setTcpNoDelay(true);
+    }
 
-   public void setTrafficClass(int trafficClass)
-   {
-      pollChannelConfig.setTrafficClass(1);
-      sendChannelConfig.setTrafficClass(1);
-   }
+    public void setTrafficClass(int trafficClass) {
+        pollChannelConfig.setTrafficClass(1);
+        sendChannelConfig.setTrafficClass(1);
+    }
 }

@@ -32,63 +32,59 @@ import org.junit.runner.RunWith;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 @RunWith(JMock.class)
-public class HttpTunnelAcceptedChannelSinkTest
-{
+public class HttpTunnelAcceptedChannelSinkTest {
 
-   private static final String TUNNEL_ID = "1";
+    private static final String TUNNEL_ID = "1";
 
-   private final JUnit4Mockery mockContext = new JUnit4Mockery();
+    private final JUnit4Mockery mockContext = new JUnit4Mockery();
 
-   ServerMessageSwitchDownstreamInterface messageSwitch;
+    ServerMessageSwitchDownstreamInterface messageSwitch;
 
-   private HttpTunnelAcceptedChannelSink sink;
+    private HttpTunnelAcceptedChannelSink sink;
 
-   private FakeSocketChannel channel;
+    private FakeSocketChannel channel;
 
-   private UpstreamEventCatcher upstreamCatcher;
+    private UpstreamEventCatcher upstreamCatcher;
 
-   @Before
-   public void setUp() throws Exception
-   {
-      messageSwitch = mockContext.mock(ServerMessageSwitchDownstreamInterface.class);
-      sink = new HttpTunnelAcceptedChannelSink(messageSwitch, TUNNEL_ID, new HttpTunnelAcceptedChannelConfig());
-      ChannelPipeline pipeline = Channels.pipeline();
-      upstreamCatcher = new UpstreamEventCatcher();
-      pipeline.addLast(UpstreamEventCatcher.NAME, upstreamCatcher);
-      channel = new FakeSocketChannel(null, null, pipeline, sink);
-      upstreamCatcher.events.clear();
-   }
+    @Before
+    public void setUp() throws Exception {
+        messageSwitch =
+                mockContext.mock(ServerMessageSwitchDownstreamInterface.class);
+        sink =
+                new HttpTunnelAcceptedChannelSink(messageSwitch, TUNNEL_ID,
+                        new HttpTunnelAcceptedChannelConfig());
+        ChannelPipeline pipeline = Channels.pipeline();
+        upstreamCatcher = new UpstreamEventCatcher();
+        pipeline.addLast(UpstreamEventCatcher.NAME, upstreamCatcher);
+        channel = new FakeSocketChannel(null, null, pipeline, sink);
+        upstreamCatcher.events.clear();
+    }
 
-   @Test
-   public void testSendInvalidDataType()
-   {
-      Channels.write(channel, new Object());
-      assertEquals(1, upstreamCatcher.events.size());
-      NettyTestUtils.checkIsExceptionEvent(upstreamCatcher.events.poll());
-   }
+    @Test
+    public void testSendInvalidDataType() {
+        Channels.write(channel, new Object());
+        assertEquals(1, upstreamCatcher.events.size());
+        NettyTestUtils.checkIsExceptionEvent(upstreamCatcher.events.poll());
+    }
 
-   @Test
-   public void testUnbind()
-   {
-      mockContext.checking(new Expectations()
-      {
-         {
-            one(messageSwitch).serverCloseTunnel(TUNNEL_ID);
-         }
-      });
-      Channels.unbind(channel);
-   }
+    @Test
+    public void testUnbind() {
+        mockContext.checking(new Expectations() {
+            {
+                one(messageSwitch).serverCloseTunnel(TUNNEL_ID);
+            }
+        });
+        Channels.unbind(channel);
+    }
 
-   @Test
-   public void testDisconnect()
-   {
-      mockContext.checking(new Expectations()
-      {
-         {
-            one(messageSwitch).serverCloseTunnel(TUNNEL_ID);
-         }
-      });
+    @Test
+    public void testDisconnect() {
+        mockContext.checking(new Expectations() {
+            {
+                one(messageSwitch).serverCloseTunnel(TUNNEL_ID);
+            }
+        });
 
-      Channels.disconnect(channel);
-   }
+        Channels.disconnect(channel);
+    }
 }
