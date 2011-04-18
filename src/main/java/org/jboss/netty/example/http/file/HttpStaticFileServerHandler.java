@@ -57,15 +57,25 @@ import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.util.CharsetUtil;
 
 /**
- * Web browser caching works with HTTP headers as illustrated by the following sample.  
- * <ul>
+ * A simple handler that serves incoming HTTP requests to send their respective
+ * HTTP responses.  It also implements {@code 'If-Modified-Since'} header to
+ * take advantage of browser cache, as described in
+ * <a href="http://tools.ietf.org/html/rfc2616#section-14.25">RFC 2616</a>.
+ *
+ * <h3>How Browser Caching Works</h3>
+ *
+ * Web browser caching works with HTTP headers as illustrated by the following
+ * sample:
+ * <ol>
  * <li>Request #1 returns the content of <code>/file1.txt</code>.</li>
  * <li>Contents of <code>/file1.txt</code> is cached by the browser.</li>
- * <li>Request #2 for <code>/file1.txt</code> does return the contents of the file again. Rather,
- * a 304 Not Modified is returned. This tells the browser to use the contents stored in its cache.</li>
- * <li>The server knows the file has not been modified because the <code>If-Modified-Since</code> date is the 
- * same as the file's last modified date.</li>
- * </ul>
+ * <li>Request #2 for <code>/file1.txt</code> does return the contents of the
+ *     file again. Rather, a 304 Not Modified is returned. This tells the
+ *     browser to use the contents stored in its cache.</li>
+ * <li>The server knows the file has not been modified because the
+ *     <code>If-Modified-Since</code> date is the same as the file's last
+ *     modified date.</li>
+ * </ol>
  * 
  * <pre>
  * Request #1 Headers
@@ -94,6 +104,7 @@ import org.jboss.netty.util.CharsetUtil;
  * 
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @author <a href="http://www.veebsbraindump.com/">Veebs</a>
  */
 public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
 
@@ -261,8 +272,6 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
      * 
      * @param response
      *            HTTP response
-     * @param file
-     *            file to extract content type
      */
     private void setDateHeader(HttpResponse response) {
         SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
@@ -277,10 +286,10 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
      * 
      * @param response
      *            HTTP response
-     * @param file
+     * @param fileToCache
      *            file to extract content type
      */
-    private void setDateAndCacheHeaders(HttpResponse response, File filetoCache) {
+    private void setDateAndCacheHeaders(HttpResponse response, File fileToCache) {
         SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
         dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
 
@@ -291,10 +300,8 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         // Add cache headers
         time.add(Calendar.SECOND, HTTP_CACHE_SECONDS);
         response.setHeader(HttpHeaders.Names.EXPIRES, dateFormatter.format(time.getTime()));
-
         response.setHeader(HttpHeaders.Names.CACHE_CONTROL, "private, max-age=" + HTTP_CACHE_SECONDS);
-
-        response.setHeader(HttpHeaders.Names.LAST_MODIFIED, dateFormatter.format(new Date(filetoCache.lastModified())));
+        response.setHeader(HttpHeaders.Names.LAST_MODIFIED, dateFormatter.format(new Date(fileToCache.lastModified())));
     }
 
     /**
