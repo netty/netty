@@ -15,18 +15,14 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.channel.*;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
+import static org.jboss.netty.channel.Channels.fireChannelOpen;
 
 /**
  *

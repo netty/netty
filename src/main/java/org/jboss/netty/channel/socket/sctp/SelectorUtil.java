@@ -15,12 +15,12 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.Selector;
-
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

@@ -15,9 +15,6 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import java.net.Socket;
-import java.util.Map;
-
 import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictorFactory;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
@@ -26,6 +23,9 @@ import org.jboss.netty.channel.socket.DefaultSocketChannelConfig;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.ConversionUtil;
+
+import java.net.Socket;
+import java.util.Map;
 
 /**
  * The default {@link NioSocketChannelConfig} implementation.

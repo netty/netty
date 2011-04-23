@@ -15,14 +15,14 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import static org.jboss.netty.channel.Channels.*;
-
-import java.nio.channels.SocketChannel;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
+
+import java.nio.channels.SocketChannel;
+
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  *
@@ -32,7 +32,7 @@ import org.jboss.netty.channel.ChannelSink;
  * @version $Rev$, $Date$
  *
  */
-final class NioAcceptedSocketChannel extends org.jboss.netty.channel.socket.nio.NioSocketChannel {
+final class NioAcceptedSocketChannel extends org.jboss.netty.channel.socket.sctp.NioSocketChannel {
 
     final Thread bossThread;
 

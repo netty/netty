@@ -15,7 +15,11 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.channel.*;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
+import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -31,19 +35,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jboss.netty.channel.AbstractChannelSink;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelState;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.DeadLockProofWorker;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  *

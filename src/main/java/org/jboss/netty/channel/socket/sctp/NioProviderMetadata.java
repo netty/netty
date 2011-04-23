@@ -15,23 +15,23 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.SystemPropertyUtil;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.spi.SelectorProvider;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.SystemPropertyUtil;
 
 /**
  * Provides information which is specific to a NIO service provider
@@ -48,7 +48,7 @@ class NioProviderMetadata {
         InternalLoggerFactory.getInstance(NioProviderMetadata.class);
 
     private static final String CONSTRAINT_LEVEL_PROPERTY =
-        "org.jboss.netty.channel.socket.nio.constraintLevel";
+        "org.jboss.netty.channel.socket.sctp.constraintLevel";
 
     /**
      * 0 - no need to wake up to get / set interestOps (most cases)

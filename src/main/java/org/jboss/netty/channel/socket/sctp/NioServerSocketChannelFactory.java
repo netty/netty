@@ -15,13 +15,13 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import java.util.concurrent.Executor;
-
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 import org.jboss.netty.util.internal.ExecutorUtil;
+
+import java.util.concurrent.Executor;
 
 /**
  * A {@link org.jboss.netty.channel.socket.ServerSocketChannelFactory} which creates a server-side NIO-based

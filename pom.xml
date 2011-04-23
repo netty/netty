@@ -54,6 +54,20 @@
     <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
   </scm>
 
+  <repositories>
+      <repository>
+          <id>JBoss-Public</id>
+          <url>http://repository.jboss.org/nexus/content/groups/public-jboss/</url>
+      </repository>
+  </repositories>
+
+  <pluginRepositories>
+      <pluginRepository>
+          <id>JBoss-Public</id>
+          <url>http://repository.jboss.org/nexus/content/groups/public-jboss/</url>
+      </pluginRepository>
+  </pluginRepositories>
+
   <dependencies>
     <!-- Google Protocol Buffers - completely optional -->
     <dependency>

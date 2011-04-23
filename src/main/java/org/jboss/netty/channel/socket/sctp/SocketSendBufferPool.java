@@ -15,15 +15,15 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.FileRegion;
+
 import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.WritableByteChannel;
-
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.FileRegion;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

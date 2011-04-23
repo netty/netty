@@ -15,31 +15,20 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
-import java.nio.channels.CancelledKeyException;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ClosedSelectorException;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jboss.netty.channel.AbstractChannelSink;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelState;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.DeadLockProofWorker;
+import static org.jboss.netty.channel.Channels.*;
 
 /**
  *
@@ -273,7 +262,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                 NioWorker worker = nextWorker();
                 worker.register(new NioAcceptedSocketChannel(
                         channel.getFactory(), pipeline, channel,
-                        org.jboss.netty.channel.socket.nio.NioServerSocketPipelineSink.this, acceptedSocket,
+                        org.jboss.netty.channel.socket.sctp.NioServerSocketPipelineSink.this, acceptedSocket,
                         worker, currentThread), null);
             } catch (Exception e) {
                 logger.warn(

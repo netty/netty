@@ -15,7 +15,11 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.socket.sctp.SocketSendBufferPool.SendBuffer;
+import org.jboss.netty.util.internal.LinkedTransferQueue;
+import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -24,18 +28,7 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.AbstractChannel;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
-import org.jboss.netty.util.internal.ThreadLocalBoolean;
+import static org.jboss.netty.channel.Channels.fireChannelInterestChanged;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
@@ -232,7 +225,7 @@ class NioSocketChannel extends AbstractChannel
                     highWaterMarkCounter.incrementAndGet();
                     if (!notifying.get()) {
                         notifying.set(Boolean.TRUE);
-                        fireChannelInterestChanged(org.jboss.netty.channel.socket.nio.NioSocketChannel.this);
+                        fireChannelInterestChanged(org.jboss.netty.channel.socket.sctp.NioSocketChannel.this);
                         notifying.set(Boolean.FALSE);
                     }
                 }
@@ -253,7 +246,7 @@ class NioSocketChannel extends AbstractChannel
                         highWaterMarkCounter.decrementAndGet();
                         if (isConnected() && !notifying.get()) {
                             notifying.set(Boolean.TRUE);
-                            fireChannelInterestChanged(org.jboss.netty.channel.socket.nio.NioSocketChannel.this);
+                            fireChannelInterestChanged(org.jboss.netty.channel.socket.sctp.NioSocketChannel.this);
                             notifying.set(Boolean.FALSE);
                         }
                     }
@@ -280,7 +273,7 @@ class NioSocketChannel extends AbstractChannel
         @Override
         public void run() {
             writeTaskInTaskQueue.set(false);
-            worker.writeFromTaskLoop(org.jboss.netty.channel.socket.nio.NioSocketChannel.this);
+            worker.writeFromTaskLoop(org.jboss.netty.channel.socket.sctp.NioSocketChannel.this);
         }
     }
 }
