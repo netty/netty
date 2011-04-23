@@ -15,6 +15,7 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
+import com.sun.nio.sctp.SctpChannel;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.logging.InternalLogger;
@@ -34,22 +35,23 @@ import static org.jboss.netty.channel.Channels.*;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @author Jestan Nirojan
  *
  * @version $Rev$, $Date$
  *
  */
-class NioServerSocketPipelineSink extends AbstractChannelSink {
+class SctpServerPipelineSink extends AbstractChannelSink {
 
     static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(NioServerSocketPipelineSink.class);
+        InternalLoggerFactory.getInstance(SctpServerPipelineSink.class);
 
-    private final NioWorker[] workers;
+    private final SctpWorker[] workers;
     private final AtomicInteger workerIndex = new AtomicInteger();
 
-    NioServerSocketPipelineSink(Executor workerExecutor, int workerCount) {
-        workers = new NioWorker[workerCount];
+    SctpServerPipelineSink(Executor workerExecutor, int workerCount) {
+        workers = new SctpWorker[workerCount];
         for (int i = 0; i < workers.length; i ++) {
-            workers[i] = new NioWorker(workerExecutor);
+            workers[i] = new SctpWorker(workerExecutor);
         }
     }
 
@@ -57,9 +59,9 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         Channel channel = e.getChannel();
-        if (channel instanceof NioServerSocketChannel) {
+        if (channel instanceof SctpServerChannelImpl) {
             handleServerSocket(e);
-        } else if (channel instanceof NioSocketChannel) {
+        } else if (channel instanceof SctpChannelImpl) {
             handleAcceptedSocket(e);
         }
     }
@@ -70,8 +72,8 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
         }
 
         ChannelStateEvent event = (ChannelStateEvent) e;
-        NioServerSocketChannel channel =
-            (NioServerSocketChannel) event.getChannel();
+        SctpServerChannelImpl channel =
+            (SctpServerChannelImpl) event.getChannel();
         ChannelFuture future = event.getFuture();
         ChannelState state = event.getState();
         Object value = event.getValue();
@@ -95,7 +97,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
     private void handleAcceptedSocket(ChannelEvent e) {
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent event = (ChannelStateEvent) e;
-            NioSocketChannel channel = (NioSocketChannel) event.getChannel();
+            SctpChannelImpl channel = (SctpChannelImpl) event.getChannel();
             ChannelFuture future = event.getFuture();
             ChannelState state = event.getState();
             Object value = event.getValue();
@@ -113,12 +115,12 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                 }
                 break;
             case INTEREST_OPS:
-                channel.worker.setInterestOps(channel, future, ((Integer) value).intValue());
+                channel.worker.setInterestOps(channel, future, (Integer) value);
                 break;
             }
         } else if (e instanceof MessageEvent) {
             MessageEvent event = (MessageEvent) e;
-            NioSocketChannel channel = (NioSocketChannel) event.getChannel();
+            SctpChannelImpl channel = (SctpChannelImpl) event.getChannel();
             boolean offered = channel.writeBuffer.offer(event);
             assert offered;
             channel.worker.writeFromUserCode(channel);
@@ -126,20 +128,20 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
     }
 
     private void bind(
-            NioServerSocketChannel channel, ChannelFuture future,
+            SctpServerChannelImpl channel, ChannelFuture future,
             SocketAddress localAddress) {
 
         boolean bound = false;
         boolean bossStarted = false;
         try {
-            channel.socket.socket().bind(localAddress, channel.getConfig().getBacklog());
+            channel.socket.bind(localAddress, channel.getConfig().getBacklog());
             bound = true;
-
+            channel.setBound();
             future.setSuccess();
             fireChannelBound(channel, channel.getLocalAddress());
 
             Executor bossExecutor =
-                ((NioServerSocketChannelFactory) channel.getFactory()).bossExecutor;
+                ((DefaultSctpServerChannelFactory) channel.getFactory()).bossExecutor;
             DeadLockProofWorker.start(bossExecutor, new Boss(channel));
             bossStarted = true;
         } catch (Throwable t) {
@@ -152,7 +154,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
         }
     }
 
-    private void close(NioServerSocketChannel channel, ChannelFuture future) {
+    private void close(SctpServerChannelImpl channel, ChannelFuture future) {
         boolean bound = channel.isBound();
         try {
             if (channel.socket.isOpen()) {
@@ -186,16 +188,16 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
         }
     }
 
-    NioWorker nextWorker() {
+    SctpWorker nextWorker() {
         return workers[Math.abs(
                 workerIndex.getAndIncrement() % workers.length)];
     }
 
     private final class Boss implements Runnable {
         private final Selector selector;
-        private final NioServerSocketChannel channel;
+        private final SctpServerChannelImpl channel;
 
-        Boss(NioServerSocketChannel channel) throws IOException {
+        Boss(SctpServerChannelImpl channel) throws IOException {
             this.channel = channel;
 
             selector = Selector.open();
@@ -225,7 +227,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                             selector.selectedKeys().clear();
                         }
 
-                        SocketChannel acceptedSocket = channel.socket.accept();
+                        SctpChannel acceptedSocket = channel.socket.accept();
                         if (acceptedSocket != null) {
                             registerAcceptedChannel(acceptedSocket, currentThread);
                         }
@@ -255,14 +257,14 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
             }
         }
 
-        private void registerAcceptedChannel(SocketChannel acceptedSocket, Thread currentThread) {
+        private void registerAcceptedChannel(SctpChannel acceptedSocket, Thread currentThread) {
             try {
                 ChannelPipeline pipeline =
                     channel.getConfig().getPipelineFactory().getPipeline();
-                NioWorker worker = nextWorker();
-                worker.register(new NioAcceptedSocketChannel(
+                SctpWorker worker = nextWorker();
+                worker.register(new SctpAcceptedChannel(
                         channel.getFactory(), pipeline, channel,
-                        org.jboss.netty.channel.socket.sctp.NioServerSocketPipelineSink.this, acceptedSocket,
+                        SctpServerPipelineSink.this, acceptedSocket,
                         worker, currentThread), null);
             } catch (Exception e) {
                 logger.warn(

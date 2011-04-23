@@ -15,15 +15,15 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
+import com.sun.nio.sctp.SctpChannel;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.socket.sctp.SocketSendBufferPool.SendBuffer;
+import org.jboss.netty.channel.socket.sctp.SctpSendBufferPool.SendBuffer;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.SocketChannel;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,12 +33,13 @@ import static org.jboss.netty.channel.Channels.fireChannelInterestChanged;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @author Jestan Nirojan
  *
  * @version $Rev$, $Date$
  *
  */
-class NioSocketChannel extends AbstractChannel
-                                implements org.jboss.netty.channel.socket.SocketChannel {
+class SctpChannelImpl extends AbstractChannel
+                                implements org.jboss.netty.channel.socket.sctp.SctpChannel {
 
     private static final int ST_OPEN = 0;
     private static final int ST_BOUND = 1;
@@ -46,9 +47,9 @@ class NioSocketChannel extends AbstractChannel
     private static final int ST_CLOSED = -1;
     volatile int state = ST_OPEN;
 
-    final SocketChannel socket;
-    final NioWorker worker;
-    private final NioSocketChannelConfig config;
+    final SctpChannel sctpChannel;
+    final SctpWorker worker;
+    private final SctpChannelConfig config;
     private volatile InetSocketAddress localAddress;
     private volatile InetSocketAddress remoteAddress;
 
@@ -67,18 +68,16 @@ class NioSocketChannel extends AbstractChannel
     MessageEvent currentWriteEvent;
     SendBuffer currentWriteBuffer;
 
-    public NioSocketChannel(
+    public SctpChannelImpl(
             Channel parent, ChannelFactory factory,
             ChannelPipeline pipeline, ChannelSink sink,
-            SocketChannel socket, NioWorker worker) {
+            SctpChannel sctpChannel, SctpWorker worker) {
         super(parent, factory, pipeline, sink);
 
-        this.socket = socket;
+        this.sctpChannel = sctpChannel;
         this.worker = worker;
-        config = new DefaultNioSocketChannelConfig(socket.socket());
+        config = new DefaultSctpChannelConfig(sctpChannel);
 
-        // TODO Move the state variable to AbstractChannel so that we don't need
-        //      to add many listeners.
         getCloseFuture().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
@@ -88,7 +87,7 @@ class NioSocketChannel extends AbstractChannel
     }
 
     @Override
-    public NioSocketChannelConfig getConfig() {
+    public SctpChannelConfig getConfig() {
         return config;
     }
 
@@ -97,8 +96,9 @@ class NioSocketChannel extends AbstractChannel
         InetSocketAddress localAddress = this.localAddress;
         if (localAddress == null) {
             try {
+                //TODO: fix this
                 this.localAddress = localAddress =
-                    (InetSocketAddress) socket.socket().getLocalSocketAddress();
+                    (InetSocketAddress) sctpChannel.getAllLocalAddresses().iterator().next();
             } catch (Throwable t) {
                 // Sometimes fails on a closed socket in Windows.
                 return null;
@@ -112,8 +112,9 @@ class NioSocketChannel extends AbstractChannel
         InetSocketAddress remoteAddress = this.remoteAddress;
         if (remoteAddress == null) {
             try {
+                //TODO: fix this
                 this.remoteAddress = remoteAddress =
-                    (InetSocketAddress) socket.socket().getRemoteSocketAddress();
+                    (InetSocketAddress) sctpChannel.getRemoteAddresses().iterator().next();
             } catch (Throwable t) {
                 // Sometimes fails on a closed socket in Windows.
                 return null;
@@ -225,7 +226,7 @@ class NioSocketChannel extends AbstractChannel
                     highWaterMarkCounter.incrementAndGet();
                     if (!notifying.get()) {
                         notifying.set(Boolean.TRUE);
-                        fireChannelInterestChanged(org.jboss.netty.channel.socket.sctp.NioSocketChannel.this);
+                        fireChannelInterestChanged(SctpChannelImpl.this);
                         notifying.set(Boolean.FALSE);
                     }
                 }
@@ -246,7 +247,7 @@ class NioSocketChannel extends AbstractChannel
                         highWaterMarkCounter.decrementAndGet();
                         if (isConnected() && !notifying.get()) {
                             notifying.set(Boolean.TRUE);
-                            fireChannelInterestChanged(org.jboss.netty.channel.socket.sctp.NioSocketChannel.this);
+                            fireChannelInterestChanged(SctpChannelImpl.this);
                             notifying.set(Boolean.FALSE);
                         }
                     }
@@ -273,7 +274,7 @@ class NioSocketChannel extends AbstractChannel
         @Override
         public void run() {
             writeTaskInTaskQueue.set(false);
-            worker.writeFromTaskLoop(org.jboss.netty.channel.socket.sctp.NioSocketChannel.this);
+            worker.writeFromTaskLoop(SctpChannelImpl.this);
         }
     }
 }

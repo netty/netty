@@ -16,7 +16,6 @@
 package org.jboss.netty.channel.socket.sctp;
 
 import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.socket.DefaultServerSocketChannelConfig;
 import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -24,7 +23,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -34,22 +32,25 @@ import static org.jboss.netty.channel.Channels.fireChannelOpen;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @author Jestan Nirojan
  *
  * @version $Rev$, $Date$
  *
  */
-class NioServerSocketChannel extends AbstractServerChannel
-                             implements org.jboss.netty.channel.socket.ServerSocketChannel {
+class SctpServerChannelImpl extends AbstractServerChannel
+                             implements SctpServerChannel {
 
     private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
+        InternalLoggerFactory.getInstance(SctpServerChannelImpl.class);
 
-    final ServerSocketChannel socket;
+    final com.sun.nio.sctp.SctpServerChannel socket;
     final Lock shutdownLock = new ReentrantLock();
     volatile Selector selector;
-    private final ServerSocketChannelConfig config;
+    private final SctpServerChannelConfig config;
 
-    NioServerSocketChannel(
+    private volatile boolean bound;
+
+    SctpServerChannelImpl(
             ChannelFactory factory,
             ChannelPipeline pipeline,
             ChannelSink sink) {
@@ -57,7 +58,7 @@ class NioServerSocketChannel extends AbstractServerChannel
         super(factory, pipeline, sink);
 
         try {
-            socket = ServerSocketChannel.open();
+            socket = com.sun.nio.sctp.SctpServerChannel.open();
         } catch (IOException e) {
             throw new ChannelException(
                     "Failed to open a server socket.", e);
@@ -76,19 +77,23 @@ class NioServerSocketChannel extends AbstractServerChannel
             throw new ChannelException("Failed to enter non-blocking mode.", e);
         }
 
-        config = new DefaultServerSocketChannelConfig(socket.socket());
+        config = new DefaultSctpServerChannelConfig(socket);
 
         fireChannelOpen(this);
     }
 
     @Override
-    public ServerSocketChannelConfig getConfig() {
+    public SctpServerChannelConfig getConfig() {
         return config;
     }
 
     @Override
     public InetSocketAddress getLocalAddress() {
-        return (InetSocketAddress) socket.socket().getLocalSocketAddress();
+        try {
+            return (InetSocketAddress) socket.getAllLocalAddresses().iterator().next();
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     @Override
@@ -98,7 +103,11 @@ class NioServerSocketChannel extends AbstractServerChannel
 
     @Override
     public boolean isBound() {
-        return isOpen() && socket.socket().isBound();
+        return isOpen() && bound;
+    }
+
+    public void setBound() {
+        bound = true;
     }
 
     @Override

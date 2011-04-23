@@ -15,22 +15,23 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
+import com.sun.nio.sctp.MessageInfo;
+import com.sun.nio.sctp.SctpChannel;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.FileRegion;
 
 import java.io.IOException;
 import java.lang.ref.SoftReference;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
-import java.nio.channels.WritableByteChannel;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @author Jestan Nirojan
+ *
  * @version $Rev: 2174 $, $Date: 2010-02-19 09:57:23 +0900 (Fri, 19 Feb 2010) $
  */
-final class SocketSendBufferPool {
+final class SctpSendBufferPool {
 
     private static final SendBuffer EMPTY_BUFFER = new EmptySendBuffer();
 
@@ -41,7 +42,7 @@ final class SocketSendBufferPool {
     PreallocationRef poolHead = null;
     Preallocation current = new Preallocation(DEFAULT_PREALLOCATION_SIZE);
 
-    SocketSendBufferPool() {
+    SctpSendBufferPool() {
         super();
     }
 
@@ -54,13 +55,6 @@ final class SocketSendBufferPool {
 
         throw new IllegalArgumentException(
                 "unsupported message type: " + message.getClass());
-    }
-
-    private final SendBuffer acquire(FileRegion src) {
-        if (src.getCount() == 0) {
-            return EMPTY_BUFFER;
-        }
-        return new FileSendBuffer(src);
     }
 
     private final SendBuffer acquire(ChannelBuffer src) {
@@ -86,7 +80,7 @@ final class SocketSendBufferPool {
             ByteBuffer slice = buffer.duplicate();
             buffer.position(align(nextPos));
             slice.limit(nextPos);
-            current.refCnt ++;
+            current.refCnt++;
             dst = new PooledSendBuffer(current, slice);
         } else if (size > remaining) {
             this.current = current = getPreallocation();
@@ -94,10 +88,10 @@ final class SocketSendBufferPool {
             ByteBuffer slice = buffer.duplicate();
             buffer.position(align(size));
             slice.limit(size);
-            current.refCnt ++;
+            current.refCnt++;
             dst = new PooledSendBuffer(current, slice);
         } else { // size == remaining
-            current.refCnt ++;
+            current.refCnt++;
             this.current = getPreallocation0();
             dst = new PooledSendBuffer(current, current.buffer);
         }
@@ -142,7 +136,7 @@ final class SocketSendBufferPool {
         int q = pos >>> ALIGN_SHIFT;
         int r = pos & ALIGN_MASK;
         if (r != 0) {
-            q ++;
+            q++;
         }
         return q << ALIGN_SHIFT;
     }
@@ -167,11 +161,12 @@ final class SocketSendBufferPool {
 
     interface SendBuffer {
         boolean finished();
+
         long writtenBytes();
+
         long totalBytes();
 
-        long transferTo(WritableByteChannel ch) throws IOException;
-        long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException;
+        long transferTo(SctpChannel ch, int protocolId, int streamNo) throws IOException;
 
         void release();
     }
@@ -202,13 +197,12 @@ final class SocketSendBufferPool {
         }
 
         @Override
-        public final long transferTo(WritableByteChannel ch) throws IOException {
-            return ch.write(buffer);
-        }
-
-        @Override
-        public final long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
-            return ch.send(buffer, raddr);
+        public long transferTo(SctpChannel ch, int protocolId, int streamNo) throws IOException {
+            final MessageInfo messageInfo = MessageInfo.createOutgoing(ch.association(), null, streamNo);
+            messageInfo.payloadProtocolID(protocolId);
+            messageInfo.streamNumber(streamNo);
+            ch.send(buffer, messageInfo);
+            return writtenBytes();
         }
 
         @Override
@@ -245,68 +239,23 @@ final class SocketSendBufferPool {
         }
 
         @Override
-        public long transferTo(WritableByteChannel ch) throws IOException {
-            return ch.write(buffer);
-        }
-
-        @Override
-        public long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
-            return ch.send(buffer, raddr);
+        public long transferTo(SctpChannel ch, int protocolId, int streamNo) throws IOException {
+            final MessageInfo messageInfo = MessageInfo.createOutgoing(ch.association(), null, streamNo);
+            messageInfo.payloadProtocolID(protocolId);
+            messageInfo.streamNumber(streamNo);
+            ch.send(buffer, messageInfo);
+            return writtenBytes();
         }
 
         @Override
         public void release() {
             final Preallocation parent = this.parent;
-            if (-- parent.refCnt == 0) {
+            if (--parent.refCnt == 0) {
                 parent.buffer.clear();
                 if (parent != current) {
                     poolHead = new PreallocationRef(parent, poolHead);
                 }
             }
-        }
-    }
-
-    final class FileSendBuffer implements SendBuffer {
-
-        private final FileRegion file;
-        private long writtenBytes;
-
-
-        FileSendBuffer(FileRegion file) {
-            this.file = file;
-        }
-
-        @Override
-        public boolean finished() {
-            return writtenBytes >= file.getCount();
-        }
-
-        @Override
-        public long writtenBytes() {
-            return writtenBytes;
-        }
-
-        @Override
-        public long totalBytes() {
-            return file.getCount();
-        }
-
-        @Override
-        public long transferTo(WritableByteChannel ch) throws IOException {
-            long localWrittenBytes = file.transferTo(ch, writtenBytes);
-            writtenBytes += localWrittenBytes;
-            return localWrittenBytes;
-        }
-
-        @Override
-        public long transferTo(DatagramChannel ch, SocketAddress raddr)
-                throws IOException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void release() {
-            // Unpooled.
         }
     }
 
@@ -332,12 +281,7 @@ final class SocketSendBufferPool {
         }
 
         @Override
-        public final long transferTo(WritableByteChannel ch) throws IOException {
-            return 0;
-        }
-
-        @Override
-        public final long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
+        public long transferTo(SctpChannel ch, int protocolId, int streamNo) throws IOException {
             return 0;
         }
 

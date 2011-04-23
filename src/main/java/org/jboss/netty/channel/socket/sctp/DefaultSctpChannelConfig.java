@@ -15,32 +15,29 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictorFactory;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ReceiveBufferSizePredictor;
-import org.jboss.netty.channel.ReceiveBufferSizePredictorFactory;
-import org.jboss.netty.channel.socket.DefaultSocketChannelConfig;
+import com.sun.nio.sctp.SctpChannel;
+import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.channel.*;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.ConversionUtil;
 
-import java.net.Socket;
 import java.util.Map;
 
 /**
- * The default {@link NioSocketChannelConfig} implementation.
+ * The default {@link SctpChannelConfig} implementation.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @author Jestan Nirojan
  *
  * @version $Rev$, $Date$
  *
  */
-class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
-        implements NioSocketChannelConfig {
+class DefaultSctpChannelConfig implements SctpChannelConfig {
 
     private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(DefaultNioSocketChannelConfig.class);
+        InternalLoggerFactory.getInstance(DefaultSctpChannelConfig.class);
 
     private static final ReceiveBufferSizePredictorFactory DEFAULT_PREDICTOR_FACTORY =
         new AdaptiveReceiveBufferSizePredictorFactory();
@@ -50,14 +47,16 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
     private volatile ReceiveBufferSizePredictor predictor;
     private volatile ReceiveBufferSizePredictorFactory predictorFactory = DEFAULT_PREDICTOR_FACTORY;
     private volatile int writeSpinCount = 16;
+    private SctpChannel socket;
+    private int payloadProtocolId = 0;
 
-    DefaultNioSocketChannelConfig(Socket socket) {
-        super(socket);
+    DefaultSctpChannelConfig(SctpChannel socket) {
+        this.socket = socket;
     }
 
     @Override
     public void setOptions(Map<String, Object> options) {
-        super.setOptions(options);
+        setOptions(options);
         if (getWriteBufferHighWaterMark() < getWriteBufferLowWaterMark()) {
             // Recover the integrity of the configuration with a sensible value.
             setWriteBufferLowWaterMark0(getWriteBufferHighWaterMark() >>> 1);
@@ -71,10 +70,6 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
 
     @Override
     public boolean setOption(String key, Object value) {
-        if (super.setOption(key, value)) {
-            return true;
-        }
-
         if (key.equals("writeBufferHighWaterMark")) {
             setWriteBufferHighWaterMark0(ConversionUtil.toInt(value));
         } else if (key.equals("writeBufferLowWaterMark")) {
@@ -86,9 +81,37 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
         } else if (key.equals("receiveBufferSizePredictor")) {
             setReceiveBufferSizePredictor((ReceiveBufferSizePredictor) value);
         } else {
+            //TODO: set sctp channel options
             return false;
         }
         return true;
+    }
+
+    @Override
+    public ChannelBufferFactory getBufferFactory() {
+        return null;
+    }
+
+    @Override
+    public void setBufferFactory(ChannelBufferFactory bufferFactory) {
+    }
+
+    @Override
+    public ChannelPipelineFactory getPipelineFactory() {
+        return null;
+    }
+
+    @Override
+    public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
+    }
+
+    @Override
+    public int getConnectTimeoutMillis() {
+        return 0;
+    }
+
+    @Override
+    public void setConnectTimeoutMillis(int connectTimeoutMillis) {
     }
 
     @Override
@@ -189,5 +212,77 @@ class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
             throw new NullPointerException("predictorFactory");
         }
         this.predictorFactory = predictorFactory;
+    }
+
+    @Override
+    public int getPayloadProtocol() {
+        return payloadProtocolId;
+    }
+
+    @Override
+    public boolean isTcpNoDelay() {
+        return false;
+    }
+
+    @Override
+    public void setTcpNoDelay(boolean tcpNoDelay) {
+    }
+
+    @Override
+    public int getSoLinger() {
+        return 0;
+    }
+
+    @Override
+    public void setSoLinger(int soLinger) {
+    }
+
+    @Override
+    public int getSendBufferSize() {
+        return 0;
+    }
+
+    @Override
+    public void setSendBufferSize(int sendBufferSize) {
+    }
+
+    @Override
+    public int getReceiveBufferSize() {
+        return 0;
+    }
+
+    @Override
+    public void setReceiveBufferSize(int receiveBufferSize) {
+    }
+
+    @Override
+    public boolean isKeepAlive() {
+        return false;
+    }
+
+    @Override
+    public void setKeepAlive(boolean keepAlive) {
+    }
+
+    @Override
+    public int getTrafficClass() {
+        return 0;
+    }
+
+    @Override
+    public void setTrafficClass(int trafficClass) {
+    }
+
+    @Override
+    public boolean isReuseAddress() {
+        return false;
+    }
+
+    @Override
+    public void setReuseAddress(boolean reuseAddress) {
+    }
+
+    @Override
+    public void setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
     }
 }

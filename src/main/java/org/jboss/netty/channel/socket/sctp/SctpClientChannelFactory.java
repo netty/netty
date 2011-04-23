@@ -15,34 +15,21 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-
-import java.io.IOException;
-import java.nio.channels.CancelledKeyException;
-import java.nio.channels.Selector;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.socket.SocketChannel;
 
 /**
+ * A {@link org.jboss.netty.channel.ChannelFactory} which creates a client-side {@link org.jboss.netty.channel.socket.SocketChannel}.
+ *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Jestan Nirojan
  *
  * @version $Rev$, $Date$
+ *
+ * @apiviz.has org.jboss.netty.channel.socket.SocketChannel oneway - - creates
  */
-final class SelectorUtil {
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(SelectorUtil.class);
-
-    static final int DEFAULT_IO_THREADS = Runtime.getRuntime().availableProcessors() * 2;
-
-    static void select(Selector selector) throws IOException {
-        try {
-            selector.select(500);
-        } catch (CancelledKeyException e) {
-            // Harmless exception - log anyway
-            logger.debug(
-                    CancelledKeyException.class.getSimpleName() +
-                    " raised by a Selector - JDK bug?", e);
-        }
-    }
+public interface SctpClientChannelFactory extends ChannelFactory {
+    @Override
+    SctpChannel newChannel(ChannelPipeline pipeline);
 }

@@ -15,11 +15,12 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
+import com.sun.nio.sctp.*;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.socket.sctp.SocketSendBufferPool.SendBuffer;
+import org.jboss.netty.channel.socket.sctp.SctpSendBufferPool.SendBuffer;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
@@ -41,19 +42,18 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import static org.jboss.netty.channel.Channels.*;
 
 /**
- *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @author Jestan Nirojan
  *
  * @version $Rev$, $Date$
- *
  */
-class NioWorker implements Runnable {
+class SctpWorker implements Runnable {
 
     private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(NioWorker.class);
+            InternalLoggerFactory.getInstance(SctpWorker.class);
 
-    private static final int CONSTRAINT_LEVEL = NioProviderMetadata.CONSTRAINT_LEVEL;
+    private static final int CONSTRAINT_LEVEL = SctpProviderMetadata.CONSTRAINT_LEVEL;
 
     static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
@@ -68,17 +68,22 @@ class NioWorker implements Runnable {
     private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
-    private final SocketReceiveBufferPool recvBufferPool = new SocketReceiveBufferPool();
-    private final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
+    private final SctpReceiveBufferPool recvBufferPool = new SctpReceiveBufferPool();
+    private final SctpSendBufferPool sendBufferPool = new SctpSendBufferPool();
+    private int payloadProtocolId = 0;// un-known sctp payload protocol id
 
-    NioWorker(Executor executor) {
+    private NotificationHandler notificationHandler;
+
+    SctpWorker(Executor executor) {
         this.executor = executor;
     }
 
-    void register(NioSocketChannel channel, ChannelFuture future) {
+    void register(SctpChannelImpl channel, ChannelFuture future) {
 
-        boolean server = !(channel instanceof NioClientSocketChannel);
+        boolean server = !(channel instanceof SctpClientChannel);
         Runnable registerTask = new RegisterTask(channel, future, server);
+        payloadProtocolId = channel.getConfig().getPayloadProtocol();
+        notificationHandler = new NotificationHandler(channel, this);
         Selector selector;
 
         synchronized (startStopLock) {
@@ -131,13 +136,13 @@ class NioWorker implements Runnable {
 
         boolean shutdown = false;
         Selector selector = this.selector;
-        for (;;) {
+        for (; ;) {
             wakenUp.set(false);
 
             if (CONSTRAINT_LEVEL != 0) {
                 selectorGuard.writeLock().lock();
-                    // This empty synchronization block prevents the selector
-                    // from acquiring its lock.
+                // This empty synchronization block prevents the selector
+                // from acquiring its lock.
                 selectorGuard.writeLock().unlock();
             }
 
@@ -188,7 +193,7 @@ class NioWorker implements Runnable {
                 // concurrent manner.
                 if (selector.keys().isEmpty()) {
                     if (shutdown ||
-                        executor instanceof ExecutorService && ((ExecutorService) executor).isShutdown()) {
+                            executor instanceof ExecutorService && ((ExecutorService) executor).isShutdown()) {
 
                         synchronized (startStopLock) {
                             if (registerTaskQueue.isEmpty() && selector.keys().isEmpty()) {
@@ -229,7 +234,7 @@ class NioWorker implements Runnable {
     }
 
     private void processRegisterTaskQueue() throws IOException {
-        for (;;) {
+        for (; ;) {
             final Runnable task = registerTaskQueue.poll();
             if (task == null) {
                 break;
@@ -241,7 +246,7 @@ class NioWorker implements Runnable {
     }
 
     private void processWriteTaskQueue() throws IOException {
-        for (;;) {
+        for (; ;) {
             final Runnable task = writeTaskQueue.poll();
             if (task == null) {
                 break;
@@ -287,45 +292,50 @@ class NioWorker implements Runnable {
     }
 
     private boolean read(SelectionKey k) {
-        final SocketChannel ch = (SocketChannel) k.channel();
-        final NioSocketChannel channel = (NioSocketChannel) k.attachment();
+        final SctpChannelImpl channel = (SctpChannelImpl) k.attachment();
 
         final ReceiveBufferSizePredictor predictor =
-            channel.getConfig().getReceiveBufferSizePredictor();
+                channel.getConfig().getReceiveBufferSizePredictor();
         final int predictedRecvBufSize = predictor.nextReceiveBufferSize();
 
-        int ret = 0;
-        int readBytes = 0;
+        boolean messageReceived = false;
         boolean failure = true;
 
         ByteBuffer bb = recvBufferPool.acquire(predictedRecvBufSize);
         try {
-            while ((ret = ch.read(bb)) > 0) {
-                readBytes += ret;
-                if (!bb.hasRemaining()) {
-                    break;
+            MessageInfo messageInfo = channel.sctpChannel.receive(bb, this, notificationHandler);
+            if (messageInfo != null) {
+                messageReceived = true;
+                if (messageInfo.isComplete()) {
+                    failure = false;
+                } else {
+                    logger.error("Received incomplete sctp packet, can not continue! Expected SCTP_EXPLICIT_COMPLETE message");
+                    failure = true;
                 }
+            } else {
+                messageReceived = false;
+                failure = false;
             }
-            failure = false;
         } catch (ClosedChannelException e) {
             // Can happen, and does not need a user attention.
         } catch (Throwable t) {
             fireExceptionCaught(channel, t);
         }
 
-        if (readBytes > 0) {
+        if (messageReceived) {
             bb.flip();
 
             final ChannelBufferFactory bufferFactory =
-                channel.getConfig().getBufferFactory();
-            final ChannelBuffer buffer = bufferFactory.getBuffer(readBytes);
+                    channel.getConfig().getBufferFactory();
+            final int receivedBytes = bb.remaining();
+            final ChannelBuffer buffer = bufferFactory.getBuffer(receivedBytes);
             buffer.setBytes(0, bb);
-            buffer.writerIndex(readBytes);
+            buffer.writerIndex(receivedBytes);
 
             recvBufferPool.release(bb);
 
             // Update the predictor.
-            predictor.previousReceiveBufferSize(readBytes);
+            predictor.previousReceiveBufferSize(receivedBytes);
 
             // Fire the event.
             fireMessageReceived(channel, buffer);
@@ -333,7 +343,7 @@ class NioWorker implements Runnable {
             recvBufferPool.release(bb);
         }
 
-        if (ret < 0 || failure) {
+        if (channel.sctpChannel.isBlocking() && !messageReceived || failure) {
             k.cancel(); // Some JDK implementations run into an infinite loop without this.
             close(channel, succeededFuture(channel));
             return false;
@@ -343,11 +353,11 @@ class NioWorker implements Runnable {
     }
 
     private void close(SelectionKey k) {
-        NioSocketChannel ch = (NioSocketChannel) k.attachment();
+        SctpChannelImpl ch = (SctpChannelImpl) k.attachment();
         close(ch, succeededFuture(ch));
     }
 
-    void writeFromUserCode(final NioSocketChannel channel) {
+    void writeFromUserCode(final SctpChannelImpl channel) {
         if (!channel.isConnected()) {
             cleanUpWriteBuffer(channel);
             return;
@@ -370,19 +380,19 @@ class NioWorker implements Runnable {
         write0(channel);
     }
 
-    void writeFromTaskLoop(final NioSocketChannel ch) {
+    void writeFromTaskLoop(final SctpChannelImpl ch) {
         if (!ch.writeSuspended) {
             write0(ch);
         }
     }
 
     void writeFromSelectorLoop(final SelectionKey k) {
-        NioSocketChannel ch = (NioSocketChannel) k.attachment();
+        SctpChannelImpl ch = (SctpChannelImpl) k.attachment();
         ch.writeSuspended = false;
         write0(ch);
     }
 
-    private boolean scheduleWriteIfNecessary(final NioSocketChannel channel) {
+    private boolean scheduleWriteIfNecessary(final SctpChannelImpl channel) {
         final Thread currentThread = Thread.currentThread();
         final Thread workerThread = thread;
         if (currentThread != workerThread) {
@@ -391,8 +401,8 @@ class NioWorker implements Runnable {
                 assert offered;
             }
 
-            if (!(channel instanceof NioAcceptedSocketChannel) ||
-                ((NioAcceptedSocketChannel) channel).bossThread != currentThread) {
+            if (!(channel instanceof SctpAcceptedChannel) ||
+                    ((SctpAcceptedChannel) channel).bossThread != currentThread) {
                 final Selector workerSelector = selector;
                 if (workerSelector != null) {
                     if (wakenUp.compareAndSet(false, true)) {
@@ -417,20 +427,20 @@ class NioWorker implements Runnable {
         return false;
     }
 
-    private void write0(NioSocketChannel channel) {
+    private void write0(SctpChannelImpl channel) {
         boolean open = true;
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
 
         long writtenBytes = 0;
 
-        final SocketSendBufferPool sendBufferPool = this.sendBufferPool;
-        final SocketChannel ch = channel.socket;
+        final SctpSendBufferPool sendBufferPool = this.sendBufferPool;
+        final com.sun.nio.sctp.SctpChannel ch = channel.sctpChannel;
         final Queue<MessageEvent> writeBuffer = channel.writeBuffer;
         final int writeSpinCount = channel.getConfig().getWriteSpinCount();
         synchronized (channel.writeLock) {
             channel.inWriteNowLoop = true;
-            for (;;) {
+            for (; ;) {
                 MessageEvent evt = channel.currentWriteEvent;
                 SendBuffer buf;
                 if (evt == null) {
@@ -448,8 +458,8 @@ class NioWorker implements Runnable {
                 ChannelFuture future = evt.getFuture();
                 try {
                     long localWrittenBytes = 0;
-                    for (int i = writeSpinCount; i > 0; i --) {
-                        localWrittenBytes = buf.transferTo(ch);
+                    for (int i = writeSpinCount; i > 0; i--) {
+                        localWrittenBytes = buf.transferTo(ch, payloadProtocolId, 0);
                         if (localWrittenBytes != 0) {
                             writtenBytes += localWrittenBytes;
                             break;
@@ -510,9 +520,9 @@ class NioWorker implements Runnable {
         }
     }
 
-    private void setOpWrite(NioSocketChannel channel) {
+    private void setOpWrite(SctpChannelImpl channel) {
         Selector selector = this.selector;
-        SelectionKey key = channel.socket.keyFor(selector);
+        SelectionKey key = channel.sctpChannel.keyFor(selector);
         if (key == null) {
             return;
         }
@@ -533,9 +543,9 @@ class NioWorker implements Runnable {
         }
     }
 
-    private void clearOpWrite(NioSocketChannel channel) {
+    private void clearOpWrite(SctpChannelImpl channel) {
         Selector selector = this.selector;
-        SelectionKey key = channel.socket.keyFor(selector);
+        SelectionKey key = channel.sctpChannel.keyFor(selector);
         if (key == null) {
             return;
         }
@@ -556,12 +566,12 @@ class NioWorker implements Runnable {
         }
     }
 
-    void close(NioSocketChannel channel, ChannelFuture future) {
+    void close(SctpChannelImpl channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         try {
-            channel.socket.close();
-            cancelledKeys ++;
+            channel.sctpChannel.close();
+            cancelledKeys++;
 
             if (channel.setClosed()) {
                 future.setSuccess();
@@ -583,7 +593,7 @@ class NioWorker implements Runnable {
         }
     }
 
-    private void cleanUpWriteBuffer(NioSocketChannel channel) {
+    private void cleanUpWriteBuffer(SctpChannelImpl channel) {
         Exception cause = null;
         boolean fireExceptionCaught = false;
 
@@ -620,7 +630,7 @@ class NioWorker implements Runnable {
                     }
                 }
 
-                for (;;) {
+                for (; ;) {
                     evt = writeBuffer.poll();
                     if (evt == null) {
                         break;
@@ -637,14 +647,14 @@ class NioWorker implements Runnable {
     }
 
     void setInterestOps(
-            NioSocketChannel channel, ChannelFuture future, int interestOps) {
+            SctpChannelImpl channel, ChannelFuture future, int interestOps) {
         boolean changed = false;
         try {
             // interestOps can change at any time and at any thread.
             // Acquire a lock to avoid possible race condition.
             synchronized (channel.interestOpsLock) {
                 Selector selector = this.selector;
-                SelectionKey key = channel.socket.keyFor(selector);
+                SelectionKey key = channel.sctpChannel.keyFor(selector);
 
                 if (key == null || selector == null) {
                     // Not registered to the worker yet.
@@ -658,38 +668,38 @@ class NioWorker implements Runnable {
                 interestOps |= channel.getRawInterestOps() & Channel.OP_WRITE;
 
                 switch (CONSTRAINT_LEVEL) {
-                case 0:
-                    if (channel.getRawInterestOps() != interestOps) {
-                        key.interestOps(interestOps);
-                        if (Thread.currentThread() != thread &&
-                            wakenUp.compareAndSet(false, true)) {
-                            selector.wakeup();
-                        }
-                        changed = true;
-                    }
-                    break;
-                case 1:
-                case 2:
-                    if (channel.getRawInterestOps() != interestOps) {
-                        if (Thread.currentThread() == thread) {
+                    case 0:
+                        if (channel.getRawInterestOps() != interestOps) {
                             key.interestOps(interestOps);
+                            if (Thread.currentThread() != thread &&
+                                    wakenUp.compareAndSet(false, true)) {
+                                selector.wakeup();
+                            }
                             changed = true;
-                        } else {
-                            selectorGuard.readLock().lock();
-                            try {
-                                if (wakenUp.compareAndSet(false, true)) {
-                                    selector.wakeup();
-                                }
+                        }
+                        break;
+                    case 1:
+                    case 2:
+                        if (channel.getRawInterestOps() != interestOps) {
+                            if (Thread.currentThread() == thread) {
                                 key.interestOps(interestOps);
                                 changed = true;
-                            } finally {
-                                selectorGuard.readLock().unlock();
+                            } else {
+                                selectorGuard.readLock().lock();
+                                try {
+                                    if (wakenUp.compareAndSet(false, true)) {
+                                        selector.wakeup();
+                                    }
+                                    key.interestOps(interestOps);
+                                    changed = true;
+                                } finally {
+                                    selectorGuard.readLock().unlock();
+                                }
                             }
                         }
-                    }
-                    break;
-                default:
-                    throw new Error();
+                        break;
+                    default:
+                        throw new Error();
                 }
 
                 if (changed) {
@@ -713,12 +723,12 @@ class NioWorker implements Runnable {
     }
 
     private final class RegisterTask implements Runnable {
-        private final NioSocketChannel channel;
+        private final SctpChannelImpl channel;
         private final ChannelFuture future;
         private final boolean server;
 
         RegisterTask(
-                NioSocketChannel channel, ChannelFuture future, boolean server) {
+                SctpChannelImpl channel, ChannelFuture future, boolean server) {
 
             this.channel = channel;
             this.future = future;
@@ -739,11 +749,11 @@ class NioWorker implements Runnable {
 
             try {
                 if (server) {
-                    channel.socket.configureBlocking(false);
+                    channel.sctpChannel.configureBlocking(false);
                 }
 
                 synchronized (channel.interestOpsLock) {
-                    channel.socket.register(
+                    channel.sctpChannel.register(
                             selector, channel.getRawInterestOps(), channel);
                 }
                 if (future != null) {
@@ -762,7 +772,7 @@ class NioWorker implements Runnable {
             }
 
             if (!server) {
-                if (!((NioClientSocketChannel) channel).boundManually) {
+                if (!((SctpClientChannel) channel).boundManually) {
                     fireChannelBound(channel, localAddress);
                 }
                 fireChannelConnected(channel, remoteAddress);

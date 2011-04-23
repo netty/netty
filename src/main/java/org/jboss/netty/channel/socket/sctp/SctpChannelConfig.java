@@ -25,7 +25,7 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  * <h3>Available options</h3>
  *
  * In addition to the options provided by {@link org.jboss.netty.channel.ChannelConfig} and
- * {@link org.jboss.netty.channel.socket.SocketChannelConfig}, {@link org.jboss.netty.channel.socket.sctp.NioSocketChannelConfig} allows the
+ * {@link org.jboss.netty.channel.socket.SocketChannelConfig}, {@link SctpChannelConfig} allows the
  * following options in the option map:
  *
  * <table border="1" cellspacing="0" cellpadding="6">
@@ -46,10 +46,11 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @author Jestan Nirojan
  *
  * @version $Rev$, $Date$
  */
-public interface NioSocketChannelConfig extends SocketChannelConfig {
+public interface SctpChannelConfig extends SocketChannelConfig {
 
     /**
      * Returns the high water mark of the write buffer.  If the number of bytes
@@ -138,4 +139,11 @@ public interface NioSocketChannelConfig extends SocketChannelConfig {
      */
     void setReceiveBufferSizePredictorFactory(
             ReceiveBufferSizePredictorFactory predictorFactory);
+
+    /**
+     * Get the sctp payload protocol id
+     * A value indicating the type of payload protocol data being transmitted. This value is passed as opaque data by SCTP.
+     * @return payload protocol id
+     */
+    int getPayloadProtocol();
 }

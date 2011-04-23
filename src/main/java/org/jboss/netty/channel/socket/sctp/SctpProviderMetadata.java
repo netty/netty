@@ -39,13 +39,14 @@ import java.util.regex.Pattern;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @author Jestan Nirojan
  *
  * @version $Rev$, $Date$
  *
  */
-class NioProviderMetadata {
+class SctpProviderMetadata {
     static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(NioProviderMetadata.class);
+        InternalLoggerFactory.getInstance(SctpProviderMetadata.class);
 
     private static final String CONSTRAINT_LEVEL_PROPERTY =
         "org.jboss.netty.channel.socket.sctp.constraintLevel";
@@ -429,7 +430,7 @@ class NioProviderMetadata {
                 new ConstraintLevelAutodetector().autodetect());
     }
 
-    private NioProviderMetadata() {
+    private SctpProviderMetadata() {
         // Unused
     }
 }

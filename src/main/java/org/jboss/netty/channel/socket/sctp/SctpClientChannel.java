@@ -15,12 +15,12 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
+import com.sun.nio.sctp.SctpChannel;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.nio.channels.SocketChannel;
 
 import static org.jboss.netty.channel.Channels.fireChannelOpen;
 
@@ -28,33 +28,34 @@ import static org.jboss.netty.channel.Channels.fireChannelOpen;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @author Jestan Nirojan
  *
  * @version $Rev$, $Date$
  *
  */
-final class NioClientSocketChannel extends NioSocketChannel {
+final class SctpClientChannel extends SctpChannelImpl {
 
     private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(NioClientSocketChannel.class);
+        InternalLoggerFactory.getInstance(SctpClientChannel.class);
 
-    private static SocketChannel newSocket() {
-        SocketChannel socket;
+    private static SctpChannel newSocket() {
+        SctpChannel underlayingChannel;
         try {
-            socket = SocketChannel.open();
+            underlayingChannel = SctpChannel.open();
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
         }
 
         boolean success = false;
         try {
-            socket.configureBlocking(false);
+            underlayingChannel.configureBlocking(false);
             success = true;
         } catch (IOException e) {
             throw new ChannelException("Failed to enter non-blocking mode.", e);
         } finally {
             if (!success) {
                 try {
-                    socket.close();
+                    underlayingChannel.close();
                 } catch (IOException e) {
                     logger.warn(
                             "Failed to close a partially initialized socket.",
@@ -63,7 +64,7 @@ final class NioClientSocketChannel extends NioSocketChannel {
             }
         }
 
-        return socket;
+        return underlayingChannel;
     }
 
     volatile ChannelFuture connectFuture;
@@ -72,9 +73,9 @@ final class NioClientSocketChannel extends NioSocketChannel {
     // Does not need to be volatile as it's accessed by only one thread.
     long connectDeadlineNanos;
 
-    NioClientSocketChannel(
+    SctpClientChannel(
             ChannelFactory factory, ChannelPipeline pipeline,
-            ChannelSink sink, NioWorker worker) {
+            ChannelSink sink, SctpWorker worker) {
 
         super(null, factory, pipeline, sink, newSocket(), worker);
         fireChannelOpen(this);

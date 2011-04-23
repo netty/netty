@@ -41,26 +41,27 @@ import static org.jboss.netty.channel.Channels.*;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @author Jestan Nirojan
  *
  * @version $Rev$, $Date$
  *
  */
-class NioClientSocketPipelineSink extends AbstractChannelSink {
+class SctpClientPipelineSink extends AbstractChannelSink {
 
     static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(NioClientSocketPipelineSink.class);
+        InternalLoggerFactory.getInstance(SctpClientPipelineSink.class);
 
     final Executor bossExecutor;
     private final Boss boss = new Boss();
-    private final NioWorker[] workers;
+    private final SctpWorker[] workers;
     private final AtomicInteger workerIndex = new AtomicInteger();
 
-    NioClientSocketPipelineSink(
+    SctpClientPipelineSink(
             Executor bossExecutor, Executor workerExecutor, int workerCount) {
         this.bossExecutor = bossExecutor;
-        workers = new NioWorker[workerCount];
+        workers = new SctpWorker[workerCount];
         for (int i = 0; i < workers.length; i ++) {
-            workers[i] = new NioWorker(workerExecutor);
+            workers[i] = new SctpWorker(workerExecutor);
         }
     }
 
@@ -69,8 +70,8 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent event = (ChannelStateEvent) e;
-            NioClientSocketChannel channel =
-                (NioClientSocketChannel) event.getChannel();
+            SctpClientChannel channel =
+                (SctpClientChannel) event.getChannel();
             ChannelFuture future = event.getFuture();
             ChannelState state = event.getState();
             Object value = event.getValue();
@@ -101,7 +102,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             }
         } else if (e instanceof MessageEvent) {
             MessageEvent event = (MessageEvent) e;
-            NioSocketChannel channel = (NioSocketChannel) event.getChannel();
+            SctpChannelImpl channel = (SctpChannelImpl) event.getChannel();
             boolean offered = channel.writeBuffer.offer(event);
             assert offered;
             channel.worker.writeFromUserCode(channel);
@@ -109,10 +110,10 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
     }
 
     private void bind(
-            NioClientSocketChannel channel, ChannelFuture future,
+            SctpClientChannel channel, ChannelFuture future,
             SocketAddress localAddress) {
         try {
-            channel.socket.socket().bind(localAddress);
+            channel.sctpChannel.bind(localAddress);
             channel.boundManually = true;
             channel.setBound();
             future.setSuccess();
@@ -124,10 +125,10 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
     }
 
     private void connect(
-            final NioClientSocketChannel channel, final ChannelFuture cf,
+            final SctpClientChannel channel, final ChannelFuture cf,
             SocketAddress remoteAddress) {
         try {
-            if (channel.socket.connect(remoteAddress)) {
+            if (channel.sctpChannel.connect(remoteAddress)) {
                 channel.worker.register(channel, cf);
             } else {
                 channel.getCloseFuture().addListener(new ChannelFutureListener() {
@@ -151,7 +152,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         }
     }
 
-    NioWorker nextWorker() {
+    SctpWorker nextWorker() {
         return workers[Math.abs(
                 workerIndex.getAndIncrement() % workers.length)];
     }
@@ -168,7 +169,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             super();
         }
 
-        void register(NioClientSocketChannel channel) {
+        void register(SctpClientChannel channel) {
             Runnable registerTask = new RegisterTask(this, channel);
             Selector selector;
 
@@ -352,7 +353,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                     continue;
                 }
 
-                NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
+                SctpClientChannel ch = (SctpClientChannel) k.attachment();
                 if (ch.connectDeadlineNanos > 0 &&
                         currentTimeNanos >= ch.connectDeadlineNanos) {
 
@@ -368,9 +369,9 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         }
 
         private void connect(SelectionKey k) {
-            NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
+            SctpClientChannel ch = (SctpClientChannel) k.attachment();
             try {
-                if (ch.socket.finishConnect()) {
+                if (ch.sctpChannel.finishConnect()) {
                     k.cancel();
                     ch.worker.register(ch, ch.connectFuture);
                 }
@@ -383,16 +384,16 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         }
 
         private void close(SelectionKey k) {
-            NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
+            SctpClientChannel ch = (SctpClientChannel) k.attachment();
             ch.worker.close(ch, succeededFuture(ch));
         }
     }
 
     private static final class RegisterTask implements Runnable {
         private final Boss boss;
-        private final NioClientSocketChannel channel;
+        private final SctpClientChannel channel;
 
-        RegisterTask(Boss boss, NioClientSocketChannel channel) {
+        RegisterTask(Boss boss, SctpClientChannel channel) {
             this.boss = boss;
             this.channel = channel;
         }
@@ -400,7 +401,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         @Override
         public void run() {
             try {
-                channel.socket.register(
+                channel.sctpChannel.register(
                         boss.selector, SelectionKey.OP_CONNECT, channel);
             } catch (ClosedChannelException e) {
                 channel.worker.close(channel, succeededFuture(channel));

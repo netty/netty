@@ -17,8 +17,6 @@ package org.jboss.netty.channel.socket.sctp;
 
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.socket.ServerSocketChannel;
-import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 import org.jboss.netty.util.internal.ExecutorUtil;
 
 import java.util.concurrent.Executor;
@@ -31,7 +29,7 @@ import java.util.concurrent.Executor;
  *
  * <h3>How threads work</h3>
  * <p>
- * There are two types of threads in a {@link org.jboss.netty.channel.socket.sctp.NioServerSocketChannelFactory};
+ * There are two types of threads in a {@link DefaultSctpServerChannelFactory};
  * one is boss thread and the other is worker thread.
  *
  * <h4>Boss threads</h4>
@@ -41,18 +39,18 @@ import java.util.concurrent.Executor;
  * have two boss threads.  A boss thread accepts incoming connections until
  * the port is unbound.  Once a connection is accepted successfully, the boss
  * thread passes the accepted {@link org.jboss.netty.channel.Channel} to one of the worker
- * threads that the {@link org.jboss.netty.channel.socket.sctp.NioServerSocketChannelFactory} manages.
+ * threads that the {@link DefaultSctpServerChannelFactory} manages.
  *
  * <h4>Worker threads</h4>
  * <p>
- * One {@link org.jboss.netty.channel.socket.sctp.NioServerSocketChannelFactory} can have one or more worker
+ * One {@link DefaultSctpServerChannelFactory} can have one or more worker
  * threads.  A worker thread performs non-blocking read and write for one or
  * more {@link org.jboss.netty.channel.Channel}s in a non-blocking mode.
  *
  * <h3>Life cycle of threads and graceful shutdown</h3>
  * <p>
  * All threads are acquired from the {@link java.util.concurrent.Executor}s which were specified
- * when a {@link org.jboss.netty.channel.socket.sctp.NioServerSocketChannelFactory} was created.  Boss threads are
+ * when a {@link DefaultSctpServerChannelFactory} was created.  Boss threads are
  * acquired from the {@code bossExecutor}, and worker threads are acquired from
  * the {@code workerExecutor}.  Therefore, you should make sure the specified
  * {@link java.util.concurrent.Executor}s are able to lend the sufficient number of threads.
@@ -77,12 +75,13 @@ import java.util.concurrent.Executor;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @author Jestan Nirojan
  *
  * @version $Rev$, $Date$
  *
  * @apiviz.landmark
  */
-public class NioServerSocketChannelFactory implements ServerSocketChannelFactory {
+public class DefaultSctpServerChannelFactory implements SctpServerChannelFactory {
 
     final Executor bossExecutor;
     private final Executor workerExecutor;
@@ -90,7 +89,7 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
 
     /**
      * Creates a new instance.  Calling this constructor is same with calling
-     * {@link #NioServerSocketChannelFactory(java.util.concurrent.Executor, java.util.concurrent.Executor, int)} with 2 *
+     * {@link #DefaultSctpServerChannelFactory(java.util.concurrent.Executor, java.util.concurrent.Executor, int)} with 2 *
      * the number of available processors in the machine.  The number of
      * available processors is obtained by {@link Runtime#availableProcessors()}.
      *
@@ -99,7 +98,7 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
      * @param workerExecutor
      *        the {@link java.util.concurrent.Executor} which will execute the I/O worker threads
      */
-    public NioServerSocketChannelFactory(
+    public DefaultSctpServerChannelFactory(
             Executor bossExecutor, Executor workerExecutor) {
         this(bossExecutor, workerExecutor, SelectorUtil.DEFAULT_IO_THREADS);
     }
@@ -114,7 +113,7 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
      * @param workerCount
      *        the maximum number of I/O worker threads
      */
-    public NioServerSocketChannelFactory(
+    public DefaultSctpServerChannelFactory(
             Executor bossExecutor, Executor workerExecutor,
             int workerCount) {
         if (bossExecutor == null) {
@@ -130,12 +129,12 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
         }
         this.bossExecutor = bossExecutor;
         this.workerExecutor = workerExecutor;
-        sink = new NioServerSocketPipelineSink(workerExecutor, workerCount);
+        sink = new SctpServerPipelineSink(workerExecutor, workerCount);
     }
 
     @Override
-    public ServerSocketChannel newChannel(ChannelPipeline pipeline) {
-        return new NioServerSocketChannel(this, pipeline, sink);
+    public SctpServerChannel newChannel(ChannelPipeline pipeline) {
+        return new SctpServerChannelImpl(this, pipeline, sink);
     }
 
     @Override

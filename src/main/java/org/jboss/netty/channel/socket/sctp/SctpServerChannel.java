@@ -15,34 +15,25 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.channel.ServerChannel;
+import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
 
-import java.io.IOException;
-import java.nio.channels.CancelledKeyException;
-import java.nio.channels.Selector;
+import java.net.InetSocketAddress;
 
 /**
+ * A TCP/IP {@link org.jboss.netty.channel.ServerChannel} which accepts incoming TCP/IP connections.
+ *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Jestan Nirojan
  *
  * @version $Rev$, $Date$
+ *
  */
-final class SelectorUtil {
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(SelectorUtil.class);
-
-    static final int DEFAULT_IO_THREADS = Runtime.getRuntime().availableProcessors() * 2;
-
-    static void select(Selector selector) throws IOException {
-        try {
-            selector.select(500);
-        } catch (CancelledKeyException e) {
-            // Harmless exception - log anyway
-            logger.debug(
-                    CancelledKeyException.class.getSimpleName() +
-                    " raised by a Selector - JDK bug?", e);
-        }
-    }
+public interface SctpServerChannel extends ServerChannel {
+    @Override
+    SctpServerChannelConfig getConfig();
+    @Override
+    InetSocketAddress getLocalAddress();
+    @Override
+    InetSocketAddress getRemoteAddress();
 }

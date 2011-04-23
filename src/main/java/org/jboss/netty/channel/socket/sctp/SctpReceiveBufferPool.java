@@ -21,16 +21,18 @@ import java.nio.ByteBuffer;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @author Jestan Nirojan
+ *
  * @version $Rev$, $Date$
  */
-final class SocketReceiveBufferPool {
+final class SctpReceiveBufferPool {
 
     private static final int POOL_SIZE = 8;
 
     @SuppressWarnings("unchecked")
     private final SoftReference<ByteBuffer>[] pool = new SoftReference[POOL_SIZE];
 
-    SocketReceiveBufferPool() {
+    SctpReceiveBufferPool() {
         super();
     }
 

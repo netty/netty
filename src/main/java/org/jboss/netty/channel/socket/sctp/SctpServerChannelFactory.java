@@ -15,16 +15,12 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-
-import java.nio.channels.SocketChannel;
-
-import static org.jboss.netty.channel.Channels.*;
+import org.jboss.netty.channel.ServerChannelFactory;
+import org.jboss.netty.channel.socket.ServerSocketChannel;
 
 /**
+ * A {@link org.jboss.netty.channel.ChannelFactory} which creates a {@link org.jboss.netty.channel.socket.ServerSocketChannel}.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
@@ -32,22 +28,7 @@ import static org.jboss.netty.channel.Channels.*;
  * @version $Rev$, $Date$
  *
  */
-final class NioAcceptedSocketChannel extends org.jboss.netty.channel.socket.sctp.NioSocketChannel {
-
-    final Thread bossThread;
-
-    NioAcceptedSocketChannel(
-            ChannelFactory factory, ChannelPipeline pipeline,
-            Channel parent, ChannelSink sink,
-            SocketChannel socket, NioWorker worker, Thread bossThread) {
-
-        super(parent, factory, pipeline, sink, socket, worker);
-
-        this.bossThread = bossThread;
-
-        setConnected();
-        fireChannelOpen(this);
-        fireChannelBound(this, getLocalAddress());
-        fireChannelConnected(this, getRemoteAddress());
-    }
+public interface SctpServerChannelFactory extends ServerChannelFactory {
+    @Override
+    SctpServerChannel newChannel(ChannelPipeline pipeline);
 }
