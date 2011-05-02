@@ -15,7 +15,8 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.text.DateFormat;
 import java.util.Date;
@@ -33,7 +34,7 @@ public class CookieEncoderTest {
     @Test
     public void testEncodingSingleCookieV0() {
         String result = "myCookie=myValue;Expires=XXX;Path=/apathsomewhere;Domain=.adomainsomewhere;Secure";
-        DateFormat df = new CookieDateFormat();
+        DateFormat df = new HttpHeaderDateFormat();
         Cookie cookie = new DefaultCookie("myCookie", "myValue");
         CookieEncoder encoder = new CookieEncoder(true);
         encoder.addCookie(cookie);

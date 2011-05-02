@@ -22,14 +22,19 @@ import java.util.TimeZone;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @author <a href="http://www.rogiel.com/">Rogiel Josias Sulzbach</a>
  * @version $Rev$, $Date$
  */
-final class CookieDateFormat extends SimpleDateFormat {
+final class HttpHeaderDateFormat extends SimpleDateFormat {
+	private static final long serialVersionUID = -925286159755905325L;
 
-    private static final long serialVersionUID = 1789486337887402640L;
+	/*
+	 * Official documentations says that the "E, d-MMM-y HH:mm:ss z" format is
+	 * now obsolete. "E, d MMM yyyy HH:mm:ss z" should be used.
+	 */
 
-    CookieDateFormat() {
-        super("E, d-MMM-y HH:mm:ss z", Locale.ENGLISH);
-        setTimeZone(TimeZone.getTimeZone("GMT"));
-    }
+	HttpHeaderDateFormat() {
+		super("E, d MMM yyyy HH:mm:ss z", Locale.ENGLISH);
+		setTimeZone(TimeZone.getTimeZone("GMT"));
+	}
 }
