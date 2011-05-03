@@ -36,12 +36,13 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements
 
     private final ServerSocketChannel realChannel;
 
-    private final HttpTunnelServerChannelConfig config;
+    final HttpTunnelServerChannelConfig config;
 
-    private final ServerMessageSwitch messageSwitch;
+    final ServerMessageSwitch messageSwitch;
 
     private final ChannelFutureListener CLOSE_FUTURE_PROXY =
             new ChannelFutureListener() {
+                @Override
                 public void operationComplete(ChannelFuture future)
                         throws Exception {
                     HttpTunnelServerChannel.this.setClosed();
@@ -62,21 +63,30 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements
         Channels.fireChannelOpen(this);
     }
 
+    @Override
     public ServerSocketChannelConfig getConfig() {
         return config;
     }
 
+    @Override
     public InetSocketAddress getLocalAddress() {
         return realChannel.getLocalAddress();
     }
 
+    @Override
     public InetSocketAddress getRemoteAddress() {
         // server channels never have a remote address
         return null;
     }
 
+    @Override
     public boolean isBound() {
         return realChannel.isBound();
+    }
+
+    @Override
+    protected boolean setClosed() {
+        return super.setClosed();
     }
 
     /**
@@ -85,8 +95,13 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements
     private final class TunnelCreator implements
             HttpTunnelAcceptedChannelFactory {
 
-        public HttpTunnelAcceptedChannelReceiver newChannel(String newTunnelId,
-                InetSocketAddress remoteAddress) {
+        TunnelCreator() {
+            super();
+        }
+
+        @Override
+        public HttpTunnelAcceptedChannelReceiver newChannel(
+                String newTunnelId, InetSocketAddress remoteAddress) {
             ChannelPipeline childPipeline = null;
             try {
                 childPipeline = getConfig().getPipelineFactory().getPipeline();
@@ -103,6 +118,7 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements
                     getFactory(), childPipeline, sink, remoteAddress, config);
         }
 
+        @Override
         public String generateTunnelId() {
             return config.getTunnelIdGenerator().generateId();
         }

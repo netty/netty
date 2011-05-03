@@ -53,6 +53,7 @@ public class FakeChannelConfig implements SocketChannelConfig {
 
     private ChannelPipelineFactory pipelineFactory =
             new ChannelPipelineFactory() {
+                @Override
                 public ChannelPipeline getPipeline() throws Exception {
                     return Channels.pipeline();
                 }
@@ -60,87 +61,108 @@ public class FakeChannelConfig implements SocketChannelConfig {
 
     private int writeTimeout = 3000;
 
+    @Override
     public int getReceiveBufferSize() {
         return receiveBufferSize;
     }
 
+    @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
         this.receiveBufferSize = receiveBufferSize;
     }
 
+    @Override
     public int getSendBufferSize() {
         return sendBufferSize;
     }
 
+    @Override
     public void setSendBufferSize(int sendBufferSize) {
         this.sendBufferSize = sendBufferSize;
     }
 
+    @Override
     public int getSoLinger() {
         return soLinger;
     }
 
+    @Override
     public void setSoLinger(int soLinger) {
         this.soLinger = soLinger;
     }
 
+    @Override
     public int getTrafficClass() {
         return trafficClass;
     }
 
+    @Override
     public void setTrafficClass(int trafficClass) {
         this.trafficClass = trafficClass;
     }
 
+    @Override
     public boolean isKeepAlive() {
         return keepAlive;
     }
 
+    @Override
     public void setKeepAlive(boolean keepAlive) {
         this.keepAlive = keepAlive;
     }
 
+    @Override
     public boolean isReuseAddress() {
         return reuseAddress;
     }
 
+    @Override
     public void setReuseAddress(boolean reuseAddress) {
         this.reuseAddress = reuseAddress;
     }
 
+    @Override
     public boolean isTcpNoDelay() {
         return tcpNoDelay;
     }
 
+    @Override
     public void setTcpNoDelay(boolean tcpNoDelay) {
         this.tcpNoDelay = tcpNoDelay;
     }
 
+    @Override
     public void setPerformancePreferences(int connectionTime, int latency,
             int bandwidth) {
         // do nothing
     }
 
+    @Override
     public ChannelBufferFactory getBufferFactory() {
         return bufferFactory;
     }
 
+    @Override
     public void setBufferFactory(ChannelBufferFactory bufferFactory) {
         this.bufferFactory = bufferFactory;
     }
 
+    @Override
     public int getConnectTimeoutMillis() {
         return connectTimeout;
     }
 
+    @Override
     public void setConnectTimeoutMillis(int connectTimeoutMillis) {
         connectTimeout = connectTimeoutMillis;
     }
 
+    @Override
     public ChannelPipelineFactory getPipelineFactory() {
         return pipelineFactory;
     }
 
+    @Override
     public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
         this.pipelineFactory = pipelineFactory;
     }
@@ -153,6 +175,7 @@ public class FakeChannelConfig implements SocketChannelConfig {
         writeTimeout = writeTimeoutMillis;
     }
 
+    @Override
     public boolean setOption(String key, Object value) {
         if (key.equals("pipelineFactory")) {
             setPipelineFactory((ChannelPipelineFactory) value);
@@ -180,6 +203,7 @@ public class FakeChannelConfig implements SocketChannelConfig {
         return true;
     }
 
+    @Override
     public void setOptions(Map<String, Object> options) {
         for (Entry<String, Object> e: options.entrySet()) {
             setOption(e.getKey(), e.getValue());

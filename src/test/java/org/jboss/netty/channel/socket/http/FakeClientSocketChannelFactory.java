@@ -36,6 +36,7 @@ public class FakeClientSocketChannelFactory implements
         createdChannels = new ArrayList<FakeSocketChannel>();
     }
 
+    @Override
     public SocketChannel newChannel(ChannelPipeline pipeline) {
         FakeSocketChannel channel =
                 new FakeSocketChannel(null, this, pipeline,
@@ -44,6 +45,7 @@ public class FakeClientSocketChannelFactory implements
         return channel;
     }
 
+    @Override
     public void releaseExternalResources() {
         // nothing to do
     }

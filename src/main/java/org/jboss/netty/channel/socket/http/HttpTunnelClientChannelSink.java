@@ -33,6 +33,7 @@ import org.jboss.netty.channel.MessageEvent;
  */
 class HttpTunnelClientChannelSink extends AbstractChannelSink {
 
+    @Override
     public void eventSunk(ChannelPipeline pipeline, ChannelEvent e)
             throws Exception {
         if (e instanceof ChannelStateEvent) {

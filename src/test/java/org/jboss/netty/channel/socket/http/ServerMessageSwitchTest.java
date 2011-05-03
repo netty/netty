@@ -16,7 +16,7 @@
 
 package org.jboss.netty.channel.socket.http;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 import java.net.InetSocketAddress;
 
@@ -55,7 +55,7 @@ public class ServerMessageSwitchTest {
 
     private FakeSocketChannel requesterChannel;
 
-    private HttpTunnelAcceptedChannelReceiver htunAcceptedChannel;
+    HttpTunnelAcceptedChannelReceiver htunAcceptedChannel;
 
     @Before
     public void setUp() throws Exception {

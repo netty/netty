@@ -38,7 +38,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * ends of the http tunnel and the virtual server accepted tunnel. As a tunnel can last for longer than
  * the lifetime of the client channels that are used to service it, this layer of abstraction is
  * necessary.
- * 
+ *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
@@ -62,6 +62,7 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
         tunnelsById = new ConcurrentHashMap<String, TunnelInfo>();
     }
 
+    @Override
     public String createTunnel(InetSocketAddress remoteAddress) {
         String newTunnelId =
                 String.format("%s_%s", tunnelIdPrefix,
@@ -74,11 +75,13 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
         return newTunnelId;
     }
 
+    @Override
     public boolean isOpenTunnel(String tunnelId) {
         TunnelInfo tunnel = tunnelsById.get(tunnelId);
         return tunnel != null;
     }
 
+    @Override
     public void pollOutboundData(String tunnelId, Channel channel) {
         TunnelInfo tunnel = tunnelsById.get(tunnelId);
         if (tunnel == null) {
@@ -136,6 +139,7 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
                 new RelayedChannelFutureListener(originalFuture));
     }
 
+    @Override
     public TunnelStatus routeInboundData(String tunnelId,
             ChannelBuffer inboundData) {
         TunnelInfo tunnel = tunnelsById.get(tunnelId);
@@ -156,12 +160,14 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
         return TunnelStatus.ALIVE;
     }
 
+    @Override
     public void clientCloseTunnel(String tunnelId) {
         TunnelInfo tunnel = tunnelsById.get(tunnelId);
         tunnel.localChannel.clientClosed();
         tunnelsById.remove(tunnelId);
     }
 
+    @Override
     public void serverCloseTunnel(String tunnelId) {
         TunnelInfo tunnel = tunnelsById.get(tunnelId);
         tunnel.closing.set(true);
@@ -179,6 +185,7 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
         tunnelsById.remove(tunnelId);
     }
 
+    @Override
     public void routeOutboundData(String tunnelId, ChannelBuffer data,
             ChannelFuture writeFuture) {
         TunnelInfo tunnel = tunnelsById.get(tunnelId);
@@ -217,10 +224,11 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
             ChannelFutureListener {
         private final ChannelFuture originalFuture;
 
-        private RelayedChannelFutureListener(ChannelFuture originalFuture) {
+        RelayedChannelFutureListener(ChannelFuture originalFuture) {
             this.originalFuture = originalFuture;
         }
 
+        @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             if (future.isSuccess()) {
                 originalFuture.setSuccess();
@@ -231,6 +239,10 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
     }
 
     private static final class TunnelInfo {
+        TunnelInfo() {
+            super();
+        }
+
         public String tunnelId;
 
         public HttpTunnelAcceptedChannelReceiver localChannel;

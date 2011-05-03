@@ -41,6 +41,7 @@ class AcceptedServerChannelPipelineFactory implements ChannelPipelineFactory {
         this.messageSwitch = messageSwitch;
     }
 
+    @Override
     public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline pipeline = Channels.pipeline();
 

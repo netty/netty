@@ -37,23 +37,28 @@ public class MockChannelStateListener implements HttpTunnelClientWorkerOwner {
 
     public String serverHostName = null;
 
+    @Override
     public void fullyEstablished() {
         fullyEstablished = true;
     }
 
+    @Override
     public void onConnectRequest(ChannelFuture connectFuture,
             InetSocketAddress remoteAddress) {
         // not relevant for test
     }
 
+    @Override
     public void onMessageReceived(ChannelBuffer content) {
         messages.add(content);
     }
 
+    @Override
     public void onTunnelOpened(String tunnelId) {
         this.tunnelId = tunnelId;
     }
 
+    @Override
     public String getServerHostName() {
         return serverHostName;
     }

@@ -43,30 +43,37 @@ public class FakeServerSocketChannelConfig extends DefaultChannelConfig
 
     public ChannelBufferFactory bufferFactory = new HeapChannelBufferFactory();
 
+    @Override
     public int getBacklog() {
         return backlog;
     }
 
+    @Override
     public void setBacklog(int backlog) {
         this.backlog = backlog;
     }
 
+    @Override
     public int getReceiveBufferSize() {
         return receiveBufferSize;
     }
 
+    @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
         this.receiveBufferSize = receiveBufferSize;
     }
 
+    @Override
     public boolean isReuseAddress() {
         return reuseAddress;
     }
 
+    @Override
     public void setReuseAddress(boolean reuseAddress) {
         this.reuseAddress = reuseAddress;
     }
 
+    @Override
     public void setPerformancePreferences(int connectionTime, int latency,
             int bandwidth) {
         // ignore

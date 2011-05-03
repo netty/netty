@@ -33,6 +33,7 @@ public class UpstreamEventCatcher implements ChannelUpstreamHandler {
 
     public Queue<ChannelEvent> events = new LinkedList<ChannelEvent>();
 
+    @Override
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
             throws Exception {
         events.add(e);

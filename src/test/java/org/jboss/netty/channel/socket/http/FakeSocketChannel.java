@@ -52,22 +52,27 @@ public class FakeSocketChannel extends AbstractChannel implements SocketChannel 
         this.sink = sink;
     }
 
+    @Override
     public InetSocketAddress getLocalAddress() {
         return localAddress;
     }
 
+    @Override
     public SocketChannelConfig getConfig() {
         return config;
     }
 
+    @Override
     public InetSocketAddress getRemoteAddress() {
         return remoteAddress;
     }
 
+    @Override
     public boolean isBound() {
         return bound;
     }
 
+    @Override
     public boolean isConnected() {
         return connected;
     }
