@@ -24,6 +24,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.util.Timeout;
 import org.jboss.netty.util.Timer;
 import org.jboss.netty.util.TimerTask;
@@ -39,9 +40,11 @@ import org.jboss.netty.util.TimerTask;
  */
 public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
 
+    // We assume that we are tracking only one server in this example.
+    private static long startTime = -1;
+
     final ClientBootstrap bootstrap;
     private final Timer timer;
-    private long startTime = -1;
 
     public UptimeClientHandler(ClientBootstrap bootstrap, Timer timer) {
         this.bootstrap = bootstrap;
@@ -84,6 +87,13 @@ public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
         if (cause instanceof ConnectException) {
             startTime = -1;
             println("Failed to connect: " + cause.getMessage());
+        }
+        if (cause instanceof ReadTimeoutException) {
+            // The connection was OK but there was no traffic for last period.
+            println("Disconnecting due to no inbound traffic");
+        }
+        else {
+            cause.printStackTrace();
         }
         ctx.getChannel().close();
     }
