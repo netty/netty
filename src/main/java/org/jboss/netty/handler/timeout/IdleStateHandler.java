@@ -21,6 +21,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -73,14 +75,16 @@ import org.jboss.netty.util.TimerTask;
  * public class MyPipelineFactory implements {@link ChannelPipelineFactory} {
  *
  *     private final {@link Timer} timer;
+ *     private final {@link ChannelHandler} idleStateHandler;
  *
  *     public MyPipelineFactory({@link Timer} timer) {
  *         this.timer = timer;
+ *         this.idleStateHandler = <b>new {@link IdleStateHandler}(timer, 60, 30, 0), // timer must be shared.</b>
  *     }
  *
  *     public {@link ChannelPipeline} getPipeline() {
  *         return {@link Channels}.pipeline(
- *             <b>new {@link IdleStateHandler}(timer, 60, 30, 0), // timer must be shared.</b>
+ *             idleStateHandler,
  *             new MyHandler());
  *     }
  * }
@@ -120,6 +124,7 @@ import org.jboss.netty.util.TimerTask;
  * @apiviz.uses org.jboss.netty.util.HashedWheelTimer
  * @apiviz.has org.jboss.netty.handler.timeout.IdleStateEvent oneway - - triggers
  */
+@Sharable
 public class IdleStateHandler extends SimpleChannelUpstreamHandler
                              implements LifeCycleAwareChannelHandler,
                                         ExternalResourceReleasable {
@@ -127,15 +132,8 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     final Timer timer;
 
     final long readerIdleTimeMillis;
-    volatile Timeout readerIdleTimeout;
-    volatile long lastReadTime;
-
     final long writerIdleTimeMillis;
-    volatile Timeout writerIdleTimeout;
-    volatile long lastWriteTime;
-
     final long allIdleTimeMillis;
-    volatile Timeout allIdleTimeout;
 
     /**
      * Creates a new instance.
@@ -249,7 +247,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
 
     @Override
     public void beforeRemove(ChannelHandlerContext ctx) throws Exception {
-        destroy();
+        destroy(ctx);
     }
 
     @Override
@@ -270,14 +268,15 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
-        destroy();
+        destroy(ctx);
         ctx.sendUpstream(e);
     }
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
             throws Exception {
-        lastReadTime = System.currentTimeMillis();
+        State state = (State) ctx.getAttachment();
+        state.lastReadTime = System.currentTimeMillis();
         ctx.sendUpstream(e);
     }
 
@@ -285,42 +284,47 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     public void writeComplete(ChannelHandlerContext ctx, WriteCompletionEvent e)
             throws Exception {
         if (e.getWrittenAmount() > 0) {
-            lastWriteTime = System.currentTimeMillis();
+            State state = (State) ctx.getAttachment();
+            state.lastWriteTime = System.currentTimeMillis();
         }
         ctx.sendUpstream(e);
     }
 
     private void initialize(ChannelHandlerContext ctx) {
-        lastReadTime = lastWriteTime = System.currentTimeMillis();
+        State state = new State();
+        ctx.setAttachment(state);
+
+        state.lastReadTime = state.lastWriteTime = System.currentTimeMillis();
         if (readerIdleTimeMillis > 0) {
-            readerIdleTimeout = timer.newTimeout(
+            state.readerIdleTimeout = timer.newTimeout(
                     new ReaderIdleTimeoutTask(ctx),
                     readerIdleTimeMillis, TimeUnit.MILLISECONDS);
         }
         if (writerIdleTimeMillis > 0) {
-            writerIdleTimeout = timer.newTimeout(
+            state.writerIdleTimeout = timer.newTimeout(
                     new WriterIdleTimeoutTask(ctx),
                     writerIdleTimeMillis, TimeUnit.MILLISECONDS);
         }
         if (allIdleTimeMillis > 0) {
-            allIdleTimeout = timer.newTimeout(
+            state.allIdleTimeout = timer.newTimeout(
                     new AllIdleTimeoutTask(ctx),
                     allIdleTimeMillis, TimeUnit.MILLISECONDS);
         }
     }
 
-    private void destroy() {
-        if (readerIdleTimeout != null) {
-            readerIdleTimeout.cancel();
-            readerIdleTimeout = null;
+    private void destroy(ChannelHandlerContext ctx) {
+        State state = (State) ctx.getAttachment();
+        if (state.readerIdleTimeout != null) {
+            state.readerIdleTimeout.cancel();
+            state.readerIdleTimeout = null;
         }
-        if (writerIdleTimeout != null) {
-            writerIdleTimeout.cancel();
-            writerIdleTimeout = null;
+        if (state.writerIdleTimeout != null) {
+            state.writerIdleTimeout.cancel();
+            state.writerIdleTimeout = null;
         }
-        if (allIdleTimeout != null) {
-            allIdleTimeout.cancel();
-            allIdleTimeout = null;
+        if (state.allIdleTimeout != null) {
+            state.allIdleTimeout.cancel();
+            state.allIdleTimeout = null;
         }
     }
 
@@ -343,12 +347,13 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
                 return;
             }
 
+            State state = (State) ctx.getAttachment();
             long currentTime = System.currentTimeMillis();
-            long lastReadTime = IdleStateHandler.this.lastReadTime;
+            long lastReadTime = state.lastReadTime;
             long nextDelay = readerIdleTimeMillis - (currentTime - lastReadTime);
             if (nextDelay <= 0) {
                 // Reader is idle - set a new timeout and notify the callback.
-                readerIdleTimeout =
+                state.readerIdleTimeout =
                     timer.newTimeout(this, readerIdleTimeMillis, TimeUnit.MILLISECONDS);
                 try {
                     channelIdle(ctx, IdleState.READER_IDLE, lastReadTime);
@@ -357,7 +362,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
                 }
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                readerIdleTimeout =
+                state.readerIdleTimeout =
                     timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
@@ -378,12 +383,13 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
                 return;
             }
 
+            State state = (State) ctx.getAttachment();
             long currentTime = System.currentTimeMillis();
-            long lastWriteTime = IdleStateHandler.this.lastWriteTime;
+            long lastWriteTime = state.lastWriteTime;
             long nextDelay = writerIdleTimeMillis - (currentTime - lastWriteTime);
             if (nextDelay <= 0) {
                 // Writer is idle - set a new timeout and notify the callback.
-                writerIdleTimeout =
+                state.writerIdleTimeout =
                     timer.newTimeout(this, writerIdleTimeMillis, TimeUnit.MILLISECONDS);
                 try {
                     channelIdle(ctx, IdleState.WRITER_IDLE, lastWriteTime);
@@ -392,7 +398,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
                 }
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
-                writerIdleTimeout =
+                state.writerIdleTimeout =
                     timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
@@ -412,13 +418,14 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
                 return;
             }
 
+            State state = (State) ctx.getAttachment();
             long currentTime = System.currentTimeMillis();
-            long lastIoTime = Math.max(lastReadTime, lastWriteTime);
+            long lastIoTime = Math.max(state.lastReadTime, state.lastWriteTime);
             long nextDelay = allIdleTimeMillis - (currentTime - lastIoTime);
             if (nextDelay <= 0) {
                 // Both reader and writer are idle - set a new timeout and
                 // notify the callback.
-                allIdleTimeout =
+                state.allIdleTimeout =
                     timer.newTimeout(this, allIdleTimeMillis, TimeUnit.MILLISECONDS);
                 try {
                     channelIdle(ctx, IdleState.ALL_IDLE, lastIoTime);
@@ -428,9 +435,23 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
             } else {
                 // Either read or write occurred before the timeout - set a new
                 // timeout with shorter delay.
-                allIdleTimeout =
+                state.allIdleTimeout =
                     timer.newTimeout(this, nextDelay, TimeUnit.MILLISECONDS);
             }
         }
+    }
+
+    private static final class State {
+        State() {
+            super();
+        }
+
+        volatile Timeout readerIdleTimeout;
+        volatile long lastReadTime;
+
+        volatile Timeout writerIdleTimeout;
+        volatile long lastWriteTime;
+
+        volatile Timeout allIdleTimeout;
     }
 }

@@ -189,26 +189,16 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
             throws Exception {
-        updateLastReadTime(ctx);
+        State state = (State) ctx.getAttachment();
+        state.lastReadTime = System.currentTimeMillis();
         ctx.sendUpstream(e);
     }
 
     private void initialize(ChannelHandlerContext ctx) {
-        updateLastReadTime(ctx);
+        State state = new State();
+        ctx.setAttachment(state);
         if (timeoutMillis > 0) {
-            State state = (State) ctx.getAttachment();
             state.timeout = timer.newTimeout(new ReadTimeoutTask(ctx), timeoutMillis, TimeUnit.MILLISECONDS);
-        }
-    }
-
-    private void updateLastReadTime(ChannelHandlerContext ctx) {
-        State state = (State) ctx.getAttachment();
-        if (state == null) {
-            // lastReadTime will be set by the constructor, so we do not do it
-            // again here.
-            ctx.setAttachment(state = new State());
-        } else {
-            state.lastReadTime = System.currentTimeMillis();
         }
     }
 
