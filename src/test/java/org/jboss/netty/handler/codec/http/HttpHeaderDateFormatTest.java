@@ -18,7 +18,7 @@ public class HttpHeaderDateFormatTest {
 
 	@Test
 	public void testParse() throws ParseException {
-		HttpHeaderDateFormat format = HttpHeaderDateFormat.SHARED_INSTANCE;
+		HttpHeaderDateFormat format = new HttpHeaderDateFormat();
 
 		{
 			final Date parsed = format.parse("Sun, 6 Nov 1994 08:49:37 GMT");
@@ -49,7 +49,7 @@ public class HttpHeaderDateFormatTest {
 
 	@Test
 	public void testFormat() {
-		HttpHeaderDateFormat format = HttpHeaderDateFormat.SHARED_INSTANCE;
+		HttpHeaderDateFormat format = new HttpHeaderDateFormat();
 
 		final String formatted = format.format(DATE);
 		Assert.assertNotNull(formatted);

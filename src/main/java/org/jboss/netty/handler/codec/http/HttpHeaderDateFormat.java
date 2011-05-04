@@ -39,11 +39,6 @@ import java.util.TimeZone;
  */
 final class HttpHeaderDateFormat extends SimpleDateFormat {
 	private static final long serialVersionUID = -925286159755905325L;
-	/**
-	 * An shared instance of this {@link DateFormat} to avoid unnecessary GC on
-	 * this stateless class.
-	 */
-	public static final HttpHeaderDateFormat SHARED_INSTANCE = new HttpHeaderDateFormat();
 
 	private final SimpleDateFormat format1 = new HttpHeaderDateFormatObsolete1();
 	private final SimpleDateFormat format2 = new HttpHeaderDateFormatObsolete2();
