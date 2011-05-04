@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.text.ParseException;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +36,7 @@ import java.util.TreeSet;
  * @apiviz.stereotype static
  */
 public class HttpHeaders {
+	private static final HttpHeaderDateFormat dateFormat = new HttpHeaderDateFormat();
 
     /**
      * Standard HTTP header names.
@@ -686,6 +689,79 @@ public class HttpHeaders {
     public static void setHost(HttpMessage message, String value) {
         message.setHeader(Names.HOST, value);
     }
+    
+
+	/**
+	 * Returns the value of the {@code "Date"} header.
+	 */
+	public static Date getDate(HttpMessage message) {
+		return getDate(message, null);
+	}
+
+	/**
+	 * Returns the value of the {@code "Date"} header. If there is no such
+	 * header, the {@code defaultValue} is returned.
+	 */
+	public static Date getDate(HttpMessage message, Date defaultValue) {
+		final String dateString = message.getHeader(Names.DATE);
+		if (dateString == null) {
+			return defaultValue;
+		}
+		try {
+			return dateFormat.parse(dateString);
+		} catch (ParseException e) {
+			// is that correct?
+			return defaultValue;
+		}
+	}
+
+	/**
+	 * Sets the {@code "Date"} header.
+	 */
+	public static void setDate(HttpMessage message, Date value) {
+		if (value != null) {
+			message.setHeader(Names.DATE, dateFormat.format(value));
+		} else {
+			message.setHeader(Names.DATE, null);
+		}
+	}
+
+	/**
+	 * Returns the value of the {@code "Date"} header.
+	 */
+	public static long getDateInMilliseconds(HttpMessage message) {
+		return getDate(message, null).getTime();
+	}
+
+	/**
+	 * Returns the value of the {@code "Date"} header. If there is no such
+	 * header, the {@code defaultValue} is returned.
+	 */
+	public static long getDateInMilliseconds(HttpMessage message,
+			long defaultValue) {
+		Date date = getDate(message, null);
+		if (date == null) {
+			return defaultValue;
+		}
+		return date.getTime();
+	}
+
+	/**
+	 * Sets the {@code "Date"} header.
+	 * 
+	 * @param message
+	 *            the {@link HttpMessage}
+	 * @param date
+	 *            the date in milliseconds
+	 */
+	public static void setDateInMilliseconds(HttpMessage message, long date) {
+		final Date value = new Date(date);
+		if (date > 0) {
+			message.setHeader(Names.DATE, dateFormat.format(value));
+		} else {
+			message.setHeader(Names.DATE, null);
+		}
+	}
 
     /**
      * Returns {@code true} if and only if the specified message contains the

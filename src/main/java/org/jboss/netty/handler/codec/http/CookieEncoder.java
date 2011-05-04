@@ -107,7 +107,7 @@ public class CookieEncoder {
             if (cookie.getMaxAge() >= 0) {
                 if (cookie.getVersion() == 0) {
                     addUnquoted(sb, CookieHeaderNames.EXPIRES,
-                            new CookieDateFormat().format(
+                            new HttpHeaderDateFormat().format(
                                     new Date(System.currentTimeMillis() +
                                              cookie.getMaxAge() * 1000L)));
                 } else {
