@@ -19,6 +19,7 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
@@ -70,11 +71,16 @@ public class UptimeClient {
 
         // Configure the pipeline factory.
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+
+            private final ChannelHandler timeoutHandler =
+                new ReadTimeoutHandler(timer, READ_TIMEOUT);
+            private final ChannelHandler uptimeHandler =
+                new UptimeClientHandler(bootstrap, timer);
+
             @Override
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(
-                        new ReadTimeoutHandler(timer, READ_TIMEOUT),
-                        new UptimeClientHandler(bootstrap, timer));
+                        timeoutHandler, uptimeHandler);
             }
         });
 

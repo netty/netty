@@ -40,11 +40,9 @@ import org.jboss.netty.util.TimerTask;
  */
 public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
 
-    // We assume that we are tracking only one server in this example.
-    private static long startTime = -1;
-
     final ClientBootstrap bootstrap;
     private final Timer timer;
+    private long startTime = -1;
 
     public UptimeClientHandler(ClientBootstrap bootstrap, Timer timer) {
         this.bootstrap = bootstrap;
