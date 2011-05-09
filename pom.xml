@@ -652,5 +652,16 @@
       </snapshots>
     </repository>
   </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>jboss-plugins</id>
+      <url>http://repository.jboss.org/nexus/content/groups/public-jboss</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </pluginRepository>
+  </pluginRepositories>
+
 </project>
 
