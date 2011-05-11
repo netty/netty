@@ -15,7 +15,12 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Date;
 import java.util.Iterator;
@@ -33,7 +38,7 @@ public class CookieDecoderTest {
     @Test
     public void testDecodingSingleCookieV0() {
         String cookieString = "myCookie=myValue;expires=XXX;path=/apathsomewhere;domain=.adomainsomewhere;secure;";
-        cookieString = cookieString.replace("XXX", new CookieDateFormat().format(new Date(System.currentTimeMillis() + 50000)));
+        cookieString = cookieString.replace("XXX", new HttpHeaderDateFormat().format(new Date(System.currentTimeMillis() + 50000)));
 
         CookieDecoder cookieDecoder = new CookieDecoder();
         Set<Cookie> cookies = cookieDecoder.decode(cookieString);
