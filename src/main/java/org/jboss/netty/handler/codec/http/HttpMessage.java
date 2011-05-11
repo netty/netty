@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -100,18 +102,36 @@ public interface HttpMessage {
 
     /**
      * Adds a new header with the specified name and value.
+     * If the specified value is not a {@link String}, it is converted into a
+     * {@link String} by {@link Object#toString()}, except for {@link Date}
+     * and {@link Calendar} which are formatted to the date format defined in
+     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
      */
     void addHeader(String name, Object value);
 
     /**
      * Sets a new header with the specified name and value.  If there is an
      * existing header with the same name, the existing header is removed.
+     * If the specified value is not a {@link String}, it is converted into a
+     * {@link String} by {@link Object#toString()}, except for {@link Date}
+     * and {@link Calendar} which are formatted to the date format defined in
+     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
      */
     void setHeader(String name, Object value);
 
     /**
      * Sets a new header with the specified name and values.  If there is an
      * existing header with the same name, the existing header is removed.
+     * This method can be represented approximately as the following code:
+     * <pre>
+     * m.removeHeader(name);
+     * for (Object v: values) {
+     *     if (v == null) {
+     *         break;
+     *     }
+     *     m.addHeader(name, v);
+     * }
+     * </pre>
      */
     void setHeader(String name, Iterable<?> values);
 

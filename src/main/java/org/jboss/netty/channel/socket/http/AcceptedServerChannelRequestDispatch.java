@@ -109,7 +109,7 @@ class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler 
             LOG.debug("send data request received for tunnel " + tunnelId);
         }
 
-        if (HttpHeaders.getContentLength(request) == 0 ||
+        if (HttpHeaders.getContentLength(request, 0) == 0 ||
                 request.getContent() == null ||
                 request.getContent().readableBytes() == 0) {
             respondWithRejection(ctx, request,

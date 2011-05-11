@@ -241,7 +241,7 @@ public class HttpTunnelMessageUtils {
     public static boolean hasContents(HttpResponse response,
             byte[] expectedContents) {
         if (response.getContent() != null &&
-                HttpHeaders.getContentLength(response) == expectedContents.length &&
+                HttpHeaders.getContentLength(response, 0) == expectedContents.length &&
                 response.getContent().readableBytes() == expectedContents.length) {
             byte[] compareBytes = new byte[expectedContents.length];
             response.getContent().readBytes(compareBytes);
@@ -300,7 +300,7 @@ public class HttpTunnelMessageUtils {
 
     public static Object extractErrorMessage(HttpResponse response) {
         if (response.getContent() == null ||
-                HttpHeaders.getContentLength(response) == 0) {
+                HttpHeaders.getContentLength(response, 0) == 0) {
             return "";
         }
 

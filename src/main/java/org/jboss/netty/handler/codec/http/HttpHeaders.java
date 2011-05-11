@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.text.ParseException;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -36,7 +37,6 @@ import java.util.TreeSet;
  * @apiviz.stereotype static
  */
 public class HttpHeaders {
-	private static final HttpHeaderDateFormat dateFormat = new HttpHeaderDateFormat();
 
     /**
      * Standard HTTP header names.
@@ -532,6 +532,10 @@ public class HttpHeaders {
     /**
      * Sets a new header with the specified name and value.  If there is an
      * existing header with the same name, the existing header is removed.
+     * If the specified value is not a {@link String}, it is converted into a
+     * {@link String} by {@link Object#toString()}, except for {@link Date}
+     * and {@link Calendar} which are formatted to the date format defined in
+     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
      */
     public static void setHeader(HttpMessage message, String name, Object value) {
         message.setHeader(name, value);
@@ -540,6 +544,16 @@ public class HttpHeaders {
     /**
      * Sets a new header with the specified name and values.  If there is an
      * existing header with the same name, the existing header is removed.
+     * This method can be represented approximately as the following code:
+     * <pre>
+     * removeHeader(message, name);
+     * for (Object v: values) {
+     *     if (v == null) {
+     *         break;
+     *     }
+     *     addHeader(message, name, v);
+     * }
+     * </pre>
      */
     public static void setHeader(HttpMessage message, String name, Iterable<?> values) {
         message.setHeader(name, values);
@@ -547,9 +561,27 @@ public class HttpHeaders {
 
     /**
      * Adds a new header with the specified name and value.
+     * If the specified value is not a {@link String}, it is converted into a
+     * {@link String} by {@link Object#toString()}, except for {@link Date}
+     * and {@link Calendar} which are formatted to the date format defined in
+     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>.
      */
     public static void addHeader(HttpMessage message, String name, Object value) {
         message.addHeader(name, value);
+    }
+
+    /**
+     * Removes the header with the specified name.
+     */
+    public static void removeHeader(HttpMessage message, String name) {
+        message.removeHeader(name);
+    }
+
+    /**
+     * Removes all headers from the specified message.
+     */
+    public static void clearHeaders(HttpMessage message) {
+        message.clearHeaders();
     }
 
     /**
@@ -564,7 +596,7 @@ public class HttpHeaders {
     public static int getIntHeader(HttpMessage message, String name) {
         String value = getHeader(message, name);
         if (value == null) {
-            throw new NumberFormatException("null");
+            throw new NumberFormatException("header not found: " + name);
         }
         return Integer.parseInt(value);
     }
@@ -614,16 +646,103 @@ public class HttpHeaders {
     }
 
     /**
+     * Returns the date header value with the specified header name.  If
+     * there are more than one header value for the specified header name, the
+     * first value is returned.
+     *
+     * @return the header value
+     * @throws ParseException
+     *         if there is no such header or the header value is not a formatted date
+     */
+    public static Date getDateHeader(HttpMessage message, String name) throws ParseException {
+        String value = getHeader(message, name);
+        if (value == null) {
+            throw new ParseException("header not found: " + name, 0);
+        }
+        return new HttpHeaderDateFormat().parse(value);
+    }
+
+    /**
+     * Returns the date header value with the specified header name.  If
+     * there are more than one header value for the specified header name, the
+     * first value is returned.
+     *
+     * @return the header value or the {@code defaultValue} if there is no such
+     *         header or the header value is not a formatted date
+     */
+    public static Date getDateHeader(HttpMessage message, String name, Date defaultValue) {
+        final String value = getHeader(message, name);
+        if (value == null) {
+            return defaultValue;
+        }
+
+        try {
+            return new HttpHeaderDateFormat().parse(value);
+        } catch (ParseException e) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * Sets a new date header with the specified name and value.  If there
+     * is an existing header with the same name, the existing header is removed.
+     * The specified value is formatted as defined in
+     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
+     */
+    public static void setDateHeader(HttpMessage message, String name, Date value) {
+        if (value != null) {
+            message.setHeader(name, new HttpHeaderDateFormat().format(value));
+        } else {
+            message.setHeader(name, null);
+        }
+
+    }
+
+    /**
+     * Sets a new date header with the specified name and values.  If there
+     * is an existing header with the same name, the existing header is removed.
+     * The specified values are formatted as defined in
+     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
+     */
+    public static void setDateHeader(HttpMessage message, String name, Iterable<Date> values) {
+        message.setHeader(name, values);
+    }
+
+    /**
+     * Adds a new date header with the specified name and value.  The specified
+     * value is formatted as defined in <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1">RFC2616</a>
+     */
+    public static void addDateHeader(HttpMessage message, String name, Date value) {
+        message.addHeader(name, value);
+    }
+
+    /**
      * Returns the length of the content.  Please note that this value is
      * not retrieved from {@link HttpMessage#getContent()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
      * other.
      *
-     * @return the content length or {@code 0} if this message does not have
-     *         the {@code "Content-Length"} header
+     * @return the content length
+     *
+     * @throws NumberFormatException
+     *         if the message does not have the {@code "Content-Length"} header
+     *         or its value is not a number
      */
     public static long getContentLength(HttpMessage message) {
-        return getContentLength(message, 0L);
+        String value = getHeader(message, Names.CONTENT_LENGTH);
+        if (value != null) {
+            return Long.parseLong(value);
+        }
+
+        // We know the content length if it's a Web Socket message even if
+        // Content-Length header is missing.
+        long webSocketContentLength = getWebSocketContentLength(message);
+        if (webSocketContentLength >= 0) {
+            return webSocketContentLength;
+        }
+
+        // Otherwise we don't.
+        throw new NumberFormatException("header not found: " + Names.CONTENT_LENGTH);
     }
 
     /**
@@ -633,14 +752,35 @@ public class HttpHeaders {
      * other.
      *
      * @return the content length or {@code defaultValue} if this message does
-     *         not have the {@code "Content-Length"} header
+     *         not have the {@code "Content-Length"} header or its value is not
+     *         a number
      */
     public static long getContentLength(HttpMessage message, long defaultValue) {
         String contentLength = message.getHeader(Names.CONTENT_LENGTH);
         if (contentLength != null) {
-            return Long.parseLong(contentLength);
+            try {
+                return Long.parseLong(contentLength);
+            } catch (NumberFormatException e) {
+                return defaultValue;
+            }
         }
 
+        // We know the content length if it's a Web Socket message even if
+        // Content-Length header is missing.
+        long webSocketContentLength = getWebSocketContentLength(message);
+        if (webSocketContentLength >= 0) {
+            return webSocketContentLength;
+        }
+
+        // Otherwise we don't.
+        return defaultValue;
+    }
+
+    /**
+     * Returns the content length of the specified web socket message.  If the
+     * specified message is not a web socket message, {@code -1} is returned.
+     */
+    private static int getWebSocketContentLength(HttpMessage message) {
         // WebSockset messages have constant content-lengths.
         if (message instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) message;
@@ -658,7 +798,8 @@ public class HttpHeaders {
             }
         }
 
-        return defaultValue;
+        // Not a web socket message
+        return -1;
     }
 
     /**
@@ -689,79 +830,37 @@ public class HttpHeaders {
     public static void setHost(HttpMessage message, String value) {
         message.setHeader(Names.HOST, value);
     }
-    
 
-	/**
-	 * Returns the value of the {@code "Date"} header.
-	 */
-	public static Date getDate(HttpMessage message) {
-		return getDate(message, null);
-	}
 
-	/**
-	 * Returns the value of the {@code "Date"} header. If there is no such
-	 * header, the {@code defaultValue} is returned.
-	 */
-	public static Date getDate(HttpMessage message, Date defaultValue) {
-		final String dateString = message.getHeader(Names.DATE);
-		if (dateString == null) {
-			return defaultValue;
-		}
-		try {
-			return dateFormat.parse(dateString);
-		} catch (ParseException e) {
-			// is that correct?
-			return defaultValue;
-		}
-	}
+    /**
+     * Returns the value of the {@code "Date"} header.
+     *
+     * @throws ParseException
+     *         if there is no such header or the header value is not a formatted date
+     */
+    public static Date getDate(HttpMessage message) throws ParseException {
+        return getDateHeader(message, Names.DATE);
+    }
 
-	/**
-	 * Sets the {@code "Date"} header.
-	 */
-	public static void setDate(HttpMessage message, Date value) {
-		if (value != null) {
-			message.setHeader(Names.DATE, dateFormat.format(value));
-		} else {
-			message.setHeader(Names.DATE, null);
-		}
-	}
+    /**
+     * Returns the value of the {@code "Date"} header. If there is no such
+     * header or the header is not a formatted date, the {@code defaultValue}
+     * is returned.
+     */
+    public static Date getDate(HttpMessage message, Date defaultValue) {
+        return getDateHeader(message, Names.DATE, defaultValue);
+    }
 
-	/**
-	 * Returns the value of the {@code "Date"} header.
-	 */
-	public static long getDateInMilliseconds(HttpMessage message) {
-		return getDate(message, null).getTime();
-	}
-
-	/**
-	 * Returns the value of the {@code "Date"} header. If there is no such
-	 * header, the {@code defaultValue} is returned.
-	 */
-	public static long getDateInMilliseconds(HttpMessage message,
-			long defaultValue) {
-		Date date = getDate(message, null);
-		if (date == null) {
-			return defaultValue;
-		}
-		return date.getTime();
-	}
-
-	/**
-	 * Sets the {@code "Date"} header.
-	 * 
-	 * @param message
-	 *            the {@link HttpMessage}
-	 * @param date
-	 *            the date in milliseconds
-	 */
-	public static void setDateInMilliseconds(HttpMessage message, long date) {
-		final Date value = new Date(date);
-		if (date > 0) {
-			message.setHeader(Names.DATE, dateFormat.format(value));
-		} else {
-			message.setHeader(Names.DATE, null);
-		}
-	}
+    /**
+     * Sets the {@code "Date"} header.
+     */
+    public static void setDate(HttpMessage message, Date value) {
+        if (value != null) {
+            message.setHeader(Names.DATE, new HttpHeaderDateFormat().format(value));
+        } else {
+            message.setHeader(Names.DATE, null);
+        }
+    }
 
     /**
      * Returns {@code true} if and only if the specified message contains the
@@ -1051,6 +1150,18 @@ public class HttpHeaders {
     private static String toString(Object value) {
         if (value == null) {
             return null;
+        }
+        if (value instanceof String) {
+            return (String) value;
+        }
+        if (value instanceof Number) {
+            return value.toString();
+        }
+        if (value instanceof Date) {
+            return new HttpHeaderDateFormat().format((Date) value);
+        }
+        if (value instanceof Calendar) {
+            return new HttpHeaderDateFormat().format(((Calendar) value).getTime());
         }
         return value.toString();
     }
