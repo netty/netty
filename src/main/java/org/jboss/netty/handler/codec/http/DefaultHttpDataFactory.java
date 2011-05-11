@@ -51,7 +51,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
      * Keep all HttpDatas until cleanAllHttpDatas() is called.
      */
     private ConcurrentHashMap<HttpRequest, List<HttpData>> requestFileDeleteMap =
-    	new ConcurrentHashMap<HttpRequest, List<HttpData>>();
+        new ConcurrentHashMap<HttpRequest, List<HttpData>>();
     /**
      * HttpData will be in memory if less than default size (16KB).
      * The type will be Mixed.
@@ -88,10 +88,10 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
      * @return the associated list of Files for the request
      */
     private List<HttpData> getList(HttpRequest request) {
-    	List<HttpData> list = requestFileDeleteMap.get(request);
+        List<HttpData> list = requestFileDeleteMap.get(request);
         if (list == null) {
-        	list = new ArrayList<HttpData>();
-        	requestFileDeleteMap.put(request, list);
+            list = new ArrayList<HttpData>();
+            requestFileDeleteMap.put(request, list);
         }
         return list;
     }
@@ -170,33 +170,33 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     @Override
     public void removeHttpDataFromClean(HttpRequest request, InterfaceHttpData data) {
         if (data instanceof HttpData) {
-        	List<HttpData> fileToDelete = getList(request);
+            List<HttpData> fileToDelete = getList(request);
             fileToDelete.remove(data);
         }
     }
 
     @Override
     public void cleanRequestHttpDatas(HttpRequest request) {
-    	List<HttpData> fileToDelete = requestFileDeleteMap.remove(request);
-    	if (fileToDelete != null) {
-	        for (HttpData data: fileToDelete) {
-	            data.delete();
-	        }
-	        fileToDelete.clear();
-    	}
+        List<HttpData> fileToDelete = requestFileDeleteMap.remove(request);
+        if (fileToDelete != null) {
+            for (HttpData data: fileToDelete) {
+                data.delete();
+            }
+            fileToDelete.clear();
+        }
     }
 
     @Override
     public void cleanAllHttpDatas() {
-    	for (HttpRequest request : requestFileDeleteMap.keySet()) {
-    		List<HttpData> fileToDelete = requestFileDeleteMap.get(request);
-        	if (fileToDelete != null) {
-    	        for (HttpData data: fileToDelete) {
-    	            data.delete();
-    	        }
-    	        fileToDelete.clear();
-        	}
-        	requestFileDeleteMap.remove(request);
-    	}
+        for (HttpRequest request : requestFileDeleteMap.keySet()) {
+            List<HttpData> fileToDelete = requestFileDeleteMap.get(request);
+            if (fileToDelete != null) {
+                for (HttpData data: fileToDelete) {
+                    data.delete();
+                }
+                fileToDelete.clear();
+            }
+            requestFileDeleteMap.remove(request);
+        }
     }
 }

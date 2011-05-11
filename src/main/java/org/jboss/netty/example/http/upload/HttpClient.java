@@ -128,17 +128,17 @@ public class HttpClient {
 
         // Simple Get form: no factory used (not usable)
         List<Entry<String,String>> headers =
-        	formget(bootstrap, host, port, get, uriSimple);
+            formget(bootstrap, host, port, get, uriSimple);
         if (headers == null) {
-        	factory.cleanAllHttpDatas();
-        	return;
+            factory.cleanAllHttpDatas();
+            return;
         }
         // Simple Post form: factory used for big attributes
         List<InterfaceHttpData> bodylist =
-        	formpost(bootstrap, host, port, uriSimple, file, factory, headers);
+            formpost(bootstrap, host, port, uriSimple, file, factory, headers);
         if (bodylist == null) {
-        	factory.cleanAllHttpDatas();
-        	return;
+            factory.cleanAllHttpDatas();
+            return;
         }
         // Multipart Post form: factory used
         formpostmultipart(bootstrap, host, port, uriFile, file, factory, headers, bodylist);
@@ -155,7 +155,7 @@ public class HttpClient {
      * @return the list of headers that will be used in every example after
     **/
     private static List<Entry<String,String>> formget(ClientBootstrap bootstrap, String host, int port, String get,
-    		URI uriSimple) {
+            URI uriSimple) {
         // XXX /formget
         // No use of HttpPostRequestEncoder since not a POST
         // Start the connection attempt.
@@ -193,14 +193,14 @@ public class HttpClient {
         request.setHeader(HttpHeaders.Names.HOST, host);
         request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
         request.setHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP+","+
-        		HttpHeaders.Values.DEFLATE);
+                HttpHeaders.Values.DEFLATE);
 
         request.setHeader(HttpHeaders.Names.ACCEPT_CHARSET, "ISO-8859-1,utf-8;q=0.7,*;q=0.7");
         request.setHeader(HttpHeaders.Names.ACCEPT_LANGUAGE, "fr");
         request.setHeader(HttpHeaders.Names.REFERER, uriSimple.toString());
         request.setHeader(HttpHeaders.Names.USER_AGENT, "Netty Simple Http Client side");
         request.setHeader(HttpHeaders.Names.ACCEPT,
-        		"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
         //connection will not close but needed
         // request.setHeader("Connection","keep-alive");
         // request.setHeader("Keep-Alive","300");
@@ -232,12 +232,12 @@ public class HttpClient {
      * @return the list of HttpData object (attribute and file) to be reused on next post
      */
     private static List<InterfaceHttpData> formpost(ClientBootstrap bootstrap,
-    		String host, int port,
-    		URI uriSimple, File file, HttpDataFactory factory,
-    		List<Entry<String,String>> headers) {
+            String host, int port,
+            URI uriSimple, File file, HttpDataFactory factory,
+            List<Entry<String,String>> headers) {
         // XXX /formpost
         // Start the connection attempt.
-    	ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
+        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
         // Wait until the connection attempt succeeds or fails.
         Channel channel = future.awaitUninterruptibly().getChannel();
         if (!future.isSuccess()) {
@@ -266,7 +266,7 @@ public class HttpClient {
         // it is legal to add directly header or cookie into the request until finalize
         for (Entry<String, String> entry : headers) {
             request.setHeader(entry.getKey(), entry.getValue());
-		}
+        }
 
         // add Form attribute
         try {
@@ -327,13 +327,13 @@ public class HttpClient {
      * @param bodylist
      */
     private static void formpostmultipart(ClientBootstrap bootstrap, String host, int port,
-    		URI uriFile, File file, HttpDataFactory factory,
-    		List<Entry<String,String>> headers, List<InterfaceHttpData> bodylist) {
+            URI uriFile, File file, HttpDataFactory factory,
+            List<Entry<String,String>> headers, List<InterfaceHttpData> bodylist) {
         // XXX /formpostmultipart
         // Start the connection attempt.
-    	ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
+        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
         // Wait until the connection attempt succeeds or fails.
-    	Channel channel = future.awaitUninterruptibly().getChannel();
+        Channel channel = future.awaitUninterruptibly().getChannel();
         if (!future.isSuccess()) {
             future.getCause().printStackTrace();
             bootstrap.releaseExternalResources();
