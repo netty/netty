@@ -21,7 +21,7 @@ import org.jboss.netty.channel.*;
 import java.net.SocketAddress;
 
 /**
- * A channel to a serial device using the RXTX library.
+ * A channel to an {@link java.io.InputStream} and an {@link java.io.OutputStream}.
  *
  * @author Daniel Bimschas
  * @author Dennis Pfisterer
