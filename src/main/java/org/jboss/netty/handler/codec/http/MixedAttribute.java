@@ -74,7 +74,7 @@ public class MixedAttribute implements Attribute {
                 DiskAttribute diskAttribute = new DiskAttribute(attribute
                         .getName());
                 diskAttribute.addContent(((MemoryAttribute) attribute)
-                        .getChannelBuffer(), false);
+                        .getChannelBuffer(), last);
                 attribute = diskAttribute;
             }
         }

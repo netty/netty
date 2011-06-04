@@ -63,7 +63,7 @@ public class MixedFileUpload implements FileUpload {
                         .getContentTransferEncoding(), fileUpload.getCharset(),
                         definedSize);
                 diskFileUpload.addContent(((MemoryFileUpload) fileUpload)
-                        .getChannelBuffer(), false);
+                        .getChannelBuffer(), last);
                 fileUpload = diskFileUpload;
             }
         }
