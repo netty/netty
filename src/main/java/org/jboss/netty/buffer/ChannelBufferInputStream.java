@@ -90,7 +90,11 @@ public class ChannelBufferInputStream extends InputStream implements DataInput {
 
     @Override
     public int available() throws IOException {
-        return endIndex - buffer.readerIndex();
+        if (buffer.readable()) {
+            return Math.min(endIndex - buffer.readerIndex(), buffer.readableBytes());
+        } else {
+            return 0;
+        }
     }
 
     @Override
