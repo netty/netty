@@ -78,11 +78,13 @@ class CompactObjectInputStream extends ObjectInputStream {
         try {
             return loadClass(className);
         } catch (ClassNotFoundException ex) {
+            // FIXME Cache the result to avoid the cost of ClassNotFoundException.
             return super.resolveClass(desc);
         }
     }
 
     protected Class<?> loadClass(String className) throws ClassNotFoundException {
+        // FIXME Cache the result to avoid the cost of loading classes.
         Class<?> clazz;
         ClassLoader classLoader = this.classLoader;
         if (classLoader == null) {
