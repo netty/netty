@@ -53,7 +53,15 @@ class NioServerSocketChannel extends AbstractServerChannel
     volatile Selector selector;
     private final ServerSocketChannelConfig config;
 
-    NioServerSocketChannel(
+    static NioServerSocketChannel create(ChannelFactory factory,
+            ChannelPipeline pipeline, ChannelSink sink) {
+        NioServerSocketChannel instance =
+                new NioServerSocketChannel(factory, pipeline, sink);
+        fireChannelOpen(instance);
+        return instance;
+    }
+
+    private NioServerSocketChannel(
             ChannelFactory factory,
             ChannelPipeline pipeline,
             ChannelSink sink) {
@@ -81,8 +89,6 @@ class NioServerSocketChannel extends AbstractServerChannel
         }
 
         config = new DefaultServerSocketChannelConfig(socket.socket());
-
-        fireChannelOpen(this);
     }
 
     @Override

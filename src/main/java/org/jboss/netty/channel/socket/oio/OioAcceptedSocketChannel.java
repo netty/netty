@@ -41,7 +41,19 @@ class OioAcceptedSocketChannel extends OioSocketChannel {
     private final PushbackInputStream in;
     private final OutputStream out;
 
-    OioAcceptedSocketChannel(
+    static OioAcceptedSocketChannel create(Channel parent,
+            ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink,
+            Socket socket) {
+        OioAcceptedSocketChannel instance =
+                new OioAcceptedSocketChannel(parent, factory, pipeline, sink,
+                        socket);
+        fireChannelOpen(instance);
+        fireChannelBound(instance, instance.getLocalAddress());
+        fireChannelConnected(instance, instance.getRemoteAddress());
+        return instance;
+    }
+
+    private OioAcceptedSocketChannel(
             Channel parent,
             ChannelFactory factory,
             ChannelPipeline pipeline,
@@ -60,10 +72,6 @@ class OioAcceptedSocketChannel extends OioSocketChannel {
         } catch (IOException e) {
             throw new ChannelException("Failed to obtain an OutputStream.", e);
         }
-
-        fireChannelOpen(this);
-        fireChannelBound(this, getLocalAddress());
-        fireChannelConnected(this, getRemoteAddress());
     }
 
     @Override

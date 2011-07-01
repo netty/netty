@@ -43,8 +43,8 @@ public class HttpTunnelClientChannelFactory implements
 
     @Override
     public HttpTunnelClientChannel newChannel(ChannelPipeline pipeline) {
-        return new HttpTunnelClientChannel(this, pipeline,
-                new HttpTunnelClientChannelSink(), factory, realConnections);
+        return HttpTunnelClientChannel.create(this, pipeline, new HttpTunnelClientChannelSink(), factory,
+                realConnections);
     }
 
     @Override

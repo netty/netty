@@ -96,7 +96,7 @@ public class OioDatagramChannelFactory implements DatagramChannelFactory {
 
     @Override
     public DatagramChannel newChannel(ChannelPipeline pipeline) {
-        return new OioDatagramChannel(this, pipeline, sink);
+        return OioDatagramChannel.create(this, pipeline, sink);
     }
 
     @Override
