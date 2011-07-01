@@ -163,6 +163,15 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
     @Override
     public void clientCloseTunnel(String tunnelId) {
         TunnelInfo tunnel = tunnelsById.get(tunnelId);
+        if (tunnel == null) {
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("attempt made to close tunnel id " +
+                        tunnelId + " which is unknown or closed");
+            }
+
+            return;
+        }
+
         tunnel.localChannel.clientClosed();
         tunnelsById.remove(tunnelId);
     }
@@ -170,6 +179,15 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
     @Override
     public void serverCloseTunnel(String tunnelId) {
         TunnelInfo tunnel = tunnelsById.get(tunnelId);
+        if (tunnel == null) {
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("attempt made to close tunnel id " +
+                        tunnelId + " which is unknown or closed");
+            }
+
+            return;
+        }
+
         tunnel.closing.set(true);
 
         Channel responseChannel = tunnel.responseChannel.getAndSet(null);
