@@ -165,7 +165,8 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
         TunnelInfo tunnel = tunnelsById.get(tunnelId);
         if (tunnel == null) {
             if (LOG.isWarnEnabled()) {
-                LOG.warn("attempt made to close tunnel id " + tunnelId + " which is unknown or closed");
+                LOG.warn("attempt made to close tunnel id " +
+                        tunnelId + " which is unknown or closed");
             }
 
             return;
@@ -180,7 +181,8 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
         TunnelInfo tunnel = tunnelsById.get(tunnelId);
         if (tunnel == null) {
             if (LOG.isWarnEnabled()) {
-                LOG.warn("attempt made to close tunnel id " + tunnelId + " which is unknown or closed");
+                LOG.warn("attempt made to close tunnel id " +
+                        tunnelId + " which is unknown or closed");
             }
 
             return;
