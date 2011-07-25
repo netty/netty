@@ -167,7 +167,8 @@ public class CookieEncoder {
             }
         }
 
-        sb.setLength(sb.length() - 1);
+        if(sb.length() > 0)
+        	sb.setLength(sb.length() - 1);
         return sb.toString();
     }
 
@@ -205,7 +206,8 @@ public class CookieEncoder {
             }
         }
 
-        sb.setLength(sb.length() - 1);
+        if(sb.length() > 0)
+        	sb.setLength(sb.length() - 1);
         return sb.toString();
     }
 
