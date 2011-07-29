@@ -167,7 +167,7 @@ public class CookieEncoder {
             }
         }
 
-        if(sb.length() > 0) {
+        if (sb.length() > 0) {
             sb.setLength(sb.length() - 1);
         }
 
