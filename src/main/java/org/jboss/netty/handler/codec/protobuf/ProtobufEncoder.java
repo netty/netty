@@ -78,9 +78,12 @@ public class ProtobufEncoder extends OneToOneEncoder {
     @Override
     protected Object encode(
             ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
-        if (!(msg instanceof MessageLite)) {
-            return msg;
+        if (msg instanceof MessageLite) {
+            return wrappedBuffer(((MessageLite) msg).toByteArray());
         }
-        return wrappedBuffer(((MessageLite) msg).toByteArray());
+        if (msg instanceof MessageLite.Builder) {
+            return wrappedBuffer(((MessageLite.Builder) msg).build().toByteArray());
+        }
+        return msg;
     }
 }
