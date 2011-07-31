@@ -254,7 +254,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
 
     private ChannelFuture writeLastChunk() {
         if (!requestHeaderWritten) {
-            throw new NotYetConnectedException();
+            return failedFuture(this, new NotYetConnectedException());
         } else {
             return realChannel.write(HttpChunk.LAST_CHUNK);
         }
