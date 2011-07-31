@@ -590,6 +590,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     void sendDownstream(DefaultChannelHandlerContext ctx, ChannelEvent e) {
+        if (e instanceof UpstreamMessageEvent) {
+            throw new IllegalArgumentException("cannot send an upstream event to downstream");
+        }
+        
         try {
             ((ChannelDownstreamHandler) ctx.getHandler()).handleDownstream(ctx, e);
         } catch (Throwable t) {

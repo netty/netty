@@ -407,6 +407,10 @@ public class StaticChannelPipeline implements ChannelPipeline {
     }
 
     void sendDownstream(StaticChannelHandlerContext ctx, ChannelEvent e) {
+        if (e instanceof UpstreamMessageEvent) {
+            throw new IllegalArgumentException("cannot send an upstream event to downstream");
+        }
+
         try {
             ((ChannelDownstreamHandler) ctx.getHandler()).handleDownstream(ctx, e);
         } catch (Throwable t) {
