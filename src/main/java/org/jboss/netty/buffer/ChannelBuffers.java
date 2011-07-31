@@ -979,8 +979,8 @@ public class ChannelBuffers {
         }
 
         for (int i = byteCount; i > 0; i --) {
-            byte va = bufferA.getByte(aIndex);
-            byte vb = bufferB.getByte(bIndex);
+            short va = bufferA.getUnsignedByte(aIndex);
+            short vb = bufferB.getUnsignedByte(bIndex);
             if (va > vb) {
                 return 1;
             } else if (va < vb) {
