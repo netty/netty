@@ -48,11 +48,20 @@ import org.jboss.netty.util.ExternalResourceReleasable;
  * transfer, sending a file with {@link FileRegion} might fail or yield worse
  * performance.  For example, sending a large file doesn't work well in Windows.
  *
+ * <h3>Not all transports support it</h3>
+ *
+ * Currently, the NIO transport is the only transport that supports {@link FileRegion}.
+ * Attempting to write a {@link FileRegion} to non-NIO {@link Channel} will trigger
+ * a {@link ClassCastException} or a similar exception.
+ *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
  */
 public interface FileRegion extends ExternalResourceReleasable {
+
+    // FIXME Make sure all transports support writing a FileRegion
+    //       Even if zero copy cannot be achieved, all transports should emulate it.
 
     /**
      * Returns the offset in the file where the transfer began.
