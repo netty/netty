@@ -187,6 +187,11 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
         return productQueue.size();
     }
 
+    @Override
+    public ChannelPipeline getPipeline() {
+        return pipeline;
+    }
+
     private final class EmbeddedChannelSink implements ChannelSink, ChannelUpstreamHandler {
         EmbeddedChannelSink() {
             super();
