@@ -659,6 +659,11 @@ public class SslHandler extends FrameDecoder
                                     channel, future, msg, channel.getRemoteAddress());
                             offerEncryptedWriteRequest(encryptedWrite);
                             offered = true;
+                        } else if (result.getStatus() == Status.CLOSED) {
+                            // SSLEngine has been closed already.
+                            // Any further write attempts should be denied.
+                            success = false;
+                            break;
                         } else {
                             final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
                             handleRenegotiation(handshakeStatus);
