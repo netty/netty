@@ -17,6 +17,7 @@ package org.jboss.netty.channel;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -487,6 +488,11 @@ public interface ChannelPipeline {
      * a {@link Channel}.
      */
     boolean isAttached();
+
+    /**
+     * Returns the {@link List} of the handler names.
+     */
+    List<String> getNames();
 
     /**
      * Converts this pipeline into an ordered {@link Map} whose keys are

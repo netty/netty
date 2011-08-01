@@ -15,8 +15,10 @@
  */
 package org.jboss.netty.channel;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -485,6 +487,23 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
         return null;
+    }
+
+    public List<String> getNames() {
+        List<String> list = new ArrayList<String>();
+        if (name2ctx.isEmpty()) {
+            return list;
+        }
+
+        DefaultChannelHandlerContext ctx = head;
+        for (;;) {
+            list.add(ctx.getName());
+            ctx = ctx.next;
+            if (ctx == null) {
+                break;
+            }
+        }
+        return list;
     }
 
     public Map<String, ChannelHandler> toMap() {
