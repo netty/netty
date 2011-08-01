@@ -21,6 +21,8 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
 import java.io.StreamCorruptedException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
@@ -31,6 +33,7 @@ import java.io.StreamCorruptedException;
  */
 class CompactObjectInputStream extends ObjectInputStream {
 
+    private final Map<String, Class<?>> classCache = new HashMap<String, Class<?>>();
     private final ClassLoader classLoader;
 
     CompactObjectInputStream(InputStream in) throws IOException {
@@ -65,7 +68,7 @@ class CompactObjectInputStream extends ObjectInputStream {
         case CompactObjectOutputStream.TYPE_THIN_DESCRIPTOR:
             String className = readUTF();
             Class<?> clazz = loadClass(className);
-            return ObjectStreamClass.lookup(clazz);
+            return ObjectStreamClass.lookupAny(clazz);
         default:
             throw new StreamCorruptedException(
                     "Unexpected class descriptor type: " + type);
@@ -74,16 +77,33 @@ class CompactObjectInputStream extends ObjectInputStream {
 
     @Override
     protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
+        // Query the cache first.
         String className = desc.getName();
-        try {
-            return loadClass(className);
-        } catch (ClassNotFoundException ex) {
-            return super.resolveClass(desc);
+        Class<?> clazz = classCache.get(className);
+        if (clazz != null) {
+            return clazz;
         }
+
+        // And then try to resolve.
+        try {
+            clazz = loadClass(className);
+        } catch (ClassNotFoundException ex) {
+            clazz = super.resolveClass(desc);
+        }
+
+        classCache.put(className, clazz);
+        return clazz;
     }
 
     protected Class<?> loadClass(String className) throws ClassNotFoundException {
+        // Query the cache first.
         Class<?> clazz;
+        clazz = classCache.get(className);
+        if (clazz != null) {
+            return clazz;
+        }
+
+        // And then try to load.
         ClassLoader classLoader = this.classLoader;
         if (classLoader == null) {
             classLoader = Thread.currentThread().getContextClassLoader();
@@ -94,6 +114,8 @@ class CompactObjectInputStream extends ObjectInputStream {
         } else {
             clazz = Class.forName(className);
         }
+
+        classCache.put(className, clazz);
         return clazz;
     }
 }
