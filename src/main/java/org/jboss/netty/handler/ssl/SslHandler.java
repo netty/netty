@@ -1072,6 +1072,8 @@ public class SslHandler extends FrameDecoder
         public void operationComplete(ChannelFuture closeNotifyFuture) throws Exception {
             if (!(closeNotifyFuture.getCause() instanceof ClosedChannelException)) {
                 Channels.close(context, e.getFuture());
+            } else {
+                e.getFuture().setSuccess();
             }
         }
     }
