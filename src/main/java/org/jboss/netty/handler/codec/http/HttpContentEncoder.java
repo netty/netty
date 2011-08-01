@@ -102,7 +102,8 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
                 throw new IllegalStateException("cannot send more responses than requests");
             }
 
-            if ((encoder = newContentEncoder(acceptEncoding)) != null) {
+            boolean hasContent = m.isChunked() || m.getContent().readable();
+            if (hasContent && (encoder = newContentEncoder(acceptEncoding)) != null) {
                 // Encode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
                 m.setHeader(
