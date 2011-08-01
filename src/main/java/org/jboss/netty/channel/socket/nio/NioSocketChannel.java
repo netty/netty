@@ -83,14 +83,6 @@ class NioSocketChannel extends AbstractChannel
         this.socket = socket;
         this.worker = worker;
         config = new DefaultNioSocketChannelConfig(socket.socket());
-
-        // TODO Move the state variable to AbstractChannel so that we don't need
-        //      to add many listeners.
-        getCloseFuture().addListener(new ChannelFutureListener() {
-            public void operationComplete(ChannelFuture future) throws Exception {
-                state = ST_CLOSED;
-            }
-        });
     }
 
     public NioSocketChannelConfig getConfig() {
@@ -151,6 +143,7 @@ class NioSocketChannel extends AbstractChannel
 
     @Override
     protected boolean setClosed() {
+        state = ST_CLOSED;
         return super.setClosed();
     }
 
