@@ -597,6 +597,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         try {
             ((ChannelDownstreamHandler) ctx.getHandler()).handleDownstream(ctx, e);
         } catch (Throwable t) {
+            // Unlike an upstream event, a downstream event usually has an
+            // incomplete future which is supposed to be updated by ChannelSink.
+            // However, if an exception is raised before the event reaches at
+            // ChannelSink, the future is not going to be updated, so we update
+            // here.
+            e.getFuture().setFailure(t);
             notifyHandlerException(e, t);
         }
     }
