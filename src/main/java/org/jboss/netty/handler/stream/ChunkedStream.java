@@ -23,6 +23,12 @@ import java.io.PushbackInputStream;
 /**
  * A {@link ChunkedInput} that fetches data from an {@link InputStream} chunk by
  * chunk.
+ * <p>
+ * Please note that the {@link InputStream} instance that feeds data into
+ * {@link ChunkedStream} must implement {@link InputStream#available()} as
+ * accurately as possible, rather than using the default implementation.
+ * Otherwise, {@link ChunkedStream} will generate many too small chunks or
+ * block unnecessarily often.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
