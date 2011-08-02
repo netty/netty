@@ -17,6 +17,7 @@ package org.jboss.netty.handler.stream;
 
 import static org.jboss.netty.channel.Channels.*;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.Queue;
 
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -150,32 +151,40 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         ctx.sendUpstream(e);
     }
 
-    private synchronized void discard(ChannelHandlerContext ctx) {
-        for (;;) {
-            if (currentEvent == null) {
-                currentEvent = queue.poll();
-            }
+    private void discard(ChannelHandlerContext ctx) {
+        ClosedChannelException cause = null;
+        boolean fireExceptionCaught = false;
+        synchronized (this) {
+            for (;;) {
+                if (currentEvent == null) {
+                    currentEvent = queue.poll();
+                }
 
-            if (currentEvent == null) {
-                break;
-            }
+                if (currentEvent == null) {
+                    break;
+                }
 
-            MessageEvent currentEvent = this.currentEvent;
-            this.currentEvent = null;
+                MessageEvent currentEvent = this.currentEvent;
+                this.currentEvent = null;
 
-            Object m = currentEvent.getMessage();
-            if (m instanceof ChunkedInput) {
-                closeInput((ChunkedInput) m);
+                Object m = currentEvent.getMessage();
+                if (m instanceof ChunkedInput) {
+                    closeInput((ChunkedInput) m);
+                }
 
                 // Trigger a ClosedChannelException
-                Channels.write(
-                        ctx, currentEvent.getFuture(), ChannelBuffers.EMPTY_BUFFER,
-                        currentEvent.getRemoteAddress());
-            } else {
-                // Trigger a ClosedChannelException
-                ctx.sendDownstream(currentEvent);
+                if (cause == null) {
+                    cause = new ClosedChannelException();
+                }
+                currentEvent.getFuture().setFailure(cause);
+                fireExceptionCaught = true;
+
+                currentEvent = null;
             }
-            currentEvent = null;
+        }
+
+        if (fireExceptionCaught) {
+            Channels.fireExceptionCaught(currentEvent.getChannel(), cause);
         }
     }
 
