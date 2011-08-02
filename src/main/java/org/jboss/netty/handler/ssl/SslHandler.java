@@ -338,7 +338,7 @@ public class SslHandler extends FrameDecoder
                     engine.beginHandshake();
                     runDelegatedTasks();
                     handshakeFuture = this.handshakeFuture = future(channel);
-                } catch (SSLException e) {
+                } catch (Exception e) {
                     handshakeFuture = this.handshakeFuture = failedFuture(channel, e);
                 }
             }
