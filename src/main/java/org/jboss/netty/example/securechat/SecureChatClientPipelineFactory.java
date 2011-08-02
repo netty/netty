@@ -50,7 +50,7 @@ public class SecureChatClientPipelineFactory implements
 
         SSLEngine engine =
             SecureChatSslContextFactory.getClientContext().createSSLEngine();
-        engine.setUseClientMode(true);
+        //engine.setUseClientMode(true);
 
         pipeline.addLast("ssl", new SslHandler(engine));
 
