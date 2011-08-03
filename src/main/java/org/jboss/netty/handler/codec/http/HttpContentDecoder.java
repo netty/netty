@@ -62,7 +62,7 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
         Object msg = e.getMessage();
         if (msg instanceof HttpResponse && ((HttpResponse) msg).getStatus().getCode() == 100) {
             // 100-continue response must be passed through.
-            ctx.sendDownstream(e);
+            ctx.sendUpstream(e);
         } else if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
