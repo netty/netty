@@ -67,12 +67,12 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
             throws Exception {
         Object msg = e.getMessage();
-        if (!(msg instanceof HttpMessage)) {
+        if (!(msg instanceof HttpRequest)) {
             ctx.sendUpstream(e);
             return;
         }
 
-        HttpMessage m = (HttpMessage) msg;
+        HttpRequest m = (HttpRequest) msg;
         String acceptedEncoding = m.getHeader(HttpHeaders.Names.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
             acceptedEncoding = HttpHeaders.Values.IDENTITY;
@@ -94,21 +94,26 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
         } else  if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
-            encoder = null;
-
-            // Determine the content encoding.
-            String acceptEncoding = acceptEncodingQueue.poll();
-            if (acceptEncoding == null) {
-                throw new IllegalStateException("cannot send more responses than requests");
+            String encoding;
+            if(msg instanceof HttpResponse) {
+                // Determine the content encoding.
+                encoding = acceptEncodingQueue.poll();
+                if (encoding == null)
+                {
+                    throw new IllegalStateException("cannot send more responses than requests");
+                }
+            }
+            else {
+                encoding = m.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
             }
 
             boolean hasContent = m.isChunked() || m.getContent().readable();
-            if (hasContent && (encoder = newContentEncoder(acceptEncoding)) != null) {
+            if (hasContent && (encoder = newContentEncoder(encoding)) != null) {
                 // Encode the content and remove or replace the existing headers
                 // so that the message looks like a decoded message.
                 m.setHeader(
                         HttpHeaders.Names.CONTENT_ENCODING,
-                        getTargetContentEncoding(acceptEncoding));
+                        getTargetContentEncoding(encoding));
 
                 if (!m.isChunked()) {
                     ChannelBuffer content = m.getContent();
