@@ -329,6 +329,8 @@ public class SslHandler extends FrameDecoder
         ChannelHandlerContext ctx = this.ctx;
         Channel channel = ctx.getChannel();
         ChannelFuture handshakeFuture;
+        Exception exception = null;
+
         synchronized (handshakeLock) {
             if (handshaking) {
                 return this.handshakeFuture;
@@ -338,17 +340,24 @@ public class SslHandler extends FrameDecoder
                     engine.beginHandshake();
                     runDelegatedTasks();
                     handshakeFuture = this.handshakeFuture = future(channel);
-                } catch (SSLException e) {
+                } catch (Exception e) {
                     handshakeFuture = this.handshakeFuture = failedFuture(channel, e);
+                    exception = e;
                 }
             }
         }
 
-        try {
-            wrapNonAppData(ctx, channel);
-        } catch (SSLException e) {
-            handshakeFuture.setFailure(e);
+        if (exception == null) { // Began handshake successfully.
+            try {
+                wrapNonAppData(ctx, channel);
+            } catch (SSLException e) {
+                fireExceptionCaught(ctx, e);
+                handshakeFuture.setFailure(e);
+            }
+        } else { // Failed to initiate handshake.
+            fireExceptionCaught(ctx, exception);
         }
+
         return handshakeFuture;
     }
 
@@ -363,6 +372,7 @@ public class SslHandler extends FrameDecoder
             engine.closeOutbound();
             return wrapNonAppData(ctx, channel);
         } catch (SSLException e) {
+            fireExceptionCaught(ctx, e);
             return failedFuture(channel, e);
         }
     }
@@ -659,6 +669,11 @@ public class SslHandler extends FrameDecoder
                                     channel, future, msg, channel.getRemoteAddress());
                             offerEncryptedWriteRequest(encryptedWrite);
                             offered = true;
+                        } else if (result.getStatus() == Status.CLOSED) {
+                            // SSLEngine has been closed already.
+                            // Any further write attempts should be denied.
+                            success = false;
+                            break;
                         } else {
                             final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
                             handleRenegotiation(handshakeStatus);
@@ -1072,6 +1087,8 @@ public class SslHandler extends FrameDecoder
         public void operationComplete(ChannelFuture closeNotifyFuture) throws Exception {
             if (!(closeNotifyFuture.getCause() instanceof ClosedChannelException)) {
                 Channels.close(context, e.getFuture());
+            } else {
+                e.getFuture().setSuccess();
             }
         }
     }

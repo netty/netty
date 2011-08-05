@@ -32,7 +32,6 @@ import org.jboss.netty.util.internal.ConcurrentHashMap;
 public abstract class AbstractChannel implements Channel {
 
     static final ConcurrentMap<Integer, Channel> allChannels = new ConcurrentHashMap<Integer, Channel>();
-    private static final IdDeallocator ID_DEALLOCATOR = new IdDeallocator();
 
     private static Integer allocateId(Channel channel) {
         Integer id = Integer.valueOf(System.identityHashCode(channel));
@@ -46,17 +45,6 @@ public abstract class AbstractChannel implements Channel {
                 // Taken by other channel at almost the same moment.
                 id = Integer.valueOf(id.intValue() + 1);
             }
-        }
-    }
-
-    private static final class IdDeallocator implements ChannelFutureListener {
-        IdDeallocator() {
-            super();
-        }
-
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            allChannels.remove(future.getChannel().getId());
         }
     }
 
@@ -94,7 +82,6 @@ public abstract class AbstractChannel implements Channel {
         this.pipeline = pipeline;
 
         id = allocateId(this);
-        closeFuture.addListener(ID_DEALLOCATOR);
 
         pipeline.attach(this, sink);
     }
@@ -200,6 +187,10 @@ public abstract class AbstractChannel implements Channel {
      *                      closed yet
      */
     protected boolean setClosed() {
+        // Deallocate the current channel's ID from allChannels so that other
+        // new channels can use it.
+        allChannels.remove(id);
+
         return closeFuture.setClosed();
     }
 
