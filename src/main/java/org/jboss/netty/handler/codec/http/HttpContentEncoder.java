@@ -94,6 +94,7 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
         } else  if (msg instanceof HttpMessage) {
             HttpMessage m = (HttpMessage) msg;
 
+            encoder = null;
             String encoding;
             if(msg instanceof HttpResponse) {
                 // Determine the content encoding.
