@@ -184,7 +184,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         }
 
         if (fireExceptionCaught) {
-            Channels.fireExceptionCaught(currentEvent.getChannel(), cause);
+            Channels.fireExceptionCaught(ctx.getChannel(), cause);
         }
     }
 
