@@ -374,18 +374,19 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             long tooLongFrameLength = this.tooLongFrameLength;
             this.tooLongFrameLength = 0;
             discardingTooLongFrame = false;
-            if (!failImmediatelyOnTooLongFrame)
+            if ((!failImmediatelyOnTooLongFrame) ||
+                (failImmediatelyOnTooLongFrame && firstDetectionOfTooLongFrame))
             {
                 fail(ctx, tooLongFrameLength);
             }
         } else {
-            // Keep discarding.
+            // Keep discarding and notify handlers if necessary.
+            if (failImmediatelyOnTooLongFrame && firstDetectionOfTooLongFrame)
+            {
+                fail(ctx, this.tooLongFrameLength);
+            }
         }
 
-        if (firstDetectionOfTooLongFrame && failImmediatelyOnTooLongFrame)
-        {
-            fail(ctx, tooLongFrameLength);
-        }
     }
 
     /**
@@ -414,10 +415,10 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
      * 
      * @param failImmediatelyOnTooLongFrame  If false (the default) a {@link TooLongFrameException}
      *                                       is thrown if the length of the frame exceeds maxFrameLength,
-     *                                       after the delimiter has been read.
+     *                                       after the entire frame has been read.
      *                                       If true a {@link TooLongFrameException} is thrown immediately
      *                                       when the length of the frame exceeds maxFrameLength,
-     *                                       regardless of whether a delimiter has been found yet.
+     *                                       regardless of whether the entire frame has been read.
      */
     public LengthFieldBasedFrameDecoder setFailImmediatelyOnTooLongFrame(
             boolean failImmediatelyOnTooLongFrame)
