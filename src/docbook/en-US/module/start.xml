@@ -337,7 +337,7 @@ public class TimeServerHandler extends &SimpleChannelHandler; {
         &Channel; ch = e.getChannel();
         
         &ChannelBuffer; time = &ChannelBuffers;.buffer(4);<co id="example.time.co2"/>
-        time.writeInt(System.currentTimeMillis() / 1000);
+        time.writeInt((int) (System.currentTimeMillis() / 1000));
         
         &ChannelFuture; f = ch.write(time);<co id="example.time.co3"/>
         
