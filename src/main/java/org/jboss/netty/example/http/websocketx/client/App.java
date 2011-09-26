@@ -25,6 +25,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.group.ChannelGroup;
@@ -32,6 +33,9 @@ import org.jboss.netty.channel.group.ChannelGroupFuture;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.example.http.websocketx.server.WebSocketServerPipelineFactory;
+import org.jboss.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import org.jboss.netty.handler.codec.http.websocketx.PingWebSocketFrame;
+import org.jboss.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketSpecificationVersion;
@@ -94,13 +98,14 @@ public class App {
 		MyCallbackHandler callbackHandler = new MyCallbackHandler();
 		WebSocketClientFactory factory = new WebSocketClientFactory();
 
-		// Connect with spec version 10 (try changing it to V00 and it will still work ... fingers crossed ;-)
+		// Connect with spec version 10 (try changing it to V00 and it will
+		// still work ... fingers crossed ;-)
 		WebSocketClient client = factory.newClient(new URI("ws://localhost:8080/websocket"),
 				WebSocketSpecificationVersion.V10, callbackHandler);
 
 		// Connect
 		client.connect().awaitUninterruptibly();
-		Thread.sleep(500);
+		Thread.sleep(200);
 
 		// Send 10 messages and wait for responses
 		for (int i = 0; i < 10; i++) {
@@ -108,8 +113,11 @@ public class App {
 		}
 		Thread.sleep(1000);
 
-		// Close - this throws ClosedChannelException. Not sure why. Just as easy to just disconnect.
-		//client.send(new CloseWebSocketFrame());
+		// Close - this throws ClosedChannelException. Not sure why. Just as
+		// easy to just disconnect.
+		client.send(new PingWebSocketFrame(ChannelBuffers.copiedBuffer(new byte[] { 1, 2, 3, 4, 5, 6 })));
+		client.send(new CloseWebSocketFrame());
+		Thread.sleep(200);
 
 		// Disconnect
 		client.disconnect();
@@ -159,6 +167,10 @@ public class App {
 				TextWebSocketFrame textFrame = (TextWebSocketFrame) frame;
 				logger.debug("WebSocket Client Received Message:" + textFrame.getText());
 				messagesReceived.add(textFrame.getText());
+			} else if (frame instanceof PongWebSocketFrame) {
+				logger.debug("WebSocket Client ping/pong");
+			} else if (frame instanceof CloseWebSocketFrame) {
+				logger.debug("WebSocket Client closing");
 			}
 		}
 
