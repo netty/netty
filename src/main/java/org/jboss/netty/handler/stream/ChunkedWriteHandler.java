@@ -154,34 +154,36 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
     private void discard(ChannelHandlerContext ctx) {
         ClosedChannelException cause = null;
         boolean fireExceptionCaught = false;
-        synchronized (this) {
-            for (;;) {
-                if (currentEvent == null) {
-                    currentEvent = queue.poll();
-                }
-
-                if (currentEvent == null) {
-                    break;
-                }
-
-                MessageEvent currentEvent = this.currentEvent;
-                this.currentEvent = null;
-
-                Object m = currentEvent.getMessage();
-                if (m instanceof ChunkedInput) {
-                    closeInput((ChunkedInput) m);
-                }
-
-                // Trigger a ClosedChannelException
-                if (cause == null) {
-                    cause = new ClosedChannelException();
-                }
-                currentEvent.getFuture().setFailure(cause);
-                fireExceptionCaught = true;
-
-                currentEvent = null;
+           
+        for (;;) {
+            MessageEvent currentEvent = this.currentEvent;
+                
+            if (this.currentEvent == null) { 
+                currentEvent = queue.poll(); 
+            } else {
+                this.currentEvent = null; 
             }
+
+            if (currentEvent == null) { 
+                break; 
+            }
+            
+              
+            Object m = currentEvent.getMessage();
+            if (m instanceof ChunkedInput) {
+                closeInput((ChunkedInput) m);
+            }
+
+            // Trigger a ClosedChannelException
+            if (cause == null) {
+                cause = new ClosedChannelException();
+            }
+            currentEvent.getFuture().setFailure(cause);
+            fireExceptionCaught = true;
+
+            currentEvent = null;
         }
+        
 
         if (fireExceptionCaught) {
             Channels.fireExceptionCaught(ctx.getChannel(), cause);
