@@ -41,20 +41,20 @@
     <title>Rich Buffer Data Structure</title>
     <para>
       Netty uses its own buffer API instead of NIO <classname>ByteBuffer</classname>
-      to represent a sequence of bytes. This approach has significant advantage
+      to represent a sequence of bytes. This approach has significant advantages
       over using <classname>ByteBuffer</classname>.  Netty's new buffer type,
-      &ChannelBuffer; has been designed from ground up to address the problems
+      &ChannelBuffer; has been designed from the ground up to address the problems
       of <classname>ByteBuffer</classname> and to meet the daily needs of
       network application developers.  To list a few cool features:
       <itemizedlist>
         <listitem>
           <para>
-            You can define your buffer type if necessary.
+            You can define your own buffer type if necessary.
           </para>
         </listitem>
         <listitem>
           <para>
-            Transparent zero copy is achieved by built-in composite buffer type.
+            Transparent zero copy is achieved by a built-in composite buffer type.
           </para>
         </listitem>
         <listitem>
