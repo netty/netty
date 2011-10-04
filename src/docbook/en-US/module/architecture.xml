@@ -160,14 +160,14 @@
   <section>
     <title>Event Model based on the Interceptor Chain Pattern</title>
     <para>
-      Well-defined and extensible event model is a must for an event-driven
-      application.  Netty does have a well-defined event model focused on I/O.
-      It also allows you to implement your own event type without breaking the
-      existing code at all because each event type is distinguished from
-      each other by strict type hierarchy.  This is another differentiator
-      against other frameworks.  Many NIO frameworks have no or very limited
-      notion of event model; they often break the existing code when you try
-      to add a new custom event type, or just do not allow extension.
+      A well-defined and extensible event model is a must for an event-driven
+      application.  Netty has a well-defined event model focused on I/O.  It
+      also allows you to implement your own event type without breaking the
+      existing code because each event type is distinguished from another by
+      a strict type hierarchy.  This is another differentiator against other
+      frameworks.  Many NIO frameworks have no or a very limited notion of an
+      event model. If they offer extension at all, they often break the
+      existing code when you try to add custom event types
     </para>
     <para>
       A &ChannelEvent; is handled by a list of &ChannelHandler;s in a
@@ -175,7 +175,7 @@
       <ulink url="http://java.sun.com/blueprints/corej2eepatterns/Patterns/InterceptingFilter.html">Intercepting Filter</ulink>
       pattern to give a user full control over how an event is handled and how
       the handlers in the pipeline interact with each other.  For example,
-      you can define what to do when a data is read from a socket:
+      you can define what to do when data is read from a socket:
     </para>
     <programlisting>public class MyReadHandler implements &SimpleChannelHandler; {
     public void messageReceived(&ChannelHandlerContext; ctx, &MessageEvent; evt) {
@@ -188,8 +188,7 @@
     }
 }</programlisting>
     <para>
-      You can also define what to do when other handler requested a write
-      operation:
+      You can also define what to do when a handler receives a write request:
     </para>
     <programlisting>public class MyWriteHandler implements &SimpleChannelHandler; {
     public void writeRequested(&ChannelHandlerContext; ctx, &MessageEvent; evt) {
@@ -202,7 +201,7 @@
     }
 }</programlisting>
     <para>
-      For more information about the event model, please refer to the
+      For more information on the event model, please refer to the
       API documentation of &ChannelEvent; and &ChannelPipeline;.
     </para>
   </section>
