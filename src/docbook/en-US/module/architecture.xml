@@ -329,18 +329,18 @@
     <title>Summary</title>
     <para>
       In this chapter, we reviewed the overall architecture of Netty from the
-      feature-wise standpoint.  Netty has simple yet powerful architecture.
+      feature standpoint.  Netty has a simple, yet powerful architecture.
       It is composed of three components - buffer, channel, and event model -
       and all advanced features are built on top of the three core components.
       Once you understood how these three work together, it should not be
-      difficult to understand more advanced features which were covered briefly
-      in this chapter.
+      difficult to understand the more advanced features which were covered
+      briefly in this chapter.
     </para>
     <para>
-      You might still have an unanswered question about what the overall
-      architecture looks exactly like and how each feature work together.
-      If so, it is a good idea to <ulink url="&Community;">talk to us</ulink>
-      to improve this guide.
+      You might still have unanswered questions about what the overall
+      architecture looks like exactly and how each of the features work
+      together.  If so, it is a good idea to
+      <ulink url="&Community;">talk to us</ulink> to improve this guide.
     </para>
   </section>
 </chapter>
