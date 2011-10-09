@@ -39,15 +39,15 @@ import org.jboss.netty.channel.MessageEvent;
  */
 class HttpTunnelAcceptedChannelSink extends AbstractChannelSink {
 
-    private final SaturationManager saturationManager;
+    final SaturationManager saturationManager;
 
     private final ServerMessageSwitchDownstreamInterface messageSwitch;
 
     private final String tunnelId;
 
-    private AtomicBoolean active = new AtomicBoolean(false);
+    private final AtomicBoolean active = new AtomicBoolean(false);
 
-    private HttpTunnelAcceptedChannelConfig config;
+    private final HttpTunnelAcceptedChannelConfig config;
 
     public HttpTunnelAcceptedChannelSink(
             ServerMessageSwitchDownstreamInterface messageSwitch,
@@ -55,11 +55,12 @@ class HttpTunnelAcceptedChannelSink extends AbstractChannelSink {
         this.messageSwitch = messageSwitch;
         this.tunnelId = tunnelId;
         this.config = config;
-        this.saturationManager =
+        saturationManager =
                 new SaturationManager(config.getWriteBufferLowWaterMark(),
                         config.getWriteBufferHighWaterMark());
     }
 
+    @Override
     public void eventSunk(ChannelPipeline pipeline, ChannelEvent e)
             throws Exception {
         if (e instanceof MessageEvent) {

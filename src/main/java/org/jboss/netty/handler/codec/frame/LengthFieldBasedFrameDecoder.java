@@ -290,17 +290,7 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             buffer.skipBytes(localBytesToDiscard);
             bytesToDiscard -= localBytesToDiscard;
             this.bytesToDiscard = bytesToDiscard;
-            if (bytesToDiscard == 0) {
-                // Reset to the initial state and tell the handlers that
-                // the frame was too large.
-                // TODO Let user choose when the exception should be raised - early or late?
-                //      If early, fail() should be called when discardingTooLongFrame is set to true.
-                long tooLongFrameLength = this.tooLongFrameLength;
-                this.tooLongFrameLength = 0;
-                fail(ctx, tooLongFrameLength);
-            } else {
-                // Keep discarding.
-            }
+            failIfNecessary(ctx);
             return null;
         }
 
@@ -350,6 +340,7 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             tooLongFrameLength = frameLength;
             bytesToDiscard = frameLength - buffer.readableBytes();
             buffer.skipBytes(buffer.readableBytes());
+            failIfNecessary(ctx);
             return null;
         }
 
@@ -373,6 +364,21 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
         ChannelBuffer frame = extractFrame(buffer, readerIndex, actualFrameLength);
         buffer.readerIndex(readerIndex + actualFrameLength);
         return frame;
+    }
+
+    private void failIfNecessary(ChannelHandlerContext ctx) {
+        if (bytesToDiscard == 0) {
+            // Reset to the initial state and tell the handlers that
+            // the frame was too large.
+            // TODO Let user choose when the exception should be raised - early or late?
+            //      If early, fail() should be called when discardingTooLongFrame is set to true.
+            long tooLongFrameLength = this.tooLongFrameLength;
+            this.tooLongFrameLength = 0;
+            discardingTooLongFrame = false;
+            fail(ctx, tooLongFrameLength);
+        } else {
+            // Keep discarding.
+        }
     }
 
     /**

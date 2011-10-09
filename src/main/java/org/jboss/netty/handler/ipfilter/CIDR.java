@@ -167,6 +167,17 @@ public abstract class CIDR implements Comparable<CIDR>
     */
    public abstract boolean contains(InetAddress inetAddress);
 
+   /* (non-Javadoc)
+    * @see java.lang.Object#equals(java.lang.Object)
+    */
+   @Override
+   public boolean equals(Object arg0) {
+       if (!(arg0 instanceof CIDR)) {
+           return false;
+       }
+       return (this.compareTo((CIDR) arg0) == 0);
+   }
+
    /** Convert an IPv4 or IPv6 textual representation into an
     *  InetAddress.
     * @param addr

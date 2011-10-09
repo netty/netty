@@ -62,36 +62,44 @@ class HttpTunnelAcceptedChannel extends AbstractChannel implements
         fireChannelConnected(this, getRemoteAddress());
     }
 
+    @Override
     public SocketChannelConfig getConfig() {
         return config;
     }
 
+    @Override
     public InetSocketAddress getLocalAddress() {
 
         return ((HttpTunnelServerChannel) getParent()).getLocalAddress();
     }
 
+    @Override
     public InetSocketAddress getRemoteAddress() {
         return remoteAddress;
     }
 
+    @Override
     public boolean isBound() {
         return sink.isActive();
     }
 
+    @Override
     public boolean isConnected() {
         return sink.isActive();
     }
 
+    @Override
     public void clientClosed() {
         this.setClosed();
         Channels.fireChannelClosed(this);
     }
 
+    @Override
     public void dataReceived(ChannelBuffer data) {
         Channels.fireMessageReceived(this, data);
     }
 
+    @Override
     public void updateInterestOps(SaturationStateChange transition) {
         switch (transition) {
         case SATURATED:

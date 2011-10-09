@@ -52,7 +52,7 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler {
                 System.out.println();
             }
 
-            if (response.getStatus().getCode() == 200 && response.isChunked()) {
+            if (response.isChunked()) {
                 readingChunks = true;
                 System.out.println("CHUNKED CONTENT {");
             } else {

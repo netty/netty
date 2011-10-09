@@ -52,22 +52,27 @@ public class FakeServerSocketChannel extends AbstractChannel implements
         super(null, factory, pipeline, sink);
     }
 
+    @Override
     public ServerSocketChannelConfig getConfig() {
         return config;
     }
 
+    @Override
     public InetSocketAddress getLocalAddress() {
         return localAddress;
     }
 
+    @Override
     public InetSocketAddress getRemoteAddress() {
         return remoteAddress;
     }
 
+    @Override
     public boolean isBound() {
         return bound;
     }
 
+    @Override
     public boolean isConnected() {
         return connected;
     }

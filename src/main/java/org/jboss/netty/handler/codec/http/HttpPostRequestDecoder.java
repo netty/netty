@@ -634,7 +634,7 @@ public class HttpPostRequestDecoder {
         }
         case FIELD: {
             // Now get value according to Content-Type and Charset
-        	Charset localCharset = null;
+            Charset localCharset = null;
             Attribute charsetAttribute = currentFieldAttributes
                     .get(HttpHeaders.Values.CHARSET);
             if (charsetAttribute != null) {
@@ -854,7 +854,7 @@ public class HttpPostRequestDecoder {
                             Attribute attribute;
                             try {
                                 attribute = factory.createAttribute(request,
-                                		contents[0].trim(),
+                                        contents[0].trim(),
                                         decodeAttribute(cleanString(contents[i]), charset));
                             } catch (NullPointerException e) {
                                 throw new ErrorDataDecoderException(e);

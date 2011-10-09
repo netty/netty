@@ -36,6 +36,7 @@ class HttpTunnelServerChannelSink extends AbstractChannelSink {
 
     private ServerSocketChannel realChannel;
 
+    @Override
     public void eventSunk(ChannelPipeline pipeline, ChannelEvent e)
             throws Exception {
 
@@ -67,6 +68,7 @@ class HttpTunnelServerChannelSink extends AbstractChannelSink {
             this.upstreamFuture = upstreamFuture;
         }
 
+        @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             if (future.isSuccess()) {
                 upstreamFuture.setSuccess();

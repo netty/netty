@@ -73,8 +73,10 @@ public class MixedAttribute implements Attribute {
             if (attribute.length() + buffer.readableBytes() > limitSize) {
                 DiskAttribute diskAttribute = new DiskAttribute(attribute
                         .getName());
-                diskAttribute.addContent(((MemoryAttribute) attribute)
-                        .getChannelBuffer(), false);
+                if (((MemoryAttribute) attribute).getChannelBuffer() != null) {
+                    diskAttribute.addContent(((MemoryAttribute) attribute)
+                        .getChannelBuffer(), last);
+                }
                 attribute = diskAttribute;
             }
         }

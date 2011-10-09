@@ -506,17 +506,23 @@ class NioWorker implements Runnable {
                 }
             }
             channel.inWriteNowLoop = false;
+
+            // Initially, the following block was executed after releasing
+            // the writeLock, but there was a race condition, and it has to be
+            // executed before releasing the writeLock:
+            //
+            //     https://issues.jboss.org/browse/NETTY-410
+            //
+            if (open) {
+                if (addOpWrite) {
+                    setOpWrite(channel);
+                } else if (removeOpWrite) {
+                    clearOpWrite(channel);
+                }
+            }
         }
 
         fireWriteComplete(channel, writtenBytes);
-
-        if (open) {
-            if (addOpWrite) {
-                setOpWrite(channel);
-            } else if (removeOpWrite) {
-                clearOpWrite(channel);
-            }
-        }
     }
 
     private void setOpWrite(NioSocketChannel channel) {

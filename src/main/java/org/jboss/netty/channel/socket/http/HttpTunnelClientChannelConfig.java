@@ -31,8 +31,8 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  * <th>Name</th><th>Associated setter method</th>
  * </tr>
  * <tr><td>{@code "proxyAddress"}</td><td>{@link #setProxyAddress(SocketAddress)}</td></tr>
- * <tr><td>{@code "writeBufferHighWaterMark"}</td><td>{@link #setWriteBufferHighWaterMark(long)}</td></tr>
- * <tr><td>{@code "writeBufferLowWaterMark"}</td><td>{@link #setWriteBufferLowWaterMark(long)}</td></tr>
+ * <tr><td>{@code "writeBufferHighWaterMark"}</td><td>{@link #setWriteBufferHighWaterMark(int)}</td></tr>
+ * <tr><td>{@code "writeBufferLowWaterMark"}</td><td>{@link #setWriteBufferLowWaterMark(int)}</td></tr>
  * </table>
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
@@ -88,39 +88,48 @@ public class HttpTunnelClientChannelConfig extends HttpTunnelChannelConfig {
 
     /* GENERIC SOCKET CHANNEL CONFIGURATION */
 
+    @Override
     public int getReceiveBufferSize() {
         return pollChannelConfig.getReceiveBufferSize();
     }
 
+    @Override
     public int getSendBufferSize() {
         return pollChannelConfig.getSendBufferSize();
     }
 
+    @Override
     public int getSoLinger() {
         return pollChannelConfig.getSoLinger();
     }
 
+    @Override
     public int getTrafficClass() {
         return pollChannelConfig.getTrafficClass();
     }
 
+    @Override
     public boolean isKeepAlive() {
         return pollChannelConfig.isKeepAlive();
     }
 
+    @Override
     public boolean isReuseAddress() {
         return pollChannelConfig.isReuseAddress();
     }
 
+    @Override
     public boolean isTcpNoDelay() {
         return pollChannelConfig.isTcpNoDelay();
     }
 
+    @Override
     public void setKeepAlive(boolean keepAlive) {
         pollChannelConfig.setKeepAlive(keepAlive);
         sendChannelConfig.setKeepAlive(keepAlive);
     }
 
+    @Override
     public void setPerformancePreferences(int connectionTime, int latency,
             int bandwidth) {
         pollChannelConfig.setPerformancePreferences(connectionTime, latency,
@@ -129,31 +138,37 @@ public class HttpTunnelClientChannelConfig extends HttpTunnelChannelConfig {
                 bandwidth);
     }
 
+    @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
         pollChannelConfig.setReceiveBufferSize(receiveBufferSize);
         sendChannelConfig.setReceiveBufferSize(receiveBufferSize);
     }
 
+    @Override
     public void setReuseAddress(boolean reuseAddress) {
         pollChannelConfig.setReuseAddress(reuseAddress);
         sendChannelConfig.setReuseAddress(reuseAddress);
     }
 
+    @Override
     public void setSendBufferSize(int sendBufferSize) {
         pollChannelConfig.setSendBufferSize(sendBufferSize);
         sendChannelConfig.setSendBufferSize(sendBufferSize);
     }
 
+    @Override
     public void setSoLinger(int soLinger) {
         pollChannelConfig.setSoLinger(soLinger);
         sendChannelConfig.setSoLinger(soLinger);
     }
 
+    @Override
     public void setTcpNoDelay(boolean tcpNoDelay) {
         pollChannelConfig.setTcpNoDelay(true);
         sendChannelConfig.setTcpNoDelay(true);
     }
 
+    @Override
     public void setTrafficClass(int trafficClass) {
         pollChannelConfig.setTrafficClass(1);
         sendChannelConfig.setTrafficClass(1);

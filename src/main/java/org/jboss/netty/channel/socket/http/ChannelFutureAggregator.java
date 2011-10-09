@@ -47,6 +47,7 @@ class ChannelFutureAggregator implements ChannelFutureListener {
         future.addListener(this);
     }
 
+    @Override
     public synchronized void operationComplete(ChannelFuture future)
             throws Exception {
         if (future.isCancelled()) {

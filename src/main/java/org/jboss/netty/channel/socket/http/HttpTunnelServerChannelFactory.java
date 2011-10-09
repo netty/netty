@@ -40,6 +40,7 @@ public class HttpTunnelServerChannelFactory implements
         realConnections = new DefaultChannelGroup();
     }
 
+    @Override
     public HttpTunnelServerChannel newChannel(ChannelPipeline pipeline) {
         return new HttpTunnelServerChannel(this, pipeline);
     }
@@ -58,6 +59,7 @@ public class HttpTunnelServerChannelFactory implements
         return newChannel;
     }
 
+    @Override
     public void releaseExternalResources() {
         realConnections.close().awaitUninterruptibly();
         realConnectionFactory.releaseExternalResources();

@@ -41,11 +41,13 @@ public class HttpTunnelClientChannelFactory implements
         this.factory = factory;
     }
 
+    @Override
     public HttpTunnelClientChannel newChannel(ChannelPipeline pipeline) {
         return new HttpTunnelClientChannel(this, pipeline,
                 new HttpTunnelClientChannelSink(), factory, realConnections);
     }
 
+    @Override
     public void releaseExternalResources() {
         realConnections.close().awaitUninterruptibly();
         factory.releaseExternalResources();

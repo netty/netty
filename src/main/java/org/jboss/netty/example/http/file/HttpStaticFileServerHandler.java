@@ -313,7 +313,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
      *            file to extract content type
      */
     private void setContentTypeHeader(HttpResponse response, File file) {
-    	MimetypesFileTypeMap mimeTypesMap = new MimetypesFileTypeMap();
+        MimetypesFileTypeMap mimeTypesMap = new MimetypesFileTypeMap();
         response.setHeader(HttpHeaders.Names.CONTENT_TYPE, mimeTypesMap.getContentType(file.getPath()));
     }
 

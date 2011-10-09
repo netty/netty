@@ -48,33 +48,33 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 public class HttpTunnelClientChannel extends AbstractChannel implements
         SocketChannel {
 
-    private static final InternalLogger LOG = InternalLoggerFactory
+    static final InternalLogger LOG = InternalLoggerFactory
             .getInstance(HttpTunnelClientChannel.class);
 
     private final HttpTunnelClientChannelConfig config;
 
-    private final SocketChannel sendChannel;
+    final SocketChannel sendChannel;
 
-    private final SocketChannel pollChannel;
+    final SocketChannel pollChannel;
 
-    private volatile String tunnelId;
+    volatile String tunnelId;
 
-    private volatile ChannelFuture connectFuture;
+    volatile ChannelFuture connectFuture;
 
-    private volatile boolean connected;
+    volatile boolean connected;
 
-    private volatile boolean bound;
+    volatile boolean bound;
 
     volatile InetSocketAddress serverAddress;
 
-    private volatile String serverHostName;
+    volatile String serverHostName;
 
     private final WorkerCallbacks callbackProxy;
 
     private final SaturationManager saturationManager;
 
     /**
-     * @see {@link HttpTunnelClientChannelFactory#newChannel(ChannelPipeline)}
+     * @see HttpTunnelClientChannelFactory#newChannel(ChannelPipeline)
      */
     protected HttpTunnelClientChannel(ChannelFactory factory,
             ChannelPipeline pipeline, HttpTunnelClientChannelSink sink,
@@ -82,7 +82,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements
             ChannelGroup realConnections) {
         super(null, factory, pipeline, sink);
 
-        this.callbackProxy = new WorkerCallbacks();
+        callbackProxy = new WorkerCallbacks();
 
         sendChannel = outboundFactory.newChannel(createSendPipeline());
         pollChannel = outboundFactory.newChannel(createPollPipeline());
@@ -100,24 +100,34 @@ public class HttpTunnelClientChannel extends AbstractChannel implements
         Channels.fireChannelOpen(this);
     }
 
+    @Override
     public HttpTunnelClientChannelConfig getConfig() {
         return config;
     }
 
+    @Override
     public boolean isBound() {
         return bound;
     }
 
+    @Override
     public boolean isConnected() {
         return connected;
     }
 
+    @Override
     public InetSocketAddress getLocalAddress() {
         return sendChannel.getLocalAddress();
     }
 
+    @Override
     public InetSocketAddress getRemoteAddress() {
         return serverAddress;
+    }
+
+    @Override
+    protected boolean setClosed() {
+        return super.setClosed();
     }
 
     void onConnectRequest(ChannelFuture connectFuture,
@@ -146,6 +156,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements
         pollChannel.disconnect().addListener(disconnectListener);
 
         disconnectFuture.addListener(new ChannelFutureListener() {
+            @Override
             public void operationComplete(ChannelFuture future)
                     throws Exception {
                 serverAddress = null;
@@ -214,7 +225,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements
         return pipeline;
     }
 
-    private void setTunnelIdForPollChannel() {
+    void setTunnelIdForPollChannel() {
         HttpTunnelClientPollHandler pollHandler =
                 pollChannel.getPipeline()
                         .get(HttpTunnelClientPollHandler.class);
@@ -230,6 +241,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements
         updateSaturationStatus(messageSize);
         Channels.write(sendChannel, e.getMessage()).addListener(
                 new ChannelFutureListener() {
+                    @Override
                     public void operationComplete(ChannelFuture future)
                             throws Exception {
                         if (future.isSuccess()) {
@@ -242,7 +254,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements
                 });
     }
 
-    private void updateSaturationStatus(int queueSizeDelta) {
+    void updateSaturationStatus(int queueSizeDelta) {
         SaturationStateChange transition =
                 saturationManager.queueSizeChanged(queueSizeDelta);
         switch (transition) {
@@ -279,6 +291,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements
             eventsLeft = new AtomicInteger(numToConsolidate);
         }
 
+        @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             if (!future.isSuccess()) {
                 futureFailed(future);
@@ -315,7 +328,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements
         protected void futureFailed(ChannelFuture future) {
             LOG.warn("Failed to close one of the child channels of tunnel " +
                     tunnelId);
-            HttpTunnelClientChannel.this.setClosed();
+            setClosed();
         }
 
         @Override
@@ -323,7 +336,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Tunnel " + tunnelId + " closed");
             }
-            HttpTunnelClientChannel.this.setClosed();
+            setClosed();
         }
 
     }
@@ -332,20 +345,23 @@ public class HttpTunnelClientChannel extends AbstractChannel implements
      * Contains the implementing methods of HttpTunnelClientWorkerOwner, so that these are hidden
      * from the public API.
      */
-    private class WorkerCallbacks implements HttpTunnelClientWorkerOwner {
+    class WorkerCallbacks implements HttpTunnelClientWorkerOwner {
 
+        @Override
         public void onConnectRequest(ChannelFuture connectFuture,
                 InetSocketAddress remoteAddress) {
             HttpTunnelClientChannel.this.onConnectRequest(connectFuture,
                     remoteAddress);
         }
 
+        @Override
         public void onTunnelOpened(String tunnelId) {
             HttpTunnelClientChannel.this.tunnelId = tunnelId;
             setTunnelIdForPollChannel();
             Channels.connect(pollChannel, sendChannel.getRemoteAddress());
         }
 
+        @Override
         public void fullyEstablished() {
             if (!bound) {
                 bound = true;
@@ -359,10 +375,12 @@ public class HttpTunnelClientChannel extends AbstractChannel implements
                     getRemoteAddress());
         }
 
+        @Override
         public void onMessageReceived(ChannelBuffer content) {
             Channels.fireMessageReceived(HttpTunnelClientChannel.this, content);
         }
 
+        @Override
         public String getServerHostName() {
             if (serverHostName == null) {
                 serverHostName =

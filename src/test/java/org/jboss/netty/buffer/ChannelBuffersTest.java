@@ -200,6 +200,19 @@ public class ChannelBuffersTest {
         assertSame(EMPTY_BUFFER, copiedBuffer(new ChannelBuffer[] { buffer(0), buffer(0) }));
     }
 
+    @Test
+    public void testCompare2() {
+        assertTrue(ChannelBuffers.compare(
+                ChannelBuffers.wrappedBuffer(new byte[]{(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF}),
+                ChannelBuffers.wrappedBuffer(new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00}))
+                > 0);
+
+        assertTrue(ChannelBuffers.compare(
+                ChannelBuffers.wrappedBuffer(new byte[]{(byte) 0xFF}),
+                ChannelBuffers.wrappedBuffer(new byte[]{(byte) 0x00}))
+                > 0);
+    }
+
     @Test(expected = NullPointerException.class)
     public void shouldDisallowNullEndian1() {
         buffer(null, 0);

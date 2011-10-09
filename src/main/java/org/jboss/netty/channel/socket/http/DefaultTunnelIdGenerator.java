@@ -39,6 +39,7 @@ public class DefaultTunnelIdGenerator implements TunnelIdGenerator {
         this.generator = generator;
     }
 
+    @Override
     public synchronized String generateId() {
         // synchronized to ensure that this code is thread safe. The Sun
         // standard implementations seem to be synchronized or lock free

@@ -15,8 +15,10 @@
  */
 package org.jboss.netty.channel;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.jboss.netty.logging.InternalLogger;
@@ -341,6 +343,15 @@ public class StaticChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public List<String> getNames() {
+        List<String> list = new ArrayList<String>();
+        for (StaticChannelHandlerContext ctx: contexts) {
+            list.add(ctx.getName());
+        }
+        return list;
+    }
+
+    @Override
     public Map<String, ChannelHandler> toMap() {
         Map<String, ChannelHandler> map = new LinkedHashMap<String, ChannelHandler>();
         for (StaticChannelHandlerContext ctx: contexts) {
@@ -407,9 +418,19 @@ public class StaticChannelPipeline implements ChannelPipeline {
     }
 
     void sendDownstream(StaticChannelHandlerContext ctx, ChannelEvent e) {
+        if (e instanceof UpstreamMessageEvent) {
+            throw new IllegalArgumentException("cannot send an upstream event to downstream");
+        }
+
         try {
             ((ChannelDownstreamHandler) ctx.getHandler()).handleDownstream(ctx, e);
         } catch (Throwable t) {
+            // Unlike an upstream event, a downstream event usually has an
+            // incomplete future which is supposed to be updated by ChannelSink.
+            // However, if an exception is raised before the event reaches at
+            // ChannelSink, the future is not going to be updated, so we update
+            // here.
+            e.getFuture().setFailure(t);
             notifyHandlerException(e, t);
         }
     }

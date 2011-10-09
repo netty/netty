@@ -36,7 +36,7 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler {
 
     private volatile boolean readingChunks;
 
-	@Override
+    @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (!readingChunks) {
             HttpResponse response = (HttpResponse) e.getMessage();

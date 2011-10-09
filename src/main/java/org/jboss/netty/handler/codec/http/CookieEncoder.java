@@ -107,7 +107,7 @@ public class CookieEncoder {
             if (cookie.getMaxAge() >= 0) {
                 if (cookie.getVersion() == 0) {
                     addUnquoted(sb, CookieHeaderNames.EXPIRES,
-                            new CookieDateFormat().format(
+                            new HttpHeaderDateFormat().format(
                                     new Date(System.currentTimeMillis() +
                                              cookie.getMaxAge() * 1000L)));
                 } else {
@@ -167,7 +167,10 @@ public class CookieEncoder {
             }
         }
 
-        sb.setLength(sb.length() - 1);
+        if (sb.length() > 0) {
+            sb.setLength(sb.length() - 1);
+        }
+
         return sb.toString();
     }
 
@@ -205,7 +208,8 @@ public class CookieEncoder {
             }
         }
 
-        sb.setLength(sb.length() - 1);
+        if(sb.length() > 0)
+        	sb.setLength(sb.length() - 1);
         return sb.toString();
     }
 

@@ -36,7 +36,7 @@ import org.jboss.netty.handler.stream.ChunkedWriteHandler;
  * @version $Rev$, $Date$
  */
 public class HttpClientPipelineFactory implements ChannelPipelineFactory {
-	private final boolean ssl;
+    private final boolean ssl;
 
     public HttpClientPipelineFactory(boolean ssl) {
         this.ssl = ssl;

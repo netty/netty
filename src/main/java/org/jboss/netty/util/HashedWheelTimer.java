@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -472,11 +473,15 @@ public class HashedWheelTimer implements Timer {
 
     private final class HashedWheelTimeout implements Timeout {
 
+        private static final int ST_INIT = 0;
+        private static final int ST_CANCELLED = 1;
+        private static final int ST_EXPIRED = 2;
+
         private final TimerTask task;
         final long deadline;
         volatile int stopIndex;
         volatile long remainingRounds;
-        private volatile boolean cancelled;
+        private final AtomicInteger state = new AtomicInteger(ST_INIT);
 
         HashedWheelTimeout(TimerTask task, long deadline) {
             this.task = task;
@@ -495,28 +500,26 @@ public class HashedWheelTimer implements Timer {
 
         @Override
         public void cancel() {
-            if (isExpired()) {
+            if (!state.compareAndSet(ST_INIT, ST_CANCELLED)) {
+                // TODO return false
                 return;
             }
-
-            cancelled = true;
-
-            // Might be called more than once, but doesn't matter.
+            
             wheel[stopIndex].remove(this);
         }
 
         @Override
         public boolean isCancelled() {
-            return cancelled;
+            return state.get() == ST_CANCELLED;
         }
 
         @Override
         public boolean isExpired() {
-            return cancelled || System.currentTimeMillis() > deadline;
+            return state.get() != ST_INIT;
         }
 
         public void expire() {
-            if (cancelled) {
+            if (!state.compareAndSet(ST_INIT, ST_EXPIRED)) {
                 return;
             }
 

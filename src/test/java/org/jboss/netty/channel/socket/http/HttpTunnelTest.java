@@ -102,6 +102,7 @@ public class HttpTunnelTest {
         clientCaptureHandler = new ClientEndHandler();
         clientBootstrap.setPipelineFactory(new ChannelPipelineFactory() {
 
+            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline pipeline = Channels.pipeline();
                 pipeline.addLast("clientCapture", clientCaptureHandler);
@@ -117,6 +118,7 @@ public class HttpTunnelTest {
         connectionCaptureHandler = new ServerEndHandler();
         serverBootstrap.setPipelineFactory(new ChannelPipelineFactory() {
 
+            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline pipeline = Channels.pipeline();
                 pipeline.addLast("capture", connectionCaptureHandler);

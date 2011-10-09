@@ -73,7 +73,7 @@ public class HttpTunnelSoakTester {
 
     final ChannelGroup channels;
 
-    private final ExecutorService executor;
+    final ExecutorService executor;
 
     final ScheduledExecutorService scheduledExecutor;
 
@@ -81,9 +81,9 @@ public class HttpTunnelSoakTester {
 
     final DataSender s2cDataSender = new DataSender("S2C");
 
-    private DataVerifier c2sVerifier = new DataVerifier("C2S-Verifier");
+    final DataVerifier c2sVerifier = new DataVerifier("C2S-Verifier");
 
-    private DataVerifier s2cVerifier = new DataVerifier("S2C-Verifier");
+    final DataVerifier s2cVerifier = new DataVerifier("S2C-Verifier");
 
     private static byte[] SEND_STREAM;
 
@@ -160,6 +160,7 @@ public class HttpTunnelSoakTester {
     protected ChannelPipelineFactory createClientPipelineFactory() {
         return new ChannelPipelineFactory() {
 
+            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline pipeline = Channels.pipeline();
                 pipeline.addLast("s2cVerifier", s2cVerifier);
@@ -173,6 +174,7 @@ public class HttpTunnelSoakTester {
     protected ChannelPipelineFactory createServerPipelineFactory() {
         return new ChannelPipelineFactory() {
 
+            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline pipeline = Channels.pipeline();
                 pipeline.addLast("c2sVerifier", c2sVerifier);
@@ -180,6 +182,7 @@ public class HttpTunnelSoakTester {
                         s2cDataSender));
                 pipeline.addLast("sendStarter",
                         new SimpleChannelUpstreamHandler() {
+                            @Override
                             public void channelConnected(
                                     ChannelHandlerContext ctx,
                                     ChannelStateEvent e) throws Exception {
@@ -187,7 +190,7 @@ public class HttpTunnelSoakTester {
                                 channels.add(childChannel);
                                 s2cDataSender.setChannel(childChannel);
                                 executor.execute(s2cDataSender);
-                            };
+                            }
                         });
                 return pipeline;
             }
@@ -271,15 +274,15 @@ public class HttpTunnelSoakTester {
         }
 
         HttpTunnelClientChannelConfig config =
-                ((HttpTunnelClientChannelConfig) clientChannelFuture
-                        .getChannel().getConfig());
+                (HttpTunnelClientChannelConfig) clientChannelFuture
+                .getChannel().getConfig();
         config.setWriteBufferHighWaterMark(2 * 1024 * 1024);
         config.setWriteBufferLowWaterMark(1024 * 1024);
 
         return (SocketChannel) clientChannelFuture.getChannel();
     }
 
-    private ChannelBuffer createRandomSizeBuffer(AtomicInteger nextWriteByte) {
+    ChannelBuffer createRandomSizeBuffer(AtomicInteger nextWriteByte) {
         Random random = new Random();
         int arraySize = random.nextInt(MAX_WRITE_SIZE) + 1;
 
@@ -309,13 +312,13 @@ public class HttpTunnelSoakTester {
     }
 
     private class DataVerifier extends SimpleChannelUpstreamHandler {
-        private String name;
+        private final String name;
 
         private int expectedNext = 0;
 
         private int verifiedBytes = 0;
 
-        private CountDownLatch completionLatch = new CountDownLatch(1);
+        private final CountDownLatch completionLatch = new CountDownLatch(1);
 
         public DataVerifier(String name) {
             this.name = name;
@@ -376,7 +379,7 @@ public class HttpTunnelSoakTester {
 
     private class DataSender implements Runnable {
 
-        private AtomicReference<Channel> channel =
+        private final AtomicReference<Channel> channel =
                 new AtomicReference<Channel>();
 
         private long totalBytesSent = 0;
@@ -387,15 +390,15 @@ public class HttpTunnelSoakTester {
 
         private boolean firstRun = true;
 
-        private AtomicBoolean writeEnabled = new AtomicBoolean(true);
+        private final AtomicBoolean writeEnabled = new AtomicBoolean(true);
 
-        private AtomicBoolean running = new AtomicBoolean(false);
+        private final AtomicBoolean running = new AtomicBoolean(false);
 
-        private CountDownLatch finishLatch = new CountDownLatch(1);
+        private final CountDownLatch finishLatch = new CountDownLatch(1);
 
-        private String name;
+        private final String name;
 
-        private AtomicInteger nextWriteByte = new AtomicInteger(0);
+        private final AtomicInteger nextWriteByte = new AtomicInteger(0);
 
         public DataSender(String name) {
             this.name = name;
@@ -407,7 +410,7 @@ public class HttpTunnelSoakTester {
 
         public void setWriteEnabled(boolean enabled) {
             writeEnabled.set(enabled);
-            if (enabled && !this.isRunning() && finishLatch.getCount() > 0) {
+            if (enabled && !isRunning() && finishLatch.getCount() > 0) {
                 executor.execute(this);
             }
         }

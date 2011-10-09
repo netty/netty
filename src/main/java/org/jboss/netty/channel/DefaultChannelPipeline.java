@@ -15,8 +15,10 @@
  */
 package org.jboss.netty.channel;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -511,6 +513,24 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public List<String> getNames() {
+        List<String> list = new ArrayList<String>();
+        if (name2ctx.isEmpty()) {
+            return list;
+        }
+
+        DefaultChannelHandlerContext ctx = head;
+        for (;;) {
+            list.add(ctx.getName());
+            ctx = ctx.next;
+            if (ctx == null) {
+                break;
+            }
+        }
+        return list;
+    }
+
+    @Override
     public Map<String, ChannelHandler> toMap() {
         Map<String, ChannelHandler> map = new LinkedHashMap<String, ChannelHandler>();
         if (name2ctx.isEmpty()) {
@@ -590,9 +610,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     void sendDownstream(DefaultChannelHandlerContext ctx, ChannelEvent e) {
+        if (e instanceof UpstreamMessageEvent) {
+            throw new IllegalArgumentException("cannot send an upstream event to downstream");
+        }
+        
         try {
             ((ChannelDownstreamHandler) ctx.getHandler()).handleDownstream(ctx, e);
         } catch (Throwable t) {
+            // Unlike an upstream event, a downstream event usually has an
+            // incomplete future which is supposed to be updated by ChannelSink.
+            // However, if an exception is raised before the event reaches at
+            // ChannelSink, the future is not going to be updated, so we update
+            // here.
+            e.getFuture().setFailure(t);
             notifyHandlerException(e, t);
         }
     }

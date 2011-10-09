@@ -32,11 +32,13 @@ public class FakeServerSocketChannelFactory implements
 
     public FakeServerSocketChannel createdChannel;
 
+    @Override
     public ServerSocketChannel newChannel(ChannelPipeline pipeline) {
         createdChannel = new FakeServerSocketChannel(this, pipeline, sink);
         return createdChannel;
     }
 
+    @Override
     public void releaseExternalResources() {
         // nothing to do
     }
