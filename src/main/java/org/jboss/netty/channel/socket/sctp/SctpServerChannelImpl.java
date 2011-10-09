@@ -46,7 +46,7 @@ class SctpServerChannelImpl extends AbstractServerChannel
     final com.sun.nio.sctp.SctpServerChannel socket;
     final Lock shutdownLock = new ReentrantLock();
     volatile Selector selector;
-    private final SctpServerChannelConfig config;
+    private final ServerSocketChannelConfig config;
 
     private volatile boolean bound;
 
@@ -77,13 +77,13 @@ class SctpServerChannelImpl extends AbstractServerChannel
             throw new ChannelException("Failed to enter non-blocking mode.", e);
         }
 
-        config = new DefaultSctpServerChannelConfig(socket);
+        config = new SctpServerChannelConfig(socket);
 
         fireChannelOpen(this);
     }
 
     @Override
-    public SctpServerChannelConfig getConfig() {
+    public ServerSocketChannelConfig getConfig() {
         return config;
     }
 

@@ -17,6 +17,7 @@ package org.jboss.netty.channel.socket.sctp;
 
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.ServerChannelFactory;
 import org.jboss.netty.util.internal.ExecutorUtil;
 
 import java.util.concurrent.Executor;
@@ -29,7 +30,7 @@ import java.util.concurrent.Executor;
  *
  * <h3>How threads work</h3>
  * <p>
- * There are two types of threads in a {@link DefaultSctpServerChannelFactory};
+ * There are two types of threads in a {@link SctpServerSocketChannelFactory};
  * one is boss thread and the other is worker thread.
  *
  * <h4>Boss threads</h4>
@@ -39,18 +40,18 @@ import java.util.concurrent.Executor;
  * have two boss threads.  A boss thread accepts incoming connections until
  * the port is unbound.  Once a connection is accepted successfully, the boss
  * thread passes the accepted {@link org.jboss.netty.channel.Channel} to one of the worker
- * threads that the {@link DefaultSctpServerChannelFactory} manages.
+ * threads that the {@link SctpServerSocketChannelFactory} manages.
  *
  * <h4>Worker threads</h4>
  * <p>
- * One {@link DefaultSctpServerChannelFactory} can have one or more worker
+ * One {@link SctpServerSocketChannelFactory} can have one or more worker
  * threads.  A worker thread performs non-blocking read and write for one or
  * more {@link org.jboss.netty.channel.Channel}s in a non-blocking mode.
  *
  * <h3>Life cycle of threads and graceful shutdown</h3>
  * <p>
  * All threads are acquired from the {@link java.util.concurrent.Executor}s which were specified
- * when a {@link DefaultSctpServerChannelFactory} was created.  Boss threads are
+ * when a {@link SctpServerSocketChannelFactory} was created.  Boss threads are
  * acquired from the {@code bossExecutor}, and worker threads are acquired from
  * the {@code workerExecutor}.  Therefore, you should make sure the specified
  * {@link java.util.concurrent.Executor}s are able to lend the sufficient number of threads.
@@ -81,7 +82,7 @@ import java.util.concurrent.Executor;
  *
  * @apiviz.landmark
  */
-public class DefaultSctpServerChannelFactory implements SctpServerChannelFactory {
+public class SctpServerSocketChannelFactory implements ServerChannelFactory {
 
     final Executor bossExecutor;
     private final Executor workerExecutor;
@@ -89,7 +90,7 @@ public class DefaultSctpServerChannelFactory implements SctpServerChannelFactory
 
     /**
      * Creates a new instance.  Calling this constructor is same with calling
-     * {@link #DefaultSctpServerChannelFactory(java.util.concurrent.Executor, java.util.concurrent.Executor, int)} with 2 *
+     * {@link #SctpServerSocketChannelFactory(java.util.concurrent.Executor, java.util.concurrent.Executor, int)} with 2 *
      * the number of available processors in the machine.  The number of
      * available processors is obtained by {@link Runtime#availableProcessors()}.
      *
@@ -98,7 +99,7 @@ public class DefaultSctpServerChannelFactory implements SctpServerChannelFactory
      * @param workerExecutor
      *        the {@link java.util.concurrent.Executor} which will execute the I/O worker threads
      */
-    public DefaultSctpServerChannelFactory(
+    public SctpServerSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor) {
         this(bossExecutor, workerExecutor, SelectorUtil.DEFAULT_IO_THREADS);
     }
@@ -113,7 +114,7 @@ public class DefaultSctpServerChannelFactory implements SctpServerChannelFactory
      * @param workerCount
      *        the maximum number of I/O worker threads
      */
-    public DefaultSctpServerChannelFactory(
+    public SctpServerSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor,
             int workerCount) {
         if (bossExecutor == null) {

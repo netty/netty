@@ -15,34 +15,39 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import com.sun.nio.sctp.Association;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.socket.SocketChannel;
-import org.jboss.netty.channel.socket.SocketChannelConfig;
-import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
-
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.util.Set;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Jestan Nirojan
+ *
  * @version $Rev$, $Date$
  */
-public interface SctpChannel extends SocketChannel {
-    @Override
-    InetSocketAddress getLocalAddress();
+public final class SctpMessage {
+    private final int streamNo;
+    private final int payloadProtocolId;
+    private final ChannelBuffer data;
 
-    Set<InetSocketAddress> getAllLocalAddresses();
+    public SctpMessage(int streamNo, int payloadProtocolId, ChannelBuffer data) {
+        this.streamNo = streamNo;
+        this.payloadProtocolId = payloadProtocolId;
+        this.data = data;
+    }
 
-    @Override
-    NioSocketChannelConfig getConfig();
+    public int streamNumber() {
+        return streamNo;
+    }
 
-    @Override
-    InetSocketAddress getRemoteAddress();
+    public int payloadProtocolId() {
+        return payloadProtocolId;
+    }
 
-    Set<InetSocketAddress> getRemoteAddresses();
-
-    Association association();
+    public ChannelBuffer data() {
+        if (data.readable()) {
+            return data.slice();
+        } else {
+            return ChannelBuffers.EMPTY_BUFFER;
+        }
+    }
 }

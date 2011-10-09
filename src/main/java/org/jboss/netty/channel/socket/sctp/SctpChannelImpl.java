@@ -15,16 +15,18 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
+import com.sun.nio.sctp.Association;
 import com.sun.nio.sctp.SctpChannel;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
 import org.jboss.netty.channel.socket.sctp.SctpSendBufferPool.SendBuffer;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -47,9 +49,9 @@ class SctpChannelImpl extends AbstractChannel
     private static final int ST_CLOSED = -1;
     volatile int state = ST_OPEN;
 
-    final SctpChannel sctpChannel;
+    final SctpChannel socket;
     final SctpWorker worker;
-    private final SctpChannelConfig config;
+    private final NioSocketChannelConfig config;
     private volatile InetSocketAddress localAddress;
     private volatile InetSocketAddress remoteAddress;
 
@@ -71,12 +73,12 @@ class SctpChannelImpl extends AbstractChannel
     public SctpChannelImpl(
             Channel parent, ChannelFactory factory,
             ChannelPipeline pipeline, ChannelSink sink,
-            SctpChannel sctpChannel, SctpWorker worker) {
+            SctpChannel socket, SctpWorker worker) {
         super(parent, factory, pipeline, sink);
 
-        this.sctpChannel = sctpChannel;
+        this.socket = socket;
         this.worker = worker;
-        config = new DefaultSctpChannelConfig(sctpChannel);
+        config = new DefaultSctpSocketChannelConfig(socket);
 
         getCloseFuture().addListener(new ChannelFutureListener() {
             @Override
@@ -87,7 +89,7 @@ class SctpChannelImpl extends AbstractChannel
     }
 
     @Override
-    public SctpChannelConfig getConfig() {
+    public NioSocketChannelConfig getConfig() {
         return config;
     }
 
@@ -96,11 +98,11 @@ class SctpChannelImpl extends AbstractChannel
         InetSocketAddress localAddress = this.localAddress;
         if (localAddress == null) {
             try {
-                //TODO: fix this
-                this.localAddress = localAddress =
-                    (InetSocketAddress) sctpChannel.getAllLocalAddresses().iterator().next();
+                final Iterator<SocketAddress> iterator = socket.getAllLocalAddresses().iterator();
+                if (iterator.hasNext()) {
+                    this.localAddress = localAddress = (InetSocketAddress) iterator.next();
+                }
             } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
                 return null;
             }
         }
@@ -108,19 +110,56 @@ class SctpChannelImpl extends AbstractChannel
     }
 
     @Override
+    public Set<InetSocketAddress> getAllLocalAddresses() {
+            try {
+                final Set<SocketAddress> allLocalAddresses = socket.getAllLocalAddresses();
+                final Set<InetSocketAddress> addresses = new HashSet<InetSocketAddress>(allLocalAddresses.size());
+                for(SocketAddress socketAddress: allLocalAddresses) {
+                    addresses.add((InetSocketAddress) socketAddress);
+                }
+                return addresses;
+            } catch (Throwable t) {
+                return Collections.emptySet();
+            }
+    }
+
+    @Override
     public InetSocketAddress getRemoteAddress() {
         InetSocketAddress remoteAddress = this.remoteAddress;
         if (remoteAddress == null) {
             try {
-                //TODO: fix this
-                this.remoteAddress = remoteAddress =
-                    (InetSocketAddress) sctpChannel.getRemoteAddresses().iterator().next();
+                final Iterator<SocketAddress> iterator = socket.getRemoteAddresses().iterator();
+                if (iterator.hasNext()) {
+                    this.remoteAddress = remoteAddress = (InetSocketAddress) iterator.next();
+                }
             } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
                 return null;
             }
         }
         return remoteAddress;
+    }
+
+    @Override
+    public Set<InetSocketAddress> getRemoteAddresses() {
+            try {
+                final Set<SocketAddress> allLocalAddresses = socket.getRemoteAddresses();
+                final Set<InetSocketAddress> addresses = new HashSet<InetSocketAddress>(allLocalAddresses.size());
+                for(SocketAddress socketAddress: allLocalAddresses) {
+                    addresses.add((InetSocketAddress) socketAddress);
+                }
+                return addresses;
+            } catch (Throwable t) {
+                return Collections.emptySet();
+            }
+    }
+
+    @Override
+    public Association association() {
+        try {
+            return socket.association();
+        } catch (Throwable e) {
+            return null;
+        }
     }
 
     @Override
