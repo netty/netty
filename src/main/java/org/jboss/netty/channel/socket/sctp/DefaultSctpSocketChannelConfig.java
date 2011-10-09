@@ -17,7 +17,9 @@ package org.jboss.netty.channel.socket.sctp;
 
 import com.sun.nio.sctp.SctpChannel;
 import org.jboss.netty.buffer.ChannelBufferFactory;
+import org.jboss.netty.buffer.HeapChannelBufferFactory;
 import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.ConversionUtil;
@@ -25,46 +27,46 @@ import org.jboss.netty.util.internal.ConversionUtil;
 import java.util.Map;
 
 /**
- * The default {@link SctpChannelConfig} implementation.
+ * The default {@link NioSocketChannelConfig} implementation for SCTP.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Jestan Nirojan
- *
  * @version $Rev$, $Date$
- *
  */
-class DefaultSctpChannelConfig implements SctpChannelConfig {
+class DefaultSctpSocketChannelConfig implements NioSocketChannelConfig {
+    private volatile ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
+    private volatile int connectTimeoutMillis = 10000; // 10 seconds
 
     private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(DefaultSctpChannelConfig.class);
+            InternalLoggerFactory.getInstance(DefaultSctpSocketChannelConfig.class);
 
     private static final ReceiveBufferSizePredictorFactory DEFAULT_PREDICTOR_FACTORY =
-        new AdaptiveReceiveBufferSizePredictorFactory();
+            new AdaptiveReceiveBufferSizePredictorFactory();
 
     private volatile int writeBufferHighWaterMark = 64 * 1024;
-    private volatile int writeBufferLowWaterMark  = 32 * 1024;
+    private volatile int writeBufferLowWaterMark = 32 * 1024;
     private volatile ReceiveBufferSizePredictor predictor;
     private volatile ReceiveBufferSizePredictorFactory predictorFactory = DEFAULT_PREDICTOR_FACTORY;
     private volatile int writeSpinCount = 16;
     private SctpChannel socket;
-    private int payloadProtocolId = 0;
 
-    DefaultSctpChannelConfig(SctpChannel socket) {
+    DefaultSctpSocketChannelConfig(SctpChannel socket) {
         this.socket = socket;
     }
 
     @Override
     public void setOptions(Map<String, Object> options) {
-        setOptions(options);
+        //TODO: implement this as in DefaultSocketChannelConfig
+        //socket.setOption(options);
         if (getWriteBufferHighWaterMark() < getWriteBufferLowWaterMark()) {
             // Recover the integrity of the configuration with a sensible value.
             setWriteBufferLowWaterMark0(getWriteBufferHighWaterMark() >>> 1);
             // Notify the user about misconfiguration.
             logger.warn(
                     "writeBufferLowWaterMark cannot be greater than " +
-                    "writeBufferHighWaterMark; setting to the half of the " +
-                    "writeBufferHighWaterMark.");
+                            "writeBufferHighWaterMark; setting to the half of the " +
+                            "writeBufferHighWaterMark.");
         }
     }
 
@@ -89,11 +91,15 @@ class DefaultSctpChannelConfig implements SctpChannelConfig {
 
     @Override
     public ChannelBufferFactory getBufferFactory() {
-        return null;
+        return bufferFactory;
     }
 
     @Override
     public void setBufferFactory(ChannelBufferFactory bufferFactory) {
+        if (bufferFactory == null) {
+            throw new NullPointerException("bufferFactory");
+        }
+        this.bufferFactory = bufferFactory;
     }
 
     @Override
@@ -103,15 +109,20 @@ class DefaultSctpChannelConfig implements SctpChannelConfig {
 
     @Override
     public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
+        //unused
     }
 
     @Override
     public int getConnectTimeoutMillis() {
-        return 0;
+        return connectTimeoutMillis;
     }
 
     @Override
     public void setConnectTimeoutMillis(int connectTimeoutMillis) {
+        if (connectTimeoutMillis < 0) {
+            throw new IllegalArgumentException("connectTimeoutMillis: " + connectTimeoutMillis);
+        }
+        this.connectTimeoutMillis = connectTimeoutMillis;
     }
 
     @Override
@@ -124,8 +135,8 @@ class DefaultSctpChannelConfig implements SctpChannelConfig {
         if (writeBufferHighWaterMark < getWriteBufferLowWaterMark()) {
             throw new IllegalArgumentException(
                     "writeBufferHighWaterMark cannot be less than " +
-                    "writeBufferLowWaterMark (" + getWriteBufferLowWaterMark() + "): " +
-                    writeBufferHighWaterMark);
+                            "writeBufferLowWaterMark (" + getWriteBufferLowWaterMark() + "): " +
+                            writeBufferHighWaterMark);
         }
         setWriteBufferHighWaterMark0(writeBufferHighWaterMark);
     }
@@ -148,8 +159,8 @@ class DefaultSctpChannelConfig implements SctpChannelConfig {
         if (writeBufferLowWaterMark > getWriteBufferHighWaterMark()) {
             throw new IllegalArgumentException(
                     "writeBufferLowWaterMark cannot be greater than " +
-                    "writeBufferHighWaterMark (" + getWriteBufferHighWaterMark() + "): " +
-                    writeBufferLowWaterMark);
+                            "writeBufferHighWaterMark (" + getWriteBufferHighWaterMark() + "): " +
+                            writeBufferLowWaterMark);
         }
         setWriteBufferLowWaterMark0(writeBufferLowWaterMark);
     }
@@ -185,7 +196,7 @@ class DefaultSctpChannelConfig implements SctpChannelConfig {
             } catch (Exception e) {
                 throw new ChannelException(
                         "Failed to create a new " +
-                        ReceiveBufferSizePredictor.class.getSimpleName() + '.',
+                                ReceiveBufferSizePredictor.class.getSimpleName() + '.',
                         e);
             }
         }
@@ -214,10 +225,6 @@ class DefaultSctpChannelConfig implements SctpChannelConfig {
         this.predictorFactory = predictorFactory;
     }
 
-    @Override
-    public int getPayloadProtocol() {
-        return payloadProtocolId;
-    }
 
     @Override
     public boolean isTcpNoDelay() {

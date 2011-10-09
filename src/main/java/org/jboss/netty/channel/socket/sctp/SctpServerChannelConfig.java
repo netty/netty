@@ -15,71 +15,100 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import org.jboss.netty.channel.ChannelConfig;
+import com.sun.nio.sctp.SctpStandardSocketOption;
+import org.jboss.netty.channel.ChannelException;
+import org.jboss.netty.channel.DefaultServerChannelConfig;
+import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
+import org.jboss.netty.util.internal.ConversionUtil;
+
+import java.io.IOException;
 
 /**
- * A {@link org.jboss.netty.channel.ChannelConfig} for a {@link org.jboss.netty.channel.socket.ServerSocketChannel}.
- *
- * <h3>Available options</h3>
- *
- * In addition to the options provided by {@link org.jboss.netty.channel.ChannelConfig},
- * {@link org.jboss.netty.channel.socket.sctp.SctpServerChannelConfig} allows the following options in the
- * option map:
- *
- * <table border="1" cellspacing="0" cellpadding="6">
- * <tr>
- * <th>Name</th><th>Associated setter method</th>
- * </tr><tr>
- * <td>{@code "backlog"}</td><td>{@link #setBacklog(int)}</td>
- * </tr><tr>
- * <td>{@code "reuseAddress"}</td><td>{@link #setReuseAddress(boolean)}</td>
- * </tr><tr>
- * <td>{@code "receiveBufferSize"}</td><td>{@link #setReceiveBufferSize(int)}</td>
- * </tr>
- * </table>
+ * The default {@link org.jboss.netty.channel.socket.ServerSocketChannelConfig} implementation.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+
  *
  * @version $Rev$, $Date$
  */
-public interface SctpServerChannelConfig extends ChannelConfig {
+public class SctpServerChannelConfig extends DefaultServerChannelConfig
+                                              implements ServerSocketChannelConfig {
+
+    private final com.sun.nio.sctp.SctpServerChannel serverChannel;
+    private volatile int backlog;
 
     /**
-     * Gets the backlog value to specify when the channel binds to a local
-     * address.
+     * Creates a new instance.
      */
-    int getBacklog();
+    public SctpServerChannelConfig(com.sun.nio.sctp.SctpServerChannel serverChannel) {
+        if (serverChannel == null) {
+            throw new NullPointerException("serverChannel");
+        }
+        this.serverChannel = serverChannel;
+    }
 
-    /**
-     * Sets the backlog value to specify when the channel binds to a local
-     * address.
-     */
-    void setBacklog(int backlog);
+    @Override
+    public boolean setOption(String key, Object value) {
+        if (super.setOption(key, value)) {
+            return true;
+        }
 
-    /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_REUSEADDR}</a> option.
-     */
-    boolean isReuseAddress();
+        if (key.equals("receiveBufferSize")) {
+            setReceiveBufferSize(ConversionUtil.toInt(value));
+        } else if (key.equals("reuseAddress")) {
+            setReuseAddress(ConversionUtil.toBoolean(value));
+        } else if (key.equals("backlog")) {
+            setBacklog(ConversionUtil.toInt(value));
+        } else {
+            return false;
+        }
+        return true;
+    }
 
-    /**
-     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_REUSEADDR}</a> option.
-     */
-    void setReuseAddress(boolean reuseAddress);
+    @Override
+    public boolean isReuseAddress() {
+        return false;
+    }
 
-    /**
-     * Gets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_RCVBUF}</a> option.
-     */
-    int getReceiveBufferSize();
+    @Override
+    public void setReuseAddress(boolean reuseAddress) {
+        throw new UnsupportedOperationException("Not supported");
+    }
 
-    /**
-     * Sets the <a href="http://java.sun.com/javase/6/docs/technotes/guides/net/socketOpt.html">{@code SO_RCVBUF}</a> option.
-     */
-    void setReceiveBufferSize(int receiveBufferSize);
+    @Override
+    public int getReceiveBufferSize() {
+        try {
+            return serverChannel.getOption(SctpStandardSocketOption.SO_RCVBUF);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
 
-    /**
-     * Sets the performance preferences as specified in
-     * {@link java.net.ServerSocket#setPerformancePreferences(int, int, int)}.
-     */
-    void setPerformancePreferences(int connectionTime, int latency, int bandwidth);
+    @Override
+    public void setReceiveBufferSize(int receiveBufferSize) {
+        try {
+            serverChannel.setOption(SctpStandardSocketOption.SO_RCVBUF, receiveBufferSize);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    @Override
+    public void setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
+        throw new UnsupportedOperationException("Not supported");
+    }
+
+    @Override
+    public int getBacklog() {
+        return backlog;
+    }
+
+    @Override
+    public void setBacklog(int backlog) {
+        if (backlog < 0) {
+            throw new IllegalArgumentException("backlog: " + backlog);
+        }
+        this.backlog = backlog;
+    }
 }

@@ -141,7 +141,7 @@ class SctpServerPipelineSink extends AbstractChannelSink {
             fireChannelBound(channel, channel.getLocalAddress());
 
             Executor bossExecutor =
-                ((DefaultSctpServerChannelFactory) channel.getFactory()).bossExecutor;
+                ((SctpServerSocketChannelFactory) channel.getFactory()).bossExecutor;
             DeadLockProofWorker.start(bossExecutor, new Boss(channel));
             bossStarted = true;
         } catch (Throwable t) {

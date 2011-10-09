@@ -18,7 +18,6 @@ package org.jboss.netty.channel.socket.sctp;
 import com.sun.nio.sctp.MessageInfo;
 import com.sun.nio.sctp.SctpChannel;
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.FileRegion;
 
 import java.io.IOException;
 import java.lang.ref.SoftReference;
@@ -28,7 +27,6 @@ import java.nio.ByteBuffer;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Jestan Nirojan
- *
  * @version $Rev: 2174 $, $Date: 2010-02-19 09:57:23 +0900 (Fri, 19 Feb 2010) $
  */
 final class SctpSendBufferPool {
@@ -47,27 +45,29 @@ final class SctpSendBufferPool {
     }
 
     final SendBuffer acquire(Object message) {
-        if (message instanceof ChannelBuffer) {
-            return acquire((ChannelBuffer) message);
-        } else if (message instanceof FileRegion) {
-            return acquire((FileRegion) message);
+        if (message instanceof SctpMessage) {
+            return acquire((SctpMessage) message);
+        } else {
+            throw new IllegalArgumentException(
+                    "unsupported message type: " + message.getClass());
         }
-
-        throw new IllegalArgumentException(
-                "unsupported message type: " + message.getClass());
     }
 
-    private final SendBuffer acquire(ChannelBuffer src) {
+    private final SendBuffer acquire(SctpMessage message) {
+        final ChannelBuffer src = message.data();
+        final int streamNo = message.streamNumber();
+        final int protocolId = message.payloadProtocolId();
+
         final int size = src.readableBytes();
         if (size == 0) {
             return EMPTY_BUFFER;
         }
 
         if (src.isDirect()) {
-            return new UnpooledSendBuffer(src.toByteBuffer());
+            return new UnpooledSendBuffer(streamNo, protocolId, src.toByteBuffer());
         }
         if (src.readableBytes() > DEFAULT_PREALLOCATION_SIZE) {
-            return new UnpooledSendBuffer(src.toByteBuffer());
+            return new UnpooledSendBuffer(streamNo, protocolId, src.toByteBuffer());
         }
 
         Preallocation current = this.current;
@@ -81,7 +81,7 @@ final class SctpSendBufferPool {
             buffer.position(align(nextPos));
             slice.limit(nextPos);
             current.refCnt++;
-            dst = new PooledSendBuffer(current, slice);
+            dst = new PooledSendBuffer(streamNo, protocolId, current, slice);
         } else if (size > remaining) {
             this.current = current = getPreallocation();
             buffer = current.buffer;
@@ -89,11 +89,11 @@ final class SctpSendBufferPool {
             buffer.position(align(size));
             slice.limit(size);
             current.refCnt++;
-            dst = new PooledSendBuffer(current, slice);
+            dst = new PooledSendBuffer(streamNo, protocolId, current, slice);
         } else { // size == remaining
             current.refCnt++;
             this.current = getPreallocation0();
-            dst = new PooledSendBuffer(current, current.buffer);
+            dst = new PooledSendBuffer(streamNo, protocolId, current, current.buffer);
         }
 
         ByteBuffer dstbuf = dst.buffer;
@@ -166,7 +166,7 @@ final class SctpSendBufferPool {
 
         long totalBytes();
 
-        long transferTo(SctpChannel ch, int protocolId, int streamNo) throws IOException;
+        long transferTo(SctpChannel ch) throws IOException;
 
         void release();
     }
@@ -175,8 +175,12 @@ final class SctpSendBufferPool {
 
         final ByteBuffer buffer;
         final int initialPos;
+        final int streamNo;
+        final int protocolId;
 
-        UnpooledSendBuffer(ByteBuffer buffer) {
+        UnpooledSendBuffer(int streamNo, int protocolId, ByteBuffer buffer) {
+            this.streamNo = streamNo;
+            this.protocolId = protocolId;
             this.buffer = buffer;
             initialPos = buffer.position();
         }
@@ -197,7 +201,7 @@ final class SctpSendBufferPool {
         }
 
         @Override
-        public long transferTo(SctpChannel ch, int protocolId, int streamNo) throws IOException {
+        public long transferTo(SctpChannel ch) throws IOException {
             final MessageInfo messageInfo = MessageInfo.createOutgoing(ch.association(), null, streamNo);
             messageInfo.payloadProtocolID(protocolId);
             messageInfo.streamNumber(streamNo);
@@ -216,8 +220,12 @@ final class SctpSendBufferPool {
         private final Preallocation parent;
         final ByteBuffer buffer;
         final int initialPos;
+        final int streamNo;
+        final int protocolId;
 
-        PooledSendBuffer(Preallocation parent, ByteBuffer buffer) {
+        PooledSendBuffer(int streamNo, int protocolId, Preallocation parent, ByteBuffer buffer) {
+            this.streamNo = streamNo;
+            this.protocolId = protocolId;
             this.parent = parent;
             this.buffer = buffer;
             initialPos = buffer.position();
@@ -239,7 +247,7 @@ final class SctpSendBufferPool {
         }
 
         @Override
-        public long transferTo(SctpChannel ch, int protocolId, int streamNo) throws IOException {
+        public long transferTo(SctpChannel ch) throws IOException {
             final MessageInfo messageInfo = MessageInfo.createOutgoing(ch.association(), null, streamNo);
             messageInfo.payloadProtocolID(protocolId);
             messageInfo.streamNumber(streamNo);
@@ -281,7 +289,7 @@ final class SctpSendBufferPool {
         }
 
         @Override
-        public long transferTo(SctpChannel ch, int protocolId, int streamNo) throws IOException {
+        public long transferTo(SctpChannel ch) throws IOException {
             return 0;
         }
 
