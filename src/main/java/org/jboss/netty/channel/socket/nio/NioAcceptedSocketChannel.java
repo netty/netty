@@ -36,7 +36,20 @@ final class NioAcceptedSocketChannel extends NioSocketChannel {
 
     final Thread bossThread;
 
-    NioAcceptedSocketChannel(
+    static NioAcceptedSocketChannel create(ChannelFactory factory,
+            ChannelPipeline pipeline, Channel parent, ChannelSink sink,
+            SocketChannel socket, NioWorker worker, Thread bossThread) {
+        NioAcceptedSocketChannel instance =
+                new NioAcceptedSocketChannel(factory, pipeline, parent, sink,
+                        socket, worker, bossThread);
+        instance.setConnected();
+        fireChannelOpen(instance);
+        fireChannelBound(instance, instance.getLocalAddress());
+        fireChannelConnected(instance, instance.getRemoteAddress());
+        return instance;
+    }
+
+    private NioAcceptedSocketChannel(
             ChannelFactory factory, ChannelPipeline pipeline,
             Channel parent, ChannelSink sink,
             SocketChannel socket, NioWorker worker, Thread bossThread) {
@@ -44,10 +57,5 @@ final class NioAcceptedSocketChannel extends NioSocketChannel {
         super(parent, factory, pipeline, sink, socket, worker);
 
         this.bossThread = bossThread;
-
-        setConnected();
-        fireChannelOpen(this);
-        fireChannelBound(this, getLocalAddress());
-        fireChannelConnected(this, getRemoteAddress());
     }
 }

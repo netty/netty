@@ -140,7 +140,7 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
 
     @Override
     public ServerSocketChannel newChannel(ChannelPipeline pipeline) {
-        return new NioServerSocketChannel(this, pipeline, sink);
+        return NioServerSocketChannel.create(this, pipeline, sink);
     }
 
     @Override

@@ -137,7 +137,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
 
     @Override
     public SocketChannel newChannel(ChannelPipeline pipeline) {
-        return new NioClientSocketChannel(this, pipeline, sink, sink.nextWorker());
+        return NioClientSocketChannel.create(this, pipeline, sink, sink.nextWorker());
     }
 
     @Override
