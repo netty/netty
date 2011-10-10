@@ -69,17 +69,22 @@ import org.jboss.netty.util.internal.NonReentrantLock;
  *
  * <h3>Renegotiation</h3>
  * <p>
- * TLS renegotiation has been disabled by default due to a known security issue,
- * <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2009-3555">CVE-2009-3555</a>.
- * You can re-enable renegotiation by calling {@link #setEnableRenegotiation(boolean)}
- * with {@code true} at your own risk.
- * <p>
- * If {@link #isEnableRenegotiation() enableRenegotiation} is {@code true} and
- * the initial handshake has been done successfully, you can call
+ * If {@link #isEnableRenegotiation() enableRenegotiation} is {@code true}
+ * (default) and the initial handshake has been done successfully, you can call
  * {@link #handshake()} to trigger the renegotiation.
  * <p>
  * If {@link #isEnableRenegotiation() enableRenegotiation} is {@code false},
  * an attempt to trigger renegotiation will result in the connection closure.
+ * <p>
+ * Please note that TLS renegotiation had a security issue before.  If your
+ * runtime environment did not fix it, please make sure to disable TLS
+ * renegotiation by calling {@link #setEnableRenegotiation(boolean)} with
+ * {@code false}.  For more information, please refer to the following documents:
+ * <ul>
+ *   <li><a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2009-3555">CVE-2009-3555</a></li>
+ *   <li><a href="http://www.ietf.org/rfc/rfc5746.txt">RFC5746</a></li>
+ *   <li><a href="http://www.oracle.com/technetwork/java/javase/documentation/tlsreadme2-176330.html">Phased Approach to Fixing the TLS Renegotiation Issue</a></li>
+ * </ul>
  *
  * <h3>Closing the session</h3>
  * <p>
@@ -173,7 +178,7 @@ public class SslHandler extends FrameDecoder
     private final Executor delegatedTaskExecutor;
     private final boolean startTls;
 
-    private volatile boolean enableRenegotiation;
+    private volatile boolean enableRenegotiation = true;
 
     final Object handshakeLock = new Object();
     private boolean handshaking;
