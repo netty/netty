@@ -39,6 +39,9 @@ public class WebSocketServerIndexPage {
         "<body>" + NEWLINE +
         "<script type=\"text/javascript\">" + NEWLINE +
         "var socket;" + NEWLINE +
+        "if (!window.WebSocket) {" + NEWLINE +
+        "  window.WebSocket = window.MozWebSocket;" + NEWLINE +
+        "}" + NEWLINE +        
         "if (window.WebSocket) {" + NEWLINE +
         "  socket = new WebSocket(\"" + webSocketLocation + "\");" + NEWLINE +
         "  socket.onmessage = function(event) { var ta = document.getElementById('responseText'); ta.value = ta.value + '\\n' + event.data };" + NEWLINE +
