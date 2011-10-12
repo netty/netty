@@ -82,7 +82,6 @@ class NioWorker implements Runnable {
 
     private final SocketReceiveBufferPool recvBufferPool = new SocketReceiveBufferPool();
     private final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
-    private final AtomicBoolean fireConnect = new AtomicBoolean(true);
     
     NioWorker(int bossId, int id, Executor executor) {
         this.bossId = bossId;
@@ -97,7 +96,6 @@ class NioWorker implements Runnable {
         Selector selector;
 
         synchronized (startStopLock) {
-            fireConnect.set(true);
             
             if (!started) {
                 // Open a selector if this worker didn't start yet.
