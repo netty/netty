@@ -82,7 +82,8 @@ class NioWorker implements Runnable {
 
     private final SocketReceiveBufferPool recvBufferPool = new SocketReceiveBufferPool();
     private final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
-
+    private final AtomicBoolean fireConnect = new AtomicBoolean(true);
+    
     NioWorker(int bossId, int id, Executor executor) {
         this.bossId = bossId;
         this.id = id;
@@ -96,6 +97,8 @@ class NioWorker implements Runnable {
         Selector selector;
 
         synchronized (startStopLock) {
+            fireConnect.set(true);
+            
             if (!started) {
                 // Open a selector if this worker didn't start yet.
                 try {
@@ -160,6 +163,7 @@ class NioWorker implements Runnable {
             }
 
             try {
+
                 SelectorUtil.select(selector);
 
                 // 'wakenUp.compareAndSet(false, true)' is always evaluated
@@ -789,6 +793,14 @@ class NioWorker implements Runnable {
                     fireChannelBound(channel, localAddress);
                 }
                 fireChannelConnected(channel, remoteAddress);
+            }
+            
+            // Handle the channelOpen, channelBound and channelConnected in the worker thread
+            if (channel instanceof NioAcceptedSocketChannel) {
+                fireChannelOpen(channel);
+                fireChannelBound(channel, channel.getLocalAddress());
+                fireChannelConnected(channel, channel.getRemoteAddress());
+            
             }
         }
     }
