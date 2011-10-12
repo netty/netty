@@ -1,4 +1,4 @@
-package org.jboss.netty.channel;
+package org.jboss.netty.channel.socket.sctp;
 /*
  * Copyright 2009 Red Hat, Inc.
  *
@@ -15,11 +15,15 @@ package org.jboss.netty.channel;
  * under the License.
  */
 import com.sun.nio.sctp.Notification;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.Channels;
 
 /**
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
- * @author Jestan Nirojan
+ * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  *
  * @version $Rev$, $Date$
  *

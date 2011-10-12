@@ -35,7 +35,7 @@ import static org.jboss.netty.channel.Channels.fireChannelInterestChanged;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Jestan Nirojan
+ * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  *
  * @version $Rev$, $Date$
  *
@@ -51,7 +51,7 @@ class SctpChannelImpl extends AbstractChannel
 
     final SctpChannel socket;
     final SctpWorker worker;
-    private final NioSocketChannelConfig config;
+    private final NioSctpChannelConfig config;
     private volatile InetSocketAddress localAddress;
     private volatile InetSocketAddress remoteAddress;
 
@@ -78,7 +78,7 @@ class SctpChannelImpl extends AbstractChannel
 
         this.socket = socket;
         this.worker = worker;
-        config = new DefaultSctpSocketChannelConfig(socket);
+        config = new DefaultNioSctpChannelConfig(socket);
 
         getCloseFuture().addListener(new ChannelFutureListener() {
             @Override
@@ -89,7 +89,7 @@ class SctpChannelImpl extends AbstractChannel
     }
 
     @Override
-    public NioSocketChannelConfig getConfig() {
+    public NioSctpChannelConfig getConfig() {
         return config;
     }
 

@@ -16,14 +16,13 @@ package org.jboss.netty.channel.socket.sctp;
  */
 import com.sun.nio.sctp.*;
 import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.UpstreamChannelNotificationEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
- * @author Jestan Nirojan
+ * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  *
  * @version $Rev$, $Date$
  *

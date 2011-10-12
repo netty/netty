@@ -27,17 +27,17 @@ import java.util.Set;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
- * @author Jestan Nirojan
+ * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  * @version $Rev$, $Date$
  */
-public interface SctpChannel extends SocketChannel {
+public interface SctpChannel extends Channel {
     @Override
     InetSocketAddress getLocalAddress();
 
     Set<InetSocketAddress> getAllLocalAddresses();
 
     @Override
-    NioSocketChannelConfig getConfig();
+    NioSctpChannelConfig getConfig();
 
     @Override
     InetSocketAddress getRemoteAddress();

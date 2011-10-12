@@ -15,7 +15,6 @@
  */
 package org.jboss.netty.example.sctp;
 
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -30,11 +29,12 @@ import java.util.logging.Logger;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Jestan Nirojan
+ * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  *
  * @version $Rev$, $Date$
  */
 public class SctpServerHandler extends SimpleChannelUpstreamHandler {
+    private final AtomicLong counter = new AtomicLong(0);
 
     private static final Logger logger = Logger.getLogger(
             SctpServerHandler.class.getName());
@@ -43,6 +43,7 @@ public class SctpServerHandler extends SimpleChannelUpstreamHandler {
     public void messageReceived(
             ChannelHandlerContext ctx, MessageEvent e) {
         // Send back the received message to the remote peer.
+        logger.log(Level.INFO, "Received " +  counter.incrementAndGet() + "th message from client.");
         e.getChannel().write(e.getMessage());
     }
 

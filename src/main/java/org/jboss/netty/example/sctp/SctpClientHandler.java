@@ -25,17 +25,16 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Handler implementation for the echo client.  It initiates the ping-pong
- * traffic between the echo client and server by sending the first message to
- * the server.
+ * Handler implementation for the echo client.  It initiates the message
+ * and upon receiving echo back to the server
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Jestan Nirojan
- *
+ * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  * @version $Rev$, $Date$
  */
 public class SctpClientHandler extends SimpleChannelUpstreamHandler {
+    private final AtomicLong counter = new AtomicLong(0);
 
     private static final Logger logger = Logger.getLogger(
             SctpClientHandler.class.getName());
@@ -59,6 +58,7 @@ public class SctpClientHandler extends SimpleChannelUpstreamHandler {
     public void messageReceived(
             ChannelHandlerContext ctx, MessageEvent e) {
         // Send back the received message to the remote peer.
+        logger.log(Level.INFO, "Received " + counter.incrementAndGet() + "th message from server.");
         e.getChannel().write(e.getMessage());
     }
 

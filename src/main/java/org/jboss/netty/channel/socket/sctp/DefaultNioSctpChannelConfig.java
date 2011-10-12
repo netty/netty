@@ -16,30 +16,28 @@
 package org.jboss.netty.channel.socket.sctp;
 
 import com.sun.nio.sctp.SctpChannel;
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.HeapChannelBufferFactory;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
+import java.util.Map;
+
+import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictorFactory;
+import org.jboss.netty.channel.ChannelException;
+import org.jboss.netty.channel.ReceiveBufferSizePredictor;
+import org.jboss.netty.channel.ReceiveBufferSizePredictorFactory;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.ConversionUtil;
 
-import java.util.Map;
-
 /**
- * The default {@link NioSocketChannelConfig} implementation for SCTP.
+ * The default {@link org.jboss.netty.channel.socket.nio.NioSocketChannelConfig} implementation for SCTP.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Jestan Nirojan
+ * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  * @version $Rev$, $Date$
  */
-class DefaultSctpSocketChannelConfig implements NioSocketChannelConfig {
-    private volatile ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
-    private volatile int connectTimeoutMillis = 10000; // 10 seconds
+class DefaultNioSctpChannelConfig extends DefaultSctpChannelConfig implements NioSctpChannelConfig {
 
     private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(DefaultSctpSocketChannelConfig.class);
+            InternalLoggerFactory.getInstance(DefaultNioSctpChannelConfig.class);
 
     private static final ReceiveBufferSizePredictorFactory DEFAULT_PREDICTOR_FACTORY =
             new AdaptiveReceiveBufferSizePredictorFactory();
@@ -49,16 +47,14 @@ class DefaultSctpSocketChannelConfig implements NioSocketChannelConfig {
     private volatile ReceiveBufferSizePredictor predictor;
     private volatile ReceiveBufferSizePredictorFactory predictorFactory = DEFAULT_PREDICTOR_FACTORY;
     private volatile int writeSpinCount = 16;
-    private SctpChannel socket;
 
-    DefaultSctpSocketChannelConfig(SctpChannel socket) {
-        this.socket = socket;
+    DefaultNioSctpChannelConfig(SctpChannel channel) {
+       super(channel);
     }
 
     @Override
     public void setOptions(Map<String, Object> options) {
-        //TODO: implement this as in DefaultSocketChannelConfig
-        //socket.setOption(options);
+        super.setOptions(options);
         if (getWriteBufferHighWaterMark() < getWriteBufferLowWaterMark()) {
             // Recover the integrity of the configuration with a sensible value.
             setWriteBufferLowWaterMark0(getWriteBufferHighWaterMark() >>> 1);
@@ -72,6 +68,10 @@ class DefaultSctpSocketChannelConfig implements NioSocketChannelConfig {
 
     @Override
     public boolean setOption(String key, Object value) {
+        if (super.setOption(key, value)) {
+            return true;
+        }
+
         if (key.equals("writeBufferHighWaterMark")) {
             setWriteBufferHighWaterMark0(ConversionUtil.toInt(value));
         } else if (key.equals("writeBufferLowWaterMark")) {
@@ -83,46 +83,9 @@ class DefaultSctpSocketChannelConfig implements NioSocketChannelConfig {
         } else if (key.equals("receiveBufferSizePredictor")) {
             setReceiveBufferSizePredictor((ReceiveBufferSizePredictor) value);
         } else {
-            //TODO: set sctp channel options
             return false;
         }
         return true;
-    }
-
-    @Override
-    public ChannelBufferFactory getBufferFactory() {
-        return bufferFactory;
-    }
-
-    @Override
-    public void setBufferFactory(ChannelBufferFactory bufferFactory) {
-        if (bufferFactory == null) {
-            throw new NullPointerException("bufferFactory");
-        }
-        this.bufferFactory = bufferFactory;
-    }
-
-    @Override
-    public ChannelPipelineFactory getPipelineFactory() {
-        return null;
-    }
-
-    @Override
-    public void setPipelineFactory(ChannelPipelineFactory pipelineFactory) {
-        //unused
-    }
-
-    @Override
-    public int getConnectTimeoutMillis() {
-        return connectTimeoutMillis;
-    }
-
-    @Override
-    public void setConnectTimeoutMillis(int connectTimeoutMillis) {
-        if (connectTimeoutMillis < 0) {
-            throw new IllegalArgumentException("connectTimeoutMillis: " + connectTimeoutMillis);
-        }
-        this.connectTimeoutMillis = connectTimeoutMillis;
     }
 
     @Override
@@ -223,73 +186,5 @@ class DefaultSctpSocketChannelConfig implements NioSocketChannelConfig {
             throw new NullPointerException("predictorFactory");
         }
         this.predictorFactory = predictorFactory;
-    }
-
-
-    @Override
-    public boolean isTcpNoDelay() {
-        return false;
-    }
-
-    @Override
-    public void setTcpNoDelay(boolean tcpNoDelay) {
-    }
-
-    @Override
-    public int getSoLinger() {
-        return 0;
-    }
-
-    @Override
-    public void setSoLinger(int soLinger) {
-    }
-
-    @Override
-    public int getSendBufferSize() {
-        return 0;
-    }
-
-    @Override
-    public void setSendBufferSize(int sendBufferSize) {
-    }
-
-    @Override
-    public int getReceiveBufferSize() {
-        return 0;
-    }
-
-    @Override
-    public void setReceiveBufferSize(int receiveBufferSize) {
-    }
-
-    @Override
-    public boolean isKeepAlive() {
-        return false;
-    }
-
-    @Override
-    public void setKeepAlive(boolean keepAlive) {
-    }
-
-    @Override
-    public int getTrafficClass() {
-        return 0;
-    }
-
-    @Override
-    public void setTrafficClass(int trafficClass) {
-    }
-
-    @Override
-    public boolean isReuseAddress() {
-        return false;
-    }
-
-    @Override
-    public void setReuseAddress(boolean reuseAddress) {
-    }
-
-    @Override
-    public void setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
     }
 }

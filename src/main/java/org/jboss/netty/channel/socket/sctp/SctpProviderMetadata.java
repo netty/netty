@@ -15,6 +15,7 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
+import com.sun.nio.sctp.SctpServerChannel;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.SystemPropertyUtil;
@@ -23,7 +24,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -39,7 +39,7 @@ import java.util.regex.Pattern;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Jestan Nirojan
+ * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  *
  * @version $Rev$, $Date$
  *
@@ -231,16 +231,16 @@ class SctpProviderMetadata {
             long startTime;
             int interestOps;
 
-            ServerSocketChannel ch = null;
+            SctpServerChannel ch = null;
             SelectorLoop loop = null;
 
             try {
                 // Open a channel.
-                ch = ServerSocketChannel.open();
+                ch = com.sun.nio.sctp.SctpServerChannel.open();
 
                 // Configure the channel
                 try {
-                    ch.socket().bind(new InetSocketAddress(0));
+                    ch.bind(new InetSocketAddress(0));
                     ch.configureBlocking(false);
                 } catch (Throwable e) {
                     logger.warn("Failed to configure a temporary socket.", e);

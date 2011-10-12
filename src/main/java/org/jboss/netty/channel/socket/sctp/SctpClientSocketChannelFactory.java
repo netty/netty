@@ -15,8 +15,8 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
+import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.util.internal.ExecutorUtil;
 
 import java.util.concurrent.Executor;
@@ -72,13 +72,13 @@ import java.util.concurrent.Executor;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Jestan Nirojan
+ * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  *
  * @version $Rev$, $Date$
  *
  * @apiviz.landmark
  */
-public class SctpClientSocketChannelFactory implements ClientSocketChannelFactory {
+public class SctpClientSocketChannelFactory implements ChannelFactory {
 
     private final Executor bossExecutor;
     private final Executor workerExecutor;

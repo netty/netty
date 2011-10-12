@@ -20,8 +20,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
- * @author Jestan Nirojan
- *
+ * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  * @version $Rev$, $Date$
  */
 public final class SctpMessage {
@@ -49,5 +48,18 @@ public final class SctpMessage {
         } else {
             return ChannelBuffers.EMPTY_BUFFER;
         }
+    }
+
+    @Override
+    public String toString() {
+        return new StringBuilder().
+                append("SctpMessage{").
+                append("streamNo=").
+                append(streamNo).
+                append(", payloadProtocolId=").
+                append(payloadProtocolId).
+                append(", data=").
+                append(ChannelBuffers.hexDump(data())).
+                append('}').toString();
     }
 }

@@ -15,7 +15,7 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import org.jboss.netty.channel.socket.ServerSocketChannel;
+import org.jboss.netty.channel.ServerChannel;
 import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
 
 import java.net.InetSocketAddress;
@@ -29,7 +29,7 @@ import java.net.InetSocketAddress;
  * @version $Rev$, $Date$
  *
  */
-public interface SctpServerChannel extends ServerSocketChannel {
+public interface SctpServerChannel extends ServerChannel {
     @Override
     ServerSocketChannelConfig getConfig();
     @Override

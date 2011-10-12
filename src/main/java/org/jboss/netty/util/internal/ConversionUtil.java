@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.util.internal;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -91,6 +93,19 @@ public class ConversionUtil {
         }
 
         return String.valueOf(value).split("[, \\t\\n\\r\\f\\e\\a]");
+    }
+
+    /**
+     * Converts the specified object into a socketAddress.
+     */
+    public static SocketAddress toSocketAddress(Object value) {
+
+       if (value instanceof String) {
+          String [] hostPorts = (((String) value).trim()).split(":");
+           return new InetSocketAddress(hostPorts[0], Integer.parseInt(hostPorts[1]));
+       } else {
+           return (SocketAddress) value;
+       }
     }
 
     private static final String[] INTEGERS = {
