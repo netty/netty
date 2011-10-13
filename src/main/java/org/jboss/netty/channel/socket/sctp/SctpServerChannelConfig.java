@@ -18,22 +18,22 @@ package org.jboss.netty.channel.socket.sctp;
 import com.sun.nio.sctp.SctpStandardSocketOption;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.DefaultServerChannelConfig;
-import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
 import org.jboss.netty.util.internal.ConversionUtil;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 
 /**
  * The default {@link org.jboss.netty.channel.socket.ServerSocketChannelConfig} implementation.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
-
+ * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  *
  * @version $Rev$, $Date$
  */
 public class SctpServerChannelConfig extends DefaultServerChannelConfig
-                                              implements ServerSocketChannelConfig {
+        implements ServerSctpChannelConfig {
 
     private final com.sun.nio.sctp.SctpServerChannel serverChannel;
     private volatile int backlog;
@@ -54,10 +54,8 @@ public class SctpServerChannelConfig extends DefaultServerChannelConfig
             return true;
         }
 
-        if (key.equals("receiveBufferSize")) {
-            setReceiveBufferSize(ConversionUtil.toInt(value));
-        } else if (key.equals("reuseAddress")) {
-            setReuseAddress(ConversionUtil.toBoolean(value));
+        if (key.equals("sctpInitMaxStreams")) {
+            setInitMaxStreams((SctpStandardSocketOption.InitMaxStreams) value);
         } else if (key.equals("backlog")) {
             setBacklog(ConversionUtil.toInt(value));
         } else {
@@ -67,36 +65,21 @@ public class SctpServerChannelConfig extends DefaultServerChannelConfig
     }
 
     @Override
-    public boolean isReuseAddress() {
-        return false;
-    }
-
-    @Override
-    public void setReuseAddress(boolean reuseAddress) {
-        throw new UnsupportedOperationException("Not supported");
-    }
-
-    @Override
-    public int getReceiveBufferSize() {
+    public SctpStandardSocketOption.InitMaxStreams getInitMaxStreams() {
         try {
-            return serverChannel.getOption(SctpStandardSocketOption.SO_RCVBUF);
+            return serverChannel.getOption(SctpStandardSocketOption.SCTP_INIT_MAXSTREAMS);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
     @Override
-    public void setReceiveBufferSize(int receiveBufferSize) {
+    public void setInitMaxStreams(SctpStandardSocketOption.InitMaxStreams initMaxStreams) {
         try {
-            serverChannel.setOption(SctpStandardSocketOption.SO_RCVBUF, receiveBufferSize);
+            serverChannel.setOption(SctpStandardSocketOption.SCTP_INIT_MAXSTREAMS, initMaxStreams);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
-    }
-
-    @Override
-    public void setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
-        throw new UnsupportedOperationException("Not supported");
     }
 
     @Override

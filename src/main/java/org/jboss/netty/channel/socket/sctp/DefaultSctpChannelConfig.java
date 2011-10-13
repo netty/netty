@@ -15,18 +15,14 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.util.Map;
-
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpStandardSocketOption;
-
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.DefaultChannelConfig;
 import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
 import org.jboss.netty.util.internal.ConversionUtil;
 
+import java.io.IOException;
 
 /**
  * The default {@link NioSocketChannelConfig} implementation for SCTP.
@@ -34,6 +30,7 @@ import org.jboss.netty.util.internal.ConversionUtil;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
+ *
  * @version $Rev$, $Date$
  */
 class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChannelConfig {
@@ -59,10 +56,6 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
             setSendBufferSize(ConversionUtil.toInt(value));
         } else if (key.equals("sctpNoDelay")) {
             setSctpNoDelay(ConversionUtil.toBoolean(value));
-        } else if (key.equals("sctpPrimaryAddress")) {
-            setPrimaryAddress(ConversionUtil.toSocketAddress(value));
-        } else if (key.equals("sctpPeerPrimaryAddress")) {
-            setPeerPrimaryAddress(ConversionUtil.toSocketAddress(value));
         } else if (key.equals("soLinger")) {
             setSoLinger(ConversionUtil.toInt(value));
         } else if (key.equals("sctpInitMaxStreams")) {
@@ -140,42 +133,6 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     public void setReceiveBufferSize(int receiveBufferSize) {
         try {
             channel.setOption(SctpStandardSocketOption.SO_RCVBUF, receiveBufferSize);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    @Override
-    public SocketAddress getPrimaryAddress() {
-        try {
-            return channel.getOption(SctpStandardSocketOption.SCTP_PRIMARY_ADDR);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    @Override
-    public void setPrimaryAddress(SocketAddress primaryAddress) {
-        try {
-            channel.setOption(SctpStandardSocketOption.SCTP_PRIMARY_ADDR, primaryAddress);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    @Override
-    public SocketAddress getPeerPrimaryAddress() {
-        try {
-            return channel.getOption(SctpStandardSocketOption.SCTP_SET_PEER_PRIMARY_ADDR);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    @Override
-    public void setPeerPrimaryAddress(SocketAddress peerPrimaryAddress) {
-        try {
-            channel.setOption(SctpStandardSocketOption.SCTP_SET_PEER_PRIMARY_ADDR, peerPrimaryAddress);
         } catch (IOException e) {
             throw new ChannelException(e);
         }

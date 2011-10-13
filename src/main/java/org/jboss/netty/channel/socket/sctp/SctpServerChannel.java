@@ -16,24 +16,27 @@
 package org.jboss.netty.channel.socket.sctp;
 
 import org.jboss.netty.channel.ServerChannel;
-import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
 
 import java.net.InetSocketAddress;
+import java.util.Set;
 
 /**
  * A TCP/IP {@link org.jboss.netty.channel.ServerChannel} which accepts incoming TCP/IP connections.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
+ * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  *
  * @version $Rev$, $Date$
  *
  */
 public interface SctpServerChannel extends ServerChannel {
     @Override
-    ServerSocketChannelConfig getConfig();
+    ServerSctpChannelConfig getConfig();
     @Override
     InetSocketAddress getLocalAddress();
+
+    Set<InetSocketAddress> getAllLocalAddresses();
     @Override
     InetSocketAddress getRemoteAddress();
 }

@@ -134,7 +134,7 @@ class SctpServerPipelineSink extends AbstractChannelSink {
         boolean bound = false;
         boolean bossStarted = false;
         try {
-            channel.socket.bind(localAddress, channel.getConfig().getBacklog());
+            channel.serverChannel.bind(localAddress, channel.getConfig().getBacklog());
             bound = true;
             channel.setBound();
             future.setSuccess();
@@ -157,8 +157,8 @@ class SctpServerPipelineSink extends AbstractChannelSink {
     private void close(SctpServerChannelImpl channel, ChannelFuture future) {
         boolean bound = channel.isBound();
         try {
-            if (channel.socket.isOpen()) {
-                channel.socket.close();
+            if (channel.serverChannel.isOpen()) {
+                channel.serverChannel.close();
                 Selector selector = channel.selector;
                 if (selector != null) {
                     selector.wakeup();
@@ -204,7 +204,7 @@ class SctpServerPipelineSink extends AbstractChannelSink {
 
             boolean registered = false;
             try {
-                channel.socket.register(selector, SelectionKey.OP_ACCEPT);
+                channel.serverChannel.register(selector, SelectionKey.OP_ACCEPT);
                 registered = true;
             } finally {
                 if (!registered) {
@@ -227,7 +227,7 @@ class SctpServerPipelineSink extends AbstractChannelSink {
                             selector.selectedKeys().clear();
                         }
 
-                        SctpChannel acceptedSocket = channel.socket.accept();
+                        SctpChannel acceptedSocket = channel.serverChannel.accept();
                         if (acceptedSocket != null) {
                             registerAcceptedChannel(acceptedSocket, currentThread);
                         }

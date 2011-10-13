@@ -19,7 +19,6 @@ import com.sun.nio.sctp.Association;
 import com.sun.nio.sctp.SctpChannel;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
 import org.jboss.netty.channel.socket.sctp.SctpSendBufferPool.SendBuffer;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
@@ -49,7 +48,7 @@ class SctpChannelImpl extends AbstractChannel
     private static final int ST_CLOSED = -1;
     volatile int state = ST_OPEN;
 
-    final SctpChannel socket;
+    final SctpChannel channel;
     final SctpWorker worker;
     private final NioSctpChannelConfig config;
     private volatile InetSocketAddress localAddress;
@@ -73,12 +72,12 @@ class SctpChannelImpl extends AbstractChannel
     public SctpChannelImpl(
             Channel parent, ChannelFactory factory,
             ChannelPipeline pipeline, ChannelSink sink,
-            SctpChannel socket, SctpWorker worker) {
+            SctpChannel channel, SctpWorker worker) {
         super(parent, factory, pipeline, sink);
 
-        this.socket = socket;
+        this.channel = channel;
         this.worker = worker;
-        config = new DefaultNioSctpChannelConfig(socket);
+        config = new DefaultNioSctpChannelConfig(channel);
 
         getCloseFuture().addListener(new ChannelFutureListener() {
             @Override
@@ -98,7 +97,7 @@ class SctpChannelImpl extends AbstractChannel
         InetSocketAddress localAddress = this.localAddress;
         if (localAddress == null) {
             try {
-                final Iterator<SocketAddress> iterator = socket.getAllLocalAddresses().iterator();
+                final Iterator<SocketAddress> iterator = channel.getAllLocalAddresses().iterator();
                 if (iterator.hasNext()) {
                     this.localAddress = localAddress = (InetSocketAddress) iterator.next();
                 }
@@ -112,7 +111,7 @@ class SctpChannelImpl extends AbstractChannel
     @Override
     public Set<InetSocketAddress> getAllLocalAddresses() {
             try {
-                final Set<SocketAddress> allLocalAddresses = socket.getAllLocalAddresses();
+                final Set<SocketAddress> allLocalAddresses = channel.getAllLocalAddresses();
                 final Set<InetSocketAddress> addresses = new HashSet<InetSocketAddress>(allLocalAddresses.size());
                 for(SocketAddress socketAddress: allLocalAddresses) {
                     addresses.add((InetSocketAddress) socketAddress);
@@ -128,7 +127,7 @@ class SctpChannelImpl extends AbstractChannel
         InetSocketAddress remoteAddress = this.remoteAddress;
         if (remoteAddress == null) {
             try {
-                final Iterator<SocketAddress> iterator = socket.getRemoteAddresses().iterator();
+                final Iterator<SocketAddress> iterator = channel.getRemoteAddresses().iterator();
                 if (iterator.hasNext()) {
                     this.remoteAddress = remoteAddress = (InetSocketAddress) iterator.next();
                 }
@@ -142,7 +141,7 @@ class SctpChannelImpl extends AbstractChannel
     @Override
     public Set<InetSocketAddress> getRemoteAddresses() {
             try {
-                final Set<SocketAddress> allLocalAddresses = socket.getRemoteAddresses();
+                final Set<SocketAddress> allLocalAddresses = channel.getRemoteAddresses();
                 final Set<InetSocketAddress> addresses = new HashSet<InetSocketAddress>(allLocalAddresses.size());
                 for(SocketAddress socketAddress: allLocalAddresses) {
                     addresses.add((InetSocketAddress) socketAddress);
@@ -156,7 +155,7 @@ class SctpChannelImpl extends AbstractChannel
     @Override
     public Association association() {
         try {
-            return socket.association();
+            return channel.association();
         } catch (Throwable e) {
             return null;
         }

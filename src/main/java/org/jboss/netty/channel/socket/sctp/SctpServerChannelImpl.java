@@ -22,7 +22,12 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.channels.Selector;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -43,10 +48,10 @@ class SctpServerChannelImpl extends AbstractServerChannel
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SctpServerChannelImpl.class);
 
-    final com.sun.nio.sctp.SctpServerChannel socket;
+    final com.sun.nio.sctp.SctpServerChannel serverChannel;
     final Lock shutdownLock = new ReentrantLock();
     volatile Selector selector;
-    private final ServerSocketChannelConfig config;
+    private final ServerSctpChannelConfig config;
 
     private volatile boolean bound;
 
@@ -58,17 +63,17 @@ class SctpServerChannelImpl extends AbstractServerChannel
         super(factory, pipeline, sink);
 
         try {
-            socket = com.sun.nio.sctp.SctpServerChannel.open();
+            serverChannel = com.sun.nio.sctp.SctpServerChannel.open();
         } catch (IOException e) {
             throw new ChannelException(
                     "Failed to open a server socket.", e);
         }
 
         try {
-            socket.configureBlocking(false);
+            serverChannel.configureBlocking(false);
         } catch (IOException e) {
             try {
-                socket.close();
+                serverChannel.close();
             } catch (IOException e2) {
                 logger.warn(
                         "Failed to close a partially initialized socket.", e2);
@@ -77,28 +82,43 @@ class SctpServerChannelImpl extends AbstractServerChannel
             throw new ChannelException("Failed to enter non-blocking mode.", e);
         }
 
-        config = new SctpServerChannelConfig(socket);
+        config = new SctpServerChannelConfig(serverChannel);
 
         fireChannelOpen(this);
     }
 
     @Override
-    public ServerSocketChannelConfig getConfig() {
+    public ServerSctpChannelConfig getConfig() {
         return config;
     }
 
     @Override
     public InetSocketAddress getLocalAddress() {
         try {
-            return (InetSocketAddress) socket.getAllLocalAddresses().iterator().next();
+            final Iterator<SocketAddress> iterator = serverChannel.getAllLocalAddresses().iterator();
+            return iterator.hasNext() ? (InetSocketAddress) iterator.next() : null;
         } catch (IOException e) {
             return null;
         }
     }
 
     @Override
+    public Set<InetSocketAddress> getAllLocalAddresses() {
+        try {
+            final Set<SocketAddress> allLocalAddresses = serverChannel.getAllLocalAddresses();
+            final Set<InetSocketAddress> addresses = new HashSet<InetSocketAddress>(allLocalAddresses.size());
+            for (SocketAddress socketAddress : allLocalAddresses) {
+                addresses.add((InetSocketAddress) socketAddress);
+            }
+            return addresses;
+        } catch (Throwable t) {
+            return Collections.emptySet();
+        }
+    }
+
+    @Override
     public InetSocketAddress getRemoteAddress() {
-        return null;
+        return null;// not available for server channel
     }
 
     @Override

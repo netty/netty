@@ -302,7 +302,7 @@ class SctpWorker implements Runnable {
 
         ByteBuffer bb = recvBufferPool.acquire(predictedRecvBufSize);
         try {
-            messageInfo = channel.socket.receive(bb, this, notificationHandler);
+            messageInfo = channel.channel.receive(bb, this, notificationHandler);
             if (messageInfo != null) {
                 messageReceived = true;
                 if (messageInfo.isComplete()) {
@@ -337,12 +337,16 @@ class SctpWorker implements Runnable {
             predictor.previousReceiveBufferSize(receivedBytes);
 
             // Fire the event.
-            fireMessageReceived(channel, new SctpMessage(messageInfo.streamNumber(), messageInfo.payloadProtocolID(), buffer));
+            fireMessageReceived(channel,
+                    new SctpMessage(messageInfo.streamNumber(),
+                            messageInfo.payloadProtocolID(),
+                            buffer),
+                    messageInfo.address());
         } else {
             recvBufferPool.release(bb);
         }
 
-        if (channel.socket.isBlocking() && !messageReceived || failure) {
+        if (channel.channel.isBlocking() && !messageReceived || failure) {
             k.cancel(); // Some JDK implementations run into an infinite loop without this.
             close(channel, succeededFuture(channel));
             return false;
@@ -434,7 +438,7 @@ class SctpWorker implements Runnable {
         long writtenBytes = 0;
 
         final SctpSendBufferPool sendBufferPool = this.sendBufferPool;
-        final com.sun.nio.sctp.SctpChannel ch = channel.socket;
+        final com.sun.nio.sctp.SctpChannel ch = channel.channel;
         final Queue<MessageEvent> writeBuffer = channel.writeBuffer;
         final int writeSpinCount = channel.getConfig().getWriteSpinCount();
         synchronized (channel.writeLock) {
@@ -521,7 +525,7 @@ class SctpWorker implements Runnable {
 
     private void setOpWrite(SctpChannelImpl channel) {
         Selector selector = this.selector;
-        SelectionKey key = channel.socket.keyFor(selector);
+        SelectionKey key = channel.channel.keyFor(selector);
         if (key == null) {
             return;
         }
@@ -544,7 +548,7 @@ class SctpWorker implements Runnable {
 
     private void clearOpWrite(SctpChannelImpl channel) {
         Selector selector = this.selector;
-        SelectionKey key = channel.socket.keyFor(selector);
+        SelectionKey key = channel.channel.keyFor(selector);
         if (key == null) {
             return;
         }
@@ -569,7 +573,7 @@ class SctpWorker implements Runnable {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         try {
-            channel.socket.close();
+            channel.channel.close();
             cancelledKeys++;
 
             if (channel.setClosed()) {
@@ -653,7 +657,7 @@ class SctpWorker implements Runnable {
             // Acquire a lock to avoid possible race condition.
             synchronized (channel.interestOpsLock) {
                 Selector selector = this.selector;
-                SelectionKey key = channel.socket.keyFor(selector);
+                SelectionKey key = channel.channel.keyFor(selector);
 
                 if (key == null || selector == null) {
                     // Not registered to the worker yet.
@@ -748,11 +752,11 @@ class SctpWorker implements Runnable {
 
             try {
                 if (server) {
-                    channel.socket.configureBlocking(false);
+                    channel.channel.configureBlocking(false);
                 }
 
                 synchronized (channel.interestOpsLock) {
-                    channel.socket.register(
+                    channel.channel.register(
                             selector, channel.getRawInterestOps(), channel);
                 }
                 if (future != null) {

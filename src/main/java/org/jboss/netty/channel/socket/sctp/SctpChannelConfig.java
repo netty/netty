@@ -40,10 +40,6 @@ import java.net.SocketAddress;
  * </tr><tr>
  * <td>{@code "sendBufferSize"}</td><td>{@link #setSendBufferSize(int)}</td>
  * </tr><tr>
- * <td>{@code "sctpPrimaryAddress"}</td><td>{@link #setPrimaryAddress(SocketAddress)}}</td>
- * </tr><tr>
- * <td>{@code "sctpPeerPrimaryAddress"}</td><td>{@link #setPeerPrimaryAddress(SocketAddress)}}</td>
- * </tr><tr>
  * <td>{@code "sctpInitMaxStreams"}</td><td>{@link #setInitMaxStreams(com.sun.nio.sctp.SctpStandardSocketOption.InitMaxStreams)} (int)}}</td>
  * </tr>
  * </table>
@@ -94,26 +90,6 @@ public interface SctpChannelConfig extends ChannelConfig {
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_RCVBUF}</a> option.
      */
     void setReceiveBufferSize(int receiveBufferSize);
-
-    /**
-     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_PRIMARY_ADDR}</a> option.
-     */
-    SocketAddress getPrimaryAddress();
-
-    /**
-     * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_PRIMARY_ADDR}</a> option.
-     */
-    void setPrimaryAddress(SocketAddress primaryAddress);
-
-    /**
-     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_SET_PEER_PRIMARY_ADDR}</a> option.
-     */
-    SocketAddress getPeerPrimaryAddress();
-
-    /**
-     * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_SET_PEER_PRIMARY_ADDR}</a> option.
-     */
-    void setPeerPrimaryAddress(SocketAddress peerPrimaryAddress);
 
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_INIT_MAXSTREAMS}</a> option.

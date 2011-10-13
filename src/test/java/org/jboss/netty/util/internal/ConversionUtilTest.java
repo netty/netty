@@ -19,9 +19,6 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
@@ -77,14 +74,4 @@ public class ConversionUtilTest {
         assertFalse(ConversionUtil.toBoolean("FALSE"));
         assertFalse(ConversionUtil.toBoolean("0"));
     }
-
-    @Test
-    public void testToSocketAddress() throws Exception {
-        SocketAddress socketAddress = ConversionUtil.toSocketAddress("localhost:9658");
-        assertNotNull(socketAddress);
-        InetSocketAddress inetSocketAddress = (InetSocketAddress) socketAddress;
-        assertEquals("localhost", inetSocketAddress.getHostName());
-        assertEquals(9658, inetSocketAddress.getPort());
-        assertNotNull(ConversionUtil.toSocketAddress(inetSocketAddress));
     }
-}
