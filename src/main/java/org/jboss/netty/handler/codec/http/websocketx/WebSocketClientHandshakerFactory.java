@@ -37,12 +37,14 @@ public class WebSocketClientHandshakerFactory {
 	 * @param subProtocol
 	 *            Sub protocol request sent to the server. Null if no
 	 *            sub-protocol support is required.
+	 * @param allowExtensions
+	 *            Allow extensions to be used in the reserved bits of the web socket frame
 	 * @throws WebSocketHandshakeException
 	 */
 	public WebSocketClientHandshaker newHandshaker(URI webSocketURL, WebSocketSpecificationVersion version,
-			String subProtocol) throws WebSocketHandshakeException {
+			String subProtocol, boolean allowExtensions) throws WebSocketHandshakeException {
 		if (version == WebSocketSpecificationVersion.V10) {
-			return new WebSocketClientHandshaker10(webSocketURL, version, subProtocol);
+			return new WebSocketClientHandshaker10(webSocketURL, version, subProtocol, allowExtensions);
 		}
 		if (version == WebSocketSpecificationVersion.V00) {
 			return new WebSocketClientHandshaker00(webSocketURL, version, subProtocol);

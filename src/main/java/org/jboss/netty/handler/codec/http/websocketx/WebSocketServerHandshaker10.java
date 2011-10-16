@@ -47,6 +47,8 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
 
 	public static final String WEBSOCKET_08_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
+	private boolean allowExtensions = false;
+
 	/**
 	 * Constructor specifying the destination web socket location
 	 * 
@@ -56,9 +58,13 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
 	 *            sent to this URL.
 	 * @param subProtocols
 	 *            CSV of supported protocols
+	 * @param allowExtensions
+	 *            Allow extensions to be used in the reserved bits of the web
+	 *            socket frame
 	 */
-	public WebSocketServerHandshaker10(String webSocketURL, String subProtocols) {
+	public WebSocketServerHandshaker10(String webSocketURL, String subProtocols, boolean allowExtensions) {
 		super(webSocketURL, subProtocols);
+		this.allowExtensions = allowExtensions;
 		return;
 	}
 
@@ -139,7 +145,7 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
 		// Upgrade the connection and send the handshake response.
 		ChannelPipeline p = ctx.getChannel().getPipeline();
 		p.remove("aggregator");
-		p.replace("decoder", "wsdecoder", new WebSocket08FrameDecoder(true));
+		p.replace("decoder", "wsdecoder", new WebSocket08FrameDecoder(true, this.allowExtensions));
 		p.replace("encoder", "wsencoder", new WebSocket08FrameEncoder(false));
 
 		return;

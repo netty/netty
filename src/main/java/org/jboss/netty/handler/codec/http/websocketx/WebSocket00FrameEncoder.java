@@ -43,7 +43,7 @@ public class WebSocket00FrameEncoder extends OneToOneEncoder {
 	protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
 		if (msg instanceof WebSocketFrame) {
 			WebSocketFrame frame = (WebSocketFrame) msg;
-			if (frame.getType() == WebSocketFrameType.TEXT) {
+			if (frame instanceof TextWebSocketFrame) {
 				// Text frame
 				ChannelBuffer data = frame.getBinaryData();
 				ChannelBuffer encoded = channel.getConfig().getBufferFactory()
@@ -52,7 +52,7 @@ public class WebSocket00FrameEncoder extends OneToOneEncoder {
 				encoded.writeBytes(data, data.readerIndex(), data.readableBytes());
 				encoded.writeByte((byte) 0xFF);
 				return encoded;
-			} else if (frame.getType() == WebSocketFrameType.CLOSE) {
+			} else if (frame instanceof CloseWebSocketFrame) {
 				// Close frame
 				ChannelBuffer data = frame.getBinaryData();
 				ChannelBuffer encoded = channel.getConfig().getBufferFactory().getBuffer(data.order(), 2);

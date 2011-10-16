@@ -51,6 +51,8 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
 
 	private String protocol = null;
 
+	private boolean allowExtensions = false;
+
 	/**
 	 * Constructor specifying the destination web socket location and version to
 	 * initiate
@@ -64,9 +66,13 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
 	 *            server
 	 * @param subProtocol
 	 *            Sub protocol request sent to the server.
+	 * @param allowExtensions
+	 *            Allow extensions to be used in the reserved bits of the web socket frame
 	 */
-	public WebSocketClientHandshaker10(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol) {
+	public WebSocketClientHandshaker10(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol,
+			boolean allowExtensions) {
 		super(webSocketURL, version, subProtocol);
+		this.allowExtensions = allowExtensions;
 		return;
 	}
 
@@ -179,7 +185,7 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
 					this.expectedChallengeResponseString));
 		}
 
-		ctx.getPipeline().replace("decoder", "ws-decoder", new WebSocket08FrameDecoder(false));
+		ctx.getPipeline().replace("decoder", "ws-decoder", new WebSocket08FrameDecoder(false, this.allowExtensions));
 
 		this.setOpenningHandshakeCompleted(true);
 		return;

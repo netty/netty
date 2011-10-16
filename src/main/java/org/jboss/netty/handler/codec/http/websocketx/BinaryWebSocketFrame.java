@@ -25,11 +25,6 @@ import org.jboss.netty.buffer.ChannelBuffers;
  */
 public class BinaryWebSocketFrame extends WebSocketFrame {
 
-	@Override
-	public WebSocketFrameType getType() {
-		return WebSocketFrameType.BINARY;
-	}
-
 	/**
 	 * Creates a new empty binary frame.
 	 */
@@ -38,7 +33,8 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
 	}
 
 	/**
-	 * Creates a new frame with the specified binary data.
+	 * Creates a new binary frame with the specified binary data. The final
+	 * fragment flag is set to true.
 	 * 
 	 * @param binaryData
 	 *            the content of the frame.
@@ -47,9 +43,26 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
 		this.setBinaryData(binaryData);
 	}
 
+	/**
+	 * Creates a new binary frame with the specified binary data and the final
+	 * fragment flag.
+	 * 
+	 * @param finalFragment
+	 *            flag indicating if this frame is the final fragment
+	 * @param rsv
+	 *            reserved bits used for protocol extensions
+	 * @param binaryData
+	 *            the content of the frame.
+	 */
+	public BinaryWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
+		this.setFinalFragment(finalFragment);
+		this.setRsv(rsv);
+		this.setBinaryData(binaryData);
+	}
+
 	@Override
 	public String toString() {
-		return getClass().getSimpleName() + "(type: " + getType() + ", " + "data: " + getBinaryData() + ')';
+		return getClass().getSimpleName() + "(data: " + getBinaryData() + ')';
 	}
 
 }

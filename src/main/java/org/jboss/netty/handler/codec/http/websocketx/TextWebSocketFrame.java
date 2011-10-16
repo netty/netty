@@ -27,11 +27,6 @@ import org.jboss.netty.util.CharsetUtil;
  */
 public class TextWebSocketFrame extends WebSocketFrame {
 
-	@Override
-	public WebSocketFrameType getType() {
-		return WebSocketFrameType.TEXT;
-	}
-
 	/**
 	 * Creates a new empty text frame.
 	 */
@@ -40,22 +35,66 @@ public class TextWebSocketFrame extends WebSocketFrame {
 	}
 
 	/**
-	 * Creates a new text frame with the specified text string.
+	 * Creates a new text frame with the specified text string. The final
+	 * fragment flag is set to true.
 	 * 
 	 * @param text
 	 *            String to put in the frame
 	 */
 	public TextWebSocketFrame(String text) {
-		this.setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
+		if (text == null || text.isEmpty()) {
+			this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+		} else {
+			this.setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
+		}
 	}
 
 	/**
-	 * Creates a new frame with the specified binary data.
+	 * Creates a new text frame with the specified binary data. The final
+	 * fragment flag is set to true.
 	 * 
 	 * @param binaryData
 	 *            the content of the frame. Must be UTF-8 encoded
 	 */
 	public TextWebSocketFrame(ChannelBuffer binaryData) {
+		this.setBinaryData(binaryData);
+	}
+
+	/**
+	 * Creates a new text frame with the specified text string. The final
+	 * fragment flag is set to true.
+	 * 
+	 * @param finalFragment
+	 *            flag indicating if this frame is the final fragment
+	 * @param rsv
+	 *            reserved bits used for protocol extensions
+	 * @param text
+	 *            String to put in the frame
+	 */
+	public TextWebSocketFrame(boolean finalFragment, int rsv, String text) {
+		this.setFinalFragment(finalFragment);
+		this.setRsv(rsv);
+		if (text == null || text.isEmpty()) {
+			this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+		} else {
+			this.setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
+		}
+	}
+
+	/**
+	 * Creates a new text frame with the specified binary data. The final
+	 * fragment flag is set to true.
+	 * 
+	 * @param finalFragment
+	 *            flag indicating if this frame is the final fragment
+	 * @param rsv
+	 *            reserved bits used for protocol extensions
+	 * @param binaryData
+	 *            the content of the frame. Must be UTF-8 encoded
+	 */
+	public TextWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
+		this.setFinalFragment(finalFragment);
+		this.setRsv(rsv);
 		this.setBinaryData(binaryData);
 	}
 

@@ -39,14 +39,15 @@
 package org.jboss.netty.handler.codec.http.websocketx;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.frame.CorruptedFrameException;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.jboss.netty.logging.InternalLogger;
+import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * Decodes a web socket frame from wire protocol version 8 format. This code was
@@ -57,6 +58,8 @@ import java.util.List;
  */
 public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDecoder.State> {
 
+	private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocket08FrameDecoder.class);
+
 	private static final byte OPCODE_CONT = 0x0;
 	private static final byte OPCODE_TEXT = 0x1;
 	private static final byte OPCODE_BINARY = 0x2;
@@ -64,20 +67,22 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 	private static final byte OPCODE_PING = 0x9;
 	private static final byte OPCODE_PONG = 0xA;
 
-	public static final int MAX_LENGTH = 16384;
+	private int fragmentedFramesCount = 0;
 
-	private Byte fragmentOpcode;
-	private Byte opcode = null;
-	private int currentFrameLength;
+	private boolean frameFinalFlag;
+	private int frameRsv;
+	private int frameOpcode;
+	private long framePayloadLength;
+	private ChannelBuffer framePayload = null;
+	private int framePayloadBytesRead = 0;
 	private ChannelBuffer maskingKey;
-	private int currentPayloadBytesRead = 0;
-	private ChannelBuffer currentPayload = null;
-	private List<ChannelBuffer> frames = new ArrayList<ChannelBuffer>();
+
+	private boolean allowExtensions = false;
 	private boolean maskedPayload = false;
 	private boolean receivedClosingHandshake = false;
 
 	public static enum State {
-		FRAME_START, PARSING_LENGTH, MASKING_KEY, PARSING_LENGTH_2, PARSING_LENGTH_3, PAYLOAD
+		FRAME_START, MASKING_KEY, PAYLOAD, CORRUPT
 	}
 
 	/**
@@ -86,10 +91,13 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 	 * @param maskedPayload
 	 *            Web socket servers must set this to true processed incoming
 	 *            masked payload. Client implementations must set this to false.
+	 * @param allowExtensions
+	 *            Flag to allow reserved extension bits to be used or not 
 	 */
-	public WebSocket08FrameDecoder(boolean maskedPayload) {
+	public WebSocket08FrameDecoder(boolean maskedPayload, boolean allowExtensions) {
 		super(State.FRAME_START);
 		this.maskedPayload = maskedPayload;
+		this.allowExtensions = allowExtensions;
 	}
 
 	@Override
@@ -104,76 +112,99 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
 		switch (state) {
 		case FRAME_START:
-			currentPayloadBytesRead = 0;
-			currentFrameLength = -1;
-			currentPayload = null;
+			framePayloadBytesRead = 0;
+			framePayloadLength = -1;
+			framePayload = null;
 
+			// FIN, RSV, OPCODE
 			byte b = buffer.readByte();
-			byte fin = (byte) (b & 0x80);
-			byte reserved = (byte) (b & 0x70);
-			byte opcode = (byte) (b & 0x0F);
+			frameFinalFlag = (b & 0x80) != 0;
+			frameRsv = (b & 0x70) >> 4;
+			frameOpcode = (b & 0x0F);
 
-			if (reserved != 0) {
-				throw new CorruptedFrameException("Reserved bits set: " + bits(reserved));
-			}
-			if (!isOpcode(opcode)) {
-				throw new CorruptedFrameException("Invalid opcode " + hex(opcode));
+			logger.debug("Decoding WebSocket Frame opCode=" + frameOpcode);
+			
+			// MASK, PAYLOAD LEN 1
+			b = buffer.readByte();
+			boolean frameMasked = (b & 0x80) != 0;
+			int framePayloadLen1 = (b & 0x7F);
+
+			if (frameRsv != 0 && !this.allowExtensions) {
+				protocolViolation(channel, "RSV != 0 and no extension negotiated, RSV:" + frameRsv);
+				return null;
 			}
 
-			if (fin == 0) {
-				if (fragmentOpcode == null) {
-					if (!isDataOpcode(opcode)) {
-						throw new CorruptedFrameException("Fragmented frame with invalid opcode " + hex(opcode));
-					}
-					fragmentOpcode = opcode;
-				} else if (opcode != OPCODE_CONT) {
-					throw new CorruptedFrameException("Continuation frame with invalid opcode " + hex(opcode));
+			if (this.maskedPayload && !frameMasked) {
+				protocolViolation(channel, "unmasked client to server frame");
+				return null;
+			}
+			if (frameOpcode > 7) { // control frame (have MSB in opcode set)
+
+				// control frames MUST NOT be fragmented
+				if (!frameFinalFlag) {
+					protocolViolation(channel, "fragmented control frame");
+					return null;
+				}
+
+				// control frames MUST have payload 125 octets or less
+				if (framePayloadLen1 > 125) {
+					protocolViolation(channel, "control frame with payload length > 125 octets");
+					return null;
+				}
+
+				// check for reserved control frame opcodes
+				if (!(frameOpcode == OPCODE_CLOSE || frameOpcode == OPCODE_PING || frameOpcode == OPCODE_PONG)) {
+					protocolViolation(channel, "control frame using reserved opcode " + frameOpcode);
+					return null;
+				}
+
+				// close frame : if there is a body, the first two bytes of the
+				// body MUST be a 2-byte
+				// unsigned integer (in network byte order) representing a
+				// status code
+				if (frameOpcode == 8 && framePayloadLen1 == 1) {
+					protocolViolation(channel, "received close control frame with payload len 1");
+					return null;
+				}
+			} else { // data frame
+				// check for reserved data frame opcodes
+				if (!(frameOpcode == OPCODE_CONT || frameOpcode == OPCODE_TEXT || frameOpcode == OPCODE_BINARY)) {
+					protocolViolation(channel, "data frame using reserved opcode " + frameOpcode);
+					return null;
+				}
+
+				// check opcode vs message fragmentation state 1/2
+				if (fragmentedFramesCount == 0 && frameOpcode == OPCODE_CONT) {
+					protocolViolation(channel, "received continuation data frame outside fragmented message");
+					return null;
+				}
+
+				// check opcode vs message fragmentation state 2/2
+				if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT && frameOpcode != OPCODE_PING) {
+					protocolViolation(channel, "received non-continuation data frame while inside fragmented message");
+					return null;
+				}
+			}
+
+			if (framePayloadLen1 == 126) {
+				framePayloadLength = buffer.readUnsignedShort();
+				if (framePayloadLength < 126) {
+					protocolViolation(channel, "invalid data frame length (not using minimal length encoding)");
+					return null;
+				}
+			} else if (framePayloadLen1 == 127) {
+				framePayloadLength = buffer.readLong();
+				// TODO: check if it's bigger than 0x7FFFFFFFFFFFFFFF, Maybe
+				// just check if it's negative?
+
+				if (framePayloadLength < 65536) {
+					protocolViolation(channel, "invalid data frame length (not using minimal length encoding)");
+					return null;
 				}
 			} else {
-				if (fragmentOpcode != null) {
-					if (!isControlOpcode(opcode) && opcode != OPCODE_CONT) {
-						throw new CorruptedFrameException("Final frame with invalid opcode " + hex(opcode));
-					}
-				} else if (opcode == OPCODE_CONT) {
-					throw new CorruptedFrameException("Final frame with invalid opcode " + hex(opcode));
-				}
-				this.opcode = opcode;
+				framePayloadLength = framePayloadLen1;
 			}
-
-			checkpoint(State.PARSING_LENGTH);
-		case PARSING_LENGTH:
-			b = buffer.readByte();
-			int length = (byte) (b);
-
-			if (this.maskedPayload) {
-				byte masked = (byte) (b & 0x80);
-				if (masked == 0) {
-					throw new CorruptedFrameException("Unmasked frame received");
-				}
-				length = (byte) (b & 0x7F);
-			}
-
-			if (length < 126) {
-				currentFrameLength = length;
-				if (currentFrameLength == 0) {
-					checkpoint(State.PAYLOAD);
-				} else {
-					checkpoint(this.maskedPayload ? State.MASKING_KEY : State.PAYLOAD);
-				}
-			} else if (length == 126) {
-				checkpoint(State.PARSING_LENGTH_2);
-			} else if (length == 127) {
-				checkpoint(State.PARSING_LENGTH_3);
-			}
-			return null;
-		case PARSING_LENGTH_2:
-			currentFrameLength = buffer.readShort();
-			checkpoint(this.maskedPayload ? State.MASKING_KEY : State.PAYLOAD);
-			return null;
-		case PARSING_LENGTH_3:
-			currentFrameLength = buffer.readInt();
-			checkpoint(this.maskedPayload ? State.MASKING_KEY : State.PAYLOAD);
-			return null;
+			checkpoint(State.MASKING_KEY);
 		case MASKING_KEY:
 			maskingKey = buffer.readBytes(4);
 			checkpoint(State.PAYLOAD);
@@ -182,28 +213,28 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 			// Some times, the payload may not be delivered in 1 nice packet
 			// We need to accumulate the data until we have it all
 			int rbytes = actualReadableBytes();
-			ChannelBuffer payload = null;
+			ChannelBuffer payloadBuffer = null;
 
-			int willHaveReadByteCount = currentPayloadBytesRead + rbytes;
-			if (willHaveReadByteCount == currentFrameLength) {
+			int willHaveReadByteCount = framePayloadBytesRead + rbytes;
+			if (willHaveReadByteCount == framePayloadLength) {
 				// We have all our content so proceed to process
-				payload = buffer.readBytes(rbytes);
-			} else if (willHaveReadByteCount < currentFrameLength) {
+				payloadBuffer = buffer.readBytes(rbytes);
+			} else if (willHaveReadByteCount < framePayloadLength) {
 				// We don't have all our content so accumulate payload.
 				// Returning null means we will get called back
-				payload = buffer.readBytes(rbytes);
-				if (currentPayload == null) {
-					currentPayload = channel.getConfig().getBufferFactory().getBuffer(currentFrameLength);
+				payloadBuffer = buffer.readBytes(rbytes);
+				if (framePayload == null) {
+					framePayload = channel.getConfig().getBufferFactory().getBuffer(toFrameLength(framePayloadLength));
 				}
-				currentPayload.writeBytes(payload);
-				currentPayloadBytesRead = currentPayloadBytesRead + rbytes;
+				framePayload.writeBytes(payloadBuffer);
+				framePayloadBytesRead = framePayloadBytesRead + rbytes;
 
 				// Return null to wait for more bytes to arrive
 				return null;
-			} else if (willHaveReadByteCount > currentFrameLength) {
+			} else if (willHaveReadByteCount > framePayloadLength) {
 				// We have more than what we need so read up to the end of frame
 				// Leave the remainder in the buffer for next frame
-				payload = buffer.readBytes(currentFrameLength - currentPayloadBytesRead);
+				payloadBuffer = buffer.readBytes(toFrameLength(framePayloadLength - framePayloadBytesRead));
 			}
 
 			// Now we have all the data, the next checkpoint must be the next
@@ -211,53 +242,46 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 			checkpoint(State.FRAME_START);
 
 			// Take the data that we have in this packet
-			if (currentPayload == null) {
-				currentPayload = payload;
+			if (framePayload == null) {
+				framePayload = payloadBuffer;
 			} else {
-				currentPayload.writeBytes(payload);
+				framePayload.writeBytes(payloadBuffer);
 			}
 
 			// Unmask data if needed
 			if (this.maskedPayload) {
-				unmask(currentPayload);
+				unmask(framePayload);
 			}
 
-			// Accumulate fragments
-			if (this.opcode == OPCODE_CONT) {
-				this.opcode = fragmentOpcode;
-				frames.add(currentPayload);
-
-				int totalBytes = 0;
-				for (ChannelBuffer channelBuffer : frames) {
-					totalBytes += channelBuffer.readableBytes();
-				}
-
-				currentPayload = channel.getConfig().getBufferFactory().getBuffer(totalBytes);
-				for (ChannelBuffer channelBuffer : frames) {
-					currentPayload.writeBytes(channelBuffer);
-				}
-
-				this.fragmentOpcode = null;
-				frames.clear();
-			}
-
-			if (this.opcode == OPCODE_TEXT) {
-				if (currentPayload.readableBytes() > MAX_LENGTH) {
-					throw new TooLongFrameException();
-				}
-				return new TextWebSocketFrame(currentPayload);
-			} else if (this.opcode == OPCODE_BINARY) {
-				return new BinaryWebSocketFrame(currentPayload);
-			} else if (this.opcode == OPCODE_PING) {
-				return new PingWebSocketFrame(currentPayload);
-			} else if (this.opcode == OPCODE_PONG) {
-				return new PongWebSocketFrame(currentPayload);
-			} else if (this.opcode == OPCODE_CLOSE) {
-				this.receivedClosingHandshake = true;
-				return new CloseWebSocketFrame();
+			// Count the number of fragments
+			if (frameFinalFlag) {
+				fragmentedFramesCount = 0;
 			} else {
-				throw new UnsupportedOperationException("Cannot decode opcode: " + this.opcode);
+				fragmentedFramesCount++;
 			}
+
+			// Return the frame
+			if (frameOpcode == OPCODE_TEXT) {
+				return new TextWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
+			} else if (frameOpcode == OPCODE_BINARY) {
+				return new BinaryWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
+			} else if (frameOpcode == OPCODE_PING) {
+				return new PingWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
+			} else if (frameOpcode == OPCODE_PONG) {
+				return new PongWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
+			} else if (frameOpcode == OPCODE_CONT) {
+				return new ContinuationWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
+			} else if (frameOpcode == OPCODE_CLOSE) {
+				this.receivedClosingHandshake = true;
+				return new CloseWebSocketFrame(frameFinalFlag, frameRsv);
+			} else {
+				throw new UnsupportedOperationException("Cannot decode web socket frame with opcode: " + frameOpcode);
+			}
+		case CORRUPT:
+			// If we don't keep reading Netty will throw an exception saying
+			// we can't return null if no bytes read and state not changed.
+			buffer.readByte();
+			return null;
 		default:
 			throw new Error("Shouldn't reach here.");
 		}
@@ -270,24 +294,20 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 		}
 	}
 
-	private String bits(byte b) {
-		return Integer.toBinaryString(b).substring(24);
+	private void protocolViolation(Channel channel, String reason) throws CorruptedFrameException {
+		checkpoint(State.CORRUPT);
+		if (channel.isConnected()) {
+			channel.write(ChannelBuffers.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+			channel.close().awaitUninterruptibly();
+		}
+		throw new CorruptedFrameException(reason);
 	}
 
-	private String hex(byte b) {
-		return Integer.toHexString(b);
-	}
-
-	private boolean isOpcode(int opcode) {
-		return opcode == OPCODE_CONT || opcode == OPCODE_TEXT || opcode == OPCODE_BINARY || opcode == OPCODE_CLOSE
-				|| opcode == OPCODE_PING || opcode == OPCODE_PONG;
-	}
-
-	private boolean isControlOpcode(int opcode) {
-		return opcode == OPCODE_CLOSE || opcode == OPCODE_PING || opcode == OPCODE_PONG;
-	}
-
-	private boolean isDataOpcode(int opcode) {
-		return opcode == OPCODE_TEXT || opcode == OPCODE_BINARY;
+	private int toFrameLength(long l) throws TooLongFrameException {
+		if (l > Integer.MAX_VALUE) {
+			throw new TooLongFrameException("Length:" + l);
+		} else {
+			return (int) l;
+		}
 	}
 }

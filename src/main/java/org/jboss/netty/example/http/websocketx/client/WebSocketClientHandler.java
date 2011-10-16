@@ -68,7 +68,7 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler impleme
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         channel = e.getChannel();
-        this.handshaker = new WebSocketClientHandshakerFactory().newHandshaker(url, version, null);
+        this.handshaker = new WebSocketClientHandshakerFactory().newHandshaker(url, version, null, false);
         handshaker.beginOpeningHandshake(ctx, channel);
     }
 

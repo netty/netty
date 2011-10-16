@@ -34,6 +34,8 @@ public class WebSocketServerHandshakerFactory {
 
 	private String subProtocols;
 
+	private boolean allowExtensions = false;
+
 	/**
 	 * Constructor specifying the destination web socket location
 	 * 
@@ -44,10 +46,14 @@ public class WebSocketServerHandshakerFactory {
 	 * @param subProtocols
 	 *            CSV of supported protocols. Null if sub protocols not
 	 *            supported.
+	 * @param allowExtensions
+	 *            Allow extensions to be used in the reserved bits of the web
+	 *            socket frame
 	 */
-	public WebSocketServerHandshakerFactory(String webSocketURL, String subProtocols) {
+	public WebSocketServerHandshakerFactory(String webSocketURL, String subProtocols, boolean allowExtensions) {
 		this.webSocketURL = webSocketURL;
 		this.subProtocols = subProtocols;
+		this.allowExtensions = allowExtensions;
 		return;
 	}
 
@@ -74,7 +80,7 @@ public class WebSocketServerHandshakerFactory {
 			if (version.equals("8")) {
 				// Version 8 of the wire protocol - assume version 10 of the
 				// specification.
-				return new WebSocketServerHandshaker10(webSocketURL, subProtocols);
+				return new WebSocketServerHandshaker10(webSocketURL, subProtocols, this.allowExtensions);
 			} else {
 				return null;
 			}

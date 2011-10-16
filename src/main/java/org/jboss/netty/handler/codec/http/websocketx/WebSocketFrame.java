@@ -25,14 +25,20 @@ import org.jboss.netty.buffer.ChannelBuffer;
 public abstract class WebSocketFrame {
 
 	/**
+	 * Flag to indicate if this frame is the final fragment in a message. The
+	 * first fragment (frame) may also be the final fragment.
+	 */
+	private boolean finalFragment = true;
+
+	/**
+	 *  RSV1, RSV2, RSV3 used for extensions 
+	 */
+	private int rsv = 0;
+	
+	/**
 	 * Contents of this frame
 	 */
 	private ChannelBuffer binaryData;
-
-	/**
-	 * Returns the type of this frame.
-	 */
-	public abstract WebSocketFrameType getType();
 
 	/**
 	 * Returns binary data
@@ -47,5 +53,30 @@ public abstract class WebSocketFrame {
 	public void setBinaryData(ChannelBuffer binaryData) {
 		this.binaryData = binaryData;
 	}
+
+	/**
+	 * Flag to indicate if this frame is the final fragment in a message. The
+	 * first fragment (frame) may also be the final fragment.
+	 */
+	public boolean isFinalFragment() {
+		return finalFragment;
+	}
+
+	public void setFinalFragment(boolean finalFragment) {
+		this.finalFragment = finalFragment;
+	}
+
+	/**
+	 * Bits used for extensions to the standard. 
+	 */
+	public int getRsv() {
+		return rsv;
+	}
+
+	public void setRsv(int rsv) {
+		this.rsv = rsv;
+	}
+	
+	
 
 }

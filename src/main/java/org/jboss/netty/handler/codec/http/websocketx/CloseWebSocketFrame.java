@@ -24,15 +24,28 @@ import org.jboss.netty.buffer.ChannelBuffers;
  */
 public class CloseWebSocketFrame extends WebSocketFrame {
 
-	@Override
-	public WebSocketFrameType getType() {
-		return WebSocketFrameType.CLOSE;
-	}
-
 	/**
-	 * Creates a new empty binary frame.
+	 * Creates a new empty close frame.
 	 */
 	public CloseWebSocketFrame() {
 		this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+	}
+
+	/**
+	 * Creates a new close frame
+	 * 
+	 * @param finalFragment
+	 *            flag indicating if this frame is the final fragment
+	 * @param rsv
+	 *            reserved bits used for protocol extensions
+	 */
+	public CloseWebSocketFrame(boolean finalFragment, int rsv) {
+		this.setFinalFragment(finalFragment);
+		this.setRsv(rsv);
+	}
+	
+	@Override
+	public String toString() {
+		return getClass().getSimpleName();
 	}
 }
