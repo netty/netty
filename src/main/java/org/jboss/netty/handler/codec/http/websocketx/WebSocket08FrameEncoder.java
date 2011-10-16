@@ -110,9 +110,10 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
 			} else {
 				throw new UnsupportedOperationException("Cannot encode frame of type: " + frame.getClass().getName());
 			}
-			logger.debug("Encoding WebSocket Frame opCode=" + opcode);
 
 			int length = data.readableBytes();
+
+			logger.debug("Encoding WebSocket Frame opCode=" + opcode + " length=" + length);
 
 			int b0 = 0;
 			if (frame.isFinalFragment()) {

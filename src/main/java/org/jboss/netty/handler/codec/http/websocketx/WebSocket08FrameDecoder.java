@@ -67,6 +67,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 	private static final byte OPCODE_PING = 0x9;
 	private static final byte OPCODE_PONG = 0xA;
 
+	private UTF8Output fragmentedFramesText = null;
 	private int fragmentedFramesCount = 0;
 
 	private boolean frameFinalFlag;
@@ -92,7 +93,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 	 *            Web socket servers must set this to true processed incoming
 	 *            masked payload. Client implementations must set this to false.
 	 * @param allowExtensions
-	 *            Flag to allow reserved extension bits to be used or not 
+	 *            Flag to allow reserved extension bits to be used or not
 	 */
 	public WebSocket08FrameDecoder(boolean maskedPayload, boolean allowExtensions) {
 		super(State.FRAME_START);
@@ -123,7 +124,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 			frameOpcode = (b & 0x0F);
 
 			logger.debug("Decoding WebSocket Frame opCode=" + frameOpcode);
-			
+
 			// MASK, PAYLOAD LEN 1
 			b = buffer.readByte();
 			boolean frameMasked = (b & 0x80) != 0;
@@ -204,11 +205,12 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 			} else {
 				framePayloadLength = framePayloadLen1;
 			}
+			
+			logger.debug("Frame length =" + framePayloadLength);
 			checkpoint(State.MASKING_KEY);
 		case MASKING_KEY:
 			maskingKey = buffer.readBytes(4);
 			checkpoint(State.PAYLOAD);
-			return null;
 		case PAYLOAD:
 			// Some times, the payload may not be delivered in 1 nice packet
 			// We need to accumulate the data until we have it all
@@ -253,10 +255,43 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 				unmask(framePayload);
 			}
 
-			// Count the number of fragments
+			// Processing for fragmented messages
+			String aggregatedText = null;
 			if (frameFinalFlag) {
-				fragmentedFramesCount = 0;
+				// Final frame of the sequence. Apparently ping frames are
+				// allowed in the middle of a fragmented message
+				if (frameOpcode != OPCODE_PING) {
+					fragmentedFramesCount = 0;
+
+					// Check text for UTF8 correctness
+					if (frameOpcode == OPCODE_TEXT || fragmentedFramesText != null) {
+						checkUTF8String(channel, framePayload.array());
+					}
+
+					// If final frame in a fragmented message, then set
+					// aggregated text so it can be returned
+					if (fragmentedFramesText != null) {
+						aggregatedText = fragmentedFramesText.toString();
+						fragmentedFramesText = null;
+					}
+				}
 			} else {
+				// Not final frame so we can expect more frames in the
+				// fragmented sequence
+				if (fragmentedFramesCount == 0) {
+					// First text or binary frame for a fragmented set
+					fragmentedFramesText = null;
+					if (frameOpcode == OPCODE_TEXT) {
+						checkUTF8String(channel, framePayload.array());
+					}
+				} else {
+					// Subsequent frames - only check if init frame is text
+					if (fragmentedFramesText != null) {
+						checkUTF8String(channel, framePayload.array());
+					}
+				}
+
+				// Increment counter
 				fragmentedFramesCount++;
 			}
 
@@ -270,7 +305,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 			} else if (frameOpcode == OPCODE_PONG) {
 				return new PongWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
 			} else if (frameOpcode == OPCODE_CONT) {
-				return new ContinuationWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
+				return new ContinuationWebSocketFrame(frameFinalFlag, frameRsv, framePayload, aggregatedText);
 			} else if (frameOpcode == OPCODE_CLOSE) {
 				this.receivedClosingHandshake = true;
 				return new CloseWebSocketFrame(frameFinalFlag, frameRsv);
@@ -308,6 +343,25 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 			throw new TooLongFrameException("Length:" + l);
 		} else {
 			return (int) l;
+		}
+	}
+
+	private void checkUTF8String(Channel channel, byte[] bytes) throws CorruptedFrameException {
+		try {
+			
+			StringBuilder sb = new StringBuilder("UTF8 " + bytes.length + " bytes: ");
+			for (byte b : bytes) {
+				sb.append(Integer.toHexString(b)).append(" ");
+			}
+			logger.debug(sb.toString());
+			
+			if (fragmentedFramesText == null) {
+				fragmentedFramesText = new UTF8Output(bytes);
+			} else {
+				fragmentedFramesText.write(bytes);
+			}
+		} catch (UTF8Exception ex) {
+			protocolViolation(channel, "invalid UTF-8 bytes");
 		}
 	}
 }
