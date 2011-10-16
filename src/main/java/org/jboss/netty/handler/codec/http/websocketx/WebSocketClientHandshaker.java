@@ -19,9 +19,13 @@ import java.net.URI;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.handler.codec.base64.Base64;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.util.CharsetUtil;
 
 /**
  * Base class for web socket client handshake implementations
@@ -162,6 +166,18 @@ public abstract class WebSocketClientHandshaker {
 		}
 	}
 
+	/**
+	 * Base 64 encoding
+	 * 
+	 * @param bytes
+	 *            Bytes to encode
+	 * @return encoded string
+	 */
+	protected String base64Encode(byte[] bytes) {
+		ChannelBuffer hashed = ChannelBuffers.wrappedBuffer(bytes);
+		return Base64.encode(hashed).toString(CharsetUtil.UTF_8);
+	}
+	
 	/**
 	 * Creates some random bytes
 	 * 

@@ -109,11 +109,11 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
 
 		// Get 16 bit nonce and base 64 encode it
 		byte[] nonce = createRandomBytes(16);
-		String key = Base64.encode(nonce);
+		String key = base64Encode(nonce);
 
 		String acceptSeed = key + MAGIC_GUID;
 		byte[] sha1 = sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
-		this.expectedChallengeResponseString = Base64.encode(sha1);
+		this.expectedChallengeResponseString = base64Encode(sha1);
 
 		if (logger.isDebugEnabled()) {
 			logger.debug(String.format("HyBi10 Client Handshake key: %s. Expected response: %s.", key,

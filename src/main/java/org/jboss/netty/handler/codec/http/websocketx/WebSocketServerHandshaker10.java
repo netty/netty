@@ -125,7 +125,7 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
 		}
 		String acceptSeed = key + WEBSOCKET_08_ACCEPT_GUID;
 		byte[] sha1 = sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
-		String accept = Base64.encode(sha1);
+		String accept = base64Encode(sha1);
 
 		if (logger.isDebugEnabled()) {
 			logger.debug(String.format("HyBi10 Server Handshake key: %s. Response: %s.", key, accept));

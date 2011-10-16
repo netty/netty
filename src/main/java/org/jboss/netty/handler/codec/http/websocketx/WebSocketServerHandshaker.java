@@ -18,8 +18,12 @@ package org.jboss.netty.handler.codec.http.websocketx;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.handler.codec.base64.Base64;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.util.CharsetUtil;
 
 /**
  * Base class for server side web socket opening and closing handshakes
@@ -144,6 +148,18 @@ public abstract class WebSocketServerHandshaker {
 		} catch (NoSuchAlgorithmException e) {
 			throw new InternalError("SHA-1 not supported on this platform");
 		}
+	}
+
+	/**
+	 * Base 64 encoding
+	 * 
+	 * @param bytes
+	 *            Bytes to encode
+	 * @return encoded string
+	 */
+	protected String base64Encode(byte[] bytes) {
+		ChannelBuffer hashed = ChannelBuffers.wrappedBuffer(bytes);
+		return Base64.encode(hashed).toString(CharsetUtil.UTF_8);
 	}
 
 	/**
