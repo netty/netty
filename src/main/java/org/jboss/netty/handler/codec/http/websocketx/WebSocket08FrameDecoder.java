@@ -205,7 +205,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 			} else {
 				framePayloadLength = framePayloadLen1;
 			}
-			
+
 			logger.debug("Frame length =" + framePayloadLength);
 			checkpoint(State.MASKING_KEY);
 		case MASKING_KEY:
@@ -265,13 +265,13 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
 					// Check text for UTF8 correctness
 					if (frameOpcode == OPCODE_TEXT || fragmentedFramesText != null) {
+						// Check UTF-8 correctness for this payload
 						checkUTF8String(channel, framePayload.array());
-					}
 
-					// If final frame in a fragmented message, then set
-					// aggregated text so it can be returned
-					if (fragmentedFramesText != null) {
+						// This does a second check to make sure UTF-8
+						// correctness for entire text message
 						aggregatedText = fragmentedFramesText.toString();
+
 						fragmentedFramesText = null;
 					}
 				}
@@ -348,13 +348,13 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
 	private void checkUTF8String(Channel channel, byte[] bytes) throws CorruptedFrameException {
 		try {
-			
+
 			StringBuilder sb = new StringBuilder("UTF8 " + bytes.length + " bytes: ");
 			for (byte b : bytes) {
 				sb.append(Integer.toHexString(b)).append(" ");
 			}
 			logger.debug(sb.toString());
-			
+
 			if (fragmentedFramesText == null) {
 				fragmentedFramesText = new UTF8Output(bytes);
 			} else {
