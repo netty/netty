@@ -16,31 +16,19 @@
 
 package org.jboss.netty.example.http.websocketx.client;
 
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.concurrent.Executors;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.group.ChannelGroup;
-import org.jboss.netty.channel.group.ChannelGroupFuture;
-import org.jboss.netty.channel.group.DefaultChannelGroup;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.example.http.websocketx.server.WebSocketServerPipelineFactory;
 import org.jboss.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketSpecificationVersion;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
  * A HTTP client demo app
@@ -51,41 +39,14 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  */
 public class App {
 
-	private static final ChannelGroup allChannels = new DefaultChannelGroup("App");
-	private static ChannelFactory channelFactory = null;
-
 	public static void main(String[] args) throws Exception {
 		ConsoleHandler ch = new ConsoleHandler();
 		ch.setLevel(Level.FINE);
 		Logger.getLogger("").addHandler(ch);
 		Logger.getLogger("").setLevel(Level.FINE);
 
-		startServer();
-
 		runClient();
-
-		stopServer();
-	}
-
-	/**
-	 * Starts our web socket server
-	 */
-	public static void startServer() {
-		// Configure the server.
-		channelFactory = new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
-				Executors.newCachedThreadPool());
-
-		ServerBootstrap bootstrap = new ServerBootstrap(channelFactory);
-
-		// Set up the event pipeline factory.
-		bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory());
-
-		// Bind and start to accept incoming connections.
-		Channel channel = bootstrap.bind(new InetSocketAddress(8080));
-		allChannels.add(channel);
-
-		System.out
-				.println("Web Socket Server started on 8080. Open your browser and navigate to http://localhost:8080/");
+		System.exit(0);
 	}
 
 	/**
@@ -104,44 +65,35 @@ public class App {
 				WebSocketSpecificationVersion.V10, callbackHandler);
 
 		// Connect
-		client.connect().awaitUninterruptibly();
+    	System.out.println("WebSocket Client connecting");
+    	client.connect().awaitUninterruptibly();
 		Thread.sleep(200);
 
 		// Send 10 messages and wait for responses
+    	System.out.println("WebSocket Client sending message");
 		for (int i = 0; i < 10; i++) {
 			client.send(new TextWebSocketFrame("Message #" + i));
 		}
 		Thread.sleep(1000);
 
-		// Close - this throws ClosedChannelException. Not sure why. Just as
-		// easy to just disconnect.
+		// Ping
+    	System.out.println("WebSocket Client sending ping");
 		client.send(new PingWebSocketFrame(ChannelBuffers.copiedBuffer(new byte[] { 1, 2, 3, 4, 5, 6 })));
+		Thread.sleep(1000);
+
+		// Close
+    	System.out.println("WebSocket Client sending close");
 		client.send(new CloseWebSocketFrame());
-		Thread.sleep(200);
+		Thread.sleep(1000);
 
 		// Disconnect
 		client.disconnect();
 	}
 
 	/**
-	 * Stops the server
-	 */
-	public static void stopServer() {
-		ChannelGroupFuture future = allChannels.close();
-		future.awaitUninterruptibly();
-
-		channelFactory.releaseExternalResources();
-		channelFactory = null;
-
-	}
-
-	/**
 	 * Our web socket callback handler for this app
 	 */
 	public static class MyCallbackHandler implements WebSocketCallback {
-
-		private static final InternalLogger logger = InternalLoggerFactory.getInstance(MyCallbackHandler.class);
-
 		public boolean connected = false;
 		public ArrayList<String> messagesReceived = new ArrayList<String>();
 
@@ -151,13 +103,13 @@ public class App {
 
 		@Override
 		public void onConnect(WebSocketClient client) {
-			logger.debug("WebSocket Client connected!");
+			System.out.println("WebSocket Client connected!");
 			connected = true;
 		}
 
 		@Override
 		public void onDisconnect(WebSocketClient client) {
-			logger.debug("WebSocket Client disconnected!");
+			System.out.println("WebSocket Client disconnected!");
 			connected = false;
 		}
 
@@ -165,18 +117,18 @@ public class App {
 		public void onMessage(WebSocketClient client, WebSocketFrame frame) {
 			if (frame instanceof TextWebSocketFrame) {
 				TextWebSocketFrame textFrame = (TextWebSocketFrame) frame;
-				logger.debug("WebSocket Client Received Message:" + textFrame.getText());
+				System.out.println("WebSocket Client received message:" + textFrame.getText());
 				messagesReceived.add(textFrame.getText());
 			} else if (frame instanceof PongWebSocketFrame) {
-				logger.debug("WebSocket Client ping/pong");
+				System.out.println("WebSocket Client received pong");
 			} else if (frame instanceof CloseWebSocketFrame) {
-				logger.debug("WebSocket Client closing");
+				System.out.println("WebSocket Client received closing");
 			}
 		}
 
 		@Override
 		public void onError(Throwable t) {
-			logger.error("WebSocket Client error", t);
+			System.out.println("WebSocket Client error " + t.toString());
 		}
 
 	}

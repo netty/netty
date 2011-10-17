@@ -93,6 +93,9 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
 		if (msg instanceof WebSocketFrame) {
 			WebSocketFrame frame = (WebSocketFrame) msg;
 			ChannelBuffer data = frame.getBinaryData();
+			if (data == null) {
+				data = ChannelBuffers.EMPTY_BUFFER;
+			}
 
 			byte opcode;
 			if (frame instanceof TextWebSocketFrame) {
@@ -149,7 +152,7 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
 				header.writeLong(length);
 			}
 
-			// Write payload
+			// Write payload		
 			if (this.maskPayload) {
 				Integer random = (int) (Math.random() * Integer.MAX_VALUE);
 				mask = ByteBuffer.allocate(4).putInt(random).array();
@@ -164,8 +167,7 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
 			} else {
 				body = data;
 			}
-			return ChannelBuffers.wrappedBuffer(header, body);
-
+			return ChannelBuffers.wrappedBuffer(header, body);			
 		}
 
 		// If not websocket, then just return the message

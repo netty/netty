@@ -206,10 +206,12 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 				framePayloadLength = framePayloadLen1;
 			}
 
-			logger.debug("Frame length =" + framePayloadLength);
+			//logger.debug("Frame length=" + framePayloadLength);
 			checkpoint(State.MASKING_KEY);
 		case MASKING_KEY:
-			maskingKey = buffer.readBytes(4);
+			if (this.maskedPayload){
+				maskingKey = buffer.readBytes(4);
+			}
 			checkpoint(State.PAYLOAD);
 		case PAYLOAD:
 			// Some times, the payload may not be delivered in 1 nice packet
@@ -218,6 +220,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 			ChannelBuffer payloadBuffer = null;
 
 			int willHaveReadByteCount = framePayloadBytesRead + rbytes;
+			//logger.debug("Frame rbytes=" + rbytes + " willHaveReadByteCount=" + willHaveReadByteCount + " framePayloadLength=" + framePayloadLength);
 			if (willHaveReadByteCount == framePayloadLength) {
 				// We have all our content so proceed to process
 				payloadBuffer = buffer.readBytes(rbytes);
@@ -230,7 +233,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 				}
 				framePayload.writeBytes(payloadBuffer);
 				framePayloadBytesRead = framePayloadBytesRead + rbytes;
-
+				
 				// Return null to wait for more bytes to arrive
 				return null;
 			} else if (willHaveReadByteCount > framePayloadLength) {
@@ -241,7 +244,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
 			// Now we have all the data, the next checkpoint must be the next
 			// frame
-			checkpoint(State.FRAME_START);
+	    	checkpoint(State.FRAME_START);
 
 			// Take the data that we have in this packet
 			if (framePayload == null) {
@@ -249,7 +252,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 			} else {
 				framePayload.writeBytes(payloadBuffer);
 			}
-
+			
 			// Unmask data if needed
 			if (this.maskedPayload) {
 				unmask(framePayload);
