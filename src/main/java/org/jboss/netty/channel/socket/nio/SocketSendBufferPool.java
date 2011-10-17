@@ -288,7 +288,8 @@ final class SocketSendBufferPool {
         }
 
         public void release() {
-            // Unpooled.
+            // Make sure the FileRegion resource are released otherwise it may cause a FD leak or something similar
+            file.releaseExternalResources();
         }
     }
 
