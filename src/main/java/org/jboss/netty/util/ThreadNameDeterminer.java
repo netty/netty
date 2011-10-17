@@ -42,7 +42,7 @@ public interface ThreadNameDeterminer {
     ThreadNameDeterminer CURRENT = new ThreadNameDeterminer() {
         public String determineThreadName(String currentThreadName,
                 String proposedThreadName) throws Exception {
-            return null;
+            return currentThreadName;
         }
     };
 
