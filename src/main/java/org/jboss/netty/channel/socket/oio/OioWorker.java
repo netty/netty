@@ -20,12 +20,15 @@ import static org.jboss.netty.channel.Channels.*;
 import java.io.OutputStream;
 import java.io.PushbackInputStream;
 import java.net.SocketException;
+import java.nio.channels.Channels;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.WritableByteChannel;
 import java.util.regex.Pattern;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.FileRegion;
 
 /**
  *
@@ -50,8 +53,13 @@ class OioWorker implements Runnable {
     public void run() {
         channel.workerThread = Thread.currentThread();
         final PushbackInputStream in = channel.getInputStream();
+        boolean fireOpen = channel instanceof OioAcceptedSocketChannel;
 
         while (channel.isOpen()) {
+            if (fireOpen) {
+                fireOpen = false;
+                fireChannelConnected(channel, channel.getRemoteAddress());
+            }
             synchronized (channel.interestOpsLock) {
                 while (!channel.isReadable()) {
                     try {
@@ -114,13 +122,39 @@ class OioWorker implements Runnable {
         }
 
         try {
-            ChannelBuffer a = (ChannelBuffer) message;
-            int length = a.readableBytes();
-            synchronized (out) {
-                a.getBytes(a.readerIndex(), out, length);
+            int length = 0;
+
+            // Add support to write a FileRegion. This in fact will not give any performance gain but at least it not fail and 
+            // we did the best to emulate it
+            if (message instanceof FileRegion) {
+                FileRegion fr = (FileRegion) message;
+                try {
+                    synchronized (out) {
+                        WritableByteChannel  bchannel = Channels.newChannel(out);
+                        
+                        long i = 0;
+                        while ((i = fr.transferTo(bchannel, length)) > 0) {
+                            length += i;
+                            if (length >= fr.getCount()) {
+                                break;
+                            }
+                        }
+                    }
+                } finally {
+                    fr.releaseExternalResources();
+
+                }
+            } else {
+                ChannelBuffer a = (ChannelBuffer) message;
+                length = a.readableBytes();
+                synchronized (out) {
+                    a.getBytes(a.readerIndex(), out, length);
+                }
             }
+
             fireWriteComplete(channel, length);
             future.setSuccess();
+ 
         } catch (Throwable t) {
             // Convert 'SocketException: Socket closed' to
             // ClosedChannelException.

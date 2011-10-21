@@ -71,6 +71,7 @@ import org.jboss.netty.channel.socket.ServerSocketChannel;
  * <td>{@code "channelOpen"}</td>
  * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#OPEN OPEN}, value = {@code true})</td>
  * <td>a {@link Channel} is open, but not bound nor connected</td>
+ * <td><strong>Be aware that this event is fired from within the Boss-Thread so you should not execute any heavy operation in there as it will block the dispatching to other workers!</strong></td>
  * </tr>
  * <tr>
  * <td>{@code "channelClosed"}</td>
@@ -81,6 +82,7 @@ import org.jboss.netty.channel.socket.ServerSocketChannel;
  * <td>{@code "channelBound"}</td>
  * <td>{@link ChannelStateEvent}<br/>(state = {@link ChannelState#BOUND BOUND}, value = {@link SocketAddress})</td>
  * <td>a {@link Channel} is open and bound to a local address, but not connected</td>
+ * <td><strong>Be aware that this event is fired from within the Boss-Thread so you should not execute any heavy operation in there as it will block the dispatching to other workers!</strong></td>
  * </tr>
  * <tr>
  * <td>{@code "channelUnbound"}</td>

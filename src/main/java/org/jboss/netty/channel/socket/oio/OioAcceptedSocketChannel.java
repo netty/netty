@@ -63,7 +63,6 @@ class OioAcceptedSocketChannel extends OioSocketChannel {
 
         fireChannelOpen(this);
         fireChannelBound(this, getLocalAddress());
-        fireChannelConnected(this, getRemoteAddress());
     }
 
     @Override

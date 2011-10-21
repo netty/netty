@@ -782,6 +782,11 @@ class NioWorker implements Runnable {
                 }
                 fireChannelConnected(channel, remoteAddress);
             }
+            
+            // Handle the channelConnected in the worker thread
+            if (channel instanceof NioAcceptedSocketChannel) {
+                fireChannelConnected(channel, channel.getRemoteAddress());
+            }
         }
     }
 }
