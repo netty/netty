@@ -878,11 +878,7 @@ public class SslHandler extends FrameDecoder
                         handshake();
                     }
 
-                    try {
-                        result = engine.unwrap(inNetBuf, outAppBuf);
-                    } catch (SSLException e) {
-                        throw e;
-                    }
+                    result = engine.unwrap(inNetBuf, outAppBuf);
 
                     final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
                     handleRenegotiation(handshakeStatus);
@@ -1042,29 +1038,59 @@ public class SslHandler extends FrameDecoder
             if (handshakeFuture == null) {
                 handshakeFuture = future(channel);
             }
+
+            // Release all resources such as internal buffers that SSLEngine
+            // is managing.
+
+            engine.closeOutbound();
+            
+            try {
+                engine.closeInbound();
+            } catch (SSLException e) {
+                logger.debug(
+                        "SSLEngine.closeInbound() raised an exception after " +
+                        "a handshake failure.", e);
+            }
         }
+        
         handshakeFuture.setFailure(cause);
     }
 
     private void closeOutboundAndChannel(
-            final ChannelHandlerContext context, final ChannelStateEvent e) throws SSLException {
+            final ChannelHandlerContext context, final ChannelStateEvent e) {
         if (!e.getChannel().isConnected()) {
             context.sendDownstream(e);
             return;
         }
 
-        unwrap(context, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
-        if (!engine.isInboundDone()) {
-            if (sentCloseNotify.compareAndSet(false, true)) {
-                engine.closeOutbound();
-                ChannelFuture closeNotifyFuture = wrapNonAppData(context, e.getChannel());
-                closeNotifyFuture.addListener(
-                        new ClosingChannelFutureListener(context, e));
-                return;
+        boolean success = false;
+        try {
+            try {
+                unwrap(context, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
+            } catch (SSLException ex) {
+                logger.debug("Failed to unwrap before sending a close_notify message", ex);
+            }
+
+            if (!engine.isInboundDone()) {
+                if (sentCloseNotify.compareAndSet(false, true)) {
+                    engine.closeOutbound();
+                    try {
+                        ChannelFuture closeNotifyFuture = wrapNonAppData(context, e.getChannel());
+                        closeNotifyFuture.addListener(
+                                new ClosingChannelFutureListener(context, e));
+                        success = true;
+                    } catch (SSLException ex) {
+                        logger.debug("Failed to encode a close_notify message", ex);
+                    }
+                }
+            } else {
+                success = true;
+            }
+        } finally {
+            if (!success) {
+                context.sendDownstream(e);
             }
         }
-
-        context.sendDownstream(e);
     }
 
     private static final class PendingWrite {
