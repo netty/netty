@@ -47,6 +47,5 @@ final class NioAcceptedSocketChannel extends NioSocketChannel {
 
         setConnected();
         fireChannelOpen(this);
-        fireChannelBound(this, getLocalAddress());
     }
 }
