@@ -370,7 +370,7 @@ public class SslHandler extends FrameDecoder
      * @deprecated Use {@link #handshake()} instead.
      */
     @Deprecated
-    public ChannelFuture handshake(@SuppressWarnings("unused") Channel channel) {
+    public ChannelFuture handshake(Channel channel) {
         return handshake();
     }
 
@@ -394,7 +394,7 @@ public class SslHandler extends FrameDecoder
      * @deprecated Use {@link #close()} instead.
      */
     @Deprecated
-    public ChannelFuture close(@SuppressWarnings("unused") Channel channel) {
+    public ChannelFuture close(Channel channel) {
         return close();
     }
 

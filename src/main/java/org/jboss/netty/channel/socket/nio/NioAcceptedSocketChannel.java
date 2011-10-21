@@ -15,7 +15,8 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.*;
+import static org.jboss.netty.channel.Channels.fireChannelBound;
+import static org.jboss.netty.channel.Channels.fireChannelOpen;
 
 import java.nio.channels.SocketChannel;
 
@@ -46,8 +47,8 @@ final class NioAcceptedSocketChannel extends NioSocketChannel {
         this.bossThread = bossThread;
 
         setConnected();
+        
         fireChannelOpen(this);
         fireChannelBound(this, getLocalAddress());
-        fireChannelConnected(this, getRemoteAddress());
     }
 }
