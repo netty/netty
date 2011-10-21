@@ -50,8 +50,13 @@ class OioWorker implements Runnable {
     public void run() {
         channel.workerThread = Thread.currentThread();
         final PushbackInputStream in = channel.getInputStream();
+        boolean fireOpen = channel instanceof OioAcceptedSocketChannel;
 
         while (channel.isOpen()) {
+            if (fireOpen) {
+                fireOpen = false;
+                fireChannelConnected(channel, channel.getRemoteAddress());
+            }
             synchronized (channel.interestOpsLock) {
                 while (!channel.isReadable()) {
                     try {
