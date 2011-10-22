@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.DefaultFileRegion;
 import org.jboss.netty.channel.FileRegion;
 
 /**
@@ -141,7 +142,11 @@ class OioWorker implements Runnable {
                         }
                     }
                 } finally {
-                    fr.releaseExternalResources();
+                    if (fr instanceof DefaultFileRegion) {
+                        if (((DefaultFileRegion)fr).releaseAfterTransfer()) {
+                            fr.releaseExternalResources();
+                        }
+                    }
 
                 }
             } else {
