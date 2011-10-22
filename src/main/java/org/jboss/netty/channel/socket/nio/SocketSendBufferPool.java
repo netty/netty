@@ -23,6 +23,7 @@ import java.nio.channels.DatagramChannel;
 import java.nio.channels.WritableByteChannel;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.DefaultFileRegion;
 import org.jboss.netty.channel.FileRegion;
 
 /**
@@ -288,8 +289,12 @@ final class SocketSendBufferPool {
         }
 
         public void release() {
-            // Make sure the FileRegion resource are released otherwise it may cause a FD leak or something similar
-            file.releaseExternalResources();
+            if (file instanceof DefaultFileRegion) {
+                if (((DefaultFileRegion)file).releaseAfterTransfer()) {
+                    // Make sure the FileRegion resource are released otherwise it may cause a FD leak or something similar
+                    file.releaseExternalResources();
+                }
+            }
         }
     }
 
