@@ -141,7 +141,9 @@ class OioWorker implements Runnable {
                         }
                     }
                 } finally {
-                    fr.releaseExternalResources();
+                    if (fr.releaseAfterTransfer()) {
+                        fr.releaseExternalResources();
+                    }
 
                 }
             } else {

@@ -84,4 +84,12 @@ public interface FileRegion extends ExternalResourceReleasable {
      *                  byte of the region transferred.
      */
     long transferTo(WritableByteChannel target, long position) throws IOException;
+    
+    /**
+     * Returns <code>true</code> if {@link #releaseExternalResources()} should be called after the
+     * transfer of the {@link FileRegion} was complete.
+     * 
+     * @return release
+     */
+    public boolean releaseAfterTransfer();
 }
