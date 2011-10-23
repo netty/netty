@@ -14,7 +14,11 @@ public class DefaultFileRegion implements FileRegion {
     private final FileChannel file;
     private final long position;
     private final long count;
-    private boolean releaseAfterTransfer;
+    private final boolean releaseAfterTransfer;
+
+    public DefaultFileRegion(FileChannel file, long position, long count) {
+        this(file, position, count, false);
+    }
 
     public DefaultFileRegion(FileChannel file, long position, long count, boolean releaseAfterTransfer) {
         this.file = file;
@@ -23,20 +27,18 @@ public class DefaultFileRegion implements FileRegion {
         this.releaseAfterTransfer = releaseAfterTransfer;
     }
 
-    public DefaultFileRegion(FileChannel file, long position, long count) {
-        this(file, position, count, false);
-    }
-    
     public long getPosition() {
         return position;
     }
 
-    
     public long getCount() {
         return count;
     }
 
-    
+    public boolean releaseAfterTransfer() {
+        return releaseAfterTransfer;
+    }
+
     public long transferTo(WritableByteChannel target, long position) throws IOException {
         long count = this.count - position;
         if (count < 0 || position < 0) {
@@ -51,21 +53,11 @@ public class DefaultFileRegion implements FileRegion {
         return file.transferTo(this.position + position, count, target);
     }
 
-    
     public void releaseExternalResources() {
         try {
             file.close();
         } catch (IOException e) {
             logger.warn("Failed to close a file.", e);
         }
-    }
-
-    
-    public boolean releaseAfterTransfer() {
-        return releaseAfterTransfer;
-    }
-    
-    public void setReleaseAfterTransfer(boolean releaseAfterTransfer) {
-        this.releaseAfterTransfer = releaseAfterTransfer;
     }
 }
