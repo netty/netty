@@ -11,7 +11,8 @@ import org.jboss.netty.buffer.ChannelBuffers;
  * objects to and read them
  * 
  *
- *  @author Norman Maurer 
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://www.murkycloud.com/">Norman Maurer</a>
  */
 public class BlockingChannelBufferInputStream extends InputStream{
     private final Object mutex = new Object();

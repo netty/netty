@@ -23,7 +23,8 @@ import org.jboss.netty.util.Timer;
  * Abstract base class which could be used if you need to use {@link InputStream} and {@link OutputStream} directly in your Handler. 
  * Because of the blocking nature of {@link InputStream} it will spawn a new Thread on every new connected {@link Channel}
  *  
- *  @author Norman Maurer 
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://www.murkycloud.com/">Norman Maurer</a>
  */
 public abstract class StreamHandler extends ReadTimeoutHandler{
     

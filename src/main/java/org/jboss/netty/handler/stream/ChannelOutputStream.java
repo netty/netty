@@ -11,7 +11,8 @@ import org.jboss.netty.channel.ChannelFuture;
 /**
  * {@link OutputStream} which write data to the wrapped {@link Channel}
  *
- *  @author Norman Maurer 
+ * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://www.murkycloud.com/">Norman Maurer</a>
  */
 public class ChannelOutputStream extends OutputStream{
 
