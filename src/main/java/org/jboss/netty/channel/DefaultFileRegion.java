@@ -16,13 +16,6 @@ public class DefaultFileRegion implements FileRegion {
     private final long count;
     private final boolean releaseAfterTransfer;
 
-    public DefaultFileRegion(FileChannel file, long position, long count, boolean releaseAfterTransfer) {
-        this.file = file;
-        this.position = position;
-        this.count = count;
-        this.releaseAfterTransfer = releaseAfterTransfer;
-    }
-
     /**
      * Calls {@link #DefaultFileRegion(FileChannel, long, long, boolean)}
      * with <code>true</code> as the last argument.
@@ -30,7 +23,13 @@ public class DefaultFileRegion implements FileRegion {
     public DefaultFileRegion(FileChannel file, long position, long count) {
         this(file, position, count, true);
     }
-    
+
+    public DefaultFileRegion(FileChannel file, long position, long count, boolean releaseAfterTransfer) {
+        this.file = file;
+        this.position = position;
+        this.count = count;
+        this.releaseAfterTransfer = releaseAfterTransfer;
+    }
 
     @Override
     public long getPosition() {
