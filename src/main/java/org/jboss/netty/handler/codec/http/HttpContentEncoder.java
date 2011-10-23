@@ -29,19 +29,20 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
 /**
  * Encodes the content of the outbound {@link HttpResponse} and {@link HttpChunk}.
  * The original content is replaced with the new content encoded by the
- * {@link EncoderEmbedder}, which is created by {@link #newContentEncoder(String)}.
+ * {@link EncoderEmbedder}, which is created by {@link #beginEncode(HttpMessage, String)}.
  * Once encoding is finished, the value of the <tt>'Content-Encoding'</tt> header
- * is set to the target content encoding, as returned by {@link #getTargetContentEncoding(String)}.
+ * is set to the target content encoding, as returned by
+ * {@link #beginEncode(HttpMessage, String)}.
  * Also, the <tt>'Content-Length'</tt> header is updated to the length of the
- * encoded content.  If there is no supported encoding in the
+ * encoded content.  If there is no supported or allowed encoding in the
  * corresponding {@link HttpRequest}'s {@code "Accept-Encoding"} header,
- * {@link #newContentEncoder(String)} should return {@code null} so that no
- * encoding occurs (i.e. pass-through).
+ * {@link #beginEncode(HttpMessage, String)} should return {@code null} so that
+ * no encoding occurs (i.e. pass-through).
  * <p>
  * Please note that this is an abstract class.  You have to extend this class
- * and implement {@link #newContentEncoder(String)} and {@link #getTargetContentEncoding(String)}
- * properly to make this class functional.  For example, refer to the source
- * code of {@link HttpContentCompressor}.
+ * and implement {@link #beginEncode(HttpMessage, String)} properly to make
+ * this class functional.  For example, refer to the source code of
+ * {@link HttpContentCompressor}.
  * <p>
  * This handler must be placed after {@link HttpMessageEncoder} in the pipeline
  * so that this handler can intercept HTTP responses before {@link HttpMessageEncoder}
@@ -103,26 +104,37 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
             }
 
             boolean hasContent = m.isChunked() || m.getContent().readable();
-            if (hasContent && (encoder = newContentEncoder(acceptEncoding)) != null) {
-                // Encode the content and remove or replace the existing headers
-                // so that the message looks like a decoded message.
-                m.setHeader(
-                        HttpHeaders.Names.CONTENT_ENCODING,
-                        getTargetContentEncoding(acceptEncoding));
+            if (!hasContent) {
+                ctx.sendDownstream(e);
+                return;
+            }
 
-                if (!m.isChunked()) {
-                    ChannelBuffer content = m.getContent();
-                    // Encode the content.
-                    content = ChannelBuffers.wrappedBuffer(
-                            encode(content), finishEncode());
+            Result result = beginEncode(m, acceptEncoding);
+            if (result == null) {
+                ctx.sendDownstream(e);
+                return;
+            }
 
-                    // Replace the content.
-                    m.setContent(content);
-                    if (m.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
-                        m.setHeader(
-                                HttpHeaders.Names.CONTENT_LENGTH,
-                                Integer.toString(content.readableBytes()));
-                    }
+            encoder = result.getContentEncoder();
+
+            // Encode the content and remove or replace the existing headers
+            // so that the message looks like a decoded message.
+            m.setHeader(
+                    HttpHeaders.Names.CONTENT_ENCODING,
+                    result.getTargetContentEncoding());
+
+            if (!m.isChunked()) {
+                ChannelBuffer content = m.getContent();
+                // Encode the content.
+                content = ChannelBuffers.wrappedBuffer(
+                        encode(content), finishEncode());
+
+                // Replace the content.
+                m.setContent(content);
+                if (m.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
+                    m.setHeader(
+                            HttpHeaders.Names.CONTENT_LENGTH,
+                            Integer.toString(content.readableBytes()));
                 }
             }
 
@@ -162,24 +174,20 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
     }
 
     /**
-     * Returns a new {@link EncoderEmbedder} that encodes the HTTP message
-     * content.
+     * Prepare to encode the HTTP message content.
      *
+     * @param msg
+     *        the HTTP message whose content should be encoded
      * @param acceptEncoding
      *        the value of the {@code "Accept-Encoding"} header
      *
-     * @return a new {@link EncoderEmbedder} if there is a supported encoding
-     *         in {@code acceptEncoding}.  {@code null} otherwise.
+     * @return the result of preparation, which is composed of the determined
+     *         target content encoding and a new {@link EncoderEmbedder} that
+     *         encodes the content into the target content encoding.
+     *         {@code null} if {@code acceptEncoding} is unsupported or rejected
+     *         and thus the content should be handled as-is (i.e. no encoding).
      */
-    protected abstract EncoderEmbedder<ChannelBuffer> newContentEncoder(String acceptEncoding) throws Exception;
-
-    /**
-     * Returns the expected content encoding of the encoded content.
-     *
-     * @param acceptEncoding the value of the {@code "Accept-Encoding"} header
-     * @return the expected content encoding of the new content
-     */
-    protected abstract String getTargetContentEncoding(String acceptEncoding) throws Exception;
+    protected abstract Result beginEncode(HttpMessage msg, String acceptEncoding) throws Exception;
 
     private ChannelBuffer encode(ChannelBuffer buf) {
         encoder.offer(buf);
@@ -195,5 +203,30 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
         }
         encoder = null;
         return result;
+    }
+
+    public static final class Result {
+        private final String targetContentEncoding;
+        private final EncoderEmbedder<ChannelBuffer> contentEncoder;
+
+        public Result(String targetContentEncoding, EncoderEmbedder<ChannelBuffer> contentEncoder) {
+            if (targetContentEncoding == null) {
+                throw new NullPointerException("targetContentEncoding");
+            }
+            if (contentEncoder == null) {
+                throw new NullPointerException("contentEncoder");
+            }
+
+            this.targetContentEncoding = targetContentEncoding;
+            this.contentEncoder = contentEncoder;
+        }
+
+        public String getTargetContentEncoding() {
+            return targetContentEncoding;
+        }
+
+        public EncoderEmbedder<ChannelBuffer> getContentEncoder() {
+            return contentEncoder;
+        }
     }
 }
