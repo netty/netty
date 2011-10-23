@@ -96,38 +96,45 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
 
             encoder = null;
 
-            // Determine the content encoding.
-            String acceptEncoding = acceptEncodingQueue.poll();
-            if (acceptEncoding == null) {
-                throw new IllegalStateException("cannot send more responses than requests");
-            }
+            String contentEncoding = m.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
+            if (contentEncoding != null &&
+                !HttpHeaders.Values.IDENTITY.equalsIgnoreCase(contentEncoding)) {
+                // Content-Encoding is set already and it is not 'identity'.
+                ctx.sendDownstream(e);
+            } else {
+                // Determine the content encoding.
+                String acceptEncoding = acceptEncodingQueue.poll();
+                if (acceptEncoding == null) {
+                    throw new IllegalStateException("cannot send more responses than requests");
+                }
 
-            boolean hasContent = m.isChunked() || m.getContent().readable();
-            if (hasContent && (encoder = newContentEncoder(acceptEncoding)) != null) {
-                // Encode the content and remove or replace the existing headers
-                // so that the message looks like a decoded message.
-                m.setHeader(
-                        HttpHeaders.Names.CONTENT_ENCODING,
-                        getTargetContentEncoding(acceptEncoding));
+                boolean hasContent = m.isChunked() || m.getContent().readable();
+                if (hasContent && (encoder = newContentEncoder(acceptEncoding)) != null) {
+                    // Encode the content and remove or replace the existing headers
+                    // so that the message looks like a decoded message.
+                    m.setHeader(
+                            HttpHeaders.Names.CONTENT_ENCODING,
+                            getTargetContentEncoding(acceptEncoding));
 
-                if (!m.isChunked()) {
-                    ChannelBuffer content = m.getContent();
-                    // Encode the content.
-                    content = ChannelBuffers.wrappedBuffer(
-                            encode(content), finishEncode());
+                    if (!m.isChunked()) {
+                        ChannelBuffer content = m.getContent();
+                        // Encode the content.
+                        content = ChannelBuffers.wrappedBuffer(
+                                encode(content), finishEncode());
 
-                    // Replace the content.
-                    m.setContent(content);
-                    if (m.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
-                        m.setHeader(
-                                HttpHeaders.Names.CONTENT_LENGTH,
-                                Integer.toString(content.readableBytes()));
+                        // Replace the content.
+                        m.setContent(content);
+                        if (m.containsHeader(HttpHeaders.Names.CONTENT_LENGTH)) {
+                            m.setHeader(
+                                    HttpHeaders.Names.CONTENT_LENGTH,
+                                    Integer.toString(content.readableBytes()));
+                        }
                     }
                 }
-            }
 
-            // Because HttpMessage is a mutable object, we can simply forward the write request.
-            ctx.sendDownstream(e);
+                // Because HttpMessage is a mutable object, we can simply forward the write request.
+                ctx.sendDownstream(e);
+            }
         } else if (msg instanceof HttpChunk) {
             HttpChunk c = (HttpChunk) msg;
             ChannelBuffer content = c.getContent();
