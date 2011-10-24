@@ -20,8 +20,6 @@ import org.jboss.netty.handler.codec.compression.ZlibEncoder;
 import org.jboss.netty.handler.codec.compression.ZlibWrapper;
 import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
 
-import com.sun.net.httpserver.Headers;
-
 /**
  * Compresses an {@link HttpMessage} and an {@link HttpChunk} in {@code gzip} or
  * {@code deflate} encoding while respecting the {@code "Accept-Encoding"} header.

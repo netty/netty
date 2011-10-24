@@ -71,7 +71,7 @@ public class ChannelLocal<T> {
      * Returns the initial value of the variable.  By default, it returns
      * {@code null}.  Override it to change the initial value.
      */
-    protected T initialValue(@SuppressWarnings("unused") Channel channel) {
+    protected T initialValue(Channel channel) {
         return null;
     }
 
