@@ -113,7 +113,7 @@ public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, 
     * @see org.jboss.netty.channel.ChannelUpstreamHandler#handleUpstream(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent)
     */
    @Override
-public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception
+   public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception
    {
       if (e instanceof ChannelStateEvent)
       {
@@ -189,7 +189,7 @@ public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exc
     * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#setIpFilterListener(org.jboss.netty.handler.ipfilter.IpFilterListener)
     */
    @Override
-public void setIpFilterListener(IpFilterListener listener)
+   public void setIpFilterListener(IpFilterListener listener)
    {
       this.listener = listener;
    }
@@ -198,7 +198,7 @@ public void setIpFilterListener(IpFilterListener listener)
     * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#removeIpFilterListener()
     */
    @Override
-public void removeIpFilterListener()
+   public void removeIpFilterListener()
    {
       this.listener = null;
 

@@ -159,7 +159,7 @@ public boolean contains(InetAddress inetAddress)
     * Compare two IpSubnet
     */
    @Override
-public int compareTo(IpSubnet o)
+   public int compareTo(IpSubnet o)
    {
       return cidr.toString().compareTo(o.cidr.toString());
    }
