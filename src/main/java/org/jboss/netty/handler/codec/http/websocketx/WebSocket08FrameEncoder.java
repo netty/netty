@@ -52,13 +52,10 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 /**
  * <p>
  * Encodes a web socket frame into wire protocol version 8 format. This code was
- * originally taken from webbit and modified.
- * </p>
- * <p>
- * Currently fragmentation is not supported. Data is always sent in 1 frame.
+ * forked from <a href="https://github.com/joewalnes/webbit">webbit</a> and modified.
  * </p>
  * 
- * @author https://github.com/joewalnes/webbit
+ * @author Aslak Hellesøy
  * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class WebSocket08FrameEncoder extends OneToOneEncoder {
