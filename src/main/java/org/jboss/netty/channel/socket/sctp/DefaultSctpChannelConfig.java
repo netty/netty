@@ -16,7 +16,7 @@
 package org.jboss.netty.channel.socket.sctp;
 
 import com.sun.nio.sctp.SctpChannel;
-import com.sun.nio.sctp.SctpStandardSocketOption;
+import static com.sun.nio.sctp.SctpStandardSocketOptions.*;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.DefaultChannelConfig;
 import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
@@ -59,7 +59,7 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
         } else if (key.equals("soLinger")) {
             setSoLinger(ConversionUtil.toInt(value));
         } else if (key.equals("sctpInitMaxStreams")) {
-            setInitMaxStreams((SctpStandardSocketOption.InitMaxStreams) value);
+            setInitMaxStreams((InitMaxStreams) value);
         } else {
             return false;
         }
@@ -69,7 +69,7 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     @Override
     public boolean isSctpNoDelay() {
         try {
-            return channel.getOption(SctpStandardSocketOption.SCTP_NODELAY);
+            return channel.getOption(SCTP_NODELAY);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -78,7 +78,7 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     @Override
     public void setSctpNoDelay(boolean tcpNoDelay) {
         try {
-            channel.setOption(SctpStandardSocketOption.SCTP_NODELAY, tcpNoDelay);
+            channel.setOption(SCTP_NODELAY, tcpNoDelay);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -87,7 +87,7 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     @Override
     public int getSoLinger() {
         try {
-            return channel.getOption(SctpStandardSocketOption.SO_LINGER);
+            return channel.getOption(SO_LINGER);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -96,7 +96,7 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     @Override
     public void setSoLinger(int soLinger) {
         try {
-            channel.setOption(SctpStandardSocketOption.SO_LINGER, soLinger);
+            channel.setOption(SO_LINGER, soLinger);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -105,7 +105,7 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     @Override
     public int getSendBufferSize() {
         try {
-            return channel.getOption(SctpStandardSocketOption.SO_SNDBUF);
+            return channel.getOption(SO_SNDBUF);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -114,7 +114,7 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     @Override
     public void setSendBufferSize(int sendBufferSize) {
         try {
-            channel.setOption(SctpStandardSocketOption.SO_SNDBUF, sendBufferSize);
+            channel.setOption(SO_SNDBUF, sendBufferSize);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -123,7 +123,7 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     @Override
     public int getReceiveBufferSize() {
         try {
-            return channel.getOption(SctpStandardSocketOption.SO_RCVBUF);
+            return channel.getOption(SO_RCVBUF);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -132,25 +132,25 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     @Override
     public void setReceiveBufferSize(int receiveBufferSize) {
         try {
-            channel.setOption(SctpStandardSocketOption.SO_RCVBUF, receiveBufferSize);
+            channel.setOption(SO_RCVBUF, receiveBufferSize);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
     @Override
-    public SctpStandardSocketOption.InitMaxStreams getInitMaxStreams() {
+    public InitMaxStreams getInitMaxStreams() {
         try {
-            return channel.getOption(SctpStandardSocketOption.SCTP_INIT_MAXSTREAMS);
+            return channel.getOption(SCTP_INIT_MAXSTREAMS);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
     @Override
-    public void setInitMaxStreams(SctpStandardSocketOption.InitMaxStreams initMaxStreams) {
+    public void setInitMaxStreams(InitMaxStreams initMaxStreams) {
         try {
-            channel.setOption(SctpStandardSocketOption.SCTP_INIT_MAXSTREAMS, initMaxStreams);
+            channel.setOption(SCTP_INIT_MAXSTREAMS, initMaxStreams);
         } catch (IOException e) {
             throw new ChannelException(e);
         }

@@ -15,7 +15,6 @@
  */
 package org.jboss.netty.example.sctp;
 
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.socket.sctp.SctpMessage;

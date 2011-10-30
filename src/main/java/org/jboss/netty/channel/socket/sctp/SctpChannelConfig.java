@@ -15,10 +15,8 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import com.sun.nio.sctp.SctpStandardSocketOption;
+import static com.sun.nio.sctp.SctpStandardSocketOptions.*;
 import org.jboss.netty.channel.ChannelConfig;
-
-import java.net.SocketAddress;
 
 /**
  * A {@link org.jboss.netty.channel.ChannelConfig} for a {@link org.jboss.netty.channel.socket.sctp.SctpChannel}.
@@ -40,7 +38,7 @@ import java.net.SocketAddress;
  * </tr><tr>
  * <td>{@code "sendBufferSize"}</td><td>{@link #setSendBufferSize(int)}</td>
  * </tr><tr>
- * <td>{@code "sctpInitMaxStreams"}</td><td>{@link #setInitMaxStreams(com.sun.nio.sctp.SctpStandardSocketOption.InitMaxStreams)} (int)}}</td>
+ * <td>{@code "sctpInitMaxStreams"}</td><td>{@link #setInitMaxStreams(InitMaxStreams)}</td>
  * </tr>
  * </table>
  *
@@ -94,10 +92,10 @@ public interface SctpChannelConfig extends ChannelConfig {
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_INIT_MAXSTREAMS}</a> option.
      */
-    SctpStandardSocketOption.InitMaxStreams getInitMaxStreams();
+    InitMaxStreams getInitMaxStreams();
 
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_INIT_MAXSTREAMS}</a> option.
      */
-    void setInitMaxStreams(SctpStandardSocketOption.InitMaxStreams initMaxStreams);
+    void setInitMaxStreams(InitMaxStreams initMaxStreams);
 }

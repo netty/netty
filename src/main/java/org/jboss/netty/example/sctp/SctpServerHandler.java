@@ -43,7 +43,7 @@ public class SctpServerHandler extends SimpleChannelUpstreamHandler {
     public void messageReceived(
             ChannelHandlerContext ctx, MessageEvent e) {
         // Send back the received message to the remote peer.
-        logger.log(Level.INFO, "Received " +  counter.incrementAndGet() + "th message from client.");
+//        logger.log(Level.INFO, "Received " +  counter.incrementAndGet() + "th message from client.");
         e.getChannel().write(e.getMessage());
     }
 

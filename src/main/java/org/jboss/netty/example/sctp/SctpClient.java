@@ -21,6 +21,8 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.sctp.SctpClientSocketChannelFactory;
+import org.jboss.netty.handler.execution.ExecutionHandler;
+import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
@@ -31,9 +33,7 @@ import java.util.concurrent.Executors;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
- *
  * @version $Rev$, $Date$
- *
  */
 public class SctpClient {
 
@@ -45,12 +45,14 @@ public class SctpClient {
                         Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
+        final ExecutionHandler executionHandler = new ExecutionHandler(
+                new OrderedMemoryAwareThreadPoolExecutor(16, 1048576, 1048576));
+
         // Set up the pipeline factory.
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
             @Override
             public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(
-                        new SctpClientHandler());
+                return Channels.pipeline(executionHandler, new SctpClientHandler());
             }
         });
 

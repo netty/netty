@@ -15,13 +15,12 @@
  */
 package org.jboss.netty.channel.socket.sctp;
 
-import com.sun.nio.sctp.SctpStandardSocketOption;
+import static com.sun.nio.sctp.SctpStandardSocketOptions.*;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.DefaultServerChannelConfig;
 import org.jboss.netty.util.internal.ConversionUtil;
 
 import java.io.IOException;
-import java.net.SocketAddress;
 
 /**
  * The default {@link org.jboss.netty.channel.socket.ServerSocketChannelConfig} implementation.
@@ -55,7 +54,7 @@ public class SctpServerChannelConfig extends DefaultServerChannelConfig
         }
 
         if (key.equals("sctpInitMaxStreams")) {
-            setInitMaxStreams((SctpStandardSocketOption.InitMaxStreams) value);
+            setInitMaxStreams((InitMaxStreams) value);
         } else if (key.equals("backlog")) {
             setBacklog(ConversionUtil.toInt(value));
         } else {
@@ -65,18 +64,18 @@ public class SctpServerChannelConfig extends DefaultServerChannelConfig
     }
 
     @Override
-    public SctpStandardSocketOption.InitMaxStreams getInitMaxStreams() {
+    public InitMaxStreams getInitMaxStreams() {
         try {
-            return serverChannel.getOption(SctpStandardSocketOption.SCTP_INIT_MAXSTREAMS);
+            return serverChannel.getOption(SCTP_INIT_MAXSTREAMS);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
     @Override
-    public void setInitMaxStreams(SctpStandardSocketOption.InitMaxStreams initMaxStreams) {
+    public void setInitMaxStreams(InitMaxStreams initMaxStreams) {
         try {
-            serverChannel.setOption(SctpStandardSocketOption.SCTP_INIT_MAXSTREAMS, initMaxStreams);
+            serverChannel.setOption(SCTP_INIT_MAXSTREAMS, initMaxStreams);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
