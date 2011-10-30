@@ -151,7 +151,9 @@ public class SimpleChannelUpstreamHandler implements ChannelUpstreamHandler {
 
     /**
      * Invoked when a {@link Channel} is open, but not bound nor connected.
-     */
+     * <br/>
+     * <strong>Be aware that this event is fired from within the Boss-Thread so you should not execute any heavy operation in there as it will block the dispatching to other workers!</strong>    
+    */
     public void channelOpen(
             ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         ctx.sendUpstream(e);
@@ -160,6 +162,8 @@ public class SimpleChannelUpstreamHandler implements ChannelUpstreamHandler {
     /**
      * Invoked when a {@link Channel} is open and bound to a local address,
      * but not connected.
+     * <br/>
+     * <strong>Be aware that this event is fired from within the Boss-Thread so you should not execute any heavy operation in there as it will block the dispatching to other workers!</strong>    
      */
     public void channelBound(
             ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {

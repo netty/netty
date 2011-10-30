@@ -78,7 +78,7 @@ public class CIDR6 extends CIDR
    }
 
    @Override
-public int compareTo(CIDR arg)
+   public int compareTo(CIDR arg)
    {
       if (arg instanceof CIDR4)
       {

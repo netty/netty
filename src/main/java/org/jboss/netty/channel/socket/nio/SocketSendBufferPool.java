@@ -306,7 +306,10 @@ final class SocketSendBufferPool {
 
         @Override
         public void release() {
-            // Unpooled.
+            if (file.releaseAfterTransfer()) {
+                // Make sure the FileRegion resource are released otherwise it may cause a FD leak or something similar
+                file.releaseExternalResources(); 
+            }
         }
     }
 

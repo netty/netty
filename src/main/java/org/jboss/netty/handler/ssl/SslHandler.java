@@ -69,17 +69,22 @@ import org.jboss.netty.util.internal.NonReentrantLock;
  *
  * <h3>Renegotiation</h3>
  * <p>
- * TLS renegotiation has been disabled by default due to a known security issue,
- * <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2009-3555">CVE-2009-3555</a>.
- * You can re-enable renegotiation by calling {@link #setEnableRenegotiation(boolean)}
- * with {@code true} at your own risk.
- * <p>
- * If {@link #isEnableRenegotiation() enableRenegotiation} is {@code true} and
- * the initial handshake has been done successfully, you can call
+ * If {@link #isEnableRenegotiation() enableRenegotiation} is {@code true}
+ * (default) and the initial handshake has been done successfully, you can call
  * {@link #handshake()} to trigger the renegotiation.
  * <p>
  * If {@link #isEnableRenegotiation() enableRenegotiation} is {@code false},
  * an attempt to trigger renegotiation will result in the connection closure.
+ * <p>
+ * Please note that TLS renegotiation had a security issue before.  If your
+ * runtime environment did not fix it, please make sure to disable TLS
+ * renegotiation by calling {@link #setEnableRenegotiation(boolean)} with
+ * {@code false}.  For more information, please refer to the following documents:
+ * <ul>
+ *   <li><a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2009-3555">CVE-2009-3555</a></li>
+ *   <li><a href="http://www.ietf.org/rfc/rfc5746.txt">RFC5746</a></li>
+ *   <li><a href="http://www.oracle.com/technetwork/java/javase/documentation/tlsreadme2-176330.html">Phased Approach to Fixing the TLS Renegotiation Issue</a></li>
+ * </ul>
  *
  * <h3>Closing the session</h3>
  * <p>
@@ -173,7 +178,7 @@ public class SslHandler extends FrameDecoder
     private final Executor delegatedTaskExecutor;
     private final boolean startTls;
 
-    private volatile boolean enableRenegotiation;
+    private volatile boolean enableRenegotiation = true;
 
     final Object handshakeLock = new Object();
     private boolean handshaking;
@@ -866,46 +871,50 @@ public class SslHandler extends FrameDecoder
             loop:
             for (;;) {
                 SSLEngineResult result;
+                boolean needsHandshake = false;
                 synchronized (handshakeLock) {
                     if (!handshaken && !handshaking &&
                         !engine.getUseClientMode() &&
                         !engine.isInboundDone() && !engine.isOutboundDone()) {
-                        handshake();
-                    }
-
-                    try {
-                        result = engine.unwrap(inNetBuf, outAppBuf);
-                    } catch (SSLException e) {
-                        throw e;
-                    }
-
-                    final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
-                    handleRenegotiation(handshakeStatus);
-                    switch (handshakeStatus) {
-                    case NEED_UNWRAP:
-                        if (inNetBuf.hasRemaining() && !engine.isInboundDone()) {
-                            break;
-                        } else {
-                            break loop;
-                        }
-                    case NEED_WRAP:
-                        wrapNonAppData(ctx, channel);
-                        break;
-                    case NEED_TASK:
-                        runDelegatedTasks();
-                        break;
-                    case FINISHED:
-                        setHandshakeSuccess(channel);
-                        needsWrap = true;
-                        break loop;
-                    case NOT_HANDSHAKING:
-                        needsWrap = true;
-                        break loop;
-                    default:
-                        throw new IllegalStateException(
-                                "Unknown handshake status: " + handshakeStatus);
+                        needsHandshake = true;
+                        
                     }
                 }
+                if (needsHandshake) {
+                    handshake();
+                }
+
+                synchronized (handshakeLock) {
+                    result = engine.unwrap(inNetBuf, outAppBuf);
+                }
+
+                final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
+                handleRenegotiation(handshakeStatus);
+                switch (handshakeStatus) {
+                case NEED_UNWRAP:
+                    if (inNetBuf.hasRemaining() && !engine.isInboundDone()) {
+                        break;
+                    } else {
+                        break loop;
+                    }
+                case NEED_WRAP:
+                    wrapNonAppData(ctx, channel);
+                    break;
+                case NEED_TASK:
+                    runDelegatedTasks();
+                    break;
+                case FINISHED:
+                    setHandshakeSuccess(channel);
+                    needsWrap = true;
+                    break loop;
+                case NOT_HANDSHAKING:
+                    needsWrap = true;
+                    break loop;
+                default:
+                    throw new IllegalStateException(
+                            "Unknown handshake status: " + handshakeStatus);
+                }
+                
             }
 
             if (needsWrap) {
@@ -1037,29 +1046,59 @@ public class SslHandler extends FrameDecoder
             if (handshakeFuture == null) {
                 handshakeFuture = future(channel);
             }
+
+            // Release all resources such as internal buffers that SSLEngine
+            // is managing.
+
+            engine.closeOutbound();
+            
+            try {
+                engine.closeInbound();
+            } catch (SSLException e) {
+                logger.debug(
+                        "SSLEngine.closeInbound() raised an exception after " +
+                        "a handshake failure.", e);
+            }
         }
+        
         handshakeFuture.setFailure(cause);
     }
 
     private void closeOutboundAndChannel(
-            final ChannelHandlerContext context, final ChannelStateEvent e) throws SSLException {
+            final ChannelHandlerContext context, final ChannelStateEvent e) {
         if (!e.getChannel().isConnected()) {
             context.sendDownstream(e);
             return;
         }
 
-        unwrap(context, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
-        if (!engine.isInboundDone()) {
-            if (sentCloseNotify.compareAndSet(false, true)) {
-                engine.closeOutbound();
-                ChannelFuture closeNotifyFuture = wrapNonAppData(context, e.getChannel());
-                closeNotifyFuture.addListener(
-                        new ClosingChannelFutureListener(context, e));
-                return;
+        boolean success = false;
+        try {
+            try {
+                unwrap(context, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
+            } catch (SSLException ex) {
+                logger.debug("Failed to unwrap before sending a close_notify message", ex);
+            }
+
+            if (!engine.isInboundDone()) {
+                if (sentCloseNotify.compareAndSet(false, true)) {
+                    engine.closeOutbound();
+                    try {
+                        ChannelFuture closeNotifyFuture = wrapNonAppData(context, e.getChannel());
+                        closeNotifyFuture.addListener(
+                                new ClosingChannelFutureListener(context, e));
+                        success = true;
+                    } catch (SSLException ex) {
+                        logger.debug("Failed to encode a close_notify message", ex);
+                    }
+                }
+            } else {
+                success = true;
+            }
+        } finally {
+            if (!success) {
+                context.sendDownstream(e);
             }
         }
-
-        context.sendDownstream(e);
     }
 
     private static final class PendingWrite {

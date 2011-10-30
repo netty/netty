@@ -60,30 +60,34 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     @Override
-    protected EncoderEmbedder<ChannelBuffer> newContentEncoder(String acceptEncoding) throws Exception {
+    protected Result beginEncode(HttpMessage msg, String acceptEncoding) throws Exception {
+        String contentEncoding = msg.getHeader(HttpHeaders.Names.CONTENT_ENCODING);
+        if (contentEncoding != null &&
+            !HttpHeaders.Values.IDENTITY.equalsIgnoreCase(contentEncoding)) {
+            return null;
+        }
+                
         ZlibWrapper wrapper = determineWrapper(acceptEncoding);
         if (wrapper == null) {
             return null;
         }
 
-        return new EncoderEmbedder<ChannelBuffer>(new ZlibEncoder(wrapper, compressionLevel));
-    }
-
-    @Override
-    protected String getTargetContentEncoding(String acceptEncoding) throws Exception {
-        ZlibWrapper wrapper = determineWrapper(acceptEncoding);
-        if (wrapper == null) {
-            return null;
-        }
-
+        String targetContentEncoding;
         switch (wrapper) {
         case GZIP:
-            return "gzip";
+            targetContentEncoding = "gzip";
+            break;
         case ZLIB:
-            return "deflate";
+            targetContentEncoding = "deflate";
+            break;
         default:
             throw new Error();
         }
+
+        return new Result(
+                targetContentEncoding,
+                new EncoderEmbedder<ChannelBuffer>(
+                        new ZlibEncoder(wrapper, compressionLevel)));
     }
 
     private ZlibWrapper determineWrapper(String acceptEncoding) {

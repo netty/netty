@@ -278,7 +278,7 @@ public boolean contains(InetAddress inetAddress1)
     * Compare two IpV4Subnet
     */
    @Override
-public int compareTo(IpV4Subnet o)
+   public int compareTo(IpV4Subnet o)
    {
       if (o.subnet == subnet && o.cidrMask == cidrMask)
       {

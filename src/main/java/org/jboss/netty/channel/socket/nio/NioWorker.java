@@ -776,12 +776,10 @@ class NioWorker implements Runnable {
                 }
             }
 
-            if (!server) {
-                if (!((NioClientSocketChannel) channel).boundManually) {
-                    fireChannelBound(channel, localAddress);
-                }
-                fireChannelConnected(channel, remoteAddress);
+            if (server || !((NioClientSocketChannel) channel).boundManually) {
+                fireChannelBound(channel, localAddress);
             }
+            fireChannelConnected(channel, remoteAddress);
         }
     }
 }

@@ -74,6 +74,12 @@ public interface FileRegion extends ExternalResourceReleasable {
     long getCount();
 
     /**
+     * Returns <code>true</code> if {@link #releaseExternalResources()} has to
+     * be called after the transfer of this {@link FileRegion} is complete.
+     */
+    boolean releaseAfterTransfer();
+
+    /**
      * Transfers the content of this file region to the specified channel.
      *
      * @param target    the destination of the transfer

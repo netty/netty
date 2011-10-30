@@ -74,13 +74,13 @@ public class IpV4SubnetFilterRule extends IpV4Subnet implements IpFilterRule
    }
 
    @Override
-public boolean isAllowRule()
+   public boolean isAllowRule()
    {
       return isAllowRule;
    }
 
    @Override
-public boolean isDenyRule()
+   public boolean isDenyRule()
    {
       return !isAllowRule;
    }
