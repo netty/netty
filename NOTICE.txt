@@ -96,3 +96,13 @@ framework implementation, which can be obtained at:
     * license/LICENSE.felix.txt (Apache License 2.0)
   * HOMEPAGE:
     * http://felix.apache.org/
+
+This product optionally depends on 'Webbit', a Java event based  
+WebSocket and HTTP server:
+
+  * LICENSE:
+    * license/LICENSE.webbit.txt (BSD License)
+  * HOMEPAGE:
+    * https://github.com/joewalnes/webbit
+
+    
