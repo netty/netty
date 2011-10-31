@@ -40,18 +40,38 @@ public class ChannelLocal<T> {
     private final ConcurrentMap<Channel, T> map =
         new ConcurrentIdentityWeakKeyHashMap<Channel, T>();
 
+    private final ChannelFutureListener remover = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            remove(future.getChannel());
+        }
+    };
+
+    private final boolean removeOnClose;
+    
     /**
-     * Creates a {@link Channel} local variable.
+     * Creates a {@link Channel} local variable by calling {@link #ChannelLocal(boolean)} with <code>true</code>
      */
     public ChannelLocal() {
-        super();
+        this(true);
     }
+    
+    /**
+     * Creates a {@link Channel} local variable. 
+     * 
+     * @param removeOnClose if <code>true</code> the {@link ChannelLocal} will remove a {@link Channel} from it own once the {@link Channel} was closed.
+     */
+    public ChannelLocal(boolean removeOnClose) {
+        this.removeOnClose = removeOnClose;
+    }
+    
+
 
     /**
      * Returns the initial value of the variable.  By default, it returns
      * {@code null}.  Override it to change the initial value.
      */
-    protected T initialValue(@SuppressWarnings("unused") Channel channel) {
+    protected T initialValue(Channel channel) {
         return null;
     }
 
@@ -88,7 +108,11 @@ public class ChannelLocal<T> {
             if (channel == null) {
                 throw new NullPointerException("channel");
             }
-            return map.put(channel, value);
+            T old =  map.put(channel, value);
+            if (removeOnClose) {
+                channel.getCloseFuture().addListener(remover);
+            }
+            return old;
         }
     }
 
@@ -105,7 +129,12 @@ public class ChannelLocal<T> {
             if (channel == null) {
                 throw new NullPointerException("channel");
             }
-            return map.putIfAbsent(channel, value);
+            T mapping =  map.putIfAbsent(channel, value);
+            
+            if (removeOnClose && mapping == null) {
+                channel.getCloseFuture().addListener(remover);
+            }
+            return mapping;
         }
     }
 
@@ -126,6 +155,9 @@ public class ChannelLocal<T> {
         if (removed == null) {
             return initialValue(channel);
         } else {
+            if (removeOnClose) {
+                channel.getCloseFuture().removeListener(remover);
+            }
             return removed;
         }
     }

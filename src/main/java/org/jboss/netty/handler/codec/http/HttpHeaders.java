@@ -237,6 +237,18 @@ public class HttpHeaders {
          */
         public static final String SEC_WEBSOCKET_PROTOCOL = "Sec-WebSocket-Protocol";
         /**
+         * {@code "Sec-WebSocket-Version"}
+         */
+    	public static final String SEC_WEBSOCKET_VERSION = "Sec-WebSocket-Version";
+        /**
+         * {@code "Sec-WebSocket-Key"}
+         */
+    	public static final String SEC_WEBSOCKET_KEY = "Sec-WebSocket-Key";
+        /**
+         * {@code "Sec-WebSocket-Accept"}
+         */
+    	public static final String SEC_WEBSOCKET_ACCEPT = "Sec-WebSocket-Accept";
+        /**
          * {@code "Server"}
          */
         public static final String SERVER = "Server";

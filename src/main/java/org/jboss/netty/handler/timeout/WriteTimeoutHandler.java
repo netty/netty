@@ -136,7 +136,7 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
         timer.stop();
     }
 
-    protected long getTimeoutMillis(@SuppressWarnings("unused") MessageEvent e) {
+    protected long getTimeoutMillis(MessageEvent e) {
         return timeoutMillis;
     }
 

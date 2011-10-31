@@ -871,42 +871,50 @@ public class SslHandler extends FrameDecoder
             loop:
             for (;;) {
                 SSLEngineResult result;
+                boolean needsHandshake = false;
                 synchronized (handshakeLock) {
                     if (!handshaken && !handshaking &&
                         !engine.getUseClientMode() &&
                         !engine.isInboundDone() && !engine.isOutboundDone()) {
-                        handshake();
-                    }
-
-                    result = engine.unwrap(inNetBuf, outAppBuf);
-
-                    final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
-                    handleRenegotiation(handshakeStatus);
-                    switch (handshakeStatus) {
-                    case NEED_UNWRAP:
-                        if (inNetBuf.hasRemaining() && !engine.isInboundDone()) {
-                            break;
-                        } else {
-                            break loop;
-                        }
-                    case NEED_WRAP:
-                        wrapNonAppData(ctx, channel);
-                        break;
-                    case NEED_TASK:
-                        runDelegatedTasks();
-                        break;
-                    case FINISHED:
-                        setHandshakeSuccess(channel);
-                        needsWrap = true;
-                        break loop;
-                    case NOT_HANDSHAKING:
-                        needsWrap = true;
-                        break loop;
-                    default:
-                        throw new IllegalStateException(
-                                "Unknown handshake status: " + handshakeStatus);
+                        needsHandshake = true;
+                        
                     }
                 }
+                if (needsHandshake) {
+                    handshake();
+                }
+
+                synchronized (handshakeLock) {
+                    result = engine.unwrap(inNetBuf, outAppBuf);
+                }
+
+                final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
+                handleRenegotiation(handshakeStatus);
+                switch (handshakeStatus) {
+                case NEED_UNWRAP:
+                    if (inNetBuf.hasRemaining() && !engine.isInboundDone()) {
+                        break;
+                    } else {
+                        break loop;
+                    }
+                case NEED_WRAP:
+                    wrapNonAppData(ctx, channel);
+                    break;
+                case NEED_TASK:
+                    runDelegatedTasks();
+                    break;
+                case FINISHED:
+                    setHandshakeSuccess(channel);
+                    needsWrap = true;
+                    break loop;
+                case NOT_HANDSHAKING:
+                    needsWrap = true;
+                    break loop;
+                default:
+                    throw new IllegalStateException(
+                            "Unknown handshake status: " + handshakeStatus);
+                }
+                
             }
 
             if (needsWrap) {
