@@ -271,10 +271,8 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
                 ChannelPipeline pipeline =
                     channel.getConfig().getPipelineFactory().getPipeline();
                 NioWorker worker = nextWorker();
-                worker.register(new NioAcceptedSocketChannel(
-                        channel.getFactory(), pipeline, channel,
-                        NioServerSocketPipelineSink.this, acceptedSocket,
-                        worker, currentThread), null);
+                worker.register(NioAcceptedSocketChannel.create(channel.getFactory(), pipeline, channel,
+                        NioServerSocketPipelineSink.this, acceptedSocket, worker, currentThread), null);
             } catch (Exception e) {
                 logger.warn(
                         "Failed to initialize an accepted socket.", e);

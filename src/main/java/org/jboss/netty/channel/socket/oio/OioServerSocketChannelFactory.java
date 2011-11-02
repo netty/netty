@@ -117,7 +117,7 @@ public class OioServerSocketChannelFactory implements ServerSocketChannelFactory
 
     @Override
     public ServerSocketChannel newChannel(ChannelPipeline pipeline) {
-        return new OioServerSocketChannel(this, pipeline, sink);
+        return OioServerSocketChannel.create(this, pipeline, sink);
     }
 
     @Override

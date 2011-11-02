@@ -42,13 +42,27 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  */
 class HttpTunnelAcceptedChannel extends AbstractChannel implements
         SocketChannel, HttpTunnelAcceptedChannelReceiver {
+
     private final HttpTunnelAcceptedChannelConfig config;
 
     private final HttpTunnelAcceptedChannelSink sink;
 
     private final InetSocketAddress remoteAddress;
 
-    protected HttpTunnelAcceptedChannel(HttpTunnelServerChannel parent,
+    protected static HttpTunnelAcceptedChannel create(
+            HttpTunnelServerChannel parent, ChannelFactory factory,
+            ChannelPipeline pipeline, HttpTunnelAcceptedChannelSink sink,
+            InetSocketAddress remoteAddress,
+            HttpTunnelAcceptedChannelConfig config) {
+        HttpTunnelAcceptedChannel instance = new HttpTunnelAcceptedChannel(parent, factory, pipeline, sink,
+                        remoteAddress, config);
+        fireChannelOpen(instance);
+        fireChannelBound(instance, instance.getLocalAddress());
+        fireChannelConnected(instance, instance.getRemoteAddress());
+        return instance;
+    }
+
+    private HttpTunnelAcceptedChannel(HttpTunnelServerChannel parent,
             ChannelFactory factory, ChannelPipeline pipeline,
             HttpTunnelAcceptedChannelSink sink,
             InetSocketAddress remoteAddress,
@@ -57,9 +71,6 @@ class HttpTunnelAcceptedChannel extends AbstractChannel implements
         this.config = config;
         this.sink = sink;
         this.remoteAddress = remoteAddress;
-        fireChannelOpen(this);
-        fireChannelBound(this, getLocalAddress());
-        fireChannelConnected(this, getRemoteAddress());
     }
 
     @Override
