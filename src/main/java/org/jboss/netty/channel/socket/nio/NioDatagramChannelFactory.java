@@ -125,7 +125,7 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
 
     @Override
     public DatagramChannel newChannel(final ChannelPipeline pipeline) {
-        return new NioDatagramChannel(this, pipeline, sink, sink.nextWorker());
+        return NioDatagramChannel.create(this, pipeline, sink, sink.nextWorker());
     }
 
     @Override

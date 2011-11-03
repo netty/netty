@@ -76,11 +76,18 @@ final class NioClientSocketChannel extends NioSocketChannel {
     // Does not need to be volatile as it's accessed by only one thread.
     long connectDeadlineNanos;
 
-    NioClientSocketChannel(
+    static NioClientSocketChannel create(ChannelFactory factory,
+            ChannelPipeline pipeline, ChannelSink sink, NioWorker worker) {
+        NioClientSocketChannel instance =
+                new NioClientSocketChannel(factory, pipeline, sink, worker);
+        fireChannelOpen(instance);
+        return instance;
+    }
+
+    private NioClientSocketChannel(
             ChannelFactory factory, ChannelPipeline pipeline,
             ChannelSink sink, NioWorker worker) {
 
         super(null, factory, pipeline, sink, newSocket(), worker);
-        fireChannelOpen(this);
     }
 }

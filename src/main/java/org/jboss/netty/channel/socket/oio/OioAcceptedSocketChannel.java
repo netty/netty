@@ -41,7 +41,17 @@ class OioAcceptedSocketChannel extends OioSocketChannel {
     private final PushbackInputStream in;
     private final OutputStream out;
 
-    OioAcceptedSocketChannel(
+    static OioAcceptedSocketChannel create(Channel parent,
+            ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink,
+            Socket socket) {
+        OioAcceptedSocketChannel instance = new OioAcceptedSocketChannel(
+                parent, factory, pipeline, sink, socket);
+        fireChannelOpen(instance);
+        fireChannelBound(instance, instance.getLocalAddress());
+        return instance;
+    }
+    
+    private OioAcceptedSocketChannel(
             Channel parent,
             ChannelFactory factory,
             ChannelPipeline pipeline,

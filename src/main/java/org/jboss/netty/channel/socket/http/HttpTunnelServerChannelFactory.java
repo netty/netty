@@ -42,7 +42,7 @@ public class HttpTunnelServerChannelFactory implements
 
     @Override
     public HttpTunnelServerChannel newChannel(ChannelPipeline pipeline) {
-        return new HttpTunnelServerChannel(this, pipeline);
+        return HttpTunnelServerChannel.create(this, pipeline);
     }
 
     ServerSocketChannel createRealChannel(HttpTunnelServerChannel channel,

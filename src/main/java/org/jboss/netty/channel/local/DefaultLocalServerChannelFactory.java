@@ -41,7 +41,7 @@ public class DefaultLocalServerChannelFactory implements LocalServerChannelFacto
 
     @Override
     public LocalServerChannel newChannel(ChannelPipeline pipeline) {
-        return new DefaultLocalServerChannel(this, pipeline, sink);
+        return DefaultLocalServerChannel.create(this, pipeline, sink);
     }
 
     /**
