@@ -53,7 +53,15 @@ final class OioDatagramChannel extends AbstractChannel
     private volatile InetSocketAddress localAddress;
     volatile InetSocketAddress remoteAddress;
 
-    OioDatagramChannel(
+    static OioDatagramChannel create(ChannelFactory factory,
+            ChannelPipeline pipeline, ChannelSink sink) {
+        OioDatagramChannel instance =
+                new OioDatagramChannel(factory, pipeline, sink);
+        fireChannelOpen(instance);
+        return instance;
+    }
+
+    private OioDatagramChannel(
             ChannelFactory factory,
             ChannelPipeline pipeline,
             ChannelSink sink) {
@@ -74,8 +82,6 @@ final class OioDatagramChannel extends AbstractChannel
                     "Failed to configure the datagram socket timeout.", e);
         }
         config = new DefaultDatagramChannelConfig(socket);
-
-        fireChannelOpen(this);
     }
 
     @Override

@@ -38,14 +38,20 @@ class OioClientSocketChannel extends OioSocketChannel {
     volatile PushbackInputStream in;
     volatile OutputStream out;
 
-    OioClientSocketChannel(
+    static OioClientSocketChannel create(ChannelFactory factory,
+            ChannelPipeline pipeline, ChannelSink sink) {
+        OioClientSocketChannel instance =
+                new OioClientSocketChannel(factory, pipeline, sink);
+        fireChannelOpen(instance);
+        return instance;
+    }
+
+    private OioClientSocketChannel(
             ChannelFactory factory,
             ChannelPipeline pipeline,
             ChannelSink sink) {
 
         super(null, factory, pipeline, sink, new Socket());
-
-        fireChannelOpen(this);
     }
 
     @Override
