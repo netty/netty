@@ -298,6 +298,10 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
 
             unfoldAndFireMessageReceived(context, remoteAddress, frame);
         }
+
+        if (!cumulation.readable()) {
+          this.cumulation = null;
+        }
     }
 
     private void unfoldAndFireMessageReceived(ChannelHandlerContext context, SocketAddress remoteAddress, Object result) {
