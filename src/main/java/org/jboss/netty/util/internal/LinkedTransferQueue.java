@@ -544,7 +544,6 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         private static final AtomicReferenceFieldUpdater<Node, Object> itemUpdater =
             AtomicFieldUpdaterUtil.newRefUpdater(Node.class, Object.class, "item");
 
-        private static final long serialVersionUID = -3375979862319811754L;
     }
 
     /** head of the queue; null until first enqueue */
