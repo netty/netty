@@ -25,44 +25,44 @@ import org.jboss.netty.buffer.ChannelBuffers;
  */
 public class BinaryWebSocketFrame extends WebSocketFrame {
 
-	/**
-	 * Creates a new empty binary frame.
-	 */
-	public BinaryWebSocketFrame() {
-		this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
-	}
+    /**
+     * Creates a new empty binary frame.
+     */
+    public BinaryWebSocketFrame() {
+        this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+    }
 
-	/**
-	 * Creates a new binary frame with the specified binary data. The final
-	 * fragment flag is set to true.
-	 * 
-	 * @param binaryData
-	 *            the content of the frame.
-	 */
-	public BinaryWebSocketFrame(ChannelBuffer binaryData) {
-		this.setBinaryData(binaryData);
-	}
+    /**
+     * Creates a new binary frame with the specified binary data. The final
+     * fragment flag is set to true.
+     * 
+     * @param binaryData
+     *            the content of the frame.
+     */
+    public BinaryWebSocketFrame(ChannelBuffer binaryData) {
+        this.setBinaryData(binaryData);
+    }
 
-	/**
-	 * Creates a new binary frame with the specified binary data and the final
-	 * fragment flag.
-	 * 
-	 * @param finalFragment
-	 *            flag indicating if this frame is the final fragment
-	 * @param rsv
-	 *            reserved bits used for protocol extensions
-	 * @param binaryData
-	 *            the content of the frame.
-	 */
-	public BinaryWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
-		this.setFinalFragment(finalFragment);
-		this.setRsv(rsv);
-		this.setBinaryData(binaryData);
-	}
+    /**
+     * Creates a new binary frame with the specified binary data and the final
+     * fragment flag.
+     * 
+     * @param finalFragment
+     *            flag indicating if this frame is the final fragment
+     * @param rsv
+     *            reserved bits used for protocol extensions
+     * @param binaryData
+     *            the content of the frame.
+     */
+    public BinaryWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
+        this.setFinalFragment(finalFragment);
+        this.setRsv(rsv);
+        this.setBinaryData(binaryData);
+    }
 
-	@Override
-	public String toString() {
-		return getClass().getSimpleName() + "(data: " + getBinaryData() + ')';
-	}
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "(data: " + getBinaryData() + ')';
+    }
 
 }

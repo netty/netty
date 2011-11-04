@@ -27,19 +27,19 @@ package org.jboss.netty.handler.codec.http.websocketx;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  */
 public enum WebSocketSpecificationVersion {
-	UNKNOWN,
+    UNKNOWN,
 
-	/**
-	 * <a href=
-	 * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00"
-	 * >draft-ietf-hybi-thewebsocketprotocol- 00</a>.
-	 */
-	V00,
+    /**
+     * <a href=
+     * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00"
+     * >draft-ietf-hybi-thewebsocketprotocol- 00</a>.
+     */
+    V00,
 
-	/**
-	 * <a href=
-	 * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10"
-	 * >draft-ietf-hybi-thewebsocketprotocol- 10</a>
-	 */
-	V10
+    /**
+     * <a href=
+     * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10"
+     * >draft-ietf-hybi-thewebsocketprotocol- 10</a>
+     */
+    V10
 }

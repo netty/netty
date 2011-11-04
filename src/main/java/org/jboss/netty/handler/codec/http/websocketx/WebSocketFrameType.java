@@ -21,5 +21,5 @@ package org.jboss.netty.handler.codec.http.websocketx;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  */
 public enum WebSocketFrameType {
-	TEXT, BINARY, PING, PONG, CLOSE, CONTINUATION
+    TEXT, BINARY, PING, PONG, CLOSE, CONTINUATION
 }

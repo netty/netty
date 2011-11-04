@@ -24,59 +24,57 @@ import org.jboss.netty.buffer.ChannelBuffer;
  */
 public abstract class WebSocketFrame {
 
-	/**
-	 * Flag to indicate if this frame is the final fragment in a message. The
-	 * first fragment (frame) may also be the final fragment.
-	 */
-	private boolean finalFragment = true;
+    /**
+     * Flag to indicate if this frame is the final fragment in a message. The
+     * first fragment (frame) may also be the final fragment.
+     */
+    private boolean finalFragment = true;
 
-	/**
-	 *  RSV1, RSV2, RSV3 used for extensions 
-	 */
-	private int rsv = 0;
-	
-	/**
-	 * Contents of this frame
-	 */
-	private ChannelBuffer binaryData;
+    /**
+     * RSV1, RSV2, RSV3 used for extensions
+     */
+    private int rsv = 0;
 
-	/**
-	 * Returns binary data
-	 */
-	public ChannelBuffer getBinaryData() {
-		return binaryData;
-	}
+    /**
+     * Contents of this frame
+     */
+    private ChannelBuffer binaryData;
 
-	/**
-	 * Sets the binary data for this frame
-	 */
-	public void setBinaryData(ChannelBuffer binaryData) {
-		this.binaryData = binaryData;
-	}
+    /**
+     * Returns binary data
+     */
+    public ChannelBuffer getBinaryData() {
+        return binaryData;
+    }
 
-	/**
-	 * Flag to indicate if this frame is the final fragment in a message. The
-	 * first fragment (frame) may also be the final fragment.
-	 */
-	public boolean isFinalFragment() {
-		return finalFragment;
-	}
+    /**
+     * Sets the binary data for this frame
+     */
+    public void setBinaryData(ChannelBuffer binaryData) {
+        this.binaryData = binaryData;
+    }
 
-	public void setFinalFragment(boolean finalFragment) {
-		this.finalFragment = finalFragment;
-	}
+    /**
+     * Flag to indicate if this frame is the final fragment in a message. The
+     * first fragment (frame) may also be the final fragment.
+     */
+    public boolean isFinalFragment() {
+        return finalFragment;
+    }
 
-	/**
-	 * Bits used for extensions to the standard. 
-	 */
-	public int getRsv() {
-		return rsv;
-	}
+    public void setFinalFragment(boolean finalFragment) {
+        this.finalFragment = finalFragment;
+    }
 
-	public void setRsv(int rsv) {
-		this.rsv = rsv;
-	}
-	
-	
+    /**
+     * Bits used for extensions to the standard.
+     */
+    public int getRsv() {
+        return rsv;
+    }
+
+    public void setRsv(int rsv) {
+        this.rsv = rsv;
+    }
 
 }
