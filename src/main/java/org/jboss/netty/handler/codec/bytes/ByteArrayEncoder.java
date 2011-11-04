@@ -64,6 +64,6 @@ public class ByteArrayEncoder extends OneToOneEncoder {
             return msg;
         }
         return wrappedBuffer((byte[]) msg);
-	}
+    }
 
 }

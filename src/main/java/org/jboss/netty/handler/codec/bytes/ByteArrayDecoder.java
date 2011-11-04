@@ -75,7 +75,7 @@ public class ByteArrayDecoder extends OneToOneDecoder {
         } else {
             // copy the ChannelBuffer to a byte array
 
-        	array = new byte[buf.readableBytes()];
+            array = new byte[buf.readableBytes()];
             buf.getBytes(0, array);
         }
         return array;
