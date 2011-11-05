@@ -115,7 +115,7 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
                 }
 
                 int a = System.identityHashCode(this);
-                int b = System.identityHashCode(this);
+                int b = System.identityHashCode(o);
                 if (a < b) {
                     return -1;
                 } else if (a > b) {
