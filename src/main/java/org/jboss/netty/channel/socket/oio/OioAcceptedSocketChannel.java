@@ -70,9 +70,6 @@ class OioAcceptedSocketChannel extends OioSocketChannel {
         } catch (IOException e) {
             throw new ChannelException("Failed to obtain an OutputStream.", e);
         }
-
-        fireChannelOpen(this);
-        fireChannelBound(this, getLocalAddress());
     }
 
     @Override
