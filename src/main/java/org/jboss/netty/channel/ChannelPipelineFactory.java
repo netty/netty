@@ -32,7 +32,7 @@ import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
  * creates a new channel, it uses the {@link Bootstrap#getPipelineFactory() "pipelineFactory"}
  * property to create a new {@link ChannelPipeline} for each new channel.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$

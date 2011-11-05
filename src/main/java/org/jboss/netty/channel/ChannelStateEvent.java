@@ -24,7 +24,7 @@ package org.jboss.netty.channel;
  * find out what an upstream event and a downstream event are and what
  * fundamental differences they have.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$

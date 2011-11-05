@@ -19,7 +19,7 @@ package org.jboss.netty.util;
  * A common interface for a class which depends on external resources that
  * need explicit release or shutdown.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev$, $Date$
  *

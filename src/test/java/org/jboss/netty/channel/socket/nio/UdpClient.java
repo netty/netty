@@ -23,7 +23,7 @@ import java.net.SocketException;
 
 /**
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author Daniel Bevenius (dbevenius@jboss.com)
  * @version $Rev$, $Date$
  */
