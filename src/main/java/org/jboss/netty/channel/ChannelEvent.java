@@ -178,7 +178,7 @@ import org.jboss.netty.channel.socket.ServerSocketChannel;
  * documentation to find out how an event flows in a pipeline and how to handle
  * the event in your application.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$

@@ -28,7 +28,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * server, take a look into the <tt>WebSocketServer</tt> example located in the
  * {@code org.jboss.netty.example.http.websocket} package.
  * 
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author Mike Heath (mheath@apache.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev: 2362 $, $Date: 2010-09-09 19:59:22 +0900 (Thu, 09 Sep 2010) $

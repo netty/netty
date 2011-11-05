@@ -30,7 +30,7 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 
 /**
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author Frederic Bregier (fredbregier@free.fr)
  * @version $Rev$, $Date$

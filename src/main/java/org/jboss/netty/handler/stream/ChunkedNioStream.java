@@ -27,7 +27,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * chunk by chunk.  Please note that the {@link ReadableByteChannel} must
  * operate in blocking mode.  Non-blocking mode channels are not supported.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Frederic Bregier
  * @version $Rev$, $Date$

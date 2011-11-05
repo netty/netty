@@ -40,7 +40,7 @@ import org.jboss.netty.channel.ChannelConfig;
  * </tr>
  * </table>
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$

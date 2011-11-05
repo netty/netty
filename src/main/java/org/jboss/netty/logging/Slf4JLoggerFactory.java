@@ -21,7 +21,7 @@ package org.jboss.netty.logging;
  * Logger factory which creates a <a href="http://www.slf4j.org/">SLF4J</a>
  * logger.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev$, $Date$
