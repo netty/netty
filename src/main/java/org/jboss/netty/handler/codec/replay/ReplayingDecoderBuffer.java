@@ -27,6 +27,7 @@ import java.nio.charset.Charset;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.ChannelBufferIndexFinder;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
@@ -41,6 +42,12 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     private final ChannelBuffer buffer;
     private boolean terminated;
+
+    public static ReplayingDecoderBuffer EMPTY_BUFFER = new ReplayingDecoderBuffer(ChannelBuffers.EMPTY_BUFFER);
+
+    static {
+        EMPTY_BUFFER.terminate();
+    }
 
     ReplayingDecoderBuffer(ChannelBuffer buffer) {
         this.buffer = buffer;
