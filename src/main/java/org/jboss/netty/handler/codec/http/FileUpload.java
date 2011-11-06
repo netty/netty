@@ -32,35 +32,35 @@ public interface FileUpload extends HttpData {
      * as provided by the browser (or other client software).
      * @return the original filename
      */
-    public String getFilename();
+    String getFilename();
 
     /**
      * Set the original filename
      * @param filename
      */
-    public void setFilename(String filename);
+    void setFilename(String filename);
 
     /**
      * Set the Content Type passed by the browser if defined
      * @param contentType Content Type to set - must be not null
      */
-    public void setContentType(String contentType);
+    void setContentType(String contentType);
 
     /**
      * Returns the content type passed by the browser or null if not defined.
      * @return the content type passed by the browser or null if not defined.
      */
-    public String getContentType();
+    String getContentType();
 
     /**
      * Set the Content-Transfer-Encoding type from String as 7bit, 8bit or binary
      * @param contentTransferEncoding
      */
-    public void setContentTransferEncoding(String contentTransferEncoding);
+    void setContentTransferEncoding(String contentTransferEncoding);
 
     /**
      * Returns the Content-Transfer-Encoding
      * @return the Content-Transfer-Encoding
      */
-    public String getContentTransferEncoding();
+    String getContentTransferEncoding();
 }

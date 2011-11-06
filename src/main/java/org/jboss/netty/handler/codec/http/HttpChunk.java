@@ -43,7 +43,7 @@ public interface HttpChunk {
     /**
      * The 'end of content' marker in chunked encoding.
      */
-    static HttpChunkTrailer LAST_CHUNK = new HttpChunkTrailer() {
+    HttpChunkTrailer LAST_CHUNK = new HttpChunkTrailer() {
         @Override
         public ChannelBuffer getContent() {
             return ChannelBuffers.EMPTY_BUFFER;
