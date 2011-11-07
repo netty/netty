@@ -126,6 +126,12 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     public ChannelBuffer duplicate() {
         throw new UnreplayableOperationException();
     }
+    
+    @Override
+    public boolean getBoolean(int index) {
+        checkIndex(index);
+        return buffer.getBoolean(index);
+    }
 
     @Override
     public byte getByte(int index) {
@@ -358,6 +364,12 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
             return Integer.MAX_VALUE - buffer.readerIndex();
         }
     }
+    
+    @Override
+    public boolean readBoolean() {
+        checkReadableBytes(1);
+        return buffer.readBoolean();
+    }
 
     @Override
     public byte readByte() {
@@ -504,6 +516,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     @Override
     public void resetWriterIndex() {
+        throw new UnreplayableOperationException();
+    }
+    
+    @Override
+    public void setBoolean(int index, boolean value) {
         throw new UnreplayableOperationException();
     }
 
@@ -668,6 +685,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     @Override
     public int writableBytes() {
         return 0;
+    }
+    
+    @Override
+    public void writeBoolean(boolean value) {
+        throw new UnreplayableOperationException();
     }
 
     @Override
