@@ -27,11 +27,11 @@ public interface IpFilterRule extends IpSet
     *
     * @return True if this Rule is an ALLOW rule
     */
-   public boolean isAllowRule();
+   boolean isAllowRule();
 
    /**
     *
     * @return True if this Rule is a DENY rule
     */
-   public boolean isDenyRule();
+   boolean isDenyRule();
 }
