@@ -448,6 +448,17 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         not a dynamic buffer
      */
     void ensureWritableBytes(int writableBytes);
+    
+    /**
+     * Gets a boolean at the specified absolute (@code index) in this buffer.
+     * This method does not modify the {@code readerIndex} or {@code writerIndex}
+     * of this buffer.
+     * 
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 1} is greater than {@code this.capacity}
+     */
+    boolean getBoolean(int index);
 
     /**
      * Gets a byte at the specified absolute {@code index} in this buffer.
@@ -668,7 +679,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code dstIndex + length} is greater than
      *            {@code dst.length}
      */
-    void  getBytes(int index, byte[] dst, int dstIndex, int length);
+    void getBytes(int index, byte[] dst, int dstIndex, int length);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -682,7 +693,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code index + dst.remaining()} is greater than
      *            {@code this.capacity}
      */
-    void  getBytes(int index, ByteBuffer dst);
+    void getBytes(int index, ByteBuffer dst);
 
     /**
      * Transfers this buffer's data to the specified stream starting at the
@@ -699,7 +710,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * @throws IOException
      *         if the specified stream threw an exception during I/O
      */
-    void  getBytes(int index, OutputStream out, int length) throws IOException;
+    void getBytes(int index, OutputStream out, int length) throws IOException;
 
     /**
      * Transfers this buffer's data to the specified channel starting at the
@@ -718,8 +729,20 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * @throws IOException
      *         if the specified channel threw an exception during I/O
      */
-    int   getBytes(int index, GatheringByteChannel out, int length) throws IOException;
+    int getBytes(int index, GatheringByteChannel out, int length) throws IOException;
 
+    /**
+     * Sets the specified boolean at the specified absolute {@code index} in this
+     * buffer.
+     * This method does not modify {@code readerIndex} or {@code writerIndex} of
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if the specified {@code index} is less than {@code 0} or
+     *         {@code index + 1} is greater than {@code this.capacity}
+     */
+    void setBoolean(int index, boolean value);
+    
     /**
      * Sets the specified byte at the specified absolute {@code index} in this
      * buffer.  The 24 high-order bits of the specified value are ignored.
@@ -730,7 +753,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if the specified {@code index} is less than {@code 0} or
      *         {@code index + 1} is greater than {@code this.capacity}
      */
-    void setByte(int index, int   value);
+    void setByte(int index, int value);
 
     /**
      * Sets the specified 16-bit short integer at the specified absolute
@@ -969,6 +992,15 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      *         if {@code index + length} is greater than {@code this.capacity}
      */
     void setZero(int index, int length);
+    
+    /**
+     * Gets a boolean at the current {@code readerIndex} and increases
+     * the {@code readerIndex} by {@code 1} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.readableBytes} is less than {@code 1}
+     */
+     boolean readBoolean();
 
     /**
      * Gets a byte at the current {@code readerIndex} and increases
@@ -1230,6 +1262,15 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
     void skipBytes(int length);
 
     /**
+     * Sets the specified boolean at the current {@code writerIndex}
+     * and increases the {@code writerIndex} by {@code 1} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code this.writableBytes} is less than {@code 1}
+     */
+    void writeBoolean(boolean value);
+    
+    /**
      * Sets the specified byte at the current {@code writerIndex}
      * and increases the {@code writerIndex} by {@code 1} in this buffer.
      * The 24 high-order bits of the specified value are ignored.
@@ -1237,7 +1278,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * @throws IndexOutOfBoundsException
      *         if {@code this.writableBytes} is less than {@code 1}
      */
-    void writeByte(int   value);
+    void writeByte(int value);
 
     /**
      * Sets the specified 16-bit short integer at the current
