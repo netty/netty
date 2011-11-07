@@ -239,7 +239,7 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             int maxFrameLength,
             int lengthFieldOffset, int lengthFieldLength,
             int lengthAdjustment, int initialBytesToStrip) {
-        this(maxFrameLength, lengthFieldOffset, lengthFieldOffset, lengthAdjustment,
+        this(maxFrameLength, lengthFieldOffset, lengthFieldLength, lengthAdjustment,
                 initialBytesToStrip, false);
     }
 
