@@ -36,7 +36,7 @@ public interface HttpData extends InterfaceHttpData {
      * @param buffer must be not null
      * @exception IOException
      */
-    public void setContent(ChannelBuffer buffer) throws IOException;
+    void setContent(ChannelBuffer buffer) throws IOException;
 
     /**
      * Add the content from the ChannelBuffer
@@ -44,7 +44,7 @@ public interface HttpData extends InterfaceHttpData {
      * @param last True of the buffer is the last one
      * @exception IOException
      */
-    public void addContent(ChannelBuffer buffer, boolean last)
+    void addContent(ChannelBuffer buffer, boolean last)
             throws IOException;
 
     /**
@@ -52,46 +52,46 @@ public interface HttpData extends InterfaceHttpData {
      * @param file must be not null
      * @exception IOException
      */
-    public void setContent(File file) throws IOException;
+    void setContent(File file) throws IOException;
 
     /**
      * Set the content from the inputStream (erase any previous data)
      * @param inputStream must be not null
      * @exception IOException
      */
-    public void setContent(InputStream inputStream) throws IOException;
+    void setContent(InputStream inputStream) throws IOException;
 
     /**
      *
      * @return True if the InterfaceHttpData is completed (all data are stored)
      */
-    public boolean isCompleted();
+    boolean isCompleted();
 
     /**
      * Returns the size in byte of the InterfaceHttpData
      * @return the size of the InterfaceHttpData
      */
-    public long length();
+    long length();
 
     /**
      * Deletes the underlying storage for a file item,
      * including deleting any associated temporary disk file.
      */
-    public void delete();
+    void delete();
 
     /**
      * Returns the contents of the file item as an array of bytes.
      * @return the contents of the file item as an array of bytes.
      * @exception IOException
      */
-    public byte[] get() throws IOException;
+    byte[] get() throws IOException;
 
     /**
      * Returns the content of the file item as a ChannelBuffer
      * @return the content of the file item as a ChannelBuffer
      * @throws IOException
      */
-    public ChannelBuffer getChannelBuffer() throws IOException;
+    ChannelBuffer getChannelBuffer() throws IOException;
 
     /**
      * Returns a ChannelBuffer for the content from the current position with at most length read
@@ -102,14 +102,14 @@ public interface HttpData extends InterfaceHttpData {
      * an EMPTY_BUFFER if there is no more data to return
      * @throws IOException
      */
-    public ChannelBuffer getChunk(int length) throws IOException;
+    ChannelBuffer getChunk(int length) throws IOException;
 
     /**
      * Returns the contents of the file item as a String, using the default character encoding.
      * @return the contents of the file item as a String, using the default character encoding.
      * @exception IOException
      */
-    public String getString() throws IOException;
+    String getString() throws IOException;
 
     /**
      * Returns the contents of the file item as a String, using the specified charset.
@@ -117,19 +117,19 @@ public interface HttpData extends InterfaceHttpData {
      * @return the contents of the file item as a String, using the specified charset.
      * @exception IOException
      */
-    public String getString(Charset encoding) throws IOException;
+    String getString(Charset encoding) throws IOException;
 
     /**
      * Set the Charset passed by the browser if defined
      * @param charset Charset to set - must be not null
      */
-    public void setCharset(Charset charset);
+    void setCharset(Charset charset);
 
     /**
      * Returns the Charset passed by the browser or null if not defined.
      * @return the Charset passed by the browser or null if not defined.
      */
-    public Charset getCharset();
+    Charset getCharset();
 
     /**
      * A convenience method to write an uploaded item to disk.
@@ -140,19 +140,19 @@ public interface HttpData extends InterfaceHttpData {
      * @return True if the write is successful
      * @exception IOException
      */
-    public boolean renameTo(File dest) throws IOException;
+    boolean renameTo(File dest) throws IOException;
 
     /**
      * Provides a hint as to whether or not the file contents will be read from memory.
      * @return True if the file contents is in memory.
      */
-    public boolean isInMemory();
+    boolean isInMemory();
 
     /**
      *
      * @return the associated File if this data is represented in a file
      * @exception IOException if this data is not represented by a file
      */
-    public File getFile() throws IOException;
+    File getFile() throws IOException;
 
 }

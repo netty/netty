@@ -27,10 +27,10 @@ import org.jboss.netty.buffer.ChannelBuffer;
  */
 interface HttpTunnelAcceptedChannelReceiver {
 
-    public void updateInterestOps(SaturationStateChange transition);
+    void updateInterestOps(SaturationStateChange transition);
 
-    public void dataReceived(ChannelBuffer data);
+    void dataReceived(ChannelBuffer data);
 
-    public void clientClosed();
+    void clientClosed();
 
 }

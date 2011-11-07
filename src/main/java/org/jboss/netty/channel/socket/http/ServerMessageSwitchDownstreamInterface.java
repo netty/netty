@@ -28,9 +28,9 @@ import org.jboss.netty.channel.ChannelFuture;
  */
 interface ServerMessageSwitchDownstreamInterface {
 
-    public void serverCloseTunnel(String tunnelId);
+    void serverCloseTunnel(String tunnelId);
 
-    public void routeOutboundData(String tunnelId, ChannelBuffer data,
-            ChannelFuture writeFuture);
+    void routeOutboundData(String tunnelId, ChannelBuffer data,
+                           ChannelFuture writeFuture);
 
 }

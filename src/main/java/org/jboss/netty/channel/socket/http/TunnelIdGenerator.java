@@ -32,6 +32,6 @@ public interface TunnelIdGenerator {
      * an existing tunnel ID). This method must be thread safe, and
      * preferably lock free.
      */
-    public String generateId();
+    String generateId();
 
 }

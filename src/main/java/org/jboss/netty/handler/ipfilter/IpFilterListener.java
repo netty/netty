@@ -43,7 +43,7 @@ public interface IpFilterListener
     * @param inetSocketAddress the remote {@link InetSocketAddress} from client
     * @return the associated ChannelFuture to be waited for before closing the channel. Null is allowed.
     */
-   public ChannelFuture allowed(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress);
+   ChannelFuture allowed(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress);
 
    /**
     * Called when the channel has the CONNECTED status and the channel was refused by a previous call to accept().
@@ -56,7 +56,7 @@ public interface IpFilterListener
     * @param inetSocketAddress the remote {@link InetSocketAddress} from client
     * @return the associated ChannelFuture to be waited for before closing the channel. Null is allowed.
     */
-   public ChannelFuture refused(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress);
+   ChannelFuture refused(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress);
 
    /**
     * Called in handleUpstream, if this channel was previously blocked,
@@ -69,6 +69,6 @@ public interface IpFilterListener
     * @return True if the event should continue, False if the event should not continue
     *          since this channel was blocked by this filter
     */
-   public boolean continues(ChannelHandlerContext ctx, ChannelEvent e);
+   boolean continues(ChannelHandlerContext ctx, ChannelEvent e);
 
 }

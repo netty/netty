@@ -35,7 +35,7 @@ public interface HttpDataFactory {
     * @throws NullPointerException
     * @throws IllegalArgumentException
     */
-   public Attribute createAttribute(HttpRequest request, String name)
+    Attribute createAttribute(HttpRequest request, String name)
            throws NullPointerException, IllegalArgumentException;
 
     /**
@@ -47,7 +47,7 @@ public interface HttpDataFactory {
      * @throws NullPointerException
      * @throws IllegalArgumentException
      */
-    public Attribute createAttribute(HttpRequest request, String name, String value)
+    Attribute createAttribute(HttpRequest request, String name, String value)
             throws NullPointerException, IllegalArgumentException;
 
     /**
@@ -60,9 +60,9 @@ public interface HttpDataFactory {
      * @param size the size of the Uploaded file
      * @return a new FileUpload
      */
-    public FileUpload createFileUpload(HttpRequest request, String name, String filename,
-            String contentType, String contentTransferEncoding, Charset charset,
-            long size) throws NullPointerException, IllegalArgumentException;
+    FileUpload createFileUpload(HttpRequest request, String name, String filename,
+                                String contentType, String contentTransferEncoding, Charset charset,
+                                long size) throws NullPointerException, IllegalArgumentException;
 
     /**
      * Remove the given InterfaceHttpData from clean list (will not delete the file, except if the file
@@ -70,17 +70,17 @@ public interface HttpDataFactory {
      * @param request associated request
      * @param data
      */
-    public void removeHttpDataFromClean(HttpRequest request, InterfaceHttpData data);
+    void removeHttpDataFromClean(HttpRequest request, InterfaceHttpData data);
 
     /**
      * Remove all InterfaceHttpData from virtual File storage from clean list for the request
      *
      * @param request associated request
      */
-    public void cleanRequestHttpDatas(HttpRequest request);
+    void cleanRequestHttpDatas(HttpRequest request);
 
     /**
      * Remove all InterfaceHttpData from virtual File storage from clean list for all requests
      */
-    public void cleanAllHttpDatas();
+    void cleanAllHttpDatas();
 }
