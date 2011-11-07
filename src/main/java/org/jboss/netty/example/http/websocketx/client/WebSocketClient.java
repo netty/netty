@@ -37,14 +37,14 @@ public interface WebSocketClient {
      * 
      * @return Connect future. Fires when connected.
      */
-    public ChannelFuture connect();
+    ChannelFuture connect();
 
     /**
      * Disconnect from the server
      * 
      * @return Disconnect future. Fires when disconnected.
      */
-    public ChannelFuture disconnect();
+    ChannelFuture disconnect();
 
     /**
      * Send data to server
@@ -53,5 +53,5 @@ public interface WebSocketClient {
      *            Data for sending
      * @return Write future. Will fire when the data is sent.
      */
-    public ChannelFuture send(WebSocketFrame frame);
+    ChannelFuture send(WebSocketFrame frame);
 }

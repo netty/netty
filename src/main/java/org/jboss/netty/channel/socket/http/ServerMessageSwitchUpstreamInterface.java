@@ -32,11 +32,11 @@ import org.jboss.netty.channel.Channel;
  */
 interface ServerMessageSwitchUpstreamInterface {
 
-    public String createTunnel(InetSocketAddress remoteAddress);
+    String createTunnel(InetSocketAddress remoteAddress);
 
-    public boolean isOpenTunnel(String tunnelId);
+    boolean isOpenTunnel(String tunnelId);
 
-    public void clientCloseTunnel(String tunnelId);
+    void clientCloseTunnel(String tunnelId);
 
     /**
      * Passes some received data from a client for forwarding to the server's view
@@ -45,12 +45,12 @@ interface ServerMessageSwitchUpstreamInterface {
      * functional, CLOSED indicates it is closed and the client should be notified
      * of this (and will be forgotten after this notification).
      */
-    public TunnelStatus routeInboundData(String tunnelId,
-            ChannelBuffer inboundData);
+    TunnelStatus routeInboundData(String tunnelId,
+                                  ChannelBuffer inboundData);
 
-    public void pollOutboundData(String tunnelId, Channel responseChannel);
+    void pollOutboundData(String tunnelId, Channel responseChannel);
 
-    public static enum TunnelStatus {
+    enum TunnelStatus {
         ALIVE, CLOSED
     }
 

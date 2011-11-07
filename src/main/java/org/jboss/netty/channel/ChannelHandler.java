@@ -233,7 +233,7 @@ public interface ChannelHandler {
     @Documented
     @Target(ElementType.TYPE)
     @Retention(RetentionPolicy.RUNTIME)
-    public @interface Sharable {
+    @interface Sharable {
         // no value
     }
 }

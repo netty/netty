@@ -32,10 +32,10 @@ public interface IpFilteringHandler
     * 
     * @param listener the new ip filter listener
     */
-   public void setIpFilterListener(IpFilterListener listener);
+   void setIpFilterListener(IpFilterListener listener);
 
    /**
     * Remove the filter listener.
     */
-   public void removeIpFilterListener();
+   void removeIpFilterListener();
 }
