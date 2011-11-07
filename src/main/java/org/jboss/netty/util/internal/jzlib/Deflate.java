@@ -494,26 +494,26 @@ final class Deflate {
 
     // Output a byte on the stream.
     // IN assertion: there is enough room in pending_buf.
-    private final void put_byte(byte[] p, int start, int len) {
+    private void put_byte(byte[] p, int start, int len) {
         System.arraycopy(p, start, pending_buf, pending, len);
         pending += len;
     }
 
-    private final void put_byte(byte c) {
+    private void put_byte(byte c) {
         pending_buf[pending ++] = c;
     }
 
-    private final void put_short(int w) {
+    private void put_short(int w) {
         put_byte((byte) w/*&0xff*/);
         put_byte((byte) (w >>> 8));
     }
 
-    private final void putShortMSB(int b) {
+    private void putShortMSB(int b) {
         put_byte((byte) (b >> 8));
         put_byte((byte) b/*&0xff*/);
     }
 
-    private final void send_code(int c, short[] tree) {
+    private void send_code(int c, short[] tree) {
         int c2 = c * 2;
         send_bits((tree[c2] & 0xffff), (tree[c2 + 1] & 0xffff));
     }

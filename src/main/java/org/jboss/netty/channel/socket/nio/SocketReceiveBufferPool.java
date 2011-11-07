@@ -90,7 +90,7 @@ final class SocketReceiveBufferPool {
         }
     }
 
-    private static final int normalizeCapacity(int capacity) {
+    private static int normalizeCapacity(int capacity) {
         // Normalize to multiple of 1024
         int q = capacity >>> 10;
         int r = capacity & 1023;
