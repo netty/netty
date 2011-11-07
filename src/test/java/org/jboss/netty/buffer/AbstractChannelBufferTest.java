@@ -144,6 +144,16 @@ public abstract class AbstractChannelBufferTest {
         buffer.readerIndex(0);
         buffer.writerIndex(CAPACITY);
     }
+    
+    @Test(expected=IndexOutOfBoundsException.class)
+    public void getBooleanBoundaryCheck1() {
+        buffer.getBoolean(-1);
+    }
+
+    @Test(expected=IndexOutOfBoundsException.class)
+    public void getBooleanBoundaryCheck2() {
+        buffer.getBoolean(buffer.capacity());
+    }
 
     @Test(expected=IndexOutOfBoundsException.class)
     public void getByteBoundaryCheck1() {
