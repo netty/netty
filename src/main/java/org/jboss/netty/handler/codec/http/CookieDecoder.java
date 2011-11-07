@@ -95,6 +95,11 @@ public class CookieDecoder {
         Set<Cookie> cookies = new TreeSet<Cookie>();
         for (; i < names.size(); i ++) {
             String name = names.get(i);
+            // Not all user agents understand the HttpOnly attribute -- be lenient
+            if (CookieHeaderNames.HTTPONLY.equalsIgnoreCase(name)) {
+                continue;
+            }
+
             String value = values.get(i);
             if (value == null) {
                 value = "";
