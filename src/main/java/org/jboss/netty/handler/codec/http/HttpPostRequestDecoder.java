@@ -1435,12 +1435,6 @@ public class HttpPostRequestDecoder {
          */
         private static final long serialVersionUID = 1336267941020800769L;
 
-        /**
-         *
-         */
-        public EndOfDataDecoderException() {
-            super();
-        }
     }
 
     /**

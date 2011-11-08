@@ -30,10 +30,6 @@ final class SocketReceiveBufferPool {
     @SuppressWarnings("unchecked")
     private final SoftReference<ByteBuffer>[] pool = new SoftReference[POOL_SIZE];
 
-    SocketReceiveBufferPool() {
-        super();
-    }
-
     final ByteBuffer acquire(int size) {
         final SoftReference<ByteBuffer>[] pool = this.pool;
         for (int i = 0; i < POOL_SIZE; i ++) {

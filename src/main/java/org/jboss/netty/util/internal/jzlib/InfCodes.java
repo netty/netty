@@ -85,10 +85,6 @@ final class InfCodes {
     private int[] dtree; // distance tree
     private int dtree_index; // distance tree
 
-    InfCodes() {
-        super();
-    }
-
     void init(int bl, int bd, int[] tl, int tl_index, int[] td, int td_index) {
         mode = START;
         lbits = (byte) bl;
