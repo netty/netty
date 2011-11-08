@@ -122,6 +122,10 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
             throw new IndexOutOfBoundsException();
         }
     }
+    
+    public boolean getBoolean(int index) {
+        return (getByte(index) == 1);
+    }
 
     public short getUnsignedByte(int index) {
         return (short) (getByte(index) & 0xFF);
@@ -169,6 +173,10 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         }
         getBytes(index, dst, dst.writerIndex(), length);
         dst.writerIndex(dst.writerIndex() + length);
+    }
+    
+    public void setBoolean(int index, boolean value) {
+        setByte(index, value ? 1 : 0);
     }
 
     public void setChar(int index, int value) {
@@ -236,6 +244,10 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
             throw new IndexOutOfBoundsException();
         }
         return getByte(readerIndex ++);
+    }
+    
+    public boolean readBoolean() {
+        return (readByte() == 1);
     }
 
     public short readUnsignedByte() {
@@ -399,6 +411,10 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
         }
         readerIndex(newReaderIndex);
         return newReaderIndex - oldReaderIndex;
+    }
+    
+    public void writeBoolean(boolean value) {
+        writeByte(value ? 1 : 0);
     }
 
     public void writeByte(int value) {
