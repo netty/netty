@@ -30,9 +30,9 @@ import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
  */
 public class WebSocketServerHandshakerFactory {
 
-    private String webSocketURL;
+    private final String webSocketURL;
 
-    private String subProtocols;
+    private final String subProtocols;
 
     private boolean allowExtensions = false;
 

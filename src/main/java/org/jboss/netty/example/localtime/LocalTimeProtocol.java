@@ -48,7 +48,7 @@ public final class LocalTimeProtocol {
         internalGetValueMap() {
       return internalValueMap;
     }
-    private static com.google.protobuf.Internal.EnumLiteMap<Continent>
+    private static final com.google.protobuf.Internal.EnumLiteMap<Continent>
         internalValueMap =
           new com.google.protobuf.Internal.EnumLiteMap<Continent>() {
             public Continent findValueByNumber(int number) {
@@ -125,7 +125,7 @@ public final class LocalTimeProtocol {
         internalGetValueMap() {
       return internalValueMap;
     }
-    private static com.google.protobuf.Internal.EnumLiteMap<DayOfWeek>
+    private static final com.google.protobuf.Internal.EnumLiteMap<DayOfWeek>
         internalValueMap =
           new com.google.protobuf.Internal.EnumLiteMap<DayOfWeek>() {
             public DayOfWeek findValueByNumber(int number) {
