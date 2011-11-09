@@ -34,7 +34,7 @@ public class RXTXChannelConfig extends DefaultChannelConfig {
         STOPBITS_2(SerialPort.STOPBITS_2),
         STOPBITS_1_5(SerialPort.STOPBITS_1_5);
 
-        private int value;
+        private final int value;
 
         private Stopbits(int value) {
             this.value = value;
@@ -61,7 +61,7 @@ public class RXTXChannelConfig extends DefaultChannelConfig {
         DATABITS_7(SerialPort.DATABITS_7),
         DATABITS_8(SerialPort.DATABITS_8);
 
-        private int value;
+        private final int value;
 
         private Databits(int value) {
             this.value = value;
@@ -89,7 +89,7 @@ public class RXTXChannelConfig extends DefaultChannelConfig {
         MARK(SerialPort.PARITY_MARK),
         SPACE(SerialPort.PARITY_SPACE);
 
-        private int value;
+        private final int value;
 
         private Paritybit(int value) {
             this.value = value;

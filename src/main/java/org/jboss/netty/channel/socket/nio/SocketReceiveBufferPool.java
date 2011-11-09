@@ -30,10 +30,6 @@ final class SocketReceiveBufferPool {
     @SuppressWarnings("unchecked")
     private final SoftReference<ByteBuffer>[] pool = new SoftReference[POOL_SIZE];
 
-    SocketReceiveBufferPool() {
-        super();
-    }
-
     final ByteBuffer acquire(int size) {
         final SoftReference<ByteBuffer>[] pool = this.pool;
         for (int i = 0; i < POOL_SIZE; i ++) {
@@ -90,7 +86,7 @@ final class SocketReceiveBufferPool {
         }
     }
 
-    private static final int normalizeCapacity(int capacity) {
+    private static int normalizeCapacity(int capacity) {
         // Normalize to multiple of 1024
         int q = capacity >>> 10;
         int r = capacity & 1023;

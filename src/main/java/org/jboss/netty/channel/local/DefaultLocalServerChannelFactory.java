@@ -32,13 +32,6 @@ public class DefaultLocalServerChannelFactory implements LocalServerChannelFacto
 
     private final ChannelSink sink = new LocalServerChannelSink();
 
-    /**
-     * Creates a new instance.
-     */
-    public DefaultLocalServerChannelFactory() {
-        super();
-    }
-
     @Override
     public LocalServerChannel newChannel(ChannelPipeline pipeline) {
         return DefaultLocalServerChannel.create(this, pipeline, sink);

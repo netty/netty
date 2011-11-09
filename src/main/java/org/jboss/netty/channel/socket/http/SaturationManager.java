@@ -32,9 +32,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author OneDrum Ltd.
  */
 class SaturationManager {
-    private AtomicLong desaturationPoint;
+    private final AtomicLong desaturationPoint;
 
-    private AtomicLong saturationPoint;
+    private final AtomicLong saturationPoint;
 
     private final AtomicLong queueSize;
 
