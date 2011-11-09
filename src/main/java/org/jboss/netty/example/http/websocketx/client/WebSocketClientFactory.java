@@ -44,7 +44,7 @@ import java.util.concurrent.Executors;
  */
 public class WebSocketClientFactory {
 
-    private NioClientSocketChannelFactory socketChannelFactory = new NioClientSocketChannelFactory(
+    private final NioClientSocketChannelFactory socketChannelFactory = new NioClientSocketChannelFactory(
             Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 
     /**

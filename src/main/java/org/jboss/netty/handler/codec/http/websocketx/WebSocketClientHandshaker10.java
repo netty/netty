@@ -49,7 +49,7 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
 
     private String expectedChallengeResponseString = null;
 
-    private String protocol = null;
+    private final String protocol = null;
 
     private boolean allowExtensions = false;
 

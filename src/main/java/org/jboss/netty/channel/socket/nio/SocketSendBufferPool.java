@@ -56,14 +56,14 @@ final class SocketSendBufferPool {
                 "unsupported message type: " + message.getClass());
     }
 
-    private final SendBuffer acquire(FileRegion src) {
+    private SendBuffer acquire(FileRegion src) {
         if (src.getCount() == 0) {
             return EMPTY_BUFFER;
         }
         return new FileSendBuffer(src);
     }
 
-    private final SendBuffer acquire(ChannelBuffer src) {
+    private SendBuffer acquire(ChannelBuffer src) {
         final int size = src.readableBytes();
         if (size == 0) {
             return EMPTY_BUFFER;
@@ -109,7 +109,7 @@ final class SocketSendBufferPool {
         return dst;
     }
 
-    private final Preallocation getPreallocation() {
+    private Preallocation getPreallocation() {
         Preallocation current = this.current;
         if (current.refCnt == 0) {
             current.buffer.clear();
@@ -119,7 +119,7 @@ final class SocketSendBufferPool {
         return getPreallocation0();
     }
 
-    private final Preallocation getPreallocation0() {
+    private Preallocation getPreallocation0() {
         PreallocationRef ref = poolHead;
         if (ref != null) {
             do {
@@ -138,7 +138,7 @@ final class SocketSendBufferPool {
         return new Preallocation(DEFAULT_PREALLOCATION_SIZE);
     }
 
-    private static final int align(int pos) {
+    private static int align(int pos) {
         int q = pos >>> ALIGN_SHIFT;
         int r = pos & ALIGN_MASK;
         if (r != 0) {

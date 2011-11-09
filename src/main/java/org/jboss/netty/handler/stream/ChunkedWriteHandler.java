@@ -87,13 +87,6 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
     private MessageEvent currentEvent;
 
     /**
-     * Creates a new instance.
-     */
-    public ChunkedWriteHandler() {
-        super();
-    }
-
-    /**
      * Continues to fetch the chunks from the input.
      */
     public void resumeTransfer() {

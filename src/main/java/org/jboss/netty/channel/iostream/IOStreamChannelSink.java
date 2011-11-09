@@ -115,7 +115,7 @@ public class IOStreamChannelSink extends AbstractChannelSink {
 
     private PushbackInputStream inputStream;
 
-    private ChannelConfig config = new DefaultChannelConfig();
+    private final ChannelConfig config = new DefaultChannelConfig();
 
     @Override
     public void eventSunk(final ChannelPipeline pipeline, final ChannelEvent e) throws Exception {

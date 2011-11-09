@@ -68,13 +68,6 @@ import com.google.protobuf.MessageLite;
 @Sharable
 public class ProtobufEncoder extends OneToOneEncoder {
 
-    /**
-     * Creates a new instance.
-     */
-    public ProtobufEncoder() {
-        super();
-    }
-
     @Override
     protected Object encode(
             ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {

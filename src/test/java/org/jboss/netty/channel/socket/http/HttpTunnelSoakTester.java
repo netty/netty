@@ -85,7 +85,7 @@ public class HttpTunnelSoakTester {
 
     final DataVerifier s2cVerifier = new DataVerifier("S2C-Verifier");
 
-    private static byte[] SEND_STREAM;
+    private static final byte[] SEND_STREAM;
 
     static {
         SEND_STREAM = new byte[MAX_WRITE_SIZE + 127];
