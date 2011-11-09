@@ -50,7 +50,7 @@ public class CookieDecoder {
 
     private final static String COMMA = ",";
 
-    private boolean lenient;
+    private final boolean lenient;
 
     /**
      * Creates a new decoder with strict parsing.
