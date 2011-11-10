@@ -69,6 +69,7 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
     private final boolean stripDelimiter;
     private boolean discardingTooLongFrame;
     private int tooLongFrameLength;
+    private boolean failImmediatelyOnTooLongFrame = false;
 
     /**
      * Creates a new instance.
@@ -169,11 +170,11 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
                 discardingTooLongFrame = false;
                 buffer.skipBytes(minFrameLength + minDelimLength);
 
-                // TODO Let user choose when the exception should be raised - early or late?
-                //      If early, fail() should be called when discardingTooLongFrame is set to true.
                 int tooLongFrameLength = this.tooLongFrameLength;
                 this.tooLongFrameLength = 0;
-                fail(ctx, tooLongFrameLength);
+                if (!failImmediatelyOnTooLongFrame) {
+                    fail(ctx, tooLongFrameLength);
+                }
                 return null;
             }
 
@@ -199,6 +200,9 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
                     tooLongFrameLength = buffer.readableBytes();
                     buffer.skipBytes(buffer.readableBytes());
                     discardingTooLongFrame = true;
+                    if (failImmediatelyOnTooLongFrame) {
+                        fail(ctx, tooLongFrameLength);
+                    }
                 }
             } else {
                 // Still discarding the buffer since a delimiter is not found.
@@ -207,6 +211,23 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
             }
             return null;
         }
+    }
+
+    /**
+     * Set the behavior when a frame longer than maxFrameLength is encountered.
+     * 
+     * @param failImmediatelyOnTooLongFrame  If false (the default) a {@link TooLongFrameException}
+     *                                       is thrown if the length of the frame exceeds maxFrameLength,
+     *                                       after the delimiter has been read.
+     *                                       If true a {@link TooLongFrameException} is thrown immediately
+     *                                       when the length of the frame exceeds maxFrameLength,
+     *                                       regardless of whether a delimiter has been found yet.
+     */
+    public DelimiterBasedFrameDecoder setFailImmediatelyOnTooLongFrame(
+            boolean failImmediatelyOnTooLongFrame)
+    {
+      this.failImmediatelyOnTooLongFrame = failImmediatelyOnTooLongFrame;
+      return this;
     }
 
     private void fail(ChannelHandlerContext ctx, long frameLength) {
