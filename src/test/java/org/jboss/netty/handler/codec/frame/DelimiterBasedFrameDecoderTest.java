@@ -50,8 +50,7 @@ public class DelimiterBasedFrameDecoderTest {
     @Test
     public void testFailImmediatelyTooLongFrameRecovery() throws Exception {
         DecoderEmbedder<ChannelBuffer> embedder = new DecoderEmbedder<ChannelBuffer>(
-                new DelimiterBasedFrameDecoder(1, Delimiters.nulDelimiter()).
-                        setFailImmediatelyOnTooLongFrame(true));
+                new DelimiterBasedFrameDecoder(1, true, true, Delimiters.nulDelimiter()));
 
         for (int i = 0; i < 2; i ++) {
             try {
