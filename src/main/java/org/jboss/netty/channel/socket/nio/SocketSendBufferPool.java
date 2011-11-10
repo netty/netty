@@ -45,7 +45,7 @@ final class SocketSendBufferPool {
         super();
     }
 
-    final SendBuffer acquire(Object message) {
+    SendBuffer acquire(Object message) {
         if (message instanceof ChannelBuffer) {
             return acquire((ChannelBuffer) message);
         } else if (message instanceof FileRegion) {
@@ -320,27 +320,27 @@ final class SocketSendBufferPool {
         }
 
         @Override
-        public final boolean finished() {
+        public boolean finished() {
             return true;
         }
 
         @Override
-        public final long writtenBytes() {
+        public long writtenBytes() {
             return 0;
         }
 
         @Override
-        public final long totalBytes() {
+        public long totalBytes() {
             return 0;
         }
 
         @Override
-        public final long transferTo(WritableByteChannel ch) throws IOException {
+        public long transferTo(WritableByteChannel ch) throws IOException {
             return 0;
         }
 
         @Override
-        public final long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
+        public long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
             return 0;
         }
 

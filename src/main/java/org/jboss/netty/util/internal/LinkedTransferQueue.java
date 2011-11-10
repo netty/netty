@@ -437,7 +437,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         volatile Thread waiter; // null until waiting
 
         // CAS methods for fields
-        final boolean casNext(Node cmp, Node val) {
+        boolean casNext(Node cmp, Node val) {
             if (AtomicFieldUpdaterUtil.isAvailable()) {
                 return nextUpdater.compareAndSet(this, cmp, val);
             } else {
@@ -452,7 +452,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
             }
         }
 
-        final boolean casItem(Object cmp, Object val) {
+        boolean casItem(Object cmp, Object val) {
             // assert cmp == null || cmp.getClass() != Node.class;
             if (AtomicFieldUpdaterUtil.isAvailable()) {
                 return itemUpdater.compareAndSet(this, cmp, val);
@@ -481,7 +481,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
          * Links node to itself to avoid garbage retention.  Called
          * only after CASing head field, so uses relaxed write.
          */
-        final void forgetNext() {
+        void forgetNext() {
             this.next = this;
         }
 
@@ -494,7 +494,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
          * follows either CAS or return from park (if ever parked;
          * else we don't care).
          */
-        final void forgetContents() {
+        void forgetContents() {
             this.item = this;
             this.waiter = null;
         }
@@ -503,7 +503,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
          * Returns true if this node has been matched, including the
          * case of artificial matches due to cancellation.
          */
-        final boolean isMatched() {
+        boolean isMatched() {
             Object x = item;
             return x == this || x == null == isData;
         }
@@ -511,7 +511,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         /**
          * Returns true if this is an unmatched request node.
          */
-        final boolean isUnmatchedRequest() {
+        boolean isUnmatchedRequest() {
             return !isData && item == null;
         }
 
@@ -520,7 +520,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
          * appended to this node because this node is unmatched and
          * has opposite data mode.
          */
-        final boolean cannotPrecede(boolean haveData) {
+        boolean cannotPrecede(boolean haveData) {
             boolean d = isData;
             Object x;
             return d != haveData && (x = item) != this && x != null == d;
@@ -529,7 +529,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         /**
          * Tries to artificially match a data node -- used by remove.
          */
-        final boolean tryMatchData() {
+        boolean tryMatchData() {
             // assert isData;
             Object x = item;
             if (x != null && x != this && casItem(x, null)) {
@@ -895,12 +895,12 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         }
 
         @Override
-        public final boolean hasNext() {
+        public boolean hasNext() {
             return nextNode != null;
         }
 
         @Override
-        public final E next() {
+        public E next() {
             Node p = nextNode;
             if (p == null) {
                 throw new NoSuchElementException();
@@ -911,7 +911,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         }
 
         @Override
-        public final void remove() {
+        public void remove() {
             Node p = lastRet;
             if (p == null) {
                 throw new IllegalStateException();

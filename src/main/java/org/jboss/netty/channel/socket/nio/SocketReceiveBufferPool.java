@@ -30,7 +30,7 @@ final class SocketReceiveBufferPool {
     @SuppressWarnings("unchecked")
     private final SoftReference<ByteBuffer>[] pool = new SoftReference[POOL_SIZE];
 
-    final ByteBuffer acquire(int size) {
+    ByteBuffer acquire(int size) {
         final SoftReference<ByteBuffer>[] pool = this.pool;
         for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
@@ -59,7 +59,7 @@ final class SocketReceiveBufferPool {
         return buf;
     }
 
-    final void release(ByteBuffer buffer) {
+    void release(ByteBuffer buffer) {
         final SoftReference<ByteBuffer>[] pool = this.pool;
         for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];

@@ -197,7 +197,7 @@ public final class LocalTimeProtocol {
       return defaultInstance;
     }
 
-    public static final com.google.protobuf.Descriptors.Descriptor
+    public static com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.jboss.netty.example.localtime.LocalTimeProtocol.internal_static_org_jboss_netty_example_localtime_Location_descriptor;
     }
@@ -226,7 +226,7 @@ public final class LocalTimeProtocol {
       continent_ = org.jboss.netty.example.localtime.LocalTimeProtocol.Continent.AFRICA;
     }
     @Override
-    public final boolean isInitialized() {
+    public boolean isInitialized() {
       if (!hasContinent) {
         return false;
     }
@@ -560,7 +560,7 @@ public final class LocalTimeProtocol {
       return defaultInstance;
     }
 
-    public static final com.google.protobuf.Descriptors.Descriptor
+    public static com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.jboss.netty.example.localtime.LocalTimeProtocol.internal_static_org_jboss_netty_example_localtime_Locations_descriptor;
     }
@@ -586,7 +586,7 @@ public final class LocalTimeProtocol {
     private void initFields() {
     }
     @Override
-    public final boolean isInitialized() {
+    public boolean isInitialized() {
       for (org.jboss.netty.example.localtime.LocalTimeProtocol.Location element : getLocationList()) {
         if (!element.isInitialized()) {
             return false;
@@ -917,7 +917,7 @@ public final class LocalTimeProtocol {
       return defaultInstance;
     }
 
-    public static final com.google.protobuf.Descriptors.Descriptor
+    public static com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.jboss.netty.example.localtime.LocalTimeProtocol.internal_static_org_jboss_netty_example_localtime_LocalTime_descriptor;
     }
@@ -981,7 +981,7 @@ public final class LocalTimeProtocol {
       dayOfWeek_ = org.jboss.netty.example.localtime.LocalTimeProtocol.DayOfWeek.SUNDAY;
     }
     @Override
-    public final boolean isInitialized() {
+    public boolean isInitialized() {
       if (!hasYear) {
         return false;
     }
@@ -1487,7 +1487,7 @@ public final class LocalTimeProtocol {
       return defaultInstance;
     }
 
-    public static final com.google.protobuf.Descriptors.Descriptor
+    public static com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.jboss.netty.example.localtime.LocalTimeProtocol.internal_static_org_jboss_netty_example_localtime_LocalTimes_descriptor;
     }
@@ -1513,7 +1513,7 @@ public final class LocalTimeProtocol {
     private void initFields() {
     }
     @Override
-    public final boolean isInitialized() {
+    public boolean isInitialized() {
       for (org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime element : getLocalTimeList()) {
         if (!element.isInitialized()) {
             return false;
