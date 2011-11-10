@@ -67,6 +67,7 @@ public class UTF8Output {
         }
     }
 
+    @Override
     public String toString() {
         if (state != UTF8_ACCEPT) {
             throw new UTF8Exception("bytes are not UTF-8");
