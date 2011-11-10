@@ -147,7 +147,7 @@ final class SocketSendBufferPool {
         return q << ALIGN_SHIFT;
     }
 
-    private final class Preallocation {
+    private static final class Preallocation {
         final ByteBuffer buffer;
         int refCnt;
 
@@ -176,7 +176,7 @@ final class SocketSendBufferPool {
         void release();
     }
 
-    class UnpooledSendBuffer implements SendBuffer {
+    static class UnpooledSendBuffer implements SendBuffer {
 
         final ByteBuffer buffer;
         final int initialPos;
@@ -266,7 +266,7 @@ final class SocketSendBufferPool {
         }
     }
 
-    final class FileSendBuffer implements SendBuffer {
+    static final class FileSendBuffer implements SendBuffer {
 
         private final FileRegion file;
         private long writtenBytes;

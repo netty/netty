@@ -1485,7 +1485,7 @@ public class HttpPostRequestDecoder {
      * @author frederic bregier
      *
      */
-    public class IncompatibleDataDecoderException extends Exception {
+    public static class IncompatibleDataDecoderException extends Exception {
         /**
          *
          */

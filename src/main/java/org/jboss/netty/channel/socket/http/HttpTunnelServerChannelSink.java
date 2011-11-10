@@ -61,7 +61,7 @@ class HttpTunnelServerChannelSink extends AbstractChannelSink {
         }
     }
 
-    private final class ChannelFutureProxy implements ChannelFutureListener {
+    private static final class ChannelFutureProxy implements ChannelFutureListener {
         private final ChannelFuture upstreamFuture;
 
         ChannelFutureProxy(ChannelFuture upstreamFuture) {

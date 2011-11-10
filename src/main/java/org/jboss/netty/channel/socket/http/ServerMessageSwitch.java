@@ -238,7 +238,7 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
     /**
      * Used to pass the result received from one ChannelFutureListener to another verbatim.
      */
-    private final class RelayedChannelFutureListener implements
+    private static final class RelayedChannelFutureListener implements
             ChannelFutureListener {
         private final ChannelFuture originalFuture;
 
