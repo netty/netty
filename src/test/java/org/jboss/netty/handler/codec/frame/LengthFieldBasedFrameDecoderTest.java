@@ -46,4 +46,25 @@ public class LengthFieldBasedFrameDecoderTest {
             Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
         }
     }
+
+    @Test
+    public void testFailImmediatelyTooLongFrameRecovery() throws Exception {
+        DecoderEmbedder<ChannelBuffer> embedder = new DecoderEmbedder<ChannelBuffer>(
+                new LengthFieldBasedFrameDecoder(5, 0, 4, 0, 4).
+                        setFailImmediatelyOnTooLongFrame(true));
+
+        for (int i = 0; i < 2; i ++) {
+            try {
+                embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 0, 0, 0, 2 }));
+                Assert.fail(CodecEmbedderException.class.getSimpleName() + " must be raised.");
+            } catch (CodecEmbedderException e) {
+                Assert.assertTrue(e.getCause() instanceof TooLongFrameException);
+                // Expected
+            }
+
+            embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 0, 0, 0, 0, 0, 1, 'A' }));
+            ChannelBuffer buf = embedder.poll();
+            Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
+        }
+    }
 }
