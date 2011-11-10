@@ -229,17 +229,6 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
         }
     }
 
-    /**
-     * Set the behavior when a frame longer than maxFrameLength is encountered.
-     * 
-     * 
-     */
-    public DelimiterBasedFrameDecoder setFailImmediatelyOnTooLongFrame(
-           )
-    {
-      return this;
-    }
-
     private void fail(ChannelHandlerContext ctx, long frameLength) {
         if (frameLength > 0) {
             Channels.fireExceptionCaught(
