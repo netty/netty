@@ -124,7 +124,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
      *
      * @apiviz.exclude
      */
-    protected static enum State {
+    protected enum State {
         SKIP_CONTROL_CHARS,
         READ_INITIAL,
         READ_HEADER,

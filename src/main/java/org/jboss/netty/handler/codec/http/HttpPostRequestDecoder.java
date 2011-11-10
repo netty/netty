@@ -232,7 +232,7 @@ public class HttpPostRequestDecoder {
      * @author frederic bregier
      *
      */
-    private static enum MultiPartStatus {
+    private enum MultiPartStatus {
         NOTSTARTED,
         PREAMBLE,
         HEADERDELIMITER,

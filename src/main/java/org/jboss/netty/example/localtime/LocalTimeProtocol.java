@@ -86,7 +86,7 @@ public final class LocalTimeProtocol {
     }
     private final int index;
     private final int value;
-    private Continent(int index, int value) {
+    Continent(int index, int value) {
       this.index = index;
       this.value = value;
     }
@@ -167,7 +167,7 @@ public final class LocalTimeProtocol {
     }
     private final int index;
     private final int value;
-    private DayOfWeek(int index, int value) {
+    DayOfWeek(int index, int value) {
       this.index = index;
       this.value = value;
     }
