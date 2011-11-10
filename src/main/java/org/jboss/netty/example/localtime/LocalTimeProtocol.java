@@ -68,7 +68,7 @@ public final class LocalTimeProtocol {
         getDescriptorForType() {
       return getDescriptor();
     }
-    public static final com.google.protobuf.Descriptors.EnumDescriptor
+    public static com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
       return org.jboss.netty.example.localtime.LocalTimeProtocol.getDescriptor().getEnumTypes().get(0);
     }
@@ -149,7 +149,7 @@ public final class LocalTimeProtocol {
         getDescriptorForType() {
       return getDescriptor();
     }
-    public static final com.google.protobuf.Descriptors.EnumDescriptor
+    public static com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
       return org.jboss.netty.example.localtime.LocalTimeProtocol.getDescriptor().getEnumTypes().get(1);
     }
