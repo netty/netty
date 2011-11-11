@@ -195,7 +195,6 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
     private final int lengthFieldEndOffset;
     private final int lengthAdjustment;
     private final int initialBytesToStrip;
-    private final boolean lengthFieldIncludedInFrameLength;
     private boolean discardingTooLongFrame;
     private long tooLongFrameLength;
     private long bytesToDiscard;
@@ -217,8 +216,9 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
     public LengthFieldBasedFrameDecoder(
             int maxFrameLength,
             int lengthFieldOffset, int lengthFieldLength) {
-        this(maxFrameLength, lengthFieldOffset, lengthFieldLength, 0, 0, false);
+        this(maxFrameLength, lengthFieldOffset, lengthFieldLength, 0, 0);
     }
+
 
     /**
      * Creates a new instance.
@@ -240,32 +240,6 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             int maxFrameLength,
             int lengthFieldOffset, int lengthFieldLength,
             int lengthAdjustment, int initialBytesToStrip) {
-        this(maxFrameLength, lengthFieldOffset, lengthFieldLength, lengthAdjustment,
-                initialBytesToStrip, false);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param maxFrameLength
-     *        the maximum length of the frame.  If the length of the frame is
-     *        greater than this value, {@link TooLongFrameException} will be
-     *        thrown.
-     * @param lengthFieldOffset
-     *        the offset of the length field
-     * @param lengthFieldLength
-     *        the length of the length field
-     * @param lengthAdjustment
-     *        the compensation value to add to the value of the length field
-     * @param initialBytesToStrip
-     *        the number of first bytes to strip out from the decoded frame
-     * @param lengthFieldIncludedInFrameLength
-     *        whether to count length field into frame length
-     */
-    public LengthFieldBasedFrameDecoder(
-            int maxFrameLength,
-            int lengthFieldOffset, int lengthFieldLength,
-            int lengthAdjustment, int initialBytesToStrip, boolean lengthFieldIncludedInFrameLength) {
         if (maxFrameLength <= 0) {
             throw new IllegalArgumentException(
                     "maxFrameLength must be a positive integer: " +
@@ -306,7 +280,6 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
         this.lengthAdjustment = lengthAdjustment;
         lengthFieldEndOffset = lengthFieldOffset + lengthFieldLength;
         this.initialBytesToStrip = initialBytesToStrip;
-        this.lengthFieldIncludedInFrameLength = lengthFieldIncludedInFrameLength;
     }
 
     @Override
@@ -355,9 +328,8 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
                     "negative pre-adjustment length field: " + frameLength);
         }
 
-        if (!lengthFieldIncludedInFrameLength) {
-            frameLength += lengthAdjustment + lengthFieldEndOffset;
-        }
+        frameLength += lengthAdjustment + lengthFieldEndOffset;
+        
         if (frameLength < lengthFieldEndOffset) {
             buffer.skipBytes(lengthFieldEndOffset);
             throw new CorruptedFrameException(
