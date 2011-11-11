@@ -69,7 +69,7 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
     private final boolean stripDelimiter;
     private boolean discardingTooLongFrame;
     private int tooLongFrameLength;
-    private final boolean failImmediatelyOnTooLongFrame;
+    private boolean failImmediatelyOnTooLongFrame = false;
 
     /**
      * Creates a new instance.
@@ -103,7 +103,6 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
         };
         this.maxFrameLength = maxFrameLength;
         this.stripDelimiter = stripDelimiter;
-        this.failImmediatelyOnTooLongFrame = false;
     }
 
     /**
@@ -119,14 +118,6 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
     }
 
     /**
-     *  Calls {@link #DelimiterBasedFrameDecoder(int, boolean, boolean, ChannelBuffer...)} with failImmediatelyOnTooLongFrame set to <code>false</code>
-     */
-    public DelimiterBasedFrameDecoder(
-            int maxFrameLength, boolean stripDelimiter, ChannelBuffer... delimiters) {
-        this(maxFrameLength, stripDelimiter, false, delimiters);
-    }
-
-    /**
      * Creates a new instance.
      *
      * @param maxFrameLength  the maximum length of the decoded frame.
@@ -134,16 +125,10 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
      *                        the length of the frame exceeds this value.
      * @param stripDelimiter  whether the decoded frame should strip out the
      *                        delimiter or not
-     * @param failImmediatelyOnTooLongFrame  If false (the default) a {@link TooLongFrameException}
-     *                                       is thrown if the length of the frame exceeds maxFrameLength,
-     *                                       after the delimiter has been read.
-     *                                       If true a {@link TooLongFrameException} is thrown immediately
-     *                                       when the length of the frame exceeds maxFrameLength,
-     *                                       regardless of whether a delimiter has been found yet.
      * @param delimiters  the delimiters
      */
     public DelimiterBasedFrameDecoder(
-            int maxFrameLength, boolean stripDelimiter, boolean failImmediatelyOnTooLongFrame, ChannelBuffer... delimiters) {
+            int maxFrameLength, boolean stripDelimiter, ChannelBuffer... delimiters) {
         validateMaxFrameLength(maxFrameLength);
         if (delimiters == null) {
             throw new NullPointerException("delimiters");
@@ -159,9 +144,8 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
         }
         this.maxFrameLength = maxFrameLength;
         this.stripDelimiter = stripDelimiter;
-        this.failImmediatelyOnTooLongFrame = failImmediatelyOnTooLongFrame;
     }
-    
+
     @Override
     protected Object decode(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
@@ -227,6 +211,23 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
             }
             return null;
         }
+    }
+
+    /**
+     * Set the behavior when a frame longer than maxFrameLength is encountered.
+     * 
+     * @param failImmediatelyOnTooLongFrame  If false (the default) a {@link TooLongFrameException}
+     *                                       is thrown if the length of the frame exceeds maxFrameLength,
+     *                                       after the delimiter has been read.
+     *                                       If true a {@link TooLongFrameException} is thrown immediately
+     *                                       when the length of the frame exceeds maxFrameLength,
+     *                                       regardless of whether a delimiter has been found yet.
+     */
+    public DelimiterBasedFrameDecoder setFailImmediatelyOnTooLongFrame(
+            boolean failImmediatelyOnTooLongFrame)
+    {
+      this.failImmediatelyOnTooLongFrame = failImmediatelyOnTooLongFrame;
+      return this;
     }
 
     private void fail(ChannelHandlerContext ctx, long frameLength) {
