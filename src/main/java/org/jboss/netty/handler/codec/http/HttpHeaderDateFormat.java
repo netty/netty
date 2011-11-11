@@ -67,7 +67,7 @@ final class HttpHeaderDateFormat extends SimpleDateFormat {
      * First obsolete format<p>
      * Sunday, 06-Nov-94 08:49:37 GMT -> E, d-MMM-y HH:mm:ss z
      */
-    private final class HttpHeaderDateFormatObsolete1 extends SimpleDateFormat {
+    private static final class HttpHeaderDateFormatObsolete1 extends SimpleDateFormat {
         private static final long serialVersionUID = -3178072504225114298L;
 
         HttpHeaderDateFormatObsolete1() {
@@ -81,7 +81,7 @@ final class HttpHeaderDateFormat extends SimpleDateFormat {
      * <p>
      * Sun Nov 6 08:49:37 1994 -> EEE, MMM d HH:mm:ss yyyy
      */
-    private final class HttpHeaderDateFormatObsolete2 extends SimpleDateFormat {
+    private static final class HttpHeaderDateFormatObsolete2 extends SimpleDateFormat {
         private static final long serialVersionUID = 3010674519968303714L;
 
         HttpHeaderDateFormatObsolete2() {

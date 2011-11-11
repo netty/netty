@@ -83,7 +83,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     private boolean maskedPayload = false;
     private boolean receivedClosingHandshake = false;
 
-    public static enum State {
+    public enum State {
         FRAME_START, MASKING_KEY, PAYLOAD, CORRUPT
     }
 

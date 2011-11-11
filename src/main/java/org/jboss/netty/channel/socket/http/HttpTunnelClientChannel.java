@@ -288,7 +288,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements
         Channels.fireChannelInterestChanged(this);
     }
 
-    private class ConsolidatingFutureListener implements ChannelFutureListener {
+    private static class ConsolidatingFutureListener implements ChannelFutureListener {
 
         private final ChannelFuture completionFuture;
 

@@ -145,7 +145,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
      * @param hash the hash code for the key
      * @return the segment
      */
-    final Segment<K, V> segmentFor(int hash) {
+    Segment<K, V> segmentFor(int hash) {
         return segments[hash >>> segmentShift & segmentMask];
     }
 
@@ -167,11 +167,11 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
             this.hash = hash;
         }
 
-        public final int keyHash() {
+        public int keyHash() {
             return hash;
         }
 
-        public final Object keyRef() {
+        public Object keyRef() {
             return this;
         }
     }
@@ -204,16 +204,16 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
         }
 
         @SuppressWarnings("unchecked")
-        final K key() {
+        K key() {
             return ((WeakReference<K>) keyRef).get();
         }
 
-        final V value() {
+        V value() {
             return dereferenceValue(valueRef);
         }
 
         @SuppressWarnings("unchecked")
-        final V dereferenceValue(Object value) {
+        V dereferenceValue(Object value) {
             if (value instanceof WeakKeyReference) {
                 return ((Reference<V>) value).get();
             }
@@ -221,12 +221,12 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
             return (V) value;
         }
 
-        final void setValue(V value) {
+        void setValue(V value) {
             this.valueRef = value;
         }
 
         @SuppressWarnings("unchecked")
-        static final <K, V> HashEntry<K, V>[] newArray(int i) {
+        static <K, V> HashEntry<K, V>[] newArray(int i) {
             return new HashEntry[i];
         }
     }
@@ -318,7 +318,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
         }
 
         @SuppressWarnings("unchecked")
-        static final <K, V> Segment<K, V>[] newArray(int i) {
+        static <K, V> Segment<K, V>[] newArray(int i) {
             return new Segment[i];
         }
 
@@ -618,7 +618,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
         }
 
         @SuppressWarnings("rawtypes")
-        final void removeStale() {
+        void removeStale() {
             WeakKeyReference ref;
             while ((ref = (WeakKeyReference) refQueue.poll()) != null) {
                 remove(ref.keyRef(), ref.keyHash(), null, true);

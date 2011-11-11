@@ -103,7 +103,7 @@ public final class JZlib {
     // Bit length codes must not exceed MAX_BL_BITS bits
     static final int MAX_BL_BITS = 7;
 
-    static enum WrapperType {
+    enum WrapperType {
         NONE, ZLIB, GZIP, ZLIB_OR_NONE;
     }
 }
