@@ -225,15 +225,10 @@ public final class LocalTimeProtocol {
     private void initFields() {
       continent_ = org.jboss.netty.example.localtime.LocalTimeProtocol.Continent.AFRICA;
     }
+
     @Override
     public boolean isInitialized() {
-      if (!hasContinent) {
-        return false;
-    }
-      if (!hasCity) {
-        return false;
-    }
-      return true;
+      return hasContinent && hasCity;
     }
 
     @Override
@@ -1000,10 +995,7 @@ public final class LocalTimeProtocol {
       if (!hasMinute) {
         return false;
     }
-      if (!hasSecond) {
-        return false;
-    }
-      return true;
+      return hasSecond;
     }
 
     @Override
