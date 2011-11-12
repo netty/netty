@@ -94,7 +94,6 @@ public class HttpResponseDecoder extends HttpMessageDecoder {
      * {@code maxChunkSize (8192)}.
      */
     public HttpResponseDecoder() {
-        super();
     }
 
     /**

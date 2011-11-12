@@ -36,8 +36,7 @@ public class IpV4SubnetFilterRule extends IpV4Subnet implements IpFilterRule
     */
    public IpV4SubnetFilterRule(boolean allow)
    {
-      super();
-      isAllowRule = allow;
+	   isAllowRule = allow;
    }
 
    /**

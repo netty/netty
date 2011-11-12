@@ -66,8 +66,7 @@ public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, 
    {
       if (listener == null)
          return null;
-      ChannelFuture result = listener.refused(ctx, e, inetSocketAddress);
-      return result;
+       return listener.refused(ctx, e, inetSocketAddress);
    }
 
    protected ChannelFuture handleAllowedChannel(ChannelHandlerContext ctx, ChannelEvent e,
@@ -75,8 +74,7 @@ public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, 
    {
       if (listener == null)
          return null;
-      ChannelFuture result = listener.allowed(ctx, e, inetSocketAddress);
-      return result;
+       return listener.allowed(ctx, e, inetSocketAddress);
    }
 
    /**

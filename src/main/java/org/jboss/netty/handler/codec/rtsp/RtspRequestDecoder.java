@@ -61,7 +61,6 @@ public class RtspRequestDecoder extends RtspMessageDecoder {
      * {@code maxContentLength (8192)}.
      */
     public RtspRequestDecoder() {
-        super();
     }
 
     /**

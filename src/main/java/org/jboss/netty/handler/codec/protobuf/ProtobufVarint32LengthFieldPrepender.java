@@ -52,7 +52,6 @@ public class ProtobufVarint32LengthFieldPrepender extends OneToOneEncoder {
      * Creates a new instance.
      */
     public ProtobufVarint32LengthFieldPrepender() {
-        super();
     }
 
     @Override

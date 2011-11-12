@@ -32,7 +32,7 @@ public class QuoteOfTheMomentServerHandler extends SimpleChannelUpstreamHandler 
     private static final Random random = new Random();
 
     // Quotes from Mohandas K. Gandhi:
-    private static final String[] quotes = new String[] {
+    private static final String[] quotes = {
         "Where there is love there is life.",
         "First they ignore you, then they laugh at you, then they fight you, then you win.",
         "Be the change you want to see in the world.",

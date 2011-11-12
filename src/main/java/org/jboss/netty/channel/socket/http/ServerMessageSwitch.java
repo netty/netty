@@ -258,7 +258,6 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
 
     private static final class TunnelInfo {
         TunnelInfo() {
-            super();
         }
 
         public String tunnelId;

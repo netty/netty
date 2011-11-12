@@ -62,7 +62,6 @@ public class RtspResponseDecoder extends RtspMessageDecoder {
      * {@code maxContentLength (8192)}.
      */
     public RtspResponseDecoder() {
-        super();
     }
 
     /**

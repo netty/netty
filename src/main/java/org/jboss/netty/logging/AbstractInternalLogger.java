@@ -30,7 +30,6 @@ public abstract class AbstractInternalLogger implements InternalLogger {
      * Creates a new instance.
      */
     protected AbstractInternalLogger() {
-        super();
     }
 
     @Override

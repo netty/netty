@@ -103,7 +103,6 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements
             HttpTunnelAcceptedChannelFactory {
 
         TunnelCreator() {
-            super();
         }
 
         @Override

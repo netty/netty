@@ -61,7 +61,6 @@ public class SimpleChannelDownstreamHandler implements ChannelDownstreamHandler 
      * Creates a new instance.
      */
     public SimpleChannelDownstreamHandler() {
-        super();
     }
 
     /**

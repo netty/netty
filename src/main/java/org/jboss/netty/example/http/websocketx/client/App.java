@@ -98,7 +98,6 @@ public class App {
 		public ArrayList<String> messagesReceived = new ArrayList<String>();
 
 		public MyCallbackHandler() {
-			return;
 		}
 
 		@Override

@@ -443,7 +443,6 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
 
     private static final class State {
         State() {
-            super();
         }
 
         volatile Timeout readerIdleTimeout;

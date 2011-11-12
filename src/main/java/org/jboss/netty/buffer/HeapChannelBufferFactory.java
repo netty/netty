@@ -57,7 +57,6 @@ public class HeapChannelBufferFactory extends AbstractChannelBufferFactory {
      * {@link ByteOrder#BIG_ENDIAN}.
      */
     public HeapChannelBufferFactory() {
-        super();
     }
 
     /**

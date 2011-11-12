@@ -54,7 +54,6 @@ public class WebSocketServerHandshakerFactory {
         this.webSocketURL = webSocketURL;
         this.subProtocols = subProtocols;
         this.allowExtensions = allowExtensions;
-        return;
     }
 
     /**
@@ -91,7 +90,6 @@ public class WebSocketServerHandshakerFactory {
         res.setStatus(HttpResponseStatus.UPGRADE_REQUIRED);
         res.setHeader(Names.SEC_WEBSOCKET_VERSION, "8");
         ctx.getChannel().write(res);
-        return;
     }
 
 }

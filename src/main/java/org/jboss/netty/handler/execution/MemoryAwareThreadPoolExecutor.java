@@ -500,7 +500,6 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
     private static final class NewThreadRunsPolicy implements RejectedExecutionHandler {
         NewThreadRunsPolicy() {
-            super();
         }
 
         @Override
@@ -537,8 +536,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         private int waiters;
 
         Limiter(long limit) {
-            super();
-            this.limit = limit;
+	        this.limit = limit;
         }
 
         synchronized void increase(long amount) {

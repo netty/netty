@@ -43,7 +43,6 @@ final class LocalClientChannelSink extends AbstractChannelSink {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LocalClientChannelSink.class);
 
     LocalClientChannelSink() {
-        super();
     }
 
     @Override

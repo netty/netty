@@ -207,7 +207,6 @@ public abstract class AbstractSocketServerBootstrapTest {
         final StringBuffer result = new StringBuffer();
 
         ParentChannelHandler() {
-            super();
         }
 
         @Override

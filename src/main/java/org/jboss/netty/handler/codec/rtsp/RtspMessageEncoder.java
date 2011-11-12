@@ -40,7 +40,6 @@ public abstract class RtspMessageEncoder extends HttpMessageEncoder {
      * Creates a new instance.
      */
     protected RtspMessageEncoder() {
-        super();
     }
 
     @Override

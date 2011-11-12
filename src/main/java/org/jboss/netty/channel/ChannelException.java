@@ -33,7 +33,6 @@ public class ChannelException extends RuntimeException {
      * Creates a new exception.
      */
     public ChannelException() {
-        super();
     }
 
     /**

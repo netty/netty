@@ -106,7 +106,7 @@ public class QueryStringDecoderTest {
                 // not rely on the platform's default encoding (not portable).
                 new byte[] {'C', 'a', 'f', 'f', (byte) 0xC3, (byte) 0xA9},
                 "UTF-8");
-        final String[] tests = new String[] {
+        final String[] tests = {
             // Encoded   ->   Decoded or error message substring
             "",               "",
             "foo",            "foo",

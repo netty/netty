@@ -34,7 +34,6 @@ public class CorruptedFrameException extends Exception {
      * Creates a new instance.
      */
     public CorruptedFrameException() {
-        super();
     }
 
     /**

@@ -65,7 +65,6 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      */
     public WebSocketClientHandshaker00(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol) {
         super(webSocketURL, version, subProtocol);
-        return;
     }
 
     /**
@@ -206,7 +205,6 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         ctx.getPipeline().replace("decoder", "ws-decoder", new WebSocket00FrameDecoder());
 
         this.setOpenningHandshakeCompleted(true);
-        return;
     }
 
     private String insertRandomCharacters(String key) {

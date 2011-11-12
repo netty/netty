@@ -136,7 +136,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         READ_CHUNKED_CONTENT,
         READ_CHUNKED_CONTENT_AS_CHUNKS,
         READ_CHUNK_DELIMITER,
-        READ_CHUNK_FOOTER;
+        READ_CHUNK_FOOTER
     }
 
     /**
