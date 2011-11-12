@@ -653,7 +653,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
                             }
                         }
                         LockSupport.unpark(p.waiter);
-                        return LinkedTransferQueue.<E>cast(item);
+                        return LinkedTransferQueue.cast(item);
                     }
                 }
                 Node n = p.next;
@@ -737,7 +737,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
             if (item != e) {                  // matched
                 // assert item != s;
                 s.forgetContents();           // avoid garbage
-                return LinkedTransferQueue.<E>cast(item);
+                return LinkedTransferQueue.cast(item);
             }
             if ((w.isInterrupted() || timed && nanos <= 0) &&
                     s.casItem(e, s)) {        // cancel
@@ -825,7 +825,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
             Object item = p.item;
             if (p.isData) {
                 if (item != null && item != p) {
-                    return LinkedTransferQueue.<E>cast(item);
+                    return LinkedTransferQueue.cast(item);
                 }
             }
             else if (item == null) {
@@ -878,7 +878,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
                 Object item = p.item;
                 if (p.isData) {
                     if (item != null && item != p) {
-                        nextItem = LinkedTransferQueue.<E>cast(item);
+                        nextItem = LinkedTransferQueue.cast(item);
                         nextNode = p;
                         return;
                     }
