@@ -310,7 +310,6 @@ public class HttpHeaders {
         public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
 
         private Names() {
-            super();
         }
     }
 
@@ -455,7 +454,6 @@ public class HttpHeaders {
         public static final String WEBSOCKET = "WebSocket";
 
         private Values() {
-            super();
         }
     }
 

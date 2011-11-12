@@ -33,7 +33,6 @@ public class CodecEmbedderException extends RuntimeException {
      * Creates a new instance.
      */
     public CodecEmbedderException() {
-        super();
     }
 
     /**

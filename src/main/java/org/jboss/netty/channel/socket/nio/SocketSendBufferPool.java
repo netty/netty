@@ -42,7 +42,6 @@ final class SocketSendBufferPool {
     Preallocation current = new Preallocation(DEFAULT_PREALLOCATION_SIZE);
 
     SocketSendBufferPool() {
-        super();
     }
 
     SendBuffer acquire(Object message) {
@@ -316,7 +315,6 @@ final class SocketSendBufferPool {
     static final class EmptySendBuffer implements SendBuffer {
 
         EmptySendBuffer() {
-            super();
         }
 
         @Override

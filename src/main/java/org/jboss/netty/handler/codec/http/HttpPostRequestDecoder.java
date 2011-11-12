@@ -1397,7 +1397,6 @@ public class HttpPostRequestDecoder {
          *
          */
         public NotEnoughDataDecoderException() {
-            super();
         }
 
         /**
@@ -1453,7 +1452,6 @@ public class HttpPostRequestDecoder {
          *
          */
         public ErrorDataDecoderException() {
-            super();
         }
 
         /**
@@ -1495,7 +1493,6 @@ public class HttpPostRequestDecoder {
          *
          */
         public IncompatibleDataDecoderException() {
-            super();
         }
 
         /**

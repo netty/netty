@@ -206,7 +206,6 @@ class NioSocketChannel extends AbstractChannel
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
         WriteRequestQueue() {
-            super();
         }
 
         @Override
@@ -265,7 +264,6 @@ class NioSocketChannel extends AbstractChannel
     private final class WriteTask implements Runnable {
 
         WriteTask() {
-            super();
         }
 
         @Override

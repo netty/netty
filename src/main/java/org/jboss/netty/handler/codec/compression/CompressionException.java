@@ -33,7 +33,6 @@ public class CompressionException extends RuntimeException {
      * Creates a new instance.
      */
     public CompressionException() {
-        super();
     }
 
     /**

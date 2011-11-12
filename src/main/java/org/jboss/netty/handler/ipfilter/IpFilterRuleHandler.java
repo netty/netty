@@ -82,7 +82,6 @@ public class IpFilterRuleHandler extends IpFilteringHandlerImpl
     */
    public IpFilterRuleHandler()
    {
-       super();
    }
 
    // Below are methods directly inspired from CopyOnWriteArrayList methods

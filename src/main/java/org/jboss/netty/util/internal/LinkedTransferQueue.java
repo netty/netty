@@ -1031,7 +1031,6 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * Creates an initially empty {@code LinkedTransferQueue}.
      */
     public LinkedTransferQueue() {
-        super();
     }
 
     /**

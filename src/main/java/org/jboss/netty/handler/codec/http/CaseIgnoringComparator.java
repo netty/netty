@@ -31,7 +31,6 @@ final class CaseIgnoringComparator implements Comparator<String>, Serializable {
     static final CaseIgnoringComparator INSTANCE = new CaseIgnoringComparator();
 
     private CaseIgnoringComparator() {
-        super();
     }
 
     @Override

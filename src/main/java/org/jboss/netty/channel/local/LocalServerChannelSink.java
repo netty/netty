@@ -36,7 +36,6 @@ import org.jboss.netty.channel.MessageEvent;
 final class LocalServerChannelSink extends AbstractChannelSink {
 
     LocalServerChannelSink() {
-        super();
     }
 
     @Override

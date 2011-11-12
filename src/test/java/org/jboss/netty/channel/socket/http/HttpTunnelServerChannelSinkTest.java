@@ -147,7 +147,6 @@ public class HttpTunnelServerChannelSinkTest {
     private final class ExceptionCatcher extends SimpleChannelUpstreamHandler {
 
         ExceptionCatcher() {
-            super();
         }
 
         @Override

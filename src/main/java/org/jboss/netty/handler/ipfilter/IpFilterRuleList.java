@@ -59,8 +59,7 @@ public class IpFilterRuleList extends ArrayList<IpFilterRule>
     */
    public IpFilterRuleList(String rules)
    {
-      super();
-      parseRules(rules);
+	   parseRules(rules);
    }
 
    private void parseRules(String rules)

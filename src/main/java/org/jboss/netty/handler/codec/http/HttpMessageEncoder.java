@@ -59,7 +59,6 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
      * Creates a new instance.
      */
     protected HttpMessageEncoder() {
-        super();
     }
 
     @Override

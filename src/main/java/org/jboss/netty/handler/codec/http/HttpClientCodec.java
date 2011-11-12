@@ -87,7 +87,6 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
     private final class Encoder extends HttpRequestEncoder {
 
         Encoder() {
-            super();
         }
 
         @Override

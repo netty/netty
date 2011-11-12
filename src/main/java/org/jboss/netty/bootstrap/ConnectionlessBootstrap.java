@@ -127,7 +127,6 @@ public class ConnectionlessBootstrap extends Bootstrap {
      * operation is requested.
      */
     public ConnectionlessBootstrap() {
-        super();
     }
 
     /**
