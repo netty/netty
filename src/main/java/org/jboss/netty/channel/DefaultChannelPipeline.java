@@ -817,7 +817,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private static final class DiscardingChannelSink implements ChannelSink {
         DiscardingChannelSink() {
-            super();
         }
 
         @Override

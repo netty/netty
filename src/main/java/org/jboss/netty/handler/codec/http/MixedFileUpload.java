@@ -147,12 +147,11 @@ public class MixedFileUpload implements FileUpload {
         if (buffer.readableBytes() > limitSize) {
             if (fileUpload instanceof MemoryFileUpload) {
                 // change to Disk
-                DiskFileUpload diskFileUpload = new DiskFileUpload(fileUpload
+                fileUpload = new DiskFileUpload(fileUpload
                         .getName(), fileUpload.getFilename(), fileUpload
                         .getContentType(), fileUpload
                         .getContentTransferEncoding(), fileUpload.getCharset(),
                         definedSize);
-                fileUpload = diskFileUpload;
             }
         }
         fileUpload.setContent(buffer);
@@ -163,12 +162,11 @@ public class MixedFileUpload implements FileUpload {
         if (file.length() > limitSize) {
             if (fileUpload instanceof MemoryFileUpload) {
                 // change to Disk
-                DiskFileUpload diskFileUpload = new DiskFileUpload(fileUpload
+                fileUpload = new DiskFileUpload(fileUpload
                         .getName(), fileUpload.getFilename(), fileUpload
                         .getContentType(), fileUpload
                         .getContentTransferEncoding(), fileUpload.getCharset(),
                         definedSize);
-                fileUpload = diskFileUpload;
             }
         }
         fileUpload.setContent(file);
@@ -178,12 +176,11 @@ public class MixedFileUpload implements FileUpload {
     public void setContent(InputStream inputStream) throws IOException {
         if (fileUpload instanceof MemoryFileUpload) {
             // change to Disk
-            DiskFileUpload diskFileUpload = new DiskFileUpload(fileUpload
+            fileUpload = new DiskFileUpload(fileUpload
                     .getName(), fileUpload.getFilename(), fileUpload
                     .getContentType(), fileUpload
                     .getContentTransferEncoding(), fileUpload.getCharset(),
                     definedSize);
-            fileUpload = diskFileUpload;
         }
         fileUpload.setContent(inputStream);
     }

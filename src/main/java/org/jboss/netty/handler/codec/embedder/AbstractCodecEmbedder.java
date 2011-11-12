@@ -194,7 +194,6 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
 
     private final class EmbeddedChannelSink implements ChannelSink, ChannelUpstreamHandler {
         EmbeddedChannelSink() {
-            super();
         }
 
         @Override
@@ -234,7 +233,6 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
     private static final class EmbeddedChannelPipeline extends DefaultChannelPipeline {
 
         EmbeddedChannelPipeline() {
-            super();
         }
 
         @Override

@@ -85,7 +85,6 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
      * Creates a new instance.
      */
     public SimpleChannelHandler() {
-        super();
     }
 
     /**

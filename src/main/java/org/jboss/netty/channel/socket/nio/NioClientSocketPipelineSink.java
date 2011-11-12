@@ -173,7 +173,6 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
 
         Boss() {
-            super();
         }
 
         void register(NioClientSocketChannel channel) {

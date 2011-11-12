@@ -41,7 +41,7 @@ public class ProtobufVarint32LengthFieldPrependerTest {
 
     @Test
     public void testTinyEncode() {
-        byte[] b = new byte[] { 4, 1, 1, 1, 1 };
+        byte[] b = { 4, 1, 1, 1, 1 };
         embedder.offer(wrappedBuffer(b, 1, b.length - 1));
         assertThat(embedder.poll(), is(wrappedBuffer(b)));
     }

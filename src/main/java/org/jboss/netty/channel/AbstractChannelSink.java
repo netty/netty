@@ -31,7 +31,6 @@ public abstract class AbstractChannelSink implements ChannelSink {
      * Creates a new instance.
      */
     protected AbstractChannelSink() {
-        super();
     }
 
     /**

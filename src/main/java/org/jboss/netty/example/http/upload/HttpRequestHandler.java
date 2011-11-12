@@ -267,7 +267,6 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
             // end
             responseContent
                     .append("\r\n\r\nEND OF CONTENT CHUNK BY CHUNK\r\n\r\n");
-            return;
         }
     }
 

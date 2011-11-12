@@ -37,5 +37,5 @@ public enum IdleState {
     /**
      * No data was either received or sent for a while.
      */
-    ALL_IDLE;
+    ALL_IDLE
 }

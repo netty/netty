@@ -163,7 +163,6 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
         volatile int counter;
 
         EchoHandler() {
-            super();
         }
 
         @Override

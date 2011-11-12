@@ -363,7 +363,7 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         } else {
             return Integer.MAX_VALUE - buffer.readerIndex();
         }
-    }
+    } 
     
     @Override
     public boolean readBoolean() {

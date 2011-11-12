@@ -287,7 +287,6 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
         private final LinkedList<Runnable> tasks = new LinkedList<Runnable>();
 
         ChildExecutor() {
-            super();
         }
 
         @Override

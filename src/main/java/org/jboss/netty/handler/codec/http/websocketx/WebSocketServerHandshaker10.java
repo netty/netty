@@ -65,7 +65,6 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
     public WebSocketServerHandshaker10(String webSocketURL, String subProtocols, boolean allowExtensions) {
         super(webSocketURL, subProtocols);
         this.allowExtensions = allowExtensions;
-        return;
     }
 
     /**
@@ -148,7 +147,6 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
         p.replace("decoder", "wsdecoder", new WebSocket08FrameDecoder(true, this.allowExtensions));
         p.replace("encoder", "wsencoder", new WebSocket08FrameEncoder(false));
 
-        return;
     }
 
     /**

@@ -53,7 +53,6 @@ public class ProtobufVarint32FrameDecoder extends FrameDecoder {
      * Creates a new instance.
      */
     public ProtobufVarint32FrameDecoder() {
-        super();
     }
 
     @Override

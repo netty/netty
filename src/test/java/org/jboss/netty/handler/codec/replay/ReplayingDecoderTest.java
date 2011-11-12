@@ -57,7 +57,6 @@ public class ReplayingDecoderTest {
     private static final class LineDecoder extends ReplayingDecoder<VoidEnum> {
 
         LineDecoder() {
-            super();
         }
 
         @Override

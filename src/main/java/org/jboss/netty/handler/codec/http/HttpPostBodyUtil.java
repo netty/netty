@@ -119,7 +119,6 @@ public class HttpPostBodyUtil {
     }
 
     private HttpPostBodyUtil() {
-        super();
     }
 
     //Some commons methods between HttpPostRequestDecoder and HttpMessageDecoder

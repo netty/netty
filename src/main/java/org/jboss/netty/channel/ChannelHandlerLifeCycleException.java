@@ -35,7 +35,6 @@ public class ChannelHandlerLifeCycleException extends RuntimeException {
      * Creates a new exception.
      */
     public ChannelHandlerLifeCycleException() {
-        super();
     }
 
     /**

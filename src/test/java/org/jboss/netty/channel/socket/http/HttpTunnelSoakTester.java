@@ -345,7 +345,6 @@ public class HttpTunnelSoakTester {
 
             if (verifiedBytes >= BYTES_TO_SEND) {
                 completionLatch.countDown();
-                return;
             }
         }
 

@@ -119,6 +119,5 @@ public class ExecutorUtil {
     }
 
     private ExecutorUtil() {
-        super();
     }
 }

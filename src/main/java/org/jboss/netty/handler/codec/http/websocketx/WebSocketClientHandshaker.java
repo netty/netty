@@ -204,7 +204,6 @@ public abstract class WebSocketClientHandshaker {
      * @return Random number
      */
     protected int createRandomNumber(int min, int max) {
-        int rand = (int) (Math.random() * max + min);
-        return rand;
+        return (int) (Math.random() * max + min);
     }
 }

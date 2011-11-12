@@ -90,7 +90,6 @@ final class ThreadLocalRandom extends Random {
      * invokes setSeed exactly once to initialize.
      */
     ThreadLocalRandom() {
-        super();
     }
 
     /**

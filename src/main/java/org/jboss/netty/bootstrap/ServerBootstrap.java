@@ -170,7 +170,6 @@ public class ServerBootstrap extends Bootstrap {
      * operation is requested.
      */
     public ServerBootstrap() {
-        super();
     }
 
     /**

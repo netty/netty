@@ -220,7 +220,6 @@ class NioProviderMetadata {
     private static final class ConstraintLevelAutodetector {
 
         ConstraintLevelAutodetector() {
-            super();
         }
 
         int autodetect() {

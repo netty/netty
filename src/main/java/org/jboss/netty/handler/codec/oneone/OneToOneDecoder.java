@@ -57,7 +57,6 @@ public abstract class OneToOneDecoder implements ChannelUpstreamHandler {
      * Creates a new instance with the current system character set.
      */
     protected OneToOneDecoder() {
-        super();
     }
 
     @Override

@@ -33,7 +33,6 @@ public class TimeoutException extends ChannelException {
      * Creates a new instance.
      */
     public TimeoutException() {
-        super();
     }
 
     /**

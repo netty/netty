@@ -34,7 +34,6 @@ public class HttpResponseEncoder extends HttpMessageEncoder {
      * Creates a new instance.
      */
     public HttpResponseEncoder() {
-        super();
     }
 
     @Override

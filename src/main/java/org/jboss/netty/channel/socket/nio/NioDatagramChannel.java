@@ -260,7 +260,6 @@ class NioDatagramChannel extends AbstractChannel
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
         WriteRequestQueue() {
-            super();
         }
 
         /**
@@ -330,7 +329,6 @@ class NioDatagramChannel extends AbstractChannel
      */
     private final class WriteTask implements Runnable {
         WriteTask() {
-            super();
         }
 
         @Override

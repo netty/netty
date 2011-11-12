@@ -73,7 +73,6 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      */
     public WebSocketServerHandshaker00(String webSocketURL, String subProtocols) {
         super(webSocketURL, subProtocols);
-        return;
     }
 
     /**
@@ -185,7 +184,6 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         ctx.getChannel().write(res);
 
         p.replace("encoder", "wsencoder", new WebSocket00FrameEncoder());
-        return;
     }
 
     /**

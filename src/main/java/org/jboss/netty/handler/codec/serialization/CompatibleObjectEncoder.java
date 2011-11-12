@@ -98,8 +98,7 @@ public class CompatibleObjectEncoder extends OneToOneEncoder {
         oout.writeObject(msg);
         oout.flush();
 
-        ChannelBuffer encoded = buffer.readBytes(buffer.readableBytes());
-        return encoded;
+        return buffer.readBytes(buffer.readableBytes());
     }
 
     private ChannelBuffer buffer(ChannelHandlerContext ctx) throws Exception {

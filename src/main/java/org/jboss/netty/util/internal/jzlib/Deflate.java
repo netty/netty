@@ -519,18 +519,16 @@ final class Deflate {
     }
 
     private void send_bits(int value, int length) {
-        int len = length;
-        if (bi_valid > Buf_size - len) {
-            int val = value;
+        if (bi_valid > Buf_size - length) {
             //      bi_buf |= (val << bi_valid);
-            bi_buf |= val << bi_valid & 0xffff;
+            bi_buf |= value << bi_valid & 0xffff;
             put_short(bi_buf);
-            bi_buf = (short) (val >>> Buf_size - bi_valid);
-            bi_valid += len - Buf_size;
+            bi_buf = (short) (value >>> Buf_size - bi_valid);
+            bi_valid += length - Buf_size;
         } else {
             //      bi_buf |= (value) << bi_valid;
             bi_buf |= value << bi_valid & 0xffff;
-            bi_valid += len;
+            bi_valid += length;
         }
     }
 
