@@ -45,7 +45,7 @@ final class SocketSendBufferPool {
         super();
     }
 
-    final SendBuffer acquire(Object message) {
+    SendBuffer acquire(Object message) {
         if (message instanceof ChannelBuffer) {
             return acquire((ChannelBuffer) message);
         } else if (message instanceof FileRegion) {
@@ -147,7 +147,7 @@ final class SocketSendBufferPool {
         return q << ALIGN_SHIFT;
     }
 
-    private final class Preallocation {
+    private static final class Preallocation {
         final ByteBuffer buffer;
         int refCnt;
 
@@ -176,7 +176,7 @@ final class SocketSendBufferPool {
         void release();
     }
 
-    class UnpooledSendBuffer implements SendBuffer {
+    static class UnpooledSendBuffer implements SendBuffer {
 
         final ByteBuffer buffer;
         final int initialPos;
@@ -266,7 +266,7 @@ final class SocketSendBufferPool {
         }
     }
 
-    final class FileSendBuffer implements SendBuffer {
+    static final class FileSendBuffer implements SendBuffer {
 
         private final FileRegion file;
         private long writtenBytes;
@@ -320,27 +320,27 @@ final class SocketSendBufferPool {
         }
 
         @Override
-        public final boolean finished() {
+        public boolean finished() {
             return true;
         }
 
         @Override
-        public final long writtenBytes() {
+        public long writtenBytes() {
             return 0;
         }
 
         @Override
-        public final long totalBytes() {
+        public long totalBytes() {
             return 0;
         }
 
         @Override
-        public final long transferTo(WritableByteChannel ch) throws IOException {
+        public long transferTo(WritableByteChannel ch) throws IOException {
             return 0;
         }
 
         @Override
-        public final long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
+        public long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
             return 0;
         }
 

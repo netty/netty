@@ -72,6 +72,7 @@ public class WebSocketClientFactory {
 
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
 
+            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline pipeline = Channels.pipeline();
                 pipeline.addLast("decoder", new WebSocketHttpResponseDecoder());

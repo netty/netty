@@ -203,7 +203,7 @@ public enum Base64Dialect {
     final byte[] decodabet;
     final boolean breakLinesByDefault;
 
-    private Base64Dialect(byte[] alphabet, byte[] decodabet, boolean breakLinesByDefault) {
+    Base64Dialect(byte[] alphabet, byte[] decodabet, boolean breakLinesByDefault) {
         this.alphabet = alphabet;
         this.decodabet = decodabet;
         this.breakLinesByDefault = breakLinesByDefault;

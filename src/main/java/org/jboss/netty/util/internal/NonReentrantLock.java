@@ -68,7 +68,7 @@ public final class NonReentrantLock extends AbstractQueuedSynchronizer
     }
 
     @Override
-    protected final boolean tryAcquire(int acquires) {
+    protected boolean tryAcquire(int acquires) {
         if (compareAndSetState(0, 1)) {
             owner = Thread.currentThread();
             return true;
@@ -77,7 +77,7 @@ public final class NonReentrantLock extends AbstractQueuedSynchronizer
     }
 
     @Override
-    protected final boolean tryRelease(int releases) {
+    protected boolean tryRelease(int releases) {
         if (Thread.currentThread() != owner) {
             throw new IllegalMonitorStateException();
         }
@@ -87,7 +87,7 @@ public final class NonReentrantLock extends AbstractQueuedSynchronizer
     }
 
     @Override
-    protected final boolean isHeldExclusively() {
+    protected boolean isHeldExclusively() {
         return getState() != 0 && owner == Thread.currentThread();
     }
 }

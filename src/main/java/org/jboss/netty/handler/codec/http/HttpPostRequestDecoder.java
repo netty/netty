@@ -232,7 +232,7 @@ public class HttpPostRequestDecoder {
      * @author frederic bregier
      *
      */
-    private static enum MultiPartStatus {
+    private enum MultiPartStatus {
         NOTSTARTED,
         PREAMBLE,
         HEADERDELIMITER,
@@ -1485,7 +1485,7 @@ public class HttpPostRequestDecoder {
      * @author frederic bregier
      *
      */
-    public class IncompatibleDataDecoderException extends Exception {
+    public static class IncompatibleDataDecoderException extends Exception {
         /**
          *
          */

@@ -104,7 +104,7 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
         return state.get() == ST_CONNECTED;
     }
 
-    final void setBound() throws ClosedChannelException {
+    void setBound() throws ClosedChannelException {
         if (!state.compareAndSet(ST_OPEN, ST_BOUND)) {
             switch (state.get()) {
             case ST_CLOSED:
@@ -115,7 +115,7 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
         }
     }
 
-    final void setConnected() {
+    void setConnected() {
         if (state.get() != ST_CLOSED) {
             state.set(ST_CONNECTED);
         }
