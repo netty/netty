@@ -252,9 +252,7 @@ public class HttpTunnelMessageUtils {
     }
 
     public static HttpResponse createTunnelCloseResponse() {
-        HttpResponse response =
-                createResponseTemplate(HttpResponseStatus.RESET_CONTENT, null);
-        return response;
+        return createResponseTemplate(HttpResponseStatus.RESET_CONTENT, null);
     }
 
     public static boolean isTunnelCloseResponse(HttpResponse response) {

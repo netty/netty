@@ -385,8 +385,7 @@ public abstract class AbstractTrafficShapingHandler extends
             // Time is too short, so just lets continue
             return 0;
         }
-        long wait = bytes * 1000 / limit - interval;
-        return wait;
+        return bytes * 1000 / limit - interval;
     }
 
     @Override
