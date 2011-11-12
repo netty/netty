@@ -40,5 +40,5 @@ public enum ZlibWrapper {
      * Try {@link #ZLIB} first and then {@link #NONE} if the first attempt fails.
      * Please note that you can specify this wrapper type only when decompressing.
      */
-    ZLIB_OR_NONE;
+    ZLIB_OR_NONE
 }

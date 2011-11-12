@@ -25,7 +25,7 @@ package org.jboss.netty.handler.codec.http;
  */
 public interface InterfaceHttpData extends Comparable<InterfaceHttpData> {
     enum HttpDataType {
-        Attribute, FileUpload, InternalAttribute;
+        Attribute, FileUpload, InternalAttribute
     }
 
     /**

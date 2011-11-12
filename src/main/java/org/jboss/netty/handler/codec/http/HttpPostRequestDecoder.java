@@ -246,7 +246,7 @@ public class HttpPostRequestDecoder {
         MIXEDCLOSEDELIMITER,
         CLOSEDELIMITER,
         PREEPILOGUE,
-        EPILOGUE;
+        EPILOGUE
     }
 
     /**
