@@ -50,7 +50,7 @@ class HttpCodecUtil {
     /**
      * carriage return line feed
      */
-    static final byte[] CRLF = new byte[] { CR, LF };
+    static final byte[] CRLF = { CR, LF };
 
     /**
     * Colon ':'
