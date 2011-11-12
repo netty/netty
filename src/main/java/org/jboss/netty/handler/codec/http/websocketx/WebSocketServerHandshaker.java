@@ -61,7 +61,6 @@ public abstract class WebSocketServerHandshaker {
                 this.subProtocolsArray[i] = this.subProtocolsArray[i].trim();
             }
         }
-        return;
     }
 
     /**

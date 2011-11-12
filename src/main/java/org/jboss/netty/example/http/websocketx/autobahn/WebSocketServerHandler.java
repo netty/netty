@@ -84,7 +84,6 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 		} else {
 			this.handshaker.executeOpeningHandshake(ctx, req);
 		}
-		return;
 	}
 
 	private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {

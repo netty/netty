@@ -73,7 +73,6 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
     public WebSocketClientHandshaker10(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol, boolean allowExtensions) {
         super(webSocketURL, version, subProtocol);
         this.allowExtensions = allowExtensions;
-        return;
     }
 
     /**
@@ -134,7 +133,6 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
         channel.write(request);
 
         ctx.getPipeline().replace("encoder", "ws-encoder", new WebSocket08FrameEncoder(true));
-        return;
     }
 
     /**
@@ -183,7 +181,6 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
         ctx.getPipeline().replace("decoder", "ws-decoder", new WebSocket08FrameDecoder(false, this.allowExtensions));
 
         this.setOpenningHandshakeCompleted(true);
-        return;
     }
 
 }
