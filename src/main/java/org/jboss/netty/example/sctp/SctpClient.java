@@ -56,6 +56,11 @@ public class SctpClient {
             }
         });
 
+        bootstrap.setOption("sendBufferSize", 1048576);
+        bootstrap.setOption("receiveBufferSize", 1048576);
+
+        bootstrap.setOption("sctpNoDelay", true);
+
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress("localhost", 2955), new InetSocketAddress("localhost", 2956));
 

@@ -32,7 +32,7 @@ import java.util.Set;
  */
 public interface SctpServerChannel extends ServerChannel {
     @Override
-    ServerSctpChannelConfig getConfig();
+    SctpServerChannelConfig getConfig();
     @Override
     InetSocketAddress getLocalAddress();
 

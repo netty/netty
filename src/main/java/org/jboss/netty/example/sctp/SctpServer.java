@@ -53,6 +53,10 @@ public class SctpServer {
                 return Channels.pipeline(executionHandler, new SctpServerHandler());
             }
         });
+        bootstrap.setOption("sendBufferSize", 1048576);
+        bootstrap.setOption("receiveBufferSize", 1048576);
+
+        bootstrap.setOption("child.sctpNoDelay", true);
 
         // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress("localhost", 2955));

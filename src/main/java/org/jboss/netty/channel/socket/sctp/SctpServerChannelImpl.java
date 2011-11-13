@@ -16,7 +16,6 @@
 package org.jboss.netty.channel.socket.sctp;
 
 import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
@@ -51,7 +50,7 @@ class SctpServerChannelImpl extends AbstractServerChannel
     final com.sun.nio.sctp.SctpServerChannel serverChannel;
     final Lock shutdownLock = new ReentrantLock();
     volatile Selector selector;
-    private final ServerSctpChannelConfig config;
+    private final SctpServerChannelConfig config;
 
     private volatile boolean bound;
 
@@ -82,13 +81,13 @@ class SctpServerChannelImpl extends AbstractServerChannel
             throw new ChannelException("Failed to enter non-blocking mode.", e);
         }
 
-        config = new SctpServerChannelConfig(serverChannel);
+        config = new DefaultSctpServerChannelConfig(serverChannel);
 
         fireChannelOpen(this);
     }
 
     @Override
-    public ServerSctpChannelConfig getConfig() {
+    public SctpServerChannelConfig getConfig() {
         return config;
     }
 

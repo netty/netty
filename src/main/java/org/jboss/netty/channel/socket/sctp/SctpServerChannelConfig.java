@@ -16,81 +16,80 @@
 package org.jboss.netty.channel.socket.sctp;
 
 import static com.sun.nio.sctp.SctpStandardSocketOptions.*;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.DefaultServerChannelConfig;
-import org.jboss.netty.util.internal.ConversionUtil;
 
-import java.io.IOException;
+import org.jboss.netty.channel.ChannelConfig;
 
 /**
- * The default {@link org.jboss.netty.channel.socket.ServerSocketChannelConfig} implementation.
+ * A {@link org.jboss.netty.channel.ChannelConfig} for a {@link SctpServerChannelConfig}.
+ * <p/>
+ * <h3>Available options</h3>
+ * <p/>
+ * In addition to the options provided by {@link org.jboss.netty.channel.ChannelConfig},
+ * {@link SctpServerChannelConfig} allows the following options in the
+ * option map:
+ * <p/>
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>Name</th><th>Associated setter method</th>
+ * </tr><tr>
+ * <td>{@code "backlog"}</td><td>{@link #setBacklog(int)}</td>
+ * </tr><tr>
+ * * <td>{@code "receiveBufferSize"}</td><td>{@link #setReceiveBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@code "sendBufferSize"}</td><td>{@link #setSendBufferSize(int)}</td>
+ * </tr><tr>
+ * <td>{@code "sctpInitMaxStreams"}</td><td>{@link #setInitMaxStreams(InitMaxStreams)} (int)}}</td>
+ * </tr>
+ * </table>
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
- *
  * @version $Rev$, $Date$
  */
-public class SctpServerChannelConfig extends DefaultServerChannelConfig
-        implements ServerSctpChannelConfig {
-
-    private final com.sun.nio.sctp.SctpServerChannel serverChannel;
-    private volatile int backlog;
+public interface SctpServerChannelConfig extends ChannelConfig {
 
     /**
-     * Creates a new instance.
+     * Gets the backlog value to specify when the channel binds to a local
+     * address.
      */
-    public SctpServerChannelConfig(com.sun.nio.sctp.SctpServerChannel serverChannel) {
-        if (serverChannel == null) {
-            throw new NullPointerException("serverChannel");
-        }
-        this.serverChannel = serverChannel;
-    }
+    int getBacklog();
 
-    @Override
-    public boolean setOption(String key, Object value) {
-        if (super.setOption(key, value)) {
-            return true;
-        }
+    /**
+     * Sets the backlog value to specify when the channel binds to a local
+     * address.
+     */
+    void setBacklog(int backlog);
 
-        if (key.equals("sctpInitMaxStreams")) {
-            setInitMaxStreams((InitMaxStreams) value);
-        } else if (key.equals("backlog")) {
-            setBacklog(ConversionUtil.toInt(value));
-        } else {
-            return false;
-        }
-        return true;
-    }
 
-    @Override
-    public InitMaxStreams getInitMaxStreams() {
-        try {
-            return serverChannel.getOption(SCTP_INIT_MAXSTREAMS);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
+    /**
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_SNDBUF}</a> option.
+     */
+    int getSendBufferSize();
 
-    @Override
-    public void setInitMaxStreams(InitMaxStreams initMaxStreams) {
-        try {
-            serverChannel.setOption(SCTP_INIT_MAXSTREAMS, initMaxStreams);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
+    /**
+     * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_SNDBUF}</a> option.
+     */
+    void setSendBufferSize(int sendBufferSize);
 
-    @Override
-    public int getBacklog() {
-        return backlog;
-    }
+    /**
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_RCVBUF}</a> option.
+     */
+    int getReceiveBufferSize();
 
-    @Override
-    public void setBacklog(int backlog) {
-        if (backlog < 0) {
-            throw new IllegalArgumentException("backlog: " + backlog);
-        }
-        this.backlog = backlog;
-    }
+    /**
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_RCVBUF}</a> option.
+     */
+    void setReceiveBufferSize(int receiveBufferSize);
+
+
+    /**
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_INIT_MAXSTREAMS}</a> option.
+     */
+    InitMaxStreams getInitMaxStreams();
+
+    /**
+     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_INIT_MAXSTREAMS}</a> option.
+     */
+    void setInitMaxStreams(InitMaxStreams initMaxStreams);
 }
