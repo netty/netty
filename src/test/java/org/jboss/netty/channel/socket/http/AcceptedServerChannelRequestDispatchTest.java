@@ -60,7 +60,7 @@ public class AcceptedServerChannelRequestDispatchTest {
     ServerMessageSwitchUpstreamInterface messageSwitch;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         ChannelPipeline pipeline = Channels.pipeline();
         messageSwitch =
                 mockContext.mock(ServerMessageSwitchUpstreamInterface.class);

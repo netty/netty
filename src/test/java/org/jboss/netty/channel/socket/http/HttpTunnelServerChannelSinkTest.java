@@ -59,7 +59,7 @@ public class HttpTunnelServerChannelSinkTest {
     Throwable exceptionInPipeline;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         realChannel = mockContext.mock(ServerSocketChannel.class);
         pipeline = Channels.pipeline();
         pipeline.addLast("exceptioncatcher", new ExceptionCatcher());
@@ -70,7 +70,7 @@ public class HttpTunnelServerChannelSinkTest {
     }
 
     @After
-    public void teardown() throws Exception {
+    public void teardown() {
         assertTrue("exception caught in pipeline: " + exceptionInPipeline,
                 exceptionInPipeline == null);
     }

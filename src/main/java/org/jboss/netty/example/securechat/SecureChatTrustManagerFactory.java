@@ -45,7 +45,7 @@ public class SecureChatTrustManagerFactory extends TrustManagerFactorySpi {
 
         @Override
         public void checkClientTrusted(
-                X509Certificate[] chain, String authType) throws CertificateException {
+                X509Certificate[] chain, String authType) {
             // Always trust - it is an example.
             // You should do something in the real world.
             // You will reach here only if you enabled client certificate auth,
@@ -56,7 +56,7 @@ public class SecureChatTrustManagerFactory extends TrustManagerFactorySpi {
 
         @Override
         public void checkServerTrusted(
-                X509Certificate[] chain, String authType) throws CertificateException {
+                X509Certificate[] chain, String authType) {
             // Always trust - it is an example.
             // You should do something in the real world.
             System.err.println(

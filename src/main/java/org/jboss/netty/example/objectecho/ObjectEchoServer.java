@@ -37,7 +37,7 @@ import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
  */
 public class ObjectEchoServer {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new NioServerSocketChannelFactory(

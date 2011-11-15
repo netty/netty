@@ -47,7 +47,7 @@ public class UptimeClient {
     // Reconnect when the server sends nothing for 10 seconds.
     private static final int READ_TIMEOUT = 10;
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         // Print usage if no argument is specified.
         if (args.length != 2) {
             System.err.println(

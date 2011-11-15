@@ -29,7 +29,7 @@ import org.jboss.netty.channel.Channels;
 // TODO: Auto-generated Javadoc
 /**
  * General class that handle Ip Filtering.
- * 
+ *
  * @author frederic bregier
  */
 public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, IpFilteringHandler
@@ -62,16 +62,14 @@ public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, 
     * @throws Exception
     */
    protected ChannelFuture handleRefusedChannel(ChannelHandlerContext ctx, ChannelEvent e,
-         InetSocketAddress inetSocketAddress) throws Exception
-   {
+         InetSocketAddress inetSocketAddress) {
       if (listener == null)
          return null;
        return listener.refused(ctx, e, inetSocketAddress);
    }
 
    protected ChannelFuture handleAllowedChannel(ChannelHandlerContext ctx, ChannelEvent e,
-         InetSocketAddress inetSocketAddress) throws Exception
-   {
+         InetSocketAddress inetSocketAddress) {
       if (listener == null)
          return null;
        return listener.allowed(ctx, e, inetSocketAddress);
@@ -99,8 +97,7 @@ public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, 
     *          since this channel was blocked by this filter
     * @throws Exception
     */
-   protected boolean continues(ChannelHandlerContext ctx, ChannelEvent e) throws Exception
-   {
+   protected boolean continues(ChannelHandlerContext ctx, ChannelEvent e) {
       if (listener != null)
          return listener.continues(ctx, e);
       else

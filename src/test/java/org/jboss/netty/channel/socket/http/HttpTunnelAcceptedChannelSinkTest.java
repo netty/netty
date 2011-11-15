@@ -47,7 +47,7 @@ public class HttpTunnelAcceptedChannelSinkTest {
     private UpstreamEventCatcher upstreamCatcher;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         messageSwitch =
                 mockContext.mock(ServerMessageSwitchDownstreamInterface.class);
         sink =

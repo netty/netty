@@ -117,7 +117,7 @@ public class SimpleChannelDownstreamHandler implements ChannelDownstreamHandler 
     /**
      * Invoked when {@link Channel#bind(SocketAddress)} was called.
      */
-    public void bindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void bindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) {
         ctx.sendDownstream(e);
 
     }
@@ -125,7 +125,7 @@ public class SimpleChannelDownstreamHandler implements ChannelDownstreamHandler 
     /**
      * Invoked when {@link Channel#connect(SocketAddress)} was called.
      */
-    public void connectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void connectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) {
         ctx.sendDownstream(e);
 
     }
@@ -133,14 +133,14 @@ public class SimpleChannelDownstreamHandler implements ChannelDownstreamHandler 
     /**
      * Invoked when {@link Channel#setInterestOps(int)} was called.
      */
-    public void setInterestOpsRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void setInterestOpsRequested(ChannelHandlerContext ctx, ChannelStateEvent e) {
         ctx.sendDownstream(e);
     }
 
     /**
      * Invoked when {@link Channel#disconnect()} was called.
      */
-    public void disconnectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void disconnectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) {
         ctx.sendDownstream(e);
 
     }
@@ -148,7 +148,7 @@ public class SimpleChannelDownstreamHandler implements ChannelDownstreamHandler 
     /**
      * Invoked when {@link Channel#unbind()} was called.
      */
-    public void unbindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void unbindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) {
         ctx.sendDownstream(e);
 
     }
@@ -156,7 +156,7 @@ public class SimpleChannelDownstreamHandler implements ChannelDownstreamHandler 
     /**
      * Invoked when {@link Channel#close()} was called.
      */
-    public void closeRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void closeRequested(ChannelHandlerContext ctx, ChannelStateEvent e) {
         ctx.sendDownstream(e);
     }
 }

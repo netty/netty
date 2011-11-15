@@ -45,7 +45,7 @@ public class IdleStateAwareChannelHandler extends SimpleChannelHandler {
     /**
      * Invoked when a {@link Channel} has been idle for a while.
      */
-    public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) throws Exception {
+    public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) {
         ctx.sendUpstream(e);
     }
 }

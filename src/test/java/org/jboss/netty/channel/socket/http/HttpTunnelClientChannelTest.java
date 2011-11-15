@@ -110,7 +110,7 @@ public class HttpTunnelClientChannelTest {
     private FakeChannelSink pollSink;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         ChannelPipeline pipeline = Channels.pipeline();
         upstreamCatcher = new UpstreamEventCatcher();
         pipeline.addLast(UpstreamEventCatcher.NAME, upstreamCatcher);

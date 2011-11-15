@@ -32,7 +32,7 @@ import org.jboss.netty.example.telnet.TelnetServer;
  */
 public class SecureChatServer {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new NioServerSocketChannelFactory(

@@ -144,7 +144,7 @@ public abstract class AbstractChannelBufferTest {
         buffer.readerIndex(0);
         buffer.writerIndex(CAPACITY);
     }
-    
+
     @Test(expected=IndexOutOfBoundsException.class)
     public void getBooleanBoundaryCheck1() {
         buffer.getBoolean(-1);
@@ -1431,7 +1431,7 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
-    public void testSliceEndianness() throws Exception {
+    public void testSliceEndianness() {
         assertEquals(buffer.order(), buffer.slice(0, buffer.capacity()).order());
         assertEquals(buffer.order(), buffer.slice(0, buffer.capacity() - 1).order());
         assertEquals(buffer.order(), buffer.slice(1, buffer.capacity() - 1).order());
@@ -1439,7 +1439,7 @@ public abstract class AbstractChannelBufferTest {
     }
 
     @Test
-    public void testSliceIndex() throws Exception {
+    public void testSliceIndex() {
         assertEquals(0, buffer.slice(0, buffer.capacity()).readerIndex());
         assertEquals(0, buffer.slice(0, buffer.capacity() - 1).readerIndex());
         assertEquals(0, buffer.slice(1, buffer.capacity() - 1).readerIndex());

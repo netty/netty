@@ -40,7 +40,7 @@ import org.jboss.netty.logging.InternalLogLevel;
  */
 public class LocalExampleMultthreaded {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         LocalAddress socketAddress = new LocalAddress("1");
 
         OrderedMemoryAwareThreadPoolExecutor eventExecutor =

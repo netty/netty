@@ -159,7 +159,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
      * {@link ChannelHandler}.
      */
     public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+            ChannelHandlerContext ctx, ExceptionEvent e) {
         if (this == ctx.getPipeline().getLast()) {
             logger.warn(
                     "EXCEPTION, please implement " + getClass().getName() +
@@ -172,7 +172,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
      * Invoked when a {@link Channel} is open, but not bound nor connected.
      */
     public void channelOpen(
-            ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+            ChannelHandlerContext ctx, ChannelStateEvent e) {
         ctx.sendUpstream(e);
     }
 
@@ -181,7 +181,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
      * but not connected.
      */
     public void channelBound(
-            ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+            ChannelHandlerContext ctx, ChannelStateEvent e) {
         ctx.sendUpstream(e);
     }
 
@@ -199,7 +199,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
      * was changed.
      */
     public void channelInterestChanged(
-            ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+            ChannelHandlerContext ctx, ChannelStateEvent e) {
         ctx.sendUpstream(e);
     }
 
@@ -207,7 +207,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
      * Invoked when a {@link Channel} was disconnected from its remote peer.
      */
     public void channelDisconnected(
-            ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+            ChannelHandlerContext ctx, ChannelStateEvent e) {
         ctx.sendUpstream(e);
     }
 
@@ -215,7 +215,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
      * Invoked when a {@link Channel} was unbound from the current local address.
      */
     public void channelUnbound(
-            ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+            ChannelHandlerContext ctx, ChannelStateEvent e) {
         ctx.sendUpstream(e);
     }
 
@@ -232,7 +232,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
      * Invoked when something was written into a {@link Channel}.
      */
     public void writeComplete(
-            ChannelHandlerContext ctx, WriteCompletionEvent e) throws Exception {
+            ChannelHandlerContext ctx, WriteCompletionEvent e) {
         ctx.sendUpstream(e);
     }
 
@@ -241,7 +241,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
      * (e.g. a server channel accepted a connection)
      */
     public void childChannelOpen(
-            ChannelHandlerContext ctx, ChildChannelStateEvent e) throws Exception {
+            ChannelHandlerContext ctx, ChildChannelStateEvent e) {
         ctx.sendUpstream(e);
     }
 
@@ -250,7 +250,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
      * (e.g. the accepted connection was closed)
      */
     public void childChannelClosed(
-            ChannelHandlerContext ctx, ChildChannelStateEvent e) throws Exception {
+            ChannelHandlerContext ctx, ChildChannelStateEvent e) {
         ctx.sendUpstream(e);
     }
 
@@ -308,7 +308,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
     /**
      * Invoked when {@link Channel#bind(SocketAddress)} was called.
      */
-    public void bindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void bindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) {
         ctx.sendDownstream(e);
 
     }
@@ -316,7 +316,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
     /**
      * Invoked when {@link Channel#connect(SocketAddress)} was called.
      */
-    public void connectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void connectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) {
         ctx.sendDownstream(e);
 
     }
@@ -324,7 +324,7 @@ public class SimpleChannelHandler implements ChannelUpstreamHandler, ChannelDown
     /**
      * Invoked when {@link Channel#setInterestOps(int)} was called.
      */
-    public void setInterestOpsRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+    public void setInterestOpsRequested(ChannelHandlerContext ctx, ChannelStateEvent e) {
         ctx.sendDownstream(e);
     }
 

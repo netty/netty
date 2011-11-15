@@ -43,7 +43,7 @@ public class WriteFragmenterTest {
     private FakeChannelSink downstreamCatcher;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         fragmenter = new WriteFragmenter(100);
 
         ChannelPipeline pipeline = Channels.pipeline();

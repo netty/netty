@@ -158,7 +158,7 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
         super.writeRequested(ctx, e);
     }
 
-    protected void writeTimedOut(ChannelHandlerContext ctx) throws Exception {
+    protected void writeTimedOut(ChannelHandlerContext ctx) {
         Channels.fireExceptionCaught(ctx, EXCEPTION);
     }
 

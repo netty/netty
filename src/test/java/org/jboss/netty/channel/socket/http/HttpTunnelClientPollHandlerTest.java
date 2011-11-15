@@ -66,7 +66,7 @@ public class HttpTunnelClientPollHandlerTest {
     }
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         sink = new FakeChannelSink();
 
         ChannelPipeline pipeline = Channels.pipeline();

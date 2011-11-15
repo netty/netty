@@ -48,7 +48,7 @@ public class HttpTunnelServerChannelFactoryTest {
     ServerSocketChannel realChannel;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         realChannelFactory = mockContext.mock(ServerSocketChannelFactory.class);
         factory = new HttpTunnelServerChannelFactory(realChannelFactory);
         ChannelPipeline pipeline = Channels.pipeline();
