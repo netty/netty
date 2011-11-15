@@ -61,7 +61,9 @@ public class HttpClient {
         }
 
         String baseURI = args[0];
-        String postSimple, postFile, get;
+        String postSimple;
+        String postFile;
+        String get;
         if (baseURI.endsWith("/")) {
             postSimple = baseURI+"formpost";
             postFile = baseURI+"formpostmultipart";

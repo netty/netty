@@ -298,8 +298,7 @@ final class SocketSendBufferPool {
         }
 
         @Override
-        public long transferTo(DatagramChannel ch, SocketAddress raddr)
-                throws IOException {
+        public long transferTo(DatagramChannel ch, SocketAddress raddr) {
             throw new UnsupportedOperationException();
         }
 
@@ -307,7 +306,7 @@ final class SocketSendBufferPool {
         public void release() {
             if (file.releaseAfterTransfer()) {
                 // Make sure the FileRegion resource are released otherwise it may cause a FD leak or something similar
-                file.releaseExternalResources(); 
+                file.releaseExternalResources();
             }
         }
     }
@@ -333,12 +332,12 @@ final class SocketSendBufferPool {
         }
 
         @Override
-        public long transferTo(WritableByteChannel ch) throws IOException {
+        public long transferTo(WritableByteChannel ch) {
             return 0;
         }
 
         @Override
-        public long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
+        public long transferTo(DatagramChannel ch, SocketAddress raddr) {
             return 0;
         }
 

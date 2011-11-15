@@ -34,7 +34,7 @@ import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
  */
 public class FactorialClient {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         // Print usage if no argument is specified.
         if (args.length != 3) {
             System.err.println(

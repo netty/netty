@@ -58,7 +58,7 @@ public class ServerMessageSwitchTest {
     HttpTunnelAcceptedChannelReceiver htunAcceptedChannel;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         newChannelFactory =
                 mockContext.mock(HttpTunnelAcceptedChannelFactory.class);
         messageSwitch = new ServerMessageSwitch(newChannelFactory);

@@ -46,10 +46,6 @@ public class HttpTunnelServerChannelSinkTest {
 
     private final JUnit4Mockery mockContext = new JUnit4Mockery();
 
-    private HttpTunnelServerChannelSink sink;
-
-    private ChannelPipeline pipeline;
-
     private FakeSocketChannel channel;
 
     ServerSocketChannel realChannel;
@@ -59,18 +55,18 @@ public class HttpTunnelServerChannelSinkTest {
     Throwable exceptionInPipeline;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         realChannel = mockContext.mock(ServerSocketChannel.class);
-        pipeline = Channels.pipeline();
+        ChannelPipeline pipeline = Channels.pipeline();
         pipeline.addLast("exceptioncatcher", new ExceptionCatcher());
-        sink = new HttpTunnelServerChannelSink();
+        HttpTunnelServerChannelSink sink = new HttpTunnelServerChannelSink();
         sink.setRealChannel(realChannel);
         channel = new FakeSocketChannel(null, null, pipeline, sink);
         realFuture = Channels.future(realChannel);
     }
 
     @After
-    public void teardown() throws Exception {
+    public void teardown() {
         assertTrue("exception caught in pipeline: " + exceptionInPipeline,
                 exceptionInPipeline == null);
     }

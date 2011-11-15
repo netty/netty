@@ -515,7 +515,7 @@ final class Deflate {
 
     private void send_code(int c, short[] tree) {
         int c2 = c * 2;
-        send_bits((tree[c2] & 0xffff), (tree[c2 + 1] & 0xffff));
+        send_bits(tree[c2] & 0xffff, tree[c2 + 1] & 0xffff);
     }
 
     private void send_bits(int value, int length) {
@@ -805,7 +805,8 @@ final class Deflate {
             int stored_len, // length of input block
             boolean eof // true if this is the last block for a file
     ) {
-        int opt_lenb, static_lenb;// opt_len and static_len in bytes
+        int opt_lenb; // in bytes
+        int static_lenb; // in bytes
         int max_blindex = 0; // index of last bit length code of non zero freq
 
         // Build the Huffman trees unless a stored block is forced
@@ -875,14 +876,11 @@ final class Deflate {
     //    performed for at least two bytes (required for the zip translate_eol
     //    option -- not supported here).
     private void fill_window() {
-        int n, m;
-        int p;
-        int more; // Amount of free space at the end of the window.
-
         do {
-            more = window_size - lookahead - strstart;
+            int more = window_size - lookahead - strstart; // Amount of free space at the end of the window.
 
             // Deal with !@#$% 64K limit:
+            int n;
             if (more == 0 && strstart == 0 && lookahead == 0) {
                 more = w_size;
             } else if (more == -1) {
@@ -905,7 +903,8 @@ final class Deflate {
                 // zlib, so we don't care about this pathological case.)
 
                 n = hash_size;
-                p = n;
+                int p = n;
+                int m;
                 do {
                     m = head[-- p] & 0xffff;
                     head[p] = m >= w_size? (short) (m - w_size) : 0;

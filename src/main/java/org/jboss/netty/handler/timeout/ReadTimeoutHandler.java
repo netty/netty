@@ -210,7 +210,7 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
         }
     }
 
-    protected void readTimedOut(ChannelHandlerContext ctx) throws Exception {
+    protected void readTimedOut(ChannelHandlerContext ctx) {
         Channels.fireExceptionCaught(ctx, EXCEPTION);
     }
 

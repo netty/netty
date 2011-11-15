@@ -57,7 +57,7 @@ public class HttpTunnelServerChannelTest {
     private FakeServerSocketChannelFactory realChannelFactory;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         realChannelFactory = new FakeServerSocketChannelFactory();
         realChannelFactory.sink = new FakeChannelSink();
 

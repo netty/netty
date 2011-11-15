@@ -41,7 +41,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
  * <p>
  * A very large portion of this code was taken from the Netty 3.2 HTTP example.
  * </p>
- * 
+ *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
@@ -52,7 +52,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
     /**
      * Constructor specifying the destination web socket location and version to
      * initiate
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g
      *            "ws://myhost.com/mypath". Subsequent web socket frames will be
@@ -71,7 +71,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * <p>
      * Sends the opening request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /demo HTTP/1.1
      * Upgrade: WebSocket
@@ -80,10 +80,10 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * Origin: http://example.com
      * Sec-WebSocket-Key1: 4 @1  46546xW%0l 1 5
      * Sec-WebSocket-Key2: 12998 5 Y3 1  .P00
-     * 
+     *
      * ^n:ds[4U
      * </pre>
-     * 
+     *
      * @param ctx
      *            Channel context
      * @param channel
@@ -157,7 +157,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * <p>
      * Process server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 WebSocket Protocol Handshake
      * Upgrade: WebSocket
@@ -165,10 +165,10 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Origin: http://example.com
      * Sec-WebSocket-Location: ws://example.com/demo
      * Sec-WebSocket-Protocol: sample
-     * 
+     *
      * 8jKS'y:G*Co,Wxa-
      * </pre>
-     * 
+     *
      * @param ctx
      *            Channel context
      * @param response
@@ -214,7 +214,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         int randCount = 0;
         while (randCount < count) {
             int rand = (int) (Math.random() * 0x7e + 0x21);
-            if (((0x21 < rand) && (rand < 0x2f)) || ((0x3a < rand) && (rand < 0x7e))) {
+            if (0x21 < rand && rand < 0x2f || 0x3a < rand && rand < 0x7e) {
                 randomChars[randCount] = (char) rand;
                 randCount += 1;
             }

@@ -38,7 +38,7 @@ import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
  */
 public class LocalTimeClient {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         // Print usage if necessary.
         if (args.length < 3) {
             printUsage();

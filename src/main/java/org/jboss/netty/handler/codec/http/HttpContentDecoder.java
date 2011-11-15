@@ -153,7 +153,7 @@ public abstract class HttpContentDecoder extends SimpleChannelUpstreamHandler {
      * @param contentEncoding the value of the {@code "Content-Encoding"} header
      * @return the expected content encoding of the new content
      */
-    protected String getTargetContentEncoding(String contentEncoding) throws Exception {
+    protected String getTargetContentEncoding(String contentEncoding) {
         return HttpHeaders.Values.IDENTITY;
     }
 

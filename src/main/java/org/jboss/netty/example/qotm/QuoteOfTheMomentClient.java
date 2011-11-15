@@ -42,7 +42,7 @@ import org.jboss.netty.util.CharsetUtil;
  */
 public class QuoteOfTheMomentClient {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         DatagramChannelFactory f =
             new NioDatagramChannelFactory(Executors.newCachedThreadPool());
 

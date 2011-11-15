@@ -147,21 +147,21 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
     private void discard(ChannelHandlerContext ctx) {
         ClosedChannelException cause = null;
         boolean fireExceptionCaught = false;
-           
+
         for (;;) {
             MessageEvent currentEvent = this.currentEvent;
-                
-            if (this.currentEvent == null) { 
-                currentEvent = queue.poll(); 
+
+            if (this.currentEvent == null) {
+                currentEvent = queue.poll();
             } else {
-                this.currentEvent = null; 
+                this.currentEvent = null;
             }
 
-            if (currentEvent == null) { 
-                break; 
+            if (currentEvent == null) {
+                break;
             }
-            
-              
+
+
             Object m = currentEvent.getMessage();
             if (m instanceof ChunkedInput) {
                 closeInput((ChunkedInput) m);
@@ -176,14 +176,14 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
 
             currentEvent = null;
         }
-        
+
 
         if (fireExceptionCaught) {
             Channels.fireExceptionCaught(ctx.getChannel(), cause);
         }
     }
 
-    private synchronized void flush(ChannelHandlerContext ctx) throws Exception {
+    private synchronized void flush(ChannelHandlerContext ctx) {
         final Channel channel = ctx.getChannel();
         if (!channel.isConnected()) {
             discard(ctx);

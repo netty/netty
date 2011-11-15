@@ -70,7 +70,7 @@ public class CompleteChannelFutureTest {
     }
 
     @Test
-    public void shouldNotDoAnythingOnRemove() throws Exception {
+    public void shouldNotDoAnythingOnRemove() {
         ChannelFutureListener l = createStrictMock(ChannelFutureListener.class);
         replay(l);
 

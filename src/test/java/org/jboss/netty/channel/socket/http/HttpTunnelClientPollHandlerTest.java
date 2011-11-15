@@ -53,8 +53,6 @@ public class HttpTunnelClientPollHandlerTest {
 
     private FakeChannelSink sink;
 
-    private HttpTunnelClientPollHandler handler;
-
     private MockChannelStateListener listener;
 
     private static InetSocketAddress createAddress(byte[] addr, int port) {
@@ -66,14 +64,14 @@ public class HttpTunnelClientPollHandlerTest {
     }
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         sink = new FakeChannelSink();
 
         ChannelPipeline pipeline = Channels.pipeline();
         listener = new MockChannelStateListener();
         listener.serverHostName =
                 HttpTunnelMessageUtils.convertToHostString(SERVER_ADDRESS);
-        handler = new HttpTunnelClientPollHandler(listener);
+        HttpTunnelClientPollHandler handler = new HttpTunnelClientPollHandler(listener);
         handler.setTunnelId(TUNNEL_ID);
         pipeline.addLast(HttpTunnelClientPollHandler.NAME, handler);
 

@@ -417,7 +417,7 @@ class NioProviderMetadata {
         }
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         for (Entry<Object, Object> e: System.getProperties().entrySet()) {
             System.out.println(e.getKey() + ": " + e.getValue());
         }

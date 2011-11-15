@@ -329,7 +329,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     }
 
     protected void channelIdle(
-            ChannelHandlerContext ctx, IdleState state, long lastActivityTimeMillis) throws Exception {
+            ChannelHandlerContext ctx, IdleState state, long lastActivityTimeMillis) {
         ctx.sendUpstream(new DefaultIdleStateEvent(ctx.getChannel(), state, lastActivityTimeMillis));
     }
 

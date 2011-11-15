@@ -52,7 +52,7 @@ public class NioDatagramChannelTest {
     }
 
     @Test
-    public void checkBoundPort() throws Throwable {
+    public void checkBoundPort() {
         final InetSocketAddress socketAddress = (InetSocketAddress) sc
                 .getLocalAddress();
         assertEquals(9999, socketAddress.getPort());

@@ -61,7 +61,7 @@ public abstract class AbstractSocketClientBootstrapTest {
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
 
     @Test(timeout = 10000)
-    public void testFailedConnectionAttempt() throws Exception {
+    public void testFailedConnectionAttempt() {
         ClientBootstrap bootstrap = new ClientBootstrap();
         bootstrap.setFactory(newClientSocketChannelFactory(executor));
         bootstrap.getPipeline().addLast("dummy", new DummyHandler());
