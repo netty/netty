@@ -53,7 +53,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * Decodes a web socket frame from wire protocol version 8 format. This code was
  * forked from <a href="https://github.com/joewalnes/webbit">webbit</a> and
  * modified.
- * 
+ *
  * @author Aslak Hellesøy
  * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
@@ -89,7 +89,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
     /**
      * Constructor
-     * 
+     *
      * @param maskedPayload
      *            Web socket servers must set this to true processed incoming
      *            masked payload. Client implementations must set this to false.
@@ -121,14 +121,14 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
             byte b = buffer.readByte();
             frameFinalFlag = (b & 0x80) != 0;
             frameRsv = (b & 0x70) >> 4;
-            frameOpcode = (b & 0x0F);
+            frameOpcode = b & 0x0F;
 
             logger.debug("Decoding WebSocket Frame opCode=" + frameOpcode);
 
             // MASK, PAYLOAD LEN 1
             b = buffer.readByte();
             boolean frameMasked = (b & 0x80) != 0;
-            int framePayloadLen1 = (b & 0x7F);
+            int framePayloadLen1 = b & 0x7F;
 
             if (frameRsv != 0 && !this.allowExtensions) {
                 protocolViolation(channel, "RSV != 0 and no extension negotiated, RSV:" + frameRsv);

@@ -669,7 +669,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
                     continue retry;           // lost race vs opposite mode
                 }
                 if (how != ASYNC) {
-                    return awaitMatch(s, pred, e, (how == TIMED), nanos);
+                    return awaitMatch(s, pred, e, how == TIMED, nanos);
                 }
             }
             return e; // not waiting

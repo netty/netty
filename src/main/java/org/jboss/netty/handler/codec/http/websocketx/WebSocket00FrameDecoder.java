@@ -28,12 +28,12 @@ import org.jboss.netty.handler.codec.replay.VoidEnum;
  * For the detailed instruction on adding add Web Socket support to your HTTP
  * server, take a look into the <tt>WebSocketServer</tt> example located in the
  * {@code org.jboss.netty.example.http.websocket} package.
- * 
+ *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Mike Heath (mheath@apache.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev: 2342 $, $Date: 2010-07-07 14:07:39 +0900 (Wed, 07 Jul 2010) $
- * 
+ *
  * @apiviz.landmark
  * @apiviz.uses org.jboss.netty.handler.codec.http.websocket.WebSocketFrame
  */
@@ -52,7 +52,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
      * Creates a new instance of {@code WebSocketFrameDecoder} with the
      * specified {@code maxFrameSize}. If the client sends a frame size larger
      * than {@code maxFrameSize}, the channel will be closed.
-     * 
+     *
      * @param maxFrameSize
      *            the maximum frame size to decode
      */
@@ -98,7 +98,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
             }
         } while ((b & 0x80) == 0x80);
 
-        if (type == ((byte) 0xFF) && frameSize == 0) {
+        if (type == (byte) 0xFF && frameSize == 0) {
             receivedClosingHandshake = true;
             return new CloseWebSocketFrame();
         }

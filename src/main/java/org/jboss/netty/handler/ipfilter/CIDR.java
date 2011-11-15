@@ -175,7 +175,7 @@ public abstract class CIDR implements Comparable<CIDR>
        if (!(arg0 instanceof CIDR)) {
            return false;
        }
-       return (this.compareTo((CIDR) arg0) == 0);
+       return this.compareTo((CIDR) arg0) == 0;
    }
 
    /** Convert an IPv4 or IPv6 textual representation into an

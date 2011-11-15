@@ -55,7 +55,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * forked from <a href="https://github.com/joewalnes/webbit">webbit</a> and
  * modified.
  * </p>
- * 
+ *
  * @author Aslak Hellesøy
  * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
@@ -74,7 +74,7 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
 
     /**
      * Constructor
-     * 
+     *
      * @param maskPayload
      *            Web socket clients must set this to true to mask payload.
      *            Server implementations must set this to false.
@@ -118,9 +118,9 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
 
             int b0 = 0;
             if (frame.isFinalFragment()) {
-                b0 |= (1 << 7);
+                b0 |= 1 << 7;
             }
-            b0 |= (frame.getRsv() % 8) << 4;
+            b0 |= frame.getRsv() % 8 << 4;
             b0 |= opcode % 128;
 
             ChannelBuffer header;
@@ -134,18 +134,18 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
             if (length <= 125) {
                 header = ChannelBuffers.buffer(2 + maskLength);
                 header.writeByte(b0);
-                byte b = (byte) (this.maskPayload ? (0x80 | (byte) length) : (byte) length);
+                byte b = (byte) (this.maskPayload ? 0x80 | (byte) length : (byte) length);
                 header.writeByte(b);
             } else if (length <= 0xFFFF) {
                 header = ChannelBuffers.buffer(4 + maskLength);
                 header.writeByte(b0);
-                header.writeByte(this.maskPayload ? (0xFE) : 126);
-                header.writeByte((length >>> 8) & 0xFF);
-                header.writeByte((length) & 0xFF);
+                header.writeByte(this.maskPayload ? 0xFE : 126);
+                header.writeByte(length >>> 8 & 0xFF);
+                header.writeByte(length & 0xFF);
             } else {
                 header = ChannelBuffers.buffer(10 + maskLength);
                 header.writeByte(b0);
-                header.writeByte(this.maskPayload ? (0xFF) : 127);
+                header.writeByte(this.maskPayload ? 0xFF : 127);
                 header.writeLong(length);
             }
 

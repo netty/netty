@@ -515,7 +515,7 @@ final class Deflate {
 
     private void send_code(int c, short[] tree) {
         int c2 = c * 2;
-        send_bits((tree[c2] & 0xffff), (tree[c2 + 1] & 0xffff));
+        send_bits(tree[c2] & 0xffff, tree[c2 + 1] & 0xffff);
     }
 
     private void send_bits(int value, int length) {
