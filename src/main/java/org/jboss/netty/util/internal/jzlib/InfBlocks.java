@@ -116,7 +116,6 @@ final class InfBlocks {
     }
 
     int proc(ZStream z, int r) {
-        int t; // temporary storage
         int b; // bit buffer
         int k; // bits in bit buffer
         int p; // input data pointer
@@ -138,6 +137,7 @@ final class InfBlocks {
 
         // process input based on current state
         while (true) {
+            int t; // temporary storage
             switch (mode) {
             case TYPE:
 
@@ -418,8 +418,6 @@ final class InfBlocks {
                         break;
                     }
 
-                    int i, j, c;
-
                     t = bb[0];
 
                     while (k < t) {
@@ -444,15 +442,15 @@ final class InfBlocks {
                     }
 
                     t = hufts[(tb[0] + (b & inflate_mask[t])) * 3 + 1];
-                    c = hufts[(tb[0] + (b & inflate_mask[t])) * 3 + 2];
+                    int c = hufts[(tb[0] + (b & inflate_mask[t])) * 3 + 2];
 
                     if (c < 16) {
                         b >>>= t;
                         k -= t;
                         blens[index ++] = c;
                     } else { // c == 16..18
-                        i = c == 18? 7 : c - 14;
-                        j = c == 18? 11 : 3;
+                        int i = c == 18 ? 7 : c - 14;
+                        int j = c == 18 ? 11 : 3;
 
                         while (k < t + i) {
                             if (n != 0) {
@@ -508,13 +506,13 @@ final class InfBlocks {
                 tb[0] = -1;
                 {
                     int[] bl = new int[1];
-                    int[] bd = new int[1];
-                    int[] tl = new int[1];
-                    int[] td = new int[1];
                     bl[0] = 9; // must be <= 9 for lookahead assumptions
+                    int[] bd = new int[1];
                     bd[0] = 6; // must be <= 9 for lookahead assumptions
 
                     t = table;
+                    int[] tl = new int[1];
+                    int[] td = new int[1];
                     t = inftree.inflate_trees_dynamic(257 + (t & 0x1f),
                             1 + (t >> 5 & 0x1f), blens, bl, bd, tl, td, hufts,
                             z);
@@ -631,16 +629,12 @@ final class InfBlocks {
 
     // copy as much as possible from the sliding window to the output area
     int inflate_flush(ZStream z, int r) {
-        int n;
-        int p;
-        int q;
-
         // local copies of source and destination pointers
-        p = z.next_out_index;
-        q = read;
+        int p = z.next_out_index;
+        int q = read;
 
         // compute number of bytes to copy as far as end of window
-        n = (q <= write? write : end) - q;
+        int n = (q <= write ? write : end) - q;
         if (n > z.avail_out) {
             n = z.avail_out;
         }

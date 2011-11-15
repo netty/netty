@@ -687,7 +687,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      */
     private Node tryAppend(Node s, boolean haveData) {
         for (Node t = tail, p = t;;) {        // move p to last node and append
-            Node n, u;                        // temps for reads of next & tail
+            Node n;                         // temps for reads of next & tail
             if (p == null && (p = head) == null) {
                 if (casHead(null, s)) {
                     return s;                 // initialize
@@ -696,6 +696,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
             else if (p.cannotPrecede(haveData)) {
                 return null;                  // lost race vs opposite mode
             } else if ((n = p.next) != null) { // not last; keep traversing
+                Node u;                         // temps for reads of next & tail
                 p = p != t && t != (u = tail) ? (t = u) : // stale tail
                     p != n ? n : null;      // restart if off list
             } else if (!p.casNext(null, s)) {
