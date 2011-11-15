@@ -146,12 +146,7 @@ final class Tree {
         int[] extra = stat_desc.extra_bits;
         int base = stat_desc.extra_base;
         int max_length = stat_desc.max_length;
-        int h; // heap index
-        int n, m; // iterate over the tree elements
         int bits; // bit length
-        int xbits; // extra bits
-        short f; // frequency
-        int overflow = 0; // number of elements with bit length too large
 
         for (bits = 0; bits <= JZlib.MAX_BITS; bits ++) {
             s.bl_count[bits] = 0;
@@ -161,6 +156,9 @@ final class Tree {
         // overflow in the case of the bit length tree).
         tree[s.heap[s.heap_max] * 2 + 1] = 0; // root of the heap
 
+        int overflow = 0; // number of elements with bit length too large
+        int n;  // iterate over the tree elements
+        int h; // heap index
         for (h = s.heap_max + 1; h < JZlib.HEAP_SIZE; h ++) {
             n = s.heap[h];
             bits = tree[tree[n * 2 + 1] * 2 + 1] + 1;
@@ -176,11 +174,11 @@ final class Tree {
             }
 
             s.bl_count[bits] ++;
-            xbits = 0;
+            int xbits = 0; // extra bits
             if (n >= base) {
                 xbits = extra[n - base];
             }
-            f = tree[n * 2];
+            short f = tree[n * 2]; // frequency
             s.opt_len += f * (bits + xbits);
             if (stree != null) {
                 s.static_len += f * (stree[n * 2 + 1] + xbits);
@@ -208,7 +206,7 @@ final class Tree {
         for (bits = max_length; bits != 0; bits --) {
             n = s.bl_count[bits];
             while (n != 0) {
-                m = s.heap[-- h];
+                int m = s.heap[--h];
                 if (m > max_code) {
                     continue;
                 }
@@ -232,9 +230,6 @@ final class Tree {
         short[] tree = dyn_tree;
         short[] stree = stat_desc.static_tree;
         int elems = stat_desc.elems;
-        int n, m; // iterate over heap elements
-        int max_code = -1; // largest code with non zero frequency
-        int node; // new node being created
 
         // Construct the initial heap, with least frequent element in
         // heap[1]. The sons of heap[n] are heap[2*n] and heap[2*n+1].
@@ -242,6 +237,8 @@ final class Tree {
         s.heap_len = 0;
         s.heap_max = JZlib.HEAP_SIZE;
 
+        int max_code = -1; // largest code with non zero frequency
+        int n;  // iterate over heap elements
         for (n = 0; n < elems; n ++) {
             if (tree[n * 2] != 0) {
                 s.heap[++ s.heap_len] = max_code = n;
@@ -255,6 +252,7 @@ final class Tree {
         // and that at least one bit should be sent even if there is only one
         // possible code. So to avoid special checks later on we force at least
         // two codes of non zero frequency.
+        int node; // new node being created
         while (s.heap_len < 2) {
             node = s.heap[++ s.heap_len] = max_code < 2? ++ max_code : 0;
             tree[node * 2] = 1;
@@ -283,7 +281,7 @@ final class Tree {
             n = s.heap[1];
             s.heap[1] = s.heap[s.heap_len --];
             s.pqdownheap(tree, 1);
-            m = s.heap[1]; // m = node of next least frequency
+            int m = s.heap[1];
 
             s.heap[-- s.heap_max] = n; // keep the nodes sorted by frequency
             s.heap[-- s.heap_max] = m;
@@ -321,12 +319,11 @@ final class Tree {
     ) {
         short[] next_code = new short[JZlib.MAX_BITS + 1]; // next code value for each bit length
         short code = 0; // running code value
-        int bits; // bit index
-        int n; // code index
 
         // The distribution counts are first used to generate the code values
         // without bit reversal.
-        for (bits = 1; bits <= JZlib.MAX_BITS; bits ++) {
+        for (int bits = 1; // bit index
+             bits <= JZlib.MAX_BITS; bits ++) {
             next_code[bits] = code = (short) (code + bl_count[bits - 1] << 1);
         }
 
@@ -336,7 +333,8 @@ final class Tree {
         //        "inconsistent bit counts");
         //Tracev((stderr,"\ngen_codes: max_code %d ", max_code));
 
-        for (n = 0; n <= max_code; n ++) {
+        for (int n = 0; // code index
+             n <= max_code; n ++) {
             int len = tree[n * 2 + 1];
             if (len == 0) {
                 continue;

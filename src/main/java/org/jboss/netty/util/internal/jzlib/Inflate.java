@@ -159,16 +159,15 @@ final class Inflate {
     }
 
     int inflate(ZStream z, int f) {
-        int r;
-        int b;
 
         if (z == null || z.istate == null || z.next_in == null) {
             return JZlib.Z_STREAM_ERROR;
         }
         f = f == JZlib.Z_FINISH? JZlib.Z_BUF_ERROR : JZlib.Z_OK;
-        r = JZlib.Z_BUF_ERROR;
+        int r = JZlib.Z_BUF_ERROR;
         while (true) {
             //System.out.println("mode: "+z.istate.mode);
+            int b;
             switch (z.istate.mode) {
             case METHOD:
 
@@ -564,7 +563,6 @@ final class Inflate {
     }
 
     int inflateSetDictionary(ZStream z, byte[] dictionary, int dictLength) {
-        int index = 0;
         int length = dictLength;
         if (z == null || z.istate == null || z.istate.mode != DICT0) {
             return JZlib.Z_STREAM_ERROR;
@@ -576,6 +574,7 @@ final class Inflate {
 
         z.adler = Adler32.adler32(0, null, 0, 0);
 
+        int index = 0;
         if (length >= 1 << z.istate.wbits) {
             length = (1 << z.istate.wbits) - 1;
             index = dictLength - length;
@@ -588,11 +587,6 @@ final class Inflate {
     private static final byte[] mark = { (byte) 0, (byte) 0, (byte) 0xff, (byte) 0xff };
 
     int inflateSync(ZStream z) {
-        int n; // number of bytes to look at
-        int p; // pointer to bytes
-        int m; // number of marker bytes found in a row
-        long r, w; // temporaries to save total_in and total_out
-
         // set up
         if (z == null || z.istate == null) {
             return JZlib.Z_STREAM_ERROR;
@@ -601,11 +595,12 @@ final class Inflate {
             z.istate.mode = BAD;
             z.istate.marker = 0;
         }
+        int n; // number of bytes to look at
         if ((n = z.avail_in) == 0) {
             return JZlib.Z_BUF_ERROR;
         }
-        p = z.next_in_index;
-        m = z.istate.marker;
+        int p = z.next_in_index; // pointer to bytes
+        int m = z.istate.marker; // number of marker bytes found in a row
 
         // search
         while (n != 0 && m < 4) {
@@ -630,8 +625,8 @@ final class Inflate {
         if (m != 4) {
             return JZlib.Z_DATA_ERROR;
         }
-        r = z.total_in;
-        w = z.total_out;
+        long r = z.total_in; // temporaries to save total_in and total_out
+        long w = z.total_out;
         inflateReset(z);
         z.total_in = r;
         z.total_out = w;

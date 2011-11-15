@@ -95,11 +95,10 @@ public abstract class AbstractCompositeChannelBufferTest extends
 
     @Test
     public void testDiscardReadBytes3() {
-        ChannelBuffer a, b;
-        a = wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
-        b = wrappedBuffer(
-                wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 0, 5),
-                wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 5, 5));
+        ChannelBuffer a = wrappedBuffer(order, new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+        ChannelBuffer b = wrappedBuffer(
+                wrappedBuffer(order, new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, 0, 5),
+                wrappedBuffer(order, new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, 5, 5));
         a.skipBytes(6);
         a.markReaderIndex();
         b.skipBytes(6);
@@ -151,12 +150,11 @@ public abstract class AbstractCompositeChannelBufferTest extends
     }
     @Test
     public void testSeveralBuffersEquals() {
-        ChannelBuffer a, b;
         //XXX Same tests with several buffers in wrappedCheckedBuffer
         // Different length.
-        a = wrappedBuffer(order, new byte[] { 1  });
-        b = wrappedBuffer(wrappedBuffer(order, new byte[] { 1 }),
-                wrappedBuffer(order, new byte[] { 2 }));
+        ChannelBuffer a = wrappedBuffer(order, new byte[]{1});
+        ChannelBuffer b = wrappedBuffer(wrappedBuffer(order, new byte[]{1}),
+                wrappedBuffer(order, new byte[]{2}));
         assertFalse(ChannelBuffers.equals(a, b));
 
         // Same content, same firstIndex, short length.
@@ -254,10 +252,9 @@ public abstract class AbstractCompositeChannelBufferTest extends
     @Test
     public void testWrittenBuffersEquals() {
         //XXX Same tests than testEquals with written AggregateChannelBuffers
-        ChannelBuffer a, b;
         // Different length.
-        a = wrappedBuffer(order, new byte[] { 1  });
-        b = wrappedBuffer(wrappedBuffer(order, new byte[] { 1 }, new byte[1]));
+        ChannelBuffer a = wrappedBuffer(order, new byte[]{1});
+        ChannelBuffer b = wrappedBuffer(wrappedBuffer(order, new byte[]{1}, new byte[1]));
         // to enable writeBytes
         b.writerIndex(b.writerIndex()-1);
         b.writeBytes(
