@@ -51,8 +51,6 @@ public class AcceptedServerChannelRequestDispatchTest {
 
     JUnit4Mockery mockContext = new JUnit4Mockery();
 
-    private AcceptedServerChannelRequestDispatch handler;
-
     FakeSocketChannel channel;
 
     private FakeChannelSink sink;
@@ -64,7 +62,7 @@ public class AcceptedServerChannelRequestDispatchTest {
         ChannelPipeline pipeline = Channels.pipeline();
         messageSwitch =
                 mockContext.mock(ServerMessageSwitchUpstreamInterface.class);
-        handler = new AcceptedServerChannelRequestDispatch(messageSwitch);
+        AcceptedServerChannelRequestDispatch handler = new AcceptedServerChannelRequestDispatch(messageSwitch);
         pipeline.addLast(AcceptedServerChannelRequestDispatch.NAME, handler);
         sink = new FakeChannelSink();
         channel = new FakeSocketChannel(null, null, pipeline, sink);

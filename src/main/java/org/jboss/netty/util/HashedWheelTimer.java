@@ -90,7 +90,6 @@ public class HashedWheelTimer implements Timer {
     private static final SharedResourceMisuseDetector misuseDetector =
         new SharedResourceMisuseDetector(HashedWheelTimer.class);
 
-    private final Worker worker = new Worker();
     final Thread workerThread;
     final AtomicBoolean shutdown = new AtomicBoolean();
 
@@ -208,6 +207,7 @@ public class HashedWheelTimer implements Timer {
 
         roundDuration = tickDuration * wheel.length;
 
+        Worker worker = new Worker();
         workerThread = threadFactory.newThread(worker);
 
         // Misuse check
@@ -503,7 +503,7 @@ public class HashedWheelTimer implements Timer {
                 // TODO return false
                 return;
             }
-            
+
             wheel[stopIndex].remove(this);
         }
 
