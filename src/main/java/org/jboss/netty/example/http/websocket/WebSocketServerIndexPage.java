@@ -46,7 +46,7 @@ public class WebSocketServerIndexPage {
         "} else {" + NEWLINE +
         "  alert(\"Your browser does not support Web Socket.\");" + NEWLINE +
         "}" + NEWLINE +
-        "" + NEWLINE +
+        NEWLINE +
         "function send(message) {" + NEWLINE +
         "  if (!window.WebSocket) { return; }" + NEWLINE +
         "  if (socket.readyState == WebSocket.OPEN) {" + NEWLINE +
