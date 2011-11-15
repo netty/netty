@@ -55,10 +55,6 @@ import org.junit.Test;
  */
 public class HttpTunnelTest {
 
-    private HttpTunnelClientChannelFactory clientFactory;
-
-    private HttpTunnelServerChannelFactory serverFactory;
-
     private ClientBootstrap clientBootstrap;
 
     private ServerBootstrap serverBootstrap;
@@ -86,16 +82,14 @@ public class HttpTunnelTest {
     @Before
     public void setUp() throws UnknownHostException {
         activeConnections = new DefaultChannelGroup();
-        clientFactory =
-                new HttpTunnelClientChannelFactory(
-                        new NioClientSocketChannelFactory(
-                                Executors.newCachedThreadPool(),
-                                Executors.newCachedThreadPool()));
-        serverFactory =
-                new HttpTunnelServerChannelFactory(
-                        new NioServerSocketChannelFactory(
-                                Executors.newCachedThreadPool(),
-                                Executors.newCachedThreadPool()));
+        HttpTunnelClientChannelFactory clientFactory = new HttpTunnelClientChannelFactory(
+                new NioClientSocketChannelFactory(
+                        Executors.newCachedThreadPool(),
+                        Executors.newCachedThreadPool()));
+        HttpTunnelServerChannelFactory serverFactory = new HttpTunnelServerChannelFactory(
+                new NioServerSocketChannelFactory(
+                        Executors.newCachedThreadPool(),
+                        Executors.newCachedThreadPool()));
 
         clientBootstrap = new ClientBootstrap(clientFactory);
 

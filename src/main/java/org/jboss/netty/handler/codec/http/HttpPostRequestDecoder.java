@@ -54,11 +54,6 @@ public class HttpPostRequestDecoder {
     private final Charset charset;
 
     /**
-     * Does request have a body to decode
-     */
-    private boolean bodyToDecode = false;
-
-    /**
      * Does the last chunk already received
      */
     private boolean isLastChunk = false;
@@ -171,6 +166,7 @@ public class HttpPostRequestDecoder {
         }
         this.request = request;
         HttpMethod method = request.getMethod();
+        boolean bodyToDecode = false;
         if (method.equals(HttpMethod.POST) || method.equals(HttpMethod.PUT)) {
             bodyToDecode = true;
         }

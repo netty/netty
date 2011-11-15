@@ -40,8 +40,6 @@ public class HttpTunnelAcceptedChannelSinkTest {
 
     ServerMessageSwitchDownstreamInterface messageSwitch;
 
-    private HttpTunnelAcceptedChannelSink sink;
-
     private FakeSocketChannel channel;
 
     private UpstreamEventCatcher upstreamCatcher;
@@ -50,9 +48,8 @@ public class HttpTunnelAcceptedChannelSinkTest {
     public void setUp() {
         messageSwitch =
                 mockContext.mock(ServerMessageSwitchDownstreamInterface.class);
-        sink =
-                new HttpTunnelAcceptedChannelSink(messageSwitch, TUNNEL_ID,
-                        new HttpTunnelAcceptedChannelConfig());
+        HttpTunnelAcceptedChannelSink sink = new HttpTunnelAcceptedChannelSink(messageSwitch, TUNNEL_ID,
+                new HttpTunnelAcceptedChannelConfig());
         ChannelPipeline pipeline = Channels.pipeline();
         upstreamCatcher = new UpstreamEventCatcher();
         pipeline.addLast(UpstreamEventCatcher.NAME, upstreamCatcher);

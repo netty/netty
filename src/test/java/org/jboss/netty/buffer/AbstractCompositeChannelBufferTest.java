@@ -45,7 +45,6 @@ public abstract class AbstractCompositeChannelBufferTest extends
     }
 
     private List<ChannelBuffer> buffers;
-    private ChannelBuffer buffer;
 
     @Override
     protected ChannelBuffer newBuffer(int length) {
@@ -72,7 +71,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
             buffers.add(ChannelBuffers.EMPTY_BUFFER);
         }
 
-        buffer = ChannelBuffers.wrappedBuffer(buffers.toArray(new ChannelBuffer[buffers.size()]));
+        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(buffers.toArray(new ChannelBuffer[buffers.size()]));
         buffer.writerIndex(length);
         buffer = ChannelBuffers.wrappedBuffer(buffer);
         assertEquals(length, buffer.capacity());

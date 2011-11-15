@@ -38,13 +38,11 @@ public class WriteFragmenterTest {
 
     private FakeSocketChannel channel;
 
-    private WriteFragmenter fragmenter;
-
     private FakeChannelSink downstreamCatcher;
 
     @Before
     public void setUp() {
-        fragmenter = new WriteFragmenter(100);
+        WriteFragmenter fragmenter = new WriteFragmenter(100);
 
         ChannelPipeline pipeline = Channels.pipeline();
         pipeline.addLast(WriteFragmenter.NAME, fragmenter);
