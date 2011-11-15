@@ -40,15 +40,6 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements
 
     final ServerMessageSwitch messageSwitch;
 
-    private final ChannelFutureListener CLOSE_FUTURE_PROXY =
-            new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future)
-                        throws Exception {
-                    HttpTunnelServerChannel.this.setClosed();
-                }
-            };
-
     protected static HttpTunnelServerChannel create(
             HttpTunnelServerChannelFactory factory, ChannelPipeline pipeline) {
         HttpTunnelServerChannel instance = new HttpTunnelServerChannel(factory, pipeline);
@@ -66,6 +57,13 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements
         HttpTunnelServerChannelSink sink =
                 (HttpTunnelServerChannelSink) getPipeline().getSink();
         sink.setRealChannel(realChannel);
+        ChannelFutureListener CLOSE_FUTURE_PROXY = new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future)
+                    throws Exception {
+                HttpTunnelServerChannel.this.setClosed();
+            }
+        };
         sink.setCloseListener(CLOSE_FUTURE_PROXY);
         config = new HttpTunnelServerChannelConfig(realChannel);
     }
