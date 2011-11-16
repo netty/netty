@@ -313,6 +313,10 @@ public class DefaultChannelFuture implements ChannelFuture {
                 }
             }
             notifyListeners();
+            
+            // clear listeners
+            listeners.clear();
+            progressListeners.clear();
         }
 
         return set;
