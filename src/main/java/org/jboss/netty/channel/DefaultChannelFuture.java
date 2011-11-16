@@ -100,7 +100,7 @@ public class DefaultChannelFuture implements ChannelFuture {
 
     @Override
     public boolean isDone() {
-        return result.get()!= null;
+        return result.get() != null;
     }
 
     @Override
@@ -123,7 +123,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     @Override
     public boolean isCancelled() {
         Result r = result.get();
-        return r != null && r.getCause() == CANCELLED;
+        return r != null && r.isCancelled();
     }
 
     @Override
@@ -373,11 +373,12 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
     }
     
-    private final static class Result {
+    private static final class Result {
         
-        private Throwable cause;
+        private final Throwable cause;
 
         public Result() {
+            this(null);
         }
         
         public Result(Throwable cause) {
@@ -390,6 +391,10 @@ public class DefaultChannelFuture implements ChannelFuture {
         
         public boolean isSuccess() {
             return cause == null;
+        }
+        
+        public boolean isCancelled() {
+            return cause != null && cause == CANCELLED;
         }
         
     }
