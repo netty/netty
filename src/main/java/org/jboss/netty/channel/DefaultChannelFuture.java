@@ -76,8 +76,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     private final boolean cancellable;
 
     private final List<ChannelFutureListener> listeners = new CopyOnWriteArrayList<ChannelFutureListener>();
-    private final  List<ChannelFutureProgressListener> progressListeners = new CopyOnWriteArrayList<ChannelFutureProgressListener>();
-    private volatile boolean done;
+    private final List<ChannelFutureProgressListener> progressListeners = new CopyOnWriteArrayList<ChannelFutureProgressListener>();
     private final AtomicReference<Result> result = new AtomicReference<Result>();
     private int waiters;
 
@@ -101,7 +100,7 @@ public class DefaultChannelFuture implements ChannelFuture {
 
     @Override
     public boolean isDone() {
-        return done;
+        return result.get()!= null;
     }
 
     @Override
@@ -132,7 +131,7 @@ public class DefaultChannelFuture implements ChannelFuture {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
-        if (done) {
+        if (isDone()) {
             notifyListener(listener);
         } else {
             listeners.add(listener);
@@ -148,7 +147,7 @@ public class DefaultChannelFuture implements ChannelFuture {
             throw new NullPointerException("listener");
         }
 
-        if (!done) {
+        if (!isDone()) {
             listeners.remove(listener);
             if (listener instanceof ChannelFutureProgressListener) {
                 progressListeners.remove(listener);
@@ -164,7 +163,7 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
 
         synchronized (this) {
-            while (!done) {
+            while (!isDone()) {
                 checkDeadLock();
                 waiters++;
                 try {
@@ -192,7 +191,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     public ChannelFuture awaitUninterruptibly() {
         boolean interrupted = false;
         synchronized (this) {
-            while (!done) {
+            while (!isDone()) {
                 checkDeadLock();
                 waiters++;
                 try {
@@ -241,10 +240,10 @@ public class DefaultChannelFuture implements ChannelFuture {
 
         try {
             synchronized (this) {
-                if (done) {
-                    return done;
+                if (isDone()) {
+                    return true;
                 } else if (waitTime <= 0) {
-                    return done;
+                    return isDone();
                 }
 
                 checkDeadLock();
@@ -261,12 +260,12 @@ public class DefaultChannelFuture implements ChannelFuture {
                             }
                         }
 
-                        if (done) {
+                        if (isDone()) {
                             return true;
                         } else {
                             waitTime = timeoutNanos - (System.nanoTime() - startTime);
                             if (waitTime <= 0) {
-                                return done;
+                                return isDone();
                             }
                         }
                     }
@@ -302,10 +301,9 @@ public class DefaultChannelFuture implements ChannelFuture {
     
     private boolean setResult(Result r) {
         // Allow only once.
-        if (done) {
+        if (isDone()) {
             return false;
         }
-        done = true;
         boolean set = result.compareAndSet(null, r);
 
         if (set) {
@@ -349,7 +347,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     @Override
     public boolean setProgress(long amount, long current, long total) {
         // Do not generate progress event after completion.
-        if (done) {
+        if (isDone()) {
             return false;
         }
         
