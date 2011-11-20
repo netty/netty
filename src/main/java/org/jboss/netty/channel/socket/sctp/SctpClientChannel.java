@@ -38,7 +38,7 @@ final class SctpClientChannel extends SctpChannelImpl {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SctpClientChannel.class);
 
-    private static SctpChannel newSocket() {
+    private static SctpChannel newChannael() {
         SctpChannel underlayingChannel;
         try {
             underlayingChannel = SctpChannel.open();
@@ -77,7 +77,7 @@ final class SctpClientChannel extends SctpChannelImpl {
             ChannelFactory factory, ChannelPipeline pipeline,
             ChannelSink sink, SctpWorker worker) {
 
-        super(null, factory, pipeline, sink, newSocket(), worker);
+        super(null, factory, pipeline, sink, newChannael(), worker);
         fireChannelOpen(this);
     }
 }

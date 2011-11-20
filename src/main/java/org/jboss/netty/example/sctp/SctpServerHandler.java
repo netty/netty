@@ -30,31 +30,24 @@ import java.util.logging.Logger;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
- *
  * @version $Rev$, $Date$
  */
 public class SctpServerHandler extends SimpleChannelUpstreamHandler {
+    private static final Logger logger = Logger.getLogger(SctpServerHandler.class.getName());
+
     private final AtomicLong counter = new AtomicLong(0);
 
-    private static final Logger logger = Logger.getLogger(
-            SctpServerHandler.class.getName());
-
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent messageEvent) {
         // Send back the received message to the remote peer.
-//        logger.log(Level.INFO, "Received " +  counter.incrementAndGet() + "th message from client.");
-        e.getChannel().write(e.getMessage());
+        logger.log(Level.INFO, "Received " + counter.incrementAndGet() + "th message from client, sending it back.");
+        messageEvent.getChannel().write(messageEvent.getMessage());
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent event) {
         // Close the connection when an exception is raised.
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.getCause());
-        e.getChannel().close();
+        logger.log(Level.WARNING, "Unexpected exception from downstream.", event.getCause());
+        event.getChannel().close();
     }
 }

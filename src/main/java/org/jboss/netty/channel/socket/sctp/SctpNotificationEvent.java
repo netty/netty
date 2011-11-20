@@ -28,12 +28,12 @@ import org.jboss.netty.channel.Channels;
  * @version $Rev$, $Date$
  *
  */
-public class UpstreamChannelNotificationEvent implements ChannelEvent {
+public class SctpNotificationEvent implements ChannelEvent {
     private Channel channel;
     private Notification notification;
     private Object value;
 
-    public UpstreamChannelNotificationEvent(Channel channel, Notification notification, Object value) {
+    public SctpNotificationEvent(Channel channel, Notification notification, Object value) {
         if (channel == null) {
             throw new NullPointerException("channel");
         }

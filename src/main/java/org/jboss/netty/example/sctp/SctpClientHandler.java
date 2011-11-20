@@ -33,42 +33,35 @@ import java.util.logging.Logger;
  * @version $Rev$, $Date$
  */
 public class SctpClientHandler extends SimpleChannelUpstreamHandler {
-    private final AtomicLong counter = new AtomicLong(0);
+    private static final Logger logger = Logger.getLogger(SctpClientHandler.class.getName());
 
-    private static final Logger logger = Logger.getLogger(
-            SctpClientHandler.class.getName());
+    private final AtomicLong counter = new AtomicLong(0);
 
     /**
      * Creates a client-side handler.
      */
     public SctpClientHandler() {
-
     }
 
-
+    /**
+     * After connection is initialized, start the echo from client
+     */
     @Override
-    public void channelConnected(
-            ChannelHandlerContext ctx, ChannelStateEvent e) {
-
-        e.getChannel().write(new SctpMessage(0, 0, ChannelBuffers.wrappedBuffer("SCTP ECHO".getBytes())));
+    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent stateEvent) {
+        stateEvent.getChannel().write(new SctpMessage(0, 0, ChannelBuffers.wrappedBuffer("SCTP ECHO".getBytes())));
     }
 
     @Override
-    public void messageReceived(
-            ChannelHandlerContext ctx, MessageEvent e) {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent messageEvent) {
         // Send back the received message to the remote peer.
-        logger.log(Level.INFO, "Received " + counter.incrementAndGet() + "th message from server.");
-        e.getChannel().write(e.getMessage());
+        logger.log(Level.INFO, "Received " + counter.incrementAndGet() + "th message from server, sending it back.");
+        messageEvent.getChannel().write(messageEvent.getMessage());
     }
 
     @Override
-    public void exceptionCaught(
-            ChannelHandlerContext ctx, ExceptionEvent e) {
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent exceptionEvent) {
         // Close the connection when an exception is raised.
-        logger.log(
-                Level.WARNING,
-                "Unexpected exception from downstream.",
-                e.getCause());
-        e.getChannel().close();
+        logger.log(Level.WARNING, "Unexpected exception from downstream.", exceptionEvent.getCause());
+        exceptionEvent.getChannel().close();
     }
 }

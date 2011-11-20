@@ -28,15 +28,15 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  *
  */
 
-public class NotificationHandler extends AbstractNotificationHandler {
+class SctpNotificationHandler extends AbstractNotificationHandler {
 
     private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(NotificationHandler.class);
+            InternalLoggerFactory.getInstance(SctpNotificationHandler.class);
 
     private final SctpChannelImpl sctpChannel;
     private final SctpWorker sctpWorker;
 
-    public NotificationHandler(SctpChannelImpl sctpChannel, SctpWorker sctpWorker) {
+    public SctpNotificationHandler(SctpChannelImpl sctpChannel, SctpWorker sctpWorker) {
         this.sctpChannel = sctpChannel;
         this.sctpWorker = sctpWorker;
     }
@@ -72,6 +72,6 @@ public class NotificationHandler extends AbstractNotificationHandler {
     }
 
     private void fireNotificationReceived(Notification notification, Object o) {
-        sctpChannel.getPipeline().sendUpstream(new UpstreamChannelNotificationEvent(sctpChannel, notification, o));
+        sctpChannel.getPipeline().sendUpstream(new SctpNotificationEvent(sctpChannel, notification, o));
     }
 }

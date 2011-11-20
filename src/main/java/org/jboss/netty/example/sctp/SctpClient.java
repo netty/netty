@@ -67,6 +67,8 @@ public class SctpClient {
         // Wait until the connection is closed or the connection attempt fails.
         future.getChannel().getCloseFuture().awaitUninterruptibly();
 
+       //  Please check SctpClientHandler to see, how echo message is sent & received
+
         // Shut down thread pools to exit.
         bootstrap.releaseExternalResources();
     }

@@ -48,6 +48,7 @@ import static org.jboss.netty.channel.Channels.*;
  *
  * @version $Rev$, $Date$
  */
+@SuppressWarnings("unchecked")
 class SctpWorker implements Runnable {
 
     private static final InternalLogger logger =
@@ -71,7 +72,7 @@ class SctpWorker implements Runnable {
     private final SctpReceiveBufferPool recvBufferPool = new SctpReceiveBufferPool();
     private final SctpSendBufferPool sendBufferPool = new SctpSendBufferPool();
 
-    private NotificationHandler notificationHandler;
+    private SctpNotificationHandler notificationHandler;
 
     SctpWorker(Executor executor) {
         this.executor = executor;
@@ -81,7 +82,7 @@ class SctpWorker implements Runnable {
 
         boolean server = !(channel instanceof SctpClientChannel);
         Runnable registerTask = new RegisterTask(channel, future, server);
-        notificationHandler = new NotificationHandler(channel, this);
+        notificationHandler = new SctpNotificationHandler(channel, this);
         Selector selector;
 
         synchronized (startStopLock) {
@@ -302,7 +303,7 @@ class SctpWorker implements Runnable {
 
         ByteBuffer bb = recvBufferPool.acquire(predictedRecvBufSize);
         try {
-            messageInfo = channel.channel.receive(bb, this, notificationHandler);
+            messageInfo = channel.underlayingChannel.receive(bb, null, notificationHandler);
             if (messageInfo != null) {
                 messageReceived = true;
                 if (messageInfo.isComplete()) {
@@ -346,7 +347,7 @@ class SctpWorker implements Runnable {
             recvBufferPool.release(bb);
         }
 
-        if (channel.channel.isBlocking() && !messageReceived || failure) {
+        if (channel.underlayingChannel.isBlocking() && !messageReceived || failure) {
             k.cancel(); // Some JDK implementations run into an infinite loop without this.
             close(channel, succeededFuture(channel));
             return false;
@@ -438,7 +439,7 @@ class SctpWorker implements Runnable {
         long writtenBytes = 0;
 
         final SctpSendBufferPool sendBufferPool = this.sendBufferPool;
-        final com.sun.nio.sctp.SctpChannel ch = channel.channel;
+        final com.sun.nio.sctp.SctpChannel ch = channel.underlayingChannel;
         final Queue<MessageEvent> writeBuffer = channel.writeBuffer;
         final int writeSpinCount = channel.getConfig().getWriteSpinCount();
         synchronized (channel.writeLock) {
@@ -525,7 +526,7 @@ class SctpWorker implements Runnable {
 
     private void setOpWrite(SctpChannelImpl channel) {
         Selector selector = this.selector;
-        SelectionKey key = channel.channel.keyFor(selector);
+        SelectionKey key = channel.underlayingChannel.keyFor(selector);
         if (key == null) {
             return;
         }
@@ -548,7 +549,7 @@ class SctpWorker implements Runnable {
 
     private void clearOpWrite(SctpChannelImpl channel) {
         Selector selector = this.selector;
-        SelectionKey key = channel.channel.keyFor(selector);
+        SelectionKey key = channel.underlayingChannel.keyFor(selector);
         if (key == null) {
             return;
         }
@@ -573,7 +574,7 @@ class SctpWorker implements Runnable {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
         try {
-            channel.channel.close();
+            channel.underlayingChannel.close();
             cancelledKeys++;
 
             if (channel.setClosed()) {
@@ -657,7 +658,7 @@ class SctpWorker implements Runnable {
             // Acquire a lock to avoid possible race condition.
             synchronized (channel.interestOpsLock) {
                 Selector selector = this.selector;
-                SelectionKey key = channel.channel.keyFor(selector);
+                SelectionKey key = channel.underlayingChannel.keyFor(selector);
 
                 if (key == null || selector == null) {
                     // Not registered to the worker yet.
@@ -752,11 +753,11 @@ class SctpWorker implements Runnable {
 
             try {
                 if (server) {
-                    channel.channel.configureBlocking(false);
+                    channel.underlayingChannel.configureBlocking(false);
                 }
 
                 synchronized (channel.interestOpsLock) {
-                    channel.channel.register(
+                    channel.underlayingChannel.register(
                             selector, channel.getRawInterestOps(), channel);
                 }
                 if (future != null) {
