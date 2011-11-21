@@ -88,6 +88,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     private final Executor bossExecutor;
     private final Executor workerExecutor;
     private final NioClientSocketPipelineSink sink;
+    private static final int DEFAULT_BOSS_COUNT = 1;
 
     /**
      * Creates a new instance.  Calling this constructor is same with calling
@@ -118,11 +119,35 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     public NioClientSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor,
             int workerCount) {
+    	this(bossExecutor, workerExecutor, DEFAULT_BOSS_COUNT, workerCount);
+    }
+    
+    /**
+     * Creates a new instance.
+     *
+     * @param bossExecutor
+     *        the {@link Executor} which will execute the boss thread
+     * @param workerExecutor
+     *        the {@link Executor} which will execute the I/O worker threads
+     * @param bossCount
+     *        the maximum number of boss threads
+     * @param workerCount
+     *        the maximum number of I/O worker threads
+     */
+    public NioClientSocketChannelFactory(
+            Executor bossExecutor, Executor workerExecutor,
+            int bossCount, int workerCount) {
+    	
         if (bossExecutor == null) {
             throw new NullPointerException("bossExecutor");
         }
         if (workerExecutor == null) {
             throw new NullPointerException("workerExecutor");
+        }
+        if (bossCount <= 0) {
+            throw new IllegalArgumentException(
+                    "bossCount (" + bossCount + ") " +
+                    "must be a positive integer.");
         }
         if (workerCount <= 0) {
             throw new IllegalArgumentException(
@@ -132,8 +157,9 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
 
         this.bossExecutor = bossExecutor;
         this.workerExecutor = workerExecutor;
-        sink = new NioClientSocketPipelineSink(bossExecutor, workerExecutor, workerCount);
+        sink = new NioClientSocketPipelineSink(bossExecutor, workerExecutor, bossCount, workerCount);
     }
+
 
     @Override
     public SocketChannel newChannel(ChannelPipeline pipeline) {
