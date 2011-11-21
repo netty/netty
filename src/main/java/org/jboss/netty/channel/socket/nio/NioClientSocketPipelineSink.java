@@ -58,17 +58,32 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioClientSocketPipelineSink.class);
 
+    private static final int DEFAULT_BOSS_COUNT = 1;
     final Executor bossExecutor;
-    private final Boss boss = new Boss();
+    private final int numBosses;
+    private final Boss bosses[];
     private final NioWorker[] workers;
+    
+    private final AtomicInteger bossIndex = new AtomicInteger();
     private final AtomicInteger workerIndex = new AtomicInteger();
 
-    NioClientSocketPipelineSink(
-            Executor bossExecutor, Executor workerExecutor, int workerCount) {
+    NioClientSocketPipelineSink(Executor bossExecutor, Executor workerExecutor, int workerCount) {
+        this(bossExecutor, workerExecutor, DEFAULT_BOSS_COUNT, workerCount);
+    }
+    
+    NioClientSocketPipelineSink(Executor bossExecutor, Executor workerExecutor, int bossCount, int workerCount) {
+    	
         this.bossExecutor = bossExecutor;
+        this.numBosses = bossCount;
+        
         workers = new NioWorker[workerCount];
         for (int i = 0; i < workers.length; i ++) {
             workers[i] = new NioWorker(workerExecutor);
+        }
+        
+        bosses = new Boss[numBosses];
+        for (int i = 0; i < numBosses; ++i) {
+        	bosses[i] = new Boss();
         }
     }
 
@@ -149,7 +164,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                 });
                 cf.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
                 channel.connectFuture = cf;
-                boss.register(channel);
+                nextBoss().register(channel);
             }
 
         } catch (Throwable t) {
@@ -162,6 +177,11 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
     NioWorker nextWorker() {
         return workers[Math.abs(
                 workerIndex.getAndIncrement() % workers.length)];
+    }
+    
+    Boss nextBoss() {
+        return bosses[Math.abs(
+                bossIndex.getAndIncrement() % bosses.length)];
     }
 
     private final class Boss implements Runnable {
