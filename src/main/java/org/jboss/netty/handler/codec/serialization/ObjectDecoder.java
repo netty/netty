@@ -43,7 +43,7 @@ import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
  */
 public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
 
-    private final ClassLoader classLoader;
+    private final ClassResolver classResolver;
 
     /**
      * Creates a new decoder whose maximum object size is {@code 1048576}
@@ -64,7 +64,7 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
      *                       will be raised.
      */
     public ObjectDecoder(int maxObjectSize) {
-        this(maxObjectSize, null);
+        this(maxObjectSize, ClassResolvers.cachingResolver(null));
     }
 
     /**
@@ -74,12 +74,12 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
      *                       if the length of the received object is greater
      *                       than this value, {@link StreamCorruptedException}
      *                       will be raised.
-     * @param classLoader    the {@link ClassLoader} which will load the class
+     * @param classResolver    the {@link ClassResolver} which will load the class
      *                       of the serialized object
      */
-    public ObjectDecoder(int maxObjectSize, ClassLoader classLoader) {
+    public ObjectDecoder(int maxObjectSize, ClassResolver classResolver) {
         super(maxObjectSize, 0, 4, 0, 4);
-        this.classLoader = classLoader;
+        this.classResolver = classResolver;
     }
 
     @Override
@@ -92,7 +92,7 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
         }
 
         return new CompactObjectInputStream(
-                new ChannelBufferInputStream(frame), classLoader).readObject();
+                new ChannelBufferInputStream(frame), classResolver).readObject();
     }
 
     @Override

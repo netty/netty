@@ -119,7 +119,7 @@ public class ObjectDecoderInputStream extends InputStream implements
                     "data length too big: " + dataLen + " (max: " + maxObjectSize + ')');
         }
 
-        return new CompactObjectInputStream(in, classLoader).readObject();
+        return new CompactObjectInputStream(in, ClassResolvers.cachingResolver(classLoader)).readObject();
     }
 
     @Override

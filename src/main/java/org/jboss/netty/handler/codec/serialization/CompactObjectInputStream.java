@@ -21,8 +21,6 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
 import java.io.StreamCorruptedException;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
@@ -32,21 +30,12 @@ import java.util.Map;
  *
  */
 class CompactObjectInputStream extends ObjectInputStream {
+    
+    private final ClassResolver classResolver;
 
-    private final Map<String, Class<?>> classCache = new HashMap<String, Class<?>>();
-    private final ClassLoader classLoader;
-
-    CompactObjectInputStream(InputStream in) throws IOException {
-        this(in, null);
-    }
-
-    CompactObjectInputStream(InputStream in, ClassLoader classLoader) throws IOException {
+    CompactObjectInputStream(InputStream in, ClassResolver classResolver) throws IOException {
         super(in);
-        if (classLoader == null) {
-            this.classLoader = defaultClassLoader();
-        } else {
-            this.classLoader = classLoader;
-        }
+        this.classResolver = classResolver;
     }
 
     @Override
@@ -70,7 +59,7 @@ class CompactObjectInputStream extends ObjectInputStream {
             return super.readClassDescriptor();
         case CompactObjectOutputStream.TYPE_THIN_DESCRIPTOR:
             String className = readUTF();
-            Class<?> clazz = loadClass(className);
+            Class<?> clazz = classResolver.resolve(className);
             return ObjectStreamClass.lookupAny(clazz);
         default:
             throw new StreamCorruptedException(
@@ -82,36 +71,12 @@ class CompactObjectInputStream extends ObjectInputStream {
     protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
         Class<?> clazz;
         try {
-            clazz = loadClass(desc.getName());
+            clazz = classResolver.resolve(desc.getName());
         } catch (ClassNotFoundException ex) {
             clazz = super.resolveClass(desc);
         }
 
         return clazz;
-    }
-
-    protected Class<?> loadClass(String className) throws ClassNotFoundException {
-        // Query the cache first.
-        Class<?> clazz;
-        clazz = classCache.get(className);
-        if (clazz != null) {
-            return clazz;
-        }
-
-        // And then try to load.
-        clazz = classLoader.loadClass(className);
-
-        classCache.put(className, clazz);
-        return clazz;
-    }
-
-    private static ClassLoader defaultClassLoader() {
-        final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-        if (contextClassLoader != null) {
-            return contextClassLoader;
-        }
-
-        return CompactObjectInputStream.class.getClassLoader();
     }
 
 }
