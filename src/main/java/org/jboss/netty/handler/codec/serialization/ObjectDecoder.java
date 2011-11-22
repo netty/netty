@@ -64,7 +64,7 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
      *                       will be raised.
      */
     public ObjectDecoder(int maxObjectSize) {
-        this(maxObjectSize, ClassResolvers.cachingResolver(null));
+        this(maxObjectSize, ClassResolvers.weakCachingResolver(null));
     }
 
     /**
