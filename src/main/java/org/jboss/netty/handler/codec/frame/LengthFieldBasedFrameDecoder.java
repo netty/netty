@@ -195,10 +195,10 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
     private final int lengthFieldEndOffset;
     private final int lengthAdjustment;
     private final int initialBytesToStrip;
+    private final boolean failFast;
     private boolean discardingTooLongFrame;
     private long tooLongFrameLength;
     private long bytesToDiscard;
-    private boolean failImmediatelyOnTooLongFrame = false;
 
     /**
      * Creates a new instance.
@@ -218,7 +218,6 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             int lengthFieldOffset, int lengthFieldLength) {
         this(maxFrameLength, lengthFieldOffset, lengthFieldLength, 0, 0);
     }
-
 
     /**
      * Creates a new instance.
@@ -240,6 +239,39 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             int maxFrameLength,
             int lengthFieldOffset, int lengthFieldLength,
             int lengthAdjustment, int initialBytesToStrip) {
+        this(
+                maxFrameLength,
+                lengthFieldOffset, lengthFieldLength, lengthAdjustment,
+                initialBytesToStrip, true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param maxFrameLength
+     *        the maximum length of the frame.  If the length of the frame is
+     *        greater than this value, {@link TooLongFrameException} will be
+     *        thrown.
+     * @param lengthFieldOffset
+     *        the offset of the length field
+     * @param lengthFieldLength
+     *        the length of the length field
+     * @param lengthAdjustment
+     *        the compensation value to add to the value of the length field
+     * @param initialBytesToStrip
+     *        the number of first bytes to strip out from the decoded frame
+     * @param failFast
+     *        If <tt>true</tt>, a {@link TooLongFrameException} is thrown as
+     *        soon as the decoder notices the length of the frame will exceed
+     *        <tt>maxFrameLength</tt> regardless of whether the entire frame
+     *        has been read.  If <tt>false</tt>, a {@link TooLongFrameException}
+     *        is thrown after the entire frame that exceeds <tt>maxFrameLength</tt>
+     *        has been read.
+     */
+    public LengthFieldBasedFrameDecoder(
+            int maxFrameLength,
+            int lengthFieldOffset, int lengthFieldLength,
+            int lengthAdjustment, int initialBytesToStrip, boolean failFast) {
         if (maxFrameLength <= 0) {
             throw new IllegalArgumentException(
                     "maxFrameLength must be a positive integer: " +
@@ -280,6 +312,7 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
         this.lengthAdjustment = lengthAdjustment;
         lengthFieldEndOffset = lengthFieldOffset + lengthFieldLength;
         this.initialBytesToStrip = initialBytesToStrip;
+        this.failFast = failFast;
     }
 
     @Override
@@ -376,14 +409,14 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             long tooLongFrameLength = this.tooLongFrameLength;
             this.tooLongFrameLength = 0;
             discardingTooLongFrame = false;
-            if ((!failImmediatelyOnTooLongFrame) ||
-                (failImmediatelyOnTooLongFrame && firstDetectionOfTooLongFrame))
+            if ((!failFast) ||
+                (failFast && firstDetectionOfTooLongFrame))
             {
                 fail(ctx, tooLongFrameLength);
             }
         } else {
             // Keep discarding and notify handlers if necessary.
-            if (failImmediatelyOnTooLongFrame && firstDetectionOfTooLongFrame)
+            if (failFast && firstDetectionOfTooLongFrame)
             {
                 fail(ctx, this.tooLongFrameLength);
             }
@@ -410,23 +443,6 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
         ChannelBuffer frame = buffer.factory().getBuffer(length);
         frame.writeBytes(buffer, index, length);
         return frame;
-    }
-
-    /**
-     * Set the behavior when a frame longer than maxFrameLength is encountered.
-     * 
-     * @param failImmediatelyOnTooLongFrame  If false (the default) a {@link TooLongFrameException}
-     *                                       is thrown if the length of the frame exceeds maxFrameLength,
-     *                                       after the entire frame has been read.
-     *                                       If true a {@link TooLongFrameException} is thrown immediately
-     *                                       when the length of the frame exceeds maxFrameLength,
-     *                                       regardless of whether the entire frame has been read.
-     */
-    public LengthFieldBasedFrameDecoder setFailImmediatelyOnTooLongFrame(
-            boolean failImmediatelyOnTooLongFrame)
-    {
-      this.failImmediatelyOnTooLongFrame = failImmediatelyOnTooLongFrame;
-      return this;
     }
 
     private void fail(ChannelHandlerContext ctx, long frameLength) {
