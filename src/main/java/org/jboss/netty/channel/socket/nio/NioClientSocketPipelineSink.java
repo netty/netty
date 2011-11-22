@@ -62,13 +62,23 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
 
     final int id = nextId.incrementAndGet();
     final Executor bossExecutor;
-    private final Boss boss = new Boss();
+
+    private final Boss[] bosses;
     private final NioWorker[] workers;
+
+    private final AtomicInteger bossIndex = new AtomicInteger();
     private final AtomicInteger workerIndex = new AtomicInteger();
 
     NioClientSocketPipelineSink(
-            Executor bossExecutor, Executor workerExecutor, int workerCount) {
+            Executor bossExecutor, Executor workerExecutor,
+            int bossCount, int workerCount) {
         this.bossExecutor = bossExecutor;
+        
+        bosses = new Boss[bossCount];
+        for (int i = 0; i < bosses.length; i ++) {
+            bosses[i] = new Boss(i + 1);
+        }
+        
         workers = new NioWorker[workerCount];
         for (int i = 0; i < workers.length; i ++) {
             workers[i] = new NioWorker(id, i + 1, workerExecutor);
@@ -150,7 +160,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                 });
                 cf.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
                 channel.connectFuture = cf;
-                boss.register(channel);
+                nextBoss().register(channel);
             }
 
         } catch (Throwable t) {
@@ -158,6 +168,11 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             fireExceptionCaught(channel, t);
             channel.worker.close(channel, succeededFuture(channel));
         }
+    }
+    
+    Boss nextBoss() {
+        return bosses[Math.abs(
+                bossIndex.getAndIncrement() % bosses.length)];
     }
 
     NioWorker nextWorker() {
@@ -169,12 +184,13 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
 
         volatile Selector selector;
         private boolean started;
+        private final int subId;
         private final AtomicBoolean wakenUp = new AtomicBoolean();
         private final Object startStopLock = new Object();
         private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
 
-        Boss() {
-            super();
+        Boss(int subId) {
+            this.subId = subId;
         }
 
         void register(NioClientSocketChannel channel) {
@@ -197,7 +213,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                         DeadLockProofWorker.start(
                                 bossExecutor,
                                 new ThreadRenamingRunnable(
-                                        this, "New I/O client boss #" + id));
+                                        this, "New I/O client boss #" + id + '-' + subId));
                         success = true;
                     } finally {
                         if (!success) {
