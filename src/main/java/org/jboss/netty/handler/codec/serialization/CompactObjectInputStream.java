@@ -42,7 +42,11 @@ class CompactObjectInputStream extends ObjectInputStream {
 
     CompactObjectInputStream(InputStream in, ClassLoader classLoader) throws IOException {
         super(in);
-        this.classLoader = classLoader;
+        if (classLoader == null) {
+            this.classLoader = defaultClassLoader();
+        } else {
+            this.classLoader = classLoader;
+        }
     }
 
     @Override
@@ -95,18 +99,19 @@ class CompactObjectInputStream extends ObjectInputStream {
         }
 
         // And then try to load.
-        ClassLoader classLoader = this.classLoader;
-        if (classLoader == null) {
-            classLoader = Thread.currentThread().getContextClassLoader();
-        }
-
-        if (classLoader != null) {
-            clazz = classLoader.loadClass(className);
-        } else {
-            clazz = Class.forName(className);
-        }
+        clazz = classLoader.loadClass(className);
 
         classCache.put(className, clazz);
         return clazz;
     }
+
+    private static ClassLoader defaultClassLoader() {
+        final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+        if (contextClassLoader != null) {
+            return contextClassLoader;
+        }
+
+        return CompactObjectInputStream.class.getClassLoader();
+    }
+
 }
