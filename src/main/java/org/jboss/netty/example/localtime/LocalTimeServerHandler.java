@@ -93,6 +93,6 @@ public class LocalTimeServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     private static String toString(Continent c) {
-        return "" + c.name().charAt(0) + c.name().toLowerCase().substring(1);
+        return c.name().charAt(0) + c.name().toLowerCase().substring(1);
     }
 }

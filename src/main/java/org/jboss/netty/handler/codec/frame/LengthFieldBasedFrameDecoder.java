@@ -329,7 +329,7 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
         }
 
         frameLength += lengthAdjustment + lengthFieldEndOffset;
-        
+
         if (frameLength < lengthFieldEndOffset) {
             buffer.skipBytes(lengthFieldEndOffset);
             throw new CorruptedFrameException(
@@ -376,8 +376,8 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             long tooLongFrameLength = this.tooLongFrameLength;
             this.tooLongFrameLength = 0;
             discardingTooLongFrame = false;
-            if ((!failImmediatelyOnTooLongFrame) ||
-                (failImmediatelyOnTooLongFrame && firstDetectionOfTooLongFrame))
+            if (!failImmediatelyOnTooLongFrame ||
+                    failImmediatelyOnTooLongFrame && firstDetectionOfTooLongFrame)
             {
                 fail(ctx, tooLongFrameLength);
             }
@@ -414,7 +414,7 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
 
     /**
      * Set the behavior when a frame longer than maxFrameLength is encountered.
-     * 
+     *
      * @param failImmediatelyOnTooLongFrame  If false (the default) a {@link TooLongFrameException}
      *                                       is thrown if the length of the frame exceeds maxFrameLength,
      *                                       after the entire frame has been read.

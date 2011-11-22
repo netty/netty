@@ -78,11 +78,9 @@ public class ChannelBuffersTest {
 
     @Test
     public void testEquals() {
-        ChannelBuffer a, b;
-
         // Different length.
-        a = wrappedBuffer(new byte[] { 1  });
-        b = wrappedBuffer(new byte[] { 1, 2 });
+        ChannelBuffer a = wrappedBuffer(new byte[]{1});
+        ChannelBuffer b = wrappedBuffer(new byte[]{1, 2});
         assertFalse(ChannelBuffers.equals(a, b));
 
         // Same content, same firstIndex, short length.

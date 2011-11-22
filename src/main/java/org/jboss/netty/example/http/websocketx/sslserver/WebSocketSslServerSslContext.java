@@ -92,9 +92,7 @@ public class WebSocketSslServerSslContext {
 				throw new Error("Failed to initialize the server-side SSLContext", e);
 			}
 			_serverContext = serverContext;
-
-			return;
-		} catch (Exception ex) {
+        } catch (Exception ex) {
 			logger.error("Error initializing SslContextManager. " + ex.getMessage(), ex);
 			System.exit(1);
 

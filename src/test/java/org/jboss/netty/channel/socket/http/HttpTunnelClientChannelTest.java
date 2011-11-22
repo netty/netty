@@ -95,11 +95,7 @@ public class HttpTunnelClientChannelTest {
         }
     }
 
-    private UpstreamEventCatcher upstreamCatcher;
-
     private HttpTunnelClientChannel channel;
-
-    private FakeClientSocketChannelFactory outboundFactory;
 
     private FakeSocketChannel sendChannel;
 
@@ -112,10 +108,10 @@ public class HttpTunnelClientChannelTest {
     @Before
     public void setUp() throws Exception {
         ChannelPipeline pipeline = Channels.pipeline();
-        upstreamCatcher = new UpstreamEventCatcher();
+        UpstreamEventCatcher upstreamCatcher = new UpstreamEventCatcher();
         pipeline.addLast(UpstreamEventCatcher.NAME, upstreamCatcher);
 
-        outboundFactory = new FakeClientSocketChannelFactory();
+        FakeClientSocketChannelFactory outboundFactory = new FakeClientSocketChannelFactory();
 
         HttpTunnelClientChannelFactory factory =
                 new HttpTunnelClientChannelFactory(outboundFactory);

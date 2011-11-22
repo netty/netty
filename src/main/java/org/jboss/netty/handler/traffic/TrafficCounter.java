@@ -114,11 +114,6 @@ public class TrafficCounter {
     AtomicBoolean monitorActive = new AtomicBoolean(false);
 
     /**
-     * Monitor
-     */
-    private TrafficMonitoring trafficMonitoring = null;
-
-    /**
      * Class to implement monitoring at fix delay
      *
      */
@@ -183,7 +178,7 @@ public class TrafficCounter {
             lastTime.set(System.currentTimeMillis());
             if (checkInterval.get() > 0) {
                 monitorActive.set(true);
-                trafficMonitoring = new TrafficMonitoring(
+                TrafficMonitoring trafficMonitoring = new TrafficMonitoring(
                         trafficShapingHandler, this);
                 executor.execute(trafficMonitoring);
             }

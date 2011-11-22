@@ -1181,7 +1181,8 @@ public class HttpHeaders {
         final String key;
         String value;
         Entry next;
-        Entry before, after;
+        Entry before;
+        Entry after;
 
         Entry(int hash, String key, String value) {
             this.hash = hash;
