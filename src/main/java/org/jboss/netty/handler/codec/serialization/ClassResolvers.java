@@ -7,6 +7,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ClassResolvers {
 
     /**
+     * cache disabled
+     * @param classLoader - specific classLoader to use, or null if you want to revert to default
+     * @return new instance of class resolver
+     */
+    public static ClassResolver cacheDisabled(ClassLoader classLoader) {
+        return new ClassloaderClassResolver(defaultClassLoader(classLoader));
+    }
+
+    /**
      * non-agressive non-concurrent cache
      * good for non-shared default cache
      *
@@ -62,5 +71,4 @@ public class ClassResolvers {
 
         return ClassResolvers.class.getClassLoader();
     }
-
 }
