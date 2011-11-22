@@ -46,8 +46,7 @@ class CompactObjectInputStream extends ObjectInputStream {
     }
 
     @Override
-    protected void readStreamHeader() throws IOException,
-            StreamCorruptedException {
+    protected void readStreamHeader() throws IOException {
         int version = readByte() & 0xFF;
         if (version != STREAM_VERSION) {
             throw new StreamCorruptedException(
