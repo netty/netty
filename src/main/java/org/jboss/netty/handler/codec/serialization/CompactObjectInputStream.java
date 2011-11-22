@@ -77,21 +77,13 @@ class CompactObjectInputStream extends ObjectInputStream {
 
     @Override
     protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
-        // Query the cache first.
-        String className = desc.getName();
-        Class<?> clazz = classCache.get(className);
-        if (clazz != null) {
-            return clazz;
-        }
-
-        // And then try to resolve.
+        Class<?> clazz;
         try {
-            clazz = loadClass(className);
+            clazz = loadClass(desc.getName());
         } catch (ClassNotFoundException ex) {
             clazz = super.resolveClass(desc);
         }
 
-        classCache.put(className, clazz);
         return clazz;
     }
 
