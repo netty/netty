@@ -35,8 +35,8 @@ public class ObjectDecoderInputStream extends InputStream implements
         ObjectInput {
 
     private final DataInputStream in;
-    private final ClassLoader classLoader;
     private final int maxObjectSize;
+    private final ClassResolver classResolver;
 
     /**
      * Creates a new {@link ObjectInput}.
@@ -104,7 +104,7 @@ public class ObjectDecoderInputStream extends InputStream implements
         } else {
             this.in = new DataInputStream(in);
         }
-        this.classLoader = classLoader;
+        this.classResolver = ClassResolvers.weakCachingResolver(classLoader);
         this.maxObjectSize = maxObjectSize;
     }
 
@@ -119,7 +119,7 @@ public class ObjectDecoderInputStream extends InputStream implements
                     "data length too big: " + dataLen + " (max: " + maxObjectSize + ')');
         }
 
-        return new CompactObjectInputStream(in, classLoader).readObject();
+        return new CompactObjectInputStream(in, classResolver).readObject();
     }
 
     @Override
