@@ -32,7 +32,7 @@ public class CompactObjectSerializationTest {
         PipedOutputStream pipeOut = new PipedOutputStream();
         PipedInputStream pipeIn = new PipedInputStream(pipeOut);
         CompactObjectOutputStream out = new CompactObjectOutputStream(pipeOut);
-        CompactObjectInputStream in = new CompactObjectInputStream(pipeIn);
+        CompactObjectInputStream in = new CompactObjectInputStream(pipeIn, ClassResolvers.cacheDisabled(null));
         out.writeObject(List.class);
         Assert.assertSame(List.class, in.readObject());
     }
