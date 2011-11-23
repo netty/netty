@@ -10,7 +10,11 @@ class ClassloaderClassResolver implements ClassResolver {
 
     @Override
     public Class<?> resolve(String className) throws ClassNotFoundException {
-        return classLoader.loadClass(className);
+        try {
+            return classLoader.loadClass(className);
+        } catch (ClassNotFoundException e) {
+            return Class.forName(className, false, classLoader);
+        }
     }
 
 }
