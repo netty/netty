@@ -665,7 +665,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void checkDuplicateName(String name) {
         if (name2ctx.containsKey(name)) {
-            throw new IllegalArgumentException("Duplicate handler name.");
+            throw new IllegalArgumentException("Duplicate handler name: " + name);
         }
     }
 
