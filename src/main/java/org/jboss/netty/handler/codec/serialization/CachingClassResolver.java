@@ -12,7 +12,10 @@ class CachingClassResolver implements ClassResolver {
         this.classCache = classCache;
     }
 
-    @Override
+    /*
+     * (non-Javadoc)
+     * @see org.jboss.netty.handler.codec.serialization.ClassResolver#resolve(java.lang.String)
+     */
     public Class<?> resolve(String className) throws ClassNotFoundException {
         // Query the cache first.
         Class<?> clazz;
