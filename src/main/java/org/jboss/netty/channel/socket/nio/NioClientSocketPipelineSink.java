@@ -376,6 +376,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             ConnectException cause = null;
             for (SelectionKey k: keys) {
                 if (!k.isValid()) {
+                    close(k);
                     continue;
                 }
 
