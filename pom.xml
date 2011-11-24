@@ -479,7 +479,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-jxr-plugin</artifactId>
-        <version>2.3</version>
+        <version>2.2</version>
         <executions>
           <execution>
             <id>generate-xref</id>
@@ -515,6 +515,36 @@
           </execution>
         </executions>
         <dependencies>
+          <dependency>
+            <groupId>org.eclipse.wst.css</groupId>
+            <artifactId>core</artifactId>
+            <version>1.1.101-v200705302225</version>
+            <exclusions>
+              <exclusion>
+                <groupId>org.apache</groupId>
+                <artifactId>xerces</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.ibm</groupId>
+                <artifactId>icu</artifactId>
+              </exclusion>
+            </exclusions>
+          </dependency>
+          <dependency>
+            <groupId>org.eclipse.wst.sse</groupId>
+            <artifactId>core</artifactId>
+	    <version>1.1.202-v200709061102</version>
+            <exclusions>
+              <exclusion>
+                <groupId>org.apache</groupId>
+                <artifactId>xerces</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.ibm</groupId>
+                <artifactId>icu</artifactId>
+              </exclusion>
+            </exclusions>
+          </dependency>
           <dependency>
             <groupId>org.jboss</groupId>
             <artifactId>jbossorg-docbook-xslt</artifactId>
