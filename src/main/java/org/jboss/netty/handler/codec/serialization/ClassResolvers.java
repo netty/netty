@@ -12,7 +12,7 @@ public class ClassResolvers {
      * @return new instance of class resolver
      */
     public static ClassResolver cacheDisabled(ClassLoader classLoader) {
-        return new ClassloaderClassResolver(defaultClassLoader(classLoader));
+        return new ClassLoaderClassResolver(defaultClassLoader(classLoader));
     }
 
     /**
@@ -23,7 +23,7 @@ public class ClassResolvers {
      * @return new instance of class resolver
      */
     public static ClassResolver weakCachingResolver(ClassLoader classLoader) {
-        return new CachingClassResolver(new ClassloaderClassResolver(defaultClassLoader(classLoader)), new WeakReferenceMap<String, Class<?>>(new HashMap<String, Reference<Class<?>>>()));
+        return new CachingClassResolver(new ClassLoaderClassResolver(defaultClassLoader(classLoader)), new WeakReferenceMap<String, Class<?>>(new HashMap<String, Reference<Class<?>>>()));
     }
     
     /**
@@ -34,7 +34,7 @@ public class ClassResolvers {
      * @return new instance of class resolver
      */
     public static ClassResolver softCachingResolver(ClassLoader classLoader) {
-        return new CachingClassResolver(new ClassloaderClassResolver(defaultClassLoader(classLoader)), new SoftReferenceMap<String, Class<?>>(new HashMap<String, Reference<Class<?>>>()));
+        return new CachingClassResolver(new ClassLoaderClassResolver(defaultClassLoader(classLoader)), new SoftReferenceMap<String, Class<?>>(new HashMap<String, Reference<Class<?>>>()));
     }
 
     /**
@@ -45,7 +45,7 @@ public class ClassResolvers {
      * @return new instance of class resolver
      */
     public static ClassResolver weakCachingConcurrentResolver(ClassLoader classLoader) {
-        return new CachingClassResolver(new ClassloaderClassResolver(defaultClassLoader(classLoader)), new WeakReferenceMap<String, Class<?>>(new ConcurrentHashMap<String, Reference<Class<?>>>()));
+        return new CachingClassResolver(new ClassLoaderClassResolver(defaultClassLoader(classLoader)), new WeakReferenceMap<String, Class<?>>(new ConcurrentHashMap<String, Reference<Class<?>>>()));
     }
 
     /**
@@ -56,7 +56,7 @@ public class ClassResolvers {
      * @return new instance of class resolver
      */
     public static ClassResolver softCachingConcurrentResolver(ClassLoader classLoader) {
-        return new CachingClassResolver(new ClassloaderClassResolver(defaultClassLoader(classLoader)), new SoftReferenceMap<String, Class<?>>(new ConcurrentHashMap<String, Reference<Class<?>>>()));
+        return new CachingClassResolver(new ClassLoaderClassResolver(defaultClassLoader(classLoader)), new SoftReferenceMap<String, Class<?>>(new ConcurrentHashMap<String, Reference<Class<?>>>()));
     }
 
     static ClassLoader defaultClassLoader(ClassLoader classLoader) {
