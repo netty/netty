@@ -17,10 +17,11 @@ package org.jboss.netty.channel;
 
 import static java.util.concurrent.TimeUnit.*;
 
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -43,6 +44,8 @@ public class DefaultChannelFuture implements ChannelFuture {
         InternalLoggerFactory.getInstance(DefaultChannelFuture.class);
 
     private static final Throwable CANCELLED = new Throwable();
+    private static final Result CANCELLED_RESULT = new Result(CANCELLED);
+    private static final Result SUCCESS_RESULT = new Result();
 
     private static volatile boolean useDeadLockChecker = true;
     private static boolean disabledDeadLockCheckerOnce;
@@ -72,11 +75,9 @@ public class DefaultChannelFuture implements ChannelFuture {
     private final Channel channel;
     private final boolean cancellable;
 
-    private ChannelFutureListener firstListener;
-    private List<ChannelFutureListener> otherListeners;
-    private List<ChannelFutureProgressListener> progressListeners;
-    private boolean done;
-    private Throwable cause;
+    private final List<ChannelFutureListener> listeners = new CopyOnWriteArrayList<ChannelFutureListener>();
+    private final List<ChannelFutureProgressListener> progressListeners = new CopyOnWriteArrayList<ChannelFutureProgressListener>();
+    private final AtomicReference<Result> result = new AtomicReference<Result>();
     private int waiters;
 
     /**
@@ -98,27 +99,31 @@ public class DefaultChannelFuture implements ChannelFuture {
     }
 
     @Override
-    public synchronized boolean isDone() {
-        return done;
+    public boolean isDone() {
+        return result.get() != null;
     }
 
     @Override
-    public synchronized boolean isSuccess() {
-        return done && cause == null;
+    public boolean isSuccess() {
+        Result r = result.get();
+        return r != null && r.isSuccess();
     }
 
     @Override
-    public synchronized Throwable getCause() {
-        if (cause != CANCELLED) {
-            return cause;
+    public Throwable getCause() {
+        Result r = result.get();
+        
+        if (r != null && r.getCause() != CANCELLED) {
+            return r.getCause();
         } else {
             return null;
         }
     }
 
     @Override
-    public synchronized boolean isCancelled() {
-        return cause == CANCELLED;
+    public boolean isCancelled() {
+        Result r = result.get();
+        return r != null && r.isCancelled();
     }
 
     @Override
@@ -126,32 +131,13 @@ public class DefaultChannelFuture implements ChannelFuture {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
-
-        boolean notifyNow = false;
-        synchronized (this) {
-            if (done) {
-                notifyNow = true;
-            } else {
-                if (firstListener == null) {
-                    firstListener = listener;
-                } else {
-                    if (otherListeners == null) {
-                        otherListeners = new ArrayList<ChannelFutureListener>(1);
-                    }
-                    otherListeners.add(listener);
-                }
-
-                if (listener instanceof ChannelFutureProgressListener) {
-                    if (progressListeners == null) {
-                        progressListeners = new ArrayList<ChannelFutureProgressListener>(1);
-                    }
-                    progressListeners.add((ChannelFutureProgressListener) listener);
-                }
-            }
-        }
-
-        if (notifyNow) {
+        if (isDone()) {
             notifyListener(listener);
+        } else {
+            listeners.add(listener);
+            if (listener instanceof ChannelFutureProgressListener) {
+                progressListeners.add((ChannelFutureProgressListener) listener);
+            }     
         }
     }
 
@@ -161,23 +147,13 @@ public class DefaultChannelFuture implements ChannelFuture {
             throw new NullPointerException("listener");
         }
 
-        synchronized (this) {
-            if (!done) {
-                if (listener == firstListener) {
-                    if (otherListeners != null && !otherListeners.isEmpty()) {
-                        firstListener = otherListeners.remove(0);
-                    } else {
-                        firstListener = null;
-                    }
-                } else if (otherListeners != null) {
-                    otherListeners.remove(listener);
-                }
-
-                if (listener instanceof ChannelFutureProgressListener) {
-                    progressListeners.remove(listener);
-                }
+        if (!isDone()) {
+            listeners.remove(listener);
+            if (listener instanceof ChannelFutureProgressListener) {
+                progressListeners.remove(listener);
             }
         }
+
     }
 
     @Override
@@ -187,7 +163,7 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
 
         synchronized (this) {
-            while (!done) {
+            while (!isDone()) {
                 checkDeadLock();
                 waiters++;
                 try {
@@ -215,7 +191,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     public ChannelFuture awaitUninterruptibly() {
         boolean interrupted = false;
         synchronized (this) {
-            while (!done) {
+            while (!isDone()) {
                 checkDeadLock();
                 waiters++;
                 try {
@@ -264,10 +240,10 @@ public class DefaultChannelFuture implements ChannelFuture {
 
         try {
             synchronized (this) {
-                if (done) {
-                    return done;
+                if (isDone()) {
+                    return true;
                 } else if (waitTime <= 0) {
-                    return done;
+                    return isDone();
                 }
 
                 checkDeadLock();
@@ -284,12 +260,12 @@ public class DefaultChannelFuture implements ChannelFuture {
                             }
                         }
 
-                        if (done) {
+                        if (isDone()) {
                             return true;
                         } else {
                             waitTime = timeoutNanos - (System.nanoTime() - startTime);
                             if (waitTime <= 0) {
-                                return done;
+                                return isDone();
                             }
                         }
                     }
@@ -315,39 +291,35 @@ public class DefaultChannelFuture implements ChannelFuture {
 
     @Override
     public boolean setSuccess() {
-        synchronized (this) {
-            // Allow only once.
-            if (done) {
-                return false;
-            }
-
-            done = true;
-            if (waiters > 0) {
-                notifyAll();
-            }
-        }
-
-        notifyListeners();
-        return true;
+        return setResult(SUCCESS_RESULT);
     }
 
     @Override
     public boolean setFailure(Throwable cause) {
-        synchronized (this) {
-            // Allow only once.
-            if (done) {
-                return false;
-            }
+        return setResult(new Result(cause));
+    }
+    
+    private boolean setResult(Result r) {
+        // Allow only once.
+        if (isDone()) {
+            return false;
+        }
+        boolean set = result.compareAndSet(null, r);
 
-            this.cause = cause;
-            done = true;
-            if (waiters > 0) {
-                notifyAll();
+        if (set) {
+            synchronized (this) {
+                if (waiters > 0) {
+                    notifyAll();
+                }
             }
+            notifyListeners();
+            
+            // clear listeners
+            listeners.clear();
+            progressListeners.clear();
         }
 
-        notifyListeners();
-        return true;
+        return set;
     }
 
     @Override
@@ -355,40 +327,14 @@ public class DefaultChannelFuture implements ChannelFuture {
         if (!cancellable) {
             return false;
         }
-
-        synchronized (this) {
-            // Allow only once.
-            if (done) {
-                return false;
-            }
-
-            cause = CANCELLED;
-            done = true;
-            if (waiters > 0) {
-                notifyAll();
-            }
-        }
-
-        notifyListeners();
-        return true;
+        return setResult(CANCELLED_RESULT);
     }
 
     private void notifyListeners() {
-        // This method doesn't need synchronization because:
-        // 1) This method is always called after synchronized (this) block.
-        //    Hence any listener list modification happens-before this method.
-        // 2) This method is called only when 'done' is true.  Once 'done'
-        //    becomes true, the listener list is never modified - see add/removeListener()
-        if (firstListener != null) {
-            notifyListener(firstListener);
-            firstListener = null;
-
-            if (otherListeners != null) {
-                for (ChannelFutureListener l: otherListeners) {
-                    notifyListener(l);
-                }
-                otherListeners = null;
-            }
+        // thats safe as CopyOnWriteArrayList does make sure its safe to iterate over the results
+        Iterator<ChannelFutureListener> clisteners = listeners.iterator();
+        while (clisteners.hasNext()) {
+            notifyListener(clisteners.next());
         }
     }
 
@@ -404,28 +350,17 @@ public class DefaultChannelFuture implements ChannelFuture {
 
     @Override
     public boolean setProgress(long amount, long current, long total) {
-        ChannelFutureProgressListener[] plisteners;
-        synchronized (this) {
-            // Do not generate progress event after completion.
-            if (done) {
-                return false;
-            }
-
-            Collection<ChannelFutureProgressListener> progressListeners =
-                this.progressListeners;
-            if (progressListeners == null || progressListeners.isEmpty()) {
-                // Nothing to notify - no need to create an empty array.
-                return true;
-            }
-
-            plisteners = progressListeners.toArray(
-                    new ChannelFutureProgressListener[progressListeners.size()]);
+        // Do not generate progress event after completion.
+        if (isDone()) {
+            return false;
         }
+        
+        // thats safe as CopyOnWriteArrayList does make sure its safe to iterate over the results
+        Iterator<ChannelFutureProgressListener> pListeners = progressListeners.iterator();
+        while (pListeners.hasNext()) {
+            notifyProgressListener(pListeners.next(), amount, current, total);
 
-        for (ChannelFutureProgressListener pl: plisteners) {
-            notifyProgressListener(pl, amount, current, total);
         }
-
         return true;
     }
 
@@ -440,5 +375,31 @@ public class DefaultChannelFuture implements ChannelFuture {
                     "An exception was thrown by " +
                     ChannelFutureProgressListener.class.getSimpleName() + ".", t);
         }
+    }
+    
+    private static final class Result {
+        
+        private final Throwable cause;
+
+        public Result() {
+            this(null);
+        }
+        
+        public Result(Throwable cause) {
+            this.cause = cause;
+        }
+        
+        public Throwable getCause() {
+            return cause;
+        }
+        
+        public boolean isSuccess() {
+            return cause == null;
+        }
+        
+        public boolean isCancelled() {
+            return cause != null && cause == CANCELLED;
+        }
+        
     }
 }
