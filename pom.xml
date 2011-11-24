@@ -59,7 +59,7 @@
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
-      <version>2.3.0</version>
+      <version>2.4.1</version>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
@@ -114,7 +114,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.6.1</version>
+      <version>1.6.4</version>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
@@ -168,13 +168,13 @@
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
-      <version>2.5.2</version>
+      <version>3.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymockclassextension</artifactId>
-      <version>2.5.2</version>
+      <version>3.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -186,7 +186,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
-      <version>1.6.1</version>
+      <version>1.6.4</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -211,7 +211,7 @@
       <plugin>
         <!-- See org.jboss:jboss-parent -->
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.0</version>
+        <version>1.0.1</version>
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -227,7 +227,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>2.4.3</version>
+        <version>2.5</version>
         <configuration>
           <encoding>UTF-8</encoding>
         </configuration>
@@ -258,7 +258,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.7.2</version>
+        <version>2.10</version>
         <configuration>
           <forkMode>once</forkMode>
           <excludes>
@@ -315,7 +315,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.6</version>
+        <version>1.7</version>
         <executions>
           <execution>
             <id>write-version</id>
@@ -420,7 +420,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.7</version>
+        <version>2.8</version>
         <executions>
           <execution>
             <id>generate-javadoc</id>
@@ -479,7 +479,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-jxr-plugin</artifactId>
-        <version>2.2</version>
+        <version>2.3</version>
         <executions>
           <execution>
             <id>generate-xref</id>
@@ -601,7 +601,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.2</version>
+        <version>2.2.1</version>
         <executions>
           <execution>
             <id>generate-distribution</id>
@@ -622,7 +622,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-release-plugin</artifactId>
-        <version>2.1</version>
+        <version>2.2.1</version>
         <configuration>
           <!-- We don't want to use the default release profile because it
                causes the JavaDoc and source jars to be deployed twice. -->
