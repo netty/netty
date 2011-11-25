@@ -256,7 +256,7 @@ class SctpWorker implements Runnable {
         }
     }
 
-    private void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException {
+    private void processSelectedKeys(final Set<SelectionKey> selectedKeys) throws IOException {
         for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
             SelectionKey k = i.next();
             i.remove();
@@ -513,8 +513,6 @@ class SctpWorker implements Runnable {
             channel.inWriteNowLoop = false;
         }
 
-        fireWriteComplete(channel, writtenBytes);
-
         if (open) {
             if (addOpWrite) {
                 setOpWrite(channel);
@@ -522,6 +520,8 @@ class SctpWorker implements Runnable {
                 clearOpWrite(channel);
             }
         }
+
+        fireWriteComplete(channel, writtenBytes);
     }
 
     private void setOpWrite(SctpChannelImpl channel) {

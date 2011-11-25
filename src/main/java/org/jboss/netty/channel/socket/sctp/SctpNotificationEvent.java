@@ -40,9 +40,6 @@ public class SctpNotificationEvent implements ChannelEvent {
         if (notification == null) {
             throw new NullPointerException("notification");
         }
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
 
         this.channel = channel;
         this.notification = notification;

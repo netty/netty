@@ -77,7 +77,7 @@
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
-    
+
     <!-- RXTX - completely optional -->
     <!-- Used for serial port communication transport -->
     <dependency>
@@ -653,6 +653,11 @@
           <downloadSources>true</downloadSources>
           <addVersionToProjectName>true</addVersionToProjectName>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.2.1</version>
       </plugin>
     </plugins>
   </build>
