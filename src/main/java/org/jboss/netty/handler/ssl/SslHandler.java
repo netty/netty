@@ -67,6 +67,14 @@ import org.jboss.netty.util.internal.NonReentrantLock;
  * returned by the {@link #handshake()} method when the handshake
  * process succeeds or fails.
  *
+ * <h3>Handshake</h3>
+ * <p>
+ * If {@link #isIssueHandshake()} is {@code false}
+ * (default) you will need to take care of calling {@link #handshake()} by your own. In most situations were {@link SslHandler} is used in 'client mode'
+ * you want to issue a handshake once the connection was established. if {@link #setIssueHandshake(boolean)} is set to <code>true</code> you don't need to 
+ * worry about this as the {@link SslHandler} will take care of it.
+ * <p>
+ * 
  * <h3>Renegotiation</h3>
  * <p>
  * If {@link #isEnableRenegotiation() enableRenegotiation} is {@code true}
@@ -192,7 +200,19 @@ public class SslHandler extends FrameDecoder
     private final Queue<PendingWrite> pendingUnencryptedWrites = new LinkedList<PendingWrite>();
     private final Queue<MessageEvent> pendingEncryptedWrites = new LinkedTransferQueue<MessageEvent>();
     private final NonReentrantLock pendingEncryptedWritesLock = new NonReentrantLock();
+    private volatile boolean issueHandshake = false;
+    
+    private static final ChannelFutureListener HANDSHAKE_LISTENER = new ChannelFutureListener() {
 
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (!future.isSuccess()) {
+                Channels.fireExceptionCaught(future.getChannel(), future.getCause());
+            }
+        }
+        
+    };
+    
     /**
      * Creates a new instance.
      *
@@ -396,6 +416,23 @@ public class SslHandler extends FrameDecoder
         this.enableRenegotiation = enableRenegotiation;
     }
 
+    
+    /**
+     * Enables or disables the automatic handshake once the {@link Channel} is connected. The value will only have affect if its set before the 
+     * {@link Channel} is connected.
+     * 
+     */
+    public void setIssueHandshake(boolean issueHandshake) {
+        this.issueHandshake = issueHandshake;
+    }
+    
+    /**
+     * Returns <code>true</code> if the automatic handshake is enabled
+     */
+    public boolean isIssueHandshake() {
+        return issueHandshake;
+    }
+    
     @Override
     public void handleDownstream(
             final ChannelHandlerContext context, final ChannelEvent evt) throws Exception {
@@ -1151,4 +1188,18 @@ public class SslHandler extends FrameDecoder
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         // Unused
     }
+    
+
+    /**
+     * Calls {@link #handshake()} once the {@link Channel} is connected
+     */
+    @Override
+    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        if (issueHandshake) {
+            // issue and handshake and add a listener to it which will fire an exception event if an exception was thrown
+            // while doing the handshake
+            handshake().addListener(HANDSHAKE_LISTENER);
+        }
+        super.channelConnected(ctx, e);     
+    } 
 }
