@@ -545,7 +545,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
                 try {
                     wait();
                 } catch (InterruptedException e) {
-                    // Ignore
+                    Thread.currentThread().interrupt();
                 } finally {
                     waiters --;
                 }
