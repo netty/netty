@@ -32,20 +32,23 @@
  * 
  * <p>06. Go to AutoBahn directory: <tt>cd Autobahn</tt>
  * 
- * <p>07. Checkout stable version: <tt>git checkout v0.4.2</tt>
+ * <p>07. Checkout stable version: <tt>git checkout v0.4.3</tt>
  * 
  * <p>08. Go to test suite directory: <tt>cd testsuite/websockets</tt>
  * 
- * <p>09. Edit <tt>fuzzing_clinet_spec.json</tt> and set the version to 10.
+ * <p>09. Edit <tt>fuzzing_clinet_spec.json</tt> and set the version to 10 or 17.
  * <code>
  *    {
- *       "servers": [{"agent": "Netty", "hostname": "localhost", "port": 9000, "version": 10}],
- *       "cases": ["*"]
+ *       "options": {"failByDrop": false},
+ *       "servers": [{"agent": "Netty", "url": "ws://localhost:9000", "options": {"version": 17}}],
+ *       "cases": ["*"],
+ *       "exclude-cases": [],
+ *       "exclude-agent-cases": {"FoobarServer*": ["4.*", "1.1.3"]}
  *    }
  * </code>
  * 
  * <p>10. Run the test <tt>python fuzzing_client.py</tt>. Note that the actual test case python code is 
- * located in <tt>/usr/local/lib/python2.6/dist-packages/autobahn-0.4.2-py2.6.egg/autobahn/cases</tt> 
+ * located in <tt>/usr/local/lib/python2.6/dist-packages/autobahn-0.4.3-py2.6.egg/autobahn/cases</tt> 
  * and not in the checked out git repository.
  *   
  * <p>11. See the results in <tt>reports/servers/index.html</tt>

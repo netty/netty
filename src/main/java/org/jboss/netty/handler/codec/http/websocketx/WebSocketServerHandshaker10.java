@@ -20,6 +20,8 @@ import static org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 import java.security.NoSuchAlgorithmException;
 
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -150,7 +152,7 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
     }
 
     /**
-     * Echo back the closing frame
+     * Echo back the closing frame and close the connection
      * 
      * @param ctx
      *            Channel context
@@ -159,7 +161,8 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
      */
     @Override
     public void executeClosingHandshake(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
-        ctx.getChannel().write(frame);
+        ChannelFuture f = ctx.getChannel().write(frame);
+        f.addListener(ChannelFutureListener.CLOSE);
     }
 
 }

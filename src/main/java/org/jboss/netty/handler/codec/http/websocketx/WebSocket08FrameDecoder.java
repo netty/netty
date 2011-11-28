@@ -260,7 +260,17 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                 unmask(framePayload);
             }
 
-            // Processing for fragmented messages
+            // Processing ping/pong/close frames because they cannot be fragmented
+            if (frameOpcode == OPCODE_PING) {
+                return new PingWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
+            } else if (frameOpcode == OPCODE_PONG) {
+                return new PongWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
+            } else if (frameOpcode == OPCODE_CLOSE) {
+                this.receivedClosingHandshake = true;
+                return new CloseWebSocketFrame(frameFinalFlag, frameRsv);
+            }
+            
+            // Processing for possible fragmented messages for text and binary frames
             String aggregatedText = null;
             if (frameFinalFlag) {
                 // Final frame of the sequence. Apparently ping frames are
@@ -305,15 +315,8 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                 return new TextWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
             } else if (frameOpcode == OPCODE_BINARY) {
                 return new BinaryWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
-            } else if (frameOpcode == OPCODE_PING) {
-                return new PingWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
-            } else if (frameOpcode == OPCODE_PONG) {
-                return new PongWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
             } else if (frameOpcode == OPCODE_CONT) {
                 return new ContinuationWebSocketFrame(frameFinalFlag, frameRsv, framePayload, aggregatedText);
-            } else if (frameOpcode == OPCODE_CLOSE) {
-                this.receivedClosingHandshake = true;
-                return new CloseWebSocketFrame(frameFinalFlag, frameRsv);
             } else {
                 throw new UnsupportedOperationException("Cannot decode web socket frame with opcode: " + frameOpcode);
             }
