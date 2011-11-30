@@ -311,8 +311,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
                     Thread thread = Thread.currentThread();
                     for (;;) {
                         final Runnable task = tasks.poll();
-                        // this should never happen but just in case check if
-                        // the queue was empty
+                        // if the task is null we should exit the loop
                         if (task == null) {
                             break;
                         }
@@ -328,10 +327,6 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
                                 onAfterExecute(task, e);
                             }
                             throw e;
-                        } finally {
-                            if (tasks.isEmpty()) {
-                                break;
-                            }
                         }
                     }
                 } finally {
