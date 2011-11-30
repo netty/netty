@@ -15,7 +15,6 @@
  */
 package org.jboss.netty.handler.execution;
 
-import java.lang.reflect.Method;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -34,8 +33,6 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.WriteCompletionEvent;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.DefaultObjectSizeEstimator;
 import org.jboss.netty.util.ObjectSizeEstimator;
 import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
@@ -137,9 +134,6 @@ import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
  */
 public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(MemoryAwareThreadPoolExecutor.class);
-
     private static final SharedResourceMisuseDetector misuseDetector =
         new SharedResourceMisuseDetector(MemoryAwareThreadPoolExecutor.class);
 
@@ -234,18 +228,8 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
                     "maxTotalMemorySize: " + maxTotalMemorySize);
         }
 
-        // Call allowCoreThreadTimeOut(true) using reflection
-        // because it is not supported in Java 5.
-        try {
-            Method m = getClass().getMethod("allowCoreThreadTimeOut", new Class[] { boolean.class });
-            m.invoke(this, Boolean.TRUE);
-        } catch (Throwable t) {
-            // Java 5
-            logger.debug(
-                    "ThreadPoolExecutor.allowCoreThreadTimeOut() is not " +
-                    "supported in this platform.");
-        }
-
+        allowCoreThreadTimeOut(true);
+        
         settings = new Settings(
                 objectSizeEstimator, maxChannelMemorySize);
 
