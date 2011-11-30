@@ -43,6 +43,9 @@ public class WebSocketClientHandshakerFactory {
      * @throws WebSocketHandshakeException
      */
     public WebSocketClientHandshaker newHandshaker(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol, boolean allowExtensions) throws WebSocketHandshakeException {
+        if (version == WebSocketSpecificationVersion.V17) {
+            return new WebSocketClientHandshaker17(webSocketURL, version, subProtocol, allowExtensions);
+        }
         if (version == WebSocketSpecificationVersion.V10) {
             return new WebSocketClientHandshaker10(webSocketURL, version, subProtocol, allowExtensions);
         }

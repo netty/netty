@@ -114,8 +114,10 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
 
             int length = data.readableBytes();
 
-            logger.debug("Encoding WebSocket Frame opCode=" + opcode + " length=" + length);
-
+            if (logger.isDebugEnabled()) {
+            	logger.debug("Encoding WebSocket Frame opCode=" + opcode + " length=" + length);
+            }
+            
             int b0 = 0;
             if (frame.isFinalFragment()) {
                 b0 |= (1 << 7);

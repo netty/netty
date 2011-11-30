@@ -103,7 +103,8 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, State state) throws Exception {
+    protected Object decode(ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer, State state)
+            throws Exception {
 
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
@@ -123,7 +124,9 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
             frameRsv = (b & 0x70) >> 4;
             frameOpcode = (b & 0x0F);
 
-            logger.debug("Decoding WebSocket Frame opCode=" + frameOpcode);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Decoding WebSocket Frame opCode=" + frameOpcode);
+            }
 
             // MASK, PAYLOAD LEN 1
             b = buffer.readByte();
@@ -160,9 +163,8 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                 }
 
                 // close frame : if there is a body, the first two bytes of the
-                // body MUST be a 2-byte
-                // unsigned integer (in network byte order) representing a
-                // status code
+                // body MUST be a 2-byte unsigned integer (in network byte
+                // order) representing a status code
                 if (frameOpcode == 8 && framePayloadLen1 == 1) {
                     protocolViolation(channel, "received close control frame with payload len 1");
                     return null;
@@ -187,6 +189,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                 }
             }
 
+            // Read frame payload length
             if (framePayloadLen1 == 126) {
                 framePayloadLength = buffer.readUnsignedShort();
                 if (framePayloadLength < 126) {
@@ -206,7 +209,10 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                 framePayloadLength = framePayloadLen1;
             }
 
-            // logger.debug("Frame length=" + framePayloadLength);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Decoding WebSocket Frame length=" + framePayloadLength);
+            }
+
             checkpoint(State.MASKING_KEY);
         case MASKING_KEY:
             if (this.maskedPayload) {
@@ -214,7 +220,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
             }
             checkpoint(State.PAYLOAD);
         case PAYLOAD:
-            // Some times, the payload may not be delivered in 1 nice packet
+            // Sometimes, the payload may not be delivered in 1 nice packet
             // We need to accumulate the data until we have it all
             int rbytes = actualReadableBytes();
             ChannelBuffer payloadBuffer = null;
@@ -260,7 +266,19 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                 unmask(framePayload);
             }
 
-            // Processing for fragmented messages
+            // Processing ping/pong/close frames because they cannot be
+            // fragmented
+            if (frameOpcode == OPCODE_PING) {
+                return new PingWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
+            } else if (frameOpcode == OPCODE_PONG) {
+                return new PongWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
+            } else if (frameOpcode == OPCODE_CLOSE) {
+                this.receivedClosingHandshake = true;
+                return new CloseWebSocketFrame(frameFinalFlag, frameRsv);
+            }
+
+            // Processing for possible fragmented messages for text and binary
+            // frames
             String aggregatedText = null;
             if (frameFinalFlag) {
                 // Final frame of the sequence. Apparently ping frames are
@@ -305,15 +323,8 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                 return new TextWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
             } else if (frameOpcode == OPCODE_BINARY) {
                 return new BinaryWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
-            } else if (frameOpcode == OPCODE_PING) {
-                return new PingWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
-            } else if (frameOpcode == OPCODE_PONG) {
-                return new PongWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
             } else if (frameOpcode == OPCODE_CONT) {
                 return new ContinuationWebSocketFrame(frameFinalFlag, frameRsv, framePayload, aggregatedText);
-            } else if (frameOpcode == OPCODE_CLOSE) {
-                this.receivedClosingHandshake = true;
-                return new CloseWebSocketFrame(frameFinalFlag, frameRsv);
             } else {
                 throw new UnsupportedOperationException("Cannot decode web socket frame with opcode: " + frameOpcode);
             }
