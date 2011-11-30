@@ -33,20 +33,24 @@ public class ChannelFutureAggregator implements ChannelFutureListener {
 
     private final ChannelFuture aggregateFuture;
 
-    private final Set<ChannelFuture> pendingFutures;
+    private Set<ChannelFuture> pendingFutures;
 
     public ChannelFutureAggregator(ChannelFuture aggregateFuture) {
         this.aggregateFuture = aggregateFuture;
-        pendingFutures = new HashSet<ChannelFuture>();
     }
 
     public void addFuture(ChannelFuture future) {
-        pendingFutures.add(future);
+        synchronized(this) {
+            if (pendingFutures == null) {
+                pendingFutures = new HashSet<ChannelFuture>();
+            }
+            pendingFutures.add(future);
+        }
         future.addListener(this);
     }
 
     @Override
-    public synchronized void operationComplete(ChannelFuture future)
+    public void operationComplete(ChannelFuture future)
             throws Exception {
         if (future.isCancelled()) {
             // TODO: what should the correct behaviour be when a fragment is cancelled?
@@ -54,17 +58,24 @@ public class ChannelFutureAggregator implements ChannelFutureListener {
             return;
         }
 
-        pendingFutures.remove(future);
-        if (!future.isSuccess()) {
-            aggregateFuture.setFailure(future.getCause());
-            for (ChannelFuture pendingFuture: pendingFutures) {
-                pendingFuture.cancel();
+        synchronized (this) {
+            if (pendingFutures == null) {
+                aggregateFuture.setSuccess();
+            } else {
+                pendingFutures.remove(future);
+                if (!future.isSuccess()) {
+                    aggregateFuture.setFailure(future.getCause());
+                    for (ChannelFuture pendingFuture: pendingFutures) {
+                        pendingFuture.cancel();
+                    }
+                } else {
+                    if (pendingFutures.isEmpty()) {
+                        aggregateFuture.setSuccess();
+                    }
+                }
             }
-            return;
-        }
 
-        if (pendingFutures.isEmpty()) {
-            aggregateFuture.setSuccess();
         }
+        
     }
 }
