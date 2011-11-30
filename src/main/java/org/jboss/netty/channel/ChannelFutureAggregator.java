@@ -14,13 +14,11 @@
  * under the License.
  */
 
-package org.jboss.netty.channel.socket.http;
+package org.jboss.netty.channel;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 
 /**
  * Class which is used to consolidate multiple channel futures into one, by
@@ -31,7 +29,7 @@ import org.jboss.netty.channel.ChannelFutureListener;
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  * @author OneDrum Ltd.
  */
-class ChannelFutureAggregator implements ChannelFutureListener {
+public class ChannelFutureAggregator implements ChannelFutureListener {
 
     private final ChannelFuture aggregateFuture;
 
