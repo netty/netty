@@ -37,17 +37,17 @@ import org.jboss.netty.util.CharsetUtil;
  * <p>
  * Performs server side opening and closing handshakes for web socket
  * specification version <a
- * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10"
- * >draft-ietf-hybi-thewebsocketprotocol- 10</a>
+ * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17"
+ * >draft-ietf-hybi-thewebsocketprotocol- 17</a>
  * </p>
  * 
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  */
-public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
+public class WebSocketServerHandshaker17 extends WebSocketServerHandshaker {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker10.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker17.class);
 
-    public static final String WEBSOCKET_08_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+    public static final String WEBSOCKET_17_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
     private boolean allowExtensions = false;
 
@@ -64,7 +64,7 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
      *            Allow extensions to be used in the reserved bits of the web
      *            socket frame
      */
-    public WebSocketServerHandshaker10(String webSocketURL, String subProtocols, boolean allowExtensions) {
+    public WebSocketServerHandshaker17(String webSocketURL, String subProtocols, boolean allowExtensions) {
         super(webSocketURL, subProtocols);
         this.allowExtensions = allowExtensions;
     }
@@ -72,8 +72,8 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
     /**
      * <p>
      * Handle the web socket handshake for the web socket specification <a href=
-     * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08">HyBi
-     * version 8 to 10</a>. Version 8, 9 and 10 share the same wire protocol.
+     * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17">HyBi
+     * versions 13-17</a>. Versions 13-17 share the same wire protocol.
      * </p>
      * 
      * <p>
@@ -88,7 +88,7 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
      * Sec-WebSocket-Origin: http://example.com
      * Sec-WebSocket-Protocol: chat, superchat
-     * Sec-WebSocket-Version: 8
+     * Sec-WebSocket-Version: 13
      * </pre>
      * 
      * <p>
@@ -113,23 +113,23 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
     public void executeOpeningHandshake(ChannelHandlerContext ctx, HttpRequest req) {
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s web socket spec version 10 handshake", ctx.getChannel().getId()));
+            logger.debug(String.format("Channel %s web socket spec version 17 handshake", ctx.getChannel().getId()));
         }
 
         HttpResponse res = new DefaultHttpResponse(HTTP_1_1, new HttpResponseStatus(101, "Switching Protocols"));
-        this.setVersion(WebSocketSpecificationVersion.V10);
+        this.setVersion(WebSocketSpecificationVersion.V17);
 
         String key = req.getHeader(Names.SEC_WEBSOCKET_KEY);
         if (key == null) {
             res.setStatus(HttpResponseStatus.BAD_REQUEST);
             return;
         }
-        String acceptSeed = key + WEBSOCKET_08_ACCEPT_GUID;
+        String acceptSeed = key + WEBSOCKET_17_ACCEPT_GUID;
         byte[] sha1 = sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
         String accept = base64Encode(sha1);
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("HyBi10 Server Handshake key: %s. Response: %s.", key, accept));
+            logger.debug(String.format("HyBi17 Server Handshake key: %s. Response: %s.", key, accept));
         }
 
         res.setStatus(new HttpResponseStatus(101, "Switching Protocols"));
@@ -146,8 +146,8 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
         // Upgrade the connection and send the handshake response.
         ChannelPipeline p = ctx.getChannel().getPipeline();
         p.remove("aggregator");
-        p.replace("decoder", "wsdecoder", new WebSocket08FrameDecoder(true, this.allowExtensions));
-        p.replace("encoder", "wsencoder", new WebSocket08FrameEncoder(false));
+        p.replace("decoder", "wsdecoder", new WebSocket13FrameDecoder(true, this.allowExtensions));
+        p.replace("encoder", "wsencoder", new WebSocket13FrameEncoder(false));
 
     }
 

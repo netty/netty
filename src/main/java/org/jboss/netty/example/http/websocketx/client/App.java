@@ -59,10 +59,10 @@ public class App {
 		MyCallbackHandler callbackHandler = new MyCallbackHandler();
 		WebSocketClientFactory factory = new WebSocketClientFactory();
 
-		// Connect with spec version 10 (try changing it to V00 and it will
+		// Connect with spec version 17 (try changing it to V10 or V00 and it will
 		// still work ... fingers crossed ;-)
 		WebSocketClient client = factory.newClient(new URI("ws://localhost:8080/websocket"),
-				WebSocketSpecificationVersion.V10, callbackHandler);
+				WebSocketSpecificationVersion.V17, callbackHandler);
 
 		// Connect
     	System.out.println("WebSocket Client connecting");
