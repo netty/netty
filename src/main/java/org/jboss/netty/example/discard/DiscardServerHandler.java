@@ -15,7 +15,6 @@
  */
 package org.jboss.netty.example.discard;
 
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -40,10 +39,10 @@ public class DiscardServerHandler extends SimpleChannelUpstreamHandler {
     private static final Logger logger = Logger.getLogger(
             DiscardServerHandler.class.getName());
 
-    private final AtomicLong transferredBytes = new AtomicLong();
+    private long transferredBytes = 0;
 
     public long getTransferredBytes() {
-        return transferredBytes.get();
+        return transferredBytes;
     }
 
     @Override
@@ -59,7 +58,7 @@ public class DiscardServerHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
         // Discard received data silently by doing nothing.
-        transferredBytes.addAndGet(((ChannelBuffer) e.getMessage()).readableBytes());
+        transferredBytes += (((ChannelBuffer) e.getMessage()).readableBytes());
     }
 
     @Override
