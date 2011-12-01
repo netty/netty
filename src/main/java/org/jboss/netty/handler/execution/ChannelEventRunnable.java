@@ -24,7 +24,7 @@ import org.jboss.netty.util.EstimatableObjectWrapper;
 /**
  * a {@link Runnable} which sends the specified {@link ChannelEvent} upstream.
  * Most users will not see this type at all because it is used by
- * {@link Executor} implementors only
+ * {@link Executor} implementers only
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
@@ -34,8 +34,8 @@ import org.jboss.netty.util.EstimatableObjectWrapper;
  */
 public class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper {
 
-    private final ChannelHandlerContext ctx;
-    private final ChannelEvent e;
+    protected final ChannelHandlerContext ctx;
+    protected final ChannelEvent e;
     int estimatedSize;
 
     /**
