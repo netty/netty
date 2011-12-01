@@ -22,11 +22,10 @@ import java.nio.ByteOrder;
 import org.junit.Test;
 
 /**
- *
+ * Tests little-endian heap channel buffers
+ * 
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
  */
 public class LittleEndianHeapChannelBufferTest extends AbstractChannelBufferTest {
 

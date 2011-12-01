@@ -27,6 +27,8 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.junit.Test;
 
 /**
+ * Tests write splitting capabilities
+ * 
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */

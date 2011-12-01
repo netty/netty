@@ -20,7 +20,6 @@ import java.net.SocketAddress;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 class EmbeddedSocketAddress extends SocketAddress {
     private static final long serialVersionUID = 1400788804624980619L;

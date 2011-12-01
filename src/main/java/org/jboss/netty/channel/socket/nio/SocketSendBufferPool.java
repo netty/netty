@@ -28,7 +28,6 @@ import org.jboss.netty.channel.FileRegion;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2174 $, $Date: 2010-02-19 09:57:23 +0900 (Fri, 19 Feb 2010) $
  */
 final class SocketSendBufferPool {
 

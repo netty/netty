@@ -26,8 +26,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
  */
 public class WebSocketServerPipelineFactory implements ChannelPipelineFactory {
     @Override

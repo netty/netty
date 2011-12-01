@@ -46,7 +46,6 @@ import org.jboss.netty.util.CharsetUtil;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  *
  * @apiviz.landmark
  * @apiviz.uses org.jboss.netty.handler.codec.base64.Base64

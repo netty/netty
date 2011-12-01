@@ -46,7 +46,6 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author Doug Lea
  * @author Jason T. Greene
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  *
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values

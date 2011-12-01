@@ -19,7 +19,6 @@ import java.util.concurrent.Executor;
 
 /**
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 public final class DeadLockProofWorker {
 

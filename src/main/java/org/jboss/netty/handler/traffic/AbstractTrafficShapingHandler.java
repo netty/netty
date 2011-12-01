@@ -56,7 +56,6 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Frederic Bregier
- * @version $Rev: 1832 $, $Date: 2009-10-25 19:53:54 +0900 (Sun, 25 Oct 2009) $
  */
 public abstract class AbstractTrafficShapingHandler extends
         SimpleChannelHandler implements ExternalResourceReleasable {

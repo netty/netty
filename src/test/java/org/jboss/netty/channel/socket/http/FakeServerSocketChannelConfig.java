@@ -23,6 +23,8 @@ import org.jboss.netty.channel.DefaultChannelConfig;
 import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
 
 /**
+ * A fake server socket channel config class for use in testing
+ * 
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */

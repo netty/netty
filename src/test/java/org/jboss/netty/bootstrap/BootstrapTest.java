@@ -34,71 +34,112 @@ import org.junit.Test;
 
 
 /**
+ * A bootstrap test
+ * 
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 public class BootstrapTest {
+    
+    /**
+     * Tests to make sure that a new bootstrap should not return null, but an IllegalStateException
+     */
     @Test(expected = IllegalStateException.class)
     public void shouldNotReturnNullFactory() {
         new Bootstrap().getFactory();
     }
 
+    /**
+     * Tests to make sure that a new bootstrap cannot have it's channel factory changed
+     */
     @Test(expected = IllegalStateException.class)
     public void shouldNotAllowInitialFactoryToChange() {
         new Bootstrap(createMock(ChannelFactory.class)).setFactory(createMock(ChannelFactory.class));
     }
 
+    /**
+     * Tests to make sure that a bootstrap's factory can only be set once and not reset after that
+     */
     @Test
     public void shouldNotAllowFactoryToChangeMoreThanOnce() {
+		//Initialize a new bootstrap
         Bootstrap b = new Bootstrap();
+        //Create a mock-up ChannelFactory
         ChannelFactory f = createMock(ChannelFactory.class);
+        //Set the bootstrap's channel factory
         b.setFactory(f);
+        //Assert that both f and the bootstrap's factory are the same
         assertSame(f, b.getFactory());
 
+        //Start a try block
         try {
+			//Attempt to set the bootstrap's channel factory again
             b.setFactory(createMock(ChannelFactory.class));
+            //Fail if no exception is thrown
             fail();
         } catch (IllegalStateException e) {
             // Success.
         }
     }
 
+    /**
+     * Tests to make sure that setFactory does not accept null as a parameter
+     */
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullFactory() {
         new Bootstrap().setFactory(null);
     }
 
+    /**
+     * Tests to make sure that a new bootstrap's default pipeline is not null
+     */
     @Test
     public void shouldHaveNonNullInitialPipeline() {
         assertNotNull(new Bootstrap().getPipeline());
     }
 
+    /**
+     * Tests to make sure a bootstrap's pipeline cannot be set to null
+     */
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullPipeline() {
         new Bootstrap().setPipeline(null);
     }
 
+    /**
+     * Tests to make sure a bootstrap cannot have it's pipeline (map) set to null
+     */
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullPipelineMap() {
         new Bootstrap().setPipelineAsMap(null);
     }
 
+    /**
+     * Tests to make sure a bootstrap's initial pipeline factory is not null
+     */
     @Test
     public void shouldHaveNonNullInitialPipelineFactory() {
         assertNotNull(new Bootstrap().getPipelineFactory());
     }
 
+    /**
+     * Tests to make sure that a bootstrap's pipeline factory changes if a new pipeline is set
+     */
     @Test
     public void shouldUpdatePipelineFactoryIfPipelineIsSet() {
+		//Make a new bootstrap
         Bootstrap b = new Bootstrap();
+        //Get the initial pipeline factory
         ChannelPipelineFactory oldPipelineFactory = b.getPipelineFactory();
+        //Set a new pipeline
         b.setPipeline(createMock(ChannelPipeline.class));
+        //Assert that the new pipeline factory is not the same as the initial one
         assertNotSame(oldPipelineFactory, b.getPipelineFactory());
     }
 
+    /**
+     * Tests to make sure a bootstrap's pipeline is not returned when a pipeline factory is explicitly set
+     */
     @Test(expected = IllegalStateException.class)
     public void shouldNotReturnPipelineWhenPipelineFactoryIsSetByUser() {
         Bootstrap b = new Bootstrap();
@@ -106,6 +147,9 @@ public class BootstrapTest {
         b.getPipeline();
     }
 
+    /**
+     * Tests to make sure a bootstrap's pipeline map is not returned when a pipeline factory is explicitly set
+     */
     @Test(expected = IllegalStateException.class)
     public void shouldNotReturnPipelineMapWhenPipelineFactoryIsSetByUser() {
         Bootstrap b = new Bootstrap();
@@ -113,16 +157,25 @@ public class BootstrapTest {
         b.getPipelineAsMap();
     }
 
+    /**
+     * Tests to make sure a bootstrap's pipeline factory cannot be set to null
+     */
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullPipelineFactory() {
         new Bootstrap().setPipelineFactory(null);
     }
 
+    /**
+     * Tests to make sure a new bootstrap's pipeline map is empty
+     */
     @Test
     public void shouldHaveInitialEmptyPipelineMap() {
         assertTrue(new Bootstrap().getPipelineAsMap().isEmpty());
     }
 
+    /**
+     * Tests to make sure that a buffer's pipeline map is ordered
+     */
     @Test
     public void shouldReturnOrderedPipelineMap() {
         Bootstrap b = new Bootstrap();
@@ -151,6 +204,9 @@ public class BootstrapTest {
         assertFalse(m.hasNext());
     }
 
+    /**
+     * Tests to make sure that a buffer's pipeline map cannot be set to an unordered map
+     */
     @Test(expected = IllegalArgumentException.class)
     public void shouldNotAllowUnorderedPipelineMap() {
         Map<String, ChannelHandler> m = new HashMap<String, ChannelHandler>();
@@ -163,6 +219,9 @@ public class BootstrapTest {
         b.setPipelineAsMap(m);
     }
 
+    /**
+     * Tests to make sure a buffer's pipeline is ordered when it is set from a map
+     */
     @Test
     public void shouldHaveOrderedPipelineWhenSetFromMap() {
         Map<String, ChannelHandler> m = new LinkedHashMap<String, ChannelHandler>();
@@ -197,11 +256,17 @@ public class BootstrapTest {
         }
     }
 
+    /**
+     * Tests to make sure that a new bootstrap should not have any options set
+     */
     @Test
     public void shouldHaveInitialEmptyOptionMap() {
         assertTrue(new Bootstrap().getOptions().isEmpty());
     }
 
+    /**
+     * Tests to make sure that a bootstrap's option map updates in real time
+     */
     @Test
     public void shouldUpdateOptionMapAsRequested1() {
         Bootstrap b = new Bootstrap();
@@ -216,6 +281,9 @@ public class BootstrapTest {
         assertEquals(42, o.get("i"));
     }
 
+    /**
+     * Tests to make sure that a bootstrap's option map updates in real time
+     */
     @Test
     public void shouldUpdateOptionMapAsRequested2() {
         Bootstrap b = new Bootstrap();
@@ -235,6 +303,9 @@ public class BootstrapTest {
         assertEquals(o1, o2);
     }
 
+    /**
+     * Tests to make sure that an option is removed from a buffer's options when the option is set to null
+     */
     @Test
     public void shouldRemoveOptionIfValueIsNull() {
         Bootstrap b = new Bootstrap();
@@ -247,16 +318,25 @@ public class BootstrapTest {
         assertTrue(b.getOptions().isEmpty());
     }
 
+    /**
+     * Tests to make sure that a bootstrap can't accept null as a parameter of getOption(key)
+     */
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullOptionKeyOnGet() {
         new Bootstrap().getOption(null);
     }
 
+    /**
+     * Tests to make sure a bootstrap can't accept a null key when using setOption(key, value)
+     */
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullOptionKeyOnSet() {
         new Bootstrap().setOption(null, "x");
     }
 
+    /**
+     * Tests to make sure that a boostrap can't accept a null option map
+     */
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullOptionMap() {
         new Bootstrap().setOptions(null);

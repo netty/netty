@@ -40,7 +40,6 @@ import org.jboss.netty.channel.MessageEvent;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
 
