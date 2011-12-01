@@ -40,6 +40,8 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.UpstreamMessageEvent;
 
 /**
+ * Test utilities for Netty
+ * 
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */

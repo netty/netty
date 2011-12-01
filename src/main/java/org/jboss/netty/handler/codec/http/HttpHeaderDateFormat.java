@@ -34,7 +34,6 @@ import java.util.TimeZone;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://www.rogiel.com/">Rogiel Josias Sulzbach</a>
- * @version $Rev$, $Date$
  */
 final class HttpHeaderDateFormat extends SimpleDateFormat {
     private static final long serialVersionUID = -925286159755905325L;

@@ -131,8 +131,6 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author David M. Lloyd (david.lloyd@redhat.com)
  *
- * @version $Rev$, $Date$
- *
  * @apiviz.landmark
  */
 public class OrderedMemoryAwareThreadPoolExecutor extends

@@ -29,7 +29,6 @@ import org.junit.Test;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Tomasz Blachowicz (tblachowicz@gmail.com)
- * @version $Rev$, $Date$
  */
 public class ByteArrayEncoderTest {
 

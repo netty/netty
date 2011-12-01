@@ -32,8 +32,6 @@ import org.jboss.netty.handler.stream.ChunkedWriteHandler;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://openr66.free.fr/">Frederic Bregier</a>
- *
- * @version $Rev$, $Date$
  */
 public class HttpClientPipelineFactory implements ChannelPipelineFactory {
     private final boolean ssl;

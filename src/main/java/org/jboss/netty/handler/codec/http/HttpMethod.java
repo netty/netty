@@ -25,7 +25,6 @@ import java.util.Map;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
- * @version $Rev$, $Date$
  *
  * @apiviz.exclude
  */

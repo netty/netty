@@ -26,11 +26,11 @@ import java.util.List;
 import org.junit.Test;
 
 /**
+ * An abstract test class for composite channel buffers
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Frederic Bregier (fredbregier@free.fr)
- * @version $Rev$, $Date$
  */
 public abstract class AbstractCompositeChannelBufferTest extends
         AbstractChannelBufferTest {

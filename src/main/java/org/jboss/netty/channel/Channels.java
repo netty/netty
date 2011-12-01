@@ -50,8 +50,6 @@ import org.jboss.netty.util.internal.ConversionUtil;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- *
- * @version $Rev$, $Date$
  */
 public class Channels {
 

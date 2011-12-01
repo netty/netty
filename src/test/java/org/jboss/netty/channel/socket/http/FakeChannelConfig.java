@@ -28,6 +28,8 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
 import org.jboss.netty.util.internal.ConversionUtil;
 
 /**
+ * A face channel config class for use in testing
+ * 
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */

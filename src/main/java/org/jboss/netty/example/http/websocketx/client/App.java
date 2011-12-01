@@ -34,8 +34,6 @@ import org.jboss.netty.handler.codec.http.websocketx.WebSocketSpecificationVersi
  * A HTTP client demo app
  * 
  * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
- * 
- * @version $Rev$, $Date$
  */
 public class App {
 

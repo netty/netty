@@ -22,6 +22,8 @@ import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
 
 /**
+ * A fake server socket channel factory for use in testing
+ * 
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */

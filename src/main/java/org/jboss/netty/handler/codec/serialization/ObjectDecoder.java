@@ -36,8 +36,6 @@ import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
- *
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.codec.serialization.ObjectDecoderInputStream - - - compatible with
  */

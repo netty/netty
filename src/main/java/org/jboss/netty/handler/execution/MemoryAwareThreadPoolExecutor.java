@@ -127,8 +127,6 @@ import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
- *
  * @apiviz.has org.jboss.netty.util.ObjectSizeEstimator oneway - -
  * @apiviz.has org.jboss.netty.handler.execution.ChannelEventRunnable oneway - - executes
  */

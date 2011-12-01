@@ -31,6 +31,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
+ * Tests write fragmenting capabilities
+ * 
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */

@@ -28,7 +28,6 @@ package org.jboss.netty.handler.codec.base64;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Robert Harder (rob@iharder.net)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 public enum Base64Dialect {
     /**
