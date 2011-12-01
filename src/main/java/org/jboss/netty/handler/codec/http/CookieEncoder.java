@@ -254,7 +254,7 @@ public class CookieEncoder {
         sb.append((char) HttpCodecUtil.SEMICOLON);
     }
 
-    private static void add(StringBuilder sb, String name, int val) {
+    private static <T extends Number> void add(StringBuilder sb, String name, T val) {
         sb.append(name);
         sb.append((char) HttpCodecUtil.EQUALS);
         sb.append(val);

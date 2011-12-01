@@ -126,7 +126,7 @@ public class CookieDecoder {
             String commentURL = null;
             String domain = null;
             String path = null;
-            int maxAge = -1;
+            long maxAge = -1;
             List<Integer> ports = new ArrayList<Integer>(2);
 
             for (int j = i + 1; j < names.size(); j++, i++) {
@@ -155,7 +155,7 @@ public class CookieDecoder {
                         if (maxAgeMillis <= 0) {
                             maxAge = 0;
                         } else {
-                            maxAge = (int) (maxAgeMillis / 1000) +
+                            maxAge = (maxAgeMillis / 1000) +
                                      (maxAgeMillis % 1000 != 0? 1 : 0);
                         }
                     } catch (ParseException e) {
