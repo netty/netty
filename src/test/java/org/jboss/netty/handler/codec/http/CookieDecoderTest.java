@@ -365,4 +365,15 @@ public class CookieDecoderTest {
         Cookie c = cookies.iterator().next();
         assertTrue(Math.abs(expectedMaxAge - c.getMaxAge()) < 2);
     }
+
+    @Test
+    public void testDecodingValueWithComma() {
+        String source = "UserCookie=timeZoneName=(GMT+04:00) Moscow, St. Petersburg, Volgograd&promocode=&region=BE;" +
+                " expires=Sat, 01-Dec-2012 10:53:31 GMT; path=/";
+
+        Set<Cookie> cookies = new CookieDecoder().decode(source);
+
+        Cookie c = cookies.iterator().next();
+        assertEquals("timeZoneName=(GMT+04:00) Moscow, St. Petersburg, Volgograd&promocode=&region=BE", c.getValue());
+    }
 }

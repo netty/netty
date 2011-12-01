@@ -46,7 +46,7 @@ import java.util.regex.Pattern;
 public class CookieDecoder {
 
     private final static Pattern PATTERN =
-        Pattern.compile("(?:\\s|[;,])*\\$*([^;=]+)(?:=(?:[\"']((?:\\\\.|[^\"])*)[\"']|([^;,]*)))?(\\s*(?:[;,]+\\s*|$))");
+        Pattern.compile("(?:\\s|[;,])*\\$*([^;=]+)(?:=(?:[\"']((?:\\\\.|[^\"])*)[\"']|([^;]*)))?(\\s*(?:[;,]+\\s*|$))");
 
     private final static String COMMA = ",";
 
