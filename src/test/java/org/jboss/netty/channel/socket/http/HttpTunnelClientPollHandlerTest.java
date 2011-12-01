@@ -33,6 +33,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
+ * Tests HTTP tunnel client polling
+ * 
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */

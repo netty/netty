@@ -29,8 +29,6 @@ import org.jboss.netty.util.CharsetUtil;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://openr66.free.fr/">Frederic Bregier</a>
- *
- * @version $Rev$, $Date$
  */
 public class HttpResponseHandler extends SimpleChannelUpstreamHandler {
 

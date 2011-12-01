@@ -175,8 +175,6 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev:231 $, $Date:2008-06-12 16:44:50 +0900 (목, 12 6월 2008) $
- *
  * @apiviz.landmark
  */
 public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {

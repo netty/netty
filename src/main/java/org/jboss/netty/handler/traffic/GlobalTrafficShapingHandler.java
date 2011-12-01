@@ -60,7 +60,6 @@ import org.jboss.netty.util.ObjectSizeEstimator;
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Frederic Bregier
- * @version $Rev: 1794 $, $Date: 2009-10-20 14:20:28 +0900 (Tue, 20 Oct 2009) $
  */
 @Sharable
 public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {

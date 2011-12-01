@@ -206,8 +206,6 @@ import org.jboss.netty.channel.group.ChannelGroup;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
- *
  * @apiviz.landmark
  * @apiviz.exclude ^org\.jboss\.netty\.handler\..*$
  */
@@ -227,7 +225,6 @@ public interface ChannelHandler {
      *
      * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
      * @author <a href="http://gleamynode.net/">Trustin Lee</a>
-     * @version $Rev$, $Date$
      */
     @Inherited
     @Documented

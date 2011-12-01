@@ -22,8 +22,6 @@ package org.jboss.netty.util;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
- *
  * @apiviz.landmark
  * @apiviz.uses org.jboss.netty.util.EstimatableObjectWrapper
  */

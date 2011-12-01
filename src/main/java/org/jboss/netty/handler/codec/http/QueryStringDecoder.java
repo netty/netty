@@ -41,7 +41,6 @@ import org.jboss.netty.util.CharsetUtil;
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://tsunanet.net/">Benoit Sigoure</a>
- * @version $Rev$, $Date$
  *
  * @see QueryStringEncoder
  *

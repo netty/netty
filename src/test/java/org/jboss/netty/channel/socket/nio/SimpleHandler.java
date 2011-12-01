@@ -21,13 +21,19 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
+ * A very simple channel handler
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Daniel Bevenius (dbevenius@jboss.com)
- * @version $Rev$, $Date$
  */
 public class SimpleHandler extends SimpleChannelHandler {
 
+    /**
+     * Called when a message is received
+     * 
+     * @param ctx The channel handler context
+     * @param e The message event
+     */
     @Override
     public void messageReceived(final ChannelHandlerContext ctx,
             final MessageEvent e) throws Exception {

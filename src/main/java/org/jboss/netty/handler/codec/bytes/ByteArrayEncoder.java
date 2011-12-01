@@ -53,8 +53,6 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * 
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Tomasz Blachowicz (tblachowicz@gmail.com)
- *
- * @version $Rev$, $Date$
  */
 public class ByteArrayEncoder extends OneToOneEncoder {
 

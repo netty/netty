@@ -31,8 +31,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
- * 
- * @version $Rev$, $Date$
  */
 public class WebSocketSslServerSslContext {
 
