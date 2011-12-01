@@ -84,8 +84,6 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
- *
  * @apiviz.landmark
  */
 public class OioServerSocketChannelFactory implements ServerSocketChannelFactory {
@@ -117,7 +115,7 @@ public class OioServerSocketChannelFactory implements ServerSocketChannelFactory
 
     @Override
     public ServerSocketChannel newChannel(ChannelPipeline pipeline) {
-        return new OioServerSocketChannel(this, pipeline, sink);
+        return OioServerSocketChannel.create(this, pipeline, sink);
     }
 
     @Override

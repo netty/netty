@@ -28,7 +28,6 @@ import org.junit.Test;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Tomasz Blachowicz (tblachowicz@gmail.com)
- * @version $Rev$, $Date$
  */
 public class ProtobufVarint32FrameDecoderTest {
 
@@ -42,7 +41,7 @@ public class ProtobufVarint32FrameDecoderTest {
 
     @Test
     public void testTinyDecode() {
-        byte[] b = new byte[] { 4, 1, 1, 1, 1 };
+        byte[] b = { 4, 1, 1, 1, 1 };
         embedder.offer(wrappedBuffer(b, 0, 1));
         assertThat(embedder.poll(), is(nullValue()));
         embedder.offer(wrappedBuffer(b, 1, 2));

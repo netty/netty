@@ -40,7 +40,6 @@ import org.jboss.netty.channel.MessageEvent;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
 
@@ -194,7 +193,6 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
 
     private final class EmbeddedChannelSink implements ChannelSink, ChannelUpstreamHandler {
         EmbeddedChannelSink() {
-            super();
         }
 
         @Override
@@ -234,7 +232,6 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
     private static final class EmbeddedChannelPipeline extends DefaultChannelPipeline {
 
         EmbeddedChannelPipeline() {
-            super();
         }
 
         @Override

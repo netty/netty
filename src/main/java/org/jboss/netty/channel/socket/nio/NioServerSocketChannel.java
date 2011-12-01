@@ -38,9 +38,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 class NioServerSocketChannel extends AbstractServerChannel
                              implements org.jboss.netty.channel.socket.ServerSocketChannel {
@@ -53,7 +50,15 @@ class NioServerSocketChannel extends AbstractServerChannel
     volatile Selector selector;
     private final ServerSocketChannelConfig config;
 
-    NioServerSocketChannel(
+    static NioServerSocketChannel create(ChannelFactory factory,
+            ChannelPipeline pipeline, ChannelSink sink) {
+        NioServerSocketChannel instance =
+                new NioServerSocketChannel(factory, pipeline, sink);
+        fireChannelOpen(instance);
+        return instance;
+    }
+
+    private NioServerSocketChannel(
             ChannelFactory factory,
             ChannelPipeline pipeline,
             ChannelSink sink) {
@@ -81,8 +86,6 @@ class NioServerSocketChannel extends AbstractServerChannel
         }
 
         config = new DefaultServerSocketChannelConfig(socket.socket());
-
-        fireChannelOpen(this);
     }
 
     @Override

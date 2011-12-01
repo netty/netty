@@ -53,6 +53,8 @@ import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 /**
+ * Tests HTTP tunnel soaking
+ * 
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
@@ -85,7 +87,7 @@ public class HttpTunnelSoakTester {
 
     final DataVerifier s2cVerifier = new DataVerifier("S2C-Verifier");
 
-    private static byte[] SEND_STREAM;
+    private static final byte[] SEND_STREAM;
 
     static {
         SEND_STREAM = new byte[MAX_WRITE_SIZE + 127];
@@ -345,7 +347,6 @@ public class HttpTunnelSoakTester {
 
             if (verifiedBytes >= BYTES_TO_SEND) {
                 completionLatch.countDown();
-                return;
             }
         }
 

@@ -24,7 +24,6 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  *
  * @apiviz.exclude
  * @apiviz.stereotype static
@@ -37,7 +36,6 @@ public final class RtspHeaders {
      * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
      * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
      * @author <a href="http://gleamynode.net/">Trustin Lee</a>
-     * @version $Rev$, $Date$
      */
     public static final class Names {
         /**
@@ -218,7 +216,6 @@ public final class RtspHeaders {
         public static final String WWW_AUTHENTICATE = HttpHeaders.Names.WWW_AUTHENTICATE;
 
         private Names() {
-            super();
         }
     }
 
@@ -227,7 +224,6 @@ public final class RtspHeaders {
      *
      * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
      * @author <a href="http://gleamynode.net/">Trustin Lee</a>
-     * @version $Rev$, $Date$
      */
     public static final class Values {
         /**
@@ -400,11 +396,9 @@ public final class RtspHeaders {
         public static final String URL = "url";
 
         protected Values() {
-            super();
         }
     }
 
     private RtspHeaders() {
-        super();
     }
 }

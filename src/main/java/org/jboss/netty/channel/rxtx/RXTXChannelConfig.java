@@ -28,15 +28,15 @@ import org.jboss.netty.util.internal.ConversionUtil;
  */
 public class RXTXChannelConfig extends DefaultChannelConfig {
 
-    public static enum Stopbits {
+    public enum Stopbits {
 
         STOPBITS_1(SerialPort.STOPBITS_1),
         STOPBITS_2(SerialPort.STOPBITS_2),
         STOPBITS_1_5(SerialPort.STOPBITS_1_5);
 
-        private int value;
+        private final int value;
 
-        private Stopbits(int value) {
+        Stopbits(int value) {
             this.value = value;
         }
 
@@ -54,16 +54,16 @@ public class RXTXChannelConfig extends DefaultChannelConfig {
         }
     }
 
-    public static enum Databits {
+    public enum Databits {
 
         DATABITS_5(SerialPort.DATABITS_5),
         DATABITS_6(SerialPort.DATABITS_6),
         DATABITS_7(SerialPort.DATABITS_7),
         DATABITS_8(SerialPort.DATABITS_8);
 
-        private int value;
+        private final int value;
 
-        private Databits(int value) {
+        Databits(int value) {
             this.value = value;
         }
 
@@ -81,7 +81,7 @@ public class RXTXChannelConfig extends DefaultChannelConfig {
         }
     }
 
-    public static enum Paritybit {
+    public enum Paritybit {
 
         NONE(SerialPort.PARITY_NONE),
         ODD(SerialPort.PARITY_ODD),
@@ -89,9 +89,9 @@ public class RXTXChannelConfig extends DefaultChannelConfig {
         MARK(SerialPort.PARITY_MARK),
         SPACE(SerialPort.PARITY_SPACE);
 
-        private int value;
+        private final int value;
 
-        private Paritybit(int value) {
+        Paritybit(int value) {
             this.value = value;
         }
 

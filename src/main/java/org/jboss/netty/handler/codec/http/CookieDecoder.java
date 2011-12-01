@@ -37,7 +37,6 @@ import java.util.regex.Pattern;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  * @see CookieEncoder
  *
  * @apiviz.stereotype utility
@@ -50,11 +49,22 @@ public class CookieDecoder {
 
     private final static String COMMA = ",";
 
+    private final boolean lenient;
+
     /**
-     * Creates a new decoder.
+     * Creates a new decoder with strict parsing.
      */
     public CookieDecoder() {
-        super();
+        this(false);
+    }
+
+    /**
+     * Creates a new decoder.
+     *
+     * @param lenient ignores cookies with the name 'HTTPOnly' instead of throwing an exception
+     */
+    public CookieDecoder(boolean lenient) {
+        this.lenient = lenient;
     }
 
     /**
@@ -95,6 +105,11 @@ public class CookieDecoder {
         Set<Cookie> cookies = new TreeSet<Cookie>();
         for (; i < names.size(); i ++) {
             String name = names.get(i);
+            // Not all user agents understand the HttpOnly attribute
+            if (lenient && CookieHeaderNames.HTTPONLY.equalsIgnoreCase(name)) {
+                continue;
+            }
+
             String value = values.get(i);
             if (value == null) {
                 value = "";

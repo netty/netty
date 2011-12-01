@@ -43,8 +43,6 @@ import org.jboss.netty.util.ExternalResourceReleasable;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
- *
  * @apiviz.uses org.jboss.netty.channel.ChannelFactory
  */
 public class Bootstrap implements ExternalResourceReleasable {
@@ -60,7 +58,6 @@ public class Bootstrap implements ExternalResourceReleasable {
      * I/O operation is requested.
      */
     protected Bootstrap() {
-        super();
     }
 
     /**

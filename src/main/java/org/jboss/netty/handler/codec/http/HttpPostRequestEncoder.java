@@ -965,7 +965,6 @@ public class HttpPostRequestEncoder implements ChunkedInput {
          *
          */
         public ErrorDataEncoderException() {
-            super();
         }
 
         /**

@@ -73,7 +73,7 @@
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
-      <version>2.3.0</version>
+      <version>2.4.1</version>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
@@ -128,7 +128,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.6.1</version>
+      <version>1.6.4</version>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
@@ -176,19 +176,19 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.8.2</version>
+      <version>4.10</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
-      <version>2.5.2</version>
+      <version>3.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymockclassextension</artifactId>
-      <version>2.5.2</version>
+      <version>3.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -200,7 +200,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
-      <version>1.6.1</version>
+      <version>1.6.4</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -225,7 +225,7 @@
       <plugin>
         <!-- See org.jboss:jboss-parent -->
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.0</version>
+        <version>1.0.1</version>
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -241,7 +241,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>2.4.3</version>
+        <version>2.5</version>
         <configuration>
           <encoding>UTF-8</encoding>
         </configuration>
@@ -272,7 +272,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.7.2</version>
+        <version>2.10</version>
         <configuration>
           <forkMode>once</forkMode>
           <excludes>
@@ -329,7 +329,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.6</version>
+        <version>1.7</version>
         <executions>
           <execution>
             <id>write-version</id>
@@ -434,7 +434,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.7</version>
+        <version>2.8</version>
         <executions>
           <execution>
             <id>generate-javadoc</id>
@@ -530,6 +530,36 @@
         </executions>
         <dependencies>
           <dependency>
+            <groupId>org.eclipse.wst.css</groupId>
+            <artifactId>core</artifactId>
+            <version>1.1.101-v200705302225</version>
+            <exclusions>
+              <exclusion>
+                <groupId>org.apache</groupId>
+                <artifactId>xerces</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.ibm</groupId>
+                <artifactId>icu</artifactId>
+              </exclusion>
+            </exclusions>
+          </dependency>
+          <dependency>
+            <groupId>org.eclipse.wst.sse</groupId>
+            <artifactId>core</artifactId>
+	    <version>1.1.202-v200709061102</version>
+            <exclusions>
+              <exclusion>
+                <groupId>org.apache</groupId>
+                <artifactId>xerces</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.ibm</groupId>
+                <artifactId>icu</artifactId>
+              </exclusion>
+            </exclusions>
+          </dependency>
+          <dependency>
             <groupId>org.jboss</groupId>
             <artifactId>jbossorg-docbook-xslt</artifactId>
             <version>1.1.0</version>
@@ -615,7 +645,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.2</version>
+        <version>2.2.1</version>
         <executions>
           <execution>
             <id>generate-distribution</id>
@@ -636,7 +666,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-release-plugin</artifactId>
-        <version>2.1</version>
+        <version>2.2.1</version>
         <configuration>
           <!-- We don't want to use the default release profile because it
                causes the JavaDoc and source jars to be deployed twice. -->

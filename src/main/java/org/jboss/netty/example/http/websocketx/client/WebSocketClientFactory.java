@@ -44,7 +44,7 @@ import java.util.concurrent.Executors;
  */
 public class WebSocketClientFactory {
 
-    private NioClientSocketChannelFactory socketChannelFactory = new NioClientSocketChannelFactory(
+    private final NioClientSocketChannelFactory socketChannelFactory = new NioClientSocketChannelFactory(
             Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 
     /**
@@ -72,6 +72,7 @@ public class WebSocketClientFactory {
 
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
 
+            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline pipeline = Channels.pipeline();
                 pipeline.addLast("decoder", new WebSocketHttpResponseDecoder());

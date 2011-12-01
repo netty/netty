@@ -29,23 +29,26 @@ import org.jboss.netty.channel.ChannelSink;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 class OioClientSocketChannel extends OioSocketChannel {
 
     volatile PushbackInputStream in;
     volatile OutputStream out;
 
-    OioClientSocketChannel(
+    static OioClientSocketChannel create(ChannelFactory factory,
+            ChannelPipeline pipeline, ChannelSink sink) {
+        OioClientSocketChannel instance =
+                new OioClientSocketChannel(factory, pipeline, sink);
+        fireChannelOpen(instance);
+        return instance;
+    }
+
+    private OioClientSocketChannel(
             ChannelFactory factory,
             ChannelPipeline pipeline,
             ChannelSink sink) {
 
         super(null, factory, pipeline, sink, new Socket());
-
-        fireChannelOpen(this);
     }
 
     @Override

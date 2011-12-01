@@ -28,13 +28,14 @@ import org.junit.Test;
  */
 public class DelimiterBasedFrameDecoderTest {
     @Test
-    public void testTooLongFrameRecovery() throws Exception {
+    public void testFailSlowTooLongFrameRecovery() throws Exception {
         DecoderEmbedder<ChannelBuffer> embedder = new DecoderEmbedder<ChannelBuffer>(
-                new DelimiterBasedFrameDecoder(1, Delimiters.nulDelimiter()));
+                new DelimiterBasedFrameDecoder(1, true, false, Delimiters.nulDelimiter()));
 
         for (int i = 0; i < 2; i ++) {
+            embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2 }));
             try {
-                embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2, 0 }));
+                embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 0 }));
                 Assert.fail(CodecEmbedderException.class.getSimpleName() + " must be raised.");
             } catch (CodecEmbedderException e) {
                 Assert.assertTrue(e.getCause() instanceof TooLongFrameException);
@@ -42,6 +43,26 @@ public class DelimiterBasedFrameDecoderTest {
             }
 
             embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 'A', 0 }));
+            ChannelBuffer buf = embedder.poll();
+            Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
+        }
+    }
+
+    @Test
+    public void testFailFastTooLongFrameRecovery() throws Exception {
+        DecoderEmbedder<ChannelBuffer> embedder = new DecoderEmbedder<ChannelBuffer>(
+                new DelimiterBasedFrameDecoder(1, Delimiters.nulDelimiter()));
+
+        for (int i = 0; i < 2; i ++) {
+            try {
+                embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 1, 2 }));
+                Assert.fail(CodecEmbedderException.class.getSimpleName() + " must be raised.");
+            } catch (CodecEmbedderException e) {
+                Assert.assertTrue(e.getCause() instanceof TooLongFrameException);
+                // Expected
+            }
+
+            embedder.offer(ChannelBuffers.wrappedBuffer(new byte[] { 0, 'A', 0 }));
             ChannelBuffer buf = embedder.poll();
             Assert.assertEquals("A", buf.toString(CharsetUtil.ISO_8859_1));
         }

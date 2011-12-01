@@ -30,9 +30,9 @@ import org.jboss.netty.handler.codec.http.HttpHeaders.Names;
  */
 public class WebSocketServerHandshakerFactory {
 
-	private String webSocketURL;
+	private final String webSocketURL;
 
-	private String subProtocols;
+	private final String subProtocols;
 
 	private boolean allowExtensions = false;
 
@@ -54,22 +54,11 @@ public class WebSocketServerHandshakerFactory {
 		this.webSocketURL = webSocketURL;
 		this.subProtocols = subProtocols;
 		this.allowExtensions = allowExtensions;
-		return;
 	}
 
 	/**
 	 * Instances a new handshaker
 	 * 
-	 * @param webSocketURL
-	 *            URL for web socket communications. e.g
-	 *            "ws://myhost.com/mypath". Subsequent web socket frames will be
-	 *            sent to this URL.
-	 * @param version
-	 *            Version of web socket specification to use to connect to the
-	 *            server
-	 * @param subProtocol
-	 *            Sub protocol request sent to the server. Null if no
-	 *            sub-protocol support is required.
 	 * @return A new WebSocketServerHandshaker for the requested web socket
 	 *         version. Null if web socket version is not supported.
 	 */
@@ -77,7 +66,11 @@ public class WebSocketServerHandshakerFactory {
 
 		String version = req.getHeader(Names.SEC_WEBSOCKET_VERSION);
 		if (version != null) {
-			if (version.equals("8")) {
+			if (version.equals("13")) {
+				// Version 13 of the wire protocol - assume version 17 of the
+				// specification.
+				return new WebSocketServerHandshaker17(webSocketURL, subProtocols, this.allowExtensions);
+			} else if (version.equals("8")) {
 				// Version 8 of the wire protocol - assume version 10 of the
 				// specification.
 				return new WebSocketServerHandshaker10(webSocketURL, subProtocols, this.allowExtensions);
@@ -100,9 +93,8 @@ public class WebSocketServerHandshakerFactory {
 		HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, new HttpResponseStatus(101,
 				"Switching Protocols"));
 		res.setStatus(HttpResponseStatus.UPGRADE_REQUIRED);
-		res.setHeader(Names.SEC_WEBSOCKET_VERSION, "8");
+		res.setHeader(Names.SEC_WEBSOCKET_VERSION, "13");
 		ctx.getChannel().write(res);
-		return;
 	}
 
 }

@@ -34,178 +34,176 @@ import org.jboss.netty.util.CharsetUtil;
  */
 public abstract class WebSocketClientHandshaker {
 
-	private URI webSocketURL;
+    private URI webSocketURL;
 
-	private WebSocketSpecificationVersion version = WebSocketSpecificationVersion.UNKNOWN;
+    private WebSocketSpecificationVersion version = WebSocketSpecificationVersion.UNKNOWN;
 
-	private boolean openingHandshakeCompleted = false;
+    private boolean openingHandshakeCompleted = false;
 
-	private String subProtocolRequest = null;
+    private String subProtocolRequest = null;
 
-	private String subProtocolResponse = null;
+    private String subProtocolResponse = null;
 
-	/**
-	 * 
-	 * @param webSocketURL
-	 * @param version
-	 * @param subProtocol
-	 */
-	public WebSocketClientHandshaker(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol) {
-		this.webSocketURL = webSocketURL;
-		this.version = version;
-		this.subProtocolRequest = subProtocol;
-	}
+    /**
+     * 
+     * @param webSocketURL
+     * @param version
+     * @param subProtocol
+     */
+    public WebSocketClientHandshaker(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol) {
+        this.webSocketURL = webSocketURL;
+        this.version = version;
+        this.subProtocolRequest = subProtocol;
+    }
 
-	/**
-	 * Returns the URI to the web socket. e.g. "ws://myhost.com/path"
-	 */
-	public URI getWebSocketURL() {
-		return webSocketURL;
-	}
+    /**
+     * Returns the URI to the web socket. e.g. "ws://myhost.com/path"
+     */
+    public URI getWebSocketURL() {
+        return webSocketURL;
+    }
 
-	protected void setWebSocketURL(URI webSocketURL) {
-		this.webSocketURL = webSocketURL;
-	}
+    protected void setWebSocketURL(URI webSocketURL) {
+        this.webSocketURL = webSocketURL;
+    }
 
-	/**
-	 * Version of the web socket specification that is being used
-	 */
-	public WebSocketSpecificationVersion getVersion() {
-		return version;
-	}
+    /**
+     * Version of the web socket specification that is being used
+     */
+    public WebSocketSpecificationVersion getVersion() {
+        return version;
+    }
 
-	protected void setVersion(WebSocketSpecificationVersion version) {
-		this.version = version;
-	}
+    protected void setVersion(WebSocketSpecificationVersion version) {
+        this.version = version;
+    }
 
-	/**
-	 * Flag to indicate if the opening handshake is complete
-	 */
-	public boolean isOpeningHandshakeCompleted() {
-		return openingHandshakeCompleted;
-	}
+    /**
+     * Flag to indicate if the opening handshake is complete
+     */
+    public boolean isOpeningHandshakeCompleted() {
+        return openingHandshakeCompleted;
+    }
 
-	protected void setOpenningHandshakeCompleted(boolean openningHandshakeCompleted) {
-		this.openingHandshakeCompleted = openningHandshakeCompleted;
-	}
+    protected void setOpenningHandshakeCompleted(boolean openningHandshakeCompleted) {
+        this.openingHandshakeCompleted = openningHandshakeCompleted;
+    }
 
-	/**
-	 * Returns the sub protocol request sent to the server as specified in the
-	 * constructor
-	 */
-	public String getSubProtocolRequest() {
-		return subProtocolRequest;
-	}
+    /**
+     * Returns the sub protocol request sent to the server as specified in the
+     * constructor
+     */
+    public String getSubProtocolRequest() {
+        return subProtocolRequest;
+    }
 
-	protected void setSubProtocolRequest(String subProtocolRequest) {
-		this.subProtocolRequest = subProtocolRequest;
-	}
+    protected void setSubProtocolRequest(String subProtocolRequest) {
+        this.subProtocolRequest = subProtocolRequest;
+    }
 
-	/**
-	 * Returns the sub protocol response and sent by the server. Only available
-	 * after end of handshake.
-	 */
-	public String getSubProtocolResponse() {
-		return subProtocolResponse;
-	}
+    /**
+     * Returns the sub protocol response and sent by the server. Only available
+     * after end of handshake.
+     */
+    public String getSubProtocolResponse() {
+        return subProtocolResponse;
+    }
 
-	protected void setSubProtocolResponse(String subProtocolResponse) {
-		this.subProtocolResponse = subProtocolResponse;
-	}
+    protected void setSubProtocolResponse(String subProtocolResponse) {
+        this.subProtocolResponse = subProtocolResponse;
+    }
 
-	/**
-	 * Performs the opening handshake
-	 * 
-	 * @param ctx
-	 *            Channel context
-	 * @param channel
-	 *            Channel
-	 */
-	public abstract void beginOpeningHandshake(ChannelHandlerContext ctx, Channel channel);
+    /**
+     * Performs the opening handshake
+     * 
+     * @param ctx
+     *            Channel context
+     * @param channel
+     *            Channel
+     */
+    public abstract void beginOpeningHandshake(ChannelHandlerContext ctx, Channel channel);
 
-	/**
-	 * Performs the closing handshake
-	 * 
-	 * @param ctx
-	 *            Channel context
-	 * @param response
-	 *            HTTP response containing the closing handshake details
-	 */
-	public abstract void endOpeningHandshake(ChannelHandlerContext ctx, HttpResponse response)
-			throws WebSocketHandshakeException;
+    /**
+     * Performs the closing handshake
+     * 
+     * @param ctx
+     *            Channel context
+     * @param response
+     *            HTTP response containing the closing handshake details
+     */
+    public abstract void endOpeningHandshake(ChannelHandlerContext ctx, HttpResponse response) throws WebSocketHandshakeException;
 
-	/**
-	 * Performs an MD5 hash
-	 * 
-	 * @param bytes
-	 *            Data to hash
-	 * @return Hashed data
-	 */
-	protected byte[] md5(byte[] bytes) {
-		try {
-			MessageDigest md = MessageDigest.getInstance("MD5");
-			return md.digest(bytes);
-		} catch (NoSuchAlgorithmException e) {
-			throw new InternalError("MD5 not supported on this platform");
-		}
-	}
+    /**
+     * Performs an MD5 hash
+     * 
+     * @param bytes
+     *            Data to hash
+     * @return Hashed data
+     */
+    protected byte[] md5(byte[] bytes) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            return md.digest(bytes);
+        } catch (NoSuchAlgorithmException e) {
+            throw new InternalError("MD5 not supported on this platform");
+        }
+    }
 
-	/**
-	 * Performs an SHA-1 hash
-	 * 
-	 * @param bytes
-	 *            Data to hash
-	 * @return Hashed data
-	 */
-	protected byte[] sha1(byte[] bytes) {
-		try {
-			MessageDigest md = MessageDigest.getInstance("SHA1");
-			return md.digest(bytes);
-		} catch (NoSuchAlgorithmException e) {
-			throw new InternalError("SHA-1 not supported on this platform");
-		}
-	}
+    /**
+     * Performs an SHA-1 hash
+     * 
+     * @param bytes
+     *            Data to hash
+     * @return Hashed data
+     */
+    protected byte[] sha1(byte[] bytes) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA1");
+            return md.digest(bytes);
+        } catch (NoSuchAlgorithmException e) {
+            throw new InternalError("SHA-1 not supported on this platform");
+        }
+    }
 
-	/**
-	 * Base 64 encoding
-	 * 
-	 * @param bytes
-	 *            Bytes to encode
-	 * @return encoded string
-	 */
-	protected String base64Encode(byte[] bytes) {
-		ChannelBuffer hashed = ChannelBuffers.wrappedBuffer(bytes);
-		return Base64.encode(hashed).toString(CharsetUtil.UTF_8);
-	}
-	
-	/**
-	 * Creates some random bytes
-	 * 
-	 * @param size
-	 *            Number of random bytes to create
-	 * @return random bytes
-	 */
-	protected byte[] createRandomBytes(int size) {
-		byte[] bytes = new byte[size];
+    /**
+     * Base 64 encoding
+     * 
+     * @param bytes
+     *            Bytes to encode
+     * @return encoded string
+     */
+    protected String base64Encode(byte[] bytes) {
+        ChannelBuffer hashed = ChannelBuffers.wrappedBuffer(bytes);
+        return Base64.encode(hashed).toString(CharsetUtil.UTF_8);
+    }
 
-		for (int i = 0; i < size; i++) {
-			bytes[i] = (byte) createRandomNumber(0, 255);
-		}
+    /**
+     * Creates some random bytes
+     * 
+     * @param size
+     *            Number of random bytes to create
+     * @return random bytes
+     */
+    protected byte[] createRandomBytes(int size) {
+        byte[] bytes = new byte[size];
 
-		return bytes;
-	}
+        for (int i = 0; i < size; i++) {
+            bytes[i] = (byte) createRandomNumber(0, 255);
+        }
 
-	/**
-	 * Generates a random number
-	 * 
-	 * @param min
-	 *            Minimum value
-	 * @param max
-	 *            Maximum value
-	 * @return Random number
-	 */
-	protected int createRandomNumber(int min, int max) {
-		int rand = (int) (Math.random() * max + min);
-		return rand;
-	}
+        return bytes;
+    }
+
+    /**
+     * Generates a random number
+     * 
+     * @param min
+     *            Minimum value
+     * @param max
+     *            Maximum value
+     * @return Random number
+     */
+    protected int createRandomNumber(int min, int max) {
+        return (int) (Math.random() * max + min);
+    }
 }

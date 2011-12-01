@@ -35,8 +35,8 @@ interface HttpTunnelClientWorkerOwner {
      * The HTTP tunnel client sink invokes this when the application code requests the connection
      * of an HTTP tunnel to the specified remote address.
      */
-    public void onConnectRequest(ChannelFuture connectFuture,
-            InetSocketAddress remoteAddress);
+    void onConnectRequest(ChannelFuture connectFuture,
+                          InetSocketAddress remoteAddress);
 
     /**
      * The send channel handler calls this method when the server accepts the open tunnel request,
@@ -44,25 +44,25 @@ interface HttpTunnelClientWorkerOwner {
      *
      * @param tunnelId the server allocated tunnel ID
      */
-    public void onTunnelOpened(String tunnelId);
+    void onTunnelOpened(String tunnelId);
 
     /**
      * The poll channel handler calls this method when the poll channel is connected, indicating
      * that full duplex communications are now possible.
      */
-    public void fullyEstablished();
+    void fullyEstablished();
 
     /**
      * The poll handler calls this method when some data is received and decoded from the server.
      * @param content the data received from the server
      */
-    public void onMessageReceived(ChannelBuffer content);
+    void onMessageReceived(ChannelBuffer content);
 
     /**
      * @return the name of the server with whom we are communicating with - this is used within
      * the HOST HTTP header for all requests. This is particularly important for operation behind
      * a proxy, where the HOST string is used to route the request.
      */
-    public String getServerHostName();
+    String getServerHostName();
 
 }

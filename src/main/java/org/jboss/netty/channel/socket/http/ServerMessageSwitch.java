@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureAggregator;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -238,7 +239,7 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
     /**
      * Used to pass the result received from one ChannelFutureListener to another verbatim.
      */
-    private final class RelayedChannelFutureListener implements
+    private static final class RelayedChannelFutureListener implements
             ChannelFutureListener {
         private final ChannelFuture originalFuture;
 
@@ -258,7 +259,6 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
 
     private static final class TunnelInfo {
         TunnelInfo() {
-            super();
         }
 
         public String tunnelId;

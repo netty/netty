@@ -33,7 +33,6 @@ import org.jboss.netty.buffer.HeapChannelBufferFactory;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Robert Harder (rob@iharder.net)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  *
  * @apiviz.landmark
  * @apiviz.uses org.jboss.netty.handler.codec.base64.Base64Dialect
@@ -53,21 +52,21 @@ public class Base64 {
 
     private static final byte EQUALS_SIGN_ENC = -1; // Indicates equals sign in encoding
 
-    private static final byte[] alphabet(Base64Dialect dialect) {
+    private static byte[] alphabet(Base64Dialect dialect) {
         if (dialect == null) {
             throw new NullPointerException("dialect");
         }
         return dialect.alphabet;
     }
 
-    private static final byte[] decodabet(Base64Dialect dialect) {
+    private static byte[] decodabet(Base64Dialect dialect) {
         if (dialect == null) {
             throw new NullPointerException("dialect");
         }
         return dialect.decodabet;
     }
 
-    private static final boolean breakLines(Base64Dialect dialect) {
+    private static boolean breakLines(Base64Dialect dialect) {
         if (dialect == null) {
             throw new NullPointerException("dialect");
         }

@@ -115,8 +115,6 @@ import org.jboss.netty.channel.Channels;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
- *
  * @apiviz.landmark
  */
 public class ConnectionlessBootstrap extends Bootstrap {
@@ -127,7 +125,6 @@ public class ConnectionlessBootstrap extends Bootstrap {
      * operation is requested.
      */
     public ConnectionlessBootstrap() {
-        super();
     }
 
     /**

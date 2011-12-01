@@ -44,6 +44,7 @@ public class IOStream {
 
 		// Configure the event pipeline factory.
 		bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+			@Override
 			public ChannelPipeline getPipeline() throws Exception {
 				DefaultChannelPipeline pipeline = new DefaultChannelPipeline();
 				pipeline.addLast("framer", new DelimiterBasedFrameDecoder(8192, Delimiters.lineDelimiter()));

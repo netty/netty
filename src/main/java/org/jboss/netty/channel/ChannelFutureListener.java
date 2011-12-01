@@ -32,8 +32,6 @@ import java.util.EventListener;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
  */
 public interface ChannelFutureListener extends EventListener {
 
@@ -41,7 +39,7 @@ public interface ChannelFutureListener extends EventListener {
      * A {@link ChannelFutureListener} that closes the {@link Channel} which is
      * associated with the specified {@link ChannelFuture}.
      */
-    static ChannelFutureListener CLOSE = new ChannelFutureListener() {
+    ChannelFutureListener CLOSE = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) {
             future.getChannel().close();
@@ -52,7 +50,7 @@ public interface ChannelFutureListener extends EventListener {
      * A {@link ChannelFutureListener} that closes the {@link Channel} when the
      * operation ended up with a failure or cancellation rather than a success.
      */
-    static ChannelFutureListener CLOSE_ON_FAILURE = new ChannelFutureListener() {
+    ChannelFutureListener CLOSE_ON_FAILURE = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) {
             if (!future.isSuccess()) {

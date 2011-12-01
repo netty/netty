@@ -33,6 +33,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
+ * Tests HTTP tunnel server channel factories
+ * 
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */

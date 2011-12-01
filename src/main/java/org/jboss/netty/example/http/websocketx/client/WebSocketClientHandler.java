@@ -51,12 +51,12 @@ import org.jboss.netty.util.CharsetUtil;
  */
 public class WebSocketClientHandler extends SimpleChannelUpstreamHandler implements WebSocketClient {
 
-    private ClientBootstrap bootstrap;
+    private final ClientBootstrap bootstrap;
     private URI url;
-    private WebSocketCallback callback;
+    private final WebSocketCallback callback;
     private Channel channel;
     private WebSocketClientHandshaker handshaker = null;
-    private WebSocketSpecificationVersion version;
+    private final WebSocketSpecificationVersion version;
 
     public WebSocketClientHandler(ClientBootstrap bootstrap, URI url, WebSocketSpecificationVersion version, WebSocketCallback callback) {
         this.bootstrap = bootstrap;
@@ -102,14 +102,17 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler impleme
         e.getChannel().close();
     }
 
+    @Override
     public ChannelFuture connect() {
         return bootstrap.connect(new InetSocketAddress(url.getHost(), url.getPort()));
     }
 
+    @Override
     public ChannelFuture disconnect() {
         return channel.close();
     }
 
+    @Override
     public ChannelFuture send(WebSocketFrame frame) {
         return channel.write(frame);
     }

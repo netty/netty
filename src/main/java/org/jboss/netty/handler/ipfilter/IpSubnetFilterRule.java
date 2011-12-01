@@ -39,8 +39,7 @@ public class IpSubnetFilterRule extends IpSubnet implements IpFilterRule
     */
    public IpSubnetFilterRule(boolean allow)
    {
-      super();
-      isAllowRule = allow;
+	   isAllowRule = allow;
    }
 
    /**

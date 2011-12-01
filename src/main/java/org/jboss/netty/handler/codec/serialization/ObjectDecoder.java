@@ -36,25 +36,39 @@ import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
- *
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.codec.serialization.ObjectDecoderInputStream - - - compatible with
  */
 public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
 
-    private final ClassLoader classLoader;
+    private final ClassResolver classResolver;
 
     /**
      * Creates a new decoder whose maximum object size is {@code 1048576}
      * bytes.  If the size of the received object is greater than
      * {@code 1048576} bytes, a {@link StreamCorruptedException} will be
      * raised.
+     * 
+     * @deprecated use {@link #ObjectDecoder(ClassResolver)}
      */
+    @Deprecated
     public ObjectDecoder() {
         this(1048576);
     }
 
+
+    /**
+     * Creates a new decoder whose maximum object size is {@code 1048576}
+     * bytes.  If the size of the received object is greater than
+     * {@code 1048576} bytes, a {@link StreamCorruptedException} will be
+     * raised.
+     * 
+     * @param classResolver  the {@link ClassResolver} to use for this decoder
+     */
+    public ObjectDecoder(ClassResolver classResolver) {
+        this(1048576, classResolver);
+    }
+    
     /**
      * Creates a new decoder with the specified maximum object size.
      *
@@ -62,9 +76,11 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
      *                       if the length of the received object is greater
      *                       than this value, {@link StreamCorruptedException}
      *                       will be raised.
+     * @deprecated           use {@link #ObjectDecoder(int, ClassResolver)}
      */
+    @Deprecated
     public ObjectDecoder(int maxObjectSize) {
-        this(maxObjectSize, null);
+        this(maxObjectSize, ClassResolvers.weakCachingResolver(null));
     }
 
     /**
@@ -74,14 +90,31 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
      *                       if the length of the received object is greater
      *                       than this value, {@link StreamCorruptedException}
      *                       will be raised.
-     * @param classLoader    the {@link ClassLoader} which will load the class
+     * @param classResolver    the {@link ClassResolver} which will load the class
      *                       of the serialized object
      */
-    public ObjectDecoder(int maxObjectSize, ClassLoader classLoader) {
+    public ObjectDecoder(int maxObjectSize, ClassResolver classResolver) {
         super(maxObjectSize, 0, 4, 0, 4);
-        this.classLoader = classLoader;
+        this.classResolver = classResolver;
     }
 
+
+    /**
+     * Create a new decoder with the specified maximum object size and the {@link ClassLoader} wrapped in {@link ClassResolvers#weakCachingResolver(ClassLoader)}
+     * 
+     * 
+     * @param maxObjectSize  the maximum byte length of the serialized object.
+     *                       if the length of the received object is greater
+     *                       than this value, {@link StreamCorruptedException}
+     *                       will be raised.
+     * @param classLoader    the the classloader to use
+     * @deprecated           use {@link #ObjectDecoder(int, ClassResolver)}
+     */
+    @Deprecated
+    public ObjectDecoder(int maxObjectSize, ClassLoader classLoader) {
+        this(maxObjectSize, ClassResolvers.weakCachingResolver(classLoader));
+    }
+    
     @Override
     protected Object decode(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
@@ -92,7 +125,7 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
         }
 
         return new CompactObjectInputStream(
-                new ChannelBufferInputStream(frame), classLoader).readObject();
+                new ChannelBufferInputStream(frame), classResolver).readObject();
     }
 
     @Override

@@ -6,6 +6,11 @@ import static org.jboss.netty.channel.socket.http.SaturationStateChange.*;
 import org.junit.Before;
 import org.junit.Test;
 
+/**
+ * Tests saturation managers
+ * 
+ * @author The Netty Project (netty-dev@lists.jboss.org)
+ */
 public class SaturationManagerTest {
 
     private SaturationManager manager;

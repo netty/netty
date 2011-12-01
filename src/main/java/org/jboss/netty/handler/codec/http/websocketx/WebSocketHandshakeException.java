@@ -22,13 +22,13 @@ package org.jboss.netty.handler.codec.http.websocketx;
  */
 public class WebSocketHandshakeException extends Exception {
 
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	public WebSocketHandshakeException(String s) {
-		super(s);
-	}
+    public WebSocketHandshakeException(String s) {
+        super(s);
+    }
 
-	public WebSocketHandshakeException(String s, Throwable throwable) {
-		super(s, throwable);
-	}
+    public WebSocketHandshakeException(String s, Throwable throwable) {
+        super(s, throwable);
+    }
 }

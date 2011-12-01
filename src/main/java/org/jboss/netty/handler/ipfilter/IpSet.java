@@ -32,5 +32,5 @@ public interface IpSet
     * @return returns true if the given IP address is contained in the current
     * IpSet.
     */
-   public boolean contains(InetAddress inetAddress1);
+   boolean contains(InetAddress inetAddress1);
 }

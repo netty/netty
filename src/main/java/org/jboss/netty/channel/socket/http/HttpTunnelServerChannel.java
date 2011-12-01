@@ -49,18 +49,25 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements
                 }
             };
 
-    protected HttpTunnelServerChannel(HttpTunnelServerChannelFactory factory,
+    protected static HttpTunnelServerChannel create(
+            HttpTunnelServerChannelFactory factory, ChannelPipeline pipeline) {
+        HttpTunnelServerChannel instance = new HttpTunnelServerChannel(factory, pipeline);
+        Channels.fireChannelOpen(instance);
+        return instance;
+    }
+
+    private HttpTunnelServerChannel(HttpTunnelServerChannelFactory factory,
             ChannelPipeline pipeline) {
         super(factory, pipeline, new HttpTunnelServerChannelSink());
 
         messageSwitch = new ServerMessageSwitch(new TunnelCreator());
         realChannel = factory.createRealChannel(this, messageSwitch);
+        // TODO fix calling of overrideable getPipeline() from constructor
         HttpTunnelServerChannelSink sink =
                 (HttpTunnelServerChannelSink) getPipeline().getSink();
         sink.setRealChannel(realChannel);
         sink.setCloseListener(CLOSE_FUTURE_PROXY);
         config = new HttpTunnelServerChannelConfig(realChannel);
-        Channels.fireChannelOpen(this);
     }
 
     @Override
@@ -96,7 +103,6 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements
             HttpTunnelAcceptedChannelFactory {
 
         TunnelCreator() {
-            super();
         }
 
         @Override
@@ -114,8 +120,8 @@ public class HttpTunnelServerChannel extends AbstractServerChannel implements
             HttpTunnelAcceptedChannelSink sink =
                     new HttpTunnelAcceptedChannelSink(messageSwitch,
                             newTunnelId, config);
-            return new HttpTunnelAcceptedChannel(HttpTunnelServerChannel.this,
-                    getFactory(), childPipeline, sink, remoteAddress, config);
+            return HttpTunnelAcceptedChannel.create(HttpTunnelServerChannel.this, getFactory(), childPipeline, sink,
+                    remoteAddress, config);
         }
 
         @Override

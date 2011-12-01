@@ -41,8 +41,6 @@ import com.google.protobuf.CodedInputStream;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Tomasz Blachowicz (tblachowicz@gmail.com)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
  */
 public class ProtobufVarint32FrameDecoder extends FrameDecoder {
 
@@ -53,7 +51,6 @@ public class ProtobufVarint32FrameDecoder extends FrameDecoder {
      * Creates a new instance.
      */
     public ProtobufVarint32FrameDecoder() {
-        super();
     }
 
     @Override

@@ -283,8 +283,6 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
- *
  * @param <T>
  *        the state type; use {@link VoidEnum} if state management is unused
  *
@@ -504,6 +502,11 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
 
             // A successful decode
             unfoldAndFireMessageReceived(context, result, remoteAddress);
+
+            if (!cumulation.readable()) {
+                this.cumulation.set(null);
+                replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
+            }
         }
     }
 
@@ -551,6 +554,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
         } catch (ReplayError replay) {
             // Ignore
         } finally {
+            replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
             ctx.sendUpstream(e);
         }
     }

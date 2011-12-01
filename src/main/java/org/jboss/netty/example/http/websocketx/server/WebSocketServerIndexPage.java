@@ -26,8 +26,6 @@ import org.jboss.netty.util.CharsetUtil;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
- *
- * @version $Rev$, $Date$
  */
 public class WebSocketServerIndexPage {
 
@@ -50,7 +48,7 @@ public class WebSocketServerIndexPage {
         "} else {" + NEWLINE +
         "  alert(\"Your browser does not support Web Socket.\");" + NEWLINE +
         "}" + NEWLINE +
-        "" + NEWLINE +
+        NEWLINE +
         "function send(message) {" + NEWLINE +
         "  if (!window.WebSocket) { return; }" + NEWLINE +
         "  if (socket.readyState == WebSocket.OPEN) {" + NEWLINE +

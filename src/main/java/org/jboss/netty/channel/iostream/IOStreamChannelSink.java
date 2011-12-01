@@ -26,153 +26,150 @@ import java.util.concurrent.ExecutorService;
 import static org.jboss.netty.channel.Channels.*;
 
 /**
- * A {@link org.jboss.netty.channel.ChannelSink} implementation which reads from an {@link java.io.InputStream} and
- * writes to an {@link java.io.OutputStream}.
- *
+ * A {@link org.jboss.netty.channel.ChannelSink} implementation which reads from
+ * an {@link java.io.InputStream} and writes to an {@link java.io.OutputStream}.
+ * 
  * @author Daniel Bimschas
  * @author Dennis Pfisterer
  */
 public class IOStreamChannelSink extends AbstractChannelSink {
 
-	private static class ReadRunnable implements Runnable {
+    private static class ReadRunnable implements Runnable {
 
-		private final IOStreamChannelSink channelSink;
+        private final IOStreamChannelSink channelSink;
 
-		public ReadRunnable(final IOStreamChannelSink channelSink) {
-			this.channelSink = channelSink;
-		}
+        public ReadRunnable(final IOStreamChannelSink channelSink) {
+            this.channelSink = channelSink;
+        }
 
-		@Override
-		public void run() {
+        @Override
+        public void run() {
 
-			PushbackInputStream in = channelSink.inputStream;
+            PushbackInputStream in = channelSink.inputStream;
 
-			while (channelSink.channel.isOpen()) {
+            while (channelSink.channel.isOpen()) {
 
-				byte[] buf;
-				int readBytes;
-				try {
-					int bytesToRead = in.available();
-					if (bytesToRead > 0) {
-						buf = new byte[bytesToRead];
-						readBytes = in.read(buf);
-					} else {
-						// peek into the stream if it was closed (value=-1)
-						int b = in.read();
-						if (b < 0) {
-							break;
-						}
-						// push back the byte which was read too much
-						in.unread(b);
-						continue;
-					}
-				} catch (Throwable t) {
-					if (!channelSink.channel.getCloseFuture().isDone()) {
-						fireExceptionCaught(channelSink.channel, t);
-					}
-					break;
-				}
+                byte[] buf;
+                int readBytes;
+                try {
+                    int bytesToRead = in.available();
+                    if (bytesToRead > 0) {
+                        buf = new byte[bytesToRead];
+                        readBytes = in.read(buf);
+                    } else {
+                        // peek into the stream if it was closed (value=-1)
+                        int b = in.read();
+                        if (b < 0) {
+                            break;
+                        }
+                        // push back the byte which was read too much
+                        in.unread(b);
+                        continue;
+                    }
+                } catch (Throwable t) {
+                    if (!channelSink.channel.getCloseFuture().isDone()) {
+                        fireExceptionCaught(channelSink.channel, t);
+                    }
+                    break;
+                }
 
-				fireMessageReceived(channelSink.channel, ChannelBuffers.wrappedBuffer(buf, 0, readBytes));
-			}
+                fireMessageReceived(channelSink.channel, ChannelBuffers.wrappedBuffer(buf, 0, readBytes));
+            }
 
-			// Clean up.
-			close(channelSink.channel);
-		}
-	}
+            // Clean up.
+            close(channelSink.channel);
+        }
+    }
 
-	private final ExecutorService executorService;
+    private final ExecutorService executorService;
 
-	private IOStreamChannel channel;
+    private IOStreamChannel channel;
 
-	public IOStreamChannelSink(final ExecutorService executorService) {
-		this.executorService = executorService;
-	}
+    public IOStreamChannelSink(final ExecutorService executorService) {
+        this.executorService = executorService;
+    }
 
-	public boolean isConnected() {
-		return inputStream != null && outputStream != null;
-	}
+    public boolean isConnected() {
+        return inputStream != null && outputStream != null;
+    }
 
-	public IOStreamAddress getRemoteAddress() {
-		return remoteAddress;
-	}
+    public IOStreamAddress getRemoteAddress() {
+        return remoteAddress;
+    }
 
-	public boolean isBound() {
-		return false;
-	}
+    public boolean isBound() {
+        return false;
+    }
 
-	public ChannelConfig getConfig() {
-		return config;
-	}
+    public ChannelConfig getConfig() {
+        return config;
+    }
 
-	public void setChannel(final IOStreamChannel channel) {
-		this.channel = channel;
-	}
+    public void setChannel(final IOStreamChannel channel) {
+        this.channel = channel;
+    }
 
-	private IOStreamAddress remoteAddress;
+    private IOStreamAddress remoteAddress;
 
-	private OutputStream outputStream;
+    private OutputStream outputStream;
 
-	private PushbackInputStream inputStream;
+    private PushbackInputStream inputStream;
 
-	private ChannelConfig config = new DefaultChannelConfig();
+    private final ChannelConfig config = new DefaultChannelConfig();
 
-	@Override
-	public void eventSunk(final ChannelPipeline pipeline, final ChannelEvent e) throws Exception {
+    @Override
+    public void eventSunk(final ChannelPipeline pipeline, final ChannelEvent e) throws Exception {
 
-		final ChannelFuture future = e.getFuture();
+        final ChannelFuture future = e.getFuture();
 
-		if (e instanceof ChannelStateEvent) {
+        if (e instanceof ChannelStateEvent) {
 
-			final ChannelStateEvent stateEvent = (ChannelStateEvent) e;
-			final ChannelState state = stateEvent.getState();
-			final Object value = stateEvent.getValue();
+            final ChannelStateEvent stateEvent = (ChannelStateEvent) e;
+            final ChannelState state = stateEvent.getState();
+            final Object value = stateEvent.getValue();
 
-			switch (state) {
+            switch (state) {
 
-				case OPEN:
-					if (Boolean.FALSE.equals(value)) {
-						outputStream = null;
-						inputStream = null;
-						((IOStreamChannel) e.getChannel()).doSetClosed();
-					}
-					break;
+            case OPEN:
+                if (Boolean.FALSE.equals(value)) {
+                    outputStream = null;
+                    inputStream = null;
+                    ((IOStreamChannel) e.getChannel()).doSetClosed();
+                }
+                break;
 
-				case BOUND:
-					throw new UnsupportedOperationException();
+            case BOUND:
+                throw new UnsupportedOperationException();
 
-				case CONNECTED:
-					if (value != null) {
-						remoteAddress = (IOStreamAddress) value;
-						outputStream = remoteAddress.getOutputStream();
-						inputStream = new PushbackInputStream(remoteAddress.getInputStream());
-						executorService.execute(new ReadRunnable(this));
-						future.setSuccess();
-					}
-					break;
+            case CONNECTED:
+                if (value != null) {
+                    remoteAddress = (IOStreamAddress) value;
+                    outputStream = remoteAddress.getOutputStream();
+                    inputStream = new PushbackInputStream(remoteAddress.getInputStream());
+                    executorService.execute(new ReadRunnable(this));
+                    future.setSuccess();
+                }
+                break;
 
-				case INTEREST_OPS:
-					// TODO implement
-					throw new UnsupportedOperationException();
+            case INTEREST_OPS:
+                // TODO implement
+                throw new UnsupportedOperationException();
 
-			}
+            }
 
-		} else if (e instanceof MessageEvent) {
+        } else if (e instanceof MessageEvent) {
 
-			final MessageEvent event = (MessageEvent) e;
-			if (event.getMessage() instanceof ChannelBuffer) {
+            final MessageEvent event = (MessageEvent) e;
+            if (event.getMessage() instanceof ChannelBuffer) {
 
-				final ChannelBuffer buffer = (ChannelBuffer) event.getMessage();
-				buffer.readBytes(outputStream, buffer.readableBytes());
-				outputStream.flush();
-				future.setSuccess();
+                final ChannelBuffer buffer = (ChannelBuffer) event.getMessage();
+                buffer.readBytes(outputStream, buffer.readableBytes());
+                outputStream.flush();
+                future.setSuccess();
 
-			} else {
-				throw new IllegalArgumentException(
-						"Only ChannelBuffer objects are supported to be written onto the IOStreamChannelSink! "
-								+ "Please check if the encoder pipeline is configured correctly."
-				);
-			}
-		}
-	}
+            } else {
+                throw new IllegalArgumentException("Only ChannelBuffer objects are supported to be written onto the IOStreamChannelSink! " + "Please check if the encoder pipeline is configured correctly.");
+            }
+        }
+    }
 }

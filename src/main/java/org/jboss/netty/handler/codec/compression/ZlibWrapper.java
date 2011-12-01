@@ -21,7 +21,6 @@ package org.jboss.netty.handler.codec.compression;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 public enum ZlibWrapper {
     /**
@@ -40,5 +39,5 @@ public enum ZlibWrapper {
      * Try {@link #ZLIB} first and then {@link #NONE} if the first attempt fails.
      * Please note that you can specify this wrapper type only when decompressing.
      */
-    ZLIB_OR_NONE;
+    ZLIB_OR_NONE
 }

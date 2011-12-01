@@ -15,6 +15,13 @@
  */
 package org.jboss.netty.example.localtime;
 
+// How to generate
+// ===============
+// $ protoc src/main/java/org/jboss/netty/example/localtime/LocalTimeProtocol.proto \
+//          --java_out=src/main/java
+//
+// Add @SuppressWarnings("all") to the generated code not to pollute IDE task list.
+
 option optimize_for = SPEED;
 
 enum Continent {

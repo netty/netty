@@ -48,9 +48,6 @@ import org.junit.Test;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 public abstract class AbstractSocketStringEchoTest {
 
@@ -162,13 +159,12 @@ public abstract class AbstractSocketStringEchoTest {
         }
     }
 
-    private class EchoHandler extends SimpleChannelUpstreamHandler {
+    private static class EchoHandler extends SimpleChannelUpstreamHandler {
         volatile Channel channel;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
 
         EchoHandler() {
-            super();
         }
 
         @Override

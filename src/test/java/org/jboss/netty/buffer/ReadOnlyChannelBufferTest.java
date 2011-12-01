@@ -29,11 +29,10 @@ import java.nio.channels.ScatteringByteChannel;
 import org.junit.Test;
 
 /**
+ * Tests read-only channel buffers
+ * 
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 public class ReadOnlyChannelBufferTest {
 
@@ -93,7 +92,7 @@ public class ReadOnlyChannelBufferTest {
         expect(buf.getLong(21)).andReturn(22L);
 
         ByteBuffer bb = ByteBuffer.allocate(100);
-        ByteBuffer[] bbs = new ByteBuffer[] { ByteBuffer.allocate(101), ByteBuffer.allocate(102) };
+        ByteBuffer[] bbs = { ByteBuffer.allocate(101), ByteBuffer.allocate(102) };
 
         expect(buf.toByteBuffer(23, 24)).andReturn(bb);
         expect(buf.toByteBuffers(25, 26)).andReturn(bbs);

@@ -204,8 +204,6 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
- *
  * @apiviz.landmark
  * @apiviz.composedOf org.jboss.netty.channel.ChannelHandlerContext
  * @apiviz.owns       org.jboss.netty.channel.ChannelHandler

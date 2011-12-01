@@ -38,6 +38,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
+ * Tests HTTP tunnel server channel sinks
+ * 
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
@@ -83,9 +85,8 @@ public class HttpTunnelServerChannelSinkTest {
             }
         });
 
-        ChannelFuture virtualFuture1 = Channels.close(channel);
+        ChannelFuture virtualFuture = Channels.close(channel);
         mockContext.assertIsSatisfied();
-        ChannelFuture virtualFuture = virtualFuture1;
         realFuture.setSuccess();
         assertTrue(virtualFuture.isSuccess());
     }
@@ -140,14 +141,12 @@ public class HttpTunnelServerChannelSinkTest {
             }
         });
 
-        ChannelFuture virtualFuture = Channels.bind(channel, toAddress);
-        return virtualFuture;
+        return Channels.bind(channel, toAddress);
     }
 
     private final class ExceptionCatcher extends SimpleChannelUpstreamHandler {
 
         ExceptionCatcher() {
-            super();
         }
 
         @Override

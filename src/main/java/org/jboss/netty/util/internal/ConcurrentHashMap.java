@@ -43,7 +43,6 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author Doug Lea
  * @author Jason T. Greene
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  *
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
@@ -138,7 +137,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
      * @param hash the hash code for the key
      * @return the segment
      */
-    final Segment<K, V> segmentFor(int hash) {
+    Segment<K, V> segmentFor(int hash) {
         return segments[hash >>> segmentShift & segmentMask];
     }
 
@@ -173,21 +172,21 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
         }
 
         @SuppressWarnings("unchecked")
-        final K key() {
+        K key() {
             return (K) key;
         }
 
         @SuppressWarnings("unchecked")
-        final V value() {
+        V value() {
             return (V) value;
         }
 
-        final void setValue(V value) {
+        void setValue(V value) {
             this.value = value;
         }
 
         @SuppressWarnings("unchecked")
-        static final <K, V> HashEntry<K, V>[] newArray(int i) {
+        static <K, V> HashEntry<K, V>[] newArray(int i) {
             return new HashEntry[i];
         }
     }
@@ -273,7 +272,7 @@ public final class ConcurrentHashMap<K, V> extends AbstractMap<K, V>
         }
 
         @SuppressWarnings("unchecked")
-        static final <K, V> Segment<K, V>[] newArray(int i) {
+        static <K, V> Segment<K, V>[] newArray(int i) {
             return new Segment[i];
         }
 

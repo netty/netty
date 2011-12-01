@@ -27,13 +27,11 @@ import java.nio.charset.Charset;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.ChannelBufferIndexFinder;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 class ReplayingDecoderBuffer implements ChannelBuffer {
 
@@ -41,6 +39,12 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     private final ChannelBuffer buffer;
     private boolean terminated;
+
+    public static ReplayingDecoderBuffer EMPTY_BUFFER = new ReplayingDecoderBuffer(ChannelBuffers.EMPTY_BUFFER);
+
+    static {
+        EMPTY_BUFFER.terminate();
+    }
 
     ReplayingDecoderBuffer(ChannelBuffer buffer) {
         this.buffer = buffer;
@@ -118,6 +122,12 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     @Override
     public ChannelBuffer duplicate() {
         throw new UnreplayableOperationException();
+    }
+    
+    @Override
+    public boolean getBoolean(int index) {
+        checkIndex(index);
+        return buffer.getBoolean(index);
     }
 
     @Override
@@ -350,6 +360,12 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
         } else {
             return Integer.MAX_VALUE - buffer.readerIndex();
         }
+    } 
+    
+    @Override
+    public boolean readBoolean() {
+        checkReadableBytes(1);
+        return buffer.readBoolean();
     }
 
     @Override
@@ -497,6 +513,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
 
     @Override
     public void resetWriterIndex() {
+        throw new UnreplayableOperationException();
+    }
+    
+    @Override
+    public void setBoolean(int index, boolean value) {
         throw new UnreplayableOperationException();
     }
 
@@ -661,6 +682,11 @@ class ReplayingDecoderBuffer implements ChannelBuffer {
     @Override
     public int writableBytes() {
         return 0;
+    }
+    
+    @Override
+    public void writeBoolean(boolean value) {
+        throw new UnreplayableOperationException();
     }
 
     @Override

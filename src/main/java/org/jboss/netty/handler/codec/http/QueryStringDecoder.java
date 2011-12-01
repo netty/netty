@@ -30,16 +30,17 @@ import org.jboss.netty.util.CharsetUtil;
  * Splits an HTTP query string into a path string and key-value parameter pairs.
  * This decoder is for one time use only.  Create a new instance for each URI:
  * <pre>
- * {@link QueryStringDecoder} decoder = new {@link QueryStringDecoder}("/hello?recipient=world");
+ * {@link QueryStringDecoder} decoder = new {@link QueryStringDecoder}("/hello?recipient=world&x=1;y=2");
  * assert decoder.getPath().equals("/hello");
  * assert decoder.getParameters().get("recipient").equals("world");
+ * assert decoder.getParameters().get("x").equals("1");
+ * assert decoder.getParameters().get("y").equals("2");
  * </pre>
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://tsunanet.net/">Benoit Sigoure</a>
- * @version $Rev$, $Date$
  *
  * @see QueryStringEncoder
  *
@@ -73,7 +74,8 @@ public class QueryStringDecoder {
             throw new NullPointerException("charset");
         }
 
-        this.uri = uri;
+        // http://en.wikipedia.org/wiki/Query_string
+        this.uri = uri.replace(';', '&');
         this.charset = charset;
     }
 
@@ -97,7 +99,8 @@ public class QueryStringDecoder {
             throw new NullPointerException("charset");
         }
 
-        this.uri = uri.toASCIIString();
+        // http://en.wikipedia.org/wiki/Query_string
+        this.uri = uri.toASCIIString().replace(';', '&');
         this.charset = charset;
     }
 

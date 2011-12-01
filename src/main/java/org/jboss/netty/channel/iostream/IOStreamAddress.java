@@ -20,29 +20,35 @@ import java.io.OutputStream;
 import java.net.SocketAddress;
 
 /**
- * A {@link java.net.SocketAddress} implementation holding an {@link java.io.InputStream} and an {@link java.io.OutputStream} instance used as
- * "remote" address to connect to with a {@link IOStreamChannel}.
- *
+ * A {@link java.net.SocketAddress} implementation holding an
+ * {@link java.io.InputStream} and an {@link java.io.OutputStream} instance used
+ * as "remote" address to connect to with a {@link IOStreamChannel}.
+ * 
  * @author Daniel Bimschas
  * @author Dennis Pfisterer
  */
 public class IOStreamAddress extends SocketAddress {
 
-	private final InputStream inputStream;
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -4382415449059935960L;
 
-	private final OutputStream outputStream;
+    private final InputStream inputStream;
 
-	public IOStreamAddress(final InputStream inputStream, final OutputStream outputStream) {
+    private final OutputStream outputStream;
 
-		this.inputStream = inputStream;
-		this.outputStream = outputStream;
-	}
+    public IOStreamAddress(final InputStream inputStream, final OutputStream outputStream) {
 
-	public InputStream getInputStream() {
-		return inputStream;
-	}
+        this.inputStream = inputStream;
+        this.outputStream = outputStream;
+    }
 
-	public OutputStream getOutputStream() {
-		return outputStream;
-	}
+    public InputStream getInputStream() {
+        return inputStream;
+    }
+
+    public OutputStream getOutputStream() {
+        return outputStream;
+    }
 }

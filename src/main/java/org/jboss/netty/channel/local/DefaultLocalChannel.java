@@ -39,7 +39,6 @@ import org.jboss.netty.util.internal.ThreadLocalBoolean;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 final class DefaultLocalChannel extends AbstractChannel implements LocalChannel {
 
@@ -59,7 +58,16 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
     volatile LocalAddress localAddress;
     volatile LocalAddress remoteAddress;
 
-    DefaultLocalChannel(LocalServerChannel parent, ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, DefaultLocalChannel pairedChannel) {
+    static DefaultLocalChannel create(LocalServerChannel parent,
+            ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink,
+            DefaultLocalChannel pairedChannel) {
+        DefaultLocalChannel instance = new DefaultLocalChannel(parent, factory, pipeline, sink,
+                        pairedChannel);
+        fireChannelOpen(instance);
+        return instance;
+    }
+
+    private DefaultLocalChannel(LocalServerChannel parent, ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, DefaultLocalChannel pairedChannel) {
         super(parent, factory, pipeline, sink);
         this.pairedChannel = pairedChannel;
         config = new DefaultChannelConfig();
@@ -73,7 +81,6 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
             }
         });
 
-        fireChannelOpen(this);
     }
 
     @Override
@@ -96,7 +103,7 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
         return state.get() == ST_CONNECTED;
     }
 
-    final void setBound() throws ClosedChannelException {
+    void setBound() throws ClosedChannelException {
         if (!state.compareAndSet(ST_OPEN, ST_BOUND)) {
             switch (state.get()) {
             case ST_CLOSED:
@@ -107,7 +114,7 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
         }
     }
 
-    final void setConnected() {
+    void setConnected() {
         if (state.get() != ST_CLOSED) {
             state.set(ST_CONNECTED);
         }

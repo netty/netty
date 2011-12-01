@@ -31,11 +31,10 @@ import org.easymock.classextension.EasyMock;
 import org.junit.Test;
 
 /**
+ * Tests channel buffers
+ * 
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 public class ChannelBuffersTest {
 
@@ -177,10 +176,10 @@ public class ChannelBuffersTest {
         assertSame(EMPTY_BUFFER, wrappedBuffer(new byte[][] { new byte[0] }));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new ByteBuffer[0]));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new ByteBuffer[] { ByteBuffer.allocate(0) }));
-        assertSame(EMPTY_BUFFER, wrappedBuffer(new ByteBuffer[] { ByteBuffer.allocate(0), ByteBuffer.allocate(0) }));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(ByteBuffer.allocate(0), ByteBuffer.allocate(0)));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new ChannelBuffer[0]));
         assertSame(EMPTY_BUFFER, wrappedBuffer(new ChannelBuffer[] { buffer(0) }));
-        assertSame(EMPTY_BUFFER, wrappedBuffer(new ChannelBuffer[] { buffer(0), buffer(0) }));
+        assertSame(EMPTY_BUFFER, wrappedBuffer(buffer(0), buffer(0)));
 
         assertSame(EMPTY_BUFFER, copiedBuffer(new byte[0]));
         assertSame(EMPTY_BUFFER, copiedBuffer(LITTLE_ENDIAN, new byte[0]));
@@ -194,10 +193,10 @@ public class ChannelBuffersTest {
         assertSame(EMPTY_BUFFER, copiedBuffer(new byte[][] { new byte[0] }));
         assertSame(EMPTY_BUFFER, copiedBuffer(new ByteBuffer[0]));
         assertSame(EMPTY_BUFFER, copiedBuffer(new ByteBuffer[] { ByteBuffer.allocate(0) }));
-        assertSame(EMPTY_BUFFER, copiedBuffer(new ByteBuffer[] { ByteBuffer.allocate(0), ByteBuffer.allocate(0) }));
+        assertSame(EMPTY_BUFFER, copiedBuffer(ByteBuffer.allocate(0), ByteBuffer.allocate(0)));
         assertSame(EMPTY_BUFFER, copiedBuffer(new ChannelBuffer[0]));
         assertSame(EMPTY_BUFFER, copiedBuffer(new ChannelBuffer[] { buffer(0) }));
-        assertSame(EMPTY_BUFFER, copiedBuffer(new ChannelBuffer[] { buffer(0), buffer(0) }));
+        assertSame(EMPTY_BUFFER, copiedBuffer(buffer(0), buffer(0)));
     }
 
     @Test

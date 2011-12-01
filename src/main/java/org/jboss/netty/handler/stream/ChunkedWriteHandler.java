@@ -70,7 +70,6 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  *
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.stream.ChunkedInput oneway - - reads from
@@ -85,13 +84,6 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
 
     private ChannelHandlerContext ctx;
     private MessageEvent currentEvent;
-
-    /**
-     * Creates a new instance.
-     */
-    public ChunkedWriteHandler() {
-        super();
-    }
 
     /**
      * Continues to fetch the chunks from the input.

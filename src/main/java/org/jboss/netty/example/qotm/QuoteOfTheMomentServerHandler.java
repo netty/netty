@@ -25,14 +25,13 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 public class QuoteOfTheMomentServerHandler extends SimpleChannelUpstreamHandler {
 
     private static final Random random = new Random();
 
     // Quotes from Mohandas K. Gandhi:
-    private static final String[] quotes = new String[] {
+    private static final String[] quotes = {
         "Where there is love there is life.",
         "First they ignore you, then they laugh at you, then they fight you, then you win.",
         "Be the change you want to see in the world.",

@@ -36,7 +36,6 @@ import org.jboss.netty.logging.InternalLogLevel;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
- * @version $Rev$, $Date$
  */
 public class LocalExample {
     public static void main(String[] args) throws Exception {

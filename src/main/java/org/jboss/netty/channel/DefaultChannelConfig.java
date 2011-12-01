@@ -28,21 +28,11 @@ import org.jboss.netty.util.internal.ConversionUtil;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 public class DefaultChannelConfig implements ChannelConfig {
 
     private volatile ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
     private volatile int connectTimeoutMillis = 10000; // 10 seconds
-
-    /**
-     * Creates a new instance.
-     */
-    public DefaultChannelConfig() {
-        super();
-    }
 
     @Override
     public void setOptions(Map<String, Object> options) {

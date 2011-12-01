@@ -50,8 +50,6 @@ import org.jboss.netty.util.CharsetUtil;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
- * 
- * @version $Rev$, $Date$
  */
 public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 	private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandler.class);
@@ -104,7 +102,6 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 		} else {
 			this.handshaker.executeOpeningHandshake(ctx, req);
 		}
-		return;
 	}
 
 	private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {

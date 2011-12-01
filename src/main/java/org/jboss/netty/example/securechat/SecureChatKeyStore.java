@@ -32,11 +32,9 @@ import java.io.InputStream;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
  */
 public class SecureChatKeyStore {
-    private static final short[] DATA = new short[] {
+    private static final short[] DATA = {
         0xfe, 0xed, 0xfe, 0xed, 0x00, 0x00, 0x00, 0x02,
         0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01,
         0x00, 0x07, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c,

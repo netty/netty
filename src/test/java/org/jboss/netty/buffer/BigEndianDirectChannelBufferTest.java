@@ -20,11 +20,10 @@ import static org.junit.Assert.*;
 import java.nio.ByteOrder;
 
 /**
+ * Tests big-endian direct channel buffers
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
  */
 public class BigEndianDirectChannelBufferTest extends AbstractChannelBufferTest {
 

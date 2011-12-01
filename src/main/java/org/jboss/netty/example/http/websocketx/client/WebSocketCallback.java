@@ -41,7 +41,7 @@ public interface WebSocketCallback {
      * @param client
      *            Current client used to connect
      */
-    public void onConnect(WebSocketClient client);
+    void onConnect(WebSocketClient client);
 
     /**
      * Called when the client got disconnected from the server.
@@ -49,7 +49,7 @@ public interface WebSocketCallback {
      * @param client
      *            Current client that was disconnected
      */
-    public void onDisconnect(WebSocketClient client);
+    void onDisconnect(WebSocketClient client);
 
     /**
      * Called when a message arrives from the server.
@@ -59,7 +59,7 @@ public interface WebSocketCallback {
      * @param frame
      *            Data received from server
      */
-    public void onMessage(WebSocketClient client, WebSocketFrame frame);
+    void onMessage(WebSocketClient client, WebSocketFrame frame);
 
     /**
      * Called when an unhandled errors occurs.
@@ -67,5 +67,5 @@ public interface WebSocketCallback {
      * @param t
      *            The causing error
      */
-    public void onError(Throwable t);
+    void onError(Throwable t);
 }

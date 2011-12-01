@@ -43,7 +43,6 @@ import com.google.protobuf.CodedOutputStream;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Tomasz Blachowicz (tblachowicz@gmail.com)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 @Sharable
 public class ProtobufVarint32LengthFieldPrepender extends OneToOneEncoder {
@@ -52,7 +51,6 @@ public class ProtobufVarint32LengthFieldPrepender extends OneToOneEncoder {
      * Creates a new instance.
      */
     public ProtobufVarint32LengthFieldPrepender() {
-        super();
     }
 
     @Override

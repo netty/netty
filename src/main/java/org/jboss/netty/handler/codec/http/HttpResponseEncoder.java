@@ -26,7 +26,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 public class HttpResponseEncoder extends HttpMessageEncoder {
 
@@ -34,7 +33,6 @@ public class HttpResponseEncoder extends HttpMessageEncoder {
      * Creates a new instance.
      */
     public HttpResponseEncoder() {
-        super();
     }
 
     @Override

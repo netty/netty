@@ -73,10 +73,20 @@ public class HttpTunnelClientChannel extends AbstractChannel implements
 
     private final SaturationManager saturationManager;
 
+    protected static HttpTunnelClientChannel create(ChannelFactory factory,
+            ChannelPipeline pipeline, HttpTunnelClientChannelSink sink,
+            ClientSocketChannelFactory outboundFactory,
+            ChannelGroup realConnections) {
+        HttpTunnelClientChannel instance = new HttpTunnelClientChannel(factory, pipeline, sink,
+                        outboundFactory, realConnections);
+        Channels.fireChannelOpen(instance);
+        return instance;
+    }
+
     /**
      * @see HttpTunnelClientChannelFactory#newChannel(ChannelPipeline)
      */
-    protected HttpTunnelClientChannel(ChannelFactory factory,
+    private HttpTunnelClientChannel(ChannelFactory factory,
             ChannelPipeline pipeline, HttpTunnelClientChannelSink sink,
             ClientSocketChannelFactory outboundFactory,
             ChannelGroup realConnections) {
@@ -97,7 +107,6 @@ public class HttpTunnelClientChannel extends AbstractChannel implements
         realConnections.add(sendChannel);
         realConnections.add(pollChannel);
 
-        Channels.fireChannelOpen(this);
     }
 
     @Override
@@ -279,7 +288,7 @@ public class HttpTunnelClientChannel extends AbstractChannel implements
         Channels.fireChannelInterestChanged(this);
     }
 
-    private class ConsolidatingFutureListener implements ChannelFutureListener {
+    private static class ConsolidatingFutureListener implements ChannelFutureListener {
 
         private final ChannelFuture completionFuture;
 

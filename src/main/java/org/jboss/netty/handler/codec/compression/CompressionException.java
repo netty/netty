@@ -23,7 +23,6 @@ import java.io.IOException;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 public class CompressionException extends RuntimeException {
 
@@ -33,7 +32,6 @@ public class CompressionException extends RuntimeException {
      * Creates a new instance.
      */
     public CompressionException() {
-        super();
     }
 
     /**

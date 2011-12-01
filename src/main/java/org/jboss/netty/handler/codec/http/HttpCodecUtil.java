@@ -23,7 +23,6 @@ import org.jboss.netty.util.CharsetUtil;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
- * @version $Rev$, $Date$
  */
 class HttpCodecUtil {
     //space ' '
@@ -50,7 +49,7 @@ class HttpCodecUtil {
     /**
      * carriage return line feed
      */
-    static final byte[] CRLF = new byte[] { CR, LF };
+    static final byte[] CRLF = { CR, LF };
 
     /**
     * Colon ':'
@@ -72,7 +71,6 @@ class HttpCodecUtil {
     static final Charset DEFAULT_CHARSET = CharsetUtil.UTF_8;
 
     private HttpCodecUtil() {
-        super();
     }
 
     static void validateHeaderName(String name) {

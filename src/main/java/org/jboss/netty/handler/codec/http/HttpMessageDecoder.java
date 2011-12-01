@@ -100,7 +100,6 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  *
  * @apiviz.landmark
  */
@@ -120,11 +119,10 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
      *
      * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
      * @author <a href="http://gleamynode.net/">Trustin Lee</a>
-     * @version $Rev$, $Date$
      *
      * @apiviz.exclude
      */
-    protected static enum State {
+    protected enum State {
         SKIP_CONTROL_CHARS,
         READ_INITIAL,
         READ_HEADER,
@@ -136,7 +134,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         READ_CHUNKED_CONTENT,
         READ_CHUNKED_CONTENT_AS_CHUNKS,
         READ_CHUNK_DELIMITER,
-        READ_CHUNK_FOOTER;
+        READ_CHUNK_FOOTER
     }
 
     /**

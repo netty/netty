@@ -23,7 +23,6 @@ import org.junit.Test;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://tsunanet.net/">Benoit Sigoure</a>
- * @version $Rev$, $Date$
  */
 public class QueryStringDecoderTest {
 
@@ -106,7 +105,7 @@ public class QueryStringDecoderTest {
                 // not rely on the platform's default encoding (not portable).
                 new byte[] {'C', 'a', 'f', 'f', (byte) 0xC3, (byte) 0xA9},
                 "UTF-8");
-        final String[] tests = new String[] {
+        final String[] tests = {
             // Encoded   ->   Decoded or error message substring
             "",               "",
             "foo",            "foo",

@@ -494,43 +494,41 @@ final class Deflate {
 
     // Output a byte on the stream.
     // IN assertion: there is enough room in pending_buf.
-    private final void put_byte(byte[] p, int start, int len) {
+    private void put_byte(byte[] p, int start, int len) {
         System.arraycopy(p, start, pending_buf, pending, len);
         pending += len;
     }
 
-    private final void put_byte(byte c) {
+    private void put_byte(byte c) {
         pending_buf[pending ++] = c;
     }
 
-    private final void put_short(int w) {
+    private void put_short(int w) {
         put_byte((byte) w/*&0xff*/);
         put_byte((byte) (w >>> 8));
     }
 
-    private final void putShortMSB(int b) {
+    private void putShortMSB(int b) {
         put_byte((byte) (b >> 8));
         put_byte((byte) b/*&0xff*/);
     }
 
-    private final void send_code(int c, short[] tree) {
+    private void send_code(int c, short[] tree) {
         int c2 = c * 2;
         send_bits((tree[c2] & 0xffff), (tree[c2 + 1] & 0xffff));
     }
 
     private void send_bits(int value, int length) {
-        int len = length;
-        if (bi_valid > Buf_size - len) {
-            int val = value;
+        if (bi_valid > Buf_size - length) {
             //      bi_buf |= (val << bi_valid);
-            bi_buf |= val << bi_valid & 0xffff;
+            bi_buf |= value << bi_valid & 0xffff;
             put_short(bi_buf);
-            bi_buf = (short) (val >>> Buf_size - bi_valid);
-            bi_valid += len - Buf_size;
+            bi_buf = (short) (value >>> Buf_size - bi_valid);
+            bi_valid += length - Buf_size;
         } else {
             //      bi_buf |= (value) << bi_valid;
             bi_buf |= value << bi_valid & 0xffff;
-            bi_valid += len;
+            bi_valid += length;
         }
     }
 

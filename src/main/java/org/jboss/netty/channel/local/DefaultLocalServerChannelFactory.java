@@ -24,7 +24,6 @@ import org.jboss.netty.channel.ChannelSink;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  *
  * @apiviz.landmark
  */
@@ -32,16 +31,9 @@ public class DefaultLocalServerChannelFactory implements LocalServerChannelFacto
 
     private final ChannelSink sink = new LocalServerChannelSink();
 
-    /**
-     * Creates a new instance.
-     */
-    public DefaultLocalServerChannelFactory() {
-        super();
-    }
-
     @Override
     public LocalServerChannel newChannel(ChannelPipeline pipeline) {
-        return new DefaultLocalServerChannel(this, pipeline, sink);
+        return DefaultLocalServerChannel.create(this, pipeline, sink);
     }
 
     /**

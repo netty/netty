@@ -32,9 +32,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 public class DefaultChannelPipeline implements ChannelPipeline {
 
@@ -47,13 +44,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private volatile DefaultChannelHandlerContext tail;
     private final Map<String, DefaultChannelHandlerContext> name2ctx =
         new HashMap<String, DefaultChannelHandlerContext>(4);
-
-    /**
-     * Creates a new empty pipeline.
-     */
-    public DefaultChannelPipeline() {
-        super();
-    }
 
     @Override
     public Channel getChannel() {
@@ -692,7 +682,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void checkDuplicateName(String name) {
         if (name2ctx.containsKey(name)) {
-            throw new IllegalArgumentException("Duplicate handler name.");
+            throw new IllegalArgumentException("Duplicate handler name: " + name);
         }
     }
 
@@ -824,7 +814,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private static final class DiscardingChannelSink implements ChannelSink {
         DiscardingChannelSink() {
-            super();
         }
 
         @Override

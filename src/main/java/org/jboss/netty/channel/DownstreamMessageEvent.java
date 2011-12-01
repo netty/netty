@@ -24,9 +24,6 @@ import org.jboss.netty.util.internal.StringUtil;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 public class DownstreamMessageEvent implements MessageEvent {
 

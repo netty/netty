@@ -27,9 +27,9 @@ package org.jboss.netty.handler.codec.http.websocketx;
  * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class UTF8Exception extends RuntimeException {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	public UTF8Exception(String reason) {
-		super(reason);
-	}
+    public UTF8Exception(String reason) {
+        super(reason);
+    }
 }

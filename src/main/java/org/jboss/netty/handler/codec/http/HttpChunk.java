@@ -34,7 +34,6 @@ import org.jboss.netty.channel.ChannelPipeline;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  *
  * @apiviz.landmark
  */
@@ -43,7 +42,7 @@ public interface HttpChunk {
     /**
      * The 'end of content' marker in chunked encoding.
      */
-    static HttpChunkTrailer LAST_CHUNK = new HttpChunkTrailer() {
+    HttpChunkTrailer LAST_CHUNK = new HttpChunkTrailer() {
         @Override
         public ChannelBuffer getContent() {
             return ChannelBuffers.EMPTY_BUFFER;

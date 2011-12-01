@@ -39,9 +39,6 @@ import org.jboss.netty.util.internal.ThreadLocalBoolean;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 class NioSocketChannel extends AbstractChannel
                                 implements org.jboss.netty.channel.socket.SocketChannel {
@@ -206,7 +203,6 @@ class NioSocketChannel extends AbstractChannel
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
         WriteRequestQueue() {
-            super();
         }
 
         @Override
@@ -265,7 +261,6 @@ class NioSocketChannel extends AbstractChannel
     private final class WriteTask implements Runnable {
 
         WriteTask() {
-            super();
         }
 
         @Override

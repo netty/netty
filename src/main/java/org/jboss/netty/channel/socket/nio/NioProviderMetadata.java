@@ -39,9 +39,6 @@ import org.jboss.netty.util.internal.SystemPropertyUtil;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 class NioProviderMetadata {
     static final InternalLogger logger =
@@ -220,7 +217,6 @@ class NioProviderMetadata {
     private static final class ConstraintLevelAutodetector {
 
         ConstraintLevelAutodetector() {
-            super();
         }
 
         int autodetect() {

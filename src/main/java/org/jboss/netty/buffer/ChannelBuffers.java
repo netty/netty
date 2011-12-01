@@ -85,8 +85,6 @@ import org.jboss.netty.util.CharsetUtil;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
- *
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.buffer.ChannelBuffer oneway - - creates
  */
@@ -804,8 +802,7 @@ public class ChannelBuffers {
     }
 
     private static ChannelBuffer copiedBuffer(ByteOrder endianness, CharBuffer buffer, Charset charset) {
-        CharBuffer src = buffer;
-        ByteBuffer dst = ChannelBuffers.encodeString(src, charset);
+        ByteBuffer dst = ChannelBuffers.encodeString(buffer, charset);
         ChannelBuffer result = wrappedBuffer(endianness, dst.array());
         result.writerIndex(dst.remaining());
         return result;

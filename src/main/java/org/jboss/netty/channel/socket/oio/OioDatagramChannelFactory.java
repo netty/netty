@@ -71,8 +71,6 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
- *
  * @apiviz.landmark
  */
 public class OioDatagramChannelFactory implements DatagramChannelFactory {
@@ -96,7 +94,7 @@ public class OioDatagramChannelFactory implements DatagramChannelFactory {
 
     @Override
     public DatagramChannel newChannel(ChannelPipeline pipeline) {
-        return new OioDatagramChannel(this, pipeline, sink);
+        return OioDatagramChannel.create(this, pipeline, sink);
     }
 
     @Override

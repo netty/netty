@@ -47,8 +47,6 @@ import org.jboss.netty.util.internal.ThreadLocalBoolean;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Daniel Bevenius (dbevenius@jboss.com)
- *
- * @version $Rev$, $Date$
  */
 class NioDatagramChannel extends AbstractChannel
                                 implements org.jboss.netty.channel.socket.DatagramChannel {
@@ -119,15 +117,21 @@ class NioDatagramChannel extends AbstractChannel
     private volatile InetSocketAddress localAddress;
     volatile InetSocketAddress remoteAddress;
 
-    NioDatagramChannel(final ChannelFactory factory,
+    static NioDatagramChannel create(ChannelFactory factory,
+            ChannelPipeline pipeline, ChannelSink sink, NioDatagramWorker worker) {
+        NioDatagramChannel instance =
+                new NioDatagramChannel(factory, pipeline, sink, worker);
+        fireChannelOpen(instance);
+        return instance;
+    }
+
+    private NioDatagramChannel(final ChannelFactory factory,
             final ChannelPipeline pipeline, final ChannelSink sink,
             final NioDatagramWorker worker) {
         super(null, factory, pipeline, sink);
         this.worker = worker;
         datagramChannel = openNonBlockingChannel();
         config = new DefaultNioDatagramChannelConfig(datagramChannel.socket());
-
-        fireChannelOpen(this);
     }
 
     private DatagramChannel openNonBlockingChannel() {
@@ -254,7 +258,6 @@ class NioDatagramChannel extends AbstractChannel
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
         WriteRequestQueue() {
-            super();
         }
 
         /**
@@ -324,7 +327,6 @@ class NioDatagramChannel extends AbstractChannel
      */
     private final class WriteTask implements Runnable {
         WriteTask() {
-            super();
         }
 
         @Override

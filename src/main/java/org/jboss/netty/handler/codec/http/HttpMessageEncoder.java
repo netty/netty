@@ -44,7 +44,6 @@ import org.jboss.netty.util.CharsetUtil;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  *
  * @apiviz.landmark
  */
@@ -59,7 +58,6 @@ public abstract class HttpMessageEncoder extends OneToOneEncoder {
      * Creates a new instance.
      */
     protected HttpMessageEncoder() {
-        super();
     }
 
     @Override

@@ -23,8 +23,6 @@ package org.jboss.netty.channel;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev$, $Date$
- *
  * @apiviz.hidden
  */
 public class ChannelPipelineException extends ChannelException {
@@ -35,7 +33,6 @@ public class ChannelPipelineException extends ChannelException {
      * Creates a new instance.
      */
     public ChannelPipelineException() {
-        super();
     }
 
     /**

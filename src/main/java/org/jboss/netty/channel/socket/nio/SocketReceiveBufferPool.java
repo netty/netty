@@ -21,7 +21,6 @@ import java.nio.ByteBuffer;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 final class SocketReceiveBufferPool {
 
@@ -30,11 +29,7 @@ final class SocketReceiveBufferPool {
     @SuppressWarnings("unchecked")
     private final SoftReference<ByteBuffer>[] pool = new SoftReference[POOL_SIZE];
 
-    SocketReceiveBufferPool() {
-        super();
-    }
-
-    final ByteBuffer acquire(int size) {
+    ByteBuffer acquire(int size) {
         final SoftReference<ByteBuffer>[] pool = this.pool;
         for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
@@ -63,7 +58,7 @@ final class SocketReceiveBufferPool {
         return buf;
     }
 
-    final void release(ByteBuffer buffer) {
+    void release(ByteBuffer buffer) {
         final SoftReference<ByteBuffer>[] pool = this.pool;
         for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
@@ -90,7 +85,7 @@ final class SocketReceiveBufferPool {
         }
     }
 
-    private static final int normalizeCapacity(int capacity) {
+    private static int normalizeCapacity(int capacity) {
         // Normalize to multiple of 1024
         int q = capacity >>> 10;
         int r = capacity & 1023;

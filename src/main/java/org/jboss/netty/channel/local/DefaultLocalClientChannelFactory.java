@@ -24,7 +24,6 @@ import org.jboss.netty.channel.ChannelSink;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  *
  * @apiviz.landmark
  */
@@ -41,7 +40,7 @@ public class DefaultLocalClientChannelFactory implements LocalClientChannelFacto
 
     @Override
     public LocalChannel newChannel(ChannelPipeline pipeline) {
-        return new DefaultLocalChannel(null, this, pipeline, sink, null);
+        return DefaultLocalChannel.create(null, this, pipeline, sink, null);
     }
 
     /**

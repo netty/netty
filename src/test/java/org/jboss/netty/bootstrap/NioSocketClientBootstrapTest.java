@@ -21,15 +21,19 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 
 /**
+ * A test for New I/O socket client bootstraps
+ * 
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 public class NioSocketClientBootstrapTest extends
         AbstractSocketClientBootstrapTest {
 
+    /**
+     * Creates a new New I/O client socket channel factory
+     * 
+     * @param executor The executor to use
+     */
     @Override
     protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
         return new NioClientSocketChannelFactory(executor, executor);

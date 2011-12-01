@@ -63,7 +63,6 @@ import java.util.concurrent.locks.LockSupport;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Doug Lea
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$ (Upstream: 1.79)
  *
  * @param <E> the type of elements held in this collection
  */
@@ -437,7 +436,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         volatile Thread waiter; // null until waiting
 
         // CAS methods for fields
-        final boolean casNext(Node cmp, Node val) {
+        boolean casNext(Node cmp, Node val) {
             if (AtomicFieldUpdaterUtil.isAvailable()) {
                 return nextUpdater.compareAndSet(this, cmp, val);
             } else {
@@ -452,7 +451,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
             }
         }
 
-        final boolean casItem(Object cmp, Object val) {
+        boolean casItem(Object cmp, Object val) {
             // assert cmp == null || cmp.getClass() != Node.class;
             if (AtomicFieldUpdaterUtil.isAvailable()) {
                 return itemUpdater.compareAndSet(this, cmp, val);
@@ -481,7 +480,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
          * Links node to itself to avoid garbage retention.  Called
          * only after CASing head field, so uses relaxed write.
          */
-        final void forgetNext() {
+        void forgetNext() {
             this.next = this;
         }
 
@@ -494,7 +493,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
          * follows either CAS or return from park (if ever parked;
          * else we don't care).
          */
-        final void forgetContents() {
+        void forgetContents() {
             this.item = this;
             this.waiter = null;
         }
@@ -503,7 +502,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
          * Returns true if this node has been matched, including the
          * case of artificial matches due to cancellation.
          */
-        final boolean isMatched() {
+        boolean isMatched() {
             Object x = item;
             return x == this || x == null == isData;
         }
@@ -511,7 +510,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         /**
          * Returns true if this is an unmatched request node.
          */
-        final boolean isUnmatchedRequest() {
+        boolean isUnmatchedRequest() {
             return !isData && item == null;
         }
 
@@ -520,7 +519,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
          * appended to this node because this node is unmatched and
          * has opposite data mode.
          */
-        final boolean cannotPrecede(boolean haveData) {
+        boolean cannotPrecede(boolean haveData) {
             boolean d = isData;
             Object x;
             return d != haveData && (x = item) != this && x != null == d;
@@ -529,7 +528,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         /**
          * Tries to artificially match a data node -- used by remove.
          */
-        final boolean tryMatchData() {
+        boolean tryMatchData() {
             // assert isData;
             Object x = item;
             if (x != null && x != this && casItem(x, null)) {
@@ -544,7 +543,6 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         private static final AtomicReferenceFieldUpdater<Node, Object> itemUpdater =
             AtomicFieldUpdaterUtil.newRefUpdater(Node.class, Object.class, "item");
 
-        private static final long serialVersionUID = -3375979862319811754L;
     }
 
     /** head of the queue; null until first enqueue */
@@ -654,7 +652,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
                             }
                         }
                         LockSupport.unpark(p.waiter);
-                        return LinkedTransferQueue.<E>cast(item);
+                        return LinkedTransferQueue.cast(item);
                     }
                 }
                 Node n = p.next;
@@ -738,7 +736,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
             if (item != e) {                  // matched
                 // assert item != s;
                 s.forgetContents();           // avoid garbage
-                return LinkedTransferQueue.<E>cast(item);
+                return LinkedTransferQueue.cast(item);
             }
             if ((w.isInterrupted() || timed && nanos <= 0) &&
                     s.casItem(e, s)) {        // cancel
@@ -826,7 +824,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
             Object item = p.item;
             if (p.isData) {
                 if (item != null && item != p) {
-                    return LinkedTransferQueue.<E>cast(item);
+                    return LinkedTransferQueue.cast(item);
                 }
             }
             else if (item == null) {
@@ -879,7 +877,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
                 Object item = p.item;
                 if (p.isData) {
                     if (item != null && item != p) {
-                        nextItem = LinkedTransferQueue.<E>cast(item);
+                        nextItem = LinkedTransferQueue.cast(item);
                         nextNode = p;
                         return;
                     }
@@ -896,12 +894,12 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         }
 
         @Override
-        public final boolean hasNext() {
+        public boolean hasNext() {
             return nextNode != null;
         }
 
         @Override
-        public final E next() {
+        public E next() {
             Node p = nextNode;
             if (p == null) {
                 throw new NoSuchElementException();
@@ -912,7 +910,7 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
         }
 
         @Override
-        public final void remove() {
+        public void remove() {
             Node p = lastRet;
             if (p == null) {
                 throw new IllegalStateException();
@@ -1032,7 +1030,6 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      * Creates an initially empty {@code LinkedTransferQueue}.
      */
     public LinkedTransferQueue() {
-        super();
     }
 
     /**

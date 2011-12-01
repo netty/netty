@@ -50,7 +50,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     /**
      * Keep all HttpDatas until cleanAllHttpDatas() is called.
      */
-    private ConcurrentHashMap<HttpRequest, List<HttpData>> requestFileDeleteMap =
+    private final ConcurrentHashMap<HttpRequest, List<HttpData>> requestFileDeleteMap =
         new ConcurrentHashMap<HttpRequest, List<HttpData>>();
     /**
      * HttpData will be in memory if less than default size (16KB).

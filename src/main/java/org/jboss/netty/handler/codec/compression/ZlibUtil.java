@@ -23,7 +23,6 @@ import org.jboss.netty.util.internal.jzlib.ZStream;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 final class ZlibUtil {
 
@@ -58,6 +57,5 @@ final class ZlibUtil {
     }
 
     private ZlibUtil() {
-        super();
     }
 }

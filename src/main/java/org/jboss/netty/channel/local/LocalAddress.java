@@ -31,7 +31,6 @@ import java.net.SocketAddress;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  *
  * @apiviz.landmark
  */
@@ -115,7 +114,7 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
                 }
 
                 int a = System.identityHashCode(this);
-                int b = System.identityHashCode(this);
+                int b = System.identityHashCode(o);
                 if (a < b) {
                     return -1;
                 } else if (a > b) {

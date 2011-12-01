@@ -31,7 +31,6 @@ import java.util.TreeSet;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
- * @version $Rev$, $Date$
  *
  * @apiviz.landmark
  * @apiviz.stereotype static
@@ -43,7 +42,6 @@ public class HttpHeaders {
      *
      * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
      * @author Andy Taylor (andy.taylor@jboss.org)
-     * @version $Rev$, $Date$
      *
      * @apiviz.stereotype static
      */
@@ -310,7 +308,6 @@ public class HttpHeaders {
         public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
 
         private Names() {
-            super();
         }
     }
 
@@ -319,7 +316,6 @@ public class HttpHeaders {
      *
      * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
      * @author Andy Taylor (andy.taylor@jboss.org)
-     * @version $Rev$, $Date$
      *
      * @apiviz.stereotype static
      */
@@ -455,7 +451,6 @@ public class HttpHeaders {
         public static final String WEBSOCKET = "WebSocket";
 
         private Values() {
-            super();
         }
     }
 

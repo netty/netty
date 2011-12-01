@@ -35,9 +35,6 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 abstract class OioSocketChannel extends AbstractChannel
                                 implements SocketChannel {

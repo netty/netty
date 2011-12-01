@@ -38,9 +38,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 class OioServerSocketChannel extends AbstractServerChannel
                              implements ServerSocketChannel {
@@ -52,7 +49,15 @@ class OioServerSocketChannel extends AbstractServerChannel
     final Lock shutdownLock = new ReentrantLock();
     private final ServerSocketChannelConfig config;
 
-    OioServerSocketChannel(
+    static OioServerSocketChannel create(ChannelFactory factory,
+            ChannelPipeline pipeline, ChannelSink sink) {
+        OioServerSocketChannel instance =
+                new OioServerSocketChannel(factory, pipeline, sink);
+        fireChannelOpen(instance);
+        return instance;
+    }
+
+    private OioServerSocketChannel(
             ChannelFactory factory,
             ChannelPipeline pipeline,
             ChannelSink sink) {
@@ -80,8 +85,6 @@ class OioServerSocketChannel extends AbstractServerChannel
         }
 
         config = new DefaultServerSocketChannelConfig(socket);
-
-        fireChannelOpen(this);
     }
 
     @Override

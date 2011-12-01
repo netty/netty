@@ -31,9 +31,6 @@ import org.jboss.netty.buffer.ChannelBuffers;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 public class ObjectEncoderOutputStream extends OutputStream implements
         ObjectOutput {

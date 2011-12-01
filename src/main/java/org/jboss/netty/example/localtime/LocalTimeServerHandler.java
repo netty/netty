@@ -38,8 +38,6 @@ import org.jboss.netty.example.localtime.LocalTimeProtocol.Locations;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
  */
 public class LocalTimeServerHandler extends SimpleChannelUpstreamHandler {
 
@@ -93,6 +91,6 @@ public class LocalTimeServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     private static String toString(Continent c) {
-        return "" + c.name().charAt(0) + c.name().toLowerCase().substring(1);
+        return c.name().charAt(0) + c.name().toLowerCase().substring(1);
     }
 }

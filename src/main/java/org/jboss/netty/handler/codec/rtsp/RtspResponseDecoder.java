@@ -52,7 +52,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 public class RtspResponseDecoder extends RtspMessageDecoder {
 
@@ -62,7 +61,6 @@ public class RtspResponseDecoder extends RtspMessageDecoder {
      * {@code maxContentLength (8192)}.
      */
     public RtspResponseDecoder() {
-        super();
     }
 
     /**

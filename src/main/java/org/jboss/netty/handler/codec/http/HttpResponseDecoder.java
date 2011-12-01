@@ -84,7 +84,6 @@ import org.jboss.netty.handler.codec.frame.TooLongFrameException;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 public class HttpResponseDecoder extends HttpMessageDecoder {
 
@@ -94,7 +93,6 @@ public class HttpResponseDecoder extends HttpMessageDecoder {
      * {@code maxChunkSize (8192)}.
      */
     public HttpResponseDecoder() {
-        super();
     }
 
     /**

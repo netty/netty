@@ -72,7 +72,6 @@ import org.jboss.netty.util.TimerTask;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  *
  * @see WriteTimeoutHandler
  * @see IdleStateHandler
@@ -259,7 +258,6 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
         volatile long lastReadTime = System.currentTimeMillis();
 
         State() {
-            super();
         }
     }
 }

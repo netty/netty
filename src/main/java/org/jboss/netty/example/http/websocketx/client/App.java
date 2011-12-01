@@ -34,8 +34,6 @@ import org.jboss.netty.handler.codec.http.websocketx.WebSocketSpecificationVersi
  * A HTTP client demo app
  * 
  * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
- * 
- * @version $Rev$, $Date$
  */
 public class App {
 
@@ -59,10 +57,10 @@ public class App {
 		MyCallbackHandler callbackHandler = new MyCallbackHandler();
 		WebSocketClientFactory factory = new WebSocketClientFactory();
 
-		// Connect with spec version 10 (try changing it to V00 and it will
+		// Connect with spec version 17 (try changing it to V10 or V00 and it will
 		// still work ... fingers crossed ;-)
 		WebSocketClient client = factory.newClient(new URI("ws://localhost:8080/websocket"),
-				WebSocketSpecificationVersion.V10, callbackHandler);
+				WebSocketSpecificationVersion.V17, callbackHandler);
 
 		// Connect
     	System.out.println("WebSocket Client connecting");
@@ -98,7 +96,6 @@ public class App {
 		public ArrayList<String> messagesReceived = new ArrayList<String>();
 
 		public MyCallbackHandler() {
-			return;
 		}
 
 		@Override

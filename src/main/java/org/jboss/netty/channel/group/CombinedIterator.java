@@ -21,7 +21,6 @@ import java.util.NoSuchElementException;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 final class CombinedIterator<E> implements Iterator<E> {
 
@@ -59,8 +58,7 @@ final class CombinedIterator<E> implements Iterator<E> {
     @Override
     public E next() {
         try {
-            E e = currentIterator.next();
-            return e;
+            return currentIterator.next();
         } catch (NoSuchElementException e) {
             if (currentIterator == i1) {
                 currentIterator = i2;

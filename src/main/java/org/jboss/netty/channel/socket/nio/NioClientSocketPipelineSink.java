@@ -49,9 +49,6 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 class NioClientSocketPipelineSink extends AbstractChannelSink {
 
@@ -59,13 +56,24 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         InternalLoggerFactory.getInstance(NioClientSocketPipelineSink.class);
 
     final Executor bossExecutor;
-    private final Boss boss = new Boss();
+
+    private final Boss bosses[];
     private final NioWorker[] workers;
+    
+    private final AtomicInteger bossIndex = new AtomicInteger();
     private final AtomicInteger workerIndex = new AtomicInteger();
 
     NioClientSocketPipelineSink(
-            Executor bossExecutor, Executor workerExecutor, int workerCount) {
+            Executor bossExecutor, Executor workerExecutor,
+            int bossCount, int workerCount) {
+    	
         this.bossExecutor = bossExecutor;
+
+        bosses = new Boss[bossCount];
+        for (int i = 0; i < bosses.length; i ++) {
+        	bosses[i] = new Boss();
+        }
+
         workers = new NioWorker[workerCount];
         for (int i = 0; i < workers.length; i ++) {
             workers[i] = new NioWorker(workerExecutor);
@@ -149,7 +157,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                 });
                 cf.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
                 channel.connectFuture = cf;
-                boss.register(channel);
+                nextBoss().register(channel);
             }
 
         } catch (Throwable t) {
@@ -163,6 +171,11 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         return workers[Math.abs(
                 workerIndex.getAndIncrement() % workers.length)];
     }
+    
+    Boss nextBoss() {
+        return bosses[Math.abs(
+                bossIndex.getAndIncrement() % bosses.length)];
+    }
 
     private final class Boss implements Runnable {
 
@@ -173,7 +186,6 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
 
         Boss() {
-            super();
         }
 
         void register(NioClientSocketChannel channel) {
@@ -357,6 +369,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             ConnectException cause = null;
             for (SelectionKey k: keys) {
                 if (!k.isValid()) {
+                    close(k);
                     continue;
                 }
 

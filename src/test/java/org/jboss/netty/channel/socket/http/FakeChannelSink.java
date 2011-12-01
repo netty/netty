@@ -24,6 +24,8 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelPipeline;
 
 /**
+ * A fake channel sink for use in testing
+ * 
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */

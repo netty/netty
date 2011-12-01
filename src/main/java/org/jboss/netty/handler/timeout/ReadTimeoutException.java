@@ -21,7 +21,6 @@ package org.jboss.netty.handler.timeout;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 public class ReadTimeoutException extends TimeoutException {
 
@@ -31,7 +30,6 @@ public class ReadTimeoutException extends TimeoutException {
      * Creates a new instance.
      */
     public ReadTimeoutException() {
-        super();
     }
 
     /**

@@ -24,33 +24,36 @@ import java.net.URI;
  */
 public class WebSocketClientHandshakerFactory {
 
-	/**
-	 * Instances a new handshaker
-	 * 
-	 * @param webSocketURL
-	 *            URL for web socket communications. e.g
-	 *            "ws://myhost.com/mypath". Subsequent web socket frames will be
-	 *            sent to this URL.
-	 * @param version
-	 *            Version of web socket specification to use to connect to the
-	 *            server
-	 * @param subProtocol
-	 *            Sub protocol request sent to the server. Null if no
-	 *            sub-protocol support is required.
-	 * @param allowExtensions
-	 *            Allow extensions to be used in the reserved bits of the web socket frame
-	 * @throws WebSocketHandshakeException
-	 */
-	public WebSocketClientHandshaker newHandshaker(URI webSocketURL, WebSocketSpecificationVersion version,
-			String subProtocol, boolean allowExtensions) throws WebSocketHandshakeException {
-		if (version == WebSocketSpecificationVersion.V10) {
-			return new WebSocketClientHandshaker10(webSocketURL, version, subProtocol, allowExtensions);
-		}
-		if (version == WebSocketSpecificationVersion.V00) {
-			return new WebSocketClientHandshaker00(webSocketURL, version, subProtocol);
-		}
+    /**
+     * Instances a new handshaker
+     * 
+     * @param webSocketURL
+     *            URL for web socket communications. e.g
+     *            "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the
+     *            server
+     * @param subProtocol
+     *            Sub protocol request sent to the server. Null if no
+     *            sub-protocol support is required.
+     * @param allowExtensions
+     *            Allow extensions to be used in the reserved bits of the web
+     *            socket frame
+     * @throws WebSocketHandshakeException
+     */
+    public WebSocketClientHandshaker newHandshaker(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol, boolean allowExtensions) throws WebSocketHandshakeException {
+        if (version == WebSocketSpecificationVersion.V17) {
+            return new WebSocketClientHandshaker17(webSocketURL, version, subProtocol, allowExtensions);
+        }
+        if (version == WebSocketSpecificationVersion.V10) {
+            return new WebSocketClientHandshaker10(webSocketURL, version, subProtocol, allowExtensions);
+        }
+        if (version == WebSocketSpecificationVersion.V00) {
+            return new WebSocketClientHandshaker00(webSocketURL, version, subProtocol);
+        }
 
-		throw new WebSocketHandshakeException("Protocol version " + version.toString() + " not supported.");
+        throw new WebSocketHandshakeException("Protocol version " + version.toString() + " not supported.");
 
-	}
+    }
 }

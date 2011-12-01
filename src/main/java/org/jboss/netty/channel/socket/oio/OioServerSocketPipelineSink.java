@@ -40,9 +40,6 @@ import org.jboss.netty.util.internal.DeadLockProofWorker;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 class OioServerSocketPipelineSink extends AbstractChannelSink {
 
@@ -205,12 +202,8 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                             ChannelPipeline pipeline =
                                 channel.getConfig().getPipelineFactory().getPipeline();
                             final OioAcceptedSocketChannel acceptedChannel =
-                                new OioAcceptedSocketChannel(
-                                        channel,
-                                        channel.getFactory(),
-                                        pipeline,
-                                        OioServerSocketPipelineSink.this,
-                                        acceptedSocket);
+                                OioAcceptedSocketChannel.create(channel, channel.getFactory(),
+                                    pipeline, OioServerSocketPipelineSink.this, acceptedSocket);
                             DeadLockProofWorker.start(
                                     workerExecutor,
                                     new OioWorker(acceptedChannel));

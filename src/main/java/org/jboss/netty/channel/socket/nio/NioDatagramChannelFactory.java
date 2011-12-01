@@ -76,8 +76,6 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Daniel Bevenius (dbevenius@jboss.com)
  *
- * @version $Rev$, $Date$
- *
  * @apiviz.landmark
  */
 public class NioDatagramChannelFactory implements DatagramChannelFactory {
@@ -125,7 +123,7 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
 
     @Override
     public DatagramChannel newChannel(final ChannelPipeline pipeline) {
-        return new NioDatagramChannel(this, pipeline, sink, sink.nextWorker());
+        return NioDatagramChannel.create(this, pipeline, sink, sink.nextWorker());
     }
 
     @Override

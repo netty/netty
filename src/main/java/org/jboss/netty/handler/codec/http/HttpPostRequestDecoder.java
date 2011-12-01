@@ -232,7 +232,7 @@ public class HttpPostRequestDecoder {
      * @author frederic bregier
      *
      */
-    private static enum MultiPartStatus {
+    private enum MultiPartStatus {
         NOTSTARTED,
         PREAMBLE,
         HEADERDELIMITER,
@@ -246,7 +246,7 @@ public class HttpPostRequestDecoder {
         MIXEDCLOSEDELIMITER,
         CLOSEDELIMITER,
         PREEPILOGUE,
-        EPILOGUE;
+        EPILOGUE
     }
 
     /**
@@ -1397,7 +1397,6 @@ public class HttpPostRequestDecoder {
          *
          */
         public NotEnoughDataDecoderException() {
-            super();
         }
 
         /**
@@ -1435,12 +1434,6 @@ public class HttpPostRequestDecoder {
          */
         private static final long serialVersionUID = 1336267941020800769L;
 
-        /**
-         *
-         */
-        public EndOfDataDecoderException() {
-            super();
-        }
     }
 
     /**
@@ -1459,7 +1452,6 @@ public class HttpPostRequestDecoder {
          *
          */
         public ErrorDataDecoderException() {
-            super();
         }
 
         /**
@@ -1491,7 +1483,7 @@ public class HttpPostRequestDecoder {
      * @author frederic bregier
      *
      */
-    public class IncompatibleDataDecoderException extends Exception {
+    public static class IncompatibleDataDecoderException extends Exception {
         /**
          *
          */
@@ -1501,7 +1493,6 @@ public class HttpPostRequestDecoder {
          *
          */
         public IncompatibleDataDecoderException() {
-            super();
         }
 
         /**

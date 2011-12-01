@@ -28,7 +28,6 @@ package org.jboss.netty.handler.codec.base64;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Robert Harder (rob@iharder.net)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 public enum Base64Dialect {
     /**
@@ -203,7 +202,7 @@ public enum Base64Dialect {
     final byte[] decodabet;
     final boolean breakLinesByDefault;
 
-    private Base64Dialect(byte[] alphabet, byte[] decodabet, boolean breakLinesByDefault) {
+    Base64Dialect(byte[] alphabet, byte[] decodabet, boolean breakLinesByDefault) {
         this.alphabet = alphabet;
         this.decodabet = decodabet;
         this.breakLinesByDefault = breakLinesByDefault;

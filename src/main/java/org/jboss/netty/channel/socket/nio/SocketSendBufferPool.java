@@ -28,7 +28,6 @@ import org.jboss.netty.channel.FileRegion;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2174 $, $Date: 2010-02-19 09:57:23 +0900 (Fri, 19 Feb 2010) $
  */
 final class SocketSendBufferPool {
 
@@ -42,10 +41,9 @@ final class SocketSendBufferPool {
     Preallocation current = new Preallocation(DEFAULT_PREALLOCATION_SIZE);
 
     SocketSendBufferPool() {
-        super();
     }
 
-    final SendBuffer acquire(Object message) {
+    SendBuffer acquire(Object message) {
         if (message instanceof ChannelBuffer) {
             return acquire((ChannelBuffer) message);
         } else if (message instanceof FileRegion) {
@@ -56,14 +54,14 @@ final class SocketSendBufferPool {
                 "unsupported message type: " + message.getClass());
     }
 
-    private final SendBuffer acquire(FileRegion src) {
+    private SendBuffer acquire(FileRegion src) {
         if (src.getCount() == 0) {
             return EMPTY_BUFFER;
         }
         return new FileSendBuffer(src);
     }
 
-    private final SendBuffer acquire(ChannelBuffer src) {
+    private SendBuffer acquire(ChannelBuffer src) {
         final int size = src.readableBytes();
         if (size == 0) {
             return EMPTY_BUFFER;
@@ -109,7 +107,7 @@ final class SocketSendBufferPool {
         return dst;
     }
 
-    private final Preallocation getPreallocation() {
+    private Preallocation getPreallocation() {
         Preallocation current = this.current;
         if (current.refCnt == 0) {
             current.buffer.clear();
@@ -119,7 +117,7 @@ final class SocketSendBufferPool {
         return getPreallocation0();
     }
 
-    private final Preallocation getPreallocation0() {
+    private Preallocation getPreallocation0() {
         PreallocationRef ref = poolHead;
         if (ref != null) {
             do {
@@ -138,7 +136,7 @@ final class SocketSendBufferPool {
         return new Preallocation(DEFAULT_PREALLOCATION_SIZE);
     }
 
-    private static final int align(int pos) {
+    private static int align(int pos) {
         int q = pos >>> ALIGN_SHIFT;
         int r = pos & ALIGN_MASK;
         if (r != 0) {
@@ -147,7 +145,7 @@ final class SocketSendBufferPool {
         return q << ALIGN_SHIFT;
     }
 
-    private final class Preallocation {
+    private static final class Preallocation {
         final ByteBuffer buffer;
         int refCnt;
 
@@ -176,7 +174,7 @@ final class SocketSendBufferPool {
         void release();
     }
 
-    class UnpooledSendBuffer implements SendBuffer {
+    static class UnpooledSendBuffer implements SendBuffer {
 
         final ByteBuffer buffer;
         final int initialPos;
@@ -266,7 +264,7 @@ final class SocketSendBufferPool {
         }
     }
 
-    final class FileSendBuffer implements SendBuffer {
+    static final class FileSendBuffer implements SendBuffer {
 
         private final FileRegion file;
         private long writtenBytes;
@@ -316,31 +314,30 @@ final class SocketSendBufferPool {
     static final class EmptySendBuffer implements SendBuffer {
 
         EmptySendBuffer() {
-            super();
         }
 
         @Override
-        public final boolean finished() {
+        public boolean finished() {
             return true;
         }
 
         @Override
-        public final long writtenBytes() {
+        public long writtenBytes() {
             return 0;
         }
 
         @Override
-        public final long totalBytes() {
+        public long totalBytes() {
             return 0;
         }
 
         @Override
-        public final long transferTo(WritableByteChannel ch) throws IOException {
+        public long transferTo(WritableByteChannel ch) throws IOException {
             return 0;
         }
 
         @Override
-        public final long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
+        public long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
             return 0;
         }
 

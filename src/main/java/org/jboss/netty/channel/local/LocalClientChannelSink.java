@@ -36,14 +36,12 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 final class LocalClientChannelSink extends AbstractChannelSink {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LocalClientChannelSink.class);
 
     LocalClientChannelSink() {
-        super();
     }
 
     @Override
@@ -128,8 +126,7 @@ final class LocalClientChannelSink extends AbstractChannelSink {
         }
 
         future.setSuccess();
-        DefaultLocalChannel acceptedChannel = new DefaultLocalChannel(
-                serverChannel, serverChannel.getFactory(), pipeline, this, channel);
+        DefaultLocalChannel acceptedChannel = DefaultLocalChannel.create(serverChannel, serverChannel.getFactory(), pipeline, this, channel);
         channel.pairedChannel = acceptedChannel;
 
         bind(channel, succeededFuture(channel), new LocalAddress(LocalAddress.EPHEMERAL));

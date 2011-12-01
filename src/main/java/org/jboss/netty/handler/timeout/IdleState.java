@@ -23,7 +23,6 @@ import org.jboss.netty.channel.Channel;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 public enum IdleState {
     /**
@@ -37,5 +36,5 @@ public enum IdleState {
     /**
      * No data was either received or sent for a while.
      */
-    ALL_IDLE;
+    ALL_IDLE
 }

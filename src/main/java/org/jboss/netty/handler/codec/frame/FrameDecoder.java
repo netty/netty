@@ -175,8 +175,6 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @version $Rev:231 $, $Date:2008-06-12 16:44:50 +0900 (목, 12 6월 2008) $
- *
  * @apiviz.landmark
  */
 public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
@@ -207,17 +205,28 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
             return;
         }
 
-        ChannelBuffer cumulation = cumulation(ctx);
-        if (cumulation.readable()) {
-            cumulation.discardReadBytes();
-            cumulation.writeBytes(input);
-            callDecode(ctx, e.getChannel(), cumulation, e.getRemoteAddress());
-        } else {
+        if (cumulation == null) {
+            // the cumulation buffer is not created yet so just pass the input to callDecode(...) method
             callDecode(ctx, e.getChannel(), input, e.getRemoteAddress());
             if (input.readable()) {
+                // seems like there is something readable left in the input buffer. So create the cumulation buffer and copy the input into it
+                ChannelBuffer cumulation = cumulation(ctx);
                 cumulation.writeBytes(input);
             }
+        } else {
+            ChannelBuffer cumulation = cumulation(ctx);
+            if (cumulation.readable()) {
+                cumulation.discardReadBytes();
+                cumulation.writeBytes(input);
+                callDecode(ctx, e.getChannel(), cumulation, e.getRemoteAddress());
+            } else {
+                callDecode(ctx, e.getChannel(), input, e.getRemoteAddress());
+                if (input.readable()) {
+                    cumulation.writeBytes(input);
+                }
+            }
         }
+        
     }
 
     @Override
@@ -298,6 +307,10 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
 
             unfoldAndFireMessageReceived(context, remoteAddress, frame);
         }
+
+        if (!cumulation.readable()) {
+          this.cumulation = null;
+        }
     }
 
     private void unfoldAndFireMessageReceived(ChannelHandlerContext context, SocketAddress remoteAddress, Object result) {
@@ -345,6 +358,12 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
         }
     }
 
+    /**
+     * Get the currently used {@link ChannelBuffer} for cumulation or create one in a lazy fashion if none exist yet
+     * 
+     * @param ctx the {@link ChannelHandlerContext} for this handler
+     * @return buffer the {@link ChannelBuffer} which is used fo cumulation
+     */
     private ChannelBuffer cumulation(ChannelHandlerContext ctx) {
         ChannelBuffer c = cumulation;
         if (c == null) {

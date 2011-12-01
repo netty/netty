@@ -32,9 +32,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev$, $Date$
- *
  */
 final class NioClientSocketChannel extends NioSocketChannel {
 
@@ -76,11 +73,18 @@ final class NioClientSocketChannel extends NioSocketChannel {
     // Does not need to be volatile as it's accessed by only one thread.
     long connectDeadlineNanos;
 
-    NioClientSocketChannel(
+    static NioClientSocketChannel create(ChannelFactory factory,
+            ChannelPipeline pipeline, ChannelSink sink, NioWorker worker) {
+        NioClientSocketChannel instance =
+                new NioClientSocketChannel(factory, pipeline, sink, worker);
+        fireChannelOpen(instance);
+        return instance;
+    }
+
+    private NioClientSocketChannel(
             ChannelFactory factory, ChannelPipeline pipeline,
             ChannelSink sink, NioWorker worker) {
 
         super(null, factory, pipeline, sink, newSocket(), worker);
-        fireChannelOpen(this);
     }
 }

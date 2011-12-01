@@ -80,7 +80,6 @@ import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 public class HashedWheelTimer implements Timer {
 
@@ -362,7 +361,6 @@ public class HashedWheelTimer implements Timer {
         private long tick;
 
         Worker() {
-            super();
         }
 
         @Override

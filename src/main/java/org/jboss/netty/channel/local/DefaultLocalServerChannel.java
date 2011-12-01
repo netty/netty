@@ -30,19 +30,28 @@ import org.jboss.netty.channel.DefaultServerChannelConfig;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
-final class DefaultLocalServerChannel extends AbstractServerChannel
-                                      implements LocalServerChannel {
+final class DefaultLocalServerChannel extends AbstractServerChannel implements
+        LocalServerChannel {
 
     final ChannelConfig channelConfig;
+
     final AtomicBoolean bound = new AtomicBoolean();
+
     volatile LocalAddress localAddress;
 
-    DefaultLocalServerChannel(ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink) {
+    static DefaultLocalServerChannel create(ChannelFactory factory,
+            ChannelPipeline pipeline, ChannelSink sink) {
+        DefaultLocalServerChannel instance =
+                new DefaultLocalServerChannel(factory, pipeline, sink);
+        fireChannelOpen(instance);
+        return instance;
+    }
+
+    private DefaultLocalServerChannel(ChannelFactory factory,
+            ChannelPipeline pipeline, ChannelSink sink) {
         super(factory, pipeline, sink);
         channelConfig = new DefaultServerChannelConfig();
-        fireChannelOpen(this);
     }
 
     @Override
@@ -57,7 +66,7 @@ final class DefaultLocalServerChannel extends AbstractServerChannel
 
     @Override
     public LocalAddress getLocalAddress() {
-        return isBound()? localAddress : null;
+        return isBound() ? localAddress : null;
     }
 
     @Override

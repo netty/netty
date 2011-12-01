@@ -88,7 +88,7 @@ public class HttpPostBodyUtil {
        Not allowed: "quoted-printable"
                   / "base64"
      */
-    public static enum TransferEncodingMechanism {
+    public enum TransferEncodingMechanism {
         /**
          * Default encoding
          */
@@ -104,11 +104,11 @@ public class HttpPostBodyUtil {
 
         public String value;
 
-        private TransferEncodingMechanism(String value) {
+        TransferEncodingMechanism(String value) {
             this.value = value;
         }
 
-        private TransferEncodingMechanism() {
+        TransferEncodingMechanism() {
             value = name();
         }
 
@@ -119,7 +119,6 @@ public class HttpPostBodyUtil {
     }
 
     private HttpPostBodyUtil() {
-        super();
     }
 
     //Some commons methods between HttpPostRequestDecoder and HttpMessageDecoder

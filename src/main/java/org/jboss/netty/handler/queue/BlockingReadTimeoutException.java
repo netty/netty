@@ -24,7 +24,6 @@ import java.io.InterruptedIOException;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 public class BlockingReadTimeoutException extends InterruptedIOException {
 
@@ -34,7 +33,6 @@ public class BlockingReadTimeoutException extends InterruptedIOException {
      * Creates a new instance.
      */
     public BlockingReadTimeoutException() {
-        super();
     }
 
     /**

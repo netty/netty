@@ -56,7 +56,6 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  *
  * @author The Netty Project (netty-dev@lists.jboss.org)
  * @author Frederic Bregier
- * @version $Rev: 1832 $, $Date: 2009-10-25 19:53:54 +0900 (Sun, 25 Oct 2009) $
  */
 public abstract class AbstractTrafficShapingHandler extends
         SimpleChannelHandler implements ExternalResourceReleasable {
@@ -154,8 +153,7 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     public AbstractTrafficShapingHandler(Executor executor, long writeLimit,
             long readLimit, long checkInterval) {
-        super();
-        init(new DefaultObjectSizeEstimator(), executor, writeLimit, readLimit,
+	    init(new DefaultObjectSizeEstimator(), executor, writeLimit, readLimit,
                 checkInterval);
     }
 
@@ -178,8 +176,7 @@ public abstract class AbstractTrafficShapingHandler extends
     public AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Executor executor,
             long writeLimit, long readLimit, long checkInterval) {
-        super();
-        init(objectSizeEstimator, executor, writeLimit, readLimit,
+	    init(objectSizeEstimator, executor, writeLimit, readLimit,
                 checkInterval);
     }
 
@@ -195,8 +192,7 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     public AbstractTrafficShapingHandler(Executor executor, long writeLimit,
             long readLimit) {
-        super();
-        init(new DefaultObjectSizeEstimator(), executor, writeLimit, readLimit,
+	    init(new DefaultObjectSizeEstimator(), executor, writeLimit, readLimit,
                 DEFAULT_CHECK_INTERVAL);
     }
 
@@ -216,8 +212,7 @@ public abstract class AbstractTrafficShapingHandler extends
     public AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Executor executor,
             long writeLimit, long readLimit) {
-        super();
-        init(objectSizeEstimator, executor, writeLimit, readLimit,
+	    init(objectSizeEstimator, executor, writeLimit, readLimit,
                 DEFAULT_CHECK_INTERVAL);
     }
 
@@ -228,8 +223,7 @@ public abstract class AbstractTrafficShapingHandler extends
      *          created for instance like Executors.newCachedThreadPool
      */
     public AbstractTrafficShapingHandler(Executor executor) {
-        super();
-        init(new DefaultObjectSizeEstimator(), executor, 0, 0,
+	    init(new DefaultObjectSizeEstimator(), executor, 0, 0,
                 DEFAULT_CHECK_INTERVAL);
     }
 
@@ -244,8 +238,7 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     public AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Executor executor) {
-        super();
-        init(objectSizeEstimator, executor, 0, 0, DEFAULT_CHECK_INTERVAL);
+	    init(objectSizeEstimator, executor, 0, 0, DEFAULT_CHECK_INTERVAL);
     }
 
     /**
@@ -258,8 +251,7 @@ public abstract class AbstractTrafficShapingHandler extends
      *            channels or 0 if no stats are to be computed
      */
     public AbstractTrafficShapingHandler(Executor executor, long checkInterval) {
-        super();
-        init(new DefaultObjectSizeEstimator(), executor, 0, 0, checkInterval);
+	    init(new DefaultObjectSizeEstimator(), executor, 0, 0, checkInterval);
     }
 
     /**
@@ -277,8 +269,7 @@ public abstract class AbstractTrafficShapingHandler extends
     public AbstractTrafficShapingHandler(
             ObjectSizeEstimator objectSizeEstimator, Executor executor,
             long checkInterval) {
-        super();
-        init(objectSizeEstimator, executor, 0, 0, checkInterval);
+	    init(objectSizeEstimator, executor, 0, 0, checkInterval);
     }
 
     /**
@@ -393,8 +384,7 @@ public abstract class AbstractTrafficShapingHandler extends
             // Time is too short, so just lets continue
             return 0;
         }
-        long wait = bytes * 1000 / limit - interval;
-        return wait;
+        return bytes * 1000 / limit - interval;
     }
 
     @Override

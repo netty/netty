@@ -26,7 +26,6 @@ import java.nio.ByteOrder;
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev$, $Date$
  */
 public class HeapChannelBufferFactory extends AbstractChannelBufferFactory {
 
@@ -57,7 +56,6 @@ public class HeapChannelBufferFactory extends AbstractChannelBufferFactory {
      * {@link ByteOrder#BIG_ENDIAN}.
      */
     public HeapChannelBufferFactory() {
-        super();
     }
 
     /**
