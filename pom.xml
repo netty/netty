@@ -661,5 +661,18 @@
       </plugin>
     </plugins>
   </build>
+
+    <distributionManagement>
+        <repository>
+            <id>archiva.internal</id>
+            <name>Internal Release Repository</name>
+            <url>http://192.168.0.7:8080/archiva/repository/internal/</url>
+        </repository>
+        <snapshotRepository>
+            <id>archiva.snapshots</id>
+            <name>Internal Snapshot Repository</name>
+            <url>http://192.168.0.7:8080/archiva/repository/snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
 </project>
 
