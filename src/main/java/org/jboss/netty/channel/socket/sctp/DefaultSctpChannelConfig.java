@@ -30,8 +30,6 @@ import java.io.IOException;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
- *
- * @version $Rev$, $Date$
  */
 class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChannelConfig {
 
@@ -76,9 +74,9 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     }
 
     @Override
-    public void setSctpNoDelay(boolean tcpNoDelay) {
+    public void setSctpNoDelay(boolean sctpNoDelay) {
         try {
-            channel.setOption(SCTP_NODELAY, tcpNoDelay);
+            channel.setOption(SCTP_NODELAY, sctpNoDelay);
         } catch (IOException e) {
             throw new ChannelException(e);
         }

@@ -20,12 +20,8 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 
 /**
- *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
- *
- * @version $Rev$, $Date$
- *
  */
 
 class SctpNotificationHandler extends AbstractNotificationHandler {

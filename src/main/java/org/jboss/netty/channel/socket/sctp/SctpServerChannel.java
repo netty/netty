@@ -21,7 +21,7 @@ import java.net.InetSocketAddress;
 import java.util.Set;
 
 /**
- * A TCP/IP {@link org.jboss.netty.channel.ServerChannel} which accepts incoming TCP/IP connections.
+ * A SCTP {@link org.jboss.netty.channel.ServerChannel} which accepts incoming SCTP connections.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>

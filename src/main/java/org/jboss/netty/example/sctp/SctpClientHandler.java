@@ -30,7 +30,6 @@ import java.util.logging.Logger;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
- * @version $Rev$, $Date$
  */
 public class SctpClientHandler extends SimpleChannelUpstreamHandler {
     private static final Logger logger = Logger.getLogger(SctpClientHandler.class.getName());

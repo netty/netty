@@ -35,8 +35,6 @@ import static org.jboss.netty.channel.Channels.fireChannelInterestChanged;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  *
- * @version $Rev$, $Date$
- *
  */
 class SctpChannelImpl extends AbstractChannel implements SctpChannel {
 

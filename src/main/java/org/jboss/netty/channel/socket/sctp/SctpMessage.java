@@ -21,7 +21,6 @@ import org.jboss.netty.buffer.ChannelBuffers;
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
- * @version $Rev$, $Date$
  */
 public final class SctpMessage {
     private final int streamNo;

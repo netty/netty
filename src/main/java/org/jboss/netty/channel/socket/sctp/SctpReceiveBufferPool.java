@@ -22,8 +22,6 @@ import java.nio.ByteBuffer;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
- *
- * @version $Rev$, $Date$
  */
 final class SctpReceiveBufferPool {
 
