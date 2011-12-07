@@ -110,7 +110,7 @@ class SctpClientPipelineSink extends AbstractChannelSink {
             SctpClientChannel channel, ChannelFuture future,
             SocketAddress localAddress) {
         try {
-            channel.underlayingChannel.bind(localAddress);
+            channel.channel.bind(localAddress);
             channel.boundManually = true;
             channel.setBound();
             future.setSuccess();
@@ -125,7 +125,7 @@ class SctpClientPipelineSink extends AbstractChannelSink {
             final SctpClientChannel channel, final ChannelFuture cf,
             SocketAddress remoteAddress) {
         try {
-            if (channel.underlayingChannel.connect(remoteAddress)) {
+            if (channel.channel.connect(remoteAddress)) {
                 channel.worker.register(channel, cf);
             } else {
                 channel.getCloseFuture().addListener(new ChannelFutureListener() {
@@ -368,7 +368,7 @@ class SctpClientPipelineSink extends AbstractChannelSink {
         private void connect(SelectionKey k) {
             SctpClientChannel ch = (SctpClientChannel) k.attachment();
             try {
-                if (ch.underlayingChannel.finishConnect()) {
+                if (ch.channel.finishConnect()) {
                     k.cancel();
                     ch.worker.register(ch, ch.connectFuture);
                 }
@@ -398,7 +398,7 @@ class SctpClientPipelineSink extends AbstractChannelSink {
         @Override
         public void run() {
             try {
-                channel.underlayingChannel.register(
+                channel.channel.register(
                         boss.selector, SelectionKey.OP_CONNECT, channel);
             } catch (ClosedChannelException e) {
                 channel.worker.close(channel, succeededFuture(channel));

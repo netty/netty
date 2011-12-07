@@ -44,18 +44,18 @@ final class SctpSendBufferPool {
     }
 
     final SendBuffer acquire(Object message) {
-        if (message instanceof SctpMessage) {
-            return acquire((SctpMessage) message);
+        if (message instanceof SctpPayload) {
+            return acquire((SctpPayload) message);
         } else {
             throw new IllegalArgumentException(
                     "unsupported message type: " + message.getClass());
         }
     }
 
-    private final SendBuffer acquire(SctpMessage message) {
-        final ChannelBuffer src = message.data();
-        final int streamNo = message.streamNumber();
-        final int protocolId = message.payloadProtocolId();
+    private final SendBuffer acquire(SctpPayload message) {
+        final ChannelBuffer src = message.getPayloadBuffer();
+        final int streamNo = message.getstreamIdentifier();
+        final int protocolId = message.getProtocolIdentifier();
 
         final int size = src.readableBytes();
         if (size == 0) {

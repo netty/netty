@@ -17,7 +17,7 @@ package org.jboss.netty.example.sctp;
 
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.socket.sctp.SctpMessage;
+import org.jboss.netty.channel.socket.sctp.SctpPayload;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
@@ -47,7 +47,7 @@ public class SctpClientHandler extends SimpleChannelUpstreamHandler {
      */
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent stateEvent) {
-        stateEvent.getChannel().write(new SctpMessage(0, 0, ChannelBuffers.wrappedBuffer("SCTP ECHO".getBytes())));
+        stateEvent.getChannel().write(new SctpPayload(0, 0, ChannelBuffers.wrappedBuffer("SCTP ECHO".getBytes())));
     }
 
     @Override

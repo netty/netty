@@ -35,7 +35,7 @@ final class SelectorUtil {
 
     static void select(Selector selector) throws IOException {
         try {
-            selector.select(10);
+            selector.select(10);// does small timeout give more throughput + less CPU usage?
         } catch (CancelledKeyException e) {
             // Harmless exception - log anyway
             logger.debug(

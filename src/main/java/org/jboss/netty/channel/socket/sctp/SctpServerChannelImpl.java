@@ -118,6 +118,11 @@ class SctpServerChannelImpl extends AbstractServerChannel
     }
 
     @Override
+    public Set<InetSocketAddress> getAllRemoteAddresses() {
+        return null;// not available for server channel
+    }
+
+    @Override
     public boolean isBound() {
         return isOpen() && bound;
     }

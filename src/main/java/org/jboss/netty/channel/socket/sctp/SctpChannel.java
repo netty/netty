@@ -30,18 +30,38 @@ import java.util.Set;
  * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  */
 public interface SctpChannel extends Channel {
+
+    /**
+     * Return the primary local address of the SCTP channel.
+     */
     @Override
     InetSocketAddress getLocalAddress();
 
+    /**
+     * Return all local addresses of the SCTP channel.
+     */
     Set<InetSocketAddress> getAllLocalAddresses();
 
+    /**
+     * Returns the configuration of this channel.
+     */
     @Override
     NioSctpChannelConfig getConfig();
 
+    /**
+     * Return the primary remote address of the SCTP channel.
+     */
     @Override
     InetSocketAddress getRemoteAddress();
 
-    Set<InetSocketAddress> getRemoteAddresses();
 
+    /**
+     * Return all remote addresses of the SCTP channel.
+     */
+    Set<InetSocketAddress> getAllRemoteAddresses();
+
+    /**
+     * Get the underlying SCTP association
+     */
     Association association();
 }

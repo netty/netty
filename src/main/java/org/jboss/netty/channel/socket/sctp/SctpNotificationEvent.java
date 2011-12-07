@@ -57,6 +57,10 @@ public class SctpNotificationEvent implements ChannelEvent {
         return notification;
     }
 
+    /**
+     * Return the attachment comes with SCTP notification
+     * Please note that, it may be null
+     */
     public Object getValue() {
         return value;
     }

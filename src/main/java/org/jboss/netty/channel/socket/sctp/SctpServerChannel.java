@@ -26,17 +26,35 @@ import java.util.Set;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
- *
  * @version $Rev$, $Date$
- *
  */
 public interface SctpServerChannel extends ServerChannel {
+    /**
+     * Returns the configuration of this channel.
+     */
     @Override
     SctpServerChannelConfig getConfig();
+
+    /**
+     * Return the primary local address of the SCTP server channel.
+     */
     @Override
     InetSocketAddress getLocalAddress();
 
+    /**
+     * Return all local addresses of the SCTP server channel.
+     */
     Set<InetSocketAddress> getAllLocalAddresses();
+
+    /**
+     * Return the primary remote address of the server SCTP channel.
+     */
     @Override
     InetSocketAddress getRemoteAddress();
+
+
+    /**
+     * Return all remote addresses of the SCTP server channel.
+     */
+    Set<InetSocketAddress> getAllRemoteAddresses();
 }
