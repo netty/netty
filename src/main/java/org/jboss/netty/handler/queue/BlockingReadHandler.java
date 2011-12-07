@@ -29,7 +29,7 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
+import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  * Emulates blocking read operation.  This handler stores all received messages
@@ -84,7 +84,7 @@ public class BlockingReadHandler<E> extends SimpleChannelUpstreamHandler {
      * implementation.
      */
     public BlockingReadHandler() {
-        this(new LinkedTransferQueue<ChannelEvent>());
+        this(QueueFactory.createQueue(ChannelEvent.class));
     }
 
     /**

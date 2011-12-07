@@ -32,7 +32,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.DefaultChannelConfig;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
+import org.jboss.netty.util.internal.QueueFactory;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 /**
@@ -52,7 +52,7 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
     private final ChannelConfig config;
     private final ThreadLocalBoolean delivering = new ThreadLocalBoolean();
 
-    final Queue<MessageEvent> writeBuffer = new LinkedTransferQueue<MessageEvent>();
+    final Queue<MessageEvent> writeBuffer = QueueFactory.createQueue(MessageEvent.class);
 
     volatile DefaultLocalChannel pairedChannel;
     volatile LocalAddress localAddress;

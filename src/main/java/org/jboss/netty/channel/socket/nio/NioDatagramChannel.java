@@ -38,7 +38,7 @@ import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.socket.DatagramChannelConfig;
 import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
+import org.jboss.netty.util.internal.LegacyLinkedTransferQueue;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 /**
@@ -247,26 +247,22 @@ class NioDatagramChannel extends AbstractChannel
     }
 
     /**
-     * {@link WriteRequestQueue} is an extension of {@link LinkedTransferQueue}
+     * {@link WriteRequestQueue} is an extension of {@link AbstractWriteRequestQueue}
      * that adds support for highWaterMark checking of the write buffer size.
      */
     private final class WriteRequestQueue extends
-            LinkedTransferQueue<MessageEvent> {
-
-        private static final long serialVersionUID = 5057413071460766376L;
+            AbstractWriteRequestQueue {
 
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
-        WriteRequestQueue() {
-        }
-
+       
         /**
-         * This method first delegates to {@link LinkedTransferQueue#offer(Object)} and
+         * This method first delegates to {@link LegacyLinkedTransferQueue#offer(Object)} and
          * adds support for keeping track of the size of the this write buffer.
          */
         @Override
         public boolean offer(MessageEvent e) {
-            boolean success = super.offer(e);
+            boolean success = queue.offer(e);
             assert success;
 
             int messageSize = getMessageSize(e);
@@ -287,12 +283,12 @@ class NioDatagramChannel extends AbstractChannel
         }
 
         /**
-         * This method first delegates to {@link LinkedTransferQueue#poll()} and
+         * This method first delegates to {@link LegacyLinkedTransferQueue#poll()} and
          * adds support for keeping track of the size of the this writebuffers queue.
          */
         @Override
         public MessageEvent poll() {
-            MessageEvent e = super.poll();
+            MessageEvent e = queue.poll();
             if (e != null) {
                 int messageSize = getMessageSize(e);
                 int newWriteBufferSize = writeBufferSize.addAndGet(-messageSize);

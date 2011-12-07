@@ -32,8 +32,12 @@ import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
+ * @deprecated Use {@link Channel#setAttachment(Object)} and {@link Channel#getAttachment()}
+ * 
  * @apiviz.stereotype utility
+ * 
  */
+@Deprecated
 public class ChannelLocal<T> {
 
     private final ConcurrentMap<Channel, T> map =

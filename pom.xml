@@ -221,6 +221,37 @@
       </resource>
     </resources>
 
+    <pluginManagement>
+      <plugins>
+        <!--This plugin's configuration is used to store Eclipse m2e settings only. 
+            It has no influence on the Maven build itself. -->
+        <plugin>
+          <groupId>org.eclipse.m2e</groupId>
+          <artifactId>lifecycle-mapping</artifactId>
+          <version>1.0.0</version>
+          <configuration>
+            <lifecycleMappingMetadata>
+              <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <versionRange>[1.7,)</versionRange>
+                    <goals>
+                      <goal>run</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore />
+                  </action>
+                </pluginExecution>
+              </pluginExecutions>
+            </lifecycleMappingMetadata>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
     <plugins>
       <plugin>
         <!-- See org.jboss:jboss-parent -->
@@ -512,135 +543,6 @@
           <stylesheet>${basedir}/src/xref/stylesheet.css</stylesheet>
           <docTitle>${project.name} Source Xref (${project.version})</docTitle>
           <windowTitle>${project.name} Source Xref (${project.version})</windowTitle>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.jboss.maven.plugins</groupId>
-        <artifactId>maven-jdocbook-plugin</artifactId>
-        <version>2.2.1</version>
-        <executions>
-          <execution>
-            <id>generate-docbook</id>
-            <phase>package</phase>
-            <goals>
-              <goal>resources</goal>
-              <goal>generate</goal>
-            </goals>
-          </execution>
-        </executions>
-        <dependencies>
-          <dependency>
-            <groupId>org.eclipse.wst.css</groupId>
-            <artifactId>core</artifactId>
-            <version>1.1.101-v200705302225</version>
-            <exclusions>
-              <exclusion>
-                <groupId>org.apache</groupId>
-                <artifactId>xerces</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>com.ibm</groupId>
-                <artifactId>icu</artifactId>
-              </exclusion>
-            </exclusions>
-          </dependency>
-          <dependency>
-            <groupId>org.eclipse.wst.sse</groupId>
-            <artifactId>core</artifactId>
-	    <version>1.1.202-v200709061102</version>
-            <exclusions>
-              <exclusion>
-                <groupId>org.apache</groupId>
-                <artifactId>xerces</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>com.ibm</groupId>
-                <artifactId>icu</artifactId>
-              </exclusion>
-            </exclusions>
-          </dependency>
-          <dependency>
-            <groupId>org.jboss</groupId>
-            <artifactId>jbossorg-docbook-xslt</artifactId>
-            <version>1.1.0</version>
-            <exclusions>
-              <exclusion>
-                <groupId>org.eclipse.wst.css</groupId>
-                <artifactId>core</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.eclipse.wst.sse</groupId>
-                <artifactId>core</artifactId>
-              </exclusion>
-            </exclusions>
-          </dependency>
-          <dependency>
-            <groupId>org.jboss</groupId>
-            <artifactId>jbossorg-jdocbook-style</artifactId>
-            <version>1.1.0</version>
-            <type>jdocbook-style</type>
-            <exclusions>
-              <exclusion>
-                <groupId>org.eclipse.wst.css</groupId>
-                <artifactId>core</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.eclipse.wst.sse</groupId>
-                <artifactId>core</artifactId>
-              </exclusion>
-            </exclusions>
-          </dependency>
-          <dependency>
-            <groupId>org.jboss</groupId>
-            <artifactId>jbossorg-fonts</artifactId>
-            <version>1.0.0</version>
-            <type>jdocbook-style</type>
-          </dependency>
-        </dependencies>
-        <configuration>
-          <sourceDocumentName>master.xml</sourceDocumentName>
-          <sourceDirectory>${basedir}/src/docbook</sourceDirectory>
-          <cssResource>
-            <directory>${basedir}/src/docbook</directory>
-            <includes>
-              <include>css/**/*</include>
-            </includes>
-          </cssResource>
-          <imageResource>
-            <directory>${basedir}/src/docbook</directory>
-            <includes>
-              <include>images/**/*</include>
-            </includes>
-          </imageResource>
-          <formats>
-            <format>
-              <formatName>html</formatName>
-              <stylesheetResource>file:///${basedir}/src/docbook/xslt/xhtml.xsl</stylesheetResource>
-              <finalName>index.html</finalName>
-            </format>
-            <format>
-              <formatName>html_single</formatName>
-              <stylesheetResource>file:///${basedir}/src/docbook/xslt/xhtml-single.xsl</stylesheetResource>
-              <finalName>index.html</finalName>
-            </format>
-            <format>
-              <formatName>eclipse</formatName>
-              <stylesheetResource>file:///${basedir}/src/docbook/xslt/eclipse.xsl</stylesheetResource>
-              <finalName>index.html</finalName>
-            </format>
-            <format>
-              <formatName>pdf</formatName>
-              <stylesheetResource>file:///${basedir}/src/docbook/xslt/pdf.xsl</stylesheetResource>
-              <finalName>netty.pdf</finalName>
-            </format>
-          </formats>
-          <options>
-            <xincludeSupported>true</xincludeSupported>
-            <xmlTransformerType>saxon</xmlTransformerType>
-            <docbookVersion>1.72.0</docbookVersion>
-            <localeSeparator>-</localeSeparator>
-            <autoDetectFonts>true</autoDetectFonts>
-          </options>
         </configuration>
       </plugin>
       <plugin>

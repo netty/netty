@@ -50,8 +50,8 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
 import org.jboss.netty.util.internal.NonReentrantLock;
+import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  * Adds <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL
@@ -196,7 +196,7 @@ public class SslHandler extends FrameDecoder
     int ignoreClosedChannelException;
     final Object ignoreClosedChannelExceptionLock = new Object();
     private final Queue<PendingWrite> pendingUnencryptedWrites = new LinkedList<PendingWrite>();
-    private final Queue<MessageEvent> pendingEncryptedWrites = new LinkedTransferQueue<MessageEvent>();
+    private final Queue<MessageEvent> pendingEncryptedWrites = QueueFactory.createQueue(MessageEvent.class);
     private final NonReentrantLock pendingEncryptedWritesLock = new NonReentrantLock();
     private volatile boolean issueHandshake = false;
     

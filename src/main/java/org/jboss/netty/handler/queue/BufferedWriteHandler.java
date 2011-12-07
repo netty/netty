@@ -33,7 +33,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
 import org.jboss.netty.util.HashedWheelTimer;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
+import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  * Emulates buffered write operation.  This handler stores all write requests
@@ -193,7 +193,7 @@ public class BufferedWriteHandler extends SimpleChannelHandler {
      *        into a single write request on {@link #flush()}
      */
     public BufferedWriteHandler(boolean consolidateOnFlush) {
-        this(new LinkedTransferQueue<MessageEvent>(), consolidateOnFlush);
+        this(QueueFactory.createQueue(MessageEvent.class), consolidateOnFlush);
     }
 
     /**
