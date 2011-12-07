@@ -63,7 +63,7 @@
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
-    
+
     <!-- RXTX - completely optional -->
     <!-- Used for serial port communication transport -->
     <dependency>
