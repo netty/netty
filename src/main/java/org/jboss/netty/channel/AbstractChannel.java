@@ -57,7 +57,8 @@ public abstract class AbstractChannel implements Channel {
     /** Cache for the string representation of this channel */
     private boolean strValConnected;
     private String strVal;
-
+    private volatile Object attachment;
+    
     /**
      * Creates a new instance.
      *
@@ -272,6 +273,16 @@ public abstract class AbstractChannel implements Channel {
         return Channels.write(this, message, remoteAddress);
     }
 
+    @Override
+    public Object getAttachment() {
+        return attachment;
+    }
+
+    @Override
+    public void setAttachment(Object attachment) {
+        this.attachment = attachment;
+    }
+    
     /**
      * Returns the {@link String} representation of this channel.  The returned
      * string contains the {@linkplain #getId() ID}, {@linkplain #getLocalAddress() local address},
