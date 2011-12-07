@@ -71,4 +71,4 @@ public class ConversionUtilTest {
         assertFalse(ConversionUtil.toBoolean("FALSE"));
         assertFalse(ConversionUtil.toBoolean("0"));
     }
-    }
+}
