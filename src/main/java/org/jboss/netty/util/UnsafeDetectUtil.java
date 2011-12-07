@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.util;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 
 /**
  * Utility which checks if {@value #UNSAFE} class can be found in the classpath
@@ -28,7 +30,8 @@ package org.jboss.netty.util;
 public class UnsafeDetectUtil {
 
     private static final String UNSAFE = "sun.misc.Unsafe";
-    
+    private static final boolean UNSAFE_FOUND = isUnsafeFound(AtomicInteger.class.getClassLoader());
+
     public static boolean isUnsafeFound(ClassLoader loader) {
         try {
             Class.forName(UNSAFE, true, loader);
@@ -39,7 +42,7 @@ public class UnsafeDetectUtil {
     }
 
     public static boolean isUnsafeFound() {
-        return isUnsafeFound(UnsafeDetectUtil.class.getClassLoader());
+        return UNSAFE_FOUND;
     }
 
     private UnsafeDetectUtil() {
