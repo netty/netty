@@ -19,7 +19,6 @@ import org.jboss.netty.channel.*;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -32,6 +31,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 

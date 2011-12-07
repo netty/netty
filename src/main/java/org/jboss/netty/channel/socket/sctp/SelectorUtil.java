@@ -37,7 +37,7 @@ final class SelectorUtil {
 
     static void select(Selector selector) throws IOException {
         try {
-            selector.select(500);
+            selector.select(10);
         } catch (CancelledKeyException e) {
             // Harmless exception - log anyway
             logger.debug(

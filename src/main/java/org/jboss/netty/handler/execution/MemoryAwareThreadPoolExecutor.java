@@ -18,6 +18,7 @@ package org.jboss.netty.handler.execution;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
@@ -36,7 +37,6 @@ import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.util.DefaultObjectSizeEstimator;
 import org.jboss.netty.util.ObjectSizeEstimator;
 import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
 import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
 
 /**
