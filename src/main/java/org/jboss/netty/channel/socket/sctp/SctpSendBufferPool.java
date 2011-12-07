@@ -54,7 +54,7 @@ final class SctpSendBufferPool {
 
     private final SendBuffer acquire(SctpPayload message) {
         final ChannelBuffer src = message.getPayloadBuffer();
-        final int streamNo = message.getstreamIdentifier();
+        final int streamNo = message.getStreamIdentifier();
         final int protocolId = message.getProtocolIdentifier();
 
         final int size = src.readableBytes();

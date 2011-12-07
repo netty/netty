@@ -39,7 +39,7 @@ public final class SctpPayload {
         this.payloadBuffer = payloadBuffer;
     }
 
-    public int getstreamIdentifier() {
+    public int getStreamIdentifier() {
         return streamIdentifier;
     }
 
