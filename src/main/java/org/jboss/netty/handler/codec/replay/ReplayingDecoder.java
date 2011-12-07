@@ -17,6 +17,7 @@ package org.jboss.netty.handler.codec.replay;
 
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
@@ -297,6 +298,8 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
 
     private final AtomicReference<ChannelBuffer> cumulation =
         new AtomicReference<ChannelBuffer>();
+    private final AtomicBoolean needsCleanup =
+        new AtomicBoolean(false);
     private final boolean unfold;
     private ReplayingDecoderBuffer replayable;
     private T state;
@@ -438,6 +441,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
         }
 
         ChannelBuffer cumulation = cumulation(ctx);
+        needsCleanup.set(true);
         cumulation.discardReadBytes();
         cumulation.writeBytes(input);
         callDecode(ctx, e.getChannel(), cumulation, e.getRemoteAddress());
@@ -534,14 +538,14 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
     private void cleanup(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         try {
-            ChannelBuffer cumulation = this.cumulation.getAndSet(null);
-            if (cumulation == null) {
+            if (!needsCleanup.getAndSet(false)) {
                 return;
             }
 
+            ChannelBuffer cumulation = this.cumulation.getAndSet(null);
             replayable.terminate();
 
-            if (cumulation.readable()) {
+            if (cumulation != null && cumulation.readable()) {
                 // Make sure all data was read before notifying a closed channel.
                 callDecode(ctx, e.getChannel(), cumulation, null);
             }
