@@ -44,7 +44,7 @@ import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
+import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  *
@@ -187,7 +187,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         private final int subId;
         private final AtomicBoolean wakenUp = new AtomicBoolean();
         private final Object startStopLock = new Object();
-        private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
+        private final Queue<Runnable> registerTaskQueue = QueueFactory.createQueue(Runnable.class);;
 
         Boss(int subId) {
             this.subId = subId;

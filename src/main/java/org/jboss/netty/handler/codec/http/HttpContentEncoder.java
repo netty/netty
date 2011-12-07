@@ -24,7 +24,7 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
+import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  * Encodes the content of the outbound {@link HttpResponse} and {@link HttpChunk}.
@@ -53,7 +53,7 @@ import org.jboss.netty.util.internal.LinkedTransferQueue;
  */
 public abstract class HttpContentEncoder extends SimpleChannelHandler {
 
-    private final Queue<String> acceptEncodingQueue = new LinkedTransferQueue<String>();
+    private final Queue<String> acceptEncodingQueue = QueueFactory.createQueue(String.class);
     private volatile EncoderEmbedder<ChannelBuffer> encoder;
 
     /**

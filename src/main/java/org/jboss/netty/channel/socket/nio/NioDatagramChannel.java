@@ -242,9 +242,8 @@ class NioDatagramChannel extends AbstractChannel
      * that adds support for highWaterMark checking of the write buffer size.
      */
     private final class WriteRequestQueue extends
-            LinkedTransferQueue<MessageEvent> {
+            AbstractWriteRequestQueue {
 
-        private static final long serialVersionUID = 5057413071460766376L;
 
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
@@ -258,7 +257,7 @@ class NioDatagramChannel extends AbstractChannel
          */
         @Override
         public boolean offer(MessageEvent e) {
-            boolean success = super.offer(e);
+            boolean success = queue.offer(e);
             assert success;
 
             int messageSize = getMessageSize(e);
@@ -284,7 +283,7 @@ class NioDatagramChannel extends AbstractChannel
          */
         @Override
         public MessageEvent poll() {
-            MessageEvent e = super.poll();
+            MessageEvent e = queue.poll();
             if (e != null) {
                 int messageSize = getMessageSize(e);
                 int newWriteBufferSize = writeBufferSize.addAndGet(-messageSize);

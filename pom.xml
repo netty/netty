@@ -227,6 +227,23 @@
         <!-- See org.jboss:jboss-parent -->
         <artifactId>maven-enforcer-plugin</artifactId>
         <version>1.0.1</version>
+        <executions>
+          <execution>
+            <id>enforce-java</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <!-- Enforce java 1.6 as minimum for compiling -->
+                  <!-- This is needed because of the Unsafe detection code -->
+                  <version>(1.6.0,)</version>
+                </requireJavaVersion>
+              </rules>    
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
