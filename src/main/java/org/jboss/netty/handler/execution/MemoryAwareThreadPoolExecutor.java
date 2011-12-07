@@ -36,7 +36,7 @@ import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.util.DefaultObjectSizeEstimator;
 import org.jboss.netty.util.ObjectSizeEstimator;
 import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
+import org.jboss.netty.util.internal.QueueFactory;
 import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
 
 /**
@@ -212,7 +212,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             ThreadFactory threadFactory) {
 
         super(corePoolSize, corePoolSize, keepAliveTime, unit,
-              new LinkedTransferQueue<Runnable>(), threadFactory, new NewThreadRunsPolicy());
+              QueueFactory.createQueue(Runnable.class), threadFactory, new NewThreadRunsPolicy());
 
         if (objectSizeEstimator == null) {
             throw new NullPointerException("objectSizeEstimator");

@@ -35,7 +35,7 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
+import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  * A {@link ChannelHandler} that adds support for writing a large data stream
@@ -79,8 +79,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
 
-    private final Queue<MessageEvent> queue =
-        new LinkedTransferQueue<MessageEvent>();
+    private final Queue<MessageEvent> queue = QueueFactory.createQueue(MessageEvent.class);
 
     private ChannelHandlerContext ctx;
     private MessageEvent currentEvent;

@@ -31,7 +31,7 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.util.ObjectSizeEstimator;
 import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
+import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  * A {@link MemoryAwareThreadPoolExecutor} which makes sure the events from the
@@ -284,7 +284,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
     }
 
     private final class ChildExecutor implements Executor, Runnable {
-        private final Queue<Runnable> tasks = new LinkedTransferQueue<Runnable>();
+        private final Queue<Runnable> tasks = QueueFactory.createQueue(Runnable.class);
         private final AtomicBoolean isRunning = new AtomicBoolean(false);
         
         ChildExecutor() {

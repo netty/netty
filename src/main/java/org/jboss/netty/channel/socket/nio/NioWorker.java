@@ -47,7 +47,7 @@ import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
+import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  *
@@ -70,8 +70,8 @@ class NioWorker implements Runnable {
     private final AtomicBoolean wakenUp = new AtomicBoolean();
     private final ReadWriteLock selectorGuard = new ReentrantReadWriteLock();
     private final Object startStopLock = new Object();
-    private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
-    private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
+    private final Queue<Runnable> registerTaskQueue = QueueFactory.createQueue(Runnable.class);
+    private final Queue<Runnable> writeTaskQueue = QueueFactory.createQueue(Runnable.class);
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
     private final SocketReceiveBufferPool recvBufferPool = new SocketReceiveBufferPool();

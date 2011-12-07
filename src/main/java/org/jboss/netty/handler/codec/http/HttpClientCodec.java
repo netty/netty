@@ -23,7 +23,7 @@ import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
+import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  * A combination of {@link HttpRequestEncoder} and {@link HttpResponseDecoder}
@@ -46,7 +46,7 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
         ChannelDownstreamHandler {
 
     /** A queue that is used for correlating a request and a response. */
-    final Queue<HttpMethod> queue = new LinkedTransferQueue<HttpMethod>();
+    final Queue<HttpMethod> queue = QueueFactory.createQueue(HttpMethod.class);
 
     /** If true, decoding stops (i.e. pass-through) */
     volatile boolean done;

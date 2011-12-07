@@ -45,7 +45,7 @@ import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.LinkedTransferQueue;
+import org.jboss.netty.util.internal.QueueFactory;
 
 /**
  * A class responsible for registering channels with {@link Selector}.
@@ -105,12 +105,12 @@ class NioDatagramWorker implements Runnable {
     /**
      * Queue of {@link ChannelRegistionTask}s
      */
-    private final Queue<Runnable> registerTaskQueue = new LinkedTransferQueue<Runnable>();
+    private final Queue<Runnable> registerTaskQueue = QueueFactory.createQueue(Runnable.class);
 
     /**
      * Queue of WriteTasks
      */
-    private final Queue<Runnable> writeTaskQueue = new LinkedTransferQueue<Runnable>();
+    private final Queue<Runnable> writeTaskQueue = QueueFactory.createQueue(Runnable.class);
 
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
