@@ -289,7 +289,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
 
 
     private ChannelBuffer cumulation;
-    private boolean needsCleanup = false;
+    private boolean needsCleanup;
     private final boolean unfold;
     private ReplayingDecoderBuffer replayable;
     private T state;
