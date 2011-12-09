@@ -22,6 +22,8 @@ import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
+ * @deprecated Use <tt>org.jboss.netty.handler.codec.http.websocketx</tt> instead.
+ *
  * Encodes a {@link WebSocketFrame} into a {@link ChannelBuffer}.
  * <p>
  * For the detailed instruction on adding add Web Socket support to your HTTP

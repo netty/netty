@@ -20,6 +20,8 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.util.CharsetUtil;
 
 /**
+ * @deprecated Use <tt>org.jboss.netty.handler.codec.http.websocketx</tt> instead.
+ *
  * The default {@link WebSocketFrame} implementation.
  */
 public class DefaultWebSocketFrame implements WebSocketFrame {

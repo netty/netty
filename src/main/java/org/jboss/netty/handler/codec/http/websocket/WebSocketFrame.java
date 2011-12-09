@@ -19,6 +19,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
+ * @deprecated Use <tt>org.jboss.netty.handler.codec.http.websocketx</tt> instead.
+ *
  * A Web Socket frame that represents either text or binary data.
  */
 public interface WebSocketFrame {

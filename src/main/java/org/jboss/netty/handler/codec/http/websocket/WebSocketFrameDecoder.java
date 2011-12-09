@@ -23,6 +23,8 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 import org.jboss.netty.handler.codec.replay.VoidEnum;
 
 /**
+ * @deprecated Use <tt>org.jboss.netty.handler.codec.http.websocketx</tt> instead.
+ *
  * Decodes {@link ChannelBuffer}s into {@link WebSocketFrame}s.
  * <p>
  * For the detailed instruction on adding add Web Socket support to your HTTP

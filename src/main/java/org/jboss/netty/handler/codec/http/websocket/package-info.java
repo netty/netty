@@ -15,6 +15,8 @@
  */
 
 /**
+ * @deprecated Use <tt>org.jboss.netty.handler.codec.http.websocketx</tt> instead.
+ *
  * Encoder, decoder and their related message types for
  * <a href="http://en.wikipedia.org/wiki/Web_Sockets">Web Socket</a> data frames.
  * <p>
