@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- * Copyright 2009 Red Hat, Inc.
- *
- * Red Hat licenses this file to you under the Apache License, version 2.0
- * (the "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at:
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
--->
+  ~ Copyright 2011 The Netty Project
+  ~
+  ~ The Netty Project licenses this file to you under the Apache License,
+  ~ version 2.0 (the "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at:
+  ~
+  ~ http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~ License for the specific language governing permissions and limitations
+  ~ under the License.
+  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
@@ -296,7 +296,6 @@
                   <directory>${basedir}</directory>
                   <filtering>false</filtering>
                   <includes>
-                    <include>COPYRIGHT.txt</include>
                     <include>LICENSE.txt</include>
                     <include>NOTICE.txt</include>
                     <include>license/*.txt</include>
@@ -485,7 +484,6 @@
           <doclet>org.jboss.apiviz.APIviz</doclet>
 	  <docletPath>${basedir}/lib/apiviz-1.3.1.GA.jar</docletPath>
           <attach>false</attach>
-          <stylesheetfile>${basedir}/src/javadoc/stylesheet.css</stylesheetfile>
           <javadocDirectory>${basedir}/src/javadoc</javadocDirectory>
           <docfilessubdirs>true</docfilessubdirs>
           <useStandardDocletOptions>true</useStandardDocletOptions>
@@ -542,7 +540,6 @@
           <linkJavadoc>true</linkJavadoc>
           <destDir>${project.build.directory}/xref</destDir>
           <javadocDir>${project.build.directory}/api</javadocDir>
-          <stylesheet>${basedir}/src/xref/stylesheet.css</stylesheet>
           <docTitle>${project.name} Source Xref (${project.version})</docTitle>
           <windowTitle>${project.name} Source Xref (${project.version})</windowTitle>
         </configuration>
