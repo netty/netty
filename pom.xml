@@ -29,7 +29,7 @@
   <version>4.0.0.Alpha1-SNAPSHOT</version>
 
   <name>The Netty Project</name>
-  <url>http://www.jboss.org/netty/</url>
+  <url>http://io.netty/</url>
   <description>
     The Netty project is an effort to provide an asynchronous event-driven
     network application framework and tools for rapid development of
@@ -240,9 +240,28 @@
 
     <plugins>
       <plugin>
-        <!-- See org.jboss:jboss-parent -->
         <artifactId>maven-enforcer-plugin</artifactId>
         <version>1.0.1</version>
+        <executions>
+          <execution>
+            <id>enforce-tools</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <!-- Enforce java 1.6 as minimum for compiling -->
+                  <!-- This is needed because of the Unsafe detection code -->
+                  <version>[1.6.0,)</version>
+                </requireJavaVersion>
+                <requireMavenVersion>
+                  <version>[3.0.3,)</version>
+                </requireMavenVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
