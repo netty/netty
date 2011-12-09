@@ -80,10 +80,6 @@ import io.netty.util.internal.ExecutorUtil;
  * A {@link ServerSocketChannel} created by this factory and its child channels
  * do not support asynchronous operations.  Any I/O requests such as
  * {@code "write"} will be performed in a blocking manner.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  */
 public class OioServerSocketChannelFactory implements ServerSocketChannelFactory {

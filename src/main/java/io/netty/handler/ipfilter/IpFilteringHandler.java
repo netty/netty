@@ -21,8 +21,6 @@ package io.netty.handler.ipfilter;
  * A Filter of IP.
  * <br>
  * Users can add an {@link IpFilterListener} to add specific actions in case a connection is allowed or refused.
- * 
- * @author Ron
  */
 public interface IpFilteringHandler
 {

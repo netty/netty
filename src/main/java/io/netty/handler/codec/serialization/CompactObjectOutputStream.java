@@ -21,8 +21,6 @@ import java.io.ObjectStreamClass;
 import java.io.OutputStream;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 class CompactObjectOutputStream extends ObjectOutputStream {
 

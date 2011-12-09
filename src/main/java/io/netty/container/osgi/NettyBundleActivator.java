@@ -22,9 +22,6 @@ import org.osgi.framework.BundleContext;
 
 /**
  * An OSGi {@link BundleActivator} that configures logging.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class NettyBundleActivator implements BundleActivator {
 

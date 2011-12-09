@@ -23,9 +23,6 @@ import java.nio.ByteOrder;
  * the specified capacity.  {@link HeapChannelBufferFactory} should perform
  * very well in most situations because it relies on the JVM garbage collector,
  * which is highly optimized for heap allocation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class HeapChannelBufferFactory extends AbstractChannelBufferFactory {
 

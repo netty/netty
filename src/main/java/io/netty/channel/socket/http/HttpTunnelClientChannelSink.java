@@ -26,10 +26,6 @@ import io.netty.channel.MessageEvent;
 /**
  * Sink of a client channel, deals with sunk events and then makes appropriate calls
  * on the channel itself to push data.
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 class HttpTunnelClientChannelSink extends AbstractChannelSink {
 

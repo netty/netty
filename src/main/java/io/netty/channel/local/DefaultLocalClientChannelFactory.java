@@ -20,11 +20,6 @@ import io.netty.channel.ChannelSink;
 
 /**
  * The default {@link LocalClientChannelFactory} implementation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  */
 public class DefaultLocalClientChannelFactory implements LocalClientChannelFactory {

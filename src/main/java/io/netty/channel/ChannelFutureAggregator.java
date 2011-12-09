@@ -24,10 +24,6 @@ import java.util.Set;
  * Class which is used to consolidate multiple channel futures into one, by
  * listening to the individual futures and producing an aggregated result
  * (success/failure) when all futures have completed.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 public class ChannelFutureAggregator implements ChannelFutureListener {
 

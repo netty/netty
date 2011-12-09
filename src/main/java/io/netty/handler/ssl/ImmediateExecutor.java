@@ -19,9 +19,6 @@ import java.util.concurrent.Executor;
 
 /**
  * {@link Executor} which executes the command in the caller thread.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 final class ImmediateExecutor implements Executor {
 

@@ -53,9 +53,6 @@ import io.netty.logging.InternalLoggerFactory;
  * Decodes a web socket frame from wire protocol version 8 format. This code was
  * forked from <a href="https://github.com/joewalnes/webbit">webbit</a> and
  * modified.
- * 
- * @author Aslak Hellesøy
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDecoder.State> {
 

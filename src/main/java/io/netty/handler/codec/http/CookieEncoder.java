@@ -42,9 +42,6 @@ import java.util.TreeSet;
  * res.setHeader("Set-Cookie", encoder.encode());
  * </pre>
  *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @see CookieDecoder
  *
  * @apiviz.stereotype utility

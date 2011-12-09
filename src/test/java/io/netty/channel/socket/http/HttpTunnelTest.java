@@ -51,9 +51,6 @@ import org.junit.Test;
 
 /**
  * Tests HTTP tunnelling
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 public class HttpTunnelTest {
 

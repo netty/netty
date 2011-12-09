@@ -17,8 +17,6 @@ package io.netty.handler.codec.http.websocketx;
 
 /**
  * Exception during handshaking process
- * 
- * @author <a href="http://netty.io/">The Netty Project</a>
  */
 public class WebSocketHandshakeException extends Exception {
 

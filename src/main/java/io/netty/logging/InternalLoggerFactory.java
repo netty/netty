@@ -30,10 +30,6 @@ import io.netty.util.internal.StackTraceSimplifier;
  * which were loaded after the default factory is changed.  Therefore,
  * {@link #setDefaultFactory(InternalLoggerFactory)} should be called as early
  * as possible and shouldn't be called more than once.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  * @apiviz.has io.netty.logging.InternalLogger oneway - - creates
  */

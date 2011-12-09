@@ -47,8 +47,7 @@ import io.netty.logging.InternalLoggerFactory;
  * <br>
  * new PatternRule(false, "n:*")
  * <br>
- * 
- * @author Ron
+ * 
  */
 public class PatternRule implements IpFilterRule, Comparable<Object>
 {

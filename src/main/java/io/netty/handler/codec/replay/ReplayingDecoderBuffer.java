@@ -30,8 +30,6 @@ import io.netty.buffer.ChannelBufferIndexFinder;
 import io.netty.buffer.ChannelBuffers;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 class ReplayingDecoderBuffer implements ChannelBuffer {
 

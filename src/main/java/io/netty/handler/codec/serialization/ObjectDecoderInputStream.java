@@ -24,9 +24,6 @@ import java.io.StreamCorruptedException;
 /**
  * An {@link ObjectInput} which is interoperable with {@link ObjectEncoder}
  * and {@link ObjectEncoderOutputStream}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class ObjectDecoderInputStream extends InputStream implements
         ObjectInput {

@@ -40,10 +40,6 @@ import io.netty.logging.InternalLoggerFactory;
  * The client end of an HTTP tunnel, created by an {@link HttpTunnelClientChannelFactory}. Channels of
  * this type are designed to emulate a normal TCP based socket channel as far as is feasible within the limitations
  * of the HTTP 1.1 protocol, and the usage patterns permitted by commonly used HTTP proxies and firewalls.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 public class HttpTunnelClientChannel extends AbstractChannel implements
         SocketChannel {

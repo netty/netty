@@ -21,9 +21,6 @@ import io.netty.util.CharsetUtil;
 
 /**
  * Web Socket text frame with assumed UTF-8 encoding
- * 
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
- * 
  */
 public class TextWebSocketFrame extends WebSocketFrame {
 

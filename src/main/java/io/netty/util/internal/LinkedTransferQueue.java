@@ -61,8 +61,7 @@ import java.util.concurrent.locks.LockSupport;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
- * @since 1.7
- * @author Doug Lea
+ * @since 1.7
  * @param <E> the type of elements held in this collection
  */
 public class LinkedTransferQueue<E> extends AbstractQueue<E>
@@ -324,8 +323,6 @@ public class LinkedTransferQueue<E> extends AbstractQueue<E>
      *    versa) compared to their predecessors receive additional
      *    chained spins, reflecting longer paths typically required to
      *    unblock threads during phase changes.
-     *
-     *
      * ** Unlinking removed interior nodes **
      *
      * In addition to minimizing garbage retention via self-linking

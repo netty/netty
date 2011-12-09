@@ -101,10 +101,6 @@ import io.netty.util.CharsetUtil;
  * Date:               Tue, 01 Mar 2011 22:44:28 GMT
  * 
  * </pre>
- * 
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://www.veebsbraindump.com/">Veebs</a>
  */
 public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
 

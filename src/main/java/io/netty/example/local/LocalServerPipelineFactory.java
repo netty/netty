@@ -30,9 +30,6 @@ import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.execution.ExecutionHandler;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author Frederic Bregier (fredbregier@free.fr)
  */
 public class LocalServerPipelineFactory implements ChannelPipelineFactory {
 

@@ -53,9 +53,6 @@ import io.netty.logging.InternalLoggerFactory;
  * <p>
  * A very large portion of this code was taken from the Netty 3.2 HTTP example.
  * </p>
- * 
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
 

@@ -43,10 +43,6 @@ import io.netty.util.internal.ThreadLocalBoolean;
 
 /**
  * Provides an NIO based {@link io.netty.channel.socket.DatagramChannel}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Daniel Bevenius (dbevenius@jboss.com)
  */
 class NioDatagramChannel extends AbstractChannel
                                 implements io.netty.channel.socket.DatagramChannel {
@@ -319,8 +315,7 @@ class NioDatagramChannel extends AbstractChannel
 
     /**
      * WriteTask is a simple runnable performs writes by delegating the {@link NioDatagramWorker}.
-     *
-     */
+ */
     private final class WriteTask implements Runnable {
         WriteTask() {
         }

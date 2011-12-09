@@ -51,11 +51,6 @@ import io.netty.handler.codec.http.HttpMessageDecoder;
  *     value, a {@link TooLongFrameException} will be raised.</td>
  * </tr>
  * </table>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  */
 public abstract class RtspMessageDecoder extends HttpMessageDecoder {

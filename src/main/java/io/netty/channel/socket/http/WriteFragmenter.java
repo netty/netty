@@ -33,10 +33,6 @@ import io.netty.channel.SimpleChannelDownstreamHandler;
  * <p>
  * This is utilised by the http tunnel to smooth out the per-byte latency,
  * by placing an upper bound on HTTP request / response body sizes.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 public class WriteFragmenter extends SimpleChannelDownstreamHandler {
 

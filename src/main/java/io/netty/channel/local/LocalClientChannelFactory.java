@@ -20,9 +20,6 @@ import io.netty.channel.ChannelPipeline;
 
 /**
  * A {@link ChannelFactory} that creates a client-side {@link LocalChannel}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public interface LocalClientChannelFactory extends ChannelFactory {
     @Override

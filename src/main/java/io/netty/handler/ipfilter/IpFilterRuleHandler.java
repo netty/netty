@@ -53,8 +53,6 @@ import io.netty.channel.ChannelHandlerContext;
  * Note that {@link IpSubnetFilterRule} which supports IPV4 and IPV6 should be used with as much as
  * possible no mixed IP protocol. Both IPV4 and IPV6 are supported but a mix (IpFilter in IPV6 notation
  * and the address from the channel in IPV4, or the reverse) can lead to wrong result.
- * @author frederic bregier
- *
  */
 @Sharable
 public class IpFilterRuleHandler extends IpFilteringHandlerImpl

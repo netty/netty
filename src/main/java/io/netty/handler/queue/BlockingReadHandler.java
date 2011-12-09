@@ -70,9 +70,6 @@ import io.netty.util.internal.QueueFactory;
  * </pre>
  *
  * @param <E> the type of the received messages
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class BlockingReadHandler<E> extends SimpleChannelUpstreamHandler {
 

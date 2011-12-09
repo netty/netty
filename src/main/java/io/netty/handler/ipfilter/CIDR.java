@@ -22,7 +22,6 @@ import java.net.UnknownHostException;
 import java.util.StringTokenizer;
 
 /**
- * @author frederic bregier
  */
 public abstract class CIDR implements Comparable<CIDR>
 {

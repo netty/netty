@@ -21,10 +21,6 @@ package io.netty.handler.codec.http.websocketx;
 
 /**
  * Checks UTF8 bytes for validity before converting it into a string
- * 
- * @author Bjoern Hoehrmann
- * @author https://github.com/joewalnes/webbit
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class UTF8Output {
     private static final int UTF8_ACCEPT = 0;

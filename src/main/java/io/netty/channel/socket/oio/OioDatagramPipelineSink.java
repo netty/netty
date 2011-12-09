@@ -31,9 +31,6 @@ import io.netty.channel.MessageEvent;
 import io.netty.util.internal.DeadLockProofWorker;
 
 /**
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 class OioDatagramPipelineSink extends AbstractChannelSink {
 

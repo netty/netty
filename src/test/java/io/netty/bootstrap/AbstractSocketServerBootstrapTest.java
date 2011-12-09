@@ -46,9 +46,6 @@ import org.junit.Test;
 
 /**
  * An abstract test class to test server socket bootstraps
- * 
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public abstract class AbstractSocketServerBootstrapTest {
 

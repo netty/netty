@@ -26,10 +26,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * This class is used to monitor the amount of data that has yet to be pushed to
  * the underlying socket, in order to implement the "high/low water mark" facility
  * that controls Channel.isWritable() and the interest ops of http tunnels.
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
+ * 
  */
 class SaturationManager {
     private final AtomicLong desaturationPoint;

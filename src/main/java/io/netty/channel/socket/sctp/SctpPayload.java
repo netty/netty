@@ -19,8 +19,6 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  */
 public final class SctpPayload {
     private final int streamIdentifier;

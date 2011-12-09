@@ -27,11 +27,6 @@ import io.netty.buffer.ChannelBuffers;
 /**
  * An HTTP message which provides common properties for {@link HttpRequest} and
  * {@link HttpResponse}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @see HttpHeaders
  *
  * @apiviz.landmark
@@ -45,8 +40,7 @@ public interface HttpMessage {
      * value is returned.
      *
      * @return the header value or {@code null} if there is no such header
-     *
-     */
+ */
     String getHeader(String name);
 
     /**

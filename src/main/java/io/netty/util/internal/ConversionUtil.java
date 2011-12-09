@@ -21,9 +21,6 @@ import java.util.List;
 /**
  * Conversion utility class to parse a property represented as a string or
  * an object.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class ConversionUtil {
 

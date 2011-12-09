@@ -35,9 +35,6 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 /**
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 class NioServerSocketChannel extends AbstractServerChannel
                              implements io.netty.channel.socket.ServerSocketChannel {

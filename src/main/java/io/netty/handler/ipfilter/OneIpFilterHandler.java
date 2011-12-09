@@ -34,9 +34,6 @@ import io.netty.channel.ChannelStateEvent;
  * Take care to not change isBlocked method except if you know what you are doing
  * since it is used to test if the current closed connection is to be removed
  * or not from the map of currently connected channel.
- *
- * @author frederic bregier
- *
  */
 @Sharable
 public class OneIpFilterHandler extends IpFilteringHandlerImpl

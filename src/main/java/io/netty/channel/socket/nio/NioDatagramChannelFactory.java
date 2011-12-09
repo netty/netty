@@ -71,11 +71,6 @@ import io.netty.util.internal.ExecutorUtil;
  * <p>
  * Multicast is not supported.  Please use {@link OioDatagramChannelFactory}
  * instead.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Daniel Bevenius (dbevenius@jboss.com)
- *
  * @apiviz.landmark
  */
 public class NioDatagramChannelFactory implements DatagramChannelFactory {

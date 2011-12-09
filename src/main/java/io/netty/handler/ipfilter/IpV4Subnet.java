@@ -39,8 +39,6 @@ import java.util.Vector;
  * <tt>IpV4Subnet ips = new IpV4Subnet(inetAddress, "255.255.255.0");</tt><BR>
  * where inetAddress is 192.168.1.0 and inetAddress2 is 192.168.1.123<BR>
 
- * @author frederic bregier
- *
  */
 public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet>
 {

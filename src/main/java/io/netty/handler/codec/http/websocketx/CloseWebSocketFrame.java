@@ -19,8 +19,6 @@ import io.netty.buffer.ChannelBuffers;
 
 /**
  * Web Socket Frame for closing the connection
- * 
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class CloseWebSocketFrame extends WebSocketFrame {
 

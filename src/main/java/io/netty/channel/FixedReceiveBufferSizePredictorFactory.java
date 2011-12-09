@@ -19,9 +19,6 @@ package io.netty.channel;
 /**
  * The {@link ReceiveBufferSizePredictorFactory} that returns a
  * {@link FixedReceiveBufferSizePredictor} with the pre-defined configuration.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class FixedReceiveBufferSizePredictorFactory implements
         ReceiveBufferSizePredictorFactory {

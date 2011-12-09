@@ -20,12 +20,6 @@ import java.nio.charset.Charset;
 
 /**
  * Disk FileUpload implementation that stores file into real files
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://openr66.free.fr/">Frederic Bregier</a>
- *
  */
 public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     public static String baseDirectory = null;

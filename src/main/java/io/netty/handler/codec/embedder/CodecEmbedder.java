@@ -23,9 +23,6 @@ import io.netty.channel.ChannelPipeline;
  * A helper that wraps an encoder or a decoder (codec) so that they can be used
  * without doing actual I/O in unit tests or higher level codecs.  Please refer
  * to {@link EncoderEmbedder} and {@link DecoderEmbedder} for more information.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public interface CodecEmbedder<E> {
     /**

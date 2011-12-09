@@ -17,10 +17,6 @@ package io.netty.channel;
 
 /**
  * A {@link RuntimeException} which is thrown when an I/O operation fails.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.hidden
  */
 public class ChannelException extends RuntimeException {

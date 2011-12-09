@@ -20,8 +20,6 @@ import io.netty.buffer.ChannelBuffers;
 
 /**
  * Web Socket frame containing binary data
- * 
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class PongWebSocketFrame extends WebSocketFrame {
 

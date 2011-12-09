@@ -57,10 +57,6 @@ import com.google.protobuf.MessageLite;
  *     ch.write(res);
  * }
  * </pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  */
 @Sharable

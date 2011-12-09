@@ -23,8 +23,6 @@ import java.io.ObjectStreamClass;
 import java.io.StreamCorruptedException;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 class CompactObjectInputStream extends ObjectInputStream {
     

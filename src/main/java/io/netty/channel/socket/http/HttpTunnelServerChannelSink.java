@@ -26,9 +26,6 @@ import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.socket.ServerSocketChannel;
 
 /**
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 class HttpTunnelServerChannelSink extends AbstractChannelSink {
 

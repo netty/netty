@@ -81,10 +81,6 @@ import io.netty.util.CharsetUtil;
  * This class also provides various utility methods to help implementation
  * of a new buffer type, generation of hex dump and swapping an integer's
  * byte order.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  * @apiviz.has io.netty.buffer.ChannelBuffer oneway - - creates
  */

@@ -30,9 +30,6 @@ import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 /**
  * Sends a list of continent/city pairs to a {@link LocalTimeServer} to
  * get the local times of the specified cities.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class LocalTimeClient {
 

@@ -33,11 +33,6 @@ import java.util.List;
  * encoder.addParam("recipient", "world");
  * assert encoder.toString().equals("/hello?recipient=world");
  * </pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @see QueryStringDecoder
  *
  * @apiviz.stereotype utility

@@ -25,9 +25,6 @@ import io.netty.channel.socket.SocketChannel;
 
 /**
  * A fake client socket channel factory for use in testing
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 public class FakeClientSocketChannelFactory implements
         ClientSocketChannelFactory {

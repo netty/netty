@@ -43,8 +43,7 @@ import io.netty.logging.InternalLoggerFactory;
  * <br>
  * new IPFilterRuleHandler().addAll(new IpFilterRuleList("+n:localhost, -n:*"));
  * <br>
- * 
- * @author Ron
+ * 
  */
 public class IpFilterRuleList extends ArrayList<IpFilterRule>
 {

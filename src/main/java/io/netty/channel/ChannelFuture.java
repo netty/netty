@@ -163,10 +163,6 @@ import io.netty.handler.execution.ExecutionHandler;
  *     // Connection established successfully
  * }
  * </pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  * @apiviz.owns io.netty.channel.ChannelFutureListener - - notifies
  */

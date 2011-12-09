@@ -19,11 +19,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 
 /**
  * The status code and its description of a RTSP response.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.exclude
  */
 public final class RtspResponseStatuses {

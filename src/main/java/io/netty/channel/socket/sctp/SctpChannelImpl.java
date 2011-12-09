@@ -31,10 +31,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static io.netty.channel.Channels.fireChannelInterestChanged;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
- *
  */
 class SctpChannelImpl extends AbstractChannel implements SctpChannel {
 

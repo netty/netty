@@ -26,9 +26,6 @@ import io.netty.handler.codec.string.StringEncoder;
 
 /**
  * Creates a newly configured {@link ChannelPipeline} for a new channel.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class TelnetClientPipelineFactory implements
         ChannelPipelineFactory {

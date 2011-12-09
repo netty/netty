@@ -28,9 +28,6 @@ import io.netty.buffer.ChannelBuffers;
 /**
  * An {@link ObjectOutput} which is interoperable with {@link ObjectDecoder}
  * and {@link ObjectDecoderInputStream}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class ObjectEncoderOutputStream extends OutputStream implements
         ObjectOutput {

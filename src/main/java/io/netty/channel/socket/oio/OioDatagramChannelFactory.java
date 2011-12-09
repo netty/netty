@@ -67,10 +67,6 @@ import io.netty.util.internal.ExecutorUtil;
  * A {@link DatagramChannel} created by this factory does not support asynchronous
  * operations.  Any I/O requests such as {@code "write"} will be performed in a
  * blocking manner.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  */
 public class OioDatagramChannelFactory implements DatagramChannelFactory {

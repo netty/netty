@@ -59,10 +59,6 @@ import io.netty.channel.socket.nio.NioSocketChannelConfig;
  * More options are available in the sub-types of {@link ChannelConfig}.  For
  * example, you can configure the parameters which are specific to a TCP/IP
  * socket as explained in {@link SocketChannelConfig} or {@link NioSocketChannelConfig}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.has io.netty.channel.ChannelPipelineFactory
  * @apiviz.composedOf io.netty.channel.ReceiveBufferSizePredictor
  *

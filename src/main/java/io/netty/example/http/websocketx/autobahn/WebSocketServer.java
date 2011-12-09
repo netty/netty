@@ -27,10 +27,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 /**
  * A Web Socket echo server for running the <a href="http://www.tavendo.de/autobahn/testsuite.html">autobahn</a>
  * test suite
- * 
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class WebSocketServer {
 	public static void main(String[] args) {

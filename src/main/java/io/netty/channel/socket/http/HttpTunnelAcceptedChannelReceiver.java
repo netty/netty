@@ -20,10 +20,7 @@ import io.netty.buffer.ChannelBuffer;
 /**
  * Interface from the server message switch and channel sink to an
  * accepted channel. Exists primarily for mock testing purposes.
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
+ * 
  */
 interface HttpTunnelAcceptedChannelReceiver {
 

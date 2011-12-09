@@ -23,9 +23,6 @@ import io.netty.channel.ChannelUpstreamHandler;
 
 /**
  * A channel handler that simply sends events upstream or downstream
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 public class NullChannelHandler implements ChannelUpstreamHandler,
         ChannelDownstreamHandler {

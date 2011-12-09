@@ -21,9 +21,6 @@ package io.netty.logging;
  * Logger factory which creates an
  * <a href="http://commons.apache.org/logging/">Apache Commons Logging</a>
  * logger.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class CommonsLoggerFactory extends InternalLoggerFactory {
 

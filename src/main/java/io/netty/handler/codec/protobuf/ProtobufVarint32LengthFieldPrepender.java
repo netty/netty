@@ -39,10 +39,6 @@ import com.google.protobuf.CodedOutputStream;
  * </pre> *
  *
  * @see com.google.protobuf.CodedOutputStream
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Tomasz Blachowicz (tblachowicz@gmail.com)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 @Sharable
 public class ProtobufVarint32LengthFieldPrepender extends OneToOneEncoder {

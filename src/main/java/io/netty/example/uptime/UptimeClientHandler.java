@@ -32,9 +32,6 @@ import io.netty.util.TimerTask;
 /**
  * Keep reconnecting to the server while printing out the current uptime and
  * connection attempt status.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
 

@@ -28,10 +28,6 @@ import java.util.concurrent.Executors;
 
 /**
  * Echoes back any received data from a client.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  */
 public class SctpServer {
 

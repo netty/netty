@@ -26,9 +26,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 
 /**
  * Copied from https://github.com/cgbystrom/netty-tools
- * 
- * @author <a href="http://www.pedantique.org/">Carl Bystr&ouml;m</a>
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public interface WebSocketClient {
 

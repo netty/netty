@@ -34,9 +34,6 @@ import io.netty.util.CharsetUtil;
  * {@link QuoteOfTheMomentClient}.
  *
  * Inspired by <a href="http://java.sun.com/docs/books/tutorial/networking/datagrams/clientServer.html">the official Java tutorial</a>.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class QuoteOfTheMomentServer {
 

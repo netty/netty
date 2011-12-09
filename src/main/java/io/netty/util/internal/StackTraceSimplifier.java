@@ -28,9 +28,6 @@ import io.netty.util.DebugUtil;
  * Simplifies an exception stack trace by removing unnecessary
  * {@link StackTraceElement}s.  Please note that the stack trace simplification
  * is disabled if {@linkplain DebugUtil debug mode} is turned on.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class StackTraceSimplifier {
 

@@ -23,10 +23,6 @@ import io.netty.channel.SimpleChannelHandler;
 /**
  * An extended {@link SimpleChannelHandler} that adds the handler method for
  * an {@link IdleStateEvent}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.uses io.netty.handler.timeout.IdleStateEvent
  */
 public class IdleStateAwareChannelHandler extends SimpleChannelHandler {

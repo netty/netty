@@ -26,9 +26,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 /**
  * Echoes back any received data from a client.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class EchoServer {
 

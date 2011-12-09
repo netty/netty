@@ -31,11 +31,6 @@ import io.netty.handler.stream.ChunkedInput;
 
 /**
  * This encoder will help to encode Request for a FORM as POST.
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://openr66.free.fr/">Frederic Bregier</a>
- *
  */
 public class HttpPostRequestEncoder implements ChunkedInput {
     /**
@@ -154,8 +149,7 @@ public class HttpPostRequestEncoder implements ChunkedInput {
 
     /**
      * Clean all HttpDatas (on Disk) for the current request.
-     *
-     */
+ */
     public void cleanFiles() {
         factory.cleanRequestHttpDatas(request);
     }
@@ -951,19 +945,14 @@ public class HttpPostRequestEncoder implements ChunkedInput {
 
     /**
      * Exception when an error occurs while encoding
-     *
-     * @author frederic bregier
-     *
      */
     public static class ErrorDataEncoderException extends Exception {
         /**
-         *
-         */
+ */
         private static final long serialVersionUID = 5020247425493164465L;
 
         /**
-         *
-         */
+ */
         public ErrorDataEncoderException() {
         }
 

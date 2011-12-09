@@ -25,9 +25,6 @@ import io.netty.channel.ChannelFuture;
 
 /**
  * A mock channel state listener
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 public class MockChannelStateListener implements HttpTunnelClientWorkerOwner {
 

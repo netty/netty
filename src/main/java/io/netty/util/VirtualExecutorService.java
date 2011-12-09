@@ -71,10 +71,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * termination but wait until {@link VirtualExecutorService} is shut down and
  * its active tasks are finished and the threads are returned to the parent
  * {@link Executor}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  */
 public class VirtualExecutorService extends AbstractExecutorService {

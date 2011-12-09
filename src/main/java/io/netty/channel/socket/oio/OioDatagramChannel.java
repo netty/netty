@@ -36,9 +36,6 @@ import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
 
 /**
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 final class OioDatagramChannel extends AbstractChannel
                                 implements DatagramChannel {

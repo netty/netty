@@ -25,7 +25,6 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 /**
- * @author frederic bregier
  */
 public class CIDR6 extends CIDR
 {

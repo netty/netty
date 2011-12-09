@@ -22,9 +22,6 @@ import java.util.EventListener;
  * asynchronous {@link ChannelGroup} I/O operations is notified once this
  * listener is added by calling {@link ChannelGroupFuture#addListener(ChannelGroupFutureListener)}
  * and all I/O operations are complete.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public interface ChannelGroupFutureListener extends EventListener {
 

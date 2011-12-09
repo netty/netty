@@ -34,10 +34,6 @@ import io.netty.channel.socket.SocketChannelConfig;
  * <tr><td>{@code "writeBufferHighWaterMark"}</td><td>{@link #setWriteBufferHighWaterMark(int)}</td></tr>
  * <tr><td>{@code "writeBufferLowWaterMark"}</td><td>{@link #setWriteBufferLowWaterMark(int)}</td></tr>
  * </table>
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 public class HttpTunnelClientChannelConfig extends HttpTunnelChannelConfig {
 

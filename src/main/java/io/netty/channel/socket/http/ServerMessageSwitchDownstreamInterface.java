@@ -21,10 +21,6 @@ import io.netty.channel.ChannelFuture;
 /**
  * The interface from a HttpTunnelAcceptedChannel to the ServerMessageSwitch.
  * This primarily exists for mock object testing purposes.
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 interface ServerMessageSwitchDownstreamInterface {
 

@@ -20,9 +20,6 @@ import io.netty.logging.InternalLoggerFactory;
 
 /**
  * A bean that configures the default {@link InternalLoggerFactory}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class NettyLoggerConfigurator {
     public NettyLoggerConfigurator() {

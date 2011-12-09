@@ -35,9 +35,6 @@ package io.netty.channel;
  * in the handler method can cause an unexpected pause during I/O.  If you need
  * to perform a blocking operation on I/O completion, try to execute the
  * operation in a different thread using a thread pool.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public interface ChannelFutureProgressListener extends ChannelFutureListener {
 

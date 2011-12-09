@@ -24,9 +24,6 @@ import io.netty.channel.socket.ServerSocketChannelConfig;
 
 /**
  * A fake server socket channel config class for use in testing
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 public class FakeServerSocketChannelConfig extends DefaultChannelConfig
         implements ServerSocketChannelConfig {

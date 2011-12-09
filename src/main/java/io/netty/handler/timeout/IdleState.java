@@ -20,9 +20,6 @@ import io.netty.channel.Channel;
 
 /**
  * An {@link Enum} that represents the idle state of a {@link Channel}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public enum IdleState {
     /**

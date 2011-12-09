@@ -37,10 +37,6 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  * // Encoder
  * pipeline.addLast("base64Encoder", new {@link Base64Encoder}());
  * </pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  * @apiviz.uses io.netty.handler.codec.base64.Base64
  */

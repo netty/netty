@@ -22,9 +22,6 @@ import io.netty.util.CharsetUtil;
 
 /**
  * Generates the demo HTML page which is served at http://localhost:8080/
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class WebSocketServerIndexPage {
 

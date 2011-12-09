@@ -23,9 +23,6 @@ import org.osgi.util.tracker.ServiceTracker;
 /**
  * Logger factory which creates an <a href="http://www.osgi.org/">OSGi</a>
  * {@link LogService} logger.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class OsgiLoggerFactory extends InternalLoggerFactory {
 

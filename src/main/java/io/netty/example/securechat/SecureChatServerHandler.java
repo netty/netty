@@ -34,9 +34,6 @@ import io.netty.handler.ssl.SslHandler;
 
 /**
  * Handles a server-side channel.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
 
@@ -109,8 +106,6 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     /**
-     * @author <a href="http://netty.io/">The Netty Project</a>
-     * @author <a href="http://gleamynode.net/">Trustin Lee</a>
      */
     private static final class Greeter implements ChannelFutureListener {
 

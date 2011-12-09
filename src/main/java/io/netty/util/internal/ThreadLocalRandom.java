@@ -45,7 +45,6 @@ import java.util.Random;
  * generation methods.
  *
  * @since 1.7
- * @author Doug Lea
  */
 final class ThreadLocalRandom extends Random {
     // same constants as Random, but must be redeclared because private

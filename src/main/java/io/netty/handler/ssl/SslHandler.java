@@ -145,10 +145,6 @@ import io.netty.util.internal.QueueFactory;
  * <li>insert the {@link SslHandler} to the {@link ChannelPipeline}, and</li>
  * <li>Initiate SSL handshake by calling {@link SslHandler#handshake()}.</li>
  * </ol>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  * @apiviz.uses io.netty.handler.ssl.SslBufferPool
  */
@@ -418,8 +414,7 @@ public class SslHandler extends FrameDecoder
     /**
      * Enables or disables the automatic handshake once the {@link Channel} is connected. The value will only have affect if its set before the 
      * {@link Channel} is connected.
-     * 
-     */
+ */
     public void setIssueHandshake(boolean issueHandshake) {
         this.issueHandshake = issueHandshake;
     }

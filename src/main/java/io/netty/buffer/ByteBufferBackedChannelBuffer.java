@@ -28,9 +28,6 @@ import java.nio.channels.ScatteringByteChannel;
  * A NIO {@link ByteBuffer} based buffer.  It is recommended to use {@link ChannelBuffers#directBuffer(int)}
  * and {@link ChannelBuffers#wrappedBuffer(ByteBuffer)} instead of calling the
  * constructor explicitly.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
 

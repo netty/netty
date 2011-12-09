@@ -123,10 +123,6 @@ import io.netty.util.internal.SharedResourceMisuseDetector;
  * </pre>
  *
  * To maintain the event order, you must use {@link OrderedMemoryAwareThreadPoolExecutor}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.has io.netty.util.ObjectSizeEstimator oneway - -
  * @apiviz.has io.netty.handler.execution.ChannelEventRunnable oneway - - executes
  */

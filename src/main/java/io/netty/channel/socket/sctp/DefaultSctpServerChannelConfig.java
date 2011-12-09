@@ -25,10 +25,6 @@ import java.io.IOException;
 
 /**
  * The default {@link io.netty.channel.socket.ServerSocketChannelConfig} implementation for SCTP.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  */
 public class DefaultSctpServerChannelConfig extends DefaultServerChannelConfig
         implements SctpServerChannelConfig {

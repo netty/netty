@@ -22,10 +22,6 @@ import io.netty.channel.socket.ClientSocketChannelFactory;
 
 /**
  * Factory used to create new client channels.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 public class HttpTunnelClientChannelFactory implements
         ClientSocketChannelFactory {

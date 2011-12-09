@@ -36,9 +36,6 @@ import io.netty.util.internal.SystemPropertyUtil;
 /**
  * Provides information which is specific to a NIO service provider
  * implementation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 class NioProviderMetadata {
     static final InternalLogger logger =

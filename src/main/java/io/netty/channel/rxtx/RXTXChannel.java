@@ -28,9 +28,6 @@ import io.netty.channel.ChannelSink;
 
 /**
  * A channel to a serial device using the RXTX library.
- *
- * @author Daniel Bimschas
- * @author Dennis Pfisterer
  */
 public class RXTXChannel extends AbstractChannel {
 

@@ -19,9 +19,6 @@ import java.util.regex.Pattern;
 
 /**
  * Accesses the system property swallowing a {@link SecurityException}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class SystemPropertyUtil {
 

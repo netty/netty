@@ -99,10 +99,6 @@ import io.netty.channel.socket.nio.NioSocketChannelConfig;
  * {@code writeBufferHighWaterMark} properties in {@link NioSocketChannelConfig}
  * to determine when to set or clear the {@link #OP_WRITE} flag.
  * </p>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  * @apiviz.composedOf io.netty.channel.ChannelConfig
  * @apiviz.composedOf io.netty.channel.ChannelPipeline
@@ -374,7 +370,6 @@ public interface Channel extends Comparable<Channel> {
 
     /**
      * Attaches an object to this {@link Channel} to store a stateful information
-     * 
-     */
+ */
     void setAttachment(Object attachment);
 }

@@ -21,9 +21,6 @@ import io.netty.util.CharsetUtil;
 
 /**
  * The default {@link WebSocketFrame} implementation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class DefaultWebSocketFrame implements WebSocketFrame {
 

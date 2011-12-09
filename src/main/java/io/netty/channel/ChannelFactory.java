@@ -46,10 +46,6 @@ import io.netty.util.ExternalResourceReleasable;
  * For detailed transport-specific information on shutting down a factory,
  * please refer to the Javadoc of {@link ChannelFactory}'s subtypes, such as
  * {@link NioServerSocketChannelFactory}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  * @apiviz.has        io.netty.channel.Channel oneway - - creates
  *

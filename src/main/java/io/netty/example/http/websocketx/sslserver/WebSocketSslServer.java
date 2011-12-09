@@ -45,10 +45,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * <li>Firefox 7+ (draft-ietf-hybi-thewebsocketprotocol-10)
  * <li>
  * </ul>
- * 
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class WebSocketSslServer {
 	public static void main(String[] args) {

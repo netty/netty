@@ -21,12 +21,6 @@ import java.nio.charset.Charset;
  * Default FileUpload implementation that stores file into memory.<br><br>
  *
  * Warning: be aware of the memory limitation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://openr66.free.fr/">Frederic Bregier</a>
- *
  */
 public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUpload {
 

@@ -8,8 +8,7 @@ import org.junit.Test;
 
 /**
  * Tests saturation managers
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
+ * 
  */
 public class SaturationManagerTest {
 

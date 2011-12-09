@@ -43,10 +43,6 @@ import io.netty.channel.socket.DatagramChannelConfig;
  * <td>{@code "writeSpinCount"}</td><td>{@link #setWriteSpinCount(int)}</td>
  * </tr><tr>
  * </table>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Daniel Bevenius (dbevenius@jboss.com)
  */
 public interface NioDatagramChannelConfig extends DatagramChannelConfig {
 

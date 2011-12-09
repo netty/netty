@@ -31,10 +31,6 @@ import java.util.List;
  * A virtual buffer which shows multiple buffers as a single merged buffer.  It
  * is recommended to use {@link ChannelBuffers#wrappedBuffer(ChannelBuffer...)}
  * instead of calling the constructor explicitly.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Frederic Bregier (fredbregier@free.fr)
  */
 public class CompositeChannelBuffer extends AbstractChannelBuffer {
 

@@ -19,10 +19,6 @@ import java.util.Set;
 
 /**
  * An HTTP <a href="http://en.wikipedia.org/wiki/HTTP_cookie">Cookie</a>.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
  */
 public interface Cookie extends Comparable<Cookie> {
 

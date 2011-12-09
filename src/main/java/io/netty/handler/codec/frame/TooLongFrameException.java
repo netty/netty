@@ -18,10 +18,6 @@ package io.netty.handler.codec.frame;
 /**
  * An {@link Exception} which is thrown when the length of the frame
  * decoded by {@link DelimiterBasedFrameDecoder} is greater than the maximum.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.hidden
  */
 public class TooLongFrameException extends Exception {

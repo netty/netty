@@ -19,9 +19,6 @@ package io.netty.logging;
  * A skeletal implementation of {@link InternalLogger}.  This class implements
  * all methods that have a {@link InternalLogLevel} parameter by default to call
  * specific logger methods such as {@link #info(String)} or {@link #isInfoEnabled()}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public abstract class AbstractInternalLogger implements InternalLogger {
 

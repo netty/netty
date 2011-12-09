@@ -25,9 +25,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 
 /**
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 final class NioAcceptedSocketChannel extends NioSocketChannel {
 

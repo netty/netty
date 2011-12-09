@@ -19,9 +19,6 @@ package io.netty.handler.timeout;
 /**
  * A {@link TimeoutException} raised by {@link WriteTimeoutHandler} when no data
  * was written within a certain period of time.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class WriteTimeoutException extends TimeoutException {
 

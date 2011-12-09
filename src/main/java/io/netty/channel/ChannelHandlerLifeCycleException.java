@@ -19,10 +19,6 @@ package io.netty.channel;
  * A {@link RuntimeException} which is thrown when a
  * {@link LifeCycleAwareChannelHandler} throws an {@link Exception}
  * in its handler methods.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.hidden
  */
 public class ChannelHandlerLifeCycleException extends RuntimeException {

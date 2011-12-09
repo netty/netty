@@ -27,9 +27,6 @@ package io.netty.channel;
  * might lead to an unexpected behavior.  It is because the context object
  * might not have been fully added to the pipeline or the context object is not
  * a part of the pipeline anymore respectively.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public interface LifeCycleAwareChannelHandler extends ChannelHandler {
     void beforeAdd(ChannelHandlerContext ctx) throws Exception;

@@ -22,10 +22,6 @@ import java.security.SecureRandom;
  * Default implementation of TunnelIdGenerator, which uses a
  * {@link java.security.SecureRandom SecureRandom} generator
  * to produce 32-bit tunnel identifiers.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 public class DefaultTunnelIdGenerator implements TunnelIdGenerator {
 

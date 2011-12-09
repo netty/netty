@@ -50,9 +50,6 @@ import java.net.UnknownHostException;
  * <BR>Example1 bis:<BR>
  * <tt>IpSubnet ips = new IpSubnet(inetAddress, 24);</tt><BR>
  * where inetAddress2 is 1fff:0:0a88:85a3:0:0:ac1f:8001<BR>
- *
- * @author frederic bregier
- *
  */
 public class IpSubnet implements IpSet, Comparable<IpSubnet>
 {

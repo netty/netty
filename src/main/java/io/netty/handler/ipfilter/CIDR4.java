@@ -21,7 +21,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 /**
- * @author frederic bregier
  */
 public class CIDR4 extends CIDR
 {

@@ -19,9 +19,6 @@ package io.netty.util;
  * Represents an object which contains another object that needs to be taken
  * into account by {@link ObjectSizeEstimator} for more accurate object size
  * estimation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public interface EstimatableObjectWrapper {
 

@@ -38,9 +38,6 @@ import org.junit.runner.RunWith;
 
 /**
  * Tests an accepted server channel request dispatch
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 @RunWith(JMock.class)
 public class AcceptedServerChannelRequestDispatchTest {

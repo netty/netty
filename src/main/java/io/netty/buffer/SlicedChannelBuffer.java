@@ -29,9 +29,6 @@ import java.nio.channels.ScatteringByteChannel;
  * recommended to use {@link ChannelBuffer#slice()} and
  * {@link ChannelBuffer#slice(int, int)} instead of calling the constructor
  * explicitly.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class SlicedChannelBuffer extends AbstractChannelBuffer implements WrappedChannelBuffer {
 

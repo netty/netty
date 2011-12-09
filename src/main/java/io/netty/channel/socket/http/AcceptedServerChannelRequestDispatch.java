@@ -34,10 +34,6 @@ import io.netty.logging.InternalLoggerFactory;
  * Upstream handler which is responsible for determining whether a received HTTP request is a legal
  * tunnel request, and if so, invoking the appropriate request method on the
  * {@link ServerMessageSwitch} to service the request.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler {
 

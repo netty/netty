@@ -18,7 +18,6 @@ package io.netty.util.internal;
 import java.util.concurrent.Executor;
 
 /**
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public final class DeadLockProofWorker {
 

@@ -22,8 +22,6 @@ import io.netty.handler.codec.http.HttpResponseDecoder;
 /**
  * Fix bug in standard HttpResponseDecoder for web socket clients. When status 101 is received for Hybi00, there are 16
  * bytes of contents expected
- * 
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class WebSocketHttpResponseDecoder extends HttpResponseDecoder {
 

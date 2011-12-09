@@ -17,8 +17,6 @@
 /**
  * Implementation of a Traffic Shaping Handler and Dynamic Statistics.<br>
  * <br><br>
- *
- *
  * <P>The main goal of this package is to allow to shape the traffic (bandwidth limitation),
  * but also to get statistics on how many bytes are read or written. Both functions can
  * be active or inactive (traffic or statistics).</P>
@@ -86,10 +84,6 @@
  *
  * <P>Note also that you can create different GlobalTrafficShapingHandler if you want to separate classes of
  * channels (for instance either from business point of view or from bind address point of view).</P>
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Frederic Bregier
- *
  *
  * @apiviz.exclude ^java\.lang\.
  */

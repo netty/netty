@@ -32,8 +32,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketSpecificationVersion;
 
 /**
  * A HTTP client demo app
- * 
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class App {
 

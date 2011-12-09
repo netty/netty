@@ -27,10 +27,6 @@ import io.netty.logging.InternalLoggerFactory;
 
 /**
  * Pipeline component which controls the client poll loop to the server.
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 class HttpTunnelClientPollHandler extends SimpleChannelHandler {
 

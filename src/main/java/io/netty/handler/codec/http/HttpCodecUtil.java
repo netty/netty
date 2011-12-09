@@ -21,8 +21,6 @@ import java.util.List;
 import io.netty.util.CharsetUtil;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
  */
 class HttpCodecUtil {
     //space ' '

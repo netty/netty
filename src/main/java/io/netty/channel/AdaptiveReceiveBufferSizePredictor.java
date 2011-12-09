@@ -27,9 +27,6 @@ import java.util.List;
  * number of readable bytes if the read operation was not able to fill a certain
  * amount of the allocated buffer two times consecutively.  Otherwise, it keeps
  * returning the same prediction.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class AdaptiveReceiveBufferSizePredictor implements
         ReceiveBufferSizePredictor {

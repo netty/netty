@@ -27,8 +27,6 @@ import io.netty.util.CharsetUtil;
 
 /**
  * Base class for server side web socket opening and closing handshakes
- * 
- * @author <a href="http://netty.io/">The Netty Project</a>
  */
 public abstract class WebSocketServerHandshaker {
 

@@ -73,11 +73,6 @@ import java.util.concurrent.Executor;
  * Please make sure not to shut down the executor until all channels are
  * closed.  Otherwise, you will end up with a {@link java.util.concurrent.RejectedExecutionException}
  * and the related resources might not be released properly.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
- *
  * @apiviz.landmark
  */
 public class SctpServerSocketChannelFactory implements ServerChannelFactory {

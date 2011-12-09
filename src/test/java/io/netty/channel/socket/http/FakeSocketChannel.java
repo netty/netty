@@ -30,9 +30,6 @@ import io.netty.channel.socket.SocketChannelConfig;
 
 /**
  * A fake socket channel for use in testing
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 public class FakeSocketChannel extends AbstractChannel implements SocketChannel {
 

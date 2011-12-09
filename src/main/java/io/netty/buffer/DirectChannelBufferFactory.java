@@ -29,9 +29,6 @@ import java.nio.ByteOrder;
  * is much lower than the GC throughput of heap buffers.  This factory avoids
  * this problem by allocating a large chunk of pre-allocated direct buffer and
  * reducing the number of the garbage collected internal direct buffer objects.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
 

@@ -26,8 +26,6 @@ import java.net.InetSocketAddress;
 import java.util.Set;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  */
 public interface SctpChannel extends Channel {
 

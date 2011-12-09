@@ -19,9 +19,6 @@ import java.net.InetAddress;
 
 /**
  * This Interface defines an IpSet object.
- *
- * @author frederic bregier
- *
  */
 public interface IpSet
 {

@@ -24,9 +24,6 @@ import io.netty.handler.codec.embedder.DecoderEmbedder;
  * Decompresses an {@link HttpMessage} and an {@link HttpChunk} compressed in
  * {@code gzip} or {@code deflate} encoding.  For more information on how this
  * handler modifies the message, please refer to {@link HttpContentDecoder}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class HttpContentDecompressor extends HttpContentDecoder {
     @Override

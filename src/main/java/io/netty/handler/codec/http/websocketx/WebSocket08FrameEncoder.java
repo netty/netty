@@ -55,9 +55,6 @@ import io.netty.logging.InternalLoggerFactory;
  * forked from <a href="https://github.com/joewalnes/webbit">webbit</a> and
  * modified.
  * </p>
- * 
- * @author Aslak Hellesøy
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class WebSocket08FrameEncoder extends OneToOneEncoder {
 

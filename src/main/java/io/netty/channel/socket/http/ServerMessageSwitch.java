@@ -39,10 +39,6 @@ import io.netty.logging.InternalLoggerFactory;
  * ends of the http tunnel and the virtual server accepted tunnel. As a tunnel can last for longer than
  * the lifetime of the client channels that are used to service it, this layer of abstraction is
  * necessary.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
         ServerMessageSwitchDownstreamInterface {

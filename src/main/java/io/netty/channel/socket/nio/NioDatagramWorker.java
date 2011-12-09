@@ -50,10 +50,6 @@ import io.netty.util.internal.QueueFactory;
 /**
  * A class responsible for registering channels with {@link Selector}.
  * It also implements the {@link Selector} loop.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Daniel Bevenius (dbevenius@jboss.com)
  */
 class NioDatagramWorker implements Runnable {
     /**
@@ -826,8 +822,7 @@ class NioDatagramWorker implements Runnable {
         /**
          * This runnable's task. Does the actual registering by calling the
          * underlying DatagramChannels peer DatagramSocket register method.
-         *
-         */
+ */
         @Override
         public void run() {
             final SocketAddress localAddress = channel.getLocalAddress();

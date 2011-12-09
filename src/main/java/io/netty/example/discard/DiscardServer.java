@@ -26,9 +26,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 /**
  * Discards any incoming data.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class DiscardServer {
 

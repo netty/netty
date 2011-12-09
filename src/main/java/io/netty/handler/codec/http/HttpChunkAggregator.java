@@ -47,10 +47,6 @@ import io.netty.util.CharsetUtil;
  * p.addLast("encoder", new {@link HttpResponseEncoder}());
  * p.addLast("handler", new HttpRequestHandler());
  * </pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.http.HttpChunk oneway - - filters out
  */

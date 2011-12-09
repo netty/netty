@@ -47,9 +47,6 @@ import io.netty.util.internal.QueueFactory;
  * This handler must be placed after {@link HttpMessageEncoder} in the pipeline
  * so that this handler can intercept HTTP responses before {@link HttpMessageEncoder}
  * converts them into {@link ChannelBuffer}s.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public abstract class HttpContentEncoder extends SimpleChannelHandler {
 

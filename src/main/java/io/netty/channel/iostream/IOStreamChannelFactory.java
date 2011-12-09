@@ -28,9 +28,6 @@ import java.util.concurrent.ExecutorService;
 
 /**
  * A {@link io.netty.channel.ChannelFactory} for creating {@link IOStreamChannel} instances.
- *
- * @author Daniel Bimschas
- * @author Dennis Pfisterer
  */
 public class IOStreamChannelFactory implements ChannelFactory {
 

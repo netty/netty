@@ -25,12 +25,7 @@ import io.netty.util.internal.QueueFactory;
 
 /**
  * 
- * 
- * 
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://www.murkycloud.com/">Norman Maurer</a>
- *
+ *
  */
 abstract class AbstractWriteRequestQueue implements BlockingQueue<MessageEvent>{
 

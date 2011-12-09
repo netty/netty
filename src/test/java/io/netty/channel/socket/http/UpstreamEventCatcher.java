@@ -25,9 +25,6 @@ import io.netty.channel.ChannelUpstreamHandler;
 
 /**
  * Tests the upstream event catcher
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 public class UpstreamEventCatcher implements ChannelUpstreamHandler {
 

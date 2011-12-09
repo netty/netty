@@ -44,8 +44,6 @@ package io.netty.handler.codec.http.websocketx;
  * Encodes a web socket frame into wire protocol version 13 format. V13 is essentially the same
  * as V8.
  * </p>
- * 
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class WebSocket13FrameEncoder extends WebSocket08FrameEncoder {
 

@@ -65,10 +65,6 @@ import io.netty.util.TimerTask;
  * The {@link Timer} which was specified when the {@link ReadTimeoutHandler} is
  * created should be stopped manually by calling {@link #releaseExternalResources()}
  * or {@link Timer#stop()} when your application shuts down.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @see ReadTimeoutHandler
  * @see IdleStateHandler
  *
@@ -194,8 +190,6 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
     }
 
     /**
-     * @author <a href="http://netty.io/">The Netty Project</a>
-     * @author <a href="http://gleamynode.net/">Trustin Lee</a>
      */
     private static final class TimeoutCanceller implements ChannelFutureListener {
         private final Timeout timeout;

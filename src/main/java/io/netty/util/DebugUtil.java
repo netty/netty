@@ -31,9 +31,6 @@ import io.netty.util.internal.SystemPropertyUtil;
  * If debug mode is enabled, the stack trace of the exceptions raised in
  * {@link ChannelPipeline} or {@link ChannelSink} are retained as it is to help
  * debugging Netty.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class DebugUtil {
 

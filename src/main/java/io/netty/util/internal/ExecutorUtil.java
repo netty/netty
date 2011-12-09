@@ -24,9 +24,6 @@ import java.util.concurrent.TimeUnit;
  * shut down all specified {@link ExecutorService}s immediately and wait for
  * their termination.  An {@link Executor} which is not an {@link ExecutorService}
  * will be ignored silently.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class ExecutorUtil {
 

@@ -35,9 +35,6 @@ import io.netty.util.internal.DeadLockProofWorker;
 
 /**
  * The default {@link ChannelGroupFuture} implementation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class DefaultChannelGroupFuture implements ChannelGroupFuture {
 

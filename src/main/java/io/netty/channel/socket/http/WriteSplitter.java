@@ -24,10 +24,6 @@ import io.netty.buffer.ChannelBuffers;
 /**
  * Provides functionality to split a provided ChannelBuffer into multiple fragments which fit
  * under a specified size threshold.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 public final class WriteSplitter {
 

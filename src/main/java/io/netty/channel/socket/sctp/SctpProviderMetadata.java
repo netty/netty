@@ -36,10 +36,6 @@ import java.util.regex.Pattern;
 /**
  * Provides information which is specific to a NIO service provider
  * implementation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  */
 class SctpProviderMetadata {
     static final InternalLogger logger =

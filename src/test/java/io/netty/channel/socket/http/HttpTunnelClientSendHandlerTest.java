@@ -37,9 +37,6 @@ import org.junit.Test;
 
 /**
  * Tests HTTP tunnel client sending
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 public class HttpTunnelClientSendHandlerTest {
 

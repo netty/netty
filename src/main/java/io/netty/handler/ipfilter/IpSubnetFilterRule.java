@@ -23,8 +23,6 @@ import java.net.UnknownHostException;
  * <br>
  * Note that mix of IPV4 and IPV6 is allowed but it is not recommended. So it is preferable to not
  * mix IPV4 addresses with IPV6 rules, even if it should work.
- * @author frederic bregier
- *
  */
 public class IpSubnetFilterRule extends IpSubnet implements IpFilterRule
 {

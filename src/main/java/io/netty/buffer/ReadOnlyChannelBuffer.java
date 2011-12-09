@@ -28,9 +28,6 @@ import java.nio.channels.ScatteringByteChannel;
  * A derived buffer which forbids any write requests to its parent.  It is
  * recommended to use {@link ChannelBuffers#unmodifiableBuffer(ChannelBuffer)}
  * instead of calling the constructor explicitly.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class ReadOnlyChannelBuffer extends AbstractChannelBuffer implements WrappedChannelBuffer {
 

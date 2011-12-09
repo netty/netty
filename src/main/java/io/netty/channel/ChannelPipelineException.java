@@ -19,10 +19,6 @@ package io.netty.channel;
  * A {@link ChannelException} which is thrown when a {@link ChannelPipeline}
  * failed to process a {@link ChannelEvent} or when a {@link ChannelPipelineFactory}
  * failed to initialize a {@link ChannelPipeline}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.hidden
  */
 public class ChannelPipelineException extends ChannelException {

@@ -26,8 +26,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Tomasz Blachowicz (tblachowicz@gmail.com)
  */
 public class ByteArrayDecoderTest {
 

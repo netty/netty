@@ -17,8 +17,6 @@ package io.netty.handler.codec.replay;
 
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 class ReplayError extends Error {
 

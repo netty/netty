@@ -35,10 +35,6 @@ import io.netty.logging.InternalLoggerFactory;
  * By default, all events are logged at <tt>DEBUG</tt> level.  You can extend
  * this class and override {@link #log(ChannelEvent)} to change the default
  * behavior.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  */
 @Sharable

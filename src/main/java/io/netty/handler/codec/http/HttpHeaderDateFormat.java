@@ -30,10 +30,6 @@ import java.util.TimeZone;
  * <li>Sun, 06 Nov 1994 08:49:37 GMT: obsolete specification</li>
  * <li>Sun Nov 6 08:49:37 1994: obsolete specification</li>
  * </ul>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://www.rogiel.com/">Rogiel Josias Sulzbach</a>
  */
 final class HttpHeaderDateFormat extends SimpleDateFormat {
     private static final long serialVersionUID = -925286159755905325L;

@@ -23,8 +23,6 @@ import io.netty.util.CharsetUtil;
  * Web Socket continuation frame containing continuation text or binary data.
  * This is used for fragmented messages where the contents of a messages is
  * contained more than 1 frame.
- * 
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class ContinuationWebSocketFrame extends WebSocketFrame {
 

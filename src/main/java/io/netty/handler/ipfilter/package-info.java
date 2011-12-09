@@ -17,8 +17,6 @@
 /**
  * Implementation of a Ip based Filter handlers.<br>
  * <br><br>
- *
- *
  * <P>The main goal of this package is to allow to filter connections based on IP rules.
  * The main interface is <tt>{@link io.netty.handler.ipfilter.IpFilteringHandler}</tt> which all filters will extend.</P>
  *

@@ -22,10 +22,6 @@ import io.netty.channel.Channel;
 /**
  * A TCP/IP socket {@link Channel} which was either accepted by
  * {@link ServerSocketChannel} or created by {@link ClientSocketChannelFactory}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  * @apiviz.composedOf io.netty.channel.socket.SocketChannelConfig
  */

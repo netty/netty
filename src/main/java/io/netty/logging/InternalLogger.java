@@ -18,9 +18,6 @@ package io.netty.logging;
 /**
  * <em>Internal-use-only</em> logger used by Netty.  <strong>DO NOT</strong>
  * access this class outside of Netty.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public interface InternalLogger {
     /**

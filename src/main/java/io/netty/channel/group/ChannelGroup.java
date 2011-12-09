@@ -87,10 +87,6 @@ import io.netty.util.CharsetUtil;
  *     }
  * }
  * </pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  * @apiviz.has io.netty.channel.group.ChannelGroupFuture oneway - - returns
  */

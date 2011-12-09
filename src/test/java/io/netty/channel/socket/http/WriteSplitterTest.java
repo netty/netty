@@ -28,9 +28,6 @@ import org.junit.Test;
 
 /**
  * Tests write splitting capabilities
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 public class WriteSplitterTest {
 

@@ -26,8 +26,7 @@ import io.netty.channel.ChannelHandlerContext;
  * The listener interface for receiving ipFilter events.
  * 
  * @see IpFilteringHandler
- * 
- * @author Ron
+ * 
  */
 public interface IpFilterListener
 {

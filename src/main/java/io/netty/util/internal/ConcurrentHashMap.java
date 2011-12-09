@@ -38,12 +38,6 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * An alternative {@link ConcurrentMap} implementation which is similar to
  * {@link java.util.concurrent.ConcurrentHashMap}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Doug Lea
- * @author Jason T. Greene
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
  */

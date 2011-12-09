@@ -29,9 +29,6 @@ import io.netty.channel.ChannelHandlerContext;
  * interval and call back the {@link AbstractTrafficShapingHandler} doAccounting method at every
  * specified interval. If this interval is set to 0, therefore no accounting will be done and only
  * statistics will be computed at each receive or write operations.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Frederic Bregier
  */
 public class TrafficCounter {
     /**
@@ -119,8 +116,7 @@ public class TrafficCounter {
 
     /**
      * Class to implement monitoring at fix delay
-     *
-     */
+ */
     private class TrafficMonitoring implements Runnable {
         /**
          * The associated TrafficShapingHandler
@@ -172,8 +168,7 @@ public class TrafficCounter {
 
     /**
      * Start the monitoring process
-     *
-     */
+ */
     public void start() {
         synchronized (lastTime) {
             if (monitorActive.get()) {
@@ -191,8 +186,7 @@ public class TrafficCounter {
 
     /**
      * Stop the monitoring process
-     *
-     */
+ */
     public void stop() {
         synchronized (lastTime) {
             if (!monitorActive.get()) {

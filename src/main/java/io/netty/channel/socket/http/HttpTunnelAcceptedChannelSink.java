@@ -32,10 +32,6 @@ import io.netty.channel.MessageEvent;
  * Sink for the server end of an http tunnel. Data sent down through the server end is dispatched
  * from here to the ServerMessageSwitch, which queues the data awaiting a poll request from the
  * client end of the tunnel.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 class HttpTunnelAcceptedChannelSink extends AbstractChannelSink {
 

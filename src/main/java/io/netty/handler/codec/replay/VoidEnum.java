@@ -19,9 +19,6 @@ package io.netty.handler.codec.replay;
  * A placeholder {@link Enum} which could be specified as a type parameter of
  * {@link ReplayingDecoder} when a user wants to manage the decoder state or
  * there's no state to manage.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public enum VoidEnum {
     // No state is defined.

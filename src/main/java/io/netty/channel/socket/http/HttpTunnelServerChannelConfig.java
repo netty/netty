@@ -24,9 +24,6 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 
 /**
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 public class HttpTunnelServerChannelConfig implements ServerSocketChannelConfig {
 

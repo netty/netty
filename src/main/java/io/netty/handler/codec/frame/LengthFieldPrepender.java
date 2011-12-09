@@ -53,9 +53,6 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  * + 0x000E | "HELLO, WORLD" |
  * +--------+----------------+
  * </pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 @Sharable
 public class LengthFieldPrepender extends OneToOneEncoder {

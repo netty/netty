@@ -29,9 +29,6 @@ import java.util.concurrent.Executors;
 
 /**
  * An example demonstrating the use of the {@link io.netty.channel.iostream.IOStreamChannel}.
- *
- * @author Daniel Bimschas
- * @author Dennis Pfisterer
  */
 public class IOStream {
 

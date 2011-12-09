@@ -29,8 +29,7 @@ import io.netty.channel.Channels;
 // TODO: Auto-generated Javadoc
 /**
  * General class that handle Ip Filtering.
- * 
- * @author frederic bregier
+ * 
  */
 public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, IpFilteringHandler
 {

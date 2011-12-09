@@ -21,9 +21,6 @@ import java.io.InterruptedIOException;
 /**
  * A {@link IOException} raised by {@link BlockingReadHandler} when no data
  * was read within a certain period of time.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class BlockingReadTimeoutException extends InterruptedIOException {
 

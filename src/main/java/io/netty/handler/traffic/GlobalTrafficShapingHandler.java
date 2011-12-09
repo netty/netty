@@ -57,9 +57,6 @@ import io.netty.util.ObjectSizeEstimator;
  * <tt>myHandler.releaseExternalResources();</tt><br>
  * </li>
  * </ul><br>
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Frederic Bregier
  */
 @Sharable
 public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {

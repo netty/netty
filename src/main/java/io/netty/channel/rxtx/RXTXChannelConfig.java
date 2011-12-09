@@ -22,9 +22,6 @@ import io.netty.util.internal.ConversionUtil;
 
 /**
  * A configuration class for RXTX device connections.
- *
- * @author Daniel Bimschas
- * @author Dennis Pfisterer
  */
 public class RXTXChannelConfig extends DefaultChannelConfig {
 

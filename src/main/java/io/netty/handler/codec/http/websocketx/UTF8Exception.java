@@ -21,10 +21,6 @@ package io.netty.handler.codec.http.websocketx;
 
 /**
  * Invalid UTF8 bytes encountered
- * 
- * @author Bjoern Hoehrmann
- * @author https://github.com/joewalnes/webbit
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class UTF8Exception extends RuntimeException {
     private static final long serialVersionUID = 1L;

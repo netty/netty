@@ -34,10 +34,6 @@ import io.netty.logging.InternalLoggerFactory;
 
 /**
  * Pipeline component which deals with sending data from the client to server.
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 class HttpTunnelClientSendHandler extends SimpleChannelHandler {
 

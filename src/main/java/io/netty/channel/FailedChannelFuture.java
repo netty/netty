@@ -19,9 +19,6 @@ package io.netty.channel;
  * The {@link CompleteChannelFuture} which is failed already.  It is
  * recommended to use {@link Channels#failedFuture(Channel, Throwable)}
  * instead of calling the constructor of this future.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class FailedChannelFuture extends CompleteChannelFuture {
 

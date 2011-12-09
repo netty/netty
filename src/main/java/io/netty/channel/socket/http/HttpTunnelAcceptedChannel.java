@@ -35,10 +35,6 @@ import io.netty.channel.socket.SocketChannelConfig;
  * directly related TCP connections - the connections used by a client are likely
  * to change over the lifecycle of a tunnel, especially when an HTTP proxy is in
  * use.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 class HttpTunnelAcceptedChannel extends AbstractChannel implements
         SocketChannel, HttpTunnelAcceptedChannelReceiver {

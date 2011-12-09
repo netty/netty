@@ -154,10 +154,6 @@ import io.netty.util.internal.QueueFactory;
  * the proper strategy to determine how often {@link #flush()} should be called.
  * For example, you could call {@link #flush()} periodically, using
  * {@link HashedWheelTimer} every second.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  */
 public class BufferedWriteHandler extends SimpleChannelHandler {

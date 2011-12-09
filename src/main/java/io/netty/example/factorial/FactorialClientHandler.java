@@ -37,9 +37,6 @@ import io.netty.channel.SimpleChannelUpstreamHandler;
  * Therefore, an instance of this handler can cover only one channel.  You have
  * to create a new handler instance whenever you create a new channel and insert
  * this handler to avoid a race condition.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class FactorialClientHandler extends SimpleChannelUpstreamHandler {
 

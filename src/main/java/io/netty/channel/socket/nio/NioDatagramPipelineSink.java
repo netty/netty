@@ -34,10 +34,6 @@ import io.netty.channel.MessageEvent;
 /**
  * Receives downstream events from a {@link ChannelPipeline}.  It contains
  * an array of I/O workers.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Daniel Bevenius (dbevenius@jboss.com)
  */
 class NioDatagramPipelineSink extends AbstractChannelSink {
 

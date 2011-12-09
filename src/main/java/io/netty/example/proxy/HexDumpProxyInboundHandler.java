@@ -31,8 +31,6 @@ import io.netty.channel.SimpleChannelUpstreamHandler;
 import io.netty.channel.socket.ClientSocketChannelFactory;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
 

@@ -25,9 +25,6 @@ import io.netty.channel.ChannelPipeline;
 
 /**
  * A fake channel sink for use in testing
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 public class FakeChannelSink extends AbstractChannelSink {
 

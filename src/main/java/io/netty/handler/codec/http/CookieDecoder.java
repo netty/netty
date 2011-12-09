@@ -34,9 +34,6 @@ import java.util.regex.Pattern;
  * Set&lt;{@link Cookie}&gt; cookies = new {@link CookieDecoder}().decode(value);
  * </pre>
  *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @see CookieEncoder
  *
  * @apiviz.stereotype utility

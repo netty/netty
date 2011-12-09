@@ -32,10 +32,6 @@ import io.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
  * compatible with the standard {@link ObjectOutputStream}.  Please use
  * {@link ObjectEncoder} or {@link ObjectEncoderOutputStream} to ensure the
  * interoperability with this decoder.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.serialization.ObjectDecoderInputStream - - - compatible with
  */
@@ -101,8 +97,6 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
 
     /**
      * Create a new decoder with the specified maximum object size and the {@link ClassLoader} wrapped in {@link ClassResolvers#weakCachingResolver(ClassLoader)}
-     * 
-     * 
      * @param maxObjectSize  the maximum byte length of the serialized object.
      *                       if the length of the received object is greater
      *                       than this value, {@link StreamCorruptedException}

@@ -24,9 +24,6 @@ import io.netty.example.telnet.TelnetServer;
 
 /**
  * Simple SSL chat server modified from {@link TelnetServer}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class SecureChatServer {
 

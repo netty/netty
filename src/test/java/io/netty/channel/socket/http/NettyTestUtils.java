@@ -41,9 +41,6 @@ import io.netty.channel.UpstreamMessageEvent;
 
 /**
  * Test utilities for Netty
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
  */
 public class NettyTestUtils {
 

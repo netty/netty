@@ -25,9 +25,6 @@ import io.netty.channel.SimpleChannelUpstreamHandler;
 import io.netty.channel.group.ChannelGroup;
 
 /**
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 class TunnelWrappedServerChannelHandler extends SimpleChannelUpstreamHandler {
 

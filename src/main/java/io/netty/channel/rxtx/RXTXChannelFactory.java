@@ -28,9 +28,6 @@ import io.netty.util.internal.ExecutorUtil;
 
 /**
  * A {@link ChannelFactory} for creating {@link RXTXChannel} instances.
- *
- * @author Daniel Bimschas
- * @author Dennis Pfisterer
  */
 public class RXTXChannelFactory implements ChannelFactory {
 

@@ -31,10 +31,6 @@ import io.netty.channel.ChannelPipeline;
  * is 'chunked.  If you prefer not to receive {@link HttpChunk} in your handler,
  * please {@link HttpChunkAggregator} after {@link HttpMessageDecoder} in the
  * {@link ChannelPipeline}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  */
 public interface HttpChunk {

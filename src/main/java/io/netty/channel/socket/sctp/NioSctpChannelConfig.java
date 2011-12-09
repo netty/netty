@@ -43,10 +43,6 @@ import io.netty.channel.socket.SocketChannelConfig;
  * <td>{@code "receiveBufferSizePredictorFactory"}</td><td>{@link #setReceiveBufferSizePredictorFactory(io.netty.channel.ReceiveBufferSizePredictorFactory)}</td>
  * </tr>
  * </table>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  */
 public interface NioSctpChannelConfig extends SctpChannelConfig {
 

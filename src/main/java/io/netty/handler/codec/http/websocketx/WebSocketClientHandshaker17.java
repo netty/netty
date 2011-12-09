@@ -38,8 +38,6 @@ import io.netty.util.CharsetUtil;
  * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17"
  * >draft-ietf-hybi-thewebsocketprotocol- 17</a>
  * </p>
- * 
- * @author <a href="http://netty.io/">The Netty Project</a>
  */
 public class WebSocketClientHandshaker17 extends WebSocketClientHandshaker {
 

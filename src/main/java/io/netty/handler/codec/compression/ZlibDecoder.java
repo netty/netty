@@ -26,10 +26,6 @@ import io.netty.util.internal.jzlib.ZStream;
 
 /**
  * Decompresses a {@link ChannelBuffer} using the deflate algorithm.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.compression.ZlibWrapper
  */

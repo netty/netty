@@ -25,10 +25,6 @@ import io.netty.channel.ChannelFuture;
  * to notify the virtual tunnel channel of key events, and to get
  * access to higher level information required for correct
  * operation.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 interface HttpTunnelClientWorkerOwner {
     /**

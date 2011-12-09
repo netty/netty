@@ -21,10 +21,6 @@ import java.net.InetSocketAddress;
  * Simple interface provided to a {@link ServerMessageSwitch}, allowing it to
  * create the server end of tunnels in response to legal tunnel creation
  * requests from clients.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 interface HttpTunnelAcceptedChannelFactory {
     HttpTunnelAcceptedChannelReceiver newChannel(String newTunnelId,

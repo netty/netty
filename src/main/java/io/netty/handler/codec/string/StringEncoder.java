@@ -50,10 +50,6 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  *     ch.write("Did you say '" + msg + "'?\n");
  * }
  * </pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  */
 @Sharable

@@ -37,9 +37,6 @@ import io.netty.channel.MessageEvent;
 
 /**
  * A skeletal {@link CodecEmbedder} implementation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
 

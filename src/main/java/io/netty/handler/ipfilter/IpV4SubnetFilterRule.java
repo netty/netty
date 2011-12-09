@@ -20,8 +20,6 @@ import java.net.UnknownHostException;
 
 /**
  * IpV4 only Filter Rule
- * @author frederic bregier
- *
  */
 public class IpV4SubnetFilterRule extends IpV4Subnet implements IpFilterRule
 {

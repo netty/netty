@@ -51,10 +51,6 @@ import io.netty.handler.codec.frame.TooLongFrameException;
  *     after this decoder in the {@link ChannelPipeline}.</td>
  * </tr>
  * </table>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class HttpRequestDecoder extends HttpMessageDecoder {
 

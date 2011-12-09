@@ -41,10 +41,6 @@ import io.netty.channel.ChannelConfig;
  * <td>{@code "sctpInitMaxStreams"}</td><td>{@link #setInitMaxStreams(InitMaxStreams)} (int)}}</td>
  * </tr>
  * </table>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  */
 public interface SctpServerChannelConfig extends ChannelConfig {
 

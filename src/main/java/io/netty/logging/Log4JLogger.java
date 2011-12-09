@@ -20,9 +20,6 @@ import org.apache.log4j.Logger;
 /**
  * <a href="http://logging.apache.org/log4j/1.2/index.html">Apache Log4J</a>
  * logger.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 class Log4JLogger extends AbstractInternalLogger {
 

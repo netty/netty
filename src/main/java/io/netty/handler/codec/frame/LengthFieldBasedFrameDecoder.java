@@ -179,10 +179,6 @@ import io.netty.handler.codec.serialization.ObjectDecoder;
  * | 0xCA | 0x0010 | 0xFE | "HELLO, WORLD" |      | 0xFE | "HELLO, WORLD" |
  * +------+--------+------+----------------+      +------+----------------+
  * </pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @see LengthFieldPrepender
  */
 public class LengthFieldBasedFrameDecoder extends FrameDecoder {
@@ -209,8 +205,7 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
      *        the offset of the length field
      * @param lengthFieldLength
      *        the length of the length field
-     *
-     */
+ */
     public LengthFieldBasedFrameDecoder(
             int maxFrameLength,
             int lengthFieldOffset, int lengthFieldLength) {

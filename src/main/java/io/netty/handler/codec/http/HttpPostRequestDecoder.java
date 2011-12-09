@@ -30,12 +30,6 @@ import io.netty.handler.codec.http.HttpPostBodyUtil.TransferEncodingMechanism;
 
 /**
  * This decoder will decode Body and can handle POST BODY.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://openr66.free.fr/">Frederic Bregier</a>
- *
  */
 public class HttpPostRequestDecoder {
     /**
@@ -228,9 +222,6 @@ public class HttpPostRequestDecoder {
         --AaB03x--                                             => CLOSEDELIMITER
 
        Once CLOSEDELIMITER is found, last status is EPILOGUE
-     *
-     * @author frederic bregier
-     *
      */
     private enum MultiPartStatus {
         NOTSTARTED,
@@ -1010,8 +1001,7 @@ public class HttpPostRequestDecoder {
 
     /**
      * Clean all HttpDatas (on Disk) for the current request.
-     *
-     */
+ */
     public void cleanFiles() {
         factory.cleanRequestHttpDatas(request);
     }
@@ -1383,19 +1373,14 @@ public class HttpPostRequestDecoder {
     /**
      * Exception when try reading data from request in chunked format, and not enough
      * data are available (need more chunks)
-     *
-     * @author frederic bregier
-     *
      */
     public static class NotEnoughDataDecoderException extends Exception {
         /**
-         *
-         */
+ */
         private static final long serialVersionUID = -7846841864603865638L;
 
         /**
-         *
-         */
+ */
         public NotEnoughDataDecoderException() {
         }
 
@@ -1424,33 +1409,24 @@ public class HttpPostRequestDecoder {
 
     /**
      * Exception when the body is fully decoded, even if there is still data
-     *
-     * @author frederic bregier
-     *
      */
     public static class EndOfDataDecoderException extends Exception {
         /**
-         *
-         */
+ */
         private static final long serialVersionUID = 1336267941020800769L;
 
     }
 
     /**
      * Exception when an error occurs while decoding
-     *
-     * @author frederic bregier
-     *
      */
     public static class ErrorDataDecoderException extends Exception {
         /**
-         *
-         */
+ */
         private static final long serialVersionUID = 5020247425493164465L;
 
         /**
-         *
-         */
+ */
         public ErrorDataDecoderException() {
         }
 
@@ -1479,19 +1455,14 @@ public class HttpPostRequestDecoder {
 
     /**
      * Exception when an unappropriated method was called on a request
-     *
-     * @author frederic bregier
-     *
      */
     public static class IncompatibleDataDecoderException extends Exception {
         /**
-         *
-         */
+ */
         private static final long serialVersionUID = -953268047926250267L;
 
         /**
-         *
-         */
+ */
         public IncompatibleDataDecoderException() {
         }
 

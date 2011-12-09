@@ -27,9 +27,6 @@ import io.netty.channel.ChannelSink;
 import io.netty.channel.DefaultServerChannelConfig;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 final class DefaultLocalServerChannel extends AbstractServerChannel implements
         LocalServerChannel {

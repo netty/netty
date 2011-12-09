@@ -22,12 +22,7 @@ import io.netty.util.UnsafeDetectUtil;
 
 /**
  * This factory should be used to create the "optimal" {@link BlockingQueue} instance for the running JVM. 
- * 
- * 
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://www.murkycloud.com/">Norman Maurer</a>
- *
+ *
  */
 public class QueueFactory {
     

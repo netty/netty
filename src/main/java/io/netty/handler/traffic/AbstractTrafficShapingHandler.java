@@ -53,9 +53,6 @@ import io.netty.util.internal.ExecutorUtil;
  * or start the monitoring, to change the checkInterval directly, or to have access to its values.</li>
  * <li></li>
  * </ul>
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Frederic Bregier
  */
 public abstract class AbstractTrafficShapingHandler extends
         SimpleChannelHandler implements ExternalResourceReleasable {
@@ -324,8 +321,7 @@ public abstract class AbstractTrafficShapingHandler extends
 
     /**
      * Class to implement setReadable at fix time
-     *
-     */
+ */
     private class ReopenRead implements Runnable {
         /**
          * Associated ChannelHandlerContext

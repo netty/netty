@@ -53,9 +53,6 @@ import io.netty.util.ExternalResourceReleasable;
  * Currently, the NIO transport is the only transport that supports {@link FileRegion}.
  * Attempting to write a {@link FileRegion} to non-NIO {@link Channel} will trigger
  * a {@link ClassCastException} or a similar exception.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public interface FileRegion extends ExternalResourceReleasable {
 

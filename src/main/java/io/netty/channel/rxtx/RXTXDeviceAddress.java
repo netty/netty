@@ -20,9 +20,6 @@ import java.net.SocketAddress;
 /**
  * A {@link SocketAddress} subclass to wrap the serial port address of a RXTX
  * device (e.g. COM1, /dev/ttyUSB0).
- *
- * @author Daniel Bimschas
- * @author Dennis Pfisterer
  */
 public class RXTXDeviceAddress extends SocketAddress {
 

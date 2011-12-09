@@ -23,15 +23,11 @@ import java.net.SocketAddress;
  * A {@link java.net.SocketAddress} implementation holding an
  * {@link java.io.InputStream} and an {@link java.io.OutputStream} instance used
  * as "remote" address to connect to with a {@link IOStreamChannel}.
- * 
- * @author Daniel Bimschas
- * @author Dennis Pfisterer
  */
 public class IOStreamAddress extends SocketAddress {
 
     /**
-     * 
-     */
+ */
     private static final long serialVersionUID = -4382415449059935960L;
 
     private final InputStream inputStream;

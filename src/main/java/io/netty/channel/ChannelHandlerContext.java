@@ -116,10 +116,6 @@ package io.netty.channel;
  * {@link ChannelPipeline} to find out what a upstream event and a downstream
  * event are, what fundamental differences they have, how they flow in a
  * pipeline,  and how to handle the event in your application.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.owns io.netty.channel.ChannelHandler
  */
 public interface ChannelHandlerContext {

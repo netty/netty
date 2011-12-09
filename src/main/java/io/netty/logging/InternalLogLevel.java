@@ -17,9 +17,6 @@ package io.netty.logging;
 
 /**
  * The log level that {@link InternalLogger} can log at.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public enum InternalLogLevel {
     /**

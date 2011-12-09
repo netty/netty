@@ -50,9 +50,6 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  *     ...
  * }
  * </pre>
- * 
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Tomasz Blachowicz (tblachowicz@gmail.com)
  */
 public class ByteArrayEncoder extends OneToOneEncoder {
 

@@ -47,10 +47,6 @@ import io.netty.handler.codec.http.HttpRequest;
  *     value, a {@link TooLongFrameException} will be raised.</td>
  * </tr>
  * </table>
- * *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class RtspRequestDecoder extends RtspMessageDecoder {
 

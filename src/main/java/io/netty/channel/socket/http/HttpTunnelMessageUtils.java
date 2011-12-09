@@ -39,10 +39,6 @@ import io.netty.handler.codec.http.HttpVersion;
 /**
  * Utility class for creating http requests for the operation of the full duplex
  * http tunnel, and verifying that received requests are of the correct types.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 public class HttpTunnelMessageUtils {
 

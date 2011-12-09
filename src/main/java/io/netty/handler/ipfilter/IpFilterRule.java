@@ -17,9 +17,6 @@ package io.netty.handler.ipfilter;
 
 /**
  * This Interface defines an Ip Filter Rule.
- *
- * @author frederic bregier
- *
  */
 public interface IpFilterRule extends IpSet
 {

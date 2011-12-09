@@ -80,10 +80,6 @@ import io.netty.handler.codec.frame.TooLongFrameException;
  * use {@link HttpClientCodec} if you are writing an HTTP client that issues a
  * <tt>CONNECT</tt> request.
  * </p>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class HttpResponseDecoder extends HttpMessageDecoder {
 

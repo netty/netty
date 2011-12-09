@@ -22,9 +22,6 @@ import io.netty.channel.socket.oio.OioClientSocketChannelFactory;
 
 /**
  * A test for "Old" I/O socket client bootstraps
- * 
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class OioSocketClientBootstrapTest extends
         AbstractSocketClientBootstrapTest {

@@ -34,10 +34,6 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  * compatible with the standard {@link ObjectInputStream}.  Please use
  * {@link ObjectDecoder} or {@link ObjectDecoderInputStream} to ensure the
  * interoperability with this encoder.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  * @apiviz.has io.netty.handler.codec.serialization.ObjectEncoderOutputStream - - - compatible with
  */

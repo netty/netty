@@ -171,10 +171,6 @@ import io.netty.handler.codec.replay.ReplayingDecoder;
  *     }
  * }
  * </pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  */
 public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {

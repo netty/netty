@@ -30,9 +30,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  *         {@link Executors}.{@link Executors#newCachedThreadPool(java.util.concurrent.ThreadFactory) newCachedThreadPool}(new {@link NamedThreadFactory}("myServerBoss-")),
  *         {@link Executors}.{@link Executors#newCachedThreadPool(java.util.concurrent.ThreadFactory) newCachedThreadPool}(new {@link NamedThreadFactory}("myServerWorker-")));
  * </pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class NamedThreadFactory implements ThreadFactory {
 

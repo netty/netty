@@ -19,10 +19,6 @@ package io.netty.channel.socket.http;
 /**
  * This interface is used by the server end of an http tunnel to generate new
  * tunnel ids for accepted client connections.
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 public interface TunnelIdGenerator {
 

@@ -21,9 +21,6 @@ import org.junit.Test;
 
 /**
  * Tests ByteBuffer backed heap channel buffers
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class ByteBufferBackedHeapChannelBufferTest extends AbstractChannelBufferTest {
 

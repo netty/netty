@@ -25,10 +25,6 @@ import io.netty.channel.Channel;
  * end of an http tunnel and the server message switch.
  * 
  * This primarily exists for mock testing purposes.
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 interface ServerMessageSwitchUpstreamInterface {
 

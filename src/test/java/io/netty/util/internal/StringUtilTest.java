@@ -21,9 +21,6 @@ import org.junit.Test;
 
 /**
  * Unit test for {@link StringUtil}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Daniel Bevenius (dbevenius@jboss.com)
  */
 public class StringUtilTest {
 

@@ -33,9 +33,6 @@ import io.netty.channel.SimpleChannelUpstreamHandler;
  * Handler implementation for the object echo client.  It initiates the
  * ping-pong traffic between the object echo client and server by sending the
  * first message to the server.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class ObjectEchoClientHandler extends SimpleChannelUpstreamHandler {
 

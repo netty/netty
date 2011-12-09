@@ -21,12 +21,6 @@ import java.util.List;
 /**
  * This Attribute is only for Encoder use to insert special command between object if needed
  * (like Multipart Mixed mode)
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://openr66.free.fr/">Frederic Bregier</a>
- *
  */
 public class InternalAttribute implements InterfaceHttpData {
     protected List<String> value = new ArrayList<String>();

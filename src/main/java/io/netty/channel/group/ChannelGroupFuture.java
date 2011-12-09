@@ -107,10 +107,6 @@ import io.netty.handler.execution.ExecutionHandler;
  * where it is more convenient to call {@link #await()}. In such a case, please
  * make sure you do not call {@link #await()} in an I/O thread.  Otherwise,
  * {@link IllegalStateException} will be raised to prevent a dead lock.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.owns io.netty.channel.group.ChannelGroupFutureListener - - notifies
  */
 public interface ChannelGroupFuture extends Iterable<ChannelFuture> {

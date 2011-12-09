@@ -24,10 +24,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 /**
  * An HTTP server that sends back the content of the received HTTP request
  * in a pretty plaintext form.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class HttpServer {
     public static void main(String[] args) {

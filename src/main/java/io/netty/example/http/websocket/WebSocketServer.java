@@ -28,9 +28,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  *
  * Open your browser at http://localhost:8080/, then the demo page will be
  * loaded and a Web Socket connection will be made automatically.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class WebSocketServer {
     public static void main(String[] args) {

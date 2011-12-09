@@ -28,9 +28,6 @@ import java.nio.channels.ScatteringByteChannel;
  * A dynamic capacity buffer which increases its capacity as needed.  It is
  * recommended to use {@link ChannelBuffers#dynamicBuffer(int)} instead of
  * calling the constructor explicitly.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class DynamicChannelBuffer extends AbstractChannelBuffer {
 

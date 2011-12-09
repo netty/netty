@@ -42,10 +42,6 @@ import io.netty.util.CharsetUtil;
  * {@link ChannelBuffer} encoded = embedder.poll();
  * assert encoded.toString({@link CharsetUtil}.US_ASCII).equals("Zm9vYmFy");
  * </pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  * @see DecoderEmbedder
  */

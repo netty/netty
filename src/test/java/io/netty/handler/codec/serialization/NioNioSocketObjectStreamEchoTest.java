@@ -22,8 +22,6 @@ import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class NioNioSocketObjectStreamEchoTest extends AbstractSocketObjectStreamEchoTest {
 

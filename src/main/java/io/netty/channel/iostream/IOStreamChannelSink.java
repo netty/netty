@@ -28,9 +28,6 @@ import static io.netty.channel.Channels.*;
 /**
  * A {@link io.netty.channel.ChannelSink} implementation which reads from
  * an {@link java.io.InputStream} and writes to an {@link java.io.OutputStream}.
- * 
- * @author Daniel Bimschas
- * @author Dennis Pfisterer
  */
 public class IOStreamChannelSink extends AbstractChannelSink {
 

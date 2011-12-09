@@ -152,10 +152,6 @@ import io.netty.channel.SimpleChannelUpstreamHandler;
  * {@link ServerBootstrap} instances as you want with the same
  * {@link ChannelFactory} to apply different settings for different
  * {@link Channel}s.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  */
 public class ServerBootstrap extends Bootstrap {

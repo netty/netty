@@ -27,10 +27,6 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
  * Creates pipelines for incoming http tunnel connections, capable of decoding the incoming HTTP
  * requests, determining their type (client sending data, client polling data, or unknown) and
  * handling them appropriately.
- *
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 class AcceptedServerChannelPipelineFactory implements ChannelPipelineFactory {
 

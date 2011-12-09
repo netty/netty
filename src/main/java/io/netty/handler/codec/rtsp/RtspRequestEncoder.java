@@ -23,9 +23,6 @@ import io.netty.handler.codec.http.HttpRequest;
  * Encodes an RTSP request represented in {@link HttpRequest} into
  * a {@link ChannelBuffer}.
 
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class RtspRequestEncoder extends RtspMessageEncoder {
 

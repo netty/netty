@@ -29,9 +29,6 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.logging.InternalLogLevel;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class HttpClientPipelineFactory implements ChannelPipelineFactory {
 

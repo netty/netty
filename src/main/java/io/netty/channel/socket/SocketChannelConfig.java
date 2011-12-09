@@ -46,9 +46,6 @@ import io.netty.channel.ChannelConfig;
  * <td>{@code "trafficClass"}</td><td>{@link #setTrafficClass(int)}</td>
  * </tr>
  * </table>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public interface SocketChannelConfig extends ChannelConfig {
 

@@ -45,9 +45,6 @@ import io.netty.util.CharsetUtil;
  * 
  * Handles socket communication for a connected WebSocket client Not intended for end-users. Please use
  * {@link WebSocketClient} or {@link WebSocketCallback} for controlling your client.
- * 
- * @author <a href="http://www.pedantique.org/">Carl Bystr&ouml;m</a>
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class WebSocketClientHandler extends SimpleChannelUpstreamHandler implements WebSocketClient {
 

@@ -19,10 +19,7 @@ package io.netty.channel.socket.http;
  * Represents the state change of a chanel in response in the amount of pending data to be
  * sent - either no change occurs, the channel becomes desaturated (indicating that writing
  * can safely commence) or it becomes saturated (indicating that writing should cease).
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
+ * 
  */
 enum SaturationStateChange {
     NO_CHANGE, DESATURATED, SATURATED

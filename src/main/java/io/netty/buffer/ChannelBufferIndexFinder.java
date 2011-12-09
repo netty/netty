@@ -24,10 +24,6 @@ package io.netty.buffer;
  * refer to {@link ChannelBuffer#indexOf(int, int, ChannelBufferIndexFinder)} and
  * {@link ChannelBuffer#bytesBefore(int, int, ChannelBufferIndexFinder)}
  * for more explanation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.uses io.netty.buffer.ChannelBuffer
  */
 public interface ChannelBufferIndexFinder {

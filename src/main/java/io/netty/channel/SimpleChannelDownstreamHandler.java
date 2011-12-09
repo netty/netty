@@ -49,9 +49,6 @@ import java.net.SocketAddress;
  *         <strong>super.handleDownstream(ctx, e);</strong>
  *     }
  * }</pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class SimpleChannelDownstreamHandler implements ChannelDownstreamHandler {
 

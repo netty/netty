@@ -40,11 +40,6 @@ import io.netty.util.CharsetUtil;
  * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  * To implement the encoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  */
 public abstract class HttpMessageEncoder extends OneToOneEncoder {

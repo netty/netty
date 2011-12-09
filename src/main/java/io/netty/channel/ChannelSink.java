@@ -22,10 +22,6 @@ package io.netty.channel;
  * A {@link ChannelSink} is an internal component which is supposed to be
  * implemented by a transport provider.  Most users will not see this type
  * in their code.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.uses io.netty.channel.ChannelPipeline - - sends events upstream
  */
 public interface ChannelSink {

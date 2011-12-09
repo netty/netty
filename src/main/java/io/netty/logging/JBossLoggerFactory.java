@@ -21,9 +21,6 @@ package io.netty.logging;
  * Logger factory which creates a
  * <a href="http://anonsvn.jboss.org/repos/common/common-logging-spi/">JBoss Logging</a>
  * logger.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class JBossLoggerFactory extends InternalLoggerFactory {
 

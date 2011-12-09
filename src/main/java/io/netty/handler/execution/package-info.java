@@ -22,6 +22,5 @@
  * @apiviz.exclude \.netty\.channel\.
  * @apiviz.exclude \.ExternalResourceReleasable$
  * @apiviz.exclude \.ChannelEventRunnable$
- *
  */
 package io.netty.handler.execution;

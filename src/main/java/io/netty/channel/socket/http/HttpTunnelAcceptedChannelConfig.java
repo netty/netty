@@ -21,10 +21,6 @@ package io.netty.channel.socket.http;
  * These properties largely have no effect in the current implementation, and exist
  * for API compatibility with TCP channels. With the exception of high / low water
  * marks, any changes in the values will not be honoured.
- * 
- * @author The Netty Project (netty-dev@lists.jboss.org)
- * @author Iain McGinniss (iain.mcginniss@onedrum.com)
- * @author OneDrum Ltd.
  */
 public class HttpTunnelAcceptedChannelConfig extends HttpTunnelChannelConfig {
 

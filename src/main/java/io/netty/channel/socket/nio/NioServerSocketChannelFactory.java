@@ -79,10 +79,6 @@ import io.netty.util.internal.ExecutorUtil;
  * Please make sure not to shut down the executor until all channels are
  * closed.  Otherwise, you will end up with a {@link RejectedExecutionException}
  * and the related resources might not be released properly.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  */
 public class NioServerSocketChannelFactory implements ServerSocketChannelFactory {

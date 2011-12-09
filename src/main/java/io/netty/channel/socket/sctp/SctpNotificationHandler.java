@@ -21,8 +21,6 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  */
 
 class SctpNotificationHandler extends AbstractNotificationHandler {

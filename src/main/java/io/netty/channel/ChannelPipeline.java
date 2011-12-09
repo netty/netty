@@ -200,10 +200,6 @@ import io.netty.handler.ssl.SslHandler;
  * To implement the expected behavior, you have to add <tt>SecondHandler</tt>
  * before the removal or make sure there is at least one more handler between
  * <tt>FirstHandler</tt> and <tt>SecondHandler</tt>.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
  * @apiviz.composedOf io.netty.channel.ChannelHandlerContext
  * @apiviz.owns       io.netty.channel.ChannelHandler

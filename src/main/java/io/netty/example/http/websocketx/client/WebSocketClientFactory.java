@@ -38,9 +38,6 @@ import java.util.concurrent.Executors;
  * 
  * A factory for creating WebSocket clients. The entry point for creating and connecting a client. Can and should be
  * used to create multiple instances.
- * 
- * @author <a href="http://www.pedantique.org/">Carl Bystr&ouml;m</a>
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public class WebSocketClientFactory {
 

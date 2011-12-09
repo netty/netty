@@ -22,11 +22,6 @@ import java.util.Set;
 
 /**
  * A SCTP {@link io.netty.channel.ServerChannel} which accepts incoming SCTP connections.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
- * @version $Rev$, $Date$
  */
 public interface SctpServerChannel extends ServerChannel {
     /**
