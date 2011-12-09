@@ -23,7 +23,7 @@ import org.osgi.framework.BundleContext;
 /**
  * An OSGi {@link BundleActivator} that configures logging.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev: 2231 $, $Date: 2010-03-31 12:20:47 +0900 (Wed, 31 Mar 2010) $
  */

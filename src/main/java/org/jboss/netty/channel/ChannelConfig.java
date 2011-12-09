@@ -60,7 +60,7 @@ import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
  * example, you can configure the parameters which are specific to a TCP/IP
  * socket as explained in {@link SocketChannelConfig} or {@link NioSocketChannelConfig}.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev: 2122 $, $Date: 2010-02-02 11:00:04 +0900 (Tue, 02 Feb 2010) $

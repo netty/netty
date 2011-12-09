@@ -30,7 +30,7 @@ import org.jboss.netty.buffer.ChannelBufferIndexFinder;
 import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev: 2294 $, $Date: 2010-06-01 18:19:19 +0900 (Tue, 01 Jun 2010) $

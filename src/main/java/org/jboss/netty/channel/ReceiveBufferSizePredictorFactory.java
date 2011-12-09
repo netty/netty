@@ -18,7 +18,7 @@ package org.jboss.netty.channel;
 /**
  * Creates a new {@link ReceiveBufferSizePredictor}.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev: 2124 $, $Date: 2010-02-02 11:13:06 +0900 (Tue, 02 Feb 2010) $

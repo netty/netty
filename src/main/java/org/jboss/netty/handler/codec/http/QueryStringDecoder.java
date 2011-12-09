@@ -37,7 +37,7 @@ import java.util.Map;
  * assert decoder.getParameters().get("y").equals("2");
  * </pre>
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://tsunanet.net/">Benoit Sigoure</a>

@@ -127,7 +127,7 @@ import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
  *
  * To maintain the event order, you must use {@link OrderedMemoryAwareThreadPoolExecutor}.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev: 2351 $, $Date: 2010-08-26 11:55:10 +0900 (Thu, 26 Aug 2010) $

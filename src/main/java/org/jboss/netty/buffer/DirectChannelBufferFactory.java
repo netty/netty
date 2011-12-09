@@ -30,7 +30,7 @@ import java.nio.ByteOrder;
  * this problem by allocating a large chunk of pre-allocated direct buffer and
  * reducing the number of the garbage collected internal direct buffer objects.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev: 2293 $, $Date: 2010-06-01 17:38:51 +0900 (Tue, 01 Jun 2010) $
  */

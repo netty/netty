@@ -81,7 +81,7 @@ import org.jboss.netty.handler.codec.frame.TooLongFrameException;
  * <tt>CONNECT</tt> request.
  * </p>
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev: 2225 $, $Date: 2010-03-31 11:19:45 +0900 (Wed, 31 Mar 2010) $

@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 
  * 
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://www.murkycloud.com/">Norman Maurer</a>
  *
  */

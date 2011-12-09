@@ -25,7 +25,7 @@ package org.jboss.netty.handler.codec.base64;
  * The internal lookup tables in this class has been derived from
  * <a href="http://iharder.sourceforge.net/current/java/base64/">Robert Harder's Public Domain Base64 Encoder/Decoder</a>.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author Robert Harder (rob@iharder.net)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $

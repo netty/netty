@@ -229,7 +229,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * Please refer to {@link ChannelBufferInputStream} and
  * {@link ChannelBufferOutputStream}.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev: 2268 $, $Date: 2010-05-06 16:33:26 +0900 (Thu, 06 May 2010) $

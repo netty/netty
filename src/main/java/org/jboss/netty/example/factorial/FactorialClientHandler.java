@@ -38,7 +38,7 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * to create a new handler instance whenever you create a new channel and insert
  * this handler to avoid a race condition.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev: 2121 $, $Date: 2010-02-02 09:38:07 +0900 (Tue, 02 Feb 2010) $

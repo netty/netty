@@ -97,7 +97,7 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  * To implement the decoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev: 2370 $, $Date: 2010-10-19 14:40:44 +0900 (Tue, 19 Oct 2010) $
@@ -118,7 +118,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
      * The internal state of {@link HttpMessageDecoder}.
      * <em>Internal use only</em>.
      *
-     * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+     * @author <a href="http://netty.io/">The Netty Project</a>
      * @author <a href="http://gleamynode.net/">Trustin Lee</a>
      * @version $Rev: 2370 $, $Date: 2010-10-19 14:40:44 +0900 (Tue, 19 Oct 2010) $
      *

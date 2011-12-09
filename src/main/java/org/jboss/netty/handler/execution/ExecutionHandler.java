@@ -102,7 +102,7 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  * because they often do not maintain event execution order nor interact with
  * I/O threads to control the incoming traffic and avoid {@link OutOfMemoryError}.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev: 2295 $, $Date: 2010-06-03 18:01:46 +0900 (Thu, 03 Jun 2010) $

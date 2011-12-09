@@ -38,7 +38,7 @@ import org.jboss.netty.channel.MessageEvent;
 /**
  * A skeletal {@link CodecEmbedder} implementation.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev: 2355 $, $Date: 2010-08-26 14:38:34 +0900 (Thu, 26 Aug 2010) $
  */

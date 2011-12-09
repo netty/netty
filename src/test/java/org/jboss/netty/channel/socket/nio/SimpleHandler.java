@@ -22,7 +22,7 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 
 /**
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author Daniel Bevenius (dbevenius@jboss.com)
  * @version $Rev: 2119 $, $Date: 2010-02-01 20:46:09 +0900 (Mon, 01 Feb 2010) $
  */

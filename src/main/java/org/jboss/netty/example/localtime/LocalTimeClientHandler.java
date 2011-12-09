@@ -38,7 +38,7 @@ import org.jboss.netty.example.localtime.LocalTimeProtocol.Location;
 import org.jboss.netty.example.localtime.LocalTimeProtocol.Locations;
 
 /**
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev: 2190 $, $Date: 2010-02-19 18:08:01 +0900 (Fri, 19 Feb 2010) $

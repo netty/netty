@@ -42,7 +42,7 @@ import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
  * so that this handler can intercept HTTP requests after {@link HttpMessageDecoder}
  * converts {@link ChannelBuffer}s into HTTP requests.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev: 2368 $, $Date: 2010-10-18 17:19:03 +0900 (Mon, 18 Oct 2010) $
  */

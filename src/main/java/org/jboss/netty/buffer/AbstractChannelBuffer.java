@@ -28,7 +28,7 @@ import java.util.NoSuchElementException;
 /**
  * A skeletal implementation of a buffer.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev: 2211 $, $Date: 2010-03-04 15:34:00 +0900 (Thu, 04 Mar 2010) $

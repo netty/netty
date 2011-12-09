@@ -6,7 +6,7 @@
       <authoremail>netty-dev@lists.jboss.org</authoremail>
       <version>0.28</version>
       <description>
-        http://www.jboss.org/netty/
+        http://netty.io/
       </description>
     </documentation>
     <settings>

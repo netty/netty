@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 /**
  * Accesses the system property swallowing a {@link SecurityException}.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev: 2161 $, $Date: 2010-02-18 11:12:15 +0900 (Thu, 18 Feb 2010) $

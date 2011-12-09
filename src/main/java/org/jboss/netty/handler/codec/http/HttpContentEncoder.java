@@ -47,7 +47,7 @@ import org.jboss.netty.util.internal.QueueFactory;
  * so that this handler can intercept HTTP responses before {@link HttpMessageEncoder}
  * converts them into {@link ChannelBuffer}s.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev: 2368 $, $Date: 2010-10-18 17:19:03 +0900 (Mon, 18 Oct 2010) $
  */

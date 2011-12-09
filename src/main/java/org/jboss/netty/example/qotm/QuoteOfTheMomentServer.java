@@ -35,7 +35,7 @@ import org.jboss.netty.util.CharsetUtil;
  *
  * Inspired by <a href="http://java.sun.com/docs/books/tutorial/networking/datagrams/clientServer.html">the official Java tutorial</a>.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @version $Rev: 2104 $, $Date: 2010-01-28 16:50:28 +0900 (Thu, 28 Jan 2010) $
  */

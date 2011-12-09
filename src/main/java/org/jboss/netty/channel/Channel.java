@@ -100,7 +100,7 @@ import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
  * to determine when to set or clear the {@link #OP_WRITE} flag.
  * </p>
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @version $Rev: 2244 $, $Date: 2010-04-16 14:07:37 +0900 (Fri, 16 Apr 2010) $
