@@ -33,7 +33,7 @@ import io.netty.channel.WriteCompletionEvent;
 /**
  * Handles a client-side channel.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class DiscardClientHandler extends SimpleChannelUpstreamHandler {

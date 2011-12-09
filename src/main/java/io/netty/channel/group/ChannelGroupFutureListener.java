@@ -23,7 +23,7 @@ import java.util.EventListener;
  * listener is added by calling {@link ChannelGroupFuture#addListener(ChannelGroupFutureListener)}
  * and all I/O operations are complete.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public interface ChannelGroupFutureListener extends EventListener {

@@ -30,7 +30,7 @@ import io.netty.buffer.HeapChannelBufferFactory;
  * The encoding and decoding algorithm in this class has been derived from
  * <a href="http://iharder.sourceforge.net/current/java/base64/">Robert Harder's Public Domain Base64 Encoder/Decoder</a>.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author Robert Harder (rob@iharder.net)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *

@@ -22,7 +22,7 @@ import io.netty.channel.ServerChannel;
 /**
  * A TCP/IP {@link ServerChannel} which accepts incoming TCP/IP connections.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark

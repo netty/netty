@@ -26,7 +26,7 @@ import io.netty.handler.codec.http.HttpHeaders.Names;
 /**
  * Instances the appropriate handshake class to use for clients
  * 
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  */
 public class WebSocketServerHandshakerFactory {
 

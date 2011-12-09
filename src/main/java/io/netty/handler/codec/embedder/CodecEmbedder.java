@@ -24,7 +24,7 @@ import io.netty.channel.ChannelPipeline;
  * without doing actual I/O in unit tests or higher level codecs.  Please refer
  * to {@link EncoderEmbedder} and {@link DecoderEmbedder} for more information.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public interface CodecEmbedder<E> {

@@ -29,7 +29,7 @@ import io.netty.util.internal.ConversionUtil;
 /**
  * The default {@link io.netty.channel.socket.nio.NioSocketChannelConfig} implementation for SCTP.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://github.com/jestan">Jestan Nirojan</a>
  */

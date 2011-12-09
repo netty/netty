@@ -47,7 +47,7 @@ import io.netty.util.ExternalResourceReleasable;
  * please refer to the Javadoc of {@link ChannelFactory}'s subtypes, such as
  * {@link NioServerSocketChannelFactory}.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark

@@ -24,7 +24,7 @@ import io.netty.logging.InternalLoggerFactory;
  * A skeletal {@link ChannelFuture} implementation which represents a
  * {@link ChannelFuture} which has been completed already.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public abstract class CompleteChannelFuture implements ChannelFuture {

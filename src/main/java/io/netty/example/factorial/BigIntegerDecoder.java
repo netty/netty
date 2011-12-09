@@ -29,7 +29,7 @@ import io.netty.handler.codec.frame.FrameDecoder;
  * {@link BigInteger} instance.  For example, { 'F', 0, 0, 0, 1, 42 } will be
  * decoded into new BigInteger("42").
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class BigIntegerDecoder extends FrameDecoder {

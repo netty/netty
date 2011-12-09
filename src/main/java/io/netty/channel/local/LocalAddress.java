@@ -28,7 +28,7 @@ import java.net.SocketAddress;
  * and is released as soon as the connection is closed.  All ephemeral addresses
  * have the same ID, {@code "ephemeral"}, but they are not equal to each other.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *

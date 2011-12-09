@@ -34,7 +34,7 @@ import io.netty.handler.codec.http.HttpVersion;
  * A simple HTTP client that prints out the content of the HTTP response to
  * {@link System#out} to test {@link HttpServer}.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */

@@ -24,7 +24,7 @@ import io.netty.channel.SimpleChannelUpstreamHandler;
  * An extended {@link SimpleChannelUpstreamHandler} that adds the handler method
  * for an {@link IdleStateEvent}.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.uses io.netty.handler.timeout.IdleStateEvent

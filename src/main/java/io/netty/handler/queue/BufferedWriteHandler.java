@@ -155,7 +155,7 @@ import io.netty.util.internal.QueueFactory;
  * For example, you could call {@link #flush()} periodically, using
  * {@link HashedWheelTimer} every second.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark

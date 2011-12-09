@@ -25,7 +25,7 @@ package io.netty.buffer;
  * {@link ChannelBuffer#bytesBefore(int, int, ChannelBufferIndexFinder)}
  * for more explanation.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.uses io.netty.buffer.ChannelBuffer

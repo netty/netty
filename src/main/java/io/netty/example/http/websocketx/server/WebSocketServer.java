@@ -46,7 +46,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * <li>
  * </ul>
  * 
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */

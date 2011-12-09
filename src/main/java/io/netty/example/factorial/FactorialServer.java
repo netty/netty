@@ -25,7 +25,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * Receives a sequence of integers from a {@link FactorialClient} to calculate
  * the factorial of the specified integer.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class FactorialServer {

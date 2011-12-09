@@ -20,7 +20,7 @@ import java.nio.ByteOrder;
 /**
  * A skeletal implementation of {@link ChannelBufferFactory}.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public abstract class AbstractChannelBufferFactory implements ChannelBufferFactory {

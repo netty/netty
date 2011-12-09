@@ -32,7 +32,7 @@ import java.io.InputStream;
  * The endianness of the stream is not always big endian but depends on
  * the endianness of the underlying buffer.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @see ChannelBufferOutputStream

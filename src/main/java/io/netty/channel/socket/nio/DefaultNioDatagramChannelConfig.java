@@ -26,7 +26,7 @@ import io.netty.util.internal.ConversionUtil;
 /**
  * The default {@link NioSocketChannelConfig} implementation.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Daniel Bevenius (dbevenius@jboss.com)
  */

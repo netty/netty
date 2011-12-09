@@ -22,7 +22,7 @@ import io.netty.channel.socket.ServerSocketChannel;
  * its child {@link Channel}s by accepting them.  {@link ServerSocketChannel} is
  * a good example.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public interface ServerChannel extends Channel {

@@ -31,7 +31,7 @@ import io.netty.util.internal.StackTraceSimplifier;
  * {@link #setDefaultFactory(InternalLoggerFactory)} should be called as early
  * as possible and shouldn't be called more than once.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark

@@ -28,7 +28,7 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
  * a magic number ('F' or 0x46) and a 32-bit length prefix.  For example, 42
  * will be encoded to { 'F', 0, 0, 0, 1, 42 }.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  */

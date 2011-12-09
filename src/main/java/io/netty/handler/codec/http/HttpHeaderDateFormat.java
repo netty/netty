@@ -31,7 +31,7 @@ import java.util.TimeZone;
  * <li>Sun Nov 6 08:49:37 1994: obsolete specification</li>
  * </ul>
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author <a href="http://www.rogiel.com/">Rogiel Josias Sulzbach</a>
  */

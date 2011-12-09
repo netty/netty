@@ -129,7 +129,7 @@ import io.netty.util.internal.QueueFactory;
  * or synchronized {@link WeakHashMap} instead of managing the life cycle of the
  * keys by yourself.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author David M. Lloyd (david.lloyd@redhat.com)
  *

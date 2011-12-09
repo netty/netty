@@ -49,7 +49,7 @@ import io.netty.handler.ssl.SslHandler;
  *     to validate the client certificate.</li>
  * </ul>
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class SecureChatSslContextFactory {

@@ -39,7 +39,7 @@ import io.netty.util.CharsetUtil;
  * >draft-ietf-hybi-thewebsocketprotocol- 10</a>
  * </p>
  * 
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  */
 public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
 

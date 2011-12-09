@@ -21,7 +21,7 @@ import org.apache.commons.logging.Log;
  * <a href="http://commons.apache.org/logging/">Apache Commons Logging</a>
  * logger.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 class CommonsLogger extends AbstractInternalLogger {

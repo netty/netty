@@ -26,7 +26,7 @@ import io.netty.util.EstimatableObjectWrapper;
  * Most users will not see this type at all because it is used by
  * {@link Executor} implementers only
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper {

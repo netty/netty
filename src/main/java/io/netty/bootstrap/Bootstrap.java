@@ -40,7 +40,7 @@ import io.netty.util.ExternalResourceReleasable;
  * and {@link ConnectionlessBootstrap} for client side, server-side, and
  * connectionless (e.g. UDP) channel initialization respectively.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.uses io.netty.channel.ChannelFactory

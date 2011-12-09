@@ -23,7 +23,7 @@ import io.netty.handler.codec.http.HttpMethod;
 /**
  * The request method of RTSP.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *

@@ -36,7 +36,7 @@ import io.netty.channel.MessageEvent;
  * Users of this {@link FileRegionEncoder} should add / remove this {@link ChannelDownstreamHandler} on the fly to get the best performance out of their system.
  * 
  * 
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://www.murkycloud.com/">Norman Maurer</a>
  *
  */

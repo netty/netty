@@ -68,7 +68,7 @@ package io.netty.channel;
  * accesses a shared resource or stores stateful information, you might need
  * proper synchronization in the handler implementation.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.exclude ^org\.jboss\.netty\.handler\..*$

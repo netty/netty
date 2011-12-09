@@ -26,7 +26,7 @@ import java.util.Map;
  * A utility class that provides various common operations and constants
  * related with {@link Charset} and its relevant classes.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class CharsetUtil {

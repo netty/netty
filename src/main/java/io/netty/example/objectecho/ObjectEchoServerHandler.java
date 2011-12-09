@@ -31,7 +31,7 @@ import io.netty.channel.SimpleChannelUpstreamHandler;
  * Handles both client-side and server-side handler depending on which
  * constructor was called.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class ObjectEchoServerHandler extends SimpleChannelUpstreamHandler {

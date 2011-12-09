@@ -18,7 +18,7 @@ package io.netty.channel;
 /**
  * Creates a new {@link ReceiveBufferSizePredictor}.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.has        io.netty.channel.ReceiveBufferSizePredictor oneway - - creates

@@ -30,7 +30,7 @@ import java.io.PushbackInputStream;
  * Otherwise, {@link ChunkedStream} will generate many too small chunks or
  * block unnecessarily often.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class ChunkedStream implements ChunkedInput {

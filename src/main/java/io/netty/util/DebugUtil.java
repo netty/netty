@@ -32,7 +32,7 @@ import io.netty.util.internal.SystemPropertyUtil;
  * {@link ChannelPipeline} or {@link ChannelSink} are retained as it is to help
  * debugging Netty.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class DebugUtil {

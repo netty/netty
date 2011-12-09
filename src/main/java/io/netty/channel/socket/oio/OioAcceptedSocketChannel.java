@@ -30,7 +30,7 @@ import io.netty.channel.ChannelSink;
 
 /**
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 class OioAcceptedSocketChannel extends OioSocketChannel {

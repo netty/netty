@@ -21,7 +21,7 @@ import java.io.IOException;
  * An {@link IOException} that is raised when compression or decompression
  * failed.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class CompressionException extends RuntimeException {

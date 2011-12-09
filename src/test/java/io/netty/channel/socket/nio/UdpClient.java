@@ -24,7 +24,7 @@ import java.net.SocketException;
 /**
  * A UDP (User Datagram Protocol) client for use in testing
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author Daniel Bevenius (dbevenius@jboss.com)
  */
 public class UdpClient {

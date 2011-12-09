@@ -24,7 +24,7 @@ package io.netty.handler.codec.http.websocketx;
  * may have use by more than 1 version of the specification.
  * </p>
  * 
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  */
 public enum WebSocketSpecificationVersion {
     UNKNOWN,

@@ -21,7 +21,7 @@ import io.netty.channel.ChannelPipeline;
 /**
  * A {@link ChannelFactory} which creates a {@link DatagramChannel}.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.has io.netty.channel.socket.DatagramChannel oneway - - creates

@@ -117,7 +117,7 @@ package io.netty.channel;
  * event are, what fundamental differences they have, how they flow in a
  * pipeline,  and how to handle the event in your application.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.owns io.netty.channel.ChannelHandler

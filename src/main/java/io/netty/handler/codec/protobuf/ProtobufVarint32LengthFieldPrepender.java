@@ -40,7 +40,7 @@ import com.google.protobuf.CodedOutputStream;
  *
  * @see com.google.protobuf.CodedOutputStream
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author Tomasz Blachowicz (tblachowicz@gmail.com)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */

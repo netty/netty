@@ -32,7 +32,7 @@ import io.netty.channel.SimpleChannelUpstreamHandler;
  * traffic between the echo client and server by sending the first message to
  * the server.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class EchoClientHandler extends SimpleChannelUpstreamHandler {

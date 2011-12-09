@@ -30,7 +30,7 @@ import io.netty.buffer.ChannelBuffer;
  * known, an I/O thread will call {@link #previousReceiveBufferSize(int)} to
  * update the predictor so it can predict more accurately next time.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public interface ReceiveBufferSizePredictor {

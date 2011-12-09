@@ -20,7 +20,7 @@ import org.slf4j.Logger;
 /**
  * <a href="http://www.slf4j.org/">SLF4J</a> logger.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 class Slf4JLogger extends AbstractInternalLogger {

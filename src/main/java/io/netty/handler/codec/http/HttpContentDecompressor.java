@@ -25,7 +25,7 @@ import io.netty.handler.codec.embedder.DecoderEmbedder;
  * {@code gzip} or {@code deflate} encoding.  For more information on how this
  * handler modifies the message, please refer to {@link HttpContentDecoder}.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class HttpContentDecompressor extends HttpContentDecoder {

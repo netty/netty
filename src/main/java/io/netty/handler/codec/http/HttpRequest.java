@@ -26,7 +26,7 @@ package io.netty.handler.codec.http;
  * support is also provided separately via {@link CookieEncoder} and
  * {@link CookieDecoder}.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author Andy Taylor (andy.taylor@jboss.org)
  *
  * @see HttpResponse

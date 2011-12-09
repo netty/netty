@@ -31,7 +31,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * Because SSL and GZIP are enabled on demand, 5 combinations per protocol
  * are possible: none, SSL only, GZIP only, SSL + GZIP, and GZIP + SSL.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class PortUnificationServer {

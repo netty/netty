@@ -29,7 +29,7 @@ import io.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
  * {@link ChannelHandlerContext#setAttachment(Object) ChannelHandlerContext.attachment}
  * property, which performs better.
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @deprecated Use {@link Channel#setAttachment(Object)} and {@link Channel#getAttachment()}

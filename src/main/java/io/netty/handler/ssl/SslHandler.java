@@ -146,7 +146,7 @@ import io.netty.util.internal.QueueFactory;
  * <li>Initiate SSL handshake by calling {@link SslHandler#handshake()}.</li>
  * </ol>
  *
- * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
+ * @author <a href="http://netty.io/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
