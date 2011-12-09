@@ -272,7 +272,8 @@
           <target>1.6</target>
           <debug>true</debug>
           <optimize>true</optimize>
-          <showDeprecations>true</showDeprecations>
+          <showDeprecation>true</showDeprecation>
+          <showWarnings>true</showWarnings>
         </configuration>
       </plugin>
       <plugin>
