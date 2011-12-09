@@ -504,8 +504,6 @@
           <docfilessubdirs>true</docfilessubdirs>
           <useStandardDocletOptions>true</useStandardDocletOptions>
           <outputDirectory>${project.build.directory}/api</outputDirectory>
-          <reportOutputDirectory>${project.build.directory}/api</reportOutputDirectory>
-          <destDir>api</destDir>
           <charset>UTF-8</charset>
           <docencoding>UTF-8</docencoding>
           <breakiterator>true</breakiterator>
