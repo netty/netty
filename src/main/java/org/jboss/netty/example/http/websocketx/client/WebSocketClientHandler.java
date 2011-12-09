@@ -66,7 +66,7 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler impleme
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         channel = e.getChannel();
         this.handshaker = new WebSocketClientHandshakerFactory().newHandshaker(url, version, null, false);
-        handshaker.beginOpeningHandshake(ctx, channel);
+        handshaker.performOpeningHandshake(ctx, channel);
     }
 
     @Override
@@ -77,7 +77,7 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler impleme
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (!handshaker.isOpeningHandshakeCompleted()) {
-            handshaker.endOpeningHandshake(ctx, (HttpResponse) e.getMessage());
+            handshaker.performClosingHandshake(ctx, (HttpResponse) e.getMessage());
             callback.onConnect(this);
             return;
         }

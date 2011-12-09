@@ -121,7 +121,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * @throws NoSuchAlgorithmException
      */
     @Override
-    public void executeOpeningHandshake(ChannelHandlerContext ctx, HttpRequest req) {
+    public void performOpeningHandshake(ChannelHandlerContext ctx, HttpRequest req) {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s web socket spec version 00 handshake", ctx.getChannel().getId()));
@@ -192,7 +192,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            Web Socket frame that was received
      */
     @Override
-    public void executeClosingHandshake(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
+    public void performClosingHandshake(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
         ctx.getChannel().write(frame);
     }
 }

@@ -103,7 +103,7 @@ public abstract class WebSocketServerHandshaker {
      *            HTTP Request
      * @throws NoSuchAlgorithmException
      */
-    public abstract void executeOpeningHandshake(ChannelHandlerContext ctx, HttpRequest req);
+    public abstract void performOpeningHandshake(ChannelHandlerContext ctx, HttpRequest req);
 
     /**
      * Performs the closing handshake
@@ -113,7 +113,7 @@ public abstract class WebSocketServerHandshaker {
      * @param frame
      *            Closing Frame that was received
      */
-    public abstract void executeClosingHandshake(ChannelHandlerContext ctx, CloseWebSocketFrame frame);
+    public abstract void performClosingHandshake(ChannelHandlerContext ctx, CloseWebSocketFrame frame);
 
     /**
      * Performs an MD5 hash
