@@ -18,12 +18,12 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>org.jboss</groupId>
-    <artifactId>jboss-parent</artifactId>
-    <version>5</version>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>7</version>
   </parent>
 
-  <groupId>org.jboss.netty</groupId>
+  <groupId>io.netty</groupId>
   <artifactId>netty</artifactId>
   <packaging>bundle</packaging>
   <version>4.0.0.Alpha1-SNAPSHOT</version>
