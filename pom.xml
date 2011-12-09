@@ -29,7 +29,7 @@
   <version>3.2.8.Final-SNAPSHOT</version>
 
   <name>The Netty Project</name>
-  <url>http://www.jboss.org/netty/</url>
+  <url>http://netty.io/</url>
   <description>
     The Netty project is an effort to provide an asynchronous event-driven
     network application framework and tools for rapid development of
@@ -224,7 +224,6 @@
 
     <plugins>
       <plugin>
-        <!-- See org.jboss:jboss-parent -->
         <artifactId>maven-enforcer-plugin</artifactId>
         <version>1.0.1</version>
         <executions>
@@ -306,26 +305,26 @@
         <extensions>true</extensions>
         <configuration>
           <instructions>
-            <Bundle-SymbolicName>${project.groupId}</Bundle-SymbolicName>
+	    <Bundle-SymbolicName>org.jboss.netty</Bundle-SymbolicName>
             <Bundle-DocURL>${project.url}</Bundle-DocURL>
             <Bundle-Activator>
-              ${project.groupId}.container.osgi.NettyBundleActivator
+              org.jboss.netty.container.osgi.NettyBundleActivator
             </Bundle-Activator>
             <Export-Package>
-              !${project.groupId}.example.*,
-              !${project.groupId}.util.internal.*,
-              ${project.groupId}.*;version=${project.version}
+              !org.jboss.netty.example.*,
+              !org.jboss.netty.util.internal.*,
+              org.jboss.netty.*;version=${project.version}
             </Export-Package>
             <Private-Package>
-              ${project.groupId}.example.*,
-              ${project.groupId}.util.internal.*,
+              org.jboss.netty.example.*,
+              org.jboss.netty.util.internal.*,
             </Private-Package>
             <Import-Package>
               *;resolution:=optional
             </Import-Package>
             <Eclipse-BuddyPolicy>registered</Eclipse-BuddyPolicy>
             <Bundle-BuddyPolicy>registered</Bundle-BuddyPolicy>
-            <Main-Class>${project.groupId}.util.Version</Main-Class>
+            <Main-Class>org.jboss.netty.util.Version</Main-Class>
           </instructions>
         </configuration>
       </plugin>
@@ -491,18 +490,18 @@
             -link http://commons.apache.org/logging/commons-logging-1.1.1/apidocs/
             -link http://logging.apache.org/log4j/1.2/apidocs/
 
-            -group "Low-level data representation" ${project.groupId}.buffer*
-            -group "Central interface for all I/O operations" ${project.groupId}.channel*
-            -group "Client &amp; Server bootstrapping utilities" ${project.groupId}.bootstrap*
-            -group "Reusable I/O event interceptors" ${project.groupId}.handler*
-            -group "Miscellaneous" ${project.groupId}.logging*:${project.groupId}.util*
+            -group "Low-level data representation" org.jboss.netty.buffer*
+            -group "Central interface for all I/O operations" org.jboss.netty.channel*
+            -group "Client &amp; Server bootstrapping utilities" org.jboss.netty.bootstrap*
+            -group "Reusable I/O event interceptors" org.jboss.netty.handler*
+            -group "Miscellaneous" org.jboss.netty.logging*:org.jboss.netty.util*
 
             -sourceclasspath ${project.build.outputDirectory}
             -nopackagediagram
           </additionalparam>
           <encoding>UTF-8</encoding>
           <locale>en_US</locale>
-          <excludePackageNames>${project.groupId}.example*:${project.groupId}.container*:${project.groupId}.util.internal*</excludePackageNames>
+          <excludePackageNames>org.jboss.netty.example*:org.jboss.netty.container*:org.jboss.netty.util.internal*</excludePackageNames>
         </configuration>
       </plugin>
       <plugin>
