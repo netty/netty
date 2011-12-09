@@ -21,8 +21,8 @@
  *
  * @apiviz.landmark
  * @apiviz.exclude ^java
- * @apiviz.exclude ^org\.jboss\.netty\.channel\.[^\.]+\.
- * @apiviz.exclude ^org\.jboss\.netty\.(bootstrap|handler|util)\.
+ * @apiviz.exclude ^io\.netty\.channel\.[^\.]+\.
+ * @apiviz.exclude ^io\.netty\.(bootstrap|handler|util)\.
  * @apiviz.exclude \.(Abstract|Default|Static).*$
  * @apiviz.exclude \.(Downstream|Upstream).*Event$
  * @apiviz.exclude \.[A-Za-z]+ChannelFuture$

@@ -83,7 +83,7 @@ import io.netty.handler.execution.ExecutionHandler;
  * this behavior changes depending on what {@link Executor} was employed to
  * dispatch the events.  Please refer to {@link ExecutionHandler} for more
  * information.
- * @apiviz.exclude ^org\.jboss\.netty\.handler\..*$
+ * @apiviz.exclude ^io\.netty\.handler\..*$
  */
 public interface ChannelUpstreamHandler extends ChannelHandler {
 

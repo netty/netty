@@ -67,7 +67,7 @@ package io.netty.channel;
  * may be invoked by more than one thread simultaneously.  If the handler
  * accesses a shared resource or stores stateful information, you might need
  * proper synchronization in the handler implementation.
- * @apiviz.exclude ^org\.jboss\.netty\.handler\..*$
+ * @apiviz.exclude ^io\.netty\.handler\..*$
  */
 public interface ChannelDownstreamHandler extends ChannelHandler {
 

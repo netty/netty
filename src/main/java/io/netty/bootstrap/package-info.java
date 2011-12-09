@@ -19,6 +19,6 @@
  * typical client side and server side channel initialization.
  *
  * @apiviz.landmark
- * @apiviz.exclude ^org\.jboss\.netty\.util\.
+ * @apiviz.exclude ^io\.netty\.util\.
  */
 package io.netty.bootstrap;

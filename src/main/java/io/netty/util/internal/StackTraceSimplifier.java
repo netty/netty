@@ -34,7 +34,7 @@ public class StackTraceSimplifier {
     private static final boolean SIMPLIFY_STACK_TRACE = !DebugUtil.isDebugEnabled();
     private static final Pattern EXCLUDED_STACK_TRACE =
         Pattern.compile(
-                "^org\\.jboss\\.netty\\." +
+                "^io\\.netty\\." +
                 "(util\\.internal\\.DeadLockProofWorker" +
                 "|channel\\.(SimpleChannel(Upstream|Downstream)?Handler|(Default|Static)ChannelPipeline.*))(\\$.*)?$");
 

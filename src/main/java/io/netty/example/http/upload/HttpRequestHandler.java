@@ -84,14 +84,6 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
         DiskAttribute.baseDirectory = null; // system temp directory
     }
 
-    /*
-     * (non-Javadoc)
-     *
-     * @see
-     * io.netty.channel.SimpleChannelUpstreamHandler#channelClosed(org
-     * .jboss.netty.channel.ChannelHandlerContext,
-     * io.netty.channel.ChannelStateEvent)
-     */
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {

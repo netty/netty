@@ -103,7 +103,7 @@ import io.netty.channel.socket.nio.NioSocketChannelConfig;
  * @apiviz.composedOf io.netty.channel.ChannelConfig
  * @apiviz.composedOf io.netty.channel.ChannelPipeline
  *
- * @apiviz.exclude ^org\.jboss\.netty\.channel\.([a-z]+\.)+[^\.]+Channel$
+ * @apiviz.exclude ^io\.netty\.channel\.([a-z]+\.)+[^\.]+Channel$
  */
 public interface Channel extends Comparable<Channel> {
 

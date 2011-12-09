@@ -49,7 +49,7 @@ import io.netty.util.ExternalResourceReleasable;
  * @apiviz.landmark
  * @apiviz.has        io.netty.channel.Channel oneway - - creates
  *
- * @apiviz.exclude ^org\.jboss\.netty\.channel\.([a-z]+\.)+.*ChannelFactory$
+ * @apiviz.exclude ^io\.netty\.channel\.([a-z]+\.)+.*ChannelFactory$
  */
 public interface ChannelFactory extends ExternalResourceReleasable {
 

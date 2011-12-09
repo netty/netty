@@ -46,7 +46,7 @@ import io.netty.channel.MessageEvent;
 import io.netty.channel.UpstreamMessageEvent;
 
 /**
- * A {@link ChannelSink} implementation of the RXTX support for JBoss Netty.
+ * A {@link ChannelSink} implementation of the RXTX support for Netty.
  */
 public class RXTXChannelSink extends AbstractChannelSink {
 

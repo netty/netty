@@ -203,7 +203,7 @@ import io.netty.channel.group.ChannelGroup;
  * out what a upstream event and a downstream event are, what fundamental
  * differences they have, and how they flow in a pipeline.
  * @apiviz.landmark
- * @apiviz.exclude ^org\.jboss\.netty\.handler\..*$
+ * @apiviz.exclude ^io\.netty\.handler\..*$
  */
 public interface ChannelHandler {
 
