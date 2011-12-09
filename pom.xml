@@ -228,7 +228,7 @@
         <version>1.0.1</version>
         <executions>
           <execution>
-            <id>enforce-java</id>
+            <id>enforce-tools</id>
             <goals>
               <goal>enforce</goal>
             </goals>
@@ -237,9 +237,12 @@
                 <requireJavaVersion>
                   <!-- Enforce java 1.6 as minimum for compiling -->
                   <!-- This is needed because of the Unsafe detection code -->
-                  <version>(1.6.0,)</version>
+                  <version>[1.6.0,)</version>
                 </requireJavaVersion>
-              </rules>    
+                <requireMavenVersion>
+                  <version>[3.0.3,)</version>
+                </requireMavenVersion>
+              </rules>
             </configuration>
           </execution>
         </executions>
