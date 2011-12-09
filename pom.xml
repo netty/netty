@@ -40,6 +40,11 @@
     programming such as TCP and UDP socket server.
   </description>
 
+  <organization>
+    <name>The Netty Project</name>
+    <url>http://netty.io/</url>
+  </organization>
+
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>
