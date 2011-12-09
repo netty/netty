@@ -499,7 +499,7 @@
         <configuration>
           <doclet>org.jboss.apiviz.APIviz</doclet>
 	  <docletPath>${basedir}/lib/apiviz-1.3.1.GA.jar</docletPath>
-          <attach>false</attach>
+          <attach>true</attach>
           <javadocDirectory>${basedir}/src/javadoc</javadocDirectory>
           <docfilessubdirs>true</docfilessubdirs>
           <useStandardDocletOptions>true</useStandardDocletOptions>
