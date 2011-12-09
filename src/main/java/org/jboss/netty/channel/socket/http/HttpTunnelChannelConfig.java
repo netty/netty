@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
-import org.jboss.netty.channel.DefaultChannelConfig;
-import org.jboss.netty.channel.socket.SocketChannelConfig;
-import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
+import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.nio.NioSocketChannelConfig;
 
 /**
  * Configuration for HTTP tunnels. Where possible, properties set on this configuration will
@@ -81,15 +81,15 @@ public abstract class HttpTunnelChannelConfig extends DefaultChannelConfig
     }
 
     /**
-     * Similarly to {@link org.jboss.netty.channel.socket.nio.NioSocketChannelConfig#setWriteBufferHighWaterMark(int)
+     * Similarly to {@link io.netty.channel.socket.nio.NioSocketChannelConfig#setWriteBufferHighWaterMark(int)
      * NioSocketChannelConfig.setWriteBufferHighWaterMark()},
      * the high water mark refers to the buffer size at which a user of the channel should stop writing. When the
-     * number of queued bytes exceeds the high water mark, {@link org.jboss.netty.channel.Channel#isWritable() Channel.isWritable()} will
+     * number of queued bytes exceeds the high water mark, {@link io.netty.channel.Channel#isWritable() Channel.isWritable()} will
      * return false. Once the number of queued bytes falls below the {@link #setWriteBufferLowWaterMark(int) low water mark},
-     * {@link org.jboss.netty.channel.Channel#isWritable() Channel.isWritable()} will return true again, indicating that the client
+     * {@link io.netty.channel.Channel#isWritable() Channel.isWritable()} will return true again, indicating that the client
      * can begin to send more data.
      *
-     * @param level the number of queued bytes required to flip {@link org.jboss.netty.channel.Channel#isWritable()} to
+     * @param level the number of queued bytes required to flip {@link io.netty.channel.Channel#isWritable()} to
      * false.
      *
      * @see NioSocketChannelConfig#setWriteBufferHighWaterMark(int)
@@ -118,11 +118,11 @@ public abstract class HttpTunnelChannelConfig extends DefaultChannelConfig
 
     /**
      * The low water mark refers to the "safe" size of the queued byte buffer at which more data can be enqueued. When
-     * the {@link #setWriteBufferHighWaterMark(int) high water mark} is exceeded, {@link org.jboss.netty.channel.Channel#isWritable() Channel.isWriteable()}
+     * the {@link #setWriteBufferHighWaterMark(int) high water mark} is exceeded, {@link io.netty.channel.Channel#isWritable() Channel.isWriteable()}
      * will return false until the buffer drops below this level. By creating a sufficient gap between the high and low
      * water marks, rapid oscillation between "write enabled" and "write disabled" can be avoided.
      *
-     * @see org.jboss.netty.channel.socket.nio.NioSocketChannelConfig#setWriteBufferLowWaterMark(int)
+     * @see io.netty.channel.socket.nio.NioSocketChannelConfig#setWriteBufferLowWaterMark(int)
      */
     public void setWriteBufferLowWaterMark(int level) {
         if (level >= writeBufferHighWaterMark) {

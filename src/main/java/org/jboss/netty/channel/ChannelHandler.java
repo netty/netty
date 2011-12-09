@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -22,8 +22,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.jboss.netty.bootstrap.Bootstrap;
-import org.jboss.netty.channel.group.ChannelGroup;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.group.ChannelGroup;
 
 /**
  * Handles or intercepts a {@link ChannelEvent}, and sends a

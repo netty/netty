@@ -13,16 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.replay;
+package io.netty.handler.codec.replay;
 
 import static org.junit.Assert.*;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferIndexFinder;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBufferIndexFinder;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.embedder.DecoderEmbedder;
 import org.junit.Test;
 
 /**

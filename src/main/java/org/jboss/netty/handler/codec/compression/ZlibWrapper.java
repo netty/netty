@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.compression;
+package io.netty.handler.codec.compression;
 
 /**
  * The container file formats that wrap the stream compressed by the DEFLATE

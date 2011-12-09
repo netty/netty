@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.stream;
+package io.netty.handler.stream;
 
-import static org.jboss.netty.buffer.ChannelBuffers.*;
+import static io.netty.buffer.ChannelBuffers.*;
 
 import java.io.InputStream;
 import java.io.PushbackInputStream;

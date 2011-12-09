@@ -13,27 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.embedder;
+package io.netty.handler.codec.embedder;
 
-import static org.jboss.netty.channel.Channels.*;
+import static io.netty.channel.Channels.*;
 
 import java.lang.reflect.Array;
 import java.util.ConcurrentModificationException;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineException;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.DefaultChannelPipeline;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
+import io.netty.buffer.ChannelBufferFactory;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPipelineException;
+import io.netty.channel.ChannelSink;
+import io.netty.channel.ChannelUpstreamHandler;
+import io.netty.channel.DefaultChannelPipeline;
+import io.netty.channel.ExceptionEvent;
+import io.netty.channel.MessageEvent;
 
 /**
  * A skeletal {@link CodecEmbedder} implementation.

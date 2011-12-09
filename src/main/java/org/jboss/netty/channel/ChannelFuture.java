@@ -13,12 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.handler.execution.ExecutionHandler;
+import io.netty.bootstrap.ClientBootstrap;
+import io.netty.handler.execution.ExecutionHandler;
 
 /**
  * The result of an asynchronous {@link Channel} I/O operation.
@@ -168,7 +168,7 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.owns org.jboss.netty.channel.ChannelFutureListener - - notifies
+ * @apiviz.owns io.netty.channel.ChannelFutureListener - - notifies
  */
 public interface ChannelFuture {
 

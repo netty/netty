@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.sctp;
+package io.netty.channel.socket.sctp;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

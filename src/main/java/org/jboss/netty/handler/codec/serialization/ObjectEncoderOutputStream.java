@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.serialization;
+package io.netty.handler.codec.serialization;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -21,9 +21,9 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferOutputStream;
-import org.jboss.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBufferOutputStream;
+import io.netty.buffer.ChannelBuffers;
 
 /**
  * An {@link ObjectOutput} which is interoperable with {@link ObjectDecoder}

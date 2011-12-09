@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package io.netty.handler.codec.http;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -41,7 +41,7 @@ import java.util.List;
  * @see QueryStringDecoder
  *
  * @apiviz.stereotype utility
- * @apiviz.has        org.jboss.netty.handler.codec.http.HttpRequest oneway - - encodes
+ * @apiviz.has        io.netty.handler.codec.http.HttpRequest oneway - - encodes
  */
 public class QueryStringEncoder {
 

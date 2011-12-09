@@ -13,12 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.sctp;
+package io.netty.channel.socket.sctp;
 
-import org.jboss.netty.channel.*;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.DeadLockProofWorker;
+import io.netty.channel.*;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.DeadLockProofWorker;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -35,7 +35,7 @@ import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.jboss.netty.channel.Channels.*;
+import static io.netty.channel.Channels.*;
 
 /**
  *

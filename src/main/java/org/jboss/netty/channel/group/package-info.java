@@ -16,9 +16,9 @@
 
 /**
  * A channel registry which helps a user maintain the list of open
- * {@link org.jboss.netty.channel.Channel}s and perform bulk operations on them.
+ * {@link io.netty.channel.Channel}s and perform bulk operations on them.
  *
  * @apiviz.exclude ^java
  * @apiviz.exclude \.DefaultChannelGroupFuture$
  */
-package org.jboss.netty.channel.group;
+package io.netty.channel.group;

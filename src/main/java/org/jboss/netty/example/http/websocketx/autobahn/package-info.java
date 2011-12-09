@@ -53,5 +53,5 @@
  *   
  * <p>11. See the results in <tt>reports/servers/index.html</tt>
  */
-package org.jboss.netty.example.http.websocketx.autobahn;
+package io.netty.example.http.websocketx.autobahn;
 

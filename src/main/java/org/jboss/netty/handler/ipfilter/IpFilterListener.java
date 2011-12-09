@@ -14,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jboss.netty.handler.ipfilter;
+package io.netty.handler.ipfilter;
 
 import java.net.InetSocketAddress;
 
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
 
 /**
  * The listener interface for receiving ipFilter events.

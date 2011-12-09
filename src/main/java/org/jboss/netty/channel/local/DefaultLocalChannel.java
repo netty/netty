@@ -13,27 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.local;
+package io.netty.channel.local;
 
-import static org.jboss.netty.channel.Channels.*;
+import static io.netty.channel.Channels.*;
 
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jboss.netty.channel.AbstractChannel;
-import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.DefaultChannelConfig;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.util.internal.QueueFactory;
-import org.jboss.netty.util.internal.ThreadLocalBoolean;
+import io.netty.channel.AbstractChannel;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
+import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.MessageEvent;
+import io.netty.util.internal.QueueFactory;
+import io.netty.util.internal.ThreadLocalBoolean;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

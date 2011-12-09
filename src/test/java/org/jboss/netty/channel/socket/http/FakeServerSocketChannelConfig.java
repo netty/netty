@@ -14,13 +14,13 @@
  * under the License.
  */
 
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.HeapChannelBufferFactory;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.DefaultChannelConfig;
-import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
+import io.netty.buffer.ChannelBufferFactory;
+import io.netty.buffer.HeapChannelBufferFactory;
+import io.netty.channel.ChannelPipelineFactory;
+import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.socket.ServerSocketChannelConfig;
 
 /**
  * A fake server socket channel config class for use in testing

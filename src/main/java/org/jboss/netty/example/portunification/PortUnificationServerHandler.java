@@ -13,27 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.example.portunification;
+package io.netty.example.portunification;
 
 import javax.net.ssl.SSLEngine;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.example.factorial.BigIntegerDecoder;
-import org.jboss.netty.example.factorial.FactorialServerHandler;
-import org.jboss.netty.example.factorial.NumberEncoder;
-import org.jboss.netty.example.http.snoop.HttpRequestHandler;
-import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
-import org.jboss.netty.handler.codec.compression.ZlibDecoder;
-import org.jboss.netty.handler.codec.compression.ZlibEncoder;
-import org.jboss.netty.handler.codec.compression.ZlibWrapper;
-import org.jboss.netty.handler.codec.frame.FrameDecoder;
-import org.jboss.netty.handler.codec.http.HttpContentCompressor;
-import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
-import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
-import org.jboss.netty.handler.ssl.SslHandler;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.example.factorial.BigIntegerDecoder;
+import io.netty.example.factorial.FactorialServerHandler;
+import io.netty.example.factorial.NumberEncoder;
+import io.netty.example.http.snoop.HttpRequestHandler;
+import io.netty.example.securechat.SecureChatSslContextFactory;
+import io.netty.handler.codec.compression.ZlibDecoder;
+import io.netty.handler.codec.compression.ZlibEncoder;
+import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.handler.codec.frame.FrameDecoder;
+import io.netty.handler.codec.http.HttpContentCompressor;
+import io.netty.handler.codec.http.HttpRequestDecoder;
+import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.ssl.SslHandler;
 
 /**
  * Manipulates the current pipeline dynamically to switch protocols or enable

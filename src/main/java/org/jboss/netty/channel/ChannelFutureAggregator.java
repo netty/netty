@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 import java.util.HashSet;
 import java.util.Set;

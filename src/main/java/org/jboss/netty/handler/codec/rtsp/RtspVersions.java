@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.rtsp;
+package io.netty.handler.codec.rtsp;
 
-import org.jboss.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.HttpVersion;
 
 /**
  * The version of RTSP.

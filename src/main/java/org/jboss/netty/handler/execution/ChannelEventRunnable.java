@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.execution;
+package io.netty.handler.execution;
 
 import java.util.concurrent.Executor;
 
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.util.EstimatableObjectWrapper;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.EstimatableObjectWrapper;
 
 /**
  * a {@link Runnable} which sends the specified {@link ChannelEvent} upstream.

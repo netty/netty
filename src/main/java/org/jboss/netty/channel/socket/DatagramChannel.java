@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket;
+package io.netty.channel.socket;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 
-import org.jboss.netty.channel.Channel;
+import io.netty.channel.Channel;
 
 /**
  * A UDP/IP {@link Channel} which is created by {@link DatagramChannelFactory}.
@@ -28,7 +28,7 @@ import org.jboss.netty.channel.Channel;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.composedOf org.jboss.netty.channel.socket.DatagramChannelConfig
+ * @apiviz.composedOf io.netty.channel.socket.DatagramChannelConfig
  */
 public interface DatagramChannel extends Channel {
     @Override

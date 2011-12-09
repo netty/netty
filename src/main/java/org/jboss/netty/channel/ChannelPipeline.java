@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -21,10 +21,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.execution.ExecutionHandler;
-import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
-import org.jboss.netty.handler.ssl.SslHandler;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.handler.execution.ExecutionHandler;
+import io.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+import io.netty.handler.ssl.SslHandler;
 
 
 /**
@@ -46,7 +46,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * {@link Channels} rather than calling an individual implementation's
  * constructor:
  * <pre>
- * import static org.jboss.netty.channel.{@link Channels}.*;
+ * import static io.netty.channel.{@link Channels}.*;
  * {@link ChannelPipeline} pipeline = pipeline(); // same with Channels.pipeline()
  * </pre>
  *
@@ -205,9 +205,9 @@ import org.jboss.netty.handler.ssl.SslHandler;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.composedOf org.jboss.netty.channel.ChannelHandlerContext
- * @apiviz.owns       org.jboss.netty.channel.ChannelHandler
- * @apiviz.uses       org.jboss.netty.channel.ChannelSink - - sends events downstream
+ * @apiviz.composedOf io.netty.channel.ChannelHandlerContext
+ * @apiviz.owns       io.netty.channel.ChannelHandler
+ * @apiviz.uses       io.netty.channel.ChannelSink - - sends events downstream
  */
 public interface ChannelPipeline {
 

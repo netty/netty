@@ -20,5 +20,5 @@
  *
  * @apiviz.exclude CodecEmbedder$
  */
-package org.jboss.netty.handler.codec.embedder;
+package io.netty.handler.codec.embedder;
 

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.nio;
+package io.netty.channel.socket.nio;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -29,9 +29,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.SystemPropertyUtil;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.SystemPropertyUtil;
 
 /**
  * Provides information which is specific to a NIO service provider
@@ -45,7 +45,7 @@ class NioProviderMetadata {
         InternalLoggerFactory.getInstance(NioProviderMetadata.class);
 
     private static final String CONSTRAINT_LEVEL_PROPERTY =
-        "org.jboss.netty.channel.socket.nio.constraintLevel";
+        "io.netty.channel.socket.nio.constraintLevel";
 
     /**
      * 0 - no need to wake up to get / set interestOps (most cases)

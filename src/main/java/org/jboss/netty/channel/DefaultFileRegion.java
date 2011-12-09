@@ -1,11 +1,11 @@
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 public class DefaultFileRegion implements FileRegion {
 

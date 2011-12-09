@@ -13,18 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.sctp;
+package io.netty.channel.socket.sctp;
 
 import static com.sun.nio.sctp.SctpStandardSocketOptions.*;
 
-import org.jboss.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelConfig;
 
 /**
- * A {@link org.jboss.netty.channel.ChannelConfig} for a {@link SctpServerChannelConfig}.
+ * A {@link io.netty.channel.ChannelConfig} for a {@link SctpServerChannelConfig}.
  * <p/>
  * <h3>Available options</h3>
  * <p/>
- * In addition to the options provided by {@link org.jboss.netty.channel.ChannelConfig},
+ * In addition to the options provided by {@link io.netty.channel.ChannelConfig},
  * {@link SctpServerChannelConfig} allows the following options in the
  * option map:
  * <p/>

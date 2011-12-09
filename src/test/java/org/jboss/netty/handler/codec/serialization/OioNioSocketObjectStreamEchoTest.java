@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.serialization;
+package io.netty.handler.codec.serialization;
 
 import java.util.concurrent.Executor;
 
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.channel.socket.oio.OioClientSocketChannelFactory;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

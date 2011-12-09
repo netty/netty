@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util.internal.jzlib;
+package io.netty.util.internal.jzlib;
 
 final class CRC32 {
     private static final int[] TABLE = {

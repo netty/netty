@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
-import org.jboss.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.ServerSocketChannel;
 
 /**
  * A {@link Channel} that accepts an incoming connection attempt and creates

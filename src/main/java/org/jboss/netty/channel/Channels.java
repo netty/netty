@@ -13,12 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 import java.net.SocketAddress;
 import java.util.Map;
 
-import org.jboss.netty.util.internal.ConversionUtil;
+import io.netty.util.internal.ConversionUtil;
 
 
 /**

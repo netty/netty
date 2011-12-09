@@ -13,15 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.nio;
+package io.netty.channel.socket.nio;
 
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.util.internal.QueueFactory;
+import io.netty.channel.MessageEvent;
+import io.netty.util.internal.QueueFactory;
 
 /**
  * 

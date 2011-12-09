@@ -13,16 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.timeout;
+package io.netty.handler.timeout;
 
-import static org.jboss.netty.channel.Channels.*;
+import static io.netty.channel.Channels.*;
 
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 
 /**
  * The default {@link IdleStateEvent} implementation.

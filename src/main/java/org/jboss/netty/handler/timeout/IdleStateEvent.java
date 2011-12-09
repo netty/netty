@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.timeout;
+package io.netty.handler.timeout;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelEvent;
 
 /**
  * A {@link ChannelEvent} that is triggered when a {@link Channel} has been idle
@@ -26,7 +26,7 @@ import org.jboss.netty.channel.ChannelEvent;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.has org.jboss.netty.handler.timeout.IdleState oneway - -
+ * @apiviz.has io.netty.handler.timeout.IdleState oneway - -
  */
 public interface IdleStateEvent extends ChannelEvent {
     /**

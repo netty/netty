@@ -13,14 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util;
+package io.netty.util;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 /**
  * A {@link ThreadFactory} that creates a new {@link Thread} with the specified name and thread ID.

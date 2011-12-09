@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.ipfilter;
+package io.netty.handler.ipfilter;
 
 import java.math.BigInteger;
 import java.net.Inet4Address;
@@ -21,8 +21,8 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * @author frederic bregier
@@ -117,7 +117,7 @@ public class CIDR6 extends CIDR
    }
 
    /* (non-Javadoc)
-    * @see org.jboss.netty.handler.ipfilter.CIDR#contains(java.net.InetAddress)
+    * @see io.netty.handler.ipfilter.CIDR#contains(java.net.InetAddress)
     */
    @Override
    public boolean contains(InetAddress inetAddress)

@@ -15,7 +15,7 @@
  */
 
 /**
- * Specialized variation of {@link org.jboss.netty.handler.codec.frame.FrameDecoder}
+ * Specialized variation of {@link io.netty.handler.codec.frame.FrameDecoder}
  * which enables implementation of a non-blocking decoder in the blocking I/O
  * paradigm.
  *
@@ -24,5 +24,5 @@
  * @apiviz.exclude \.VoidEnum$
  * @apiviz.exclude \.codec\.(?!replay)[a-z0-9]+\.
  */
-package org.jboss.netty.handler.codec.replay;
+package io.netty.handler.codec.replay;
 

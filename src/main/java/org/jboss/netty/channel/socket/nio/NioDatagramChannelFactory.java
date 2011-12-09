@@ -13,19 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.nio;
+package io.netty.channel.socket.nio;
 
 import java.nio.channels.Selector;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.group.ChannelGroup;
-import org.jboss.netty.channel.socket.DatagramChannel;
-import org.jboss.netty.channel.socket.DatagramChannelFactory;
-import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
-import org.jboss.netty.util.internal.ExecutorUtil;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.DatagramChannelFactory;
+import io.netty.channel.socket.oio.OioDatagramChannelFactory;
+import io.netty.util.internal.ExecutorUtil;
 
 /**
  * A {@link DatagramChannelFactory} that creates a NIO-based connectionless

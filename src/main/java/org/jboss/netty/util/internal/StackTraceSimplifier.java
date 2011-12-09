@@ -13,16 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util.internal;
+package io.netty.util.internal;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import org.jboss.netty.channel.DefaultChannelPipeline;
-import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.channel.StaticChannelPipeline;
-import org.jboss.netty.util.DebugUtil;
+import io.netty.channel.DefaultChannelPipeline;
+import io.netty.channel.SimpleChannelHandler;
+import io.netty.channel.StaticChannelPipeline;
+import io.netty.util.DebugUtil;
 
 /**
  * Simplifies an exception stack trace by removing unnecessary

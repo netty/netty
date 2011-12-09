@@ -13,19 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.base64;
+package io.netty.handler.codec.base64;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelHandler.Sharable;
-import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
-import org.jboss.netty.handler.codec.frame.Delimiters;
-import org.jboss.netty.handler.codec.frame.FrameDecoder;
-import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
-import org.jboss.netty.util.CharsetUtil;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.frame.Delimiters;
+import io.netty.handler.codec.frame.FrameDecoder;
+import io.netty.handler.codec.oneone.OneToOneDecoder;
+import io.netty.util.CharsetUtil;
 
 /**
  * Decodes a Base64-encoded {@link ChannelBuffer} or US-ASCII {@link String}
@@ -48,7 +48,7 @@ import org.jboss.netty.util.CharsetUtil;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.uses org.jboss.netty.handler.codec.base64.Base64
+ * @apiviz.uses io.netty.handler.codec.base64.Base64
  */
 @Sharable
 public class Base64Decoder extends OneToOneDecoder {

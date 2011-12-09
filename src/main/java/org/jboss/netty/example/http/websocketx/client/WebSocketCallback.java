@@ -20,9 +20,9 @@
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //THE SOFTWARE.
 
-package org.jboss.netty.example.http.websocketx.client;
+package io.netty.example.http.websocketx.client;
 
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 
 
 /**

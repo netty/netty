@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.rxtx;
+package io.netty.channel.rxtx;
 
 import gnu.io.CommPort;
 import gnu.io.CommPortIdentifier;
@@ -30,20 +30,20 @@ import java.io.IOException;
 import java.util.TooManyListenersException;
 import java.util.concurrent.Executor;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.AbstractChannelSink;
-import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.ChannelState;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.DefaultChannelFuture;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.UpstreamMessageEvent;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.AbstractChannelSink;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
+import io.netty.channel.ChannelState;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.Channels;
+import io.netty.channel.DefaultChannelFuture;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.UpstreamMessageEvent;
 
 /**
  * A {@link ChannelSink} implementation of the RXTX support for JBoss Netty.

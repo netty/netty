@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket;
+package io.netty.channel.socket;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
@@ -22,12 +22,12 @@ import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.DefaultChannelConfig;
-import org.jboss.netty.channel.FixedReceiveBufferSizePredictorFactory;
-import org.jboss.netty.channel.ReceiveBufferSizePredictor;
-import org.jboss.netty.channel.ReceiveBufferSizePredictorFactory;
-import org.jboss.netty.util.internal.ConversionUtil;
+import io.netty.channel.ChannelException;
+import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.FixedReceiveBufferSizePredictorFactory;
+import io.netty.channel.ReceiveBufferSizePredictor;
+import io.netty.channel.ReceiveBufferSizePredictorFactory;
+import io.netty.util.internal.ConversionUtil;
 
 /**
  * The default {@link DatagramChannelConfig} implementation.

@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
-import static org.jboss.netty.channel.Channels.*;
+import static io.netty.channel.Channels.*;
 
-import org.jboss.netty.util.internal.StackTraceSimplifier;
+import io.netty.util.internal.StackTraceSimplifier;
 
 /**
  * The default {@link ExceptionEvent} implementation.

@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.example.sctp;
+package io.netty.example.sctp;
 
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.socket.sctp.SctpPayload;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.*;
+import io.netty.channel.socket.sctp.SctpPayload;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;

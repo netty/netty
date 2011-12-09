@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket;
+package io.netty.channel.socket;
 
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelPipeline;
 
 /**
  * A {@link ChannelFactory} which creates a client-side {@link SocketChannel}.
@@ -24,7 +24,7 @@ import org.jboss.netty.channel.ChannelPipeline;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @apiviz.has org.jboss.netty.channel.socket.SocketChannel oneway - - creates
+ * @apiviz.has io.netty.channel.socket.SocketChannel oneway - - creates
  */
 public interface ClientSocketChannelFactory extends ChannelFactory {
     @Override

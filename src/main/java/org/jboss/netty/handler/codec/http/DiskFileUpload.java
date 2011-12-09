@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package io.netty.handler.codec.http;
 
 import java.io.File;
 import java.nio.charset.Charset;
@@ -57,7 +57,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     }
 
     /* (non-Javadoc)
-     * @see org.jboss.netty.handler.codec.http2.FileUpload#getFilename()
+     * @see io.netty.handler.codec.http2.FileUpload#getFilename()
      */
     @Override
     public String getFilename() {
@@ -65,7 +65,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     }
 
     /* (non-Javadoc)
-     * @see org.jboss.netty.handler.codec.http2.FileUpload#setFilename(java.lang.String)
+     * @see io.netty.handler.codec.http2.FileUpload#setFilename(java.lang.String)
      */
     @Override
     public void setFilename(String filename) {

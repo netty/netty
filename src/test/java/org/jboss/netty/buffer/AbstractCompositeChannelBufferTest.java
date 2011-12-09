@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.buffer;
+package io.netty.buffer;
 
-import static org.jboss.netty.buffer.ChannelBuffers.*;
+import static io.netty.buffer.ChannelBuffers.*;
 import static org.junit.Assert.*;
 
 import java.nio.ByteBuffer;

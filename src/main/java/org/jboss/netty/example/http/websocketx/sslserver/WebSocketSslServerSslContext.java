@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.example.http.websocketx.sslserver;
+package io.netty.example.http.websocketx.sslserver;
 
 import java.io.FileInputStream;
 import java.security.KeyStore;
@@ -22,8 +22,8 @@ import java.security.Security;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * Creates a {@link SSLContext} for just server certificates.

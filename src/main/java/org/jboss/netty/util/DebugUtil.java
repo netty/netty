@@ -13,17 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util;
+package io.netty.util;
 
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.util.internal.SystemPropertyUtil;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
+import io.netty.util.internal.SystemPropertyUtil;
 
 /**
  * Determines if Netty is running in a debug mode or not.  Please note that
  * this is not a Java debug mode.  You can enable Netty debug mode by
- * specifying the {@code "org.jboss.netty.debug"} system property (e.g.
- * {@code java -Dorg.jboss.netty.debug ...})
+ * specifying the {@code "io.netty.debug"} system property (e.g.
+ * {@code java -Dio.netty.debug ...})
  * <p>
  * If debug mode is disabled (default), the stack trace of the exceptions are
  * compressed to help debugging a user application.
@@ -43,7 +43,7 @@ public class DebugUtil {
     public static boolean isDebugEnabled() {
         String value;
         try {
-            value = SystemPropertyUtil.get("org.jboss.netty.debug");
+            value = SystemPropertyUtil.get("io.netty.debug");
         } catch (Exception e) {
             value = null;
         }

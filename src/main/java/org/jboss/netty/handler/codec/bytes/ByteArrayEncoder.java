@@ -13,18 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.bytes;
+package io.netty.handler.codec.bytes;
 
-import static org.jboss.netty.buffer.ChannelBuffers.wrappedBuffer;
+import static io.netty.buffer.ChannelBuffers.wrappedBuffer;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
-import org.jboss.netty.handler.codec.frame.LengthFieldPrepender;
-import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.MessageEvent;
+import io.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.frame.LengthFieldPrepender;
+import io.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
  * Encodes the requested array of bytes into a {@link ChannelBuffer}.

@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.bootstrap;
+package io.netty.bootstrap;
 
-import static org.jboss.netty.channel.Channels.*;
+import static io.netty.channel.Channels.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,12 +25,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.util.ExternalResourceReleasable;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPipelineFactory;
+import io.netty.util.ExternalResourceReleasable;
 
 /**
  * A helper class which initializes a {@link Channel}.  This class provides
@@ -43,7 +43,7 @@ import org.jboss.netty.util.ExternalResourceReleasable;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @apiviz.uses org.jboss.netty.channel.ChannelFactory
+ * @apiviz.uses io.netty.channel.ChannelFactory
  */
 public class Bootstrap implements ExternalResourceReleasable {
 

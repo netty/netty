@@ -14,18 +14,18 @@
  * under the License.
  */
 
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.HeapChannelBufferFactory;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.socket.SocketChannelConfig;
-import org.jboss.netty.util.internal.ConversionUtil;
+import io.netty.buffer.ChannelBufferFactory;
+import io.netty.buffer.HeapChannelBufferFactory;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPipelineFactory;
+import io.netty.channel.Channels;
+import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.internal.ConversionUtil;
 
 /**
  * A face channel config class for use in testing

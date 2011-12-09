@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 import java.util.concurrent.ConcurrentMap;
 
-import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
+import io.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
 
 /**
  * A global variable that is local to a {@link Channel}.  Think of this as a

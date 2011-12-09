@@ -13,17 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.embedder;
+package io.netty.handler.codec.embedder;
 
-import static org.jboss.netty.channel.Channels.*;
+import static io.netty.channel.Channels.*;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.base64.Base64Decoder;
-import org.jboss.netty.handler.codec.string.StringDecoder;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBufferFactory;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelUpstreamHandler;
+import io.netty.handler.codec.base64.Base64Decoder;
+import io.netty.handler.codec.string.StringDecoder;
 
 /**
  * A helper that wraps a decoder so that it can be used without doing actual

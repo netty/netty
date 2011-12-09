@@ -1,7 +1,7 @@
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
 import static org.junit.Assert.*;
-import static org.jboss.netty.channel.socket.http.SaturationStateChange.*;
+import static io.netty.channel.socket.http.SaturationStateChange.*;
 
 import org.junit.Before;
 import org.junit.Test;

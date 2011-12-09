@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package io.netty.handler.codec.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.frame.TooLongFrameException;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.frame.TooLongFrameException;
 
 
 /**

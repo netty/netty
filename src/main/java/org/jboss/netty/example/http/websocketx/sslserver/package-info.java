@@ -35,5 +35,5 @@
  * <p>To find out more about setting up key stores, refer to this
  * <a href="http://download.oracle.com/javase/6/docs/technotes/guides/security/jsse/JSSERefGuide.html">giude</a>.
  */
-package org.jboss.netty.example.http.websocketx.sslserver;
+package io.netty.example.http.websocketx.sslserver;
 

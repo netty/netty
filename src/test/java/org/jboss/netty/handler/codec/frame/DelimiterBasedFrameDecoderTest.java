@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.frame;
+package io.netty.handler.codec.frame;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.embedder.CodecEmbedderException;
-import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
-import org.jboss.netty.util.CharsetUtil;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.handler.codec.embedder.CodecEmbedderException;
+import io.netty.handler.codec.embedder.DecoderEmbedder;
+import io.netty.util.CharsetUtil;
 import org.junit.Assert;
 import org.junit.Test;
 

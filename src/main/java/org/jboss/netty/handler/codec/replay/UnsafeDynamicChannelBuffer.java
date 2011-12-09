@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.replay;
+package io.netty.handler.codec.replay;
 
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.DynamicChannelBuffer;
+import io.netty.buffer.ChannelBufferFactory;
+import io.netty.buffer.DynamicChannelBuffer;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

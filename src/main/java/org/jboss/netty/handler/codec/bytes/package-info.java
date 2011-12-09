@@ -16,8 +16,8 @@
 
 /**
  * Encoder and decoder which transform an array of bytes into a
- * {@link org.jboss.netty.buffer.ChannelBuffer} and vice versa.
+ * {@link io.netty.buffer.ChannelBuffer} and vice versa.
  *
  * @apiviz.exclude \.oneone\.
  */
-package org.jboss.netty.handler.codec.bytes;
+package io.netty.handler.codec.bytes;

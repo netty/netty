@@ -13,17 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
 import java.util.List;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureAggregator;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelDownstreamHandler;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureAggregator;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.Channels;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.SimpleChannelDownstreamHandler;
 
 /**
  * Downstream handler which places an upper bound on the size of written

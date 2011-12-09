@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.container.spring;
+package io.netty.container.spring;
 
-import org.jboss.netty.logging.CommonsLoggerFactory;
-import org.jboss.netty.logging.InternalLoggerFactory;
+import io.netty.logging.CommonsLoggerFactory;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * A bean that configures the default {@link InternalLoggerFactory}.

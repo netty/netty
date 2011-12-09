@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.example.localtime;
+package io.netty.example.localtime;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -22,10 +22,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Executors;
 
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.bootstrap.ClientBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 
 /**
  * Sends a list of continent/city pairs to a {@link LocalTimeServer} to

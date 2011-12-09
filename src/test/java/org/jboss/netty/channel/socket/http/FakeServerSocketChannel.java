@@ -14,20 +14,20 @@
  * under the License.
  */
 
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
-import static org.jboss.netty.channel.Channels.fireChannelBound;
-import static org.jboss.netty.channel.Channels.fireChannelConnected;
-import static org.jboss.netty.channel.Channels.fireChannelOpen;
+import static io.netty.channel.Channels.fireChannelBound;
+import static io.netty.channel.Channels.fireChannelConnected;
+import static io.netty.channel.Channels.fireChannelOpen;
 
 import java.net.InetSocketAddress;
 
-import org.jboss.netty.channel.AbstractChannel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.socket.ServerSocketChannel;
-import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
+import io.netty.channel.AbstractChannel;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.ServerSocketChannelConfig;
 
 /**
  * A fake server socket channel for use in testing

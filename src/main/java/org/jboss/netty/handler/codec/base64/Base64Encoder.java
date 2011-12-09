@@ -13,16 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.base64;
+package io.netty.handler.codec.base64;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelHandler.Sharable;
-import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
-import org.jboss.netty.handler.codec.frame.Delimiters;
-import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.frame.Delimiters;
+import io.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
  * Encodes a {@link ChannelBuffer} into a Base64-encoded {@link ChannelBuffer}.
@@ -42,7 +42,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.uses org.jboss.netty.handler.codec.base64.Base64
+ * @apiviz.uses io.netty.handler.codec.base64.Base64
  */
 @Sharable
 public class Base64Encoder extends OneToOneEncoder {

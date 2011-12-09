@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.logging;
+package io.netty.logging;
 
-import org.jboss.netty.util.internal.StackTraceSimplifier;
+import io.netty.util.internal.StackTraceSimplifier;
 
 /**
  * Creates an {@link InternalLogger} or changes the default factory
@@ -35,7 +35,7 @@ import org.jboss.netty.util.internal.StackTraceSimplifier;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.has org.jboss.netty.logging.InternalLogger oneway - - creates
+ * @apiviz.has io.netty.logging.InternalLogger oneway - - creates
  */
 public abstract class InternalLoggerFactory {
     private static volatile InternalLoggerFactory defaultFactory = new JdkLoggerFactory();

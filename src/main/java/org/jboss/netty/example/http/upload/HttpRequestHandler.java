@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.jboss.netty.example.http.upload;
+package io.netty.example.http.upload;
 
 import java.io.IOException;
 import java.net.URI;
@@ -23,42 +23,42 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.Attribute;
-import org.jboss.netty.handler.codec.http.Cookie;
-import org.jboss.netty.handler.codec.http.CookieDecoder;
-import org.jboss.netty.handler.codec.http.CookieEncoder;
-import org.jboss.netty.handler.codec.http.DefaultHttpDataFactory;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.DiskAttribute;
-import org.jboss.netty.handler.codec.http.DiskFileUpload;
-import org.jboss.netty.handler.codec.http.FileUpload;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpDataFactory;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpPostRequestDecoder;
-import org.jboss.netty.handler.codec.http.HttpPostRequestDecoder.EndOfDataDecoderException;
-import org.jboss.netty.handler.codec.http.HttpPostRequestDecoder.ErrorDataDecoderException;
-import org.jboss.netty.handler.codec.http.HttpPostRequestDecoder.IncompatibleDataDecoderException;
-import org.jboss.netty.handler.codec.http.HttpPostRequestDecoder.NotEnoughDataDecoderException;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.codec.http.InterfaceHttpData;
-import org.jboss.netty.handler.codec.http.InterfaceHttpData.HttpDataType;
-import org.jboss.netty.handler.codec.http.QueryStringDecoder;
-import org.jboss.netty.util.CharsetUtil;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.Channels;
+import io.netty.channel.ExceptionEvent;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.handler.codec.http.Attribute;
+import io.netty.handler.codec.http.Cookie;
+import io.netty.handler.codec.http.CookieDecoder;
+import io.netty.handler.codec.http.CookieEncoder;
+import io.netty.handler.codec.http.DefaultHttpDataFactory;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.DiskAttribute;
+import io.netty.handler.codec.http.DiskFileUpload;
+import io.netty.handler.codec.http.FileUpload;
+import io.netty.handler.codec.http.HttpChunk;
+import io.netty.handler.codec.http.HttpDataFactory;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpPostRequestDecoder;
+import io.netty.handler.codec.http.HttpPostRequestDecoder.EndOfDataDecoderException;
+import io.netty.handler.codec.http.HttpPostRequestDecoder.ErrorDataDecoderException;
+import io.netty.handler.codec.http.HttpPostRequestDecoder.IncompatibleDataDecoderException;
+import io.netty.handler.codec.http.HttpPostRequestDecoder.NotEnoughDataDecoderException;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.InterfaceHttpData;
+import io.netty.handler.codec.http.InterfaceHttpData.HttpDataType;
+import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.util.CharsetUtil;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
@@ -92,9 +92,9 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
      * (non-Javadoc)
      *
      * @see
-     * org.jboss.netty.channel.SimpleChannelUpstreamHandler#channelClosed(org
+     * io.netty.channel.SimpleChannelUpstreamHandler#channelClosed(org
      * .jboss.netty.channel.ChannelHandlerContext,
-     * org.jboss.netty.channel.ChannelStateEvent)
+     * io.netty.channel.ChannelStateEvent)
      */
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)

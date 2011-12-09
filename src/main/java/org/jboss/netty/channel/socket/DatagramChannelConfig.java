@@ -13,17 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket;
+package io.netty.channel.socket;
 
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 
-import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.FixedReceiveBufferSizePredictor;
-import org.jboss.netty.channel.FixedReceiveBufferSizePredictorFactory;
-import org.jboss.netty.channel.ReceiveBufferSizePredictor;
-import org.jboss.netty.channel.ReceiveBufferSizePredictorFactory;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.FixedReceiveBufferSizePredictor;
+import io.netty.channel.FixedReceiveBufferSizePredictorFactory;
+import io.netty.channel.ReceiveBufferSizePredictor;
+import io.netty.channel.ReceiveBufferSizePredictorFactory;
 
 /**
  * A {@link ChannelConfig} for a {@link DatagramChannel}.

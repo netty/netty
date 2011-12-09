@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.ipfilter;
+package io.netty.handler.ipfilter;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -117,7 +117,7 @@ public class CIDR4 extends CIDR
    }
 
    /* (non-Javadoc)
-    * @see org.jboss.netty.handler.ipfilter.CIDR#contains(java.net.InetAddress)
+    * @see io.netty.handler.ipfilter.CIDR#contains(java.net.InetAddress)
     */
    @Override
    public boolean contains(InetAddress inetAddress)

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.nio;
+package io.netty.channel.socket.nio;
 
 import java.io.IOException;
 import java.lang.ref.SoftReference;
@@ -22,8 +22,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.WritableByteChannel;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.FileRegion;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.FileRegion;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

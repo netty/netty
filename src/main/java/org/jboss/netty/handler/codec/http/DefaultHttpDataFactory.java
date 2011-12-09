@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package io.netty.handler.codec.http;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -114,7 +114,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     /* (non-Javadoc)
-     * @see org.jboss.netty.handler.codec.http2.HttpDataFactory#createAttribute(java.lang.String, java.lang.String)
+     * @see io.netty.handler.codec.http2.HttpDataFactory#createAttribute(java.lang.String, java.lang.String)
      */
     @Override
     public Attribute createAttribute(HttpRequest request, String name, String value)
@@ -144,7 +144,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
 
     /* (non-Javadoc)
-     * @see org.jboss.netty.handler.codec.http2.HttpDataFactory#createFileUpload(java.lang.String, java.lang.String, java.lang.String)
+     * @see io.netty.handler.codec.http2.HttpDataFactory#createFileUpload(java.lang.String, java.lang.String, java.lang.String)
      */
     @Override
     public FileUpload createFileUpload(HttpRequest request, String name, String filename,

@@ -13,12 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.rtsp;
+package io.netty.handler.codec.rtsp;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.jboss.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpMethod;
 
 /**
  * The request method of RTSP.

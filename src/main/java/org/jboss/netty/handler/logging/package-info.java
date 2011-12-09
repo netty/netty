@@ -15,10 +15,10 @@
  */
 
 /**
- * Logs a {@link org.jboss.netty.channel.ChannelEvent} for debugging purpose
- * using an {@link org.jboss.netty.logging.InternalLogger}.
+ * Logs a {@link io.netty.channel.ChannelEvent} for debugging purpose
+ * using an {@link io.netty.logging.InternalLogger}.
  *
  * @apiviz.hidden
  * @apiviz.exclude \.channel\.
  */
-package org.jboss.netty.handler.logging;
+package io.netty.handler.logging;

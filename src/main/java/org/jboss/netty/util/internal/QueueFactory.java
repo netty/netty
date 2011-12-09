@@ -13,12 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util.internal;
+package io.netty.util.internal;
 
 import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 
-import org.jboss.netty.util.UnsafeDetectUtil;
+import io.netty.util.UnsafeDetectUtil;
 
 /**
  * This factory should be used to create the "optimal" {@link BlockingQueue} instance for the running JVM. 

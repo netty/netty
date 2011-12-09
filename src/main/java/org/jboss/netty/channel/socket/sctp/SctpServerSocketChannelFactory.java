@@ -13,18 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.sctp;
+package io.netty.channel.socket.sctp;
 
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.ServerChannelFactory;
-import org.jboss.netty.util.internal.ExecutorUtil;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
+import io.netty.channel.ServerChannelFactory;
+import io.netty.util.internal.ExecutorUtil;
 
 import java.util.concurrent.Executor;
 
 /**
- * A {@link org.jboss.netty.channel.socket.ServerSocketChannelFactory} which creates a server-side NIO-based
- * {@link org.jboss.netty.channel.socket.ServerSocketChannel}.  It utilizes the non-blocking I/O mode which
+ * A {@link io.netty.channel.socket.ServerSocketChannelFactory} which creates a server-side NIO-based
+ * {@link io.netty.channel.socket.ServerSocketChannel}.  It utilizes the non-blocking I/O mode which
  * was introduced with NIO to serve many number of concurrent connections
  * efficiently.
  *
@@ -35,18 +35,18 @@ import java.util.concurrent.Executor;
  *
  * <h4>Boss threads</h4>
  * <p>
- * Each bound {@link org.jboss.netty.channel.socket.ServerSocketChannel} has its own boss thread.
+ * Each bound {@link io.netty.channel.socket.ServerSocketChannel} has its own boss thread.
  * For example, if you opened two server ports such as 80 and 443, you will
  * have two boss threads.  A boss thread accepts incoming connections until
  * the port is unbound.  Once a connection is accepted successfully, the boss
- * thread passes the accepted {@link org.jboss.netty.channel.Channel} to one of the worker
+ * thread passes the accepted {@link io.netty.channel.Channel} to one of the worker
  * threads that the {@link SctpServerSocketChannelFactory} manages.
  *
  * <h4>Worker threads</h4>
  * <p>
  * One {@link SctpServerSocketChannelFactory} can have one or more worker
  * threads.  A worker thread performs non-blocking read and write for one or
- * more {@link org.jboss.netty.channel.Channel}s in a non-blocking mode.
+ * more {@link io.netty.channel.Channel}s in a non-blocking mode.
  *
  * <h3>Life cycle of threads and graceful shutdown</h3>
  * <p>
@@ -66,7 +66,7 @@ import java.util.concurrent.Executor;
  * <ol>
  * <li>unbind all channels created by the factory,
  * <li>close all child channels accepted by the unbound channels, and
- *     (these two steps so far is usually done using {@link org.jboss.netty.channel.group.ChannelGroup#close()})</li>
+ *     (these two steps so far is usually done using {@link io.netty.channel.group.ChannelGroup#close()})</li>
  * <li>call {@link #releaseExternalResources()}.</li>
  * </ol>
  *

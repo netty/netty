@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
 /**
  * This interface is used by the server end of an http tunnel to generate new

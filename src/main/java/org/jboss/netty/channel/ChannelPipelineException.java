@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 /**
  * A {@link ChannelException} which is thrown when a {@link ChannelPipeline}

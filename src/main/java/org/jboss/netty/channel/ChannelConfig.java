@@ -13,16 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 import java.nio.ByteOrder;
 import java.util.Map;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.HeapChannelBufferFactory;
-import org.jboss.netty.channel.socket.SocketChannelConfig;
-import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBufferFactory;
+import io.netty.buffer.HeapChannelBufferFactory;
+import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.nio.NioSocketChannelConfig;
 
 /**
  * A set of configuration properties of a {@link Channel}.
@@ -63,8 +63,8 @@ import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @apiviz.has org.jboss.netty.channel.ChannelPipelineFactory
- * @apiviz.composedOf org.jboss.netty.channel.ReceiveBufferSizePredictor
+ * @apiviz.has io.netty.channel.ChannelPipelineFactory
+ * @apiviz.composedOf io.netty.channel.ReceiveBufferSizePredictor
  *
  * @apiviz.excludeSubtypes
  */

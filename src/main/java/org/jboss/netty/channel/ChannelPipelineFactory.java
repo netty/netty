@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
-import org.jboss.netty.bootstrap.Bootstrap;
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ClientBootstrap;
+import io.netty.bootstrap.ConnectionlessBootstrap;
 
 /**
  * Creates a new {@link ChannelPipeline} for a new {@link Channel}.
@@ -35,7 +35,7 @@ import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @apiviz.has org.jboss.netty.channel.ChannelPipeline oneway - - creates
+ * @apiviz.has io.netty.channel.ChannelPipeline oneway - - creates
  */
 public interface ChannelPipelineFactory {
 

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.logging;
+package io.netty.logging;
 
 import org.apache.commons.logging.Log;
 

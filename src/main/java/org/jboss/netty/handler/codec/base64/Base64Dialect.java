@@ -17,7 +17,7 @@
  * Written by Robert Harder and released to the public domain, as explained at
  * http://creativecommons.org/licenses/publicdomain
  */
-package org.jboss.netty.handler.codec.base64;
+package io.netty.handler.codec.base64;
 
 /**
  * Enumeration of supported Base64 dialects.

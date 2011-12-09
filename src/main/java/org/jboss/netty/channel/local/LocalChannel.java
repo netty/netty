@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.local;
+package io.netty.channel.local;
 
-import org.jboss.netty.channel.Channel;
+import io.netty.channel.Channel;
 
 /**
  * A {@link Channel} for the local transport.

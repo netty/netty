@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
 import java.security.SecureRandom;
 

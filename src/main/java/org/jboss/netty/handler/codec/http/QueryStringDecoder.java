@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package io.netty.handler.codec.http;
 
 import java.net.URI;
 import java.net.URLDecoder;
@@ -24,7 +24,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.jboss.netty.util.CharsetUtil;
+import io.netty.util.CharsetUtil;
 
 /**
  * Splits an HTTP query string into a path string and key-value parameter pairs.
@@ -45,7 +45,7 @@ import org.jboss.netty.util.CharsetUtil;
  * @see QueryStringEncoder
  *
  * @apiviz.stereotype utility
- * @apiviz.has        org.jboss.netty.handler.codec.http.HttpRequest oneway - - decodes
+ * @apiviz.has        io.netty.handler.codec.http.HttpRequest oneway - - decodes
  */
 public class QueryStringDecoder {
 

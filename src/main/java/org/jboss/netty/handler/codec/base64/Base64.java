@@ -17,11 +17,11 @@
  * Written by Robert Harder and released to the public domain, as explained at
  * http://creativecommons.org/licenses/publicdomain
  */
-package org.jboss.netty.handler.codec.base64;
+package io.netty.handler.codec.base64;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.HeapChannelBufferFactory;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBufferFactory;
+import io.netty.buffer.HeapChannelBufferFactory;
 
 /**
  * Utility class for {@link ChannelBuffer} that encodes and decodes to and from
@@ -35,7 +35,7 @@ import org.jboss.netty.buffer.HeapChannelBufferFactory;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.uses org.jboss.netty.handler.codec.base64.Base64Dialect
+ * @apiviz.uses io.netty.handler.codec.base64.Base64Dialect
  */
 public class Base64 {
 

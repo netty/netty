@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util;
+package io.netty.util;
 
 
 /**
@@ -23,7 +23,7 @@ package org.jboss.netty.util;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.uses org.jboss.netty.util.EstimatableObjectWrapper
+ * @apiviz.uses io.netty.util.EstimatableObjectWrapper
  */
 public interface ObjectSizeEstimator {
 

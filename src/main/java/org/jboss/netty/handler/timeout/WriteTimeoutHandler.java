@@ -13,27 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.timeout;
+package io.netty.handler.timeout;
 
-import static org.jboss.netty.channel.Channels.*;
+import static io.netty.channel.Channels.*;
 
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelDownstreamHandler;
-import org.jboss.netty.channel.ChannelHandler.Sharable;
-import org.jboss.netty.util.ExternalResourceReleasable;
-import org.jboss.netty.util.HashedWheelTimer;
-import org.jboss.netty.util.Timeout;
-import org.jboss.netty.util.Timer;
-import org.jboss.netty.util.TimerTask;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPipelineFactory;
+import io.netty.channel.Channels;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.SimpleChannelDownstreamHandler;
+import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.util.ExternalResourceReleasable;
+import io.netty.util.HashedWheelTimer;
+import io.netty.util.Timeout;
+import io.netty.util.Timer;
+import io.netty.util.TimerTask;
 
 /**
  * Raises a {@link WriteTimeoutException} when no data was written within a
@@ -73,8 +73,8 @@ import org.jboss.netty.util.TimerTask;
  * @see IdleStateHandler
  *
  * @apiviz.landmark
- * @apiviz.uses org.jboss.netty.util.HashedWheelTimer
- * @apiviz.has org.jboss.netty.handler.timeout.TimeoutException oneway - - raises
+ * @apiviz.uses io.netty.util.HashedWheelTimer
+ * @apiviz.has io.netty.handler.timeout.TimeoutException oneway - - raises
  */
 @Sharable
 public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler

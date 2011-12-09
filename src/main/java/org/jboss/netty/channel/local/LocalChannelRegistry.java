@@ -13,12 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.local;
+package io.netty.channel.local;
 
 import java.util.concurrent.ConcurrentMap;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.util.internal.ConcurrentHashMap;
+import io.netty.channel.Channel;
+import io.netty.util.internal.ConcurrentHashMap;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

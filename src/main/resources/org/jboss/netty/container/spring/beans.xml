@@ -18,8 +18,8 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
 
-  <bean id="org.jboss.netty.internal.LoggerConfigurator"
-        class="org.jboss.netty.container.spring.NettyLoggerConfigurator"
+  <bean id="io.netty.internal.LoggerConfigurator"
+        class="io.netty.container.spring.NettyLoggerConfigurator"
         scope="singleton" />
 
 </beans>

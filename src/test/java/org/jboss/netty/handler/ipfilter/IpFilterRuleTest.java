@@ -1,4 +1,4 @@
-package org.jboss.netty.handler.ipfilter;
+package io.netty.handler.ipfilter;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -6,15 +6,15 @@ import java.net.SocketAddress;
 
 import junit.framework.TestCase;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.UpstreamMessageEvent;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.UpstreamMessageEvent;
 import org.junit.Test;
 
 public class IpFilterRuleTest extends TestCase

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.example.http.upload;
+package io.netty.example.http.upload;
 
 import java.io.File;
 import java.net.InetSocketAddress;
@@ -23,24 +23,24 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.Executors;
 
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.handler.codec.http.QueryStringEncoder;
-import org.jboss.netty.handler.codec.http.CookieEncoder;
-import org.jboss.netty.handler.codec.http.DefaultHttpDataFactory;
-import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
-import org.jboss.netty.handler.codec.http.DiskAttribute;
-import org.jboss.netty.handler.codec.http.DiskFileUpload;
-import org.jboss.netty.handler.codec.http.InterfaceHttpData;
-import org.jboss.netty.handler.codec.http.HttpPostRequestEncoder;
-import org.jboss.netty.handler.codec.http.HttpDataFactory;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.codec.http.HttpPostRequestEncoder.ErrorDataEncoderException;
+import io.netty.bootstrap.ClientBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.handler.codec.http.QueryStringEncoder;
+import io.netty.handler.codec.http.CookieEncoder;
+import io.netty.handler.codec.http.DefaultHttpDataFactory;
+import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.DiskAttribute;
+import io.netty.handler.codec.http.DiskFileUpload;
+import io.netty.handler.codec.http.InterfaceHttpData;
+import io.netty.handler.codec.http.HttpPostRequestEncoder;
+import io.netty.handler.codec.http.HttpDataFactory;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.HttpPostRequestEncoder.ErrorDataEncoderException;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

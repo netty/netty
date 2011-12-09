@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.iostream;
+package io.netty.channel.iostream;
 
-import org.jboss.netty.channel.*;
+import io.netty.channel.*;
 
 import java.net.SocketAddress;
 

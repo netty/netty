@@ -13,17 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.sctp;
+package io.netty.channel.socket.sctp;
 
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.util.internal.ExecutorUtil;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelPipeline;
+import io.netty.util.internal.ExecutorUtil;
 
 import java.util.concurrent.Executor;
 
 /**
- * A {@link org.jboss.netty.channel.socket.ClientSocketChannelFactory} which creates a client-side NIO-based
- * {@link org.jboss.netty.channel.socket.SocketChannel}.  It utilizes the non-blocking I/O mode which was
+ * A {@link io.netty.channel.socket.ClientSocketChannelFactory} which creates a client-side NIO-based
+ * {@link io.netty.channel.socket.SocketChannel}.  It utilizes the non-blocking I/O mode which was
  * introduced with NIO to serve many number of concurrent connections
  * efficiently.
  *
@@ -36,14 +36,14 @@ import java.util.concurrent.Executor;
  * <p>
  * One {@link SctpClientSocketChannelFactory} has one boss thread.  It makes
  * a connection attempt on request.  Once a connection attempt succeeds,
- * the boss thread passes the connected {@link org.jboss.netty.channel.Channel} to one of the worker
+ * the boss thread passes the connected {@link io.netty.channel.Channel} to one of the worker
  * threads that the {@link SctpClientSocketChannelFactory} manages.
  *
  * <h4>Worker threads</h4>
  * <p>
  * One {@link SctpClientSocketChannelFactory} can have one or more worker
  * threads.  A worker thread performs non-blocking read and write for one or
- * more {@link org.jboss.netty.channel.Channel}s in a non-blocking mode.
+ * more {@link io.netty.channel.Channel}s in a non-blocking mode.
  *
  * <h3>Life cycle of threads and graceful shutdown</h3>
  * <p>
@@ -62,7 +62,7 @@ import java.util.concurrent.Executor;
  *
  * <ol>
  * <li>close all channels created by the factory usually using
- *     {@link org.jboss.netty.channel.group.ChannelGroup#close()}, and</li>
+ *     {@link io.netty.channel.group.ChannelGroup#close()}, and</li>
  * <li>call {@link #releaseExternalResources()}.</li>
  * </ol>
  *

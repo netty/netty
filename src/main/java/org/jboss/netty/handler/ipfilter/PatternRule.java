@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-package org.jboss.netty.handler.ipfilter;
+package io.netty.handler.ipfilter;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.regex.Pattern;
 
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * The Class PatternRule represents an IP filter rule using string patterns.
@@ -88,7 +88,7 @@ public class PatternRule implements IpFilterRule, Comparable<Object>
    }
 
    /* (non-Javadoc)
-    * @see org.jboss.netty.handler.ipfilter.IpFilterRule#isAllowRule()
+    * @see io.netty.handler.ipfilter.IpFilterRule#isAllowRule()
     */
    @Override
    public boolean isAllowRule()
@@ -97,7 +97,7 @@ public class PatternRule implements IpFilterRule, Comparable<Object>
    }
 
    /* (non-Javadoc)
-    * @see org.jboss.netty.handler.ipfilter.IpFilterRule#isDenyRule()
+    * @see io.netty.handler.ipfilter.IpFilterRule#isDenyRule()
     */
    @Override
    public boolean isDenyRule()
@@ -106,7 +106,7 @@ public class PatternRule implements IpFilterRule, Comparable<Object>
    }
 
    /* (non-Javadoc)
-    * @see org.jboss.netty.handler.ipfilter.IpSet#contains(java.net.InetAddress)
+    * @see io.netty.handler.ipfilter.IpSet#contains(java.net.InetAddress)
     */
    @Override
    public boolean contains(InetAddress inetAddress)

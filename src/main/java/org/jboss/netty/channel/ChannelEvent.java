@@ -13,15 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketAddress;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.socket.ServerSocketChannel;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.socket.ServerSocketChannel;
 
 /**
  * An I/O event or I/O request associated with a {@link Channel}.
@@ -182,7 +182,7 @@ import org.jboss.netty.channel.socket.ServerSocketChannel;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.composedOf org.jboss.netty.channel.ChannelFuture
+ * @apiviz.composedOf io.netty.channel.ChannelFuture
  */
 public interface ChannelEvent {
 

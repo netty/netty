@@ -3,7 +3,7 @@
 /.settings
 /target
 /reports
-/src/main/java/org/jboss/netty/util/Version.java
+/src/main/java/io/netty/util/Version.java
 /*.iml
 /*.ipr
 /*.iws

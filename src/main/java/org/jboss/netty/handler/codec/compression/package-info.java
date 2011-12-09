@@ -15,7 +15,7 @@
  */
 
 /**
- * Encoder and decoder which compresses and decompresses {@link org.jboss.netty.buffer.ChannelBuffer}s
+ * Encoder and decoder which compresses and decompresses {@link io.netty.buffer.ChannelBuffer}s
  * in a compression format such as <a href="http://en.wikipedia.org/wiki/Zlib">zlib</a>
  * and <a href="http://en.wikipedia.org/wiki/Gzip">gzip</a>.
  *
@@ -24,5 +24,5 @@
  * @apiviz.exclude \.channel\.
  * @apiviz.exclude Exception$
  */
-package org.jboss.netty.handler.codec.compression;
+package io.netty.handler.codec.compression;
 // TODO Implement bzip2 and lzma handlers

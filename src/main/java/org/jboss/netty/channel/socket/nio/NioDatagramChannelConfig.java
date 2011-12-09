@@ -13,15 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.nio;
+package io.netty.channel.socket.nio;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.socket.DatagramChannel;
-import org.jboss.netty.channel.socket.DatagramChannelConfig;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.DatagramChannelConfig;
 
 /**
  * A {@link DatagramChannelConfig} for a NIO TCP/IP {@link DatagramChannel}.

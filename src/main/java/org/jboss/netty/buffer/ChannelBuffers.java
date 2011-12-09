@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.buffer;
+package io.netty.buffer;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -26,7 +26,7 @@ import java.nio.charset.CoderResult;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.jboss.netty.util.CharsetUtil;
+import io.netty.util.CharsetUtil;
 
 
 /**
@@ -37,7 +37,7 @@ import org.jboss.netty.util.CharsetUtil;
  * This classes is intended to be used with Java 5 static import statement:
  *
  * <pre>
- * import static org.jboss.netty.buffer.{@link ChannelBuffers}.*;
+ * import static io.netty.buffer.{@link ChannelBuffers}.*;
  *
  * {@link ChannelBuffer} heapBuffer    = buffer(128);
  * {@link ChannelBuffer} directBuffer  = directBuffer(256);
@@ -86,7 +86,7 @@ import org.jboss.netty.util.CharsetUtil;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.has org.jboss.netty.buffer.ChannelBuffer oneway - - creates
+ * @apiviz.has io.netty.buffer.ChannelBuffer oneway - - creates
  */
 public class ChannelBuffers {
 

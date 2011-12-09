@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.nio;
+package io.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.*;
+import static io.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -27,29 +27,29 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.AbstractChannel;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.socket.DatagramChannelConfig;
-import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
-import org.jboss.netty.util.internal.LegacyLinkedTransferQueue;
-import org.jboss.netty.util.internal.ThreadLocalBoolean;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.AbstractChannel;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.socket.DatagramChannelConfig;
+import io.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
+import io.netty.util.internal.LegacyLinkedTransferQueue;
+import io.netty.util.internal.ThreadLocalBoolean;
 
 /**
- * Provides an NIO based {@link org.jboss.netty.channel.socket.DatagramChannel}.
+ * Provides an NIO based {@link io.netty.channel.socket.DatagramChannel}.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * @author Daniel Bevenius (dbevenius@jboss.com)
  */
 class NioDatagramChannel extends AbstractChannel
-                                implements org.jboss.netty.channel.socket.DatagramChannel {
+                                implements io.netty.channel.socket.DatagramChannel {
 
     /**
      * The {@link DatagramChannelConfig}.

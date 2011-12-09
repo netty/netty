@@ -13,19 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.sctp;
+package io.netty.channel.socket.sctp;
 
-import org.jboss.netty.channel.ReceiveBufferSizePredictor;
-import org.jboss.netty.channel.ReceiveBufferSizePredictorFactory;
-import org.jboss.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.ReceiveBufferSizePredictor;
+import io.netty.channel.ReceiveBufferSizePredictorFactory;
+import io.netty.channel.socket.SocketChannelConfig;
 
 /**
- * A {@link org.jboss.netty.channel.socket.sctp.SctpChannelConfig} for a NIO SCTP/IP {@link org.jboss.netty.channel.socket.sctp.SctpChannel}.
+ * A {@link io.netty.channel.socket.sctp.SctpChannelConfig} for a NIO SCTP/IP {@link io.netty.channel.socket.sctp.SctpChannel}.
  *
  * <h3>Available options</h3>
  *
- * In addition to the options provided by {@link org.jboss.netty.channel.ChannelConfig} and
- * {@link org.jboss.netty.channel.socket.sctp.SctpChannelConfig}, {@link org.jboss.netty.channel.socket.sctp.NioSctpChannelConfig} allows the
+ * In addition to the options provided by {@link io.netty.channel.ChannelConfig} and
+ * {@link io.netty.channel.socket.sctp.SctpChannelConfig}, {@link io.netty.channel.socket.sctp.NioSctpChannelConfig} allows the
  * following options in the option map:
  *
  * <table border="1" cellspacing="0" cellpadding="6">
@@ -38,9 +38,9 @@ import org.jboss.netty.channel.socket.SocketChannelConfig;
  * </tr><tr>
  * <td>{@code "writeSpinCount"}</td><td>{@link #setWriteSpinCount(int)}</td>
  * </tr><tr>
- * <td>{@code "receiveBufferSizePredictor"}</td><td>{@link #setReceiveBufferSizePredictor(org.jboss.netty.channel.ReceiveBufferSizePredictor)}</td>
+ * <td>{@code "receiveBufferSizePredictor"}</td><td>{@link #setReceiveBufferSizePredictor(io.netty.channel.ReceiveBufferSizePredictor)}</td>
  * </tr><tr>
- * <td>{@code "receiveBufferSizePredictorFactory"}</td><td>{@link #setReceiveBufferSizePredictorFactory(org.jboss.netty.channel.ReceiveBufferSizePredictorFactory)}</td>
+ * <td>{@code "receiveBufferSizePredictorFactory"}</td><td>{@link #setReceiveBufferSizePredictorFactory(io.netty.channel.ReceiveBufferSizePredictorFactory)}</td>
  * </tr>
  * </table>
  *
@@ -52,14 +52,14 @@ public interface NioSctpChannelConfig extends SctpChannelConfig {
 
     /**
      * Returns the high water mark of the write buffer.  If the number of bytes
-     * queued in the write buffer exceeds this value, {@link org.jboss.netty.channel.Channel#isWritable()}
+     * queued in the write buffer exceeds this value, {@link io.netty.channel.Channel#isWritable()}
      * will start to return {@code false}.
      */
     int getWriteBufferHighWaterMark();
 
     /**
      * Sets the high water mark of the write buffer.  If the number of bytes
-     * queued in the write buffer exceeds this value, {@link org.jboss.netty.channel.Channel#isWritable()}
+     * queued in the write buffer exceeds this value, {@link io.netty.channel.Channel#isWritable()}
      * will start to return {@code false}.
      */
     void setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
@@ -68,7 +68,7 @@ public interface NioSctpChannelConfig extends SctpChannelConfig {
      * Returns the low water mark of the write buffer.  Once the number of bytes
      * queued in the write buffer exceeded the
      * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link org.jboss.netty.channel.Channel#isWritable()} will return
+     * dropped down below this value, {@link io.netty.channel.Channel#isWritable()} will return
      * {@code true} again.
      */
     int getWriteBufferLowWaterMark();
@@ -77,7 +77,7 @@ public interface NioSctpChannelConfig extends SctpChannelConfig {
      * Sets the low water mark of the write buffer.  Once the number of bytes
      * queued in the write buffer exceeded the
      * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link org.jboss.netty.channel.Channel#isWritable()} will return
+     * dropped down below this value, {@link io.netty.channel.Channel#isWritable()} will return
      * {@code true} again.
      */
     void setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
@@ -104,36 +104,36 @@ public interface NioSctpChannelConfig extends SctpChannelConfig {
     void setWriteSpinCount(int writeSpinCount);
 
     /**
-     * Returns the {@link org.jboss.netty.channel.ReceiveBufferSizePredictor} which predicts the
+     * Returns the {@link io.netty.channel.ReceiveBufferSizePredictor} which predicts the
      * number of readable bytes in the socket receive buffer.  The default
-     * predictor is <tt>{@link org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictor}(64, 1024, 65536)</tt>.
+     * predictor is <tt>{@link io.netty.channel.AdaptiveReceiveBufferSizePredictor}(64, 1024, 65536)</tt>.
      */
     ReceiveBufferSizePredictor getReceiveBufferSizePredictor();
 
     /**
-     * Sets the {@link org.jboss.netty.channel.ReceiveBufferSizePredictor} which predicts the
+     * Sets the {@link io.netty.channel.ReceiveBufferSizePredictor} which predicts the
      * number of readable bytes in the socket receive buffer.  The default
-     * predictor is <tt>{@link org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictor}(64, 1024, 65536)</tt>.
+     * predictor is <tt>{@link io.netty.channel.AdaptiveReceiveBufferSizePredictor}(64, 1024, 65536)</tt>.
      */
     void setReceiveBufferSizePredictor(ReceiveBufferSizePredictor predictor);
 
     /**
-     * Returns the {@link org.jboss.netty.channel.ReceiveBufferSizePredictorFactory} which creates a new
-     * {@link org.jboss.netty.channel.ReceiveBufferSizePredictor} when a new channel is created and
-     * no {@link org.jboss.netty.channel.ReceiveBufferSizePredictor} was set.  If no predictor was set
-     * for the channel, {@link #setReceiveBufferSizePredictor(org.jboss.netty.channel.ReceiveBufferSizePredictor)}
+     * Returns the {@link io.netty.channel.ReceiveBufferSizePredictorFactory} which creates a new
+     * {@link io.netty.channel.ReceiveBufferSizePredictor} when a new channel is created and
+     * no {@link io.netty.channel.ReceiveBufferSizePredictor} was set.  If no predictor was set
+     * for the channel, {@link #setReceiveBufferSizePredictor(io.netty.channel.ReceiveBufferSizePredictor)}
      * will be called with the new predictor.  The default factory is
-     * <tt>{@link org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictorFactory}(64, 1024, 65536)</tt>.
+     * <tt>{@link io.netty.channel.AdaptiveReceiveBufferSizePredictorFactory}(64, 1024, 65536)</tt>.
      */
     ReceiveBufferSizePredictorFactory getReceiveBufferSizePredictorFactory();
 
     /**
-     * Sets the {@link org.jboss.netty.channel.ReceiveBufferSizePredictor} which creates a new
-     * {@link org.jboss.netty.channel.ReceiveBufferSizePredictor} when a new channel is created and
-     * no {@link org.jboss.netty.channel.ReceiveBufferSizePredictor} was set.  If no predictor was set
-     * for the channel, {@link #setReceiveBufferSizePredictor(org.jboss.netty.channel.ReceiveBufferSizePredictor)}
+     * Sets the {@link io.netty.channel.ReceiveBufferSizePredictor} which creates a new
+     * {@link io.netty.channel.ReceiveBufferSizePredictor} when a new channel is created and
+     * no {@link io.netty.channel.ReceiveBufferSizePredictor} was set.  If no predictor was set
+     * for the channel, {@link #setReceiveBufferSizePredictor(io.netty.channel.ReceiveBufferSizePredictor)}
      * will be called with the new predictor.  The default factory is
-     * <tt>{@link org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictorFactory}(64, 1024, 65536)</tt>.
+     * <tt>{@link io.netty.channel.AdaptiveReceiveBufferSizePredictorFactory}(64, 1024, 65536)</tt>.
      */
     void setReceiveBufferSizePredictorFactory(
             ReceiveBufferSizePredictorFactory predictorFactory);

@@ -13,17 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
 import java.net.SocketAddress;
 
-import org.jboss.netty.channel.AbstractChannelSink;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.AbstractChannelSink;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.socket.ServerSocketChannel;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)

@@ -13,21 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.iostream;
+package io.netty.channel.iostream;
 
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.group.ChannelGroup;
-import org.jboss.netty.channel.group.ChannelGroupFuture;
-import org.jboss.netty.channel.group.DefaultChannelGroup;
-import org.jboss.netty.util.internal.ExecutorUtil;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.ChannelGroupFuture;
+import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.util.internal.ExecutorUtil;
 
 import java.util.concurrent.ExecutorService;
 
 /**
- * A {@link org.jboss.netty.channel.ChannelFactory} for creating {@link IOStreamChannel} instances.
+ * A {@link io.netty.channel.ChannelFactory} for creating {@link IOStreamChannel} instances.
  *
  * @author Daniel Bimschas
  * @author Dennis Pfisterer

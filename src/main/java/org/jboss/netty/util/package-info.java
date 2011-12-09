@@ -23,4 +23,4 @@
  * @apiviz.exclude Util$
  * @apiviz.exclude \.EstimatableObjectWrapper$
  */
-package org.jboss.netty.util;
+package io.netty.util;

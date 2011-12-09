@@ -19,4 +19,4 @@
  *
  * @apiviz.exclude
  */
-package org.jboss.netty.container.microcontainer;
+package io.netty.container.microcontainer;

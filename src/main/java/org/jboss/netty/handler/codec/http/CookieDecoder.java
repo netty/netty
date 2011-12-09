@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package io.netty.handler.codec.http;
 
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -40,7 +40,7 @@ import java.util.regex.Pattern;
  * @see CookieEncoder
  *
  * @apiviz.stereotype utility
- * @apiviz.has        org.jboss.netty.handler.codec.http.Cookie oneway - - decodes
+ * @apiviz.has        io.netty.handler.codec.http.Cookie oneway - - decodes
  */
 public class CookieDecoder {
 

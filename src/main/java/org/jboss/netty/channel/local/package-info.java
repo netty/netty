@@ -21,4 +21,4 @@
  * @apiviz.exclude ^java\.lang\.
  * @apiviz.exclude Channel$
  */
-package org.jboss.netty.channel.local;
+package io.netty.channel.local;

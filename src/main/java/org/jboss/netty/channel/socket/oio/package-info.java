@@ -18,4 +18,4 @@
  * Old blocking I/O based socket channel API implementation - recommended for
  * a small number of connections (&lt; 1000).
  */
-package org.jboss.netty.channel.socket.oio;
+package io.netty.channel.socket.oio;

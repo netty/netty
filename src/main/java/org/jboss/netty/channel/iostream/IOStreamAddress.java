@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.iostream;
+package io.netty.channel.iostream;
 
 import java.io.InputStream;
 import java.io.OutputStream;

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.execution;
+package io.netty.handler.execution;
 
 import java.util.IdentityHashMap;
 import java.util.Queue;
@@ -25,13 +25,13 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelState;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.util.ObjectSizeEstimator;
-import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
-import org.jboss.netty.util.internal.QueueFactory;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelState;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.util.ObjectSizeEstimator;
+import io.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
+import io.netty.util.internal.QueueFactory;
 
 /**
  * A {@link MemoryAwareThreadPoolExecutor} which makes sure the events from the

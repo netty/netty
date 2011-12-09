@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.bootstrap;
+package io.netty.bootstrap;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
@@ -25,13 +25,13 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelPipelineException;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.util.DummyHandler;
-import org.jboss.netty.util.TestUtil;
-import org.jboss.netty.util.internal.ExecutorUtil;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPipelineException;
+import io.netty.channel.ChannelPipelineFactory;
+import io.netty.util.DummyHandler;
+import io.netty.util.TestUtil;
+import io.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;

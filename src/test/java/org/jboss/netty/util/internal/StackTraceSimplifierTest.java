@@ -13,16 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util.internal;
+package io.netty.util.internal;
 
 import static org.easymock.EasyMock.*;
 import static org.easymock.classextension.EasyMock.*;
 import static org.junit.Assert.*;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.DefaultChannelPipeline;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.Channel;
+import io.netty.channel.DefaultChannelPipeline;
+import io.netty.channel.SimpleChannelHandler;
 import org.junit.Test;
 
 

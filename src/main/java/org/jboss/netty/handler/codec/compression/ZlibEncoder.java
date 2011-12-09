@@ -13,23 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.compression;
+package io.netty.handler.codec.compression;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.LifeCycleAwareChannelHandler;
-import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
-import org.jboss.netty.util.internal.jzlib.JZlib;
-import org.jboss.netty.util.internal.jzlib.ZStream;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.Channels;
+import io.netty.channel.LifeCycleAwareChannelHandler;
+import io.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.util.internal.jzlib.JZlib;
+import io.netty.util.internal.jzlib.ZStream;
 
 
 /**
@@ -39,7 +39,7 @@ import org.jboss.netty.util.internal.jzlib.ZStream;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.has org.jboss.netty.handler.codec.compression.ZlibWrapper
+ * @apiviz.has io.netty.handler.codec.compression.ZlibWrapper
  */
 public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChannelHandler {
 

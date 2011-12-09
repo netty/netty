@@ -19,10 +19,10 @@
 //LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //THE SOFTWARE.
-package org.jboss.netty.example.http.websocketx.client;
+package io.netty.example.http.websocketx.client;
 
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.channel.ChannelFuture;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 
 /**
  * Copied from https://github.com/cgbystrom/netty-tools

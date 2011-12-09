@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket;
+package io.netty.channel.socket;
 
 import java.net.InetSocketAddress;
 
-import org.jboss.netty.channel.ServerChannel;
+import io.netty.channel.ServerChannel;
 
 /**
  * A TCP/IP {@link ServerChannel} which accepts incoming TCP/IP connections.
@@ -26,7 +26,7 @@ import org.jboss.netty.channel.ServerChannel;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.composedOf org.jboss.netty.channel.socket.ServerSocketChannelConfig
+ * @apiviz.composedOf io.netty.channel.socket.ServerSocketChannelConfig
  */
 public interface ServerSocketChannel extends ServerChannel {
     @Override

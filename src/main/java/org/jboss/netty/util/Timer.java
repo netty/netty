@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util;
+package io.netty.util;
 
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -26,8 +26,8 @@ import java.util.concurrent.TimeUnit;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.has org.jboss.netty.util.TimerTask oneway - - executes
- * @apiviz.has org.jboss.netty.util.Timeout oneway - - creates
+ * @apiviz.has io.netty.util.TimerTask oneway - - executes
+ * @apiviz.has io.netty.util.Timeout oneway - - creates
  */
 public interface Timer {
 

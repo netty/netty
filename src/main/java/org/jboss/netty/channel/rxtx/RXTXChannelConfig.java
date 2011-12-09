@@ -13,12 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.rxtx;
+package io.netty.channel.rxtx;
 
 import gnu.io.SerialPort;
 
-import org.jboss.netty.channel.DefaultChannelConfig;
-import org.jboss.netty.util.internal.ConversionUtil;
+import io.netty.channel.DefaultChannelConfig;
+import io.netty.util.internal.ConversionUtil;
 
 /**
  * A configuration class for RXTX device connections.

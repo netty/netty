@@ -20,4 +20,4 @@
  *
  * @apiviz.exclude \.RtspHeaders\.
  */
-package org.jboss.netty.handler.codec.rtsp;
+package io.netty.handler.codec.rtsp;

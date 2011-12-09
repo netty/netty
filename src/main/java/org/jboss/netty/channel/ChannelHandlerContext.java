@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 
 /**
@@ -120,7 +120,7 @@ package org.jboss.netty.channel;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @apiviz.owns org.jboss.netty.channel.ChannelHandler
+ * @apiviz.owns io.netty.channel.ChannelHandler
  */
 public interface ChannelHandlerContext {
 

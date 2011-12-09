@@ -20,7 +20,7 @@
  * http://creativecommons.org/licenses/publicdomain
  */
 
-package org.jboss.netty.util.internal;
+package io.netty.util.internal;
 
 import java.util.Random;
 

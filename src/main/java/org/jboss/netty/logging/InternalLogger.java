@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.logging;
+package io.netty.logging;
 
 /**
  * <em>Internal-use-only</em> logger used by Netty.  <strong>DO NOT</strong>

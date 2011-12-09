@@ -13,20 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.group;
+package io.netty.channel.group;
 
 import java.net.SocketAddress;
 import java.util.Set;
 
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ServerChannel;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.util.CharsetUtil;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.ServerChannel;
+import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.util.CharsetUtil;
 
 /**
  * A thread-safe {@link Set} that contains open {@link Channel}s and provides
@@ -92,7 +92,7 @@ import org.jboss.netty.util.CharsetUtil;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.has org.jboss.netty.channel.group.ChannelGroupFuture oneway - - returns
+ * @apiviz.has io.netty.channel.group.ChannelGroupFuture oneway - - returns
  */
 public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
 

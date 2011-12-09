@@ -13,20 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.iostream;
+package io.netty.channel.iostream;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.*;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.*;
 
 import java.io.OutputStream;
 import java.io.PushbackInputStream;
 import java.util.concurrent.ExecutorService;
 
-import static org.jboss.netty.channel.Channels.*;
+import static io.netty.channel.Channels.*;
 
 /**
- * A {@link org.jboss.netty.channel.ChannelSink} implementation which reads from
+ * A {@link io.netty.channel.ChannelSink} implementation which reads from
  * an {@link java.io.InputStream} and writes to an {@link java.io.OutputStream}.
  * 
  * @author Daniel Bimschas

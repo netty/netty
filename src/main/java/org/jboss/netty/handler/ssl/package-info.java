@@ -20,4 +20,4 @@
  *
  * @apiviz.exclude \.(channel|codec)\.
  */
-package org.jboss.netty.handler.ssl;
+package io.netty.handler.ssl;

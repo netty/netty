@@ -13,15 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.bytes;
+package io.netty.handler.codec.bytes;
 
 import static org.hamcrest.core.Is.is;
-import static org.jboss.netty.buffer.ChannelBuffers.wrappedBuffer;
+import static io.netty.buffer.ChannelBuffers.wrappedBuffer;
 import static org.junit.Assert.assertThat;
 
 import java.util.Random;
 
-import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
+import io.netty.handler.codec.embedder.DecoderEmbedder;
 import org.junit.Before;
 import org.junit.Test;
 

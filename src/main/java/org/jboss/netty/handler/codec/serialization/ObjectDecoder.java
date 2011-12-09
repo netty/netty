@@ -13,16 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.serialization;
+package io.netty.handler.codec.serialization;
 
 import java.io.ObjectOutputStream;
 import java.io.StreamCorruptedException;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferInputStream;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBufferInputStream;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
 
 /**
  * A decoder which deserializes the received {@link ChannelBuffer}s into Java
@@ -37,7 +37,7 @@ import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.has org.jboss.netty.handler.codec.serialization.ObjectDecoderInputStream - - - compatible with
+ * @apiviz.has io.netty.handler.codec.serialization.ObjectDecoderInputStream - - - compatible with
  */
 public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
 

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.execution;
+package io.netty.handler.execution;
 
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -25,19 +25,19 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelState;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.WriteCompletionEvent;
-import org.jboss.netty.util.DefaultObjectSizeEstimator;
-import org.jboss.netty.util.ObjectSizeEstimator;
-import org.jboss.netty.util.internal.ConcurrentIdentityHashMap;
-import org.jboss.netty.util.internal.QueueFactory;
-import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelState;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.WriteCompletionEvent;
+import io.netty.util.DefaultObjectSizeEstimator;
+import io.netty.util.ObjectSizeEstimator;
+import io.netty.util.internal.ConcurrentIdentityHashMap;
+import io.netty.util.internal.QueueFactory;
+import io.netty.util.internal.SharedResourceMisuseDetector;
 
 /**
  * A {@link ThreadPoolExecutor} which blocks the task submission when there's
@@ -127,8 +127,8 @@ import org.jboss.netty.util.internal.SharedResourceMisuseDetector;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @apiviz.has org.jboss.netty.util.ObjectSizeEstimator oneway - -
- * @apiviz.has org.jboss.netty.handler.execution.ChannelEventRunnable oneway - - executes
+ * @apiviz.has io.netty.util.ObjectSizeEstimator oneway - -
+ * @apiviz.has io.netty.handler.execution.ChannelEventRunnable oneway - - executes
  */
 public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 

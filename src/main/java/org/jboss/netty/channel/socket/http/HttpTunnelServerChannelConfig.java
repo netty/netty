@@ -13,15 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.socket.ServerSocketChannel;
-import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
+import io.netty.buffer.ChannelBufferFactory;
+import io.netty.channel.ChannelPipelineFactory;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.ServerSocketChannelConfig;
 
 /**
  * @author The Netty Project (netty-dev@lists.jboss.org)

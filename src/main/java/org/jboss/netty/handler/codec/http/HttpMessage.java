@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package io.netty.handler.codec.http;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -21,8 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
 
 /**
  * An HTTP message which provides common properties for {@link HttpRequest} and
@@ -35,7 +35,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
  * @see HttpHeaders
  *
  * @apiviz.landmark
- * @apiviz.has org.jboss.netty.handler.codec.http.HttpChunk oneway - - is followed by
+ * @apiviz.has io.netty.handler.codec.http.HttpChunk oneway - - is followed by
  */
 public interface HttpMessage {
 

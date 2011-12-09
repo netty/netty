@@ -13,14 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket;
+package io.netty.channel.socket;
 
 import java.net.Socket;
 import java.net.SocketException;
 
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.DefaultChannelConfig;
-import org.jboss.netty.util.internal.ConversionUtil;
+import io.netty.channel.ChannelException;
+import io.netty.channel.DefaultChannelConfig;
+import io.netty.util.internal.ConversionUtil;
 
 /**
  * The default {@link SocketChannelConfig} implementation.

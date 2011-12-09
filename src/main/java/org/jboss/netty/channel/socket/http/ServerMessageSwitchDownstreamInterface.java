@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.ChannelFuture;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.ChannelFuture;
 
 /**
  * The interface from a HttpTunnelAcceptedChannel to the ServerMessageSwitch.

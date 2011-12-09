@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package io.netty.handler.codec.http;
 
 import java.util.Date;
 import java.util.Set;
@@ -48,7 +48,7 @@ import java.util.TreeSet;
  * @see CookieDecoder
  *
  * @apiviz.stereotype utility
- * @apiviz.has        org.jboss.netty.handler.codec.http.Cookie oneway - - encodes
+ * @apiviz.has        io.netty.handler.codec.http.Cookie oneway - - encodes
  */
 public class CookieEncoder {
 

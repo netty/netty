@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.example.localtime;
+package io.netty.example.localtime;
 
 // How to generate
 // ===============
-// $ protoc src/main/java/org/jboss/netty/example/localtime/LocalTimeProtocol.proto \
+// $ protoc src/main/java/io/netty/example/localtime/LocalTimeProtocol.proto \
 //          --java_out=src/main/java
 //
 // Add @SuppressWarnings("all") to the generated code not to pollute IDE task list.

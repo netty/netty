@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
-import static org.jboss.netty.channel.socket.http.SaturationStateChange.DESATURATED;
-import static org.jboss.netty.channel.socket.http.SaturationStateChange.NO_CHANGE;
-import static org.jboss.netty.channel.socket.http.SaturationStateChange.SATURATED;
+import static io.netty.channel.socket.http.SaturationStateChange.DESATURATED;
+import static io.netty.channel.socket.http.SaturationStateChange.NO_CHANGE;
+import static io.netty.channel.socket.http.SaturationStateChange.SATURATED;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;

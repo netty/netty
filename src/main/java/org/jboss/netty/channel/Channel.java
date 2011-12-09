@@ -13,17 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.SelectionKey;
 
-import org.jboss.netty.channel.socket.DatagramChannel;
-import org.jboss.netty.channel.socket.ServerSocketChannel;
-import org.jboss.netty.channel.socket.SocketChannel;
-import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannelConfig;
 
 
 /**
@@ -104,8 +104,8 @@ import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.composedOf org.jboss.netty.channel.ChannelConfig
- * @apiviz.composedOf org.jboss.netty.channel.ChannelPipeline
+ * @apiviz.composedOf io.netty.channel.ChannelConfig
+ * @apiviz.composedOf io.netty.channel.ChannelPipeline
  *
  * @apiviz.exclude ^org\.jboss\.netty\.channel\.([a-z]+\.)+[^\.]+Channel$
  */

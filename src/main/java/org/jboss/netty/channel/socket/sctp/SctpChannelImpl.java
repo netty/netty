@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.sctp;
+package io.netty.channel.socket.sctp;
 
 import com.sun.nio.sctp.Association;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.socket.sctp.SctpSendBufferPool.SendBuffer;
-import org.jboss.netty.util.internal.ThreadLocalBoolean;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.*;
+import io.netty.channel.socket.sctp.SctpSendBufferPool.SendBuffer;
+import io.netty.util.internal.ThreadLocalBoolean;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -28,7 +28,7 @@ import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.jboss.netty.channel.Channels.fireChannelInterestChanged;
+import static io.netty.channel.Channels.fireChannelInterestChanged;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

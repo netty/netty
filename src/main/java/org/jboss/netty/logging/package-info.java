@@ -20,4 +20,4 @@
  *
  * @apiviz.hidden
  */
-package org.jboss.netty.logging;
+package io.netty.logging;

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.group;
+package io.netty.channel.group;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;

@@ -21,4 +21,4 @@
  * @apiviz.exclude \.socket\.[a-z]+\.
  * @apiviz.exclude \.channel\.[A-Z]
  */
-package org.jboss.netty.channel.socket;
+package io.netty.channel.socket;

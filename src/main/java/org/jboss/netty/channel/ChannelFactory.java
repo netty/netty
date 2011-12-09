@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 import java.util.concurrent.Executor;
 
-import org.jboss.netty.channel.group.ChannelGroup;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.util.ExternalResourceReleasable;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.util.ExternalResourceReleasable;
 
 
 /**
@@ -51,7 +51,7 @@ import org.jboss.netty.util.ExternalResourceReleasable;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.has        org.jboss.netty.channel.Channel oneway - - creates
+ * @apiviz.has        io.netty.channel.Channel oneway - - creates
  *
  * @apiviz.exclude ^org\.jboss\.netty\.channel\.([a-z]+\.)+.*ChannelFactory$
  */

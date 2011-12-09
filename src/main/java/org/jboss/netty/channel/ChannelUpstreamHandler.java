@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 import java.util.concurrent.Executor;
 
-import org.jboss.netty.handler.execution.ExecutionHandler;
+import io.netty.handler.execution.ExecutionHandler;
 
 
 /**

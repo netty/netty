@@ -14,14 +14,14 @@
  * under the License.
  */
 
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
 import java.util.LinkedList;
 import java.util.Queue;
 
-import org.jboss.netty.channel.AbstractChannelSink;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelPipeline;
+import io.netty.channel.AbstractChannelSink;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelPipeline;
 
 /**
  * A fake channel sink for use in testing

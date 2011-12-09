@@ -13,18 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.local;
+package io.netty.channel.local;
 
-import static org.jboss.netty.channel.Channels.*;
+import static io.netty.channel.Channels.*;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.jboss.netty.channel.AbstractServerChannel;
-import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelSink;
-import org.jboss.netty.channel.DefaultServerChannelConfig;
+import io.netty.channel.AbstractServerChannel;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
+import io.netty.channel.DefaultServerChannelConfig;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

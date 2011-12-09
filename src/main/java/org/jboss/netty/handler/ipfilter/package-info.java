@@ -20,14 +20,14 @@
  *
  *
  * <P>The main goal of this package is to allow to filter connections based on IP rules.
- * The main interface is <tt>{@link org.jboss.netty.handler.ipfilter.IpFilteringHandler}</tt> which all filters will extend.</P>
+ * The main interface is <tt>{@link io.netty.handler.ipfilter.IpFilteringHandler}</tt> which all filters will extend.</P>
  *
  * <P>Two IP filtering are proposed:<br>
  * <ul>
- * <li> <tt>{@link org.jboss.netty.handler.ipfilter.OneIpFilterHandler}</tt>: This filter proposes to allow only one connection by client's IP Address.
+ * <li> <tt>{@link io.netty.handler.ipfilter.OneIpFilterHandler}</tt>: This filter proposes to allow only one connection by client's IP Address.
  * I.E. this filter will prevent two connections from the same client based on its IP address.</li><br><br>
  *
- * <li> <tt>{@link org.jboss.netty.handler.ipfilter.IpFilterRuleHandler}</tt>: This filter proposes to allow or block IP range (based on standard notation
+ * <li> <tt>{@link io.netty.handler.ipfilter.IpFilterRuleHandler}</tt>: This filter proposes to allow or block IP range (based on standard notation
  * or on CIDR notation) when the connection is running. It relies on another class like
  * <tt>IpV4SubnetFilterRule</tt> (IPV4 support only), <tt>IpSubnetFilterRule</tt> (IPV4 and IPV6 support) or <tt>PatternRule</tt> (string pattern support)
  * which implements those Ip ranges.</li><br><br>
@@ -50,7 +50,7 @@
  * So if you want to send back a message to the client, <b>don't forget to return a respectful ChannelFuture,
  * otherwise the message could be missed since the channel will be closed immediately after this
  * call and the waiting on this channelFuture</b> (at least with respect of asynchronous operations).<br><br>
- * Per default implementation this method invokes an {@link org.jboss.netty.handler.ipfilter.IpFilterListener} or returns null if no listener has been set.
+ * Per default implementation this method invokes an {@link io.netty.handler.ipfilter.IpFilterListener} or returns null if no listener has been set.
  * <br><br>
  *
  * <li><tt>continues</tt> is called when any event appears after CONNECTED event and only for
@@ -64,7 +64,7 @@
  * those events come out before the CONNECTED event, so there is no possibility to filter those two events
  * before the CONNECTED event shows up. Therefore, you might want to let CLOSED and UNBOUND be passed
  * to the next entry in the pipeline.</b><br><br>
- * Per default implementation this method invokes an {@link org.jboss.netty.handler.ipfilter.IpFilterListener} or returns false if no listener has been set.
+ * Per default implementation this method invokes an {@link io.netty.handler.ipfilter.IpFilterListener} or returns false if no listener has been set.
  * <br><br>
  *
  * <li>Finally <tt>handleUpstream</tt> traps the CONNECTED and DISCONNECTED events.</li><br>
@@ -79,7 +79,7 @@
  * A typical setup for ip filter for TCP/IP socket would be:
  *
  * <pre>
- * {@link org.jboss.netty.channel.ChannelPipeline} pipeline = ...;
+ * {@link io.netty.channel.ChannelPipeline} pipeline = ...;
  *
  * IpFilterRuleHandler firewall = new IpFilterRuleHandler();
  * firewall.addAll(new IpFilterRuleList("+n:localhost, +c:192.168.0.0/27, -n:*"));
@@ -88,6 +88,6 @@
  *
  * @apiviz.exclude ^java\.lang\.
  */
-package org.jboss.netty.handler.ipfilter;
+package io.netty.handler.ipfilter;
 
 

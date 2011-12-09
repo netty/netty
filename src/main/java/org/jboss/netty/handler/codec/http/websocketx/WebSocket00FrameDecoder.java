@@ -13,28 +13,28 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http.websocketx;
+package io.netty.handler.codec.http.websocketx;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.frame.TooLongFrameException;
-import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
-import org.jboss.netty.handler.codec.replay.VoidEnum;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.frame.TooLongFrameException;
+import io.netty.handler.codec.replay.ReplayingDecoder;
+import io.netty.handler.codec.replay.VoidEnum;
 
 /**
  * Decodes {@link ChannelBuffer}s into {@link WebSocketFrame}s.
  * <p>
  * For the detailed instruction on adding add Web Socket support to your HTTP
  * server, take a look into the <tt>WebSocketServer</tt> example located in the
- * {@code org.jboss.netty.example.http.websocket} package.
+ * {@code io.netty.example.http.websocket} package.
  * 
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Mike Heath (mheath@apache.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * 
  * @apiviz.landmark
- * @apiviz.uses org.jboss.netty.handler.codec.http.websocket.WebSocketFrame
+ * @apiviz.uses io.netty.handler.codec.http.websocket.WebSocketFrame
  */
 public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
 

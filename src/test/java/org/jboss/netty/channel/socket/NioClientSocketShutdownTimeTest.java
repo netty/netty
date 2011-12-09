@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket;
+package io.netty.channel.socket;
 
 import static org.junit.Assert.*;
 
@@ -22,11 +22,11 @@ import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.Executors;
 
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.util.DummyHandler;
-import org.jboss.netty.util.TestUtil;
+import io.netty.bootstrap.ClientBootstrap;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.util.DummyHandler;
+import io.netty.util.TestUtil;
 import org.junit.Test;
 
 

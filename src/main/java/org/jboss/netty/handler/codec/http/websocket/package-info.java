@@ -20,10 +20,10 @@
  * <p>
  * For the detailed instruction on adding add Web Socket support to your HTTP
  * server, take a look into the <tt>WebSocketServer</tt> example located in the
- * {@code org.jboss.netty.example.http.websocket} package.
+ * {@code io.netty.example.http.websocket} package.
  * *
  * @apiviz.exclude OneToOne(Encoder|Decoder)$
  * @apiviz.exclude \.codec\.replay\.
  * @apiviz.exclude \.Default
  */
-package org.jboss.netty.handler.codec.http.websocket;
+package io.netty.handler.codec.http.websocket;

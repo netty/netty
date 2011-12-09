@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.example.securechat;
+package io.netty.example.securechat;
 
 import java.security.KeyStore;
 import java.security.Security;
@@ -24,7 +24,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 
-import org.jboss.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.SslHandler;
 
 /**
  * Creates a bogus {@link SSLContext}.  A client-side context created by this

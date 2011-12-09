@@ -13,19 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.serialization;
+package io.netty.handler.codec.serialization;
 
-import static org.jboss.netty.buffer.ChannelBuffers.*;
+import static io.netty.buffer.ChannelBuffers.*;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferOutputStream;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelHandler.Sharable;
-import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBufferOutputStream;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
  * An encoder which serializes a Java object into a {@link ChannelBuffer}.
@@ -39,7 +39,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.has org.jboss.netty.handler.codec.serialization.ObjectEncoderOutputStream - - - compatible with
+ * @apiviz.has io.netty.handler.codec.serialization.ObjectEncoderOutputStream - - - compatible with
  */
 @Sharable
 public class ObjectEncoder extends OneToOneEncoder {

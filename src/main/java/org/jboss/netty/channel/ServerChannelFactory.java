@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 /**
  * A {@link ChannelFactory} that creates a {@link ServerChannel}.
@@ -21,7 +21,7 @@ package org.jboss.netty.channel;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @apiviz.has        org.jboss.netty.channel.ServerChannel oneway - - creates
+ * @apiviz.has        io.netty.channel.ServerChannel oneway - - creates
  */
 public interface ServerChannelFactory extends ChannelFactory {
     @Override

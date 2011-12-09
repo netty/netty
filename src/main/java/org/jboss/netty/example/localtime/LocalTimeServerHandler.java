@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.example.localtime;
+package io.netty.example.localtime;
 
 import static java.util.Calendar.*;
 
@@ -22,18 +22,18 @@ import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.example.localtime.LocalTimeProtocol.Continent;
-import org.jboss.netty.example.localtime.LocalTimeProtocol.DayOfWeek;
-import org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTime;
-import org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes;
-import org.jboss.netty.example.localtime.LocalTimeProtocol.Location;
-import org.jboss.netty.example.localtime.LocalTimeProtocol.Locations;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.ExceptionEvent;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.example.localtime.LocalTimeProtocol.Continent;
+import io.netty.example.localtime.LocalTimeProtocol.DayOfWeek;
+import io.netty.example.localtime.LocalTimeProtocol.LocalTime;
+import io.netty.example.localtime.LocalTimeProtocol.LocalTimes;
+import io.netty.example.localtime.LocalTimeProtocol.Location;
+import io.netty.example.localtime.LocalTimeProtocol.Locations;
 
 /**
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>

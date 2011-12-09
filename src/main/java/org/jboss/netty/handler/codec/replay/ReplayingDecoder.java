@@ -13,23 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.replay;
+package io.netty.handler.codec.replay;
 
 import java.net.SocketAddress;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.frame.FrameDecoder;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBufferFactory;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.Channels;
+import io.netty.channel.ExceptionEvent;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.handler.codec.frame.FrameDecoder;
 
 /**
  * A specialized variation of {@link FrameDecoder} which enables implementation
@@ -286,7 +286,7 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  *        the state type; use {@link VoidEnum} if state management is unused
  *
  * @apiviz.landmark
- * @apiviz.has org.jboss.netty.handler.codec.replay.UnreplayableOperationException oneway - - throws
+ * @apiviz.has io.netty.handler.codec.replay.UnreplayableOperationException oneway - - throws
  */
 public abstract class ReplayingDecoder<T extends Enum<T>>
         extends SimpleChannelUpstreamHandler {

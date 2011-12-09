@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 import java.net.SocketAddress;
 
-import org.jboss.netty.util.internal.StringUtil;
+import io.netty.util.internal.StringUtil;
 
 /**
  * The default downstream {@link MessageEvent} implementation.

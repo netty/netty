@@ -14,14 +14,14 @@
  * under the License.
  */
 
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
-import org.jboss.netty.channel.socket.SocketChannel;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.ClientSocketChannelFactory;
+import io.netty.channel.socket.SocketChannel;
 
 /**
  * A fake client socket channel factory for use in testing

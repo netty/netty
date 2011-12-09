@@ -24,4 +24,4 @@
  * @apiviz.exclude \.codec\.[a-eg-z][a-z0-9]*\.
  * @apiviz.exclude \.ssl\.
  */
-package org.jboss.netty.handler.codec.frame;
+package io.netty.handler.codec.frame;

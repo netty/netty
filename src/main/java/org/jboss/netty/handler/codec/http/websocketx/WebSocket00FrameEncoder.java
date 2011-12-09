@@ -13,27 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http.websocketx;
+package io.netty.handler.codec.http.websocketx;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelHandler.Sharable;
-import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.handler.codec.oneone.OneToOneEncoder;
 
 /**
  * Encodes a {@link WebSocketFrame} into a {@link ChannelBuffer}.
  * <p>
  * For the detailed instruction on adding add Web Socket support to your HTTP
  * server, take a look into the <tt>WebSocketServer</tt> example located in the
- * {@code org.jboss.netty.example.http.websocket} package.
+ * {@code io.netty.example.http.websocket} package.
  * 
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author Mike Heath (mheath@apache.org)
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  * 
  * @apiviz.landmark
- * @apiviz.uses org.jboss.netty.handler.codec.http.websocket.WebSocketFrame
+ * @apiviz.uses io.netty.handler.codec.http.websocket.WebSocketFrame
  */
 @Sharable
 public class WebSocket00FrameEncoder extends OneToOneEncoder {

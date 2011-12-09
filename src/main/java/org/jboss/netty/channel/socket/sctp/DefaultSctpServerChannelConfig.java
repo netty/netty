@@ -13,18 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.sctp;
+package io.netty.channel.socket.sctp;
 
 import static com.sun.nio.sctp.SctpStandardSocketOptions.*;
 
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.DefaultServerChannelConfig;
-import org.jboss.netty.util.internal.ConversionUtil;
+import io.netty.channel.ChannelException;
+import io.netty.channel.DefaultServerChannelConfig;
+import io.netty.util.internal.ConversionUtil;
 
 import java.io.IOException;
 
 /**
- * The default {@link org.jboss.netty.channel.socket.ServerSocketChannelConfig} implementation for SCTP.
+ * The default {@link io.netty.channel.socket.ServerSocketChannelConfig} implementation for SCTP.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>

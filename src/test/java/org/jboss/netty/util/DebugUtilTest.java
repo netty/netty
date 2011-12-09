@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util;
+package io.netty.util;
 
 import static org.junit.Assert.*;
 
@@ -36,19 +36,19 @@ public class DebugUtilTest {
 
     @Test
     public void shouldReturnTrueInDebugMode() {
-        System.setProperty("org.jboss.netty.debug", "true");
+        System.setProperty("io.netty.debug", "true");
         assertTrue(DebugUtil.isDebugEnabled());
     }
 
     @Test
     public void shouldReturnFalseInNonDebugMode() {
-        System.setProperty("org.jboss.netty.debug", "false");
+        System.setProperty("io.netty.debug", "false");
         assertFalse(DebugUtil.isDebugEnabled());
     }
 
     @Test
     public void shouldNotBombOutWhenSecurityManagerIsInAction() {
-        System.setProperty("org.jboss.netty.debug", "true");
+        System.setProperty("io.netty.debug", "true");
         System.setSecurityManager(new SecurityManager() {
             @Override
             public void checkPropertyAccess(String key) {
@@ -75,6 +75,6 @@ public class DebugUtilTest {
 
     @Before @After
     public void cleanup() {
-        System.clearProperty("org.jboss.netty.debug");
+        System.clearProperty("io.netty.debug");
     }
 }

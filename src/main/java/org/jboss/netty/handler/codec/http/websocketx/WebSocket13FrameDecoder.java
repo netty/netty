@@ -36,7 +36,7 @@
 // OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package org.jboss.netty.handler.codec.http.websocketx;
+package io.netty.handler.codec.http.websocketx;
 
 /**
  * Decodes a web socket frame from wire protocol version 13 format.

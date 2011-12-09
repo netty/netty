@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.group;
+package io.netty.channel.group;
 
 import java.net.SocketAddress;
 import java.util.AbstractSet;
@@ -25,12 +25,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ServerChannel;
-import org.jboss.netty.util.internal.ConcurrentHashMap;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ServerChannel;
+import io.netty.util.internal.ConcurrentHashMap;
 
 /**
  * The default {@link ChannelGroup} implementation.

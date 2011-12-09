@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.buffer;
+package io.netty.buffer;
 
 /**
  * The common interface for buffer wrappers and derived buffers.  Most users won't

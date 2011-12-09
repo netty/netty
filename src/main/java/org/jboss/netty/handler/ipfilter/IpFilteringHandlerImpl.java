@@ -14,17 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jboss.netty.handler.ipfilter;
+package io.netty.handler.ipfilter;
 
 import java.net.InetSocketAddress;
 
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.Channels;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.ChannelUpstreamHandler;
+import io.netty.channel.Channels;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -108,7 +108,7 @@ public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, 
    }
 
    /* (non-Javadoc)
-    * @see org.jboss.netty.channel.ChannelUpstreamHandler#handleUpstream(org.jboss.netty.channel.ChannelHandlerContext, org.jboss.netty.channel.ChannelEvent)
+    * @see io.netty.channel.ChannelUpstreamHandler#handleUpstream(io.netty.channel.ChannelHandlerContext, io.netty.channel.ChannelEvent)
     */
    @Override
    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception
@@ -184,7 +184,7 @@ public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, 
    }
 
    /* (non-Javadoc)
-    * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#setIpFilterListener(org.jboss.netty.handler.ipfilter.IpFilterListener)
+    * @see io.netty.handler.ipfilter.IpFilteringHandler#setIpFilterListener(io.netty.handler.ipfilter.IpFilterListener)
     */
    @Override
    public void setIpFilterListener(IpFilterListener listener)
@@ -193,7 +193,7 @@ public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, 
    }
 
    /* (non-Javadoc)
-    * @see org.jboss.netty.handler.ipfilter.IpFilteringHandler#removeIpFilterListener()
+    * @see io.netty.handler.ipfilter.IpFilteringHandler#removeIpFilterListener()
     */
    @Override
    public void removeIpFilterListener()

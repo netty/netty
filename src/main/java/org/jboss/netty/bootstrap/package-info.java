@@ -21,4 +21,4 @@
  * @apiviz.landmark
  * @apiviz.exclude ^org\.jboss\.netty\.util\.
  */
-package org.jboss.netty.bootstrap;
+package io.netty.bootstrap;

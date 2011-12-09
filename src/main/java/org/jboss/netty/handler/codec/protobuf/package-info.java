@@ -17,10 +17,10 @@
 /**
  * Encoder and decoder which transform a
  * <a href="http://code.google.com/p/protobuf/">Google Protocol Buffers</a>
- * {@link com.google.protobuf.Message} into a {@link org.jboss.netty.buffer.ChannelBuffer}
+ * {@link com.google.protobuf.Message} into a {@link io.netty.buffer.ChannelBuffer}
  * and vice versa.
  *
  * @apiviz.exclude \.oneone\.
  * @apiviz.exclude \.frame\.
  */
-package org.jboss.netty.handler.codec.protobuf;
+package io.netty.handler.codec.protobuf;

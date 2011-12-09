@@ -1,4 +1,4 @@
-package org.jboss.netty.handler.codec.http;
+package io.netty.handler.codec.http;
 
 import java.text.ParseException;
 import java.util.Date;

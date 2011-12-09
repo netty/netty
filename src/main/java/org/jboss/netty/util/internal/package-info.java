@@ -18,4 +18,4 @@
  * <em>Internal-use-only</em> utilities which is not allowed to be used
  * outside Netty.
  */
-package org.jboss.netty.util.internal;
+package io.netty.util.internal;

@@ -13,15 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.nio;
+package io.netty.channel.socket.nio;
 
 import java.net.DatagramSocket;
 import java.util.Map;
 
-import org.jboss.netty.channel.socket.DefaultDatagramChannelConfig;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.ConversionUtil;
+import io.netty.channel.socket.DefaultDatagramChannelConfig;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.ConversionUtil;
 
 /**
  * The default {@link NioSocketChannelConfig} implementation.

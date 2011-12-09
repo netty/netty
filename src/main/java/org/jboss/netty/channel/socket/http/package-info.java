@@ -15,13 +15,13 @@
  */
 
 /**
- * An HTTP-based client-side {@link org.jboss.netty.channel.socket.SocketChannel}
+ * An HTTP-based client-side {@link io.netty.channel.socket.SocketChannel}
  * and its corresponding server-side Servlet implementation that make your
  * existing server application work in a firewalled network.
  *
  * <h3>Deploying the HTTP tunnel as a Servlet</h3>
  *
- * First, {@link org.jboss.netty.channel.socket.http.HttpTunnelingServlet} must be
+ * First, {@link io.netty.channel.socket.http.HttpTunnelingServlet} must be
  * configured in a <tt>web.xml</tt>.
  *
  * <pre>
@@ -33,7 +33,7 @@
  *
  *   &lt;servlet&gt;
  *     &lt;servlet-name&gt;NettyTunnelingServlet&lt;/servlet-name&gt;
- *     &lt;servlet-class&gt;<b>org.jboss.netty.channel.socket.http.HttpTunnelingServlet</b>&lt;/servlet-class&gt;
+ *     &lt;servlet-class&gt;<b>io.netty.channel.socket.http.HttpTunnelingServlet</b>&lt;/servlet-class&gt;
  *     &lt;!--
  *       The name of the channel, this should be a registered local channel.
  *       See LocalTransportRegister.
@@ -54,18 +54,18 @@
  *
  * Second, you have to bind your Netty-based server application in the same
  * Servlet context or shared class loader space using the local transport
- * (see {@link org.jboss.netty.channel.local.LocalServerChannelFactory}.)
+ * (see {@link io.netty.channel.local.LocalServerChannelFactory}.)
  * You can use your favorite IoC framework such as JBoss Microcontainer, Guice,
  * and Spring to do this.  The following example shows how to bind an echo
  * server to the endpoint specifed above (<tt>web.xml</tt>) in JBossAS 5:
  *
  * <pre>
  * &lt;bean name="my-local-echo-server"
- *       class="org.jboss.netty.example.http.tunnel.LocalEchoServerRegistration" /&gt;
+ *       class="io.netty.example.http.tunnel.LocalEchoServerRegistration" /&gt;
  *
  * ...
  *
- * package org.jboss.netty.example.http.tunnel;
+ * package io.netty.example.http.tunnel;
  * ...
  *
  * public class LocalEchoServerRegistration {
@@ -109,7 +109,7 @@
  * </pre>
  *
  * For more configuration parameters such as HTTPS options,
- * refer to {@link org.jboss.netty.channel.socket.http.HttpTunnelingSocketChannelConfig}.
+ * refer to {@link io.netty.channel.socket.http.HttpTunnelingSocketChannelConfig}.
  */
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 

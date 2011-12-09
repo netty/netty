@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package io.netty.handler.codec.http;
 
-import org.jboss.netty.util.internal.StringUtil;
+import io.netty.util.internal.StringUtil;
 
 /**
  * The default {@link HttpResponse} implementation.

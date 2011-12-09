@@ -13,15 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.sctp;
+package io.netty.channel.socket.sctp;
 
-import org.jboss.netty.channel.ServerChannel;
+import io.netty.channel.ServerChannel;
 
 import java.net.InetSocketAddress;
 import java.util.Set;
 
 /**
- * A SCTP {@link org.jboss.netty.channel.ServerChannel} which accepts incoming SCTP connections.
+ * A SCTP {@link io.netty.channel.ServerChannel} which accepts incoming SCTP connections.
  *
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>

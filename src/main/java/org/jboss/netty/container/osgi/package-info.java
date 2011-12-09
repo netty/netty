@@ -19,4 +19,4 @@
  *
  * @apiviz.exclude
  */
-package org.jboss.netty.container.osgi;
+package io.netty.container.osgi;

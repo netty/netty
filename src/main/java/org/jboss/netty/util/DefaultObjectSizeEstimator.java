@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.util;
+package io.netty.util;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -22,9 +22,9 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.MessageEvent;
+import io.netty.util.internal.ConcurrentIdentityWeakKeyHashMap;
 
 /**
  * The default {@link ObjectSizeEstimator} implementation for general purpose.

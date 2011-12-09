@@ -13,14 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.sctp;
+package io.netty.channel.socket.sctp;
 
 import com.sun.nio.sctp.SctpChannel;
 import static com.sun.nio.sctp.SctpStandardSocketOptions.*;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.DefaultChannelConfig;
-import org.jboss.netty.channel.socket.nio.NioSocketChannelConfig;
-import org.jboss.netty.util.internal.ConversionUtil;
+import io.netty.channel.ChannelException;
+import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.socket.nio.NioSocketChannelConfig;
+import io.netty.util.internal.ConversionUtil;
 
 import java.io.IOException;
 

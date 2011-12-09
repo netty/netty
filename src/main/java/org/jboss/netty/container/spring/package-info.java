@@ -19,4 +19,4 @@
  *
  * @apiviz.exclude
  */
-package org.jboss.netty.container.spring;
+package io.netty.container.spring;

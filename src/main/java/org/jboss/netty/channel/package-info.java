@@ -33,4 +33,4 @@
  * @apiviz.exclude \.[^\.]+ReceiveBufferSizePredictor(Factory)?$
  * @apiviz.exclude \.FileRegion$
  */
-package org.jboss.netty.channel;
+package io.netty.channel;

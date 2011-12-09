@@ -4,7 +4,7 @@
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
 
-package org.jboss.netty.util.internal;
+package io.netty.util.internal;
 
 import java.util.AbstractQueue;
 import java.util.Collection;

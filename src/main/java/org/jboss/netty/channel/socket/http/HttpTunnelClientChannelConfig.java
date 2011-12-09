@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
 import java.net.SocketAddress;
 
-import org.jboss.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.SocketChannelConfig;
 
 /**
  * Configuration for the client end of an HTTP tunnel. Any socket channel properties set here

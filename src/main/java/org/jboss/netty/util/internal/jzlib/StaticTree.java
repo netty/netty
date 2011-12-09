@@ -46,7 +46,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * and contributors of zlib.
  */
 
-package org.jboss.netty.util.internal.jzlib;
+package io.netty.util.internal.jzlib;
 
 final class StaticTree {
     static final short[] static_ltree = { 12, 8, 140, 8, 76, 8, 204, 8, 44, 8,

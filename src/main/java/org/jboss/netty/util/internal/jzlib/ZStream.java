@@ -46,9 +46,9 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * and contributors of zlib.
  */
 
-package org.jboss.netty.util.internal.jzlib;
+package io.netty.util.internal.jzlib;
 
-import org.jboss.netty.util.internal.jzlib.JZlib.WrapperType;
+import io.netty.util.internal.jzlib.JZlib.WrapperType;
 
 public final class ZStream {
 

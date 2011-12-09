@@ -21,4 +21,4 @@
  * @apiviz.exclude \.channel\.
  * @apiviz.exclude Exception$
  */
-package org.jboss.netty.handler.queue;
+package io.netty.handler.queue;

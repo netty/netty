@@ -13,22 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.example.iostream;
+package io.netty.example.iostream;
 
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.iostream.IOStreamAddress;
-import org.jboss.netty.channel.iostream.IOStreamChannelFactory;
-import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
-import org.jboss.netty.handler.codec.frame.Delimiters;
-import org.jboss.netty.handler.codec.string.StringDecoder;
-import org.jboss.netty.handler.codec.string.StringEncoder;
+import io.netty.bootstrap.ClientBootstrap;
+import io.netty.channel.*;
+import io.netty.channel.iostream.IOStreamAddress;
+import io.netty.channel.iostream.IOStreamChannelFactory;
+import io.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
+import io.netty.handler.codec.frame.Delimiters;
+import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.string.StringEncoder;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * An example demonstrating the use of the {@link org.jboss.netty.channel.iostream.IOStreamChannel}.
+ * An example demonstrating the use of the {@link io.netty.channel.iostream.IOStreamChannel}.
  *
  * @author Daniel Bimschas
  * @author Dennis Pfisterer

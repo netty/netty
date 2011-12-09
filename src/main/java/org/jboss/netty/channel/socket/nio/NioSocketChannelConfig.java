@@ -13,19 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.nio;
+package io.netty.channel.socket.nio;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
-import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictor;
-import org.jboss.netty.channel.AdaptiveReceiveBufferSizePredictorFactory;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelConfig;
-import org.jboss.netty.channel.ReceiveBufferSizePredictor;
-import org.jboss.netty.channel.ReceiveBufferSizePredictorFactory;
-import org.jboss.netty.channel.socket.SocketChannel;
-import org.jboss.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.AdaptiveReceiveBufferSizePredictor;
+import io.netty.channel.AdaptiveReceiveBufferSizePredictorFactory;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.ReceiveBufferSizePredictor;
+import io.netty.channel.ReceiveBufferSizePredictorFactory;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.SocketChannelConfig;
 
 /**
  * A {@link SocketChannelConfig} for a NIO TCP/IP {@link SocketChannel}.

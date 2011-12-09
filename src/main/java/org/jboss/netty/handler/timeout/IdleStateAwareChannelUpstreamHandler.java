@@ -13,12 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.timeout;
+package io.netty.handler.timeout;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelUpstreamHandler;
 
 /**
  * An extended {@link SimpleChannelUpstreamHandler} that adds the handler method
@@ -27,7 +27,7 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @apiviz.uses org.jboss.netty.handler.timeout.IdleStateEvent
+ * @apiviz.uses io.netty.handler.timeout.IdleStateEvent
  */
 public class IdleStateAwareChannelUpstreamHandler extends SimpleChannelUpstreamHandler {
 

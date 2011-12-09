@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 
-import org.jboss.netty.util.ExternalResourceReleasable;
+import io.netty.util.ExternalResourceReleasable;
 
 /**
  * A region of a file that is sent via a {@link Channel} which supports

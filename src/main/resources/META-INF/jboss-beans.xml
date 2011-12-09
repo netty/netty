@@ -18,7 +18,7 @@
             xsi:schemaLocation="urn:jboss:bean-deployer bean-deployer_2_0.xsd"
             xmlns="urn:jboss:bean-deployer:2.0">
 
-  <bean name="org.jboss.netty.internal.LoggerConfigurator"
-        class="org.jboss.netty.container.microcontainer.NettyLoggerConfigurator" />
+  <bean name="io.netty.internal.LoggerConfigurator"
+        class="io.netty.container.microcontainer.NettyLoggerConfigurator" />
 
 </deployment>

@@ -13,24 +13,24 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.traffic;
+package io.netty.handler.traffic;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelState;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.DefaultObjectSizeEstimator;
-import org.jboss.netty.util.ExternalResourceReleasable;
-import org.jboss.netty.util.ObjectSizeEstimator;
-import org.jboss.netty.util.internal.ExecutorUtil;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelState;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.SimpleChannelHandler;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.DefaultObjectSizeEstimator;
+import io.netty.util.ExternalResourceReleasable;
+import io.netty.util.ObjectSizeEstimator;
+import io.netty.util.internal.ExecutorUtil;
 
 /**
  * AbstractTrafficShapingHandler allows to limit the global bandwidth
@@ -507,7 +507,7 @@ public abstract class AbstractTrafficShapingHandler extends
     }
 
     /* (non-Javadoc)
-     * @see org.jboss.netty.util.ExternalResourceReleasable#releaseExternalResources()
+     * @see io.netty.util.ExternalResourceReleasable#releaseExternalResources()
      */
     @Override
     public void releaseExternalResources() {

@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.local;
+package io.netty.channel.local;
 
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ServerChannelFactory;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ServerChannelFactory;
 
 /**
  * A {@link ServerChannelFactory} that creates a {@link LocalServerChannel}.

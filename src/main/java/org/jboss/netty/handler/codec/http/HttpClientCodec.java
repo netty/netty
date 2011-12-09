@@ -13,17 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package io.netty.handler.codec.http;
 
 import java.util.Queue;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelDownstreamHandler;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.util.internal.QueueFactory;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelDownstreamHandler;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelUpstreamHandler;
+import io.netty.util.internal.QueueFactory;
 
 /**
  * A combination of {@link HttpRequestEncoder} and {@link HttpResponseDecoder}
@@ -39,8 +39,8 @@ import org.jboss.netty.util.internal.QueueFactory;
  *
  * @see HttpServerCodec
  *
- * @apiviz.has org.jboss.netty.handler.codec.http.HttpResponseDecoder
- * @apiviz.has org.jboss.netty.handler.codec.http.HttpRequestEncoder
+ * @apiviz.has io.netty.handler.codec.http.HttpResponseDecoder
+ * @apiviz.has io.netty.handler.codec.http.HttpRequestEncoder
  */
 public class HttpClientCodec implements ChannelUpstreamHandler,
         ChannelDownstreamHandler {

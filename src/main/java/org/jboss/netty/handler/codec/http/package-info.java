@@ -26,4 +26,4 @@
  * @apiviz.exclude \.Default
  * @apiviz.exclude \.Http(Client|Server)Codec$
  */
-package org.jboss.netty.handler.codec.http;
+package io.netty.handler.codec.http;

@@ -13,15 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.traffic;
+package io.netty.handler.traffic;
 
 import java.util.concurrent.Executor;
 
-import org.jboss.netty.channel.ChannelHandler.Sharable;
-import org.jboss.netty.handler.execution.ExecutionHandler;
-import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
-import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
-import org.jboss.netty.util.ObjectSizeEstimator;
+import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.handler.execution.ExecutionHandler;
+import io.netty.handler.execution.MemoryAwareThreadPoolExecutor;
+import io.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+import io.netty.util.ObjectSizeEstimator;
 
 /**
  * This implementation of the {@link AbstractTrafficShapingHandler} is for global

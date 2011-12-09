@@ -20,4 +20,4 @@
  *
  * @apiviz.exclude \.codec\.(?!oneone)[a-z0-9]+\.
  */
-package org.jboss.netty.handler.codec.oneone;
+package io.netty.handler.codec.oneone;

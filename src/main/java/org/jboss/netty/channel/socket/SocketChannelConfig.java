@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket;
+package io.netty.channel.socket;
 
 import java.net.Socket;
 
-import org.jboss.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelConfig;
 
 /**
  * A {@link ChannelConfig} for a {@link SocketChannel}.

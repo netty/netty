@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.container.osgi;
+package io.netty.container.osgi;
 
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.logging.OsgiLoggerFactory;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.logging.OsgiLoggerFactory;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 

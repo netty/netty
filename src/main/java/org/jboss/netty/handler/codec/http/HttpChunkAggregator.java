@@ -13,24 +13,24 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.http;
+package io.netty.handler.codec.http;
 
-import static org.jboss.netty.channel.Channels.*;
-import static org.jboss.netty.handler.codec.http.HttpHeaders.*;
+import static io.netty.channel.Channels.*;
+import static io.netty.handler.codec.http.HttpHeaders.*;
 
 import java.util.List;
 import java.util.Map.Entry;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.frame.TooLongFrameException;
-import org.jboss.netty.util.CharsetUtil;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.Channels;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.handler.codec.frame.TooLongFrameException;
+import io.netty.util.CharsetUtil;
 
 /**
  * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
@@ -52,7 +52,7 @@ import org.jboss.netty.util.CharsetUtil;
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
  * @apiviz.landmark
- * @apiviz.has org.jboss.netty.handler.codec.http.HttpChunk oneway - - filters out
+ * @apiviz.has io.netty.handler.codec.http.HttpChunk oneway - - filters out
  */
 public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
 

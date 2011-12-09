@@ -14,14 +14,14 @@
  * under the License.
  */
 
-package org.jboss.netty.channel.socket.http;
+package io.netty.channel.socket.http;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.ChannelFuture;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.ChannelFuture;
 
 /**
  * A mock channel state listener

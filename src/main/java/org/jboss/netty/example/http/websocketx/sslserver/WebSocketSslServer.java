@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.example.http.websocketx.sslserver;
+package io.netty.example.http.websocketx.sslserver;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
@@ -21,8 +21,8 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 /**
  * A HTTP server which serves Web Socket requests at:

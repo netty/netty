@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.codec.compression;
+package io.netty.handler.codec.compression;
 
-import org.jboss.netty.util.internal.jzlib.JZlib;
-import org.jboss.netty.util.internal.jzlib.ZStream;
+import io.netty.util.internal.jzlib.JZlib;
+import io.netty.util.internal.jzlib.ZStream;
 
 /**
  * Utility methods used by {@link ZlibEncoder} and {@link ZlibDecoder}.

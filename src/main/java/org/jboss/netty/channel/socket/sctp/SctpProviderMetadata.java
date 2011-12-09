@@ -13,12 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel.socket.sctp;
+package io.netty.channel.socket.sctp;
 
 import com.sun.nio.sctp.SctpServerChannel;
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.internal.SystemPropertyUtil;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.SystemPropertyUtil;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -46,7 +46,7 @@ class SctpProviderMetadata {
         InternalLoggerFactory.getInstance(SctpProviderMetadata.class);
 
     private static final String CONSTRAINT_LEVEL_PROPERTY =
-        "org.jboss.netty.channel.socket.sctp.constraintLevel";
+        "io.netty.channel.socket.sctp.constraintLevel";
 
     /**
      * 0 - no need to wake up to get / set interestOps (most cases)

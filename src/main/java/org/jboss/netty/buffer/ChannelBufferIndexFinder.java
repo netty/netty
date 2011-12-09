@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.buffer;
+package io.netty.buffer;
 
 
 /**
@@ -28,7 +28,7 @@ package org.jboss.netty.buffer;
  * @author <a href="http://www.jboss.org/netty/">The Netty Project</a>
  * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  *
- * @apiviz.uses org.jboss.netty.buffer.ChannelBuffer
+ * @apiviz.uses io.netty.buffer.ChannelBuffer
  */
 public interface ChannelBufferIndexFinder {
 

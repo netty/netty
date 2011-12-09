@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.handler.timeout;
+package io.netty.handler.timeout;
 
-import org.jboss.netty.channel.Channel;
+import io.netty.channel.Channel;
 
 
 /**

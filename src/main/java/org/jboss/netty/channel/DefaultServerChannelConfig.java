@@ -13,14 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.jboss.netty.channel;
+package io.netty.channel;
 
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.HeapChannelBufferFactory;
-import org.jboss.netty.channel.socket.ServerSocketChannelConfig;
+import io.netty.buffer.ChannelBufferFactory;
+import io.netty.buffer.HeapChannelBufferFactory;
+import io.netty.channel.socket.ServerSocketChannelConfig;
 
 /**
  * The default {@link ServerSocketChannelConfig} implementation.
