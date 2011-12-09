@@ -493,8 +493,8 @@
           <charset>UTF-8</charset>
           <docencoding>UTF-8</docencoding>
           <breakiterator>true</breakiterator>
-          <version>true</version>
-          <author>true</author>
+          <version>false</version>
+          <author>false</author>
           <keywords>true</keywords>
           <overview>${basedir}/src/javadoc/overview.html</overview>
           <doctitle>${project.name} API Reference (${project.version})</doctitle>
