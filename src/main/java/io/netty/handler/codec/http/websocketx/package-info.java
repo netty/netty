@@ -23,7 +23,8 @@
  * <ul>
  * <li><a href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00">draft-ietf-hybi-thewebsocketprotocol-00</a></li>
  * <li><a href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10">draft-ietf-hybi-thewebsocketprotocol-10</a></li>
- * </ul>  
+ * <li><a href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17">draft-ietf-hybi-thewebsocketprotocol-17</a></li>
+ * </ul>
  * </p>
  * <p>
  * In the future, as the specification develops, more versions will be supported.
