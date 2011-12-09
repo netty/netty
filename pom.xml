@@ -59,6 +59,17 @@
     <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
   </scm>
 
+  <developers>
+    <developer>
+      <id>netty.io</id>
+      <name>The Netty Project Contributors</name>
+      <email>netty@googlegroups.com</email>
+      <url>http://netty.io/</url>
+      <organization>The Netty Project</organization>
+      <organizationUrl>http://netty.io/</organizationUrl>
+    </developer>
+  </developers>
+
   <dependencies>
     <!-- Google Protocol Buffers - completely optional -->
     <dependency>
