@@ -489,10 +489,10 @@
         <version>2.8</version>
         <executions>
           <execution>
-            <id>generate-javadoc</id>
+            <id>attach-javadoc</id>
             <phase>package</phase>
             <goals>
-              <goal>javadoc</goal>
+              <goal>jar</goal>
             </goals>
           </execution>
         </executions>
