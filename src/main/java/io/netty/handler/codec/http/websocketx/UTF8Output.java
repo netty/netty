@@ -22,7 +22,7 @@ package io.netty.handler.codec.http.websocketx;
 /**
  * Checks UTF8 bytes for validity before converting it into a string
  */
-public class UTF8Output {
+final class UTF8Output {
     private static final int UTF8_ACCEPT = 0;
     private static final int UTF8_REJECT = 12;
 
@@ -38,7 +38,7 @@ public class UTF8Output {
 
     private final StringBuilder stringBuilder;
 
-    public UTF8Output(byte[] bytes) {
+    UTF8Output(byte[] bytes) {
         stringBuilder = new StringBuilder(bytes.length);
         write(bytes);
     }

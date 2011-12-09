@@ -87,7 +87,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      *            Channel into which we can write our request
      */
     @Override
-    public void beginOpeningHandshake(ChannelHandlerContext ctx, Channel channel) {
+    public void performOpeningHandshake(ChannelHandlerContext ctx, Channel channel) {
         // Make keys
         int spaces1 = createRandomNumber(1, 12);
         int spaces2 = createRandomNumber(1, 12);
@@ -174,7 +174,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * @throws WebSocketHandshakeException
      */
     @Override
-    public void endOpeningHandshake(ChannelHandlerContext ctx, HttpResponse response) throws WebSocketHandshakeException {
+    public void performClosingHandshake(ChannelHandlerContext ctx, HttpResponse response) throws WebSocketHandshakeException {
         final HttpResponseStatus status = new HttpResponseStatus(101, "WebSocket Protocol Handshake");
 
         if (!response.getStatus().equals(status)) {

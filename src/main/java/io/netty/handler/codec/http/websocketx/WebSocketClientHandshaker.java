@@ -119,7 +119,7 @@ public abstract class WebSocketClientHandshaker {
      * @param channel
      *            Channel
      */
-    public abstract void beginOpeningHandshake(ChannelHandlerContext ctx, Channel channel);
+    public abstract void performOpeningHandshake(ChannelHandlerContext ctx, Channel channel);
 
     /**
      * Performs the closing handshake
@@ -129,7 +129,7 @@ public abstract class WebSocketClientHandshaker {
      * @param response
      *            HTTP response containing the closing handshake details
      */
-    public abstract void endOpeningHandshake(ChannelHandlerContext ctx, HttpResponse response) throws WebSocketHandshakeException;
+    public abstract void performClosingHandshake(ChannelHandlerContext ctx, HttpResponse response) throws WebSocketHandshakeException;
 
     /**
      * Performs an MD5 hash

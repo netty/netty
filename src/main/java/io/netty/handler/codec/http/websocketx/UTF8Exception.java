@@ -22,10 +22,10 @@ package io.netty.handler.codec.http.websocketx;
 /**
  * Invalid UTF8 bytes encountered
  */
-public class UTF8Exception extends RuntimeException {
+final class UTF8Exception extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
-    public UTF8Exception(String reason) {
+    UTF8Exception(String reason) {
         super(reason);
     }
 }

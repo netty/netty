@@ -96,7 +96,7 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
      *            Channel into which we can write our request
      */
     @Override
-    public void beginOpeningHandshake(ChannelHandlerContext ctx, Channel channel) {
+    public void performOpeningHandshake(ChannelHandlerContext ctx, Channel channel) {
         // Get path
         URI wsURL = this.getWebSocketURL();
         String path = wsURL.getPath();
@@ -154,7 +154,7 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
      * @throws WebSocketHandshakeException
      */
     @Override
-    public void endOpeningHandshake(ChannelHandlerContext ctx, HttpResponse response) throws WebSocketHandshakeException {
+    public void performClosingHandshake(ChannelHandlerContext ctx, HttpResponse response) throws WebSocketHandshakeException {
         final HttpResponseStatus status = new HttpResponseStatus(101, "Switching Protocols");
 
         if (!response.getStatus().equals(status)) {
