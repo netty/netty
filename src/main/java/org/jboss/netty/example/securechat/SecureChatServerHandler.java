@@ -34,11 +34,6 @@ import org.jboss.netty.handler.ssl.SslHandler;
 
 /**
  * Handles a server-side channel.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2121 $, $Date: 2010-02-02 09:38:07 +0900 (Tue, 02 Feb 2010) $
  */
 public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
 
@@ -111,9 +106,6 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     /**
-     * @author <a href="http://netty.io/">The Netty Project</a>
-     * @author <a href="http://gleamynode.net/">Trustin Lee</a>
-     * @version $Rev: 2121 $, $Date: 2010-02-02 09:38:07 +0900 (Tue, 02 Feb 2010) $
      */
     private static final class Greeter implements ChannelFutureListener {
 

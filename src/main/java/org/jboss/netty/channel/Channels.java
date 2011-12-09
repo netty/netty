@@ -45,13 +45,7 @@ import org.jboss.netty.util.internal.ConversionUtil;
  * event generation methods provided by {@link Channels} rather than calling
  * {@link ChannelHandlerContext#sendUpstream(ChannelEvent)} or
  * {@link ChannelHandlerContext#sendDownstream(ChannelEvent)} by yourself.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @apiviz.landmark
- *
- * @version $Rev: 2210 $, $Date: 2010-03-04 08:11:39 +0900 (Thu, 04 Mar 2010) $
  */
 public class Channels {
 

@@ -51,12 +51,6 @@ import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.QueueFactory;
 
 /**
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2376 $, $Date: 2010-10-25 03:24:20 +0900 (Mon, 25 Oct 2010) $
- *
  */
 class NioWorker implements Runnable {
 

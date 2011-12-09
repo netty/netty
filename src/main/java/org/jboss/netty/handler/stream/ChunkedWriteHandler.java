@@ -67,11 +67,6 @@ import org.jboss.netty.util.internal.QueueFactory;
  * {@link ChunkedInput#nextChunk()}, resulting in the indefinitely suspended
  * transfer.  To resume the transfer when a new chunk is available, you have to
  * call {@link #resumeTransfer()}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2233 $, $Date: 2010-04-06 17:43:49 +0900 (Tue, 06 Apr 2010) $
- *
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.stream.ChunkedInput oneway - - reads from
  */

@@ -76,11 +76,6 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  * closed.  Otherwise, you will end up with a {@link RejectedExecutionException}
  * and the related resources might not be released properly.
  *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2200 $, $Date: 2010-02-23 14:42:39 +0900 (Tue, 23 Feb 2010) $
- *
  * @apiviz.landmark
  */
 public class NioClientSocketChannelFactory implements ClientSocketChannelFactory {

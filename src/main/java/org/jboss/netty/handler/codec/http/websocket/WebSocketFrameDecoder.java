@@ -28,12 +28,6 @@ import org.jboss.netty.handler.codec.replay.VoidEnum;
  * For the detailed instruction on adding add Web Socket support to your HTTP
  * server, take a look into the <tt>WebSocketServer</tt> example located in the
  * {@code org.jboss.netty.example.http.websocket} package.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Mike Heath (mheath@apache.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2342 $, $Date: 2010-07-07 14:07:39 +0900 (Wed, 07 Jul 2010) $
- *
  * @apiviz.landmark
  * @apiviz.uses org.jboss.netty.handler.codec.http.websocket.WebSocketFrame
  */

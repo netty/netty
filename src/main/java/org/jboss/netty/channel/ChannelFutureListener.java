@@ -29,11 +29,6 @@ import java.util.EventListener;
  * in the handler method can cause an unexpected pause during I/O.  If you need
  * to perform a blocking operation on I/O completion, try to execute the
  * operation in a different thread using a thread pool.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2185 $, $Date: 2010-02-19 14:13:48 +0900 (Fri, 19 Feb 2010) $
  */
 public interface ChannelFutureListener extends EventListener {
 

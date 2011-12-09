@@ -19,9 +19,6 @@ import java.lang.ref.SoftReference;
 import java.nio.ByteBuffer;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2198 $, $Date: 2010-02-23 09:56:04 +0900 (Tue, 23 Feb 2010) $
  */
 final class SocketReceiveBufferPool {
 

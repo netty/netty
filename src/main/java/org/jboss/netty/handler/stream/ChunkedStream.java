@@ -29,10 +29,6 @@ import java.io.PushbackInputStream;
  * accurately as possible, rather than using the default implementation.
  * Otherwise, {@link ChunkedStream} will generate many too small chunks or
  * block unnecessarily often.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2236 $, $Date: 2010-04-12 19:22:51 +0900 (Mon, 12 Apr 2010) $
  */
 public class ChunkedStream implements ChunkedInput {
 

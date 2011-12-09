@@ -22,12 +22,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 
 /**
  * The request method of RTSP.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2243 $, $Date: 2010-04-16 14:01:55 +0900 (Fri, 16 Apr 2010) $
- *
  * @apiviz.exclude
  */
 public final class RtspMethods {

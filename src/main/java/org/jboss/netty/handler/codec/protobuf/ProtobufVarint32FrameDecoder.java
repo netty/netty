@@ -37,12 +37,6 @@ import com.google.protobuf.CodedInputStream;
  * </pre>
  *
  * @see com.google.protobuf.CodedInputStream
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Tomasz Blachowicz (tblachowicz@gmail.com)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2323 $, $Date: 2010-06-24 11:13:12 +0900 (Thu, 24 Jun 2010) $
  */
 public class ProtobufVarint32FrameDecoder extends FrameDecoder {
 

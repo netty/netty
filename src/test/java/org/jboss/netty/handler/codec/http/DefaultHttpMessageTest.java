@@ -19,9 +19,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2260 $, $Date: 2010-05-04 10:48:52 +0900 (Tue, 04 May 2010) $
  */
 public class DefaultHttpMessageTest {
 

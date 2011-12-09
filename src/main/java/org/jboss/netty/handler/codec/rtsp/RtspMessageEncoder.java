@@ -26,10 +26,6 @@ import org.jboss.netty.handler.codec.http.HttpMessageEncoder;
  * Encodes an RTSP message represented in {@link HttpMessage} into
  * a {@link ChannelBuffer}.
 
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2243 $, $Date: 2010-04-16 14:01:55 +0900 (Fri, 16 Apr 2010) $
  *
  * @apiviz.landmark
  */

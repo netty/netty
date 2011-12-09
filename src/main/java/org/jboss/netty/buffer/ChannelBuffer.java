@@ -130,8 +130,6 @@ import java.nio.charset.UnsupportedCharsetException;
  *      +-------------------+------------------+------------------+
  *      |                   |                  |                  |
  *      0      <=      readerIndex   <=   writerIndex    <=    capacity
- *
- *
  *  AFTER discardReadBytes()
  *
  *      +------------------+--------------------------------------+
@@ -162,8 +160,6 @@ import java.nio.charset.UnsupportedCharsetException;
  *      +-------------------+------------------+------------------+
  *      |                   |                  |                  |
  *      0      <=      readerIndex   <=   writerIndex    <=    capacity
- *
- *
  *  AFTER clear()
  *
  *      +---------------------------------------------------------+
@@ -228,11 +224,6 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * Please refer to {@link ChannelBufferInputStream} and
  * {@link ChannelBufferOutputStream}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2268 $, $Date: 2010-05-06 16:33:26 +0900 (Thu, 06 May 2010) $
  *
  * @apiviz.landmark
  */
@@ -1339,8 +1330,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * @throws IndexOutOfBoundsException
      *         if {@code src.readableBytes} is greater than
      *            {@code this.writableBytes}
-     *
-     */
+ */
     void writeBytes(ChannelBuffer src);
 
     /**
@@ -1594,8 +1584,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * This method is identical to {@code buf.copy(buf.readerIndex(), buf.readableBytes())}.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
-     *
-     */
+ */
     ChannelBuffer copy();
 
     /**

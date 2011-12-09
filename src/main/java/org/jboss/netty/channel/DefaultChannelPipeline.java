@@ -29,12 +29,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * The default {@link ChannelPipeline} implementation.  It is recommended
  * to use {@link Channels#pipeline()} to create a new {@link ChannelPipeline}
  * instance rather than calling the constructor directly.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2119 $, $Date: 2010-02-01 20:46:09 +0900 (Mon, 01 Feb 2010) $
- *
  */
 public class DefaultChannelPipeline implements ChannelPipeline {
 

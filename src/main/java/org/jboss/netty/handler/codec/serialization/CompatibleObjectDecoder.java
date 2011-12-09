@@ -49,11 +49,6 @@ import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
  *             {@link ObjectEncoderOutputStream}, and
  *             {@link ObjectDecoderInputStream} respectively.  This workaround
  *             requires both a client and a server to be modified.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2188 $, $Date: 2010-02-19 18:00:00 +0900 (Fri, 19 Feb 2010) $
  */
 @Deprecated
 public class CompatibleObjectDecoder extends ReplayingDecoder<CompatibleObjectDecoderState> {

@@ -146,11 +146,6 @@ import org.jboss.netty.util.internal.QueueFactory;
  * <li>Initiate SSL handshake by calling {@link SslHandler#handshake()}.</li>
  * </ol>
  *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2369 $, $Date: 2010-10-19 13:05:28 +0900 (Tue, 19 Oct 2010) $
- *
  * @apiviz.landmark
  * @apiviz.uses org.jboss.netty.handler.ssl.SslBufferPool
  */
@@ -437,8 +432,7 @@ public class SslHandler extends FrameDecoder
      * Enables or disables the automatic handshake once the {@link Channel} is
      * connected. The value will only have affect if its set before the
      * {@link Channel} is connected.
-     * 
-     */
+ */
     public void setIssueHandshake(boolean issueHandshake) {
         this.issueHandshake = issueHandshake;
     }

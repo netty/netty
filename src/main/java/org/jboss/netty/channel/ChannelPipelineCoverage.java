@@ -27,11 +27,6 @@ import org.jboss.netty.channel.ChannelHandler.Sharable;
 /**
  * @deprecated Use the {@link Sharable} annotation instead.
 
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2124 $, $Date: 2010-02-02 11:13:06 +0900 (Tue, 02 Feb 2010) $
- *
  * @apiviz.exclude
  */
 @Inherited

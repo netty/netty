@@ -50,12 +50,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
  * and vice versa.  Please refer to the
  * <a href="package-summary.html#package_description">package summary</a> for
  * the detailed usage.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2119 $, $Date: 2010-02-01 20:46:09 +0900 (Mon, 01 Feb 2010) $
- *
  * @apiviz.landmark
  */
 public class HttpTunnelingServlet extends HttpServlet {

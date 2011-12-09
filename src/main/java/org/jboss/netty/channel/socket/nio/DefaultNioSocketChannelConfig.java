@@ -29,12 +29,6 @@ import org.jboss.netty.util.internal.ConversionUtil;
 
 /**
  * The default {@link NioSocketChannelConfig} implementation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2087 $, $Date: 2010-01-27 00:41:16 +0900 (Wed, 27 Jan 2010) $
- *
  */
 class DefaultNioSocketChannelConfig extends DefaultSocketChannelConfig
         implements NioSocketChannelConfig {

@@ -26,11 +26,6 @@ import org.junit.Test;
 
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2371 $, $Date: 2010-10-19 15:00:42 +0900 (Tue, 19 Oct 2010) $
- *
  */
 public class MapBackedSetTest {
 

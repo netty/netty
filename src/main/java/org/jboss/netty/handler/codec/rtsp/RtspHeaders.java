@@ -20,12 +20,6 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 /**
  * Standard RTSP header names and values.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2243 $, $Date: 2010-04-16 14:01:55 +0900 (Fri, 16 Apr 2010) $
- *
  * @apiviz.exclude
  * @apiviz.stereotype static
  */
@@ -33,12 +27,7 @@ public final class RtspHeaders {
 
     /**
      * Standard RTSP header names.
-     *
-     * @author <a href="http://netty.io/">The Netty Project</a>
-     * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
-     * @author <a href="http://gleamynode.net/">Trustin Lee</a>
-     * @version $Rev: 2243 $, $Date: 2010-04-16 14:01:55 +0900 (Fri, 16 Apr 2010) $
-     */
+ */
     public static final class Names {
         /**
          * {@code "Accept"}
@@ -224,11 +213,7 @@ public final class RtspHeaders {
 
     /**
      * Standard RTSP header values.
-     *
-     * @author <a href="http://netty.io/">The Netty Project</a>
-     * @author <a href="http://gleamynode.net/">Trustin Lee</a>
-     * @version $Rev: 2243 $, $Date: 2010-04-16 14:01:55 +0900 (Fri, 16 Apr 2010) $
-     */
+ */
     public static final class Values {
         /**
          * {@code "append"}

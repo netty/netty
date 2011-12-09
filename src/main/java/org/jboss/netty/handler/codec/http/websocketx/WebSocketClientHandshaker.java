@@ -29,8 +29,6 @@ import org.jboss.netty.util.CharsetUtil;
 
 /**
  * Base class for web socket client handshake implementations
- * 
- * @author <a href="http://www.veebsbraindump.com/">Vibul Imtarnasan</a>
  */
 public abstract class WebSocketClientHandshaker {
 

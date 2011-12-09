@@ -43,12 +43,6 @@ import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 /**
  * Provides an NIO based {@link org.jboss.netty.channel.socket.DatagramChannel}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Daniel Bevenius (dbevenius@jboss.com)
- *
- * @version $Rev: 2202 $, $Date: 2010-02-23 16:18:58 +0900 (Tue, 23 Feb 2010) $
  */
 class NioDatagramChannel extends AbstractChannel
                                 implements org.jboss.netty.channel.socket.DatagramChannel {
@@ -314,8 +308,7 @@ class NioDatagramChannel extends AbstractChannel
 
     /**
      * WriteTask is a simple runnable performs writes by delegating the {@link NioDatagramWorker}.
-     *
-     */
+ */
     private final class WriteTask implements Runnable {
         WriteTask() {
             super();

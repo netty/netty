@@ -164,11 +164,6 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  * }
  * </pre>
  *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2192 $, $Date: 2010-02-19 18:58:38 +0900 (Fri, 19 Feb 2010) $
- *
  * @apiviz.landmark
  * @apiviz.owns org.jboss.netty.channel.ChannelFutureListener - - notifies
  */

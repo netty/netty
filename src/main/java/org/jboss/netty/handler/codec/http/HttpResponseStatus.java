@@ -19,12 +19,6 @@ package org.jboss.netty.handler.codec.http;
  * The response code and its description of HTTP or its derived protocols, such as
  * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
  * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2286 $, $Date: 2010-05-27 21:34:44 +0900 (Thu, 27 May 2010) $
- *
  * @apiviz.exclude
  */
 public class HttpResponseStatus implements Comparable<HttpResponseStatus> {

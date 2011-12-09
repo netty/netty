@@ -44,11 +44,6 @@ import org.jboss.netty.handler.codec.frame.FrameDecoder;
  * pipeline.addLast("customEncoder", new {@link OneToOneEncoder}() { ... });
  * </pre>
  *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev:231 $, $Date:2008-06-12 16:44:50 +0900 (목, 12 6월 2008) $
- *
  * @apiviz.landmark
  */
 public abstract class OneToOneDecoder implements ChannelUpstreamHandler {

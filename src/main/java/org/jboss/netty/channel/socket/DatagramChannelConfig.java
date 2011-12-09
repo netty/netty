@@ -60,11 +60,6 @@ import org.jboss.netty.channel.ReceiveBufferSizePredictorFactory;
  * <td>{@code "trafficClass"}</td><td>{@link #setTrafficClass(int)}</td>
  * </tr>
  * </table>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
  */
 public interface DatagramChannelConfig extends ChannelConfig {
 

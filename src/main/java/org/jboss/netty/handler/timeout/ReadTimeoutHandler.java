@@ -69,11 +69,6 @@ import org.jboss.netty.util.TimerTask;
  * The {@link Timer} which was specified when the {@link ReadTimeoutHandler} is
  * created should be stopped manually by calling {@link #releaseExternalResources()}
  * or {@link Timer#stop()} when your application shuts down.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2222 $, $Date: 2010-03-24 14:07:27 +0900 (Wed, 24 Mar 2010) $
- *
  * @see WriteTimeoutHandler
  * @see IdleStateHandler
  *

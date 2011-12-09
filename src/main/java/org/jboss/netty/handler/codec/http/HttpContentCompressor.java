@@ -26,10 +26,6 @@ import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
  * If there is no matching encoding, no compression is done.  For more
  * information on how this handler modifies the message, please refer to
  * {@link HttpContentEncoder}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2121 $, $Date: 2010-02-02 09:38:07 +0900 (Tue, 02 Feb 2010) $
  */
 public class HttpContentCompressor extends HttpContentEncoder {
 

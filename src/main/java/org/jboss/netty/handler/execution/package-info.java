@@ -22,6 +22,5 @@
  * @apiviz.exclude \.netty\.channel\.
  * @apiviz.exclude \.ExternalResourceReleasable$
  * @apiviz.exclude \.ChannelEventRunnable$
- *
  */
 package org.jboss.netty.handler.execution;

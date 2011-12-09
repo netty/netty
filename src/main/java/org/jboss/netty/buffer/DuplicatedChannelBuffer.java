@@ -28,12 +28,6 @@ import java.nio.channels.ScatteringByteChannel;
  * A derived buffer which simply forwards all data access requests to its
  * parent.  It is recommended to use {@link ChannelBuffer#duplicate()} instead
  * of calling the constructor explicitly.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2206 $, $Date: 2010-03-03 14:35:01 +0900 (Wed, 03 Mar 2010) $
- *
  */
 public class DuplicatedChannelBuffer extends AbstractChannelBuffer implements WrappedChannelBuffer {
 

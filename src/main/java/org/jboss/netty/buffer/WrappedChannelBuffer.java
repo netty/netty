@@ -18,12 +18,6 @@ package org.jboss.netty.buffer;
 /**
  * The common interface for buffer wrappers and derived buffers.  Most users won't
  * need to use this interface.  It is used internally in most cases.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
- *
  */
 public interface WrappedChannelBuffer extends ChannelBuffer {
     /**

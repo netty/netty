@@ -38,11 +38,6 @@ import org.jboss.netty.handler.ssl.SslHandler;
 /**
  * Manipulates the current pipeline dynamically to switch protocols or enable
  * SSL or GZIP.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2129 $, $Date: 2010-02-02 13:31:12 +0900 (Tue, 02 Feb 2010) $
  */
 public class PortUnificationServerHandler extends FrameDecoder {
 

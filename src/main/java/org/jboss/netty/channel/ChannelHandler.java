@@ -203,11 +203,6 @@ import org.jboss.netty.channel.group.ChannelGroup;
  * out what a upstream event and a downstream event are, what fundamental
  * differences they have, and how they flow in a pipeline.
  *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2152 $, $Date: 2010-02-17 17:22:45 +0900 (Wed, 17 Feb 2010) $
- *
  * @apiviz.landmark
  * @apiviz.exclude ^org\.jboss\.netty\.handler\..*$
  */
@@ -224,11 +219,7 @@ public interface ChannelHandler {
      * <p>
      * This annotation is provided for documentation purpose, just like
      * <a href="http://www.javaconcurrencyinpractice.com/annotations/doc/">the JCIP annotations</a>.
-     *
-     * @author <a href="http://netty.io/">The Netty Project</a>
-     * @author <a href="http://gleamynode.net/">Trustin Lee</a>
-     * @version $Rev: 2152 $, $Date: 2010-02-17 17:22:45 +0900 (Wed, 17 Feb 2010) $
-     */
+ */
     @Inherited
     @Documented
     @Target(ElementType.TYPE)

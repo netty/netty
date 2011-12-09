@@ -21,10 +21,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * An {@link Exception} which is thrown when a user calls an unsupported
  * operation on a {@link ChannelBuffer} in a {@link ReplayingDecoder}
  * implementation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
  */
 public class UnreplayableOperationException extends
         UnsupportedOperationException {

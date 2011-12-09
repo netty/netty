@@ -25,11 +25,6 @@ package org.jboss.netty.handler.codec.http;
  * {@link QueryStringEncoder} and {@link QueryStringDecoder}.  {@link Cookie}
  * support is also provided separately via {@link CookieEncoder} and
  * {@link CookieDecoder}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
- *
  * @see HttpResponse
  * @see CookieEncoder
  * @see CookieDecoder

@@ -36,11 +36,6 @@ import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2202 $, $Date: 2010-02-23 16:18:58 +0900 (Tue, 23 Feb 2010) $
- *
  */
 class NioSocketChannel extends AbstractChannel
                                 implements org.jboss.netty.channel.socket.SocketChannel {

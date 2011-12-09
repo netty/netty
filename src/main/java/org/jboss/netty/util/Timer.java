@@ -21,11 +21,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * Schedules {@link TimerTask}s for one-time future execution in a background
  * thread.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
- *
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.util.TimerTask oneway - - executes
  * @apiviz.has org.jboss.netty.util.Timeout oneway - - creates

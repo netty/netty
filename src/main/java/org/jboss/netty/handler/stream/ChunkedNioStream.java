@@ -26,11 +26,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
  * A {@link ChunkedInput} that fetches data from a {@link ReadableByteChannel}
  * chunk by chunk.  Please note that the {@link ReadableByteChannel} must
  * operate in blocking mode.  Non-blocking mode channels are not supported.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author Frederic Bregier
- * @version $Rev: 2236 $, $Date: 2010-04-12 19:22:51 +0900 (Mon, 12 Apr 2010) $
  */
 public class ChunkedNioStream implements ChunkedInput {
 

@@ -129,12 +129,6 @@ import org.jboss.netty.util.internal.QueueFactory;
  * or synchronized {@link WeakHashMap} instead of managing the life cycle of the
  * keys by yourself.
  *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author David M. Lloyd (david.lloyd@redhat.com)
- *
- * @version $Rev: 2308 $, $Date: 2010-06-17 23:23:59 +0900 (Thu, 17 Jun 2010) $
- *
  * @apiviz.landmark
  */
 public class OrderedMemoryAwareThreadPoolExecutor extends

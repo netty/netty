@@ -82,11 +82,6 @@ import org.jboss.netty.util.CharsetUtil;
  * of a new buffer type, generation of hex dump and swapping an integer's
  * byte order.
  *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2269 $, $Date: 2010-05-06 16:37:27 +0900 (Thu, 06 May 2010) $
- *
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.buffer.ChannelBuffer oneway - - creates
  */

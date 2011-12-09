@@ -66,11 +66,6 @@ import java.util.concurrent.locks.LockSupport;
  * <p>This class is a member of the
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Doug Lea
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
  * @param <E> the type of elements held in this collection
  */
 public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
@@ -332,8 +327,6 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
      *    versa) compared to their predecessors receive additional
      *    chained spins, reflecting longer paths typically required to
      *    unblock threads during phase changes.
-     *
-     *
      * ** Unlinking removed interior nodes **
      *
      * In addition to minimizing garbage retention via self-linking

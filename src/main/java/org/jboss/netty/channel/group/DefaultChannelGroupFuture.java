@@ -35,11 +35,6 @@ import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 /**
  * The default {@link ChannelGroupFuture} implementation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2191 $, $Date: 2010-02-19 18:18:10 +0900 (Fri, 19 Feb 2010) $
  */
 public class DefaultChannelGroupFuture implements ChannelGroupFuture {
 

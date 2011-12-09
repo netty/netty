@@ -47,11 +47,6 @@ import org.jboss.netty.util.CharsetUtil;
  * p.addLast("encoder", new {@link HttpResponseEncoder}());
  * p.addLast("handler", new HttpRequestHandler());
  * </pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2370 $, $Date: 2010-10-19 14:40:44 +0900 (Tue, 19 Oct 2010) $
- *
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.handler.codec.http.HttpChunk oneway - - filters out
  */

@@ -23,11 +23,6 @@ package org.jboss.netty.channel;
  * implemented by a transport provider.  Most users will not see this type
  * in their code.
  *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
- *
  * @apiviz.uses org.jboss.netty.channel.ChannelPipeline - - sends events upstream
  */
 public interface ChannelSink {

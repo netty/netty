@@ -22,11 +22,6 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
 
 /**
  * A dummy handler for a testing purpose.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2119 $, $Date: 2010-02-01 20:46:09 +0900 (Mon, 01 Feb 2010) $
  */
 public class DummyHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
 

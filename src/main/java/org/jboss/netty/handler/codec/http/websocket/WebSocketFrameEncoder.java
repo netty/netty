@@ -27,12 +27,6 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * For the detailed instruction on adding add Web Socket support to your HTTP
  * server, take a look into the <tt>WebSocketServer</tt> example located in the
  * {@code org.jboss.netty.example.http.websocket} package.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Mike Heath (mheath@apache.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2362 $, $Date: 2010-09-09 19:59:22 +0900 (Thu, 09 Sep 2010) $
- *
  * @apiviz.landmark
  * @apiviz.uses org.jboss.netty.handler.codec.http.websocket.WebSocketFrame
  */

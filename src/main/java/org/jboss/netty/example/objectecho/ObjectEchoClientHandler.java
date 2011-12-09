@@ -33,11 +33,6 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * Handler implementation for the object echo client.  It initiates the
  * ping-pong traffic between the object echo client and server by sending the
  * first message to the server.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2121 $, $Date: 2010-02-02 09:38:07 +0900 (Tue, 02 Feb 2010) $
  */
 public class ObjectEchoClientHandler extends SimpleChannelUpstreamHandler {
 

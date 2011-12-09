@@ -34,11 +34,6 @@ import org.jboss.netty.channel.ChannelHandlerContext;
  * | ABC | DEF | GHI |
  * +-----+-----+-----+
  * </pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev:231 $, $Date:2008-06-12 16:44:50 +0900 (목, 12 6월 2008) $
  */
 public class FixedLengthFrameDecoder extends FrameDecoder {
 

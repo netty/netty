@@ -23,11 +23,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 /**
  * A skeletal {@link ChannelFuture} implementation which represents a
  * {@link ChannelFuture} which has been completed already.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2192 $, $Date: 2010-02-19 18:58:38 +0900 (Fri, 19 Feb 2010) $
  */
 public abstract class CompleteChannelFuture implements ChannelFuture {
 

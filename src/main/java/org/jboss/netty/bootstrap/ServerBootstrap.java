@@ -153,11 +153,6 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
  * {@link ChannelFactory} to apply different settings for different
  * {@link Channel}s.
  *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2344 $, $Date: 2010-07-07 16:55:37 +0900 (Wed, 07 Jul 2010) $
- *
  * @apiviz.landmark
  */
 public class ServerBootstrap extends Bootstrap {

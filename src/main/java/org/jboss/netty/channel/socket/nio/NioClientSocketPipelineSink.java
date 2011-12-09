@@ -47,12 +47,6 @@ import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.QueueFactory;
 
 /**
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2144 $, $Date: 2010-02-09 12:41:12 +0900 (Tue, 09 Feb 2010) $
- *
  */
 class NioClientSocketPipelineSink extends AbstractChannelSink {
 

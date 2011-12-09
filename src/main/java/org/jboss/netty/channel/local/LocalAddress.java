@@ -27,12 +27,6 @@ import java.net.SocketAddress;
  * An ephemeral address is an anonymous address which is assigned temporarily
  * and is released as soon as the connection is closed.  All ephemeral addresses
  * have the same ID, {@code "ephemeral"}, but they are not equal to each other.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2241 $, $Date: 2010-04-16 13:12:43 +0900 (Fri, 16 Apr 2010) $
- *
  * @apiviz.landmark
  */
 public final class LocalAddress extends SocketAddress implements Comparable<LocalAddress> {

@@ -23,11 +23,6 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
 /**
  * A combination of {@link HttpRequestDecoder} and {@link HttpResponseEncoder}
  * which enables easier server side HTTP implementation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2241 $, $Date: 2010-04-16 13:12:43 +0900 (Fri, 16 Apr 2010) $
- *
  * @see HttpClientCodec
  *
  * @apiviz.has org.jboss.netty.handler.codec.http.HttpRequestDecoder

@@ -31,11 +31,6 @@ import org.jboss.netty.util.internal.DeadLockProofWorker;
  * use {@link Channels#future(Channel)} and {@link Channels#future(Channel, boolean)}
  * to create a new {@link ChannelFuture} rather than calling the constructor
  * explicitly.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2201 $, $Date: 2010-02-23 14:45:53 +0900 (Tue, 23 Feb 2010) $
  */
 public class DefaultChannelFuture implements ChannelFuture {
 

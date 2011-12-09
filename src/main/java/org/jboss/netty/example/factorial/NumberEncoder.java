@@ -27,12 +27,6 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * Encodes a {@link Number} into the binary representation prepended with
  * a magic number ('F' or 0x46) and a 32-bit length prefix.  For example, 42
  * will be encoded to { 'F', 0, 0, 0, 1, 42 }.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2125 $, $Date: 2010-02-02 12:13:15 +0900 (Tue, 02 Feb 2010) $
- *
  */
 public class NumberEncoder extends OneToOneEncoder {
 

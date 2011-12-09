@@ -23,10 +23,6 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
  * Encodes an RTSP response represented in {@link HttpResponse} into
  * a {@link ChannelBuffer}.
 
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://amitbhayani.blogspot.com/">Amit Bhayani</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2117 $, $Date: 2010-02-01 17:28:17 +0900 (Mon, 01 Feb 2010) $
  */
 public class RtspResponseEncoder extends RtspMessageEncoder {
 

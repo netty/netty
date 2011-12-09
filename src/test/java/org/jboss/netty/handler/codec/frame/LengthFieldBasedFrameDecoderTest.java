@@ -24,7 +24,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 /**
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
  */
 public class LengthFieldBasedFrameDecoderTest {
     @Test

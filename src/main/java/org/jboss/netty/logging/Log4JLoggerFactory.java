@@ -21,12 +21,6 @@ package org.jboss.netty.logging;
  * Logger factory which creates an
  * <a href="http://logging.apache.org/log4j/1.2/index.html">Apache Log4J</a>
  * logger.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
- *
  */
 public class Log4JLoggerFactory extends InternalLoggerFactory {
 

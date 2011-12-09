@@ -22,12 +22,6 @@ import org.jboss.netty.util.internal.ConcurrentHashMap;
 
 /**
  * A skeletal {@link Channel} implementation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2339 $, $Date: 2010-07-07 13:36:25 +0900 (Wed, 07 Jul 2010) $
- *
  */
 public abstract class AbstractChannel implements Channel {
 

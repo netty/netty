@@ -29,12 +29,6 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 
 /**
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2341 $, $Date: 2010-07-07 13:44:23 +0900 (Wed, 07 Jul 2010) $
- *
  */
 class OioDatagramWorker implements Runnable {
 

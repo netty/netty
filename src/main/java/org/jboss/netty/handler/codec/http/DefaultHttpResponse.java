@@ -19,11 +19,6 @@ import org.jboss.netty.util.internal.StringUtil;
 
 /**
  * The default {@link HttpResponse} implementation.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2088 $, $Date: 2010-01-27 11:38:17 +0900 (Wed, 27 Jan 2010) $
  */
 public class DefaultHttpResponse extends DefaultHttpMessage implements HttpResponse {
 

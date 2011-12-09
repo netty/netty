@@ -36,13 +36,6 @@ import java.util.Map;
  * assert decoder.getParameters().get("x").equals("1");
  * assert decoder.getParameters().get("y").equals("2");
  * </pre>
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author Andy Taylor (andy.taylor@jboss.org)
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @author <a href="http://tsunanet.net/">Benoit Sigoure</a>
- * @version $Rev: 2302 $, $Date: 2010-06-14 20:07:44 +0900 (Mon, 14 Jun 2010) $
- *
  * @see QueryStringEncoder
  *
  * @apiviz.stereotype utility

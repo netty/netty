@@ -18,9 +18,6 @@ package org.jboss.netty.handler.codec.embedder;
 import java.net.SocketAddress;
 
 /**
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
  */
 class EmbeddedSocketAddress extends SocketAddress {
     private static final long serialVersionUID = 1400788804624980619L;

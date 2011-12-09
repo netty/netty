@@ -73,11 +73,6 @@ import java.net.SocketAddress;
  * </table>
  * <p>
  * To see how an event is interpreted further, please refer to {@link ChannelEvent}.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
  */
 public enum ChannelState {
     /**

@@ -107,11 +107,6 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
  * where it is more convenient to call {@link #await()}. In such a case, please
  * make sure you do not call {@link #await()} in an I/O thread.  Otherwise,
  * {@link IllegalStateException} will be raised to prevent a dead lock.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2122 $, $Date: 2010-02-02 11:00:04 +0900 (Tue, 02 Feb 2010) $
- *
  * @apiviz.owns org.jboss.netty.channel.group.ChannelGroupFutureListener - - notifies
  */
 public interface ChannelGroupFuture extends Iterable<ChannelFuture> {

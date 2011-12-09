@@ -29,10 +29,6 @@ import org.jboss.netty.channel.FileRegion;
  * If your operating system supports
  * <a href="http://en.wikipedia.org/wiki/Zero-copy">zero-copy file transfer</a>
  * such as {@code sendfile()}, you might want to use {@link FileRegion} instead.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- * @version $Rev: 2243 $, $Date: 2010-04-16 14:01:55 +0900 (Fri, 16 Apr 2010) $
  */
 public class ChunkedFile implements ChunkedInput {
 

@@ -20,12 +20,6 @@ import org.jboss.logging.Logger;
 /**
  * <a href="http://anonsvn.jboss.org/repos/common/common-logging-spi/">JBoss Logging</a>
  * logger.
- *
- * @author <a href="http://netty.io/">The Netty Project</a>
- * @author <a href="http://gleamynode.net/">Trustin Lee</a>
- *
- * @version $Rev: 2080 $, $Date: 2010-01-26 18:04:19 +0900 (Tue, 26 Jan 2010) $
- *
  */
 class JBossLogger extends AbstractInternalLogger {
 
