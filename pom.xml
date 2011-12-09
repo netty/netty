@@ -463,11 +463,7 @@
         </executions>
         <configuration>
           <doclet>org.jboss.apiviz.APIviz</doclet>
-          <docletArtifact>
-            <groupId>org.jboss.apiviz</groupId>
-            <artifactId>apiviz</artifactId>
-            <version>1.3.1.GA</version>
-          </docletArtifact>
+	  <docletPath>${basedir}/lib/apiviz-1.3.1.GA.jar</docletPath>
           <attach>false</attach>
           <stylesheetfile>${basedir}/src/javadoc/stylesheet.css</stylesheetfile>
           <javadocDirectory>${basedir}/src/javadoc</javadocDirectory>
