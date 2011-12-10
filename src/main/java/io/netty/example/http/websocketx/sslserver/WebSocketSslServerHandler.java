@@ -92,11 +92,11 @@ public class WebSocketSslServerHandler extends SimpleChannelUpstreamHandler {
 		// Handshake
 		WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
 				this.getWebSocketLocation(req), null, false);
-		this.handshaker = wsFactory.newHandshaker(ctx, req);
+		this.handshaker = wsFactory.newHandshaker(req);
 		if (this.handshaker == null) {
-			wsFactory.sendUnsupportedWebSocketVersionResponse(ctx);
+			wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.getChannel());
 		} else {
-			this.handshaker.performOpeningHandshake(ctx, req);
+			this.handshaker.performOpeningHandshake(ctx.getChannel(), req);
 		}
 	}
 
@@ -104,7 +104,7 @@ public class WebSocketSslServerHandler extends SimpleChannelUpstreamHandler {
 
 		// Check for closing frame
 		if (frame instanceof CloseWebSocketFrame) {
-			this.handshaker.performClosingHandshake(ctx, (CloseWebSocketFrame) frame);
+			this.handshaker.performClosingHandshake(ctx.getChannel(), (CloseWebSocketFrame) frame);
 			return;
 		} else if (frame instanceof PingWebSocketFrame) {
 			ctx.getChannel().write(new PongWebSocketFrame(frame.getBinaryData()));

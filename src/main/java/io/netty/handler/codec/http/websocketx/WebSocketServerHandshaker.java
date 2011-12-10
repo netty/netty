@@ -20,7 +20,7 @@ import java.security.NoSuchAlgorithmException;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.Channel;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.CharsetUtil;
@@ -40,7 +40,7 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * Constructor specifying the destination web socket location
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g
      *            "ws://myhost.com/mypath". Subsequent web socket frames will be
@@ -96,28 +96,28 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * Performs the opening handshake
-     * 
-     * @param ctx
-     *            Context
+     *
+     * @param channel
+     *            Channel
      * @param req
      *            HTTP Request
      * @throws NoSuchAlgorithmException
      */
-    public abstract void performOpeningHandshake(ChannelHandlerContext ctx, HttpRequest req);
+    public abstract void performOpeningHandshake(Channel channel, HttpRequest req);
 
     /**
      * Performs the closing handshake
-     * 
-     * @param ctx
-     *            Context
+     *
+     * @param channel
+     *            Channel
      * @param frame
      *            Closing Frame that was received
      */
-    public abstract void performClosingHandshake(ChannelHandlerContext ctx, CloseWebSocketFrame frame);
+    public abstract void performClosingHandshake(Channel channel, CloseWebSocketFrame frame);
 
     /**
      * Performs an MD5 hash
-     * 
+     *
      * @param bytes
      *            Data to hash
      * @return Hashed data
@@ -133,7 +133,7 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * SHA-1 hashing. Instance this we think it is not thread safe
-     * 
+     *
      * @param bytes
      *            byte to hash
      * @return hashed
@@ -149,7 +149,7 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * Base 64 encoding
-     * 
+     *
      * @param bytes
      *            Bytes to encode
      * @return encoded string
@@ -161,7 +161,7 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * Selects the first matching supported sub protocol
-     * 
+     *
      * @param requestedSubProtocol
      *            CSV of protocols to be supported. e.g. "chat, superchat"
      * @return First matching supported sub protocol. Null if not found.
