@@ -30,6 +30,7 @@ import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.ChannelUpstreamHandler;
 import io.netty.channel.Channels;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.handler.execution.seda.SedaExecutor;
 import io.netty.util.ExternalResourceReleasable;
 import io.netty.util.internal.ExecutorUtil;
 
@@ -93,6 +94,7 @@ import io.netty.util.internal.ExecutorUtil;
  * You can implement an alternative thread model such as
  * <a href="http://en.wikipedia.org/wiki/Staged_event-driven_architecture">SEDA</a>
  * by adding more than one {@link ExecutionHandler} to the pipeline.
+ * Alternative you may want to have a look at {@link SedaExecutor}.
  *
  * <h3>Using other {@link Executor} implementation</h3>
  *
@@ -145,6 +147,17 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
     @Override
     public void handleDownstream(
             ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+        handleReadSuspend(ctx, e);
+        ctx.sendDownstream(e);
+    }
+    
+    /**
+     * Handle suspended reads
+     *  
+     * @param ctx
+     * @param e
+     */
+    protected void handleReadSuspend(ChannelHandlerContext ctx, ChannelEvent e) {
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent cse = (ChannelStateEvent) e;
             if (cse.getState() == ChannelState.INTEREST_OPS &&
@@ -160,7 +173,5 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
                 }
             }
         }
-
-        ctx.sendDownstream(e);
     }
 }
