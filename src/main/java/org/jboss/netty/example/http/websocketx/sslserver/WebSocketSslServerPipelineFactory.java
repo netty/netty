@@ -29,7 +29,6 @@ import org.jboss.netty.handler.ssl.SslHandler;
 /**
  */
 public class WebSocketSslServerPipelineFactory implements ChannelPipelineFactory {
-	@Override
 	public ChannelPipeline getPipeline() throws Exception {
 		// Create a default pipeline implementation.
 		ChannelPipeline pipeline = pipeline();
