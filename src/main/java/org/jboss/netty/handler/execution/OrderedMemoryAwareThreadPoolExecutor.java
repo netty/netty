@@ -286,7 +286,10 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
         ChildExecutor() {
         }
 
-        @Override
+        /*
+         * (non-Javadoc)
+         * @see java.util.concurrent.Executor#execute(java.lang.Runnable)
+         */
         public void execute(Runnable command) {
             // TODO: What todo if the add return false ?
             tasks.add(command);
@@ -297,7 +300,10 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
             }
         }
 
-        @Override
+        /*
+         * (non-Javadoc)
+         * @see java.lang.Runnable#run()
+         */
         public void run() {
             // check if its already running by using CAS. If so just return here. So in the worst case the thread
             // is executed and do nothing

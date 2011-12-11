@@ -15,7 +15,6 @@
  */
 package org.jboss.netty.channel.socket.nio;
 
-import static org.jboss.netty.channel.Channels.fireChannelBound;
 import static org.jboss.netty.channel.Channels.fireChannelOpen;
 
 import java.nio.channels.SocketChannel;

@@ -200,7 +200,10 @@ public class SslHandler extends FrameDecoder
     
     private static final ChannelFutureListener HANDSHAKE_LISTENER = new ChannelFutureListener() {
 
-        @Override
+        /*
+         * (non-Javadoc)
+         * @see org.jboss.netty.channel.ChannelFutureListener#operationComplete(org.jboss.netty.channel.ChannelFuture)
+         */
         public void operationComplete(ChannelFuture future) throws Exception {
             if (!future.isSuccess()) {
                 Channels.fireExceptionCaught(future.getChannel(), future.getCause());

@@ -249,7 +249,6 @@ class NioDatagramChannel extends AbstractChannel
          * This method first delegates to {@link LinkedTransferQueue#offer(Object)} and
          * adds support for keeping track of the size of the this write buffer.
          */
-        @Override
         public boolean offer(MessageEvent e) {
             boolean success = queue.offer(e);
             assert success;
@@ -275,7 +274,6 @@ class NioDatagramChannel extends AbstractChannel
          * This method first delegates to {@link LinkedTransferQueue#poll()} and
          * adds support for keeping track of the size of the this writebuffers queue.
          */
-        @Override
         public MessageEvent poll() {
             MessageEvent e = queue.poll();
             if (e != null) {
