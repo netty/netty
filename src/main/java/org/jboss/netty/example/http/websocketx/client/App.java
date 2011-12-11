@@ -55,8 +55,9 @@ public class App {
 		MyCallbackHandler callbackHandler = new MyCallbackHandler();
 		WebSocketClientFactory factory = new WebSocketClientFactory();
 
-		// Connect with spec version 17 (try changing it to V10 or V00 and it will
-		// still work ... fingers crossed ;-)
+		// Connect with spec version 17. You can change it to V10 or V00.
+		// If you change it to V00, ping is not supported and remember to change HttpResponseDecoder to
+		// WebSocketHttpResponseDecoder in the pipeline.
 		WebSocketClient client = factory.newClient(new URI("ws://localhost:8080/websocket"),
 				WebSocketSpecificationVersion.V17, callbackHandler);
 
@@ -96,19 +97,16 @@ public class App {
 		public MyCallbackHandler() {
 		}
 
-		@Override
 		public void onConnect(WebSocketClient client) {
 			System.out.println("WebSocket Client connected!");
 			connected = true;
 		}
 
-		@Override
 		public void onDisconnect(WebSocketClient client) {
 			System.out.println("WebSocket Client disconnected!");
 			connected = false;
 		}
 
-		@Override
 		public void onMessage(WebSocketClient client, WebSocketFrame frame) {
 			if (frame instanceof TextWebSocketFrame) {
 				TextWebSocketFrame textFrame = (TextWebSocketFrame) frame;
@@ -121,7 +119,6 @@ public class App {
 			}
 		}
 
-		@Override
 		public void onError(Throwable t) {
 			System.out.println("WebSocket Client error " + t.toString());
 		}
