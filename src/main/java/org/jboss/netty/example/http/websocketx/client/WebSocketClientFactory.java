@@ -28,6 +28,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
+import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketSpecificationVersion;
 
 import java.net.URI;
@@ -71,7 +72,11 @@ public class WebSocketClientFactory {
 
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline pipeline = Channels.pipeline();
-                pipeline.addLast("decoder", new WebSocketHttpResponseDecoder());
+                
+                // If you wish to support HyBi V00, you need to use WebSocketHttpResponseDecoder instead for
+                // HttpResponseDecoder.                
+                pipeline.addLast("decoder", new HttpResponseDecoder());
+                
                 pipeline.addLast("encoder", new HttpRequestEncoder());
                 pipeline.addLast("ws-handler", clientHandler);
                 return pipeline;
