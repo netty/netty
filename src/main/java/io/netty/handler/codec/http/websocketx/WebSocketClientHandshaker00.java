@@ -21,13 +21,14 @@ import java.util.Arrays;
 
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
@@ -81,13 +82,11 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * ^n:ds[4U
      * </pre>
      * 
-     * @param ctx
-     *            Channel context
      * @param channel
      *            Channel into which we can write our request
      */
     @Override
-    public void performOpeningHandshake(ChannelHandlerContext ctx, Channel channel) {
+    public void performOpeningHandshake(Channel channel) {
         // Make keys
         int spaces1 = createRandomNumber(1, 12);
         int spaces2 = createRandomNumber(1, 12);
@@ -147,7 +146,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
         channel.write(request);
 
-        ctx.getPipeline().replace("encoder", "ws-encoder", new WebSocket00FrameEncoder());
+        channel.getPipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket00FrameEncoder());
     }
 
     /**
@@ -166,15 +165,15 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * 8jKS'y:G*Co,Wxa-
      * </pre>
      * 
-     * @param ctx
-     *            Channel context
+     * @param channel
+     *            Channel
      * @param response
      *            HTTP response returned from the server for the request sent by
      *            beginOpeningHandshake00().
      * @throws WebSocketHandshakeException
      */
     @Override
-    public void performClosingHandshake(ChannelHandlerContext ctx, HttpResponse response) throws WebSocketHandshakeException {
+    public void performClosingHandshake(Channel channel, HttpResponse response) throws WebSocketHandshakeException {
         final HttpResponseStatus status = new HttpResponseStatus(101, "WebSocket Protocol Handshake");
 
         if (!response.getStatus().equals(status)) {
@@ -199,7 +198,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         String protocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
         this.setSubProtocolResponse(protocol);
 
-        ctx.getPipeline().replace("decoder", "ws-decoder", new WebSocket00FrameDecoder());
+        channel.getPipeline().replace(HttpResponseDecoder.class, "ws-decoder", new WebSocket00FrameDecoder());
 
         this.setOpenningHandshakeCompleted(true);
     }

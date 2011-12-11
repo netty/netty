@@ -28,6 +28,7 @@ import io.netty.channel.ChannelPipelineFactory;
 import io.netty.channel.Channels;
 import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.websocketx.WebSocketSpecificationVersion;
 
 import java.net.URI;
@@ -45,7 +46,7 @@ public class WebSocketClientFactory {
             Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 
     /**
-     * Create a new WebSocket client
+     * Create a new WebSocket client.
      * 
      * @param url
      *            URL to connect to.
@@ -72,7 +73,11 @@ public class WebSocketClientFactory {
             @Override
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline pipeline = Channels.pipeline();
-                pipeline.addLast("decoder", new WebSocketHttpResponseDecoder());
+                
+                // If you wish to support HyBi V00, you need to use WebSocketHttpResponseDecoder instead for
+                // HttpResponseDecoder.
+                pipeline.addLast("decoder", new HttpResponseDecoder());
+                                
                 pipeline.addLast("encoder", new HttpRequestEncoder());
                 pipeline.addLast("ws-handler", clientHandler);
                 return pipeline;

@@ -22,7 +22,6 @@ import java.security.NoSuchAlgorithmException;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.CharsetUtil;
@@ -114,22 +113,20 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Performs the opening handshake
      * 
-     * @param ctx
-     *            Channel context
      * @param channel
      *            Channel
      */
-    public abstract void performOpeningHandshake(ChannelHandlerContext ctx, Channel channel);
+    public abstract void performOpeningHandshake(Channel channel);
 
     /**
      * Performs the closing handshake
      * 
-     * @param ctx
-     *            Channel context
+     * @param channel
+     *            Channel
      * @param response
      *            HTTP response containing the closing handshake details
      */
-    public abstract void performClosingHandshake(ChannelHandlerContext ctx, HttpResponse response) throws WebSocketHandshakeException;
+    public abstract void performClosingHandshake(Channel channel, HttpResponse response) throws WebSocketHandshakeException;
 
     /**
      * Performs an MD5 hash
