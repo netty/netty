@@ -24,9 +24,12 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.http.HttpChunkAggregator;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.logging.InternalLogger;
@@ -143,9 +146,9 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
 
         // Upgrade the connection and send the handshake response.
         ChannelPipeline p = channel.getPipeline();
-        p.remove("aggregator");
-        p.replace("decoder", "wsdecoder", new WebSocket08FrameDecoder(true, this.allowExtensions));
-        p.replace("encoder", "wsencoder", new WebSocket08FrameEncoder(false));
+        p.remove(HttpChunkAggregator.class);
+        p.replace(HttpRequestDecoder.class, "wsdecoder", new WebSocket08FrameDecoder(true, this.allowExtensions));
+        p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket08FrameEncoder(false));
 
     }
 
