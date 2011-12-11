@@ -286,8 +286,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             if (!sameName) {
                 name2ctx.remove(ctx.getName());
-                name2ctx.put(newName, newCtx);
             }
+            name2ctx.put(newName, newCtx);
 
             ChannelHandlerLifeCycleException removeException = null;
             ChannelHandlerLifeCycleException addException = null;
