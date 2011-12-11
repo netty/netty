@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.Channel;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
@@ -36,7 +36,7 @@ public class WebSocketServerHandshakerFactory {
 
 	/**
 	 * Constructor specifying the destination web socket location
-	 * 
+	 *
 	 * @param webSocketURL
 	 *            URL for web socket communications. e.g
 	 *            "ws://myhost.com/mypath". Subsequent web socket frames will be
@@ -56,11 +56,11 @@ public class WebSocketServerHandshakerFactory {
 
 	/**
 	 * Instances a new handshaker
-	 * 
+	 *
 	 * @return A new WebSocketServerHandshaker for the requested web socket
 	 *         version. Null if web socket version is not supported.
 	 */
-	public WebSocketServerHandshaker newHandshaker(ChannelHandlerContext ctx, HttpRequest req) {
+	public WebSocketServerHandshaker newHandshaker(HttpRequest req) {
 
 		String version = req.getHeader(Names.SEC_WEBSOCKET_VERSION);
 		if (version != null) {
@@ -83,16 +83,16 @@ public class WebSocketServerHandshakerFactory {
 
 	/**
 	 * Return that we need cannot not support the web socket version
-	 * 
-	 * @param ctx
-	 *            Context
+	 *
+	 * @param channel
+	 *            Channel
 	 */
-	public void sendUnsupportedWebSocketVersionResponse(ChannelHandlerContext ctx) {
+	public void sendUnsupportedWebSocketVersionResponse(Channel channel) {
 		HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, new HttpResponseStatus(101,
 				"Switching Protocols"));
 		res.setStatus(HttpResponseStatus.UPGRADE_REQUIRED);
 		res.setHeader(Names.SEC_WEBSOCKET_VERSION, "13");
-		ctx.getChannel().write(res);
+		channel.write(res);
 	}
 
 }

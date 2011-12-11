@@ -20,13 +20,16 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 import java.security.NoSuchAlgorithmException;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.http.HttpChunkAggregator;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.logging.InternalLogger;
@@ -51,7 +54,7 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
 
     /**
      * Constructor specifying the destination web socket location
-     * 
+     *
      * @param webSocketURL
      *            URL for web socket communications. e.g
      *            "ws://myhost.com/mypath". Subsequent web socket frames will be
@@ -73,11 +76,11 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
      * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08">HyBi
      * version 8 to 10</a>. Version 8, 9 and 10 share the same wire protocol.
      * </p>
-     * 
+     *
      * <p>
      * Browser request to the server:
      * </p>
-     * 
+     *
      * <pre>
      * GET /chat HTTP/1.1
      * Host: server.example.com
@@ -88,11 +91,11 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 8
      * </pre>
-     * 
+     *
      * <p>
      * Server response:
      * </p>
-     * 
+     *
      * <pre>
      * HTTP/1.1 101 Switching Protocols
      * Upgrade: websocket
@@ -100,18 +103,18 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
      * Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
      * Sec-WebSocket-Protocol: chat
      * </pre>
-     * 
-     * @param ctx
-     *            Channel context
+     *
+     * @param channel
+     *            Channel
      * @param req
      *            HTTP request
      * @throws NoSuchAlgorithmException
      */
     @Override
-    public void performOpeningHandshake(ChannelHandlerContext ctx, HttpRequest req) {
+    public void performOpeningHandshake(Channel channel, HttpRequest req) {
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s web socket spec version 10 handshake", ctx.getChannel().getId()));
+            logger.debug(String.format("Channel %s web socket spec version 10 handshake", channel.getId()));
         }
 
         HttpResponse res = new DefaultHttpResponse(HTTP_1_1, new HttpResponseStatus(101, "Switching Protocols"));
@@ -139,27 +142,27 @@ public class WebSocketServerHandshaker10 extends WebSocketServerHandshaker {
             res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, this.selectSubProtocol(protocol));
         }
 
-        ctx.getChannel().write(res);
+        channel.write(res);
 
         // Upgrade the connection and send the handshake response.
-        ChannelPipeline p = ctx.getChannel().getPipeline();
-        p.remove("aggregator");
-        p.replace("decoder", "wsdecoder", new WebSocket08FrameDecoder(true, this.allowExtensions));
-        p.replace("encoder", "wsencoder", new WebSocket08FrameEncoder(false));
+        ChannelPipeline p = channel.getPipeline();
+        p.remove(HttpChunkAggregator.class);
+        p.replace(HttpRequestDecoder.class, "wsdecoder", new WebSocket08FrameDecoder(true, this.allowExtensions));
+        p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket08FrameEncoder(false));
 
     }
 
     /**
      * Echo back the closing frame and close the connection
-     * 
-     * @param ctx
-     *            Channel context
+     *
+     * @param channel
+     *            Channel
      * @param frame
      *            Web Socket frame that was received
      */
     @Override
-    public void performClosingHandshake(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
-        ChannelFuture f = ctx.getChannel().write(frame);
+    public void performClosingHandshake(Channel channel, CloseWebSocketFrame frame) {
+        ChannelFuture f = channel.write(frame);
         f.addListener(ChannelFutureListener.CLOSE);
     }
 
