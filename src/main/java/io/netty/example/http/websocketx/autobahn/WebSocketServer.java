@@ -47,6 +47,6 @@ public class WebSocketServer {
 		// Bind and start to accept incoming connections.
 		bootstrap.bind(new InetSocketAddress(9000));
 		
-		System.out.println("Web Socket Server started on 9000. Open your browser and navigate to http://localhost:9000/");
+		System.out.println("Web Socket Server started on localhost:9000.");
 	}
 }

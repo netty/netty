@@ -55,8 +55,9 @@ public class App {
 		MyCallbackHandler callbackHandler = new MyCallbackHandler();
 		WebSocketClientFactory factory = new WebSocketClientFactory();
 
-		// Connect with spec version 17 (try changing it to V10 or V00 and it will
-		// still work ... fingers crossed ;-)
+		// Connect with spec version 17. You can change it to V10 or V00.
+		// If you change it to V00, ping is not supported and remember to change HttpResponseDecoder to
+		// WebSocketHttpResponseDecoder in the pipeline.
 		WebSocketClient client = factory.newClient(new URI("ws://localhost:8080/websocket"),
 				WebSocketSpecificationVersion.V17, callbackHandler);
 
@@ -72,7 +73,7 @@ public class App {
 		}
 		Thread.sleep(1000);
 
-		// Ping
+		// Ping - only supported for V10 and up.
     	System.out.println("WebSocket Client sending ping");
 		client.send(new PingWebSocketFrame(ChannelBuffers.copiedBuffer(new byte[] { 1, 2, 3, 4, 5, 6 })));
 		Thread.sleep(1000);

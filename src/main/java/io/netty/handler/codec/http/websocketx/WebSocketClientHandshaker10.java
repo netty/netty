@@ -18,13 +18,14 @@ package io.netty.handler.codec.http.websocketx;
 import java.net.URI;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.logging.InternalLogger;
@@ -90,13 +91,11 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Version: 8
      * </pre>
      * 
-     * @param ctx
-     *            Channel context
      * @param channel
      *            Channel into which we can write our request
      */
     @Override
-    public void performOpeningHandshake(ChannelHandlerContext ctx, Channel channel) {
+    public void performOpeningHandshake(Channel channel) {
         // Get path
         URI wsURL = this.getWebSocketURL();
         String path = wsURL.getPath();
@@ -130,7 +129,7 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
 
         channel.write(request);
 
-        ctx.getPipeline().replace("encoder", "ws-encoder", new WebSocket08FrameEncoder(true));
+        channel.getPipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket08FrameEncoder(true));
     }
 
     /**
@@ -146,15 +145,15 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
      * Sec-WebSocket-Protocol: chat
      * </pre>
      * 
-     * @param ctx
-     *            Channel context
+     * @param channel
+     *            Channel
      * @param response
      *            HTTP response returned from the server for the request sent by
      *            beginOpeningHandshake00().
      * @throws WebSocketHandshakeException
      */
     @Override
-    public void performClosingHandshake(ChannelHandlerContext ctx, HttpResponse response) throws WebSocketHandshakeException {
+    public void performClosingHandshake(Channel channel, HttpResponse response) throws WebSocketHandshakeException {
         final HttpResponseStatus status = new HttpResponseStatus(101, "Switching Protocols");
 
         if (!response.getStatus().equals(status)) {
@@ -176,7 +175,7 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
             throw new WebSocketHandshakeException(String.format("Invalid challenge. Actual: %s. Expected: %s", accept, this.expectedChallengeResponseString));
         }
 
-        ctx.getPipeline().replace("decoder", "ws-decoder", new WebSocket08FrameDecoder(false, this.allowExtensions));
+        channel.getPipeline().replace(HttpResponseDecoder.class, "ws-decoder", new WebSocket08FrameDecoder(false, this.allowExtensions));
 
         this.setOpenningHandshakeCompleted(true);
     }
