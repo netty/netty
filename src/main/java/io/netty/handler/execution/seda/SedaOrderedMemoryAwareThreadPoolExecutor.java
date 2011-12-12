@@ -30,18 +30,34 @@ import io.netty.util.ObjectSizeEstimator;
  */
 public class SedaOrderedMemoryAwareThreadPoolExecutor extends OrderedMemoryAwareThreadPoolExecutor{
 
+    /**
+     * 
+     * @see OrderedMemoryAwareThreadPoolExecutor#OrderedMemoryAwareThreadPoolExecutor(int, long, long, long, TimeUnit, ObjectSizeEstimator, ThreadFactory)
+     */
     public SedaOrderedMemoryAwareThreadPoolExecutor(int corePoolSize, long maxChannelMemorySize, long maxTotalMemorySize, long keepAliveTime, TimeUnit unit, ObjectSizeEstimator objectSizeEstimator, ThreadFactory threadFactory) {
         super(corePoolSize, maxChannelMemorySize, maxTotalMemorySize, keepAliveTime, unit, objectSizeEstimator, threadFactory);
     }
 
+    /**
+     * 
+     * @see OrderedMemoryAwareThreadPoolExecutor#OrderedMemoryAwareThreadPoolExecutor(int, long, long, long, TimeUnit, ThreadFactory)
+     */
     public SedaOrderedMemoryAwareThreadPoolExecutor(int corePoolSize, long maxChannelMemorySize, long maxTotalMemorySize, long keepAliveTime, TimeUnit unit, ThreadFactory threadFactory) {
         super(corePoolSize, maxChannelMemorySize, maxTotalMemorySize, keepAliveTime, unit, threadFactory);
     }
 
+    /**
+     * 
+     * @see OrderedMemoryAwareThreadPoolExecutor#OrderedMemoryAwareThreadPoolExecutor(int, long, long, long, TimeUnit)
+     */
     public SedaOrderedMemoryAwareThreadPoolExecutor(int corePoolSize, long maxChannelMemorySize, long maxTotalMemorySize, long keepAliveTime, TimeUnit unit) {
         super(corePoolSize, maxChannelMemorySize, maxTotalMemorySize, keepAliveTime, unit);
     }
 
+    /**
+     * 
+     * @see OrderedMemoryAwareThreadPoolExecutor#OrderedMemoryAwareThreadPoolExecutor(int, long, long)
+     */
     public SedaOrderedMemoryAwareThreadPoolExecutor(int corePoolSize, long maxChannelMemorySize, long maxTotalMemorySize) {
         super(corePoolSize, maxChannelMemorySize, maxTotalMemorySize);
     }

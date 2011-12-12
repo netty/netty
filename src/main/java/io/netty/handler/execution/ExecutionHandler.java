@@ -147,8 +147,10 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
     @Override
     public void handleDownstream(
             ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        handleReadSuspend(ctx, e);
-        ctx.sendDownstream(e);
+        // check if the read was suspend
+        if (!handleReadSuspend(ctx, e)) {
+            ctx.sendDownstream(e);
+        }
     }
     
     /**
@@ -157,7 +159,7 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
      * @param ctx
      * @param e
      */
-    protected void handleReadSuspend(ChannelHandlerContext ctx, ChannelEvent e) {
+    protected boolean handleReadSuspend(ChannelHandlerContext ctx, ChannelEvent e) {
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent cse = (ChannelStateEvent) e;
             if (cse.getState() == ChannelState.INTEREST_OPS &&
@@ -169,9 +171,10 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
                     // Drop the request silently if MemoryAwareThreadPool has
                     // set the flag.
                     e.getFuture().setSuccess();
-                    return;
+                    return true;
                 }
             }
         }
+        return false;
     }
 }

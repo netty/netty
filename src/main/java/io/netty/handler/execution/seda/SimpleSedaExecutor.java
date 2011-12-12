@@ -23,7 +23,7 @@ import io.netty.util.internal.ExecutorUtil;
 /**
  * {@link SedaExecutor} which use two different {@link Executor}'s. One is used for upstream events and one for downstream events.
  * 
- * You should use an {@link SedaOrderedMemoryAwareThreadPoolExecutor} if you care about the order of thread-execution. In most cases this should be the case
+ * You should use a {@link SedaOrderedMemoryAwareThreadPoolExecutor} if you care about the order of thread-execution. In most cases this should be the case
  * 
  * 
  *
@@ -34,7 +34,7 @@ public class SimpleSedaExecutor extends SedaExecutor{
     private final Executor downstreamExecutor;
 
     /**
-     * Constrct an {@link SimpleSedaExecutor} which use two different {@link Executor}'s. One is used for upstream events and one for downstream events.
+     * Construct an {@link SimpleSedaExecutor} which use two different {@link Executor}'s. One is used for upstream events and one for downstream events.
      * 
      * @param upstreamExecutor the {@link Executor} which is used for upstream events
      * @param downstreamExecutor the {@link Executor} which is used for downstream events

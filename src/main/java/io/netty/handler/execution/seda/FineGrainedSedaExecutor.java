@@ -39,10 +39,22 @@ import io.netty.handler.execution.ChannelEventRunnable;
  */
 public abstract class FineGrainedSedaExecutor extends SimpleSedaExecutor{
 
+    /**
+     * Create a new {@link FineGrainedSedaExecutor} which use the two given {@link Executor}'s as default. One is used for upstream events and one for downstream events.
+     * 
+     * @param upstreamExecutor   use the given {@link Executor} as default for downstream events
+     * @param downstreamExecutor use the given {@link Executor} as default for upstream events
+     */
     public FineGrainedSedaExecutor(Executor upstreamExecutor, Executor downstreamExecutor) {
         super(upstreamExecutor, downstreamExecutor);
     }
 
+    /**
+     * Create a new {@link FineGrainedSedaExecutor} which used the given {@link Executor} as default for upstream and downstream events
+     * 
+     * @param executor use the given {@link Executor} as default for upstream and downstream events
+     * 
+     */
     public FineGrainedSedaExecutor(Executor executor) {
         super(executor);
     }

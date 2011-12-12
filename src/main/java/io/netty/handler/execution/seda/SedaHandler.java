@@ -29,14 +29,25 @@ import io.netty.handler.execution.ExecutionHandler;
  */
 public class SedaHandler extends ExecutionHandler {
 
+    /**
+     * Create a new {@link SedaHandler} which uses the given {@link SedaExecutor}
+     * 
+     * @param executor the {@link SedaExecutor} to hand off tasks
+     */
     public SedaHandler(SedaExecutor executor) {
         super(executor);
     }
 
+    /**
+     * Hand the event to the {@link Executor}
+     */
     @Override
     public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        handleReadSuspend(ctx, e);
-        getExecutor().execute(new ChannelDownstreamEventRunnable(ctx, e));
+
+        // check if the read was suspend
+        if (!handleReadSuspend(ctx, e)) {
+            getExecutor().execute(new ChannelDownstreamEventRunnable(ctx, e));
+        }
     }
 
     @Override
