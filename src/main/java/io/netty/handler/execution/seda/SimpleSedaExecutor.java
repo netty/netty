@@ -18,13 +18,13 @@ package io.netty.handler.execution.seda;
 import java.util.concurrent.Executor;
 
 import io.netty.handler.execution.ChannelEventRunnable;
-import io.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import io.netty.util.internal.ExecutorUtil;
 
 /**
  * {@link SedaExecutor} which use two different {@link Executor}'s. One is used for upstream events and one for downstream events.
  * 
- * You should use an {@link OrderedMemoryAwareThreadPoolExecutor} if you care about the order of thread-execution. In most cases this should be the case
+ * You should use an {@link SedaOrderedMemoryAwareThreadPoolExecutor} if you care about the order of thread-execution. In most cases this should be the case
+ * 
  * 
  *
  */
