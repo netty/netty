@@ -290,6 +290,11 @@
           <optimize>true</optimize>
           <showDeprecation>true</showDeprecation>
           <showWarnings>true</showWarnings>
+          <excludes>
+            <!-- Exclude sctp from build for now -->
+            <!-- See: https://github.com/netty/netty/issues/120 -->
+            <exclude>**/sctp/*.java</exclude>
+          </excludes>
         </configuration>
       </plugin>
       <plugin>
