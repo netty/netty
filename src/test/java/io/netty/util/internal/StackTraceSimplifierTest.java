@@ -16,7 +16,6 @@
 package io.netty.util.internal;
 
 import static org.easymock.EasyMock.*;
-import static org.easymock.classextension.EasyMock.*;
 import static org.junit.Assert.*;
 
 import io.netty.buffer.ChannelBuffer;

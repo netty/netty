@@ -84,15 +84,12 @@ public class NettyTestUtils {
             return false;
         }
 
-        int position = 0;
         while (expected.readable()) {
             byte expectedByte = expected.readByte();
             byte actualByte = actual.readByte();
             if (expectedByte != actualByte) {
                 return false;
             }
-
-            position ++;
         }
 
         return true;
