@@ -24,6 +24,8 @@ package io.netty.example.http.websocketx.client;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 
 import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.Channel;
@@ -54,7 +56,8 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler impleme
     private Channel channel;
     private WebSocketClientHandshaker handshaker = null;
     private final WebSocketSpecificationVersion version;
-
+    private Map<String,String> customHeaders = null;
+    
     public WebSocketClientHandler(ClientBootstrap bootstrap, URI url, WebSocketSpecificationVersion version, WebSocketCallback callback) {
         this.bootstrap = bootstrap;
         this.url = url;
@@ -65,7 +68,7 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler impleme
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         channel = e.getChannel();
-        this.handshaker = new WebSocketClientHandshakerFactory().newHandshaker(url, version, null, false);
+        this.handshaker = new WebSocketClientHandshakerFactory().newHandshaker(url, version, null, false, customHeaders);
         handshaker.performOpeningHandshake(channel);
     }
 
@@ -120,5 +123,12 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler impleme
 
     public void setUrl(URI url) {
         this.url = url;
+    }
+
+    public void addCustomHeader(String header, String value){
+    	if(customHeaders == null){
+    		customHeaders = new HashMap<String,String>();
+    	}
+    	customHeaders.put(header, value);
     }
 }

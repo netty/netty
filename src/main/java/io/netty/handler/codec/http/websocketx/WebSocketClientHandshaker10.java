@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import java.net.URI;
+import java.util.Map;
 
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -68,9 +69,11 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
      * @param allowExtensions
      *            Allow extensions to be used in the reserved bits of the web
      *            socket frame
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
      */
-    public WebSocketClientHandshaker10(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol, boolean allowExtensions) {
-        super(webSocketURL, version, subProtocol);
+    public WebSocketClientHandshaker10(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol, boolean allowExtensions, Map<String,String> customHeaders) {
+        super(webSocketURL, version, subProtocol, customHeaders);
         this.allowExtensions = allowExtensions;
     }
 
@@ -127,6 +130,12 @@ public class WebSocketClientHandshaker10 extends WebSocketClientHandshaker {
         }
         request.addHeader(Names.SEC_WEBSOCKET_VERSION, "8");
 
+        if(customHeaders != null){
+        	for(String header: customHeaders.keySet()){
+        		request.addHeader(header, customHeaders.get(header));
+        	}
+        }
+        
         channel.write(request);
 
         channel.getPipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket08FrameEncoder(true));

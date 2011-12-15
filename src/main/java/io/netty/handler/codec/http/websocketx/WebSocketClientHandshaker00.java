@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.websocketx;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Map;
 
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
@@ -60,9 +61,12 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      *            server
      * @param subProtocol
      *            Sub protocol request sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
      */
-    public WebSocketClientHandshaker00(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol) {
-        super(webSocketURL, version, subProtocol);
+    public WebSocketClientHandshaker00(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol, Map<String,String> customHeaders) {
+        super(webSocketURL, version, subProtocol, customHeaders);
+        
     }
 
     /**
@@ -142,6 +146,13 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         if (this.getSubProtocolRequest() != null && !this.getSubProtocolRequest().equals("")) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, this.getSubProtocolRequest());
         }
+
+        if(customHeaders != null){
+        	for(String header: customHeaders.keySet()){
+        		request.addHeader(header, customHeaders.get(header));
+        	}
+        }
+        
         request.setContent(ChannelBuffers.copiedBuffer(key3));
 
         channel.write(request);
