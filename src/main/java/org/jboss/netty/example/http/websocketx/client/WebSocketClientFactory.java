@@ -38,8 +38,8 @@ import java.util.concurrent.Executors;
 /**
  * Copied from https://github.com/cgbystrom/netty-tools
  * 
- * A factory for creating WebSocket clients. The entry point for creating and
- * connecting a client. Can and should be used to create multiple instances.
+ * A factory for creating WebSocket clients. The entry point for creating and connecting a client. Can and should be
+ * used to create multiple instances.
  */
 public class WebSocketClientFactory {
 
@@ -57,8 +57,7 @@ public class WebSocketClientFactory {
 	 *            Callback interface to receive events
 	 * @param customHeaders
 	 *            Map of custom headers to add to the client request
-	 * @return A WebSocket client. Call {@link WebSocketClient#connect()} to
-	 *         connect.
+	 * @return A WebSocket client. Call {@link WebSocketClient#connect()} to connect.
 	 */
 	public WebSocketClient newClient(final URI url, final WebSocketVersion version, final WebSocketCallback callback,
 			final Map<String, String> customHeaders) {
