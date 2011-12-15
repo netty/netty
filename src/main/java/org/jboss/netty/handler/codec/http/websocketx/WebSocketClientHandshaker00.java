@@ -35,10 +35,9 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 
 /**
  * <p>
- * Performs client side opening and closing handshakes for web socket
- * specification version <a
- * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00"
- * >draft-ietf-hybi-thewebsocketprotocol- 00</a>
+ * Performs client side opening and closing handshakes for web socket specification version <a
+ * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00" >draft-ietf-hybi-thewebsocketprotocol-
+ * 00</a>
  * </p>
  * <p>
  * A very large portion of this code was taken from the Netty 3.2 HTTP example.
@@ -49,16 +48,13 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 	private byte[] expectedChallengeResponseBytes = null;
 
 	/**
-	 * Constructor specifying the destination web socket location and version to
-	 * initiate
+	 * Constructor specifying the destination web socket location and version to initiate
 	 * 
 	 * @param webSocketURL
-	 *            URL for web socket communications. e.g
-	 *            "ws://myhost.com/mypath". Subsequent web socket frames will be
+	 *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
 	 *            sent to this URL.
 	 * @param version
-	 *            Version of web socket specification to use to connect to the
-	 *            server
+	 *            Version of web socket specification to use to connect to the server
 	 * @param subProtocol
 	 *            Sub protocol request sent to the server.
 	 * @param customHeaders
@@ -177,8 +173,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 	 * @param channel
 	 *            Channel
 	 * @param response
-	 *            HTTP response returned from the server for the request sent by
-	 *            beginOpeningHandshake00().
+	 *            HTTP response returned from the server for the request sent by beginOpeningHandshake00().
 	 * @throws WebSocketHandshakeException
 	 */
 	@Override

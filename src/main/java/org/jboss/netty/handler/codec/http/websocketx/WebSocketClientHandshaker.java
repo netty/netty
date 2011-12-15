@@ -48,12 +48,10 @@ public abstract class WebSocketClientHandshaker {
 	 * Base constructor
 	 * 
 	 * @param webSocketURL
-	 *            URL for web socket communications. e.g
-	 *            "ws://myhost.com/mypath". Subsequent web socket frames will be
+	 *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
 	 *            sent to this URL.
 	 * @param version
-	 *            Version of web socket specification to use to connect to the
-	 *            server
+	 *            Version of web socket specification to use to connect to the server
 	 * @param subProtocol
 	 *            Sub protocol request sent to the server.
 	 * @param customHeaders
@@ -101,8 +99,7 @@ public abstract class WebSocketClientHandshaker {
 	}
 
 	/**
-	 * Returns the sub protocol request sent to the server as specified in the
-	 * constructor
+	 * Returns the sub protocol request sent to the server as specified in the constructor
 	 */
 	public String getSubProtocolRequest() {
 		return subProtocolRequest;
@@ -113,8 +110,7 @@ public abstract class WebSocketClientHandshaker {
 	}
 
 	/**
-	 * Returns the sub protocol response and sent by the server. Only available
-	 * after end of handshake.
+	 * Returns the sub protocol response and sent by the server. Only available after end of handshake.
 	 */
 	public String getSubProtocolResponse() {
 		return subProtocolResponse;

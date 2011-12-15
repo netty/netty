@@ -36,17 +36,14 @@ public class WebSocketServerHandshakerFactory {
 
 	/**
 	 * Constructor specifying the destination web socket location
-	 *
+	 * 
 	 * @param webSocketURL
-	 *            URL for web socket communications. e.g
-	 *            "ws://myhost.com/mypath". Subsequent web socket frames will be
+	 *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
 	 *            sent to this URL.
 	 * @param subProtocols
-	 *            CSV of supported protocols. Null if sub protocols not
-	 *            supported.
+	 *            CSV of supported protocols. Null if sub protocols not supported.
 	 * @param allowExtensions
-	 *            Allow extensions to be used in the reserved bits of the web
-	 *            socket frame
+	 *            Allow extensions to be used in the reserved bits of the web socket frame
 	 */
 	public WebSocketServerHandshakerFactory(String webSocketURL, String subProtocols, boolean allowExtensions) {
 		this.webSocketURL = webSocketURL;
@@ -56,9 +53,9 @@ public class WebSocketServerHandshakerFactory {
 
 	/**
 	 * Instances a new handshaker
-	 *
-	 * @return A new WebSocketServerHandshaker for the requested web socket
-	 *         version. Null if web socket version is not supported.
+	 * 
+	 * @return A new WebSocketServerHandshaker for the requested web socket version. Null if web socket version is not
+	 *         supported.
 	 */
 	public WebSocketServerHandshaker newHandshaker(HttpRequest req) {
 
@@ -83,7 +80,7 @@ public class WebSocketServerHandshakerFactory {
 
 	/**
 	 * Return that we need cannot not support the web socket version
-	 *
+	 * 
 	 * @param channel
 	 *            Channel
 	 */

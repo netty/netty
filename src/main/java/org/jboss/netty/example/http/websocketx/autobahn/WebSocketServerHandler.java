@@ -90,8 +90,9 @@ public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
 			ctx.getChannel().write(
 					new PongWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
 		} else if (frame instanceof TextWebSocketFrame) {
-			//String text = ((TextWebSocketFrame) frame).getText();
-			ctx.getChannel().write(new TextWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
+			// String text = ((TextWebSocketFrame) frame).getText();
+			ctx.getChannel().write(
+					new TextWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
 		} else if (frame instanceof BinaryWebSocketFrame) {
 			ctx.getChannel().write(
 					new BinaryWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
