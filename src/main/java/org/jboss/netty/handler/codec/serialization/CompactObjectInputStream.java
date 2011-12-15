@@ -55,8 +55,6 @@ class CompactObjectInputStream extends ObjectInputStream {
         case CompactObjectOutputStream.TYPE_THIN_DESCRIPTOR:
             String className = readUTF();
             Class<?> clazz = classResolver.resolve(className);
-            
-            // change lookupAny to lookup as lookupAny is only supported in java6
             return ObjectStreamClass.lookup(clazz);
         default:
             throw new StreamCorruptedException(
