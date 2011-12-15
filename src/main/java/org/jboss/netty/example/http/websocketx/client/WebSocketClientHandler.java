@@ -49,79 +49,79 @@ import org.jboss.netty.util.CharsetUtil;
  */
 public class WebSocketClientHandler extends SimpleChannelUpstreamHandler implements WebSocketClient {
 
-	private final ClientBootstrap bootstrap;
-	private URI url;
-	private final WebSocketCallback callback;
-	private Channel channel;
-	private WebSocketClientHandshaker handshaker = null;
-	private final WebSocketVersion version;
-	private Map<String, String> customHeaders = null;
+    private final ClientBootstrap bootstrap;
+    private URI url;
+    private final WebSocketCallback callback;
+    private Channel channel;
+    private WebSocketClientHandshaker handshaker = null;
+    private final WebSocketVersion version;
+    private Map<String, String> customHeaders = null;
 
-	public WebSocketClientHandler(ClientBootstrap bootstrap, URI url, WebSocketVersion version,
-			WebSocketCallback callback, Map<String, String> customHeaders) {
-		this.bootstrap = bootstrap;
-		this.url = url;
-		this.version = version;
-		this.callback = callback;
-		this.customHeaders = customHeaders;
-	}
+    public WebSocketClientHandler(ClientBootstrap bootstrap, URI url, WebSocketVersion version,
+            WebSocketCallback callback, Map<String, String> customHeaders) {
+        this.bootstrap = bootstrap;
+        this.url = url;
+        this.version = version;
+        this.callback = callback;
+        this.customHeaders = customHeaders;
+    }
 
-	@Override
-	public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-		channel = e.getChannel();
-		this.handshaker = new WebSocketClientHandshakerFactory()
-				.newHandshaker(url, version, null, false, customHeaders);
-		handshaker.performOpeningHandshake(channel);
-	}
+    @Override
+    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        channel = e.getChannel();
+        this.handshaker = new WebSocketClientHandshakerFactory()
+                .newHandshaker(url, version, null, false, customHeaders);
+        handshaker.performOpeningHandshake(channel);
+    }
 
-	@Override
-	public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-		callback.onDisconnect(this);
-	}
+    @Override
+    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        callback.onDisconnect(this);
+    }
 
-	@Override
-	public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-		if (!handshaker.isOpeningHandshakeCompleted()) {
-			handshaker.performClosingHandshake(ctx.getChannel(), (HttpResponse) e.getMessage());
-			callback.onConnect(this);
-			return;
-		}
+    @Override
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+        if (!handshaker.isOpeningHandshakeCompleted()) {
+            handshaker.performClosingHandshake(ctx.getChannel(), (HttpResponse) e.getMessage());
+            callback.onConnect(this);
+            return;
+        }
 
-		if (e.getMessage() instanceof HttpResponse) {
-			HttpResponse response = (HttpResponse) e.getMessage();
-			throw new WebSocketException("Unexpected HttpResponse (status=" + response.getStatus() + ", content="
-					+ response.getContent().toString(CharsetUtil.UTF_8) + ")");
-		}
+        if (e.getMessage() instanceof HttpResponse) {
+            HttpResponse response = (HttpResponse) e.getMessage();
+            throw new WebSocketException("Unexpected HttpResponse (status=" + response.getStatus() + ", content="
+                    + response.getContent().toString(CharsetUtil.UTF_8) + ")");
+        }
 
-		WebSocketFrame frame = (WebSocketFrame) e.getMessage();
-		callback.onMessage(this, frame);
-	}
+        WebSocketFrame frame = (WebSocketFrame) e.getMessage();
+        callback.onMessage(this, frame);
+    }
 
-	@Override
-	public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-		final Throwable t = e.getCause();
-		callback.onError(t);
-		e.getChannel().close();
-	}
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+        final Throwable t = e.getCause();
+        callback.onError(t);
+        e.getChannel().close();
+    }
 
-	public ChannelFuture connect() {
-		return bootstrap.connect(new InetSocketAddress(url.getHost(), url.getPort()));
-	}
+    public ChannelFuture connect() {
+        return bootstrap.connect(new InetSocketAddress(url.getHost(), url.getPort()));
+    }
 
-	public ChannelFuture disconnect() {
-		return channel.close();
-	}
+    public ChannelFuture disconnect() {
+        return channel.close();
+    }
 
-	public ChannelFuture send(WebSocketFrame frame) {
-		return channel.write(frame);
-	}
+    public ChannelFuture send(WebSocketFrame frame) {
+        return channel.write(frame);
+    }
 
-	public URI getUrl() {
-		return url;
-	}
+    public URI getUrl() {
+        return url;
+    }
 
-	public void setUrl(URI url) {
-		this.url = url;
-	}
+    public void setUrl(URI url) {
+        this.url = url;
+    }
 
 }
