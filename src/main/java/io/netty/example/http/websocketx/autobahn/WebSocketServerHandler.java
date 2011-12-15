@@ -48,86 +48,86 @@ import io.netty.util.CharsetUtil;
  * Handles handshakes and messages
  */
 public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
-	private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandler.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandler.class);
 
-	private WebSocketServerHandshaker handshaker = null;
+    private WebSocketServerHandshaker handshaker = null;
 
-	@Override
-	public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-		Object msg = e.getMessage();
-		if (msg instanceof HttpRequest) {
-			handleHttpRequest(ctx, (HttpRequest) msg);
-		} else if (msg instanceof WebSocketFrame) {
-			handleWebSocketFrame(ctx, (WebSocketFrame) msg);
-		}
-	}
+    @Override
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+        Object msg = e.getMessage();
+        if (msg instanceof HttpRequest) {
+            handleHttpRequest(ctx, (HttpRequest) msg);
+        } else if (msg instanceof WebSocketFrame) {
+            handleWebSocketFrame(ctx, (WebSocketFrame) msg);
+        }
+    }
 
-	private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest req) throws Exception {
-		// Allow only GET methods.
-		if (req.getMethod() != GET) {
-			sendHttpResponse(ctx, req, new DefaultHttpResponse(HTTP_1_1, FORBIDDEN));
-			return;
-		}
+    private void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest req) throws Exception {
+        // Allow only GET methods.
+        if (req.getMethod() != GET) {
+            sendHttpResponse(ctx, req, new DefaultHttpResponse(HTTP_1_1, FORBIDDEN));
+            return;
+        }
 
-		// Handshake
-		WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
-				this.getWebSocketLocation(req), null, false);
-		this.handshaker = wsFactory.newHandshaker(req);
-		if (this.handshaker == null) {
-			wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.getChannel());
-		} else {
-			this.handshaker.performOpeningHandshake(ctx.getChannel(), req);
-		}
-	}
+        // Handshake
+        WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
+                this.getWebSocketLocation(req), null, false);
+        this.handshaker = wsFactory.newHandshaker(req);
+        if (this.handshaker == null) {
+            wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.getChannel());
+        } else {
+            this.handshaker.performOpeningHandshake(ctx.getChannel(), req);
+        }
+    }
 
-	private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
-		logger.debug(String
-				.format("Channel %s received %s", ctx.getChannel().getId(), frame.getClass().getSimpleName()));
+    private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
+        logger.debug(String
+                .format("Channel %s received %s", ctx.getChannel().getId(), frame.getClass().getSimpleName()));
 
-		if (frame instanceof CloseWebSocketFrame) {
-			this.handshaker.performClosingHandshake(ctx.getChannel(), (CloseWebSocketFrame) frame);
-		} else if (frame instanceof PingWebSocketFrame) {
-			ctx.getChannel().write(
-					new PongWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
-		} else if (frame instanceof TextWebSocketFrame) {
-			// String text = ((TextWebSocketFrame) frame).getText();
-			ctx.getChannel().write(
-					new TextWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
-		} else if (frame instanceof BinaryWebSocketFrame) {
-			ctx.getChannel().write(
-					new BinaryWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
-		} else if (frame instanceof ContinuationWebSocketFrame) {
-			ctx.getChannel().write(
-					new ContinuationWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
-		} else if (frame instanceof PongWebSocketFrame) {
-			// Ignore
-		} else {
-			throw new UnsupportedOperationException(String.format("%s frame types not supported", frame.getClass()
-					.getName()));
-		}
-	}
+        if (frame instanceof CloseWebSocketFrame) {
+            this.handshaker.performClosingHandshake(ctx.getChannel(), (CloseWebSocketFrame) frame);
+        } else if (frame instanceof PingWebSocketFrame) {
+            ctx.getChannel().write(
+                    new PongWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
+        } else if (frame instanceof TextWebSocketFrame) {
+            // String text = ((TextWebSocketFrame) frame).getText();
+            ctx.getChannel().write(
+                    new TextWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
+        } else if (frame instanceof BinaryWebSocketFrame) {
+            ctx.getChannel().write(
+                    new BinaryWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
+        } else if (frame instanceof ContinuationWebSocketFrame) {
+            ctx.getChannel().write(
+                    new ContinuationWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
+        } else if (frame instanceof PongWebSocketFrame) {
+            // Ignore
+        } else {
+            throw new UnsupportedOperationException(String.format("%s frame types not supported", frame.getClass()
+                    .getName()));
+        }
+    }
 
-	private void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
-		// Generate an error page if response status code is not OK (200).
-		if (res.getStatus().getCode() != 200) {
-			res.setContent(ChannelBuffers.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
-			setContentLength(res, res.getContent().readableBytes());
-		}
+    private void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
+        // Generate an error page if response status code is not OK (200).
+        if (res.getStatus().getCode() != 200) {
+            res.setContent(ChannelBuffers.copiedBuffer(res.getStatus().toString(), CharsetUtil.UTF_8));
+            setContentLength(res, res.getContent().readableBytes());
+        }
 
-		// Send the response and close the connection if necessary.
-		ChannelFuture f = ctx.getChannel().write(res);
-		if (!isKeepAlive(req) || res.getStatus().getCode() != 200) {
-			f.addListener(ChannelFutureListener.CLOSE);
-		}
-	}
+        // Send the response and close the connection if necessary.
+        ChannelFuture f = ctx.getChannel().write(res);
+        if (!isKeepAlive(req) || res.getStatus().getCode() != 200) {
+            f.addListener(ChannelFutureListener.CLOSE);
+        }
+    }
 
-	@Override
-	public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-		e.getCause().printStackTrace();
-		e.getChannel().close();
-	}
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+        e.getCause().printStackTrace();
+        e.getChannel().close();
+    }
 
-	private String getWebSocketLocation(HttpRequest req) {
-		return "ws://" + req.getHeader(HttpHeaders.Names.HOST);
-	}
+    private String getWebSocketLocation(HttpRequest req) {
+        return "ws://" + req.getHeader(HttpHeaders.Names.HOST);
+    }
 }

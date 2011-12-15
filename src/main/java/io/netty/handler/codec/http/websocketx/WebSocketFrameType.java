@@ -19,5 +19,5 @@ package io.netty.handler.codec.http.websocketx;
  * Type of web socket frames
  */
 public enum WebSocketFrameType {
-	TEXT, BINARY, PING, PONG, CLOSE, CONTINUATION
+    TEXT, BINARY, PING, PONG, CLOSE, CONTINUATION
 }

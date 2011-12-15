@@ -47,11 +47,13 @@
  *    }
  * </code>
  * 
- * <p>10. Run the test <tt>python fuzzing_client.py</tt>. Note that the actual test case python code is 
+ * <p>10. Run <tt>WebSocketServer</tt> in this package
+ * 
+ * <p>11. Run the test <tt>python fuzzing_client.py</tt>. Note that the actual test case python code is 
  * located in <tt>/usr/local/lib/python2.6/dist-packages/autobahn-0.4.3-py2.6.egg/autobahn/cases</tt> 
  * and not in the checked out git repository.
  *   
- * <p>11. See the results in <tt>reports/servers/index.html</tt>
+ * <p>12. See the results in <tt>reports/servers/index.html</tt>
  */
 package io.netty.example.http.websocketx.autobahn;
 

@@ -29,24 +29,24 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * suite
  */
 public class WebSocketServer {
-	public static void main(String[] args) {
-		ConsoleHandler ch = new ConsoleHandler();
-		ch.setLevel(Level.FINE);
-		Logger.getLogger("").addHandler(ch);
-		Logger.getLogger("").setLevel(Level.FINE);
+    public static void main(String[] args) {
+        ConsoleHandler ch = new ConsoleHandler();
+        ch.setLevel(Level.FINE);
+        Logger.getLogger("").addHandler(ch);
+        Logger.getLogger("").setLevel(Level.FINE);
 
-		// Configure the server.
-		ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
-				Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
+        // Configure the server.
+        ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
+                Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
 
-		// bootstrap.setOption("child.tcpNoDelay", true);
+        // bootstrap.setOption("child.tcpNoDelay", true);
 
-		// Set up the event pipeline factory.
-		bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory());
+        // Set up the event pipeline factory.
+        bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory());
 
-		// Bind and start to accept incoming connections.
-		bootstrap.bind(new InetSocketAddress(9000));
+        // Bind and start to accept incoming connections.
+        bootstrap.bind(new InetSocketAddress(9000));
 
-		System.out.println("Web Socket Server started on localhost:9000.");
-	}
+        System.out.println("Web Socket Server started on localhost:9000.");
+    }
 }
