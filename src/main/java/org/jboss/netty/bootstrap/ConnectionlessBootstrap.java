@@ -185,8 +185,16 @@ public class ConnectionlessBootstrap extends Bootstrap {
         Channel ch = getFactory().newChannel(pipeline);
 
         // Apply options.
-        ch.getConfig().setPipelineFactory(getPipelineFactory());
-        ch.getConfig().setOptions(getOptions());
+        boolean success = false;
+        try {
+            ch.getConfig().setPipelineFactory(getPipelineFactory());
+            ch.getConfig().setOptions(getOptions());
+            success = true;
+        } finally {
+            if (!success) {
+                ch.close();
+            }
+        }
 
         // Bind
         ChannelFuture future = ch.bind(localAddress);
@@ -290,7 +298,16 @@ public class ConnectionlessBootstrap extends Bootstrap {
 
         // Set the options.
         Channel ch = getFactory().newChannel(pipeline);
-        ch.getConfig().setOptions(getOptions());
+        boolean success = false;
+        try {
+            ch.getConfig().setPipelineFactory(getPipelineFactory());
+            ch.getConfig().setOptions(getOptions());
+            success = true;
+        } finally {
+            if (!success) {
+                ch.close();
+            }
+        }
 
         // Bind.
         if (localAddress != null) {
