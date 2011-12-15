@@ -86,7 +86,7 @@ public class WebSocketServerHandshakerFactory {
 		HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, new HttpResponseStatus(101,
 				"Switching Protocols"));
 		res.setStatus(HttpResponseStatus.UPGRADE_REQUIRED);
-		res.setHeader(Names.SEC_WEBSOCKET_VERSION, "13");
+		res.setHeader(Names.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue());
 		channel.write(res);
 	}
 
