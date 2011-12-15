@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import java.net.URI;
+import java.util.Map;
 
 /**
  * Instances the appropriate handshake class to use for clients
@@ -40,15 +41,15 @@ public class WebSocketClientHandshakerFactory {
      *            socket frame
      * @throws WebSocketHandshakeException
      */
-    public WebSocketClientHandshaker newHandshaker(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol, boolean allowExtensions) throws WebSocketHandshakeException {
+    public WebSocketClientHandshaker newHandshaker(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol, boolean allowExtensions, Map<String,String> customHeaders) throws WebSocketHandshakeException {
         if (version == WebSocketSpecificationVersion.V17) {
-            return new WebSocketClientHandshaker17(webSocketURL, version, subProtocol, allowExtensions);
+            return new WebSocketClientHandshaker17(webSocketURL, version, subProtocol, allowExtensions, customHeaders);
         }
         if (version == WebSocketSpecificationVersion.V10) {
-            return new WebSocketClientHandshaker10(webSocketURL, version, subProtocol, allowExtensions);
+            return new WebSocketClientHandshaker10(webSocketURL, version, subProtocol, allowExtensions, customHeaders);
         }
         if (version == WebSocketSpecificationVersion.V00) {
-            return new WebSocketClientHandshaker00(webSocketURL, version, subProtocol);
+            return new WebSocketClientHandshaker00(webSocketURL, version, subProtocol, customHeaders);
         }
 
         throw new WebSocketHandshakeException("Protocol version " + version.toString() + " not supported.");
