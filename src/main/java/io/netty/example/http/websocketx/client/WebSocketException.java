@@ -30,15 +30,15 @@ import java.io.IOException;
  */
 public class WebSocketException extends IOException {
 
-    /**
+	/**
  */
-    private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1L;
 
-    public WebSocketException(String s) {
-        super(s);
-    }
+	public WebSocketException(String s) {
+		super(s);
+	}
 
-    public WebSocketException(String s, Throwable throwable) {
-        super(s, throwable);
-    }
+	public WebSocketException(String s, Throwable throwable) {
+		super(s, throwable);
+	}
 }

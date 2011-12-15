@@ -28,7 +28,7 @@ import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketSpecificationVersion;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 
 /**
  * A HTTP client demo app
@@ -55,31 +55,31 @@ public class App {
 		MyCallbackHandler callbackHandler = new MyCallbackHandler();
 		WebSocketClientFactory factory = new WebSocketClientFactory();
 
-		// Connect with spec version 17. You can change it to V10 or V00.
+		// Connect with RFC 6455. You can change it to V10 or V00.
 		// If you change it to V00, ping is not supported and remember to change HttpResponseDecoder to
 		// WebSocketHttpResponseDecoder in the pipeline.
-		WebSocketClient client = factory.newClient(new URI("ws://localhost:8080/websocket"),
-				WebSocketSpecificationVersion.V17, callbackHandler);
+		WebSocketClient client = factory.newClient(new URI("ws://localhost:8080/websocket"), WebSocketVersion.V13,
+				callbackHandler, null);
 
 		// Connect
-    	System.out.println("WebSocket Client connecting");
-    	client.connect().awaitUninterruptibly();
+		System.out.println("WebSocket Client connecting");
+		client.connect().awaitUninterruptibly();
 		Thread.sleep(200);
 
 		// Send 10 messages and wait for responses
-    	System.out.println("WebSocket Client sending message");
+		System.out.println("WebSocket Client sending message");
 		for (int i = 0; i < 10; i++) {
 			client.send(new TextWebSocketFrame("Message #" + i));
 		}
 		Thread.sleep(1000);
 
 		// Ping - only supported for V10 and up.
-    	System.out.println("WebSocket Client sending ping");
+		System.out.println("WebSocket Client sending ping");
 		client.send(new PingWebSocketFrame(ChannelBuffers.copiedBuffer(new byte[] { 1, 2, 3, 4, 5, 6 })));
 		Thread.sleep(1000);
 
 		// Close
-    	System.out.println("WebSocket Client sending close");
+		System.out.println("WebSocket Client sending close");
 		client.send(new CloseWebSocketFrame());
 		Thread.sleep(1000);
 

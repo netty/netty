@@ -36,17 +36,14 @@ public class WebSocketServerHandshakerFactory {
 
 	/**
 	 * Constructor specifying the destination web socket location
-	 *
+	 * 
 	 * @param webSocketURL
-	 *            URL for web socket communications. e.g
-	 *            "ws://myhost.com/mypath". Subsequent web socket frames will be
+	 *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
 	 *            sent to this URL.
 	 * @param subProtocols
-	 *            CSV of supported protocols. Null if sub protocols not
-	 *            supported.
+	 *            CSV of supported protocols. Null if sub protocols not supported.
 	 * @param allowExtensions
-	 *            Allow extensions to be used in the reserved bits of the web
-	 *            socket frame
+	 *            Allow extensions to be used in the reserved bits of the web socket frame
 	 */
 	public WebSocketServerHandshakerFactory(String webSocketURL, String subProtocols, boolean allowExtensions) {
 		this.webSocketURL = webSocketURL;
@@ -56,22 +53,20 @@ public class WebSocketServerHandshakerFactory {
 
 	/**
 	 * Instances a new handshaker
-	 *
-	 * @return A new WebSocketServerHandshaker for the requested web socket
-	 *         version. Null if web socket version is not supported.
+	 * 
+	 * @return A new WebSocketServerHandshaker for the requested web socket version. Null if web socket version is not
+	 *         supported.
 	 */
 	public WebSocketServerHandshaker newHandshaker(HttpRequest req) {
 
 		String version = req.getHeader(Names.SEC_WEBSOCKET_VERSION);
 		if (version != null) {
-			if (version.equals("13")) {
-				// Version 13 of the wire protocol - assume version 17 of the
-				// specification.
-				return new WebSocketServerHandshaker17(webSocketURL, subProtocols, this.allowExtensions);
-			} else if (version.equals("8")) {
-				// Version 8 of the wire protocol - assume version 10 of the
-				// specification.
-				return new WebSocketServerHandshaker10(webSocketURL, subProtocols, this.allowExtensions);
+			if (version.equals(WebSocketVersion.V13.toHttpHeaderValue())) {
+				// Version 13 of the wire protocol - RFC 6455 (version 17 of the draft hybi specification).
+				return new WebSocketServerHandshaker13(webSocketURL, subProtocols, this.allowExtensions);
+			} else if (version.equals(WebSocketVersion.V08.toHttpHeaderValue())) {
+				// Version 8 of the wire protocol - version 10 of the draft hybi specification.
+				return new WebSocketServerHandshaker08(webSocketURL, subProtocols, this.allowExtensions);
 			} else {
 				return null;
 			}
@@ -83,7 +78,7 @@ public class WebSocketServerHandshakerFactory {
 
 	/**
 	 * Return that we need cannot not support the web socket version
-	 *
+	 * 
 	 * @param channel
 	 *            Channel
 	 */
