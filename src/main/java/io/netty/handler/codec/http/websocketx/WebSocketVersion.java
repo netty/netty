@@ -25,38 +25,38 @@ package io.netty.handler.codec.http.websocketx;
  * </p>
  */
 public enum WebSocketVersion {
-	UNKNOWN,
+    UNKNOWN,
 
-	/**
-	 * <a href= "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00"
-	 * >draft-ietf-hybi-thewebsocketprotocol- 00</a>.
-	 */
-	V00,
+    /**
+     * <a href= "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00"
+     * >draft-ietf-hybi-thewebsocketprotocol- 00</a>.
+     */
+    V00,
 
-	/**
-	 * <a href= "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10"
-	 * >draft-ietf-hybi-thewebsocketprotocol- 10</a>
-	 */
-	V08,
+    /**
+     * <a href= "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10"
+     * >draft-ietf-hybi-thewebsocketprotocol- 10</a>
+     */
+    V08,
 
-	/**
-	 * <a href="http://tools.ietf.org/html/rfc6455 ">RFC 6455</a>. This was originally <a href=
-	 * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17" >draft-ietf-hybi-thewebsocketprotocol-
-	 * 17</a>
-	 */
-	V13;
+    /**
+     * <a href="http://tools.ietf.org/html/rfc6455 ">RFC 6455</a>. This was originally <a href=
+     * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17" >draft-ietf-hybi-thewebsocketprotocol-
+     * 17</a>
+     */
+    V13;
 
-	/**
-	 * @return Value for HTTP Header 'Sec-WebSocket-Version'
-	 */
-	public String toHttpHeaderValue() {
-		if (this == V00) {
-			return "0";
-		} else if (this == V08) {
-			return "8";
-		} else if (this == V13) {
-			return "13";
-		}
-		throw new IllegalArgumentException(this.toString() + " cannot be converted to a string.");
-	}
+    /**
+     * @return Value for HTTP Header 'Sec-WebSocket-Version'
+     */
+    public String toHttpHeaderValue() {
+        if (this == V00) {
+            return "0";
+        } else if (this == V08) {
+            return "8";
+        } else if (this == V13) {
+            return "13";
+        }
+        throw new IllegalArgumentException(this.toString() + " does not have a HttpHeaderValue.");
+    }
 }
