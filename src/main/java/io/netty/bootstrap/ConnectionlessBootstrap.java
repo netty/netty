@@ -185,7 +185,6 @@ public class ConnectionlessBootstrap extends Bootstrap {
         // Apply options.
         boolean success = false;
         try {
-            ch.getConfig().setPipelineFactory(getPipelineFactory());
             ch.getConfig().setOptions(getOptions());
             success = true;
         } finally {
@@ -298,7 +297,6 @@ public class ConnectionlessBootstrap extends Bootstrap {
         Channel ch = getFactory().newChannel(pipeline);
         boolean success = false;
         try {
-            ch.getConfig().setPipelineFactory(getPipelineFactory());
             ch.getConfig().setOptions(getOptions());
             success = true;
         } finally {
