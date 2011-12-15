@@ -15,19 +15,12 @@
  */
 package io.netty.handler.execution;
 
-import java.util.concurrent.Executor;
-
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.EstimatableObjectWrapper;
 
-/**
- * a {@link Runnable} which sends the specified {@link ChannelEvent} upstream.
- * Most users will not see this type at all because it is used by
- * {@link Executor} implementers only
- */
-public class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper {
-
+public abstract class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper{
+    
     protected final ChannelHandlerContext ctx;
     protected final ChannelEvent e;
     int estimatedSize;
@@ -54,14 +47,6 @@ public class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper 
      */
     public ChannelEvent getEvent() {
         return e;
-    }
-
-    /**
-     * Sends the event upstream.
-     */
-    @Override
-    public void run() {
-        ctx.sendUpstream(e);
     }
 
     @Override

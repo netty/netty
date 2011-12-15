@@ -13,17 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.execution.seda;
+package io.netty.handler.execution;
 
 
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.execution.ChannelEventRunnable;
 
 /**
- * A {@link Runnable} which sends the specified {@link ChannelEvent} downstream.
+ * A {@link ChannelEventRunnable} which sends the specified {@link ChannelEvent} downstream.
  */
-public class ChannelDownstreamEventRunnable extends ChannelEventRunnable{
+public final class ChannelDownstreamEventRunnable extends ChannelEventRunnable{
 
     public ChannelDownstreamEventRunnable(ChannelHandlerContext ctx, ChannelEvent e) {
         super(ctx, e);

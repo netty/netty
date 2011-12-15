@@ -64,8 +64,8 @@ import io.netty.util.internal.SharedResourceMisuseDetector;
  * <ul>
  *   <li>you are using {@link MemoryAwareThreadPoolExecutor} independently from
  *       {@link ExecutionHandler},</li>
- *   <li>you are submitting a task whose type is not {@link ChannelEventRunnable}, or</li>
- *   <li>the message type of the {@link MessageEvent} in the {@link ChannelEventRunnable}
+ *   <li>you are submitting a task whose type is not {@link ChannelUpstreamEventRunnable}, or</li>
+ *   <li>the message type of the {@link MessageEvent} in the {@link ChannelUpstreamEventRunnable}
  *       is not {@link ChannelBuffer}.</li>
  * </ul>
  * Here is an example that demonstrates how to implement an {@link ObjectSizeEstimator}
@@ -315,7 +315,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
     @Override
     public void execute(Runnable command) {
-        if (!(command instanceof ChannelEventRunnable)) {
+        if (!(command instanceof ChannelUpstreamEventRunnable)) {
             command = new MemoryAwareRunnable(command);
         }
 
@@ -363,8 +363,8 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
         int increment = settings.objectSizeEstimator.estimateSize(task);
 
-        if (task instanceof ChannelEventRunnable) {
-            ChannelEventRunnable eventTask = (ChannelEventRunnable) task;
+        if (task instanceof ChannelUpstreamEventRunnable) {
+            ChannelUpstreamEventRunnable eventTask = (ChannelUpstreamEventRunnable) task;
             eventTask.estimatedSize = increment;
             Channel channel = eventTask.getEvent().getChannel();
             long channelCounter = getChannelCounter(channel).addAndGet(increment);
@@ -398,8 +398,8 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         long maxChannelMemorySize = settings.maxChannelMemorySize;
 
         int increment;
-        if (task instanceof ChannelEventRunnable) {
-            increment = ((ChannelEventRunnable) task).estimatedSize;
+        if (task instanceof ChannelUpstreamEventRunnable) {
+            increment = ((ChannelUpstreamEventRunnable) task).estimatedSize;
         } else {
             increment = ((MemoryAwareRunnable) task).estimatedSize;
         }
@@ -408,8 +408,8 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             totalLimiter.decrease(increment);
         }
 
-        if (task instanceof ChannelEventRunnable) {
-            ChannelEventRunnable eventTask = (ChannelEventRunnable) task;
+        if (task instanceof ChannelUpstreamEventRunnable) {
+            ChannelUpstreamEventRunnable eventTask = (ChannelUpstreamEventRunnable) task;
             Channel channel = eventTask.getEvent().getChannel();
             long channelCounter = getChannelCounter(channel).addAndGet(-increment);
             //System.out.println("DC: " + channelCounter + ", " + increment);
@@ -451,8 +451,8 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
      * make sure important tasks are not counted.
      */
     protected boolean shouldCount(Runnable task) {
-        if (task instanceof ChannelEventRunnable) {
-            ChannelEventRunnable r = (ChannelEventRunnable) task;
+        if (task instanceof ChannelUpstreamEventRunnable) {
+            ChannelUpstreamEventRunnable r = (ChannelUpstreamEventRunnable) task;
             ChannelEvent e = r.getEvent();
             if (e instanceof WriteCompletionEvent) {
                 return false;

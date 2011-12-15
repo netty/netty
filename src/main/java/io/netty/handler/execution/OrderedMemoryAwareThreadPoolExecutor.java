@@ -234,10 +234,10 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
      */
     @Override
     protected void doExecute(Runnable task) {
-        if (!(task instanceof ChannelEventRunnable)) {
+        if (!(task instanceof ChannelUpstreamEventRunnable)) {
             doUnorderedExecute(task);
         } else {
-            ChannelEventRunnable r = (ChannelEventRunnable) task;
+            ChannelUpstreamEventRunnable r = (ChannelUpstreamEventRunnable) task;
             getChildExecutor(r.getEvent()).execute(task);
         }
     }

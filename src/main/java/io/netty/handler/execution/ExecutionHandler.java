@@ -30,7 +30,6 @@ import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.ChannelUpstreamHandler;
 import io.netty.channel.Channels;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.handler.execution.seda.SedaExecutor;
 import io.netty.util.ExternalResourceReleasable;
 import io.netty.util.internal.ExecutorUtil;
 
@@ -110,16 +109,22 @@ import io.netty.util.internal.ExecutorUtil;
 public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler, ExternalResourceReleasable {
 
     private final Executor executor;
+    private final boolean handleDownstream;
 
     /**
      * Creates a new instance with the specified {@link Executor}.
      * Specify an {@link OrderedMemoryAwareThreadPoolExecutor} if unsure.
      */
     public ExecutionHandler(Executor executor) {
+        this(executor, false);
+    }
+    
+    public ExecutionHandler(Executor executor, boolean handleDownstream) {
         if (executor == null) {
             throw new NullPointerException("executor");
         }
         this.executor = executor;
+        this.handleDownstream = handleDownstream;
     }
 
     /**
@@ -135,13 +140,16 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
      */
     @Override
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(getExecutor());
+        ExecutorUtil.terminate(executor);
+        if (executor instanceof ExternalResourceReleasable) {
+            ((ExternalResourceReleasable) executor).releaseExternalResources();
+        }
     }
 
     @Override
     public void handleUpstream(
             ChannelHandlerContext context, ChannelEvent e) throws Exception {
-        executor.execute(new ChannelEventRunnable(context, e));
+        executor.execute(new ChannelUpstreamEventRunnable(context, e));
     }
 
     @Override
@@ -149,7 +157,11 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
             ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         // check if the read was suspend
         if (!handleReadSuspend(ctx, e)) {
-            ctx.sendDownstream(e);
+            if (handleDownstream) {
+                executor.execute(new ChannelDownstreamEventRunnable(ctx, e));
+            } else {
+                ctx.sendDownstream(e);
+            }
         }
     }
     
