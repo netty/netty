@@ -51,4 +51,14 @@ public interface WebSocketClient {
      * @return Write future. Will fire when the data is sent.
      */
     ChannelFuture send(WebSocketFrame frame);
+    
+    /**
+     * Adds a custom header to this client request
+     * 
+     * @param header
+     * 			Name of header field to add to request
+     * @param value
+     * 			Value of header field added to request
+     */
+    void addCustomHeader(String header, String value);
 }

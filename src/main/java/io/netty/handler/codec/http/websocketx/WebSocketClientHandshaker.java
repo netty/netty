@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.websocketx;
 import java.net.URI;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Map;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
@@ -41,16 +42,19 @@ public abstract class WebSocketClientHandshaker {
 
     private String subProtocolResponse = null;
 
+    protected Map<String,String> customHeaders = null;
+    
     /**
      * 
      * @param webSocketURL
      * @param version
      * @param subProtocol
      */
-    public WebSocketClientHandshaker(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol) {
+    public WebSocketClientHandshaker(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol, Map<String,String> customHeaders) {
         this.webSocketURL = webSocketURL;
         this.version = version;
         this.subProtocolRequest = subProtocol;
+        this.customHeaders = customHeaders;
     }
 
     /**
