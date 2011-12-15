@@ -55,7 +55,7 @@ class CompactObjectInputStream extends ObjectInputStream {
         case CompactObjectOutputStream.TYPE_THIN_DESCRIPTOR:
             String className = readUTF();
             Class<?> clazz = classResolver.resolve(className);
-            return ObjectStreamClass.lookupAny(clazz);
+            return ObjectStreamClass.lookup(clazz);
         default:
             throw new StreamCorruptedException(
                     "Unexpected class descriptor type: " + type);
