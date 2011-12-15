@@ -36,13 +36,10 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * 
  * <ul>
  * <li>Safari 5+ (draft-ietf-hybi-thewebsocketprotocol-00)
- * <li>
  * <li>Chrome 6-13 (draft-ietf-hybi-thewebsocketprotocol-00)
- * <li>
  * <li>Chrome 14+ (draft-ietf-hybi-thewebsocketprotocol-10)
- * <li>
+ * <li>Chrome 16+ (RFC 6455 aka draft-ietf-hybi-thewebsocketprotocol-17)
  * <li>Firefox 7+ (draft-ietf-hybi-thewebsocketprotocol-10)
- * <li>
  * </ul>
  */
 public class WebSocketSslServer {
