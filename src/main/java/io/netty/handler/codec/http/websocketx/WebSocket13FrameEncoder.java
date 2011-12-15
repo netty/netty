@@ -38,23 +38,21 @@
 
 package io.netty.handler.codec.http.websocketx;
 
-
 /**
  * <p>
- * Encodes a web socket frame into wire protocol version 13 format. V13 is essentially the same
- * as V8.
+ * Encodes a web socket frame into wire protocol version 13 format. V13 is essentially the same as V8.
  * </p>
  */
 public class WebSocket13FrameEncoder extends WebSocket08FrameEncoder {
 
-    /**
-     * Constructor
-     * 
-     * @param maskPayload
-     *            Web socket clients must set this to true to mask payload.
-     *            Server implementations must set this to false.
-     */
-    public WebSocket13FrameEncoder(boolean maskPayload) {
-        super(maskPayload);
-    }
+	/**
+	 * Constructor
+	 * 
+	 * @param maskPayload
+	 *            Web socket clients must set this to true to mask payload. Server implementations must set this to
+	 *            false.
+	 */
+	public WebSocket13FrameEncoder(boolean maskPayload) {
+		super(maskPayload);
+	}
 }

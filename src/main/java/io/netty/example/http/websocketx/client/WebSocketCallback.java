@@ -24,7 +24,6 @@ package io.netty.example.http.websocketx.client;
 
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 
-
 /**
  * Copied from https://github.com/cgbystrom/netty-tools
  * 
@@ -32,37 +31,37 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
  */
 public interface WebSocketCallback {
 
-    /**
-     * Called when the client is connected to the server
-     * 
-     * @param client
-     *            Current client used to connect
-     */
-    void onConnect(WebSocketClient client);
+	/**
+	 * Called when the client is connected to the server
+	 * 
+	 * @param client
+	 *            Current client used to connect
+	 */
+	void onConnect(WebSocketClient client);
 
-    /**
-     * Called when the client got disconnected from the server.
-     * 
-     * @param client
-     *            Current client that was disconnected
-     */
-    void onDisconnect(WebSocketClient client);
+	/**
+	 * Called when the client got disconnected from the server.
+	 * 
+	 * @param client
+	 *            Current client that was disconnected
+	 */
+	void onDisconnect(WebSocketClient client);
 
-    /**
-     * Called when a message arrives from the server.
-     * 
-     * @param client
-     *            Current client connected
-     * @param frame
-     *            Data received from server
-     */
-    void onMessage(WebSocketClient client, WebSocketFrame frame);
+	/**
+	 * Called when a message arrives from the server.
+	 * 
+	 * @param client
+	 *            Current client connected
+	 * @param frame
+	 *            Data received from server
+	 */
+	void onMessage(WebSocketClient client, WebSocketFrame frame);
 
-    /**
-     * Called when an unhandled errors occurs.
-     * 
-     * @param t
-     *            The causing error
-     */
-    void onError(Throwable t);
+	/**
+	 * Called when an unhandled errors occurs.
+	 * 
+	 * @param t
+	 *            The causing error
+	 */
+	void onError(Throwable t);
 }

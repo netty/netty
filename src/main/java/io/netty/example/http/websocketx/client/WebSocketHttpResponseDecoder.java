@@ -25,27 +25,27 @@ import io.netty.handler.codec.http.HttpResponseDecoder;
  */
 public class WebSocketHttpResponseDecoder extends HttpResponseDecoder {
 
-    @Override
-    protected boolean isContentAlwaysEmpty(HttpMessage msg) {
-        if (msg instanceof HttpResponse) {
-            HttpResponse res = (HttpResponse) msg;
-            int code = res.getStatus().getCode();
+	@Override
+	protected boolean isContentAlwaysEmpty(HttpMessage msg) {
+		if (msg instanceof HttpResponse) {
+			HttpResponse res = (HttpResponse) msg;
+			int code = res.getStatus().getCode();
 
-            // FIX force reading of protocol upgrade challenge data into the content buffer
-            if (code == 101) {
-                return false;
-            }
+			// FIX force reading of protocol upgrade challenge data into the content buffer
+			if (code == 101) {
+				return false;
+			}
 
-            if (code < 200) {
-                return true;
-            }
-            switch (code) {
-                case 204:
-                case 205:
-                case 304:
-                    return true;
-            }
-        }
-        return false;
-    }
+			if (code < 200) {
+				return true;
+			}
+			switch (code) {
+			case 204:
+			case 205:
+			case 304:
+				return true;
+			}
+		}
+		return false;
+	}
 }

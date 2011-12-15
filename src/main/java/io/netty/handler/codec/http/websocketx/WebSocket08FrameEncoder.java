@@ -51,123 +51,123 @@ import io.netty.logging.InternalLoggerFactory;
 
 /**
  * <p>
- * Encodes a web socket frame into wire protocol version 8 format. This code was
- * forked from <a href="https://github.com/joewalnes/webbit">webbit</a> and
- * modified.
+ * Encodes a web socket frame into wire protocol version 8 format. This code was forked from <a
+ * href="https://github.com/joewalnes/webbit">webbit</a> and modified.
  * </p>
  */
 public class WebSocket08FrameEncoder extends OneToOneEncoder {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocket08FrameEncoder.class);
+	private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocket08FrameEncoder.class);
 
-    private static final byte OPCODE_CONT = 0x0;
-    private static final byte OPCODE_TEXT = 0x1;
-    private static final byte OPCODE_BINARY = 0x2;
-    private static final byte OPCODE_CLOSE = 0x8;
-    private static final byte OPCODE_PING = 0x9;
-    private static final byte OPCODE_PONG = 0xA;
+	private static final byte OPCODE_CONT = 0x0;
+	private static final byte OPCODE_TEXT = 0x1;
+	private static final byte OPCODE_BINARY = 0x2;
+	private static final byte OPCODE_CLOSE = 0x8;
+	private static final byte OPCODE_PING = 0x9;
+	private static final byte OPCODE_PONG = 0xA;
 
-    private boolean maskPayload = false;
+	private boolean maskPayload = false;
 
-    /**
-     * Constructor
-     * 
-     * @param maskPayload
-     *            Web socket clients must set this to true to mask payload.
-     *            Server implementations must set this to false.
-     */
-    public WebSocket08FrameEncoder(boolean maskPayload) {
-        this.maskPayload = maskPayload;
-    }
+	/**
+	 * Constructor
+	 * 
+	 * @param maskPayload
+	 *            Web socket clients must set this to true to mask payload. Server implementations must set this to
+	 *            false.
+	 */
+	public WebSocket08FrameEncoder(boolean maskPayload) {
+		this.maskPayload = maskPayload;
+	}
 
-    @Override
-    protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
+	@Override
+	protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
 
-        byte[] mask = null;
+		byte[] mask = null;
 
-        if (msg instanceof WebSocketFrame) {
-            WebSocketFrame frame = (WebSocketFrame) msg;
-            ChannelBuffer data = frame.getBinaryData();
-            if (data == null) {
-                data = ChannelBuffers.EMPTY_BUFFER;
-            }
+		if (msg instanceof WebSocketFrame) {
+			WebSocketFrame frame = (WebSocketFrame) msg;
+			ChannelBuffer data = frame.getBinaryData();
+			if (data == null) {
+				data = ChannelBuffers.EMPTY_BUFFER;
+			}
 
-            byte opcode;
-            if (frame instanceof TextWebSocketFrame) {
-                opcode = OPCODE_TEXT;
-            } else if (frame instanceof PingWebSocketFrame) {
-                opcode = OPCODE_PING;
-            } else if (frame instanceof PongWebSocketFrame) {
-                opcode = OPCODE_PONG;
-            } else if (frame instanceof CloseWebSocketFrame) {
-                opcode = OPCODE_CLOSE;
-            } else if (frame instanceof BinaryWebSocketFrame) {
-                opcode = OPCODE_BINARY;
-            } else if (frame instanceof ContinuationWebSocketFrame) {
-                opcode = OPCODE_CONT;
-            } else {
-                throw new UnsupportedOperationException("Cannot encode frame of type: " + frame.getClass().getName());
-            }
+			byte opcode;
+			if (frame instanceof TextWebSocketFrame) {
+				opcode = OPCODE_TEXT;
+			} else if (frame instanceof PingWebSocketFrame) {
+				opcode = OPCODE_PING;
+			} else if (frame instanceof PongWebSocketFrame) {
+				opcode = OPCODE_PONG;
+			} else if (frame instanceof CloseWebSocketFrame) {
+				opcode = OPCODE_CLOSE;
+			} else if (frame instanceof BinaryWebSocketFrame) {
+				opcode = OPCODE_BINARY;
+			} else if (frame instanceof ContinuationWebSocketFrame) {
+				opcode = OPCODE_CONT;
+			} else {
+				throw new UnsupportedOperationException("Cannot encode frame of type: " + frame.getClass().getName());
+			}
 
-            int length = data.readableBytes();
+			int length = data.readableBytes();
 
-            if (logger.isDebugEnabled()) {
-            	logger.debug("Encoding WebSocket Frame opCode=" + opcode + " length=" + length);
-            }
-            
-            int b0 = 0;
-            if (frame.isFinalFragment()) {
-                b0 |= (1 << 7);
-            }
-            b0 |= (frame.getRsv() % 8) << 4;
-            b0 |= opcode % 128;
+			if (logger.isDebugEnabled()) {
+				logger.debug("Encoding WebSocket Frame opCode=" + opcode + " length=" + length);
+			}
 
-            ChannelBuffer header;
-            ChannelBuffer body;
+			int b0 = 0;
+			if (frame.isFinalFragment()) {
+				b0 |= (1 << 7);
+			}
+			b0 |= (frame.getRsv() % 8) << 4;
+			b0 |= opcode % 128;
 
-            if (opcode == OPCODE_PING && length > 125) {
-                throw new TooLongFrameException("invalid payload for PING (payload length must be <= 125, was " + length);
-            }
+			ChannelBuffer header;
+			ChannelBuffer body;
 
-            int maskLength = this.maskPayload ? 4 : 0;
-            if (length <= 125) {
-                header = ChannelBuffers.buffer(2 + maskLength);
-                header.writeByte(b0);
-                byte b = (byte) (this.maskPayload ? (0x80 | (byte) length) : (byte) length);
-                header.writeByte(b);
-            } else if (length <= 0xFFFF) {
-                header = ChannelBuffers.buffer(4 + maskLength);
-                header.writeByte(b0);
-                header.writeByte(this.maskPayload ? (0xFE) : 126);
-                header.writeByte((length >>> 8) & 0xFF);
-                header.writeByte((length) & 0xFF);
-            } else {
-                header = ChannelBuffers.buffer(10 + maskLength);
-                header.writeByte(b0);
-                header.writeByte(this.maskPayload ? (0xFF) : 127);
-                header.writeLong(length);
-            }
+			if (opcode == OPCODE_PING && length > 125) {
+				throw new TooLongFrameException("invalid payload for PING (payload length must be <= 125, was "
+						+ length);
+			}
 
-            // Write payload
-            if (this.maskPayload) {
-                Integer random = (int) (Math.random() * Integer.MAX_VALUE);
-                mask = ByteBuffer.allocate(4).putInt(random).array();
-                header.writeBytes(mask);
+			int maskLength = this.maskPayload ? 4 : 0;
+			if (length <= 125) {
+				header = ChannelBuffers.buffer(2 + maskLength);
+				header.writeByte(b0);
+				byte b = (byte) (this.maskPayload ? (0x80 | (byte) length) : (byte) length);
+				header.writeByte(b);
+			} else if (length <= 0xFFFF) {
+				header = ChannelBuffers.buffer(4 + maskLength);
+				header.writeByte(b0);
+				header.writeByte(this.maskPayload ? (0xFE) : 126);
+				header.writeByte((length >>> 8) & 0xFF);
+				header.writeByte((length) & 0xFF);
+			} else {
+				header = ChannelBuffers.buffer(10 + maskLength);
+				header.writeByte(b0);
+				header.writeByte(this.maskPayload ? (0xFF) : 127);
+				header.writeLong(length);
+			}
 
-                body = ChannelBuffers.buffer(length);
-                int counter = 0;
-                while (data.readableBytes() > 0) {
-                    byte byteData = data.readByte();
-                    body.writeByte(byteData ^ mask[+counter++ % 4]);
-                }
-            } else {
-                body = data;
-            }
-            return ChannelBuffers.wrappedBuffer(header, body);
-        }
+			// Write payload
+			if (this.maskPayload) {
+				Integer random = (int) (Math.random() * Integer.MAX_VALUE);
+				mask = ByteBuffer.allocate(4).putInt(random).array();
+				header.writeBytes(mask);
 
-        // If not websocket, then just return the message
-        return msg;
-    }
+				body = ChannelBuffers.buffer(length);
+				int counter = 0;
+				while (data.readableBytes() > 0) {
+					byte byteData = data.readByte();
+					body.writeByte(byteData ^ mask[+counter++ % 4]);
+				}
+			} else {
+				body = data;
+			}
+			return ChannelBuffers.wrappedBuffer(header, body);
+		}
+
+		// If not websocket, then just return the message
+		return msg;
+	}
 
 }

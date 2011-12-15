@@ -23,43 +23,43 @@ import io.netty.buffer.ChannelBuffers;
  */
 public class PingWebSocketFrame extends WebSocketFrame {
 
-    /**
-     * Creates a new empty ping frame.
-     */
-    public PingWebSocketFrame() {
-        this.setFinalFragment(true);
-        this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
-    }
+	/**
+	 * Creates a new empty ping frame.
+	 */
+	public PingWebSocketFrame() {
+		this.setFinalFragment(true);
+		this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+	}
 
-    /**
-     * Creates a new ping frame with the specified binary data.
-     * 
-     * @param binaryData
-     *            the content of the frame.
-     */
-    public PingWebSocketFrame(ChannelBuffer binaryData) {
-        this.setBinaryData(binaryData);
-    }
+	/**
+	 * Creates a new ping frame with the specified binary data.
+	 * 
+	 * @param binaryData
+	 *            the content of the frame.
+	 */
+	public PingWebSocketFrame(ChannelBuffer binaryData) {
+		this.setBinaryData(binaryData);
+	}
 
-    /**
-     * Creates a new ping frame with the specified binary data
-     * 
-     * @param finalFragment
-     *            flag indicating if this frame is the final fragment
-     * @param rsv
-     *            reserved bits used for protocol extensions
-     * @param binaryData
-     *            the content of the frame.
-     */
-    public PingWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
-        this.setFinalFragment(finalFragment);
-        this.setRsv(rsv);
-        this.setBinaryData(binaryData);
-    }
+	/**
+	 * Creates a new ping frame with the specified binary data
+	 * 
+	 * @param finalFragment
+	 *            flag indicating if this frame is the final fragment
+	 * @param rsv
+	 *            reserved bits used for protocol extensions
+	 * @param binaryData
+	 *            the content of the frame.
+	 */
+	public PingWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
+		this.setFinalFragment(finalFragment);
+		this.setRsv(rsv);
+		this.setBinaryData(binaryData);
+	}
 
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() + "(data: " + getBinaryData() + ')';
-    }
+	@Override
+	public String toString() {
+		return getClass().getSimpleName() + "(data: " + getBinaryData() + ')';
+	}
 
 }

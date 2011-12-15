@@ -29,36 +29,26 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
  */
 public interface WebSocketClient {
 
-    /**
-     * Connect to server Host and port is setup by the factory.
-     * 
-     * @return Connect future. Fires when connected.
-     */
-    ChannelFuture connect();
+	/**
+	 * Connect to server Host and port is setup by the factory.
+	 * 
+	 * @return Connect future. Fires when connected.
+	 */
+	ChannelFuture connect();
 
-    /**
-     * Disconnect from the server
-     * 
-     * @return Disconnect future. Fires when disconnected.
-     */
-    ChannelFuture disconnect();
+	/**
+	 * Disconnect from the server
+	 * 
+	 * @return Disconnect future. Fires when disconnected.
+	 */
+	ChannelFuture disconnect();
 
-    /**
-     * Send data to server
-     * 
-     * @param frame
-     *            Data for sending
-     * @return Write future. Will fire when the data is sent.
-     */
-    ChannelFuture send(WebSocketFrame frame);
-    
-    /**
-     * Adds a custom header to this client request
-     * 
-     * @param header
-     * 			Name of header field to add to request
-     * @param value
-     * 			Value of header field added to request
-     */
-    void addCustomHeader(String header, String value);
+	/**
+	 * Send data to server
+	 * 
+	 * @param frame
+	 *            Data for sending
+	 * @return Write future. Will fire when the data is sent.
+	 */
+	ChannelFuture send(WebSocketFrame frame);
 }

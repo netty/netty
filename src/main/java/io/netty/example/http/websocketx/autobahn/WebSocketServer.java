@@ -25,8 +25,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 /**
- * A Web Socket echo server for running the <a href="http://www.tavendo.de/autobahn/testsuite.html">autobahn</a>
- * test suite
+ * A Web Socket echo server for running the <a href="http://www.tavendo.de/autobahn/testsuite.html">autobahn</a> test
+ * suite
  */
 public class WebSocketServer {
 	public static void main(String[] args) {
@@ -34,19 +34,19 @@ public class WebSocketServer {
 		ch.setLevel(Level.FINE);
 		Logger.getLogger("").addHandler(ch);
 		Logger.getLogger("").setLevel(Level.FINE);
-		
+
 		// Configure the server.
 		ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
 				Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
-		
-		//bootstrap.setOption("child.tcpNoDelay", true);
-		
+
+		// bootstrap.setOption("child.tcpNoDelay", true);
+
 		// Set up the event pipeline factory.
 		bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory());
 
 		// Bind and start to accept incoming connections.
 		bootstrap.bind(new InetSocketAddress(9000));
-		
+
 		System.out.println("Web Socket Server started on localhost:9000.");
 	}
 }
