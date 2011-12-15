@@ -33,7 +33,7 @@ public abstract class WebSocketServerHandshaker {
 
     private String[] subProtocolsArray = null;
 
-    private WebSocketSpecificationVersion version = WebSocketSpecificationVersion.UNKNOWN;
+    private WebSocketVersion version = WebSocketVersion.UNKNOWN;
 
     /**
      * Constructor specifying the destination web socket location
@@ -83,11 +83,11 @@ public abstract class WebSocketServerHandshaker {
     /**
      * Returns the version of the specification being supported
      */
-    public WebSocketSpecificationVersion getVersion() {
+    public WebSocketVersion getVersion() {
         return version;
     }
 
-    public void setVersion(WebSocketSpecificationVersion version) {
+    public void setVersion(WebSocketVersion version) {
         this.version = version;
     }
 

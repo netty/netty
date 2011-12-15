@@ -64,14 +64,14 @@ public class WebSocketServerHandshakerFactory {
 
 		String version = req.getHeader(Names.SEC_WEBSOCKET_VERSION);
 		if (version != null) {
-			if (version.equals("13")) {
+			if (version.equals(WebSocketVersion.V13.toHttpHeaderValue())) {
 				// Version 13 of the wire protocol - assume version 17 of the
 				// specification.
-				return new WebSocketServerHandshaker17(webSocketURL, subProtocols, this.allowExtensions);
-			} else if (version.equals("8")) {
+				return new WebSocketServerHandshaker13(webSocketURL, subProtocols, this.allowExtensions);
+			} else if (version.equals(WebSocketVersion.V08.toHttpHeaderValue())) {
 				// Version 8 of the wire protocol - assume version 10 of the
 				// specification.
-				return new WebSocketServerHandshaker10(webSocketURL, subProtocols, this.allowExtensions);
+				return new WebSocketServerHandshaker08(webSocketURL, subProtocols, this.allowExtensions);
 			} else {
 				return null;
 			}
@@ -91,7 +91,7 @@ public class WebSocketServerHandshakerFactory {
 		HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, new HttpResponseStatus(101,
 				"Switching Protocols"));
 		res.setStatus(HttpResponseStatus.UPGRADE_REQUIRED);
-		res.setHeader(Names.SEC_WEBSOCKET_VERSION, "13");
+		res.setHeader(Names.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue());
 		channel.write(res);
 	}
 

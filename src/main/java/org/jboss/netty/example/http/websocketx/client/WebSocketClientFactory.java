@@ -29,60 +29,65 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketSpecificationVersion;
+import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 
 import java.net.URI;
+import java.util.Map;
 import java.util.concurrent.Executors;
 
 /**
  * Copied from https://github.com/cgbystrom/netty-tools
  * 
- * A factory for creating WebSocket clients. The entry point for creating and connecting a client. Can and should be
- * used to create multiple instances.
+ * A factory for creating WebSocket clients. The entry point for creating and
+ * connecting a client. Can and should be used to create multiple instances.
  */
 public class WebSocketClientFactory {
 
-    private final NioClientSocketChannelFactory socketChannelFactory = new NioClientSocketChannelFactory(
-            Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+	private final NioClientSocketChannelFactory socketChannelFactory = new NioClientSocketChannelFactory(
+			Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 
-    /**
-     * Create a new WebSocket client
-     * 
-     * @param url
-     *            URL to connect to.
-     * @param version
-     *            Web Socket version to support
-     * @param callback
-     *            Callback interface to receive events
-     * @return A WebSocket client. Call {@link WebSocketClient#connect()} to connect.
-     */
-    public WebSocketClient newClient(final URI url,
-                                     final WebSocketSpecificationVersion version,
-                                     final WebSocketCallback callback) {
-        ClientBootstrap bootstrap = new ClientBootstrap(socketChannelFactory);
+	/**
+	 * Create a new WebSocket client
+	 * 
+	 * @param url
+	 *            URL to connect to.
+	 * @param version
+	 *            Web Socket version to support
+	 * @param callback
+	 *            Callback interface to receive events
+	 * @param customHeaders
+	 *            Map of custom headers to add to the client request
+	 * @return A WebSocket client. Call {@link WebSocketClient#connect()} to
+	 *         connect.
+	 */
+	public WebSocketClient newClient(final URI url, final WebSocketVersion version, final WebSocketCallback callback,
+			final Map<String, String> customHeaders) {
+		ClientBootstrap bootstrap = new ClientBootstrap(socketChannelFactory);
 
-        String protocol = url.getScheme();
-        if (!protocol.equals("ws") && !protocol.equals("wss")) {
-            throw new IllegalArgumentException("Unsupported protocol: " + protocol);
-        }
+		String protocol = url.getScheme();
+		if (!protocol.equals("ws") && !protocol.equals("wss")) {
+			throw new IllegalArgumentException("Unsupported protocol: " + protocol);
+		}
 
-        final WebSocketClientHandler clientHandler = new WebSocketClientHandler(bootstrap, url, version, callback);
+		final WebSocketClientHandler clientHandler = new WebSocketClientHandler(bootstrap, url, version, callback,
+				customHeaders);
 
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+		bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
 
-            public ChannelPipeline getPipeline() throws Exception {
-                ChannelPipeline pipeline = Channels.pipeline();
-                
-                // If you wish to support HyBi V00, you need to use WebSocketHttpResponseDecoder instead for
-                // HttpResponseDecoder.                
-                pipeline.addLast("decoder", new HttpResponseDecoder());
-                
-                pipeline.addLast("encoder", new HttpRequestEncoder());
-                pipeline.addLast("ws-handler", clientHandler);
-                return pipeline;
-            }
-        });
+			public ChannelPipeline getPipeline() throws Exception {
+				ChannelPipeline pipeline = Channels.pipeline();
 
-        return clientHandler;
-    }
+				// If you wish to support HyBi V00, you need to use
+				// WebSocketHttpResponseDecoder instead for
+				// HttpResponseDecoder.
+				pipeline.addLast("decoder", new HttpResponseDecoder());
+
+				pipeline.addLast("encoder", new HttpRequestEncoder());
+				pipeline.addLast("ws-handler", clientHandler);
+				return pipeline;
+			}
+		});
+
+		return clientHandler;
+	}
 }
