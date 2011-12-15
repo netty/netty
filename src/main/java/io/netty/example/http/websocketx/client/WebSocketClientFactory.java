@@ -43,50 +43,50 @@ import java.util.concurrent.Executors;
  */
 public class WebSocketClientFactory {
 
-	private final NioClientSocketChannelFactory socketChannelFactory = new NioClientSocketChannelFactory(
-			Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+    private final NioClientSocketChannelFactory socketChannelFactory = new NioClientSocketChannelFactory(
+            Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 
-	/**
-	 * Create a new WebSocket client.
-	 * 
-	 * @param url
-	 *            URL to connect to.
-	 * @param version
-	 *            Web Socket version to support
-	 * @param callback
-	 *            Callback interface to receive events
-	 * @param customHeaders
-	 *            custom HTTP headers to pass during the handshake
-	 * @return A WebSocket client. Call {@link WebSocketClient#connect()} to connect.
-	 */
-	public WebSocketClient newClient(final URI url, final WebSocketVersion version, final WebSocketCallback callback,
-			Map<String, String> customHeaders) {
-		ClientBootstrap bootstrap = new ClientBootstrap(socketChannelFactory);
+    /**
+     * Create a new WebSocket client.
+     * 
+     * @param url
+     *            URL to connect to.
+     * @param version
+     *            Web Socket version to support
+     * @param callback
+     *            Callback interface to receive events
+     * @param customHeaders
+     *            custom HTTP headers to pass during the handshake
+     * @return A WebSocket client. Call {@link WebSocketClient#connect()} to connect.
+     */
+    public WebSocketClient newClient(final URI url, final WebSocketVersion version, final WebSocketCallback callback,
+            Map<String, String> customHeaders) {
+        ClientBootstrap bootstrap = new ClientBootstrap(socketChannelFactory);
 
-		String protocol = url.getScheme();
-		if (!protocol.equals("ws") && !protocol.equals("wss")) {
-			throw new IllegalArgumentException("Unsupported protocol: " + protocol);
-		}
+        String protocol = url.getScheme();
+        if (!protocol.equals("ws") && !protocol.equals("wss")) {
+            throw new IllegalArgumentException("Unsupported protocol: " + protocol);
+        }
 
-		final WebSocketClientHandler clientHandler = new WebSocketClientHandler(bootstrap, url, version, callback,
-				customHeaders);
+        final WebSocketClientHandler clientHandler = new WebSocketClientHandler(bootstrap, url, version, callback,
+                customHeaders);
 
-		bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
 
-			@Override
-			public ChannelPipeline getPipeline() throws Exception {
-				ChannelPipeline pipeline = Channels.pipeline();
+            @Override
+            public ChannelPipeline getPipeline() throws Exception {
+                ChannelPipeline pipeline = Channels.pipeline();
 
-				// If you wish to support HyBi V00, you need to use WebSocketHttpResponseDecoder instead for
-				// HttpResponseDecoder.
-				pipeline.addLast("decoder", new HttpResponseDecoder());
+                // If you wish to support HyBi V00, you need to use WebSocketHttpResponseDecoder instead for
+                // HttpResponseDecoder.
+                pipeline.addLast("decoder", new HttpResponseDecoder());
 
-				pipeline.addLast("encoder", new HttpRequestEncoder());
-				pipeline.addLast("ws-handler", clientHandler);
-				return pipeline;
-			}
-		});
+                pipeline.addLast("encoder", new HttpRequestEncoder());
+                pipeline.addLast("ws-handler", clientHandler);
+                return pipeline;
+            }
+        });
 
-		return clientHandler;
-	}
+        return clientHandler;
+    }
 }

@@ -36,33 +36,30 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * 
  * <ul>
  * <li>Safari 5+ (draft-ietf-hybi-thewebsocketprotocol-00)
- * <li>
  * <li>Chrome 6-13 (draft-ietf-hybi-thewebsocketprotocol-00)
- * <li>
  * <li>Chrome 14+ (draft-ietf-hybi-thewebsocketprotocol-10)
- * <li>
+ * <li>Chrome 16+ (RFC 6455 aka draft-ietf-hybi-thewebsocketprotocol-17)
  * <li>Firefox 7+ (draft-ietf-hybi-thewebsocketprotocol-10)
- * <li>
  * </ul>
  */
 public class WebSocketServer {
-	public static void main(String[] args) {
-		ConsoleHandler ch = new ConsoleHandler();
-		ch.setLevel(Level.FINE);
-		Logger.getLogger("").addHandler(ch);
-		Logger.getLogger("").setLevel(Level.FINE);
+    public static void main(String[] args) {
+        ConsoleHandler ch = new ConsoleHandler();
+        ch.setLevel(Level.FINE);
+        Logger.getLogger("").addHandler(ch);
+        Logger.getLogger("").setLevel(Level.FINE);
 
-		// Configure the server.
-		ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
-				Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
+        // Configure the server.
+        ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
+                Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
 
-		// Set up the event pipeline factory.
-		bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory());
+        // Set up the event pipeline factory.
+        bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory());
 
-		// Bind and start to accept incoming connections.
-		bootstrap.bind(new InetSocketAddress(8080));
+        // Bind and start to accept incoming connections.
+        bootstrap.bind(new InetSocketAddress(8080));
 
-		System.out
-				.println("Web Socket Server started on 8080. Open your browser and navigate to http://localhost:8080/");
-	}
+        System.out
+                .println("Web Socket Server started on 8080. Open your browser and navigate to http://localhost:8080/");
+    }
 }

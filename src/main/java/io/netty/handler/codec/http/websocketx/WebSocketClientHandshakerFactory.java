@@ -23,35 +23,35 @@ import java.util.Map;
  */
 public class WebSocketClientHandshakerFactory {
 
-	/**
-	 * Instances a new handshaker
-	 * 
-	 * @param webSocketURL
-	 *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
-	 *            sent to this URL.
-	 * @param version
-	 *            Version of web socket specification to use to connect to the server
-	 * @param subProtocol
-	 *            Sub protocol request sent to the server. Null if no sub-protocol support is required.
-	 * @param allowExtensions
-	 *            Allow extensions to be used in the reserved bits of the web socket frame
-	 * @param customHeaders
-	 *            Custom HTTP headers to send during the handshake
-	 * @throws WebSocketHandshakeException
-	 */
-	public WebSocketClientHandshaker newHandshaker(URI webSocketURL, WebSocketVersion version, String subProtocol,
-			boolean allowExtensions, Map<String, String> customHeaders) throws WebSocketHandshakeException {
-		if (version == WebSocketVersion.V13) {
-			return new WebSocketClientHandshaker13(webSocketURL, version, subProtocol, allowExtensions, customHeaders);
-		}
-		if (version == WebSocketVersion.V08) {
-			return new WebSocketClientHandshaker08(webSocketURL, version, subProtocol, allowExtensions, customHeaders);
-		}
-		if (version == WebSocketVersion.V00) {
-			return new WebSocketClientHandshaker00(webSocketURL, version, subProtocol, customHeaders);
-		}
+    /**
+     * Instances a new handshaker
+     * 
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subProtocol
+     *            Sub protocol request sent to the server. Null if no sub-protocol support is required.
+     * @param allowExtensions
+     *            Allow extensions to be used in the reserved bits of the web socket frame
+     * @param customHeaders
+     *            Custom HTTP headers to send during the handshake
+     * @throws WebSocketHandshakeException
+     */
+    public WebSocketClientHandshaker newHandshaker(URI webSocketURL, WebSocketVersion version, String subProtocol,
+            boolean allowExtensions, Map<String, String> customHeaders) throws WebSocketHandshakeException {
+        if (version == WebSocketVersion.V13) {
+            return new WebSocketClientHandshaker13(webSocketURL, version, subProtocol, allowExtensions, customHeaders);
+        }
+        if (version == WebSocketVersion.V08) {
+            return new WebSocketClientHandshaker08(webSocketURL, version, subProtocol, allowExtensions, customHeaders);
+        }
+        if (version == WebSocketVersion.V00) {
+            return new WebSocketClientHandshaker00(webSocketURL, version, subProtocol, customHeaders);
+        }
 
-		throw new WebSocketHandshakeException("Protocol version " + version.toString() + " not supported.");
+        throw new WebSocketHandshakeException("Protocol version " + version.toString() + " not supported.");
 
-	}
+    }
 }

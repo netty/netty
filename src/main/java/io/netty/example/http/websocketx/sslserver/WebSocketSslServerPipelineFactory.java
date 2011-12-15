@@ -29,19 +29,19 @@ import io.netty.handler.ssl.SslHandler;
 /**
  */
 public class WebSocketSslServerPipelineFactory implements ChannelPipelineFactory {
-	@Override
-	public ChannelPipeline getPipeline() throws Exception {
-		// Create a default pipeline implementation.
-		ChannelPipeline pipeline = pipeline();
+    @Override
+    public ChannelPipeline getPipeline() throws Exception {
+        // Create a default pipeline implementation.
+        ChannelPipeline pipeline = pipeline();
 
-		SSLEngine engine = WebSocketSslServerSslContext.getInstance().getServerContext().createSSLEngine();
-		engine.setUseClientMode(false);
-		pipeline.addLast("ssl", new SslHandler(engine));
+        SSLEngine engine = WebSocketSslServerSslContext.getInstance().getServerContext().createSSLEngine();
+        engine.setUseClientMode(false);
+        pipeline.addLast("ssl", new SslHandler(engine));
 
-		pipeline.addLast("decoder", new HttpRequestDecoder());
-		pipeline.addLast("aggregator", new HttpChunkAggregator(65536));
-		pipeline.addLast("encoder", new HttpResponseEncoder());
-		pipeline.addLast("handler", new WebSocketSslServerHandler());
-		return pipeline;
-	}
+        pipeline.addLast("decoder", new HttpRequestDecoder());
+        pipeline.addLast("aggregator", new HttpChunkAggregator(65536));
+        pipeline.addLast("encoder", new HttpResponseEncoder());
+        pipeline.addLast("handler", new WebSocketSslServerHandler());
+        return pipeline;
+    }
 }
