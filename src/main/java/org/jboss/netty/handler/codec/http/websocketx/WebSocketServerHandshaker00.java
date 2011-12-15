@@ -129,7 +129,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s web socket spec version 00 handshake", channel.getId()));
         }
-        this.setVersion(WebSocketSpecificationVersion.V00);
+        this.setVersion(WebSocketVersion.V00);
 
         // Serve the WebSocket handshake request.
         if (!Values.UPGRADE.equalsIgnoreCase(req.getHeader(CONNECTION)) || !WEBSOCKET.equalsIgnoreCase(req.getHeader(Names.UPGRADE))) {

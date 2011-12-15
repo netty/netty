@@ -40,14 +40,14 @@ public class WebSocketClientHandshakerFactory {
      *            socket frame
      * @throws WebSocketHandshakeException
      */
-    public WebSocketClientHandshaker newHandshaker(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol, boolean allowExtensions) throws WebSocketHandshakeException {
-        if (version == WebSocketSpecificationVersion.V17) {
-            return new WebSocketClientHandshaker17(webSocketURL, version, subProtocol, allowExtensions);
+    public WebSocketClientHandshaker newHandshaker(URI webSocketURL, WebSocketVersion version, String subProtocol, boolean allowExtensions) throws WebSocketHandshakeException {
+        if (version == WebSocketVersion.V13) {
+            return new WebSocketClientHandshaker13(webSocketURL, version, subProtocol, allowExtensions);
         }
-        if (version == WebSocketSpecificationVersion.V10) {
-            return new WebSocketClientHandshaker10(webSocketURL, version, subProtocol, allowExtensions);
+        if (version == WebSocketVersion.V08) {
+            return new WebSocketClientHandshaker08(webSocketURL, version, subProtocol, allowExtensions);
         }
-        if (version == WebSocketSpecificationVersion.V00) {
+        if (version == WebSocketVersion.V00) {
             return new WebSocketClientHandshaker00(webSocketURL, version, subProtocol);
         }
 

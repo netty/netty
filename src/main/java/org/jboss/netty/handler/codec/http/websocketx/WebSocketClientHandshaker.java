@@ -33,7 +33,7 @@ public abstract class WebSocketClientHandshaker {
 
     private URI webSocketURL;
 
-    private WebSocketSpecificationVersion version = WebSocketSpecificationVersion.UNKNOWN;
+    private WebSocketVersion version = WebSocketVersion.UNKNOWN;
 
     private boolean openingHandshakeCompleted = false;
 
@@ -47,7 +47,7 @@ public abstract class WebSocketClientHandshaker {
      * @param version
      * @param subProtocol
      */
-    public WebSocketClientHandshaker(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol) {
+    public WebSocketClientHandshaker(URI webSocketURL, WebSocketVersion version, String subProtocol) {
         this.webSocketURL = webSocketURL;
         this.version = version;
         this.subProtocolRequest = subProtocol;
@@ -67,11 +67,11 @@ public abstract class WebSocketClientHandshaker {
     /**
      * Version of the web socket specification that is being used
      */
-    public WebSocketSpecificationVersion getVersion() {
+    public WebSocketVersion getVersion() {
         return version;
     }
 
-    protected void setVersion(WebSocketSpecificationVersion version) {
+    protected void setVersion(WebSocketVersion version) {
         this.version = version;
     }
 

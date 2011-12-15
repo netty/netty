@@ -28,7 +28,7 @@ import org.jboss.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketSpecificationVersion;
+import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 
 /**
  * A HTTP client demo app
@@ -59,7 +59,7 @@ public class App {
 		// If you change it to V00, ping is not supported and remember to change HttpResponseDecoder to
 		// WebSocketHttpResponseDecoder in the pipeline.
 		WebSocketClient client = factory.newClient(new URI("ws://localhost:8080/websocket"),
-				WebSocketSpecificationVersion.V17, callbackHandler);
+				WebSocketVersion.V13, callbackHandler);
 
 		// Connect
     	System.out.println("WebSocket Client connecting");

@@ -37,7 +37,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketFrame;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketSpecificationVersion;
+import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.jboss.netty.util.CharsetUtil;
 
 /**
@@ -53,9 +53,9 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler impleme
     private final WebSocketCallback callback;
     private Channel channel;
     private WebSocketClientHandshaker handshaker = null;
-    private final WebSocketSpecificationVersion version;
+    private final WebSocketVersion version;
 
-    public WebSocketClientHandler(ClientBootstrap bootstrap, URI url, WebSocketSpecificationVersion version, WebSocketCallback callback) {
+    public WebSocketClientHandler(ClientBootstrap bootstrap, URI url, WebSocketVersion version, WebSocketCallback callback) {
         this.bootstrap = bootstrap;
         this.url = url;
         this.version = version;

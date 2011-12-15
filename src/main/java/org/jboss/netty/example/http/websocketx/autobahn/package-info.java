@@ -36,7 +36,7 @@
  * 
  * <p>08. Go to test suite directory: <tt>cd testsuite/websockets</tt>
  * 
- * <p>09. Edit <tt>fuzzing_clinet_spec.json</tt> and set the version to 10 or 17.
+ * <p>09. Edit <tt>fuzzing_clinet_spec.json</tt> and set the hybi specification version to 10 or 17 (RFC 6455).
  * <code>
  *    {
  *       "options": {"failByDrop": false},

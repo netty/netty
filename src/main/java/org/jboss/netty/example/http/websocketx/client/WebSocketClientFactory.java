@@ -29,7 +29,7 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketSpecificationVersion;
+import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 
 import java.net.URI;
 import java.util.concurrent.Executors;
@@ -57,7 +57,7 @@ public class WebSocketClientFactory {
      * @return A WebSocket client. Call {@link WebSocketClient#connect()} to connect.
      */
     public WebSocketClient newClient(final URI url,
-                                     final WebSocketSpecificationVersion version,
+                                     final WebSocketVersion version,
                                      final WebSocketCallback callback) {
         ClientBootstrap bootstrap = new ClientBootstrap(socketChannelFactory);
 

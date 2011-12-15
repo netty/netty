@@ -61,7 +61,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      * @param subProtocol
      *            Sub protocol request sent to the server.
      */
-    public WebSocketClientHandshaker00(URI webSocketURL, WebSocketSpecificationVersion version, String subProtocol) {
+    public WebSocketClientHandshaker00(URI webSocketURL, WebSocketVersion version, String subProtocol) {
         super(webSocketURL, version, subProtocol);
     }
 
