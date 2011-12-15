@@ -363,8 +363,8 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
         int increment = settings.objectSizeEstimator.estimateSize(task);
 
-        if (task instanceof ChannelUpstreamEventRunnable) {
-            ChannelUpstreamEventRunnable eventTask = (ChannelUpstreamEventRunnable) task;
+        if (task instanceof ChannelEventRunnable) {
+            ChannelEventRunnable eventTask = (ChannelEventRunnable) task;
             eventTask.estimatedSize = increment;
             Channel channel = eventTask.getEvent().getChannel();
             long channelCounter = getChannelCounter(channel).addAndGet(increment);
@@ -408,8 +408,8 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
             totalLimiter.decrease(increment);
         }
 
-        if (task instanceof ChannelUpstreamEventRunnable) {
-            ChannelUpstreamEventRunnable eventTask = (ChannelUpstreamEventRunnable) task;
+        if (task instanceof ChannelEventRunnable) {
+            ChannelEventRunnable eventTask = (ChannelEventRunnable) task;
             Channel channel = eventTask.getEvent().getChannel();
             long channelCounter = getChannelCounter(channel).addAndGet(-increment);
             //System.out.println("DC: " + channelCounter + ", " + increment);
