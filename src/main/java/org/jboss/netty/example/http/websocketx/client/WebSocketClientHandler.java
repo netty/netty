@@ -44,9 +44,8 @@ import org.jboss.netty.util.CharsetUtil;
 /**
  * Copied from https://github.com/cgbystrom/netty-tools
  * 
- * Handles socket communication for a connected WebSocket client Not intended
- * for end-users. Please use {@link WebSocketClient} or
- * {@link WebSocketCallback} for controlling your client.
+ * Handles socket communication for a connected WebSocket client Not intended for end-users. Please use
+ * {@link WebSocketClient} or {@link WebSocketCallback} for controlling your client.
  */
 public class WebSocketClientHandler extends SimpleChannelUpstreamHandler implements WebSocketClient {
 

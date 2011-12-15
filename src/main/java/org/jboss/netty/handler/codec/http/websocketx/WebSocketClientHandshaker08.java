@@ -35,10 +35,9 @@ import org.jboss.netty.util.CharsetUtil;
 
 /**
  * <p>
- * Performs client side opening and closing handshakes for web socket
- * specification version <a
- * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10"
- * >draft-ietf-hybi-thewebsocketprotocol- 10</a>
+ * Performs client side opening and closing handshakes for web socket specification version <a
+ * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10" >draft-ietf-hybi-thewebsocketprotocol-
+ * 10</a>
  * </p>
  */
 public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
@@ -54,21 +53,17 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 	private boolean allowExtensions = false;
 
 	/**
-	 * Constructor specifying the destination web socket location and version to
-	 * initiate
+	 * Constructor specifying the destination web socket location and version to initiate
 	 * 
 	 * @param webSocketURL
-	 *            URL for web socket communications. e.g
-	 *            "ws://myhost.com/mypath". Subsequent web socket frames will be
+	 *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
 	 *            sent to this URL.
 	 * @param version
-	 *            Version of web socket specification to use to connect to the
-	 *            server
+	 *            Version of web socket specification to use to connect to the server
 	 * @param subProtocol
 	 *            Sub protocol request sent to the server.
 	 * @param allowExtensions
-	 *            Allow extensions to be used in the reserved bits of the web
-	 *            socket frame
+	 *            Allow extensions to be used in the reserved bits of the web socket frame
 	 * @param customHeaders
 	 *            Map of custom headers to add to the client request
 	 */
@@ -158,8 +153,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 	 * @param channel
 	 *            Channel
 	 * @param response
-	 *            HTTP response returned from the server for the request sent by
-	 *            beginOpeningHandshake00().
+	 *            HTTP response returned from the server for the request sent by beginOpeningHandshake00().
 	 * @throws WebSocketHandshakeException
 	 */
 	@Override

@@ -38,16 +38,14 @@ import org.jboss.netty.util.CharsetUtil;
 
 /**
  * <p>
- * Performs server side opening and closing handshakes for <a
- * href="http://tools.ietf.org/html/rfc6455">RFC 6455</a>. This was originally
- * <a href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17"
+ * Performs server side opening and closing handshakes for <a href="http://tools.ietf.org/html/rfc6455">RFC 6455</a>.
+ * This was originally <a href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17"
  * >draft-ietf-hybi-thewebsocketprotocol- 17</a>
  * </p>
  */
 public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 
-	private static final InternalLogger logger = InternalLoggerFactory
-			.getInstance(WebSocketServerHandshaker13.class);
+	private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker13.class);
 
 	public static final String WEBSOCKET_17_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -57,17 +55,14 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 	 * Constructor specifying the destination web socket location
 	 * 
 	 * @param webSocketURL
-	 *            URL for web socket communications. e.g
-	 *            "ws://myhost.com/mypath". Subsequent web socket frames will be
+	 *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
 	 *            sent to this URL.
 	 * @param subProtocols
 	 *            CSV of supported protocols
 	 * @param allowExtensions
-	 *            Allow extensions to be used in the reserved bits of the web
-	 *            socket frame
+	 *            Allow extensions to be used in the reserved bits of the web socket frame
 	 */
-	public WebSocketServerHandshaker13(String webSocketURL,
-			String subProtocols, boolean allowExtensions) {
+	public WebSocketServerHandshaker13(String webSocketURL, String subProtocols, boolean allowExtensions) {
 		super(webSocketURL, subProtocols);
 		this.allowExtensions = allowExtensions;
 	}
@@ -75,8 +70,8 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 	/**
 	 * <p>
 	 * Handle the web socket handshake for the web socket specification <a href=
-	 * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17">HyBi
-	 * versions 13-17</a>. Versions 13-17 share the same wire protocol.
+	 * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17">HyBi versions 13-17</a>. Versions 13-17
+	 * share the same wire protocol.
 	 * </p>
 	 * 
 	 * <p>
@@ -116,13 +111,10 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 	public void performOpeningHandshake(Channel channel, HttpRequest req) {
 
 		if (logger.isDebugEnabled()) {
-			logger.debug(String.format(
-					"Channel %s WS version 13 handshake",
-					channel.getId()));
+			logger.debug(String.format("Channel %s WS version 13 handshake", channel.getId()));
 		}
 
-		HttpResponse res = new DefaultHttpResponse(HTTP_1_1,
-				new HttpResponseStatus(101, "Switching Protocols"));
+		HttpResponse res = new DefaultHttpResponse(HTTP_1_1, new HttpResponseStatus(101, "Switching Protocols"));
 		this.setVersion(WebSocketVersion.V13);
 
 		String key = req.getHeader(Names.SEC_WEBSOCKET_KEY);
@@ -135,9 +127,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 		String accept = base64Encode(sha1);
 
 		if (logger.isDebugEnabled()) {
-			logger.debug(String.format(
-					"WS Version 13 Server Handshake key: %s. Response: %s.", key,
-					accept));
+			logger.debug(String.format("WS Version 13 Server Handshake key: %s. Response: %s.", key, accept));
 		}
 
 		res.setStatus(new HttpResponseStatus(101, "Switching Protocols"));
@@ -146,8 +136,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 		res.addHeader(Names.SEC_WEBSOCKET_ACCEPT, accept);
 		String protocol = req.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
 		if (protocol != null) {
-			res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL,
-					this.selectSubProtocol(protocol));
+			res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, this.selectSubProtocol(protocol));
 		}
 
 		channel.write(res);
@@ -155,10 +144,8 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 		// Upgrade the connection and send the handshake response.
 		ChannelPipeline p = channel.getPipeline();
 		p.remove(HttpChunkAggregator.class);
-		p.replace(HttpRequestDecoder.class, "wsdecoder",
-				new WebSocket13FrameDecoder(true, this.allowExtensions));
-		p.replace(HttpResponseEncoder.class, "wsencoder",
-				new WebSocket13FrameEncoder(false));
+		p.replace(HttpRequestDecoder.class, "wsdecoder", new WebSocket13FrameDecoder(true, this.allowExtensions));
+		p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket13FrameEncoder(false));
 
 	}
 
@@ -171,8 +158,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 	 *            Web Socket frame that was received
 	 */
 	@Override
-	public void performClosingHandshake(Channel channel,
-			CloseWebSocketFrame frame) {
+	public void performClosingHandshake(Channel channel, CloseWebSocketFrame frame) {
 		ChannelFuture f = channel.write(frame);
 		f.addListener(ChannelFutureListener.CLOSE);
 	}
