@@ -22,57 +22,57 @@ import io.netty.buffer.ChannelBuffer;
  */
 public abstract class WebSocketFrame {
 
-    /**
-     * Flag to indicate if this frame is the final fragment in a message. The
-     * first fragment (frame) may also be the final fragment.
-     */
-    private boolean finalFragment = true;
+	/**
+	 * Flag to indicate if this frame is the final fragment in a message. The first fragment (frame) may also be the
+	 * final fragment.
+	 */
+	private boolean finalFragment = true;
 
-    /**
-     * RSV1, RSV2, RSV3 used for extensions
-     */
-    private int rsv = 0;
+	/**
+	 * RSV1, RSV2, RSV3 used for extensions
+	 */
+	private int rsv = 0;
 
-    /**
-     * Contents of this frame
-     */
-    private ChannelBuffer binaryData;
+	/**
+	 * Contents of this frame
+	 */
+	private ChannelBuffer binaryData;
 
-    /**
-     * Returns binary data
-     */
-    public ChannelBuffer getBinaryData() {
-        return binaryData;
-    }
+	/**
+	 * Returns binary data
+	 */
+	public ChannelBuffer getBinaryData() {
+		return binaryData;
+	}
 
-    /**
-     * Sets the binary data for this frame
-     */
-    public void setBinaryData(ChannelBuffer binaryData) {
-        this.binaryData = binaryData;
-    }
+	/**
+	 * Sets the binary data for this frame
+	 */
+	public void setBinaryData(ChannelBuffer binaryData) {
+		this.binaryData = binaryData;
+	}
 
-    /**
-     * Flag to indicate if this frame is the final fragment in a message. The
-     * first fragment (frame) may also be the final fragment.
-     */
-    public boolean isFinalFragment() {
-        return finalFragment;
-    }
+	/**
+	 * Flag to indicate if this frame is the final fragment in a message. The first fragment (frame) may also be the
+	 * final fragment.
+	 */
+	public boolean isFinalFragment() {
+		return finalFragment;
+	}
 
-    public void setFinalFragment(boolean finalFragment) {
-        this.finalFragment = finalFragment;
-    }
+	public void setFinalFragment(boolean finalFragment) {
+		this.finalFragment = finalFragment;
+	}
 
-    /**
-     * Bits used for extensions to the standard.
-     */
-    public int getRsv() {
-        return rsv;
-    }
+	/**
+	 * Bits used for extensions to the standard.
+	 */
+	public int getRsv() {
+		return rsv;
+	}
 
-    public void setRsv(int rsv) {
-        this.rsv = rsv;
-    }
+	public void setRsv(int rsv) {
+		this.rsv = rsv;
+	}
 
 }

@@ -29,11 +29,10 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * 
  * http://localhost:8080/websocket
  * 
- * Open your browser at http://localhost:8080/, then the demo page will be
- * loaded and a Web Socket connection will be made automatically.
+ * Open your browser at http://localhost:8080/, then the demo page will be loaded and a Web Socket connection will be
+ * made automatically.
  * 
- * This server illustrates support for the different web socket specification
- * versions and will work with:
+ * This server illustrates support for the different web socket specification versions and will work with:
  * 
  * <ul>
  * <li>Safari 5+ (draft-ietf-hybi-thewebsocketprotocol-00)
@@ -52,7 +51,7 @@ public class WebSocketServer {
 		ch.setLevel(Level.FINE);
 		Logger.getLogger("").addHandler(ch);
 		Logger.getLogger("").setLevel(Level.FINE);
-		
+
 		// Configure the server.
 		ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
 				Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
@@ -62,7 +61,8 @@ public class WebSocketServer {
 
 		// Bind and start to accept incoming connections.
 		bootstrap.bind(new InetSocketAddress(8080));
-		
-		System.out.println("Web Socket Server started on 8080. Open your browser and navigate to http://localhost:8080/");
+
+		System.out
+				.println("Web Socket Server started on 8080. Open your browser and navigate to http://localhost:8080/");
 	}
 }

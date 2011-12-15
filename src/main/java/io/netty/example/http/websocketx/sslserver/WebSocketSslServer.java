@@ -29,11 +29,10 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * 
  * https://localhost:8081/websocket
  * 
- * Open your browser at https://localhost:8081/, then the demo page will be
- * loaded and a Web Socket connection will be made automatically.
+ * Open your browser at https://localhost:8081/, then the demo page will be loaded and a Web Socket connection will be
+ * made automatically.
  * 
- * This server illustrates support for the different web socket specification
- * versions and will work with:
+ * This server illustrates support for the different web socket specification versions and will work with:
  * 
  * <ul>
  * <li>Safari 5+ (draft-ietf-hybi-thewebsocketprotocol-00)
@@ -52,13 +51,13 @@ public class WebSocketSslServer {
 		ch.setLevel(Level.FINE);
 		Logger.getLogger("").addHandler(ch);
 		Logger.getLogger("").setLevel(Level.FINE);
-		
+
 		String keyStoreFilePath = System.getProperty("keystore.file.path");
 		if (keyStoreFilePath == null || keyStoreFilePath.isEmpty()) {
 			System.out.println("ERROR: System property keystore.file.path not set. Exiting now!");
 			System.exit(1);
 		}
-		
+
 		String keyStoreFilePassword = System.getProperty("keystore.file.password");
 		if (keyStoreFilePassword == null || keyStoreFilePassword.isEmpty()) {
 			System.out.println("ERROR: System property keystore.file.password not set. Exiting now!");
@@ -74,7 +73,8 @@ public class WebSocketSslServer {
 
 		// Bind and start to accept incoming connections.
 		bootstrap.bind(new InetSocketAddress(8081));
-		
-		System.out.println("Web Socket Server started on 8081. Open your browser and navigate to https://localhost:8081/");
+
+		System.out
+				.println("Web Socket Server started on 8081. Open your browser and navigate to https://localhost:8081/");
 	}
 }
