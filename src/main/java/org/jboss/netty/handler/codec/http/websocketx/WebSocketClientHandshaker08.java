@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.codec.http.websocketx;
 
 import java.net.URI;
+import java.util.Map;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
@@ -42,8 +43,7 @@ import org.jboss.netty.util.CharsetUtil;
  */
 public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 
-	private static final InternalLogger logger = InternalLoggerFactory
-			.getInstance(WebSocketClientHandshaker08.class);
+	private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketClientHandshaker08.class);
 
 	public static final String MAGIC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -69,11 +69,12 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 	 * @param allowExtensions
 	 *            Allow extensions to be used in the reserved bits of the web
 	 *            socket frame
+	 * @param customHeaders
+	 *            Map of custom headers to add to the client request
 	 */
-	public WebSocketClientHandshaker08(URI webSocketURL,
-			WebSocketVersion version, String subProtocol,
-			boolean allowExtensions) {
-		super(webSocketURL, version, subProtocol);
+	public WebSocketClientHandshaker08(URI webSocketURL, WebSocketVersion version, String subProtocol,
+			boolean allowExtensions, Map<String, String> customHeaders) {
+		super(webSocketURL, version, subProtocol, customHeaders);
 		this.allowExtensions = allowExtensions;
 	}
 
@@ -115,14 +116,12 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 		this.expectedChallengeResponseString = base64Encode(sha1);
 
 		if (logger.isDebugEnabled()) {
-			logger.debug(String
-					.format("WS Version 08 Client Handshake key: %s. Expected response: %s.",
-							key, this.expectedChallengeResponseString));
+			logger.debug(String.format("WS Version 08 Client Handshake key: %s. Expected response: %s.", key,
+					this.expectedChallengeResponseString));
 		}
 
 		// Format request
-		HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
-				HttpMethod.GET, path);
+		HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
 		request.addHeader(Names.UPGRADE, Values.WEBSOCKET.toLowerCase());
 		request.addHeader(Names.CONNECTION, Values.UPGRADE);
 		request.addHeader(Names.SEC_WEBSOCKET_KEY, key);
@@ -132,11 +131,15 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 			request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, protocol);
 		}
 		request.addHeader(Names.SEC_WEBSOCKET_VERSION, "8");
+		if (customHeaders != null) {
+			for (String header : customHeaders.keySet()) {
+				request.addHeader(header, customHeaders.get(header));
+			}
+		}
 
 		channel.write(request);
 
-		channel.getPipeline().replace(HttpRequestEncoder.class, "ws-encoder",
-				new WebSocket08FrameEncoder(true));
+		channel.getPipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket08FrameEncoder(true));
 	}
 
 	/**
@@ -160,36 +163,28 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 	 * @throws WebSocketHandshakeException
 	 */
 	@Override
-	public void performClosingHandshake(Channel channel, HttpResponse response)
-			throws WebSocketHandshakeException {
-		final HttpResponseStatus status = new HttpResponseStatus(101,
-				"Switching Protocols");
+	public void performClosingHandshake(Channel channel, HttpResponse response) throws WebSocketHandshakeException {
+		final HttpResponseStatus status = new HttpResponseStatus(101, "Switching Protocols");
 
 		if (!response.getStatus().equals(status)) {
-			throw new WebSocketHandshakeException(
-					"Invalid handshake response status: "
-							+ response.getStatus());
+			throw new WebSocketHandshakeException("Invalid handshake response status: " + response.getStatus());
 		}
 
 		String upgrade = response.getHeader(Names.UPGRADE);
 		if (upgrade == null || !upgrade.equals(Values.WEBSOCKET.toLowerCase())) {
-			throw new WebSocketHandshakeException(
-					"Invalid handshake response upgrade: "
-							+ response.getHeader(Names.UPGRADE));
+			throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
+					+ response.getHeader(Names.UPGRADE));
 		}
 
 		String connection = response.getHeader(Names.CONNECTION);
 		if (connection == null || !connection.equals(Values.UPGRADE)) {
-			throw new WebSocketHandshakeException(
-					"Invalid handshake response connection: "
-							+ response.getHeader(Names.CONNECTION));
+			throw new WebSocketHandshakeException("Invalid handshake response connection: "
+					+ response.getHeader(Names.CONNECTION));
 		}
 
 		String accept = response.getHeader(Names.SEC_WEBSOCKET_ACCEPT);
-		if (accept == null
-				|| !accept.equals(this.expectedChallengeResponseString)) {
-			throw new WebSocketHandshakeException(String.format(
-					"Invalid challenge. Actual: %s. Expected: %s", accept,
+		if (accept == null || !accept.equals(this.expectedChallengeResponseString)) {
+			throw new WebSocketHandshakeException(String.format("Invalid challenge. Actual: %s. Expected: %s", accept,
 					this.expectedChallengeResponseString));
 		}
 
