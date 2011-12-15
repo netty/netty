@@ -209,7 +209,15 @@ public class ClientBootstrap extends Bootstrap {
 
         // Set the options.
         Channel ch = getFactory().newChannel(pipeline);
-        ch.getConfig().setOptions(getOptions());
+        boolean success = false;
+        try {
+            ch.getConfig().setOptions(getOptions());
+            success = true;
+        } finally {
+            if (!success) {
+                ch.close();
+            }
+        }
 
         // Bind.
         if (localAddress != null) {

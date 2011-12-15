@@ -347,7 +347,11 @@ public class ServerBootstrap extends Bootstrap {
                 ChannelHandlerContext ctx,
                 ChildChannelStateEvent e) throws Exception {
             // Apply child options.
-            e.getChildChannel().getConfig().setOptions(childOptions);
+            try {
+                e.getChildChannel().getConfig().setOptions(childOptions);
+            } catch (Throwable t) {
+                Channels.fireExceptionCaught(e.getChildChannel(), t);
+            }
             ctx.sendUpstream(e);
         }
 
