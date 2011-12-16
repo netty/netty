@@ -96,6 +96,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * Connection: Upgrade
      * Host: example.com
      * Origin: http://example.com
+     * Sec-WebSocket-Protocol: chat, sample
      * Sec-WebSocket-Key1: 4 @1  46546xW%0l 1 5
      * Sec-WebSocket-Key2: 12998 5 Y3 1  .P00
      *
