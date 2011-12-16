@@ -452,7 +452,19 @@ public class HttpPostRequestDecoder {
                                 charset);
                         currentAttribute = factory.createAttribute(request, key);
                         firstpos = currentpos;
+                    } else if (read == '&') { // special empty FIELD
+                        currentStatus = MultiPartStatus.DISPOSITION;
+                        ampersandpos = currentpos - 1;
+                        String key = decodeAttribute(undecodedChunk.toString(firstpos, ampersandpos - firstpos, charset), charset);
+                        currentAttribute = factory.createAttribute(request, key);
+                        currentAttribute.setValue(""); // empty
+                        addHttpData(currentAttribute);
+                        currentAttribute = null;
+                        firstpos = currentpos;
+                        contRead = true;
                     }
+                    // END OF FIX
+
                     break;
                 case FIELD:// search '&' or end of line
                     if (read == '&') {
