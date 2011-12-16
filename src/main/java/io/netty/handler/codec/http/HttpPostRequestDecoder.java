@@ -463,8 +463,6 @@ public class HttpPostRequestDecoder {
                         firstpos = currentpos;
                         contRead = true;
                     }
-                    // END OF FIX
-
                     break;
                 case FIELD:// search '&' or end of line
                     if (read == '&') {
