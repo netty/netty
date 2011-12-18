@@ -36,8 +36,8 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class WebSocketServerHandshaker13Test {
-
+public class WebSocketServerHandshaker08Test {
+    
     private DefaultChannelPipeline createPipeline() {
         DefaultChannelPipeline pipeline = new DefaultChannelPipeline();
         pipeline.addLast("chunkAggregator", new HttpChunkAggregator(42));
@@ -45,20 +45,20 @@ public class WebSocketServerHandshaker13Test {
         pipeline.addLast("responseEncoder", new HttpResponseEncoder());
         return pipeline;
     }
-
+    
     @Test
     public void testPerformOpeningHandshake() {
         Channel channelMock = EasyMock.createMock(Channel.class);
-
+        
         DefaultChannelPipeline pipeline = createPipeline();
         EasyMock.expect(channelMock.getPipeline()).andReturn(pipeline);
-
+        
         // capture the http response in order to verify the headers
         Capture<HttpResponse> res = new Capture<HttpResponse>();
         EasyMock.expect(channelMock.write(capture(res))).andReturn(new DefaultChannelFuture(channelMock, true));
-
+        
         replay(channelMock);
-
+        
         HttpRequest req = new DefaultHttpRequest(HTTP_1_1, HttpMethod.GET, "/chat");
         req.setHeader(Names.HOST, "server.example.com");
         req.setHeader(Names.UPGRADE, WEBSOCKET.toLowerCase());
@@ -66,10 +66,11 @@ public class WebSocketServerHandshaker13Test {
         req.setHeader(Names.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==");
         req.setHeader(Names.SEC_WEBSOCKET_ORIGIN, "http://example.com");
         req.setHeader(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
-        req.setHeader(Names.SEC_WEBSOCKET_VERSION, "13");
-        WebSocketServerHandshaker13 handsaker = new WebSocketServerHandshaker13("ws://example.com/chat", "chat", false);
+        req.setHeader(Names.SEC_WEBSOCKET_VERSION, "8");
+        
+        WebSocketServerHandshaker08 handsaker = new WebSocketServerHandshaker08("ws://example.com/chat", "chat", false);
         handsaker.performOpeningHandshake(channelMock, req);
-
+        
         Assert.assertEquals("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.getValue().getHeader(Names.SEC_WEBSOCKET_ACCEPT));
         Assert.assertEquals("chat", res.getValue().getHeader(Names.SEC_WEBSOCKET_PROTOCOL));
     }
