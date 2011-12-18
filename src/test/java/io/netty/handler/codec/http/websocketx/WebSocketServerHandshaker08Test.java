@@ -36,7 +36,7 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class WebSocketServerHandshaker10Test {
+public class WebSocketServerHandshaker08Test {
     
     private DefaultChannelPipeline createPipeline() {
         DefaultChannelPipeline pipeline = new DefaultChannelPipeline();
@@ -68,7 +68,7 @@ public class WebSocketServerHandshaker10Test {
         req.setHeader(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
         req.setHeader(Names.SEC_WEBSOCKET_VERSION, "8");
         
-        WebSocketServerHandshaker10 handsaker = new WebSocketServerHandshaker10("ws://example.com/chat", "chat", false);
+        WebSocketServerHandshaker08 handsaker = new WebSocketServerHandshaker08("ws://example.com/chat", "chat", false);
         handsaker.performOpeningHandshake(channelMock, req);
         
         Assert.assertEquals("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.getValue().getHeader(Names.SEC_WEBSOCKET_ACCEPT));
