@@ -32,10 +32,25 @@ import io.netty.util.CharsetUtil;
  * <pre>
  * {@link QueryStringDecoder} decoder = new {@link QueryStringDecoder}("/hello?recipient=world&x=1;y=2");
  * assert decoder.getPath().equals("/hello");
- * assert decoder.getParameters().get("recipient").equals("world");
- * assert decoder.getParameters().get("x").equals("1");
- * assert decoder.getParameters().get("y").equals("2");
+ * assert decoder.getParameters().get("recipient").get(0).equals("world");
+ * assert decoder.getParameters().get("x").get(0).equals("1");
+ * assert decoder.getParameters().get("y").get(0).equals("2");
  * </pre>
+ *
+ * This decoder can also decode the content of an HTTP POST request whose
+ * content type is <tt>application/x-www-form-urlencoded</tt>:
+ * <pre>
+ * {@link QueryStringDecoder} decoder = new {@link QueryStringDecoder}("recipient=world&x=1;y=2", false);
+ * ...
+ * </pre>
+ *
+ * <h3>HashDOS vulnerability fix</h3>
+ *
+ * As a workaround to the <a href="http://events.ccc.de/congress/2011/Fahrplan/attachments/2007_28C3_Effective_DoS_on_web_application_platforms.pdf">HashDOS</a>
+ * vulnerability, the decoder limits the maximum number of decoded key-value
+ * parameter pairs, up to {@literal 1024} by default, and you can configure it
+ * when you construct the decoder by passing an additional integer parameter.
+ *
  * @see QueryStringEncoder
  *
  * @apiviz.stereotype utility
@@ -43,10 +58,15 @@ import io.netty.util.CharsetUtil;
  */
 public class QueryStringDecoder {
 
+    private static final int DEFAULT_MAX_PARAMS = 1024;
+
     private final Charset charset;
     private final String uri;
+    private final boolean hasPath;
+    private final int maxParams;
     private String path;
     private Map<String, List<String>> params;
+    private int nParams;
 
     /**
      * Creates a new decoder that decodes the specified URI. The decoder will
@@ -60,17 +80,47 @@ public class QueryStringDecoder {
      * Creates a new decoder that decodes the specified URI encoded in the
      * specified charset.
      */
+    public QueryStringDecoder(String uri, boolean hasPath) {
+        this(uri, HttpCodecUtil.DEFAULT_CHARSET, hasPath);
+    }
+
+    /**
+     * Creates a new decoder that decodes the specified URI encoded in the
+     * specified charset.
+     */
     public QueryStringDecoder(String uri, Charset charset) {
+        this(uri, charset, true);
+    }
+
+    /**
+     * Creates a new decoder that decodes the specified URI encoded in the
+     * specified charset.
+     */
+    public QueryStringDecoder(String uri, Charset charset, boolean hasPath) {
+        this(uri, charset, hasPath, DEFAULT_MAX_PARAMS);
+    }
+
+    /**
+     * Creates a new decoder that decodes the specified URI encoded in the
+     * specified charset.
+     */
+    public QueryStringDecoder(String uri, Charset charset, boolean hasPath, int maxParams) {
         if (uri == null) {
             throw new NullPointerException("uri");
         }
         if (charset == null) {
             throw new NullPointerException("charset");
         }
+        if (maxParams <= 0) {
+            throw new IllegalArgumentException(
+                    "maxParams: " + maxParams + " (expected: a positive integer)");
+        }
 
         // http://en.wikipedia.org/wiki/Query_string
         this.uri = uri.replace(';', '&');
         this.charset = charset;
+        this.maxParams = maxParams;
+        this.hasPath = hasPath;
     }
 
     /**
@@ -86,16 +136,30 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(URI uri, Charset charset){
+        this(uri, charset, DEFAULT_MAX_PARAMS);
+    }
+
+    /**
+     * Creates a new decoder that decodes the specified URI encoded in the
+     * specified charset.
+     */
+    public QueryStringDecoder(URI uri, Charset charset, int maxParams) {
         if (uri == null) {
             throw new NullPointerException("uri");
         }
         if (charset == null) {
             throw new NullPointerException("charset");
         }
+        if (maxParams <= 0) {
+            throw new IllegalArgumentException(
+                    "maxParams: " + maxParams + " (expected: a positive integer)");
+        }
 
         // http://en.wikipedia.org/wiki/Query_string
         this.uri = uri.toASCIIString().replace(';', '&');
         this.charset = charset;
+        this.maxParams = maxParams;
+        hasPath = false;
     }
 
     /**
@@ -103,6 +167,10 @@ public class QueryStringDecoder {
      */
     public String getPath() {
         if (path == null) {
+            if (!hasPath) {
+                return path = "";
+            }
+
             int pathEndPos = uri.indexOf('?');
             if (pathEndPos < 0) {
                 path = uri;
@@ -119,17 +187,25 @@ public class QueryStringDecoder {
      */
     public Map<String, List<String>> getParameters() {
         if (params == null) {
-            int pathLength = getPath().length();
-            if (uri.length() == pathLength) {
-                return Collections.emptyMap();
+            if (hasPath) {
+                int pathLength = getPath().length();
+                if (uri.length() == pathLength) {
+                    return Collections.emptyMap();
+                }
+                decodeParams(uri.substring(pathLength + 1));
+            } else {
+                if (uri.isEmpty()) {
+                    return Collections.emptyMap();
+                }
+                decodeParams(uri);
             }
-            params = decodeParams(uri.substring(pathLength + 1));
         }
         return params;
     }
 
-    private Map<String, List<String>> decodeParams(String s) {
-        Map<String, List<String>> params = new LinkedHashMap<String, List<String>>();
+    private void decodeParams(String s) {
+        Map<String, List<String>> params = this.params = new LinkedHashMap<String, List<String>>();
+        nParams = 0;
         String name = null;
         int pos = 0; // Beginning of the unprocessed region
         int i;       // End of the unprocessed region
@@ -146,9 +222,13 @@ public class QueryStringDecoder {
                     // We haven't seen an `=' so far but moved forward.
                     // Must be a param of the form '&a&' so add it with
                     // an empty value.
-                    addParam(params, decodeComponent(s.substring(pos, i), charset), "");
+                    if (!addParam(params, decodeComponent(s.substring(pos, i), charset), "")) {
+                        return;
+                    }
                 } else if (name != null) {
-                    addParam(params, name, decodeComponent(s.substring(pos, i), charset));
+                    if (!addParam(params, name, decodeComponent(s.substring(pos, i), charset))) {
+                        return;
+                    }
                     name = null;
                 }
                 pos = i + 1;
@@ -157,15 +237,34 @@ public class QueryStringDecoder {
 
         if (pos != i) {  // Are there characters we haven't dealt with?
             if (name == null) {     // Yes and we haven't seen any `='.
-                addParam(params, decodeComponent(s.substring(pos, i), charset), "");
+                if (!addParam(params, decodeComponent(s.substring(pos, i), charset), "")) {
+                    return;
+                }
             } else {                // Yes and this must be the last value.
-                addParam(params, name, decodeComponent(s.substring(pos, i), charset));
+                if (!addParam(params, name, decodeComponent(s.substring(pos, i), charset))) {
+                    return;
+                }
             }
         } else if (name != null) {  // Have we seen a name without value?
-            addParam(params, name, "");
+            if (!addParam(params, name, "")) {
+                return;
+            }
+        }
+    }
+
+    private boolean addParam(Map<String, List<String>> params, String name, String value) {
+        if (nParams >= maxParams) {
+            return false;
         }
 
-        return params;
+        List<String> values = params.get(name);
+        if (values == null) {
+            values = new ArrayList<String>(1);  // Often there's only 1 value.
+            params.put(name, values);
+        }
+        values.add(value);
+        nParams ++;
+        return true;
     }
 
     /**
@@ -283,14 +382,5 @@ public class QueryStringDecoder {
         } else {
             return Character.MAX_VALUE;
         }
-    }
-
-    private static void addParam(Map<String, List<String>> params, String name, String value) {
-        List<String> values = params.get(name);
-        if (values == null) {
-            values = new ArrayList<String>(1);  // Often there's only 1 value.
-            params.put(name, values);
-        }
-        values.add(value);
     }
 }

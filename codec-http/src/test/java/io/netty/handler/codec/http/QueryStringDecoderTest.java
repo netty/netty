@@ -15,6 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
+import java.util.List;
+import java.util.Map;
+
 import io.netty.util.CharsetUtil;
 import org.junit.Assert;
 import org.junit.Test;
@@ -92,6 +95,33 @@ public class QueryStringDecoderTest {
         assertQueryString("/foo?a=", "/foo?&a=");
         assertQueryString("/foo?a=b&c=d", "/foo?a=b&c=d");
         assertQueryString("/foo?a=1&a=&a=", "/foo?a=1&a&a=");
+    }
+    
+    @Test
+    public void testHashDos() throws Exception {
+        StringBuilder buf = new StringBuilder();
+        buf.append('?');
+        for (int i = 0; i < 65536; i ++) {
+            buf.append('k');
+            buf.append(i);
+            buf.append("=v");
+            buf.append(i);
+            buf.append('&');
+        }
+        Assert.assertEquals(1024, new QueryStringDecoder(buf.toString()).getParameters().size());
+    }
+
+    @Test
+    public void testHasPath() throws Exception {
+        QueryStringDecoder decoder = new QueryStringDecoder("1=2", false);
+        Assert.assertEquals("", decoder.getPath());
+        Map<String, List<String>> params = decoder.getParameters();
+        Assert.assertEquals(1, params.size());
+        Assert.assertTrue(params.containsKey("1"));
+        List<String> param = params.get("1");
+        Assert.assertNotNull(param);
+        Assert.assertEquals(1, param.size());
+        Assert.assertEquals("2", param.get(0));
     }
 
     @Test
