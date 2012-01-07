@@ -309,17 +309,23 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
 
     private void destroy(ChannelHandlerContext ctx) {
         State state = (State) ctx.getAttachment();
-        if (state.readerIdleTimeout != null) {
-            state.readerIdleTimeout.cancel();
-            state.readerIdleTimeout = null;
-        }
-        if (state.writerIdleTimeout != null) {
-            state.writerIdleTimeout.cancel();
-            state.writerIdleTimeout = null;
-        }
-        if (state.allIdleTimeout != null) {
-            state.allIdleTimeout.cancel();
-            state.allIdleTimeout = null;
+        // Check if the state was set before, it may not if the destroy method was called before the 
+        // channelOpen(...) method. 
+        //
+        // See #143
+        if (state != null) {
+            if (state.readerIdleTimeout != null) {
+                state.readerIdleTimeout.cancel();
+                state.readerIdleTimeout = null;
+            }
+            if (state.writerIdleTimeout != null) {
+                state.writerIdleTimeout.cancel();
+                state.writerIdleTimeout = null;
+            }
+            if (state.allIdleTimeout != null) {
+                state.allIdleTimeout.cancel();
+                state.allIdleTimeout = null;
+            }
         }
     }
 
