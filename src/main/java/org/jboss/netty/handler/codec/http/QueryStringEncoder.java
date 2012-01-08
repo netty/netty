@@ -29,7 +29,7 @@ import java.util.List;
  * This encoder is for one time use only.  Create a new instance for each URI.
  *
  * <pre>
- * {@link QueryStringEncoder} encoder = new {@link QueryStringDecoder}("/hello");
+ * {@link QueryStringEncoder} encoder = new {@link QueryStringEncoder}("/hello");
  * encoder.addParam("recipient", "world");
  * assert encoder.toString().equals("/hello?recipient=world");
  * </pre>
