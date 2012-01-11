@@ -18,17 +18,53 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.netty</groupId>
-    <artifactId>netty-parent</artifactId>
-    <version>4.0.0.Alpha1-SNAPSHOT</version>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>7</version>
+    <relativePath></relativePath>
   </parent>
 
   <groupId>io.netty</groupId>
   <artifactId>netty-build</artifactId>
-  <version>1-SNAPSHOT</version>
   <packaging>jar</packaging>
+  <version>1-SNAPSHOT</version>
 
   <name>Netty/Build</name>
+
+  <url>http://netty.io/</url>
+  <description>
+    Resources required to build Netty
+  </description>
+
+  <organization>
+    <name>The Netty Project</name>
+    <url>http://netty.io/</url>
+  </organization>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+    </license>
+  </licenses>
+  <inceptionYear>2008</inceptionYear>
+
+  <scm>
+    <url>https://github.com/netty/netty</url>
+    <connection>scm:git:git://github.com/netty/netty.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
+  </scm>
+
+  <developers>
+    <developer>
+      <id>netty.io</id>
+      <name>The Netty Project Contributors</name>
+      <email>netty@googlegroups.com</email>
+      <url>http://netty.io/</url>
+      <organization>The Netty Project</organization>
+      <organizationUrl>http://netty.io/</organizationUrl>
+    </developer>
+  </developers>
 
   <dependencies>
     <dependency>
@@ -37,19 +73,5 @@
       <version>5.5</version>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>check-style</id>
-            <phase>none</phase>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
 </project>
 
