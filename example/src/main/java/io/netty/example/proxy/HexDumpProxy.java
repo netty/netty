@@ -42,7 +42,7 @@ public class HexDumpProxy {
         String remoteHost = args[1];
         int remotePort = Integer.parseInt(args[2]);
 
-        run(localPort, remoteHost, remotePort);
+        new HexDumpProxy(localPort, remoteHost, remotePort).run();
     }
 
     private final int localPort;
