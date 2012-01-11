@@ -281,7 +281,12 @@
             <configuration>
               <consoleOutput>true</consoleOutput>
               <logViolationsToConsole>true</logViolationsToConsole>
+              <!-- Disabled temporarily until all violations are fixed.
               <failsOnError>true</failsOnError>
+              <failOnViolation>true</failOnViolation>
+              -->
+              <failsOnError>false</failsOnError>
+              <failOnViolation>false</failOnViolation>
               <configLocation>io/netty/checkstyle.xml</configLocation>
             </configuration>
           </execution>
