@@ -366,7 +366,13 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             ConnectException cause = null;
             for (SelectionKey k: keys) {
                 if (!k.isValid()) {
-                    close(k);
+                    // Comment the close call again as it gave us major problems with ClosedChannelExceptions.
+                    //
+                    // See:
+                    // * https://github.com/netty/netty/issues/142
+                    // * https://github.com/netty/netty/issues/138
+                    //
+                    //close(k);
                     continue;
                 }
 
