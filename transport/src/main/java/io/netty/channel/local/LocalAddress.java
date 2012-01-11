@@ -104,7 +104,7 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
     public int compareTo(LocalAddress o) {
         if (ephemeral) {
             if (o.ephemeral) {
-                if (this == o){
+                if (this == o) {
                     return 0;
                 }
 

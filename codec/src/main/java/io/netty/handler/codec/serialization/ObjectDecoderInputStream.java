@@ -191,6 +191,9 @@ public class ObjectDecoderInputStream extends InputStream implements
         return in.readInt();
     }
 
+    /**
+     * @deprecated Use {@link java.io.BufferedReader#readLine()} instead.
+     */
     @Override
     @Deprecated
     public final String readLine() throws IOException {

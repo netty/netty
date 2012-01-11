@@ -15,13 +15,17 @@
  */
 package io.netty.example.sctp;
 
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.*;
-import io.netty.channel.sctp.SctpPayload;
-
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.ExceptionEvent;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.channel.sctp.SctpPayload;
 
 /**
  * Handler implementation for the echo client.  It initiates the message

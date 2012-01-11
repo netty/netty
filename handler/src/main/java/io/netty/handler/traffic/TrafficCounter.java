@@ -34,22 +34,22 @@ public class TrafficCounter {
     /**
      * Current written bytes
      */
-    private final AtomicLong currentWrittenBytes = new AtomicLong(0);
+    private final AtomicLong currentWrittenBytes = new AtomicLong();
 
     /**
      * Current read bytes
      */
-    private final AtomicLong currentReadBytes = new AtomicLong(0);
+    private final AtomicLong currentReadBytes = new AtomicLong();
 
     /**
      * Long life written bytes
      */
-    private final AtomicLong cumulativeWrittenBytes = new AtomicLong(0);
+    private final AtomicLong cumulativeWrittenBytes = new AtomicLong();
 
     /**
      * Long life read bytes
      */
-    private final AtomicLong cumulativeReadBytes = new AtomicLong(0);
+    private final AtomicLong cumulativeReadBytes = new AtomicLong();
 
     /**
      * Last Time where cumulative bytes where reset to zero
@@ -59,27 +59,27 @@ public class TrafficCounter {
     /**
      * Last writing bandwidth
      */
-    private long lastWriteThroughput = 0;
+    private long lastWriteThroughput;
 
     /**
      * Last reading bandwidth
      */
-    private long lastReadThroughput = 0;
+    private long lastReadThroughput;
 
     /**
      * Last Time Check taken
      */
-    private final AtomicLong lastTime = new AtomicLong(0);
+    private final AtomicLong lastTime = new AtomicLong();
 
     /**
      * Last written bytes number during last check interval
      */
-    private long lastWrittenBytes = 0;
+    private long lastWrittenBytes;
 
     /**
      * Last read bytes number during last check interval
      */
-    private long lastReadBytes = 0;
+    private long lastReadBytes;
 
     /**
      * Delay between two captures
@@ -97,22 +97,22 @@ public class TrafficCounter {
     /**
      * The associated TrafficShapingHandler
      */
-    private AbstractTrafficShapingHandler trafficShapingHandler = null;
+    private AbstractTrafficShapingHandler trafficShapingHandler;
 
     /**
      * Default Executor
      */
-    private Executor executor = null;
+    private Executor executor;
 
     /**
      * Is Monitor active
      */
-    AtomicBoolean monitorActive = new AtomicBoolean(false);
+    AtomicBoolean monitorActive = new AtomicBoolean();
 
     /**
      * Monitor
      */
-    private TrafficMonitoring trafficMonitoring = null;
+    private TrafficMonitoring trafficMonitoring;
 
     /**
      * Class to implement monitoring at fix delay

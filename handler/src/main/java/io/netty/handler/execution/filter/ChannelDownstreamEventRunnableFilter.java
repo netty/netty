@@ -22,7 +22,7 @@ import io.netty.handler.execution.ChannelEventRunnable;
  * {@link ChannelEventRunnableFilter} implementation which matches {@link ChannelDownstreamEventRunnable}
  *
  */
-public class ChannelDownstreamEventRunnableFilter implements ChannelEventRunnableFilter{
+public class ChannelDownstreamEventRunnableFilter implements ChannelEventRunnableFilter {
 
     @Override
     public boolean filter(ChannelEventRunnable event) {

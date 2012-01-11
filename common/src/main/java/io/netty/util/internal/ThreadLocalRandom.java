@@ -48,9 +48,9 @@ import java.util.Random;
  */
 final class ThreadLocalRandom extends Random {
     // same constants as Random, but must be redeclared because private
-    private final static long multiplier = 0x5DEECE66DL;
-    private final static long addend = 0xBL;
-    private final static long mask = (1L << 48) - 1;
+    private static final long multiplier = 0x5DEECE66DL;
+    private static final long addend = 0xBL;
+    private static final long mask = (1L << 48) - 1;
 
     /**
      * The random seed. We can't use super.seed.
@@ -118,7 +118,7 @@ final class ThreadLocalRandom extends Random {
     @Override
     protected int next(int bits) {
         rnd = rnd * multiplier + addend & mask;
-        return (int) (rnd >>> 48-bits);
+        return (int) (rnd >>> 48 - bits);
     }
 
     private static final long serialVersionUID = -5851777807851030925L;

@@ -33,14 +33,14 @@ final class SctpSendBufferPool {
     private static final int ALIGN_SHIFT = 4;
     private static final int ALIGN_MASK = 15;
 
-    PreallocationRef poolHead = null;
+    PreallocationRef poolHead;
     Preallocation current = new Preallocation(DEFAULT_PREALLOCATION_SIZE);
 
     SctpSendBufferPool() {
         super();
     }
 
-    final SendBuffer acquire(Object message) {
+    SendBuffer acquire(Object message) {
         if (message instanceof SctpPayload) {
             return acquire((SctpPayload) message);
         } else {
@@ -49,7 +49,7 @@ final class SctpSendBufferPool {
         }
     }
 
-    private final SendBuffer acquire(SctpPayload message) {
+    private SendBuffer acquire(SctpPayload message) {
         final ChannelBuffer src = message.getPayloadBuffer();
         final int streamNo = message.getStreamIdentifier();
         final int protocolId = message.getProtocolIdentifier();
@@ -99,7 +99,7 @@ final class SctpSendBufferPool {
         return dst;
     }
 
-    private final Preallocation getPreallocation() {
+    private Preallocation getPreallocation() {
         Preallocation current = this.current;
         if (current.refCnt == 0) {
             current.buffer.clear();
@@ -109,7 +109,7 @@ final class SctpSendBufferPool {
         return getPreallocation0();
     }
 
-    private final Preallocation getPreallocation0() {
+    private Preallocation getPreallocation0() {
         PreallocationRef ref = poolHead;
         if (ref != null) {
             do {
@@ -128,7 +128,7 @@ final class SctpSendBufferPool {
         return new Preallocation(DEFAULT_PREALLOCATION_SIZE);
     }
 
-    private static final int align(int pos) {
+    private static int align(int pos) {
         int q = pos >>> ALIGN_SHIFT;
         int r = pos & ALIGN_MASK;
         if (r != 0) {
@@ -270,17 +270,17 @@ final class SctpSendBufferPool {
         }
 
         @Override
-        public final boolean finished() {
+        public boolean finished() {
             return true;
         }
 
         @Override
-        public final long writtenBytes() {
+        public long writtenBytes() {
             return 0;
         }
 
         @Override
-        public final long totalBytes() {
+        public long totalBytes() {
             return 0;
         }
 

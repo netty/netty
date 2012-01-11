@@ -46,6 +46,20 @@ public class FactorialClient {
             throw new IllegalArgumentException("count must be a positive integer.");
         }
 
+        new FactorialClient(host, port, count).run();
+    }
+
+    private final String host;
+    private final int port;
+    private final int count;
+
+    public FactorialClient(String host, int port, int count) {
+        this.host = host;
+        this.port = port;
+        this.count = count;
+    }
+
+    public void run() {
         // Configure the client.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(

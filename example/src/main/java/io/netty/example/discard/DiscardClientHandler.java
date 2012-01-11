@@ -38,7 +38,7 @@ public class DiscardClientHandler extends SimpleChannelUpstreamHandler {
     private static final Logger logger = Logger.getLogger(
             DiscardClientHandler.class.getName());
 
-    private long transferredBytes = 0;
+    private long transferredBytes;
     private final byte[] content;
 
     public DiscardClientHandler(int messageSize) {
@@ -84,7 +84,7 @@ public class DiscardClientHandler extends SimpleChannelUpstreamHandler {
 
     @Override
     public void writeComplete(ChannelHandlerContext ctx, WriteCompletionEvent e) {
-        transferredBytes =+e.getWrittenAmount();
+        transferredBytes += e.getWrittenAmount();
     }
 
     @Override

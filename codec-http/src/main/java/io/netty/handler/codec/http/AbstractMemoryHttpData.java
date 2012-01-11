@@ -32,14 +32,11 @@ import io.netty.buffer.ChannelBuffers;
  */
 public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
-    private ChannelBuffer channelBuffer = null;
+    private ChannelBuffer channelBuffer;
+    private int chunkPosition;
+    protected boolean isRenamed;
 
-    private int chunkPosition = 0;
-
-    protected boolean isRenamed = false;
-
-    public AbstractMemoryHttpData(String name, Charset charset, long size)
-            throws NullPointerException, IllegalArgumentException {
+    public AbstractMemoryHttpData(String name, Charset charset, long size) {
         super(name, charset, size);
     }
 
@@ -64,7 +61,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             throw new NullPointerException("inputStream");
         }
         ChannelBuffer buffer = ChannelBuffers.dynamicBuffer();
-        byte[] bytes = new byte[4096*4];
+        byte[] bytes = new byte[4096 * 4];
         int read = inputStream.read(bytes);
         int written = 0;
         while (read > 0) {

@@ -30,7 +30,7 @@ import io.netty.channel.ChannelSink;
 
 /**
  */
-class OioAcceptedSocketChannel extends OioSocketChannel {
+final class OioAcceptedSocketChannel extends OioSocketChannel {
 
     private final PushbackInputStream in;
     private final OutputStream out;

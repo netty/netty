@@ -57,9 +57,9 @@ public class DirectChannelBufferFactory extends AbstractChannelBufferFactory {
     private final Object bigEndianLock = new Object();
     private final Object littleEndianLock = new Object();
     private final int preallocatedBufferCapacity;
-    private ChannelBuffer preallocatedBigEndianBuffer = null;
+    private ChannelBuffer preallocatedBigEndianBuffer;
     private int preallocatedBigEndianBufferPosition;
-    private ChannelBuffer preallocatedLittleEndianBuffer = null;
+    private ChannelBuffer preallocatedLittleEndianBuffer;
     private int preallocatedLittleEndianBufferPosition;
 
     /**

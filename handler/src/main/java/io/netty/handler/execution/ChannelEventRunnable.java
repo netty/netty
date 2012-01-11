@@ -19,7 +19,7 @@ import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.EstimatableObjectWrapper;
 
-public abstract class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper{
+public abstract class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper {
     
     protected final ChannelHandlerContext ctx;
     protected final ChannelEvent e;

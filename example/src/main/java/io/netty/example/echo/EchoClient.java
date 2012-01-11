@@ -51,7 +51,21 @@ public class EchoClient {
         } else {
             firstMessageSize = 256;
         }
+        
+        new EchoClient(host, port, firstMessageSize).run();
+    }
+    
+    private final String host;
+    private final int port;
+    private final int firstMessageSize;
+    
+    public EchoClient(String host, int port, int firstMessageSize) {
+        this.host = host;
+        this.port = port;
+        this.firstMessageSize = firstMessageSize;
+    }
 
+    public void run() {
         // Configure the client.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(

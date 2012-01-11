@@ -52,7 +52,7 @@ public class WebSocketSslServerHandler extends SimpleChannelUpstreamHandler {
 
     private static final String WEBSOCKET_PATH = "/websocket";
 
-    private WebSocketServerHandshaker handshaker = null;
+    private WebSocketServerHandshaker handshaker;
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {

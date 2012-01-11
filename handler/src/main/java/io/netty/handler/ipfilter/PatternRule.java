@@ -46,165 +46,165 @@ import io.netty.logging.InternalLoggerFactory;
  * <br>
  * new PatternRule(false, "n:*")
  * <br>
- * 
-
  */
-public class PatternRule implements IpFilterRule, Comparable<Object>
-{
-   private static final InternalLogger logger = InternalLoggerFactory.getInstance(PatternRule.class);
+public class PatternRule implements IpFilterRule, Comparable<Object> {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(PatternRule.class);
 
-   private Pattern ipPattern = null;
+    private Pattern ipPattern;
 
-   private Pattern namePattern = null;
+    private Pattern namePattern;
 
-   private boolean isAllowRule = true;
+    private boolean isAllowRule = true;
 
-   private boolean localhost = false;
+    private boolean localhost;
 
-   private String pattern = null;
+    private String pattern;
 
-   /**
-    * Instantiates a new pattern rule.
-    * 
-    * @param allow indicates if this is an allow or block rule
-    * @param pattern the filter pattern
-    */
-   public PatternRule(boolean allow, String pattern)
-   {
-      this.isAllowRule = allow;
-      this.pattern = pattern;
-      parse(pattern);
-   }
+    /**
+     * Instantiates a new pattern rule.
+     *
+     * @param allow   indicates if this is an allow or block rule
+     * @param pattern the filter pattern
+     */
+    public PatternRule(boolean allow, String pattern) {
+        this.isAllowRule = allow;
+        this.pattern = pattern;
+        parse(pattern);
+    }
 
-   /**
-    * returns the pattern.
-    * 
-    * @return the pattern
-    */
-   public String getPattern()
-   {
-      return this.pattern;
-   }
+    /**
+     * returns the pattern.
+     *
+     * @return the pattern
+     */
+    public String getPattern() {
+        return this.pattern;
+    }
 
-   /* (non-Javadoc)
+    /* (non-Javadoc)
     * @see io.netty.handler.ipfilter.IpFilterRule#isAllowRule()
     */
-   @Override
-   public boolean isAllowRule()
-   {
-      return isAllowRule;
-   }
+    @Override
+    public boolean isAllowRule() {
+        return isAllowRule;
+    }
 
-   /* (non-Javadoc)
+    /* (non-Javadoc)
     * @see io.netty.handler.ipfilter.IpFilterRule#isDenyRule()
     */
-   @Override
-   public boolean isDenyRule()
-   {
-      return !isAllowRule;
-   }
+    @Override
+    public boolean isDenyRule() {
+        return !isAllowRule;
+    }
 
-   /* (non-Javadoc)
+    /* (non-Javadoc)
     * @see io.netty.handler.ipfilter.IpSet#contains(java.net.InetAddress)
     */
-   @Override
-   public boolean contains(InetAddress inetAddress)
-   {
-      if (localhost)
-         if (isLocalhost(inetAddress))
-            return true;
-      if (ipPattern != null)
-         if (ipPattern.matcher(inetAddress.getHostAddress()).matches())
-            return true;
-      if (namePattern != null)
-         if (namePattern.matcher(inetAddress.getHostName()).matches())
-            return true;
-      return false;
-   }
+    @Override
+    public boolean contains(InetAddress inetAddress) {
+        if (localhost) {
+            if (isLocalhost(inetAddress)) {
+                return true;
+            }
+        }
+        if (ipPattern != null) {
+            if (ipPattern.matcher(inetAddress.getHostAddress()).matches()) {
+                return true;
+            }
+        }
+        if (namePattern != null) {
+            if (namePattern.matcher(inetAddress.getHostName()).matches()) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-   private void parse(String pattern)
-   {
-      if (pattern == null)
-         return;
+    private void parse(String pattern) {
+        if (pattern == null) {
+            return;
+        }
 
-      String[] acls = pattern.split(",");
+        String[] acls = pattern.split(",");
 
-      String ip = "";
-      String name = "";
-      for (String c : acls)
-      {
-         c = c.trim();
-         if (c.equals("n:localhost"))
-            this.localhost = true;
-         else if (c.startsWith("n:"))
-            name = addRule(name, c.substring(2));
-         else if (c.startsWith("i:"))
-            ip = addRule(ip, c.substring(2));
-      }
-      if (ip.length() != 0)
-         ipPattern = Pattern.compile(ip);
-      if (name.length() != 0)
-         namePattern = Pattern.compile(name);
+        String ip = "";
+        String name = "";
+        for (String c : acls) {
+            c = c.trim();
+            if (c.equals("n:localhost")) {
+                this.localhost = true;
+            } else if (c.startsWith("n:")) {
+                name = addRule(name, c.substring(2));
+            } else if (c.startsWith("i:")) {
+                ip = addRule(ip, c.substring(2));
+            }
+        }
+        if (ip.length() != 0) {
+            ipPattern = Pattern.compile(ip);
+        }
+        if (name.length() != 0) {
+            namePattern = Pattern.compile(name);
+        }
+    }
 
-   }
+    private String addRule(String pattern, String rule) {
+        if (rule == null || rule.length() == 0) {
+            return pattern;
+        }
+        if (pattern.length() != 0) {
+            pattern += "|";
+        }
+        rule = rule.replaceAll("\\.", "\\\\.");
+        rule = rule.replaceAll("\\*", ".*");
+        rule = rule.replaceAll("\\?", ".");
+        pattern += "(" + rule + ")";
+        return pattern;
+    }
 
-   private String addRule(String pattern, String rule)
-   {
-      if (rule == null || rule.length() == 0)
-         return pattern;
-      if (pattern.length() != 0)
-         pattern += "|";
-      rule = rule.replaceAll("\\.", "\\\\.");
-      rule = rule.replaceAll("\\*", ".*");
-      rule = rule.replaceAll("\\?", ".");
-      pattern += "(" + rule + ")";
-      return pattern;
-   }
+    private boolean isLocalhost(InetAddress address) {
+        try {
+            if (address.equals(InetAddress.getLocalHost())) {
+                return true;
+            }
+        } catch (UnknownHostException e) {
+            logger.info("error getting ip of localhost", e);
+        }
+        try {
+            InetAddress[] addrs = InetAddress.getAllByName("127.0.0.1");
+            for (InetAddress addr : addrs) {
+                if (addr.equals(address)) {
+                    return true;
+                }
+            }
+        } catch (UnknownHostException e) {
+            logger.info("error getting ip of localhost", e);
+        }
+        return false;
 
-   private boolean isLocalhost(InetAddress address)
-   {
-      try
-      {
-         if (address.equals(InetAddress.getLocalHost()))
-            return true;
-      }
-      catch (UnknownHostException e)
-      {
-         logger.info("error getting ip of localhost", e);
-      }
-      try
-      {
-         InetAddress[] addrs = InetAddress.getAllByName("127.0.0.1");
-         for (InetAddress addr : addrs)
-            if (addr.equals(address))
-               return true;
-      }
-      catch (UnknownHostException e)
-      {
-         logger.info("error getting ip of localhost", e);
-      }
-      return false;
+    }
 
-   }
-
-   /* (non-Javadoc)
+    /* (non-Javadoc)
     * @see java.lang.Comparable#compareTo(java.lang.Object)
     */
-   @Override
-   public int compareTo(Object o)
-   {
-      if (o == null)
-         return -1;
-      if (!(o instanceof PatternRule))
-         return -1;
-      PatternRule p = (PatternRule) o;
-      if (p.isAllowRule() && !this.isAllowRule)
-         return -1;
-      if (this.pattern == null && p.pattern == null)
-         return 0;
-      if (this.pattern != null)
-         return this.pattern.compareTo(p.getPattern());
-      return -1;
-   }
+    @Override
+    public int compareTo(Object o) {
+        if (o == null) {
+            return -1;
+        }
+        if (!(o instanceof PatternRule)) {
+            return -1;
+        }
+        PatternRule p = (PatternRule) o;
+        if (p.isAllowRule() && !this.isAllowRule) {
+            return -1;
+        }
+        if (this.pattern == null && p.pattern == null) {
+            return 0;
+        }
+        if (this.pattern != null) {
+            return this.pattern.compareTo(p.getPattern());
+        }
+        return -1;
+    }
 
 }

@@ -134,8 +134,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
 
         // Cache Validation
         String ifModifiedSince = request.getHeader(HttpHeaders.Names.IF_MODIFIED_SINCE);
-        if (ifModifiedSince != null && !ifModifiedSince.equals(""))
-        {
+        if (ifModifiedSince != null && !ifModifiedSince.equals("")) {
             SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
             Date ifModifiedSinceDate = dateFormatter.parse(ifModifiedSince);
 

@@ -44,7 +44,7 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
 
     private final HttpTunnelClientWorkerOwner tunnelChannel;
 
-    private String tunnelId = null;
+    private String tunnelId;
 
     private final AtomicBoolean disconnecting;
 

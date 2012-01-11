@@ -18,68 +18,46 @@ package io.netty.handler.ipfilter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-/**
- * IpV4 only Filter Rule
- */
-public class IpV4SubnetFilterRule extends IpV4Subnet implements IpFilterRule
-{
-   /**
-    * Is this IpV4Subnet an ALLOW or DENY rule
-    */
-   private boolean isAllowRule = true;
+/** IpV4 only Filter Rule */
+public class IpV4SubnetFilterRule extends IpV4Subnet implements IpFilterRule {
+    /** Is this IpV4Subnet an ALLOW or DENY rule */
+    private boolean isAllowRule = true;
 
-   /**
-    * Constructor for a ALLOW or DENY ALL
-    * @param allow True for ALLOW, False for DENY
-    */
-   public IpV4SubnetFilterRule(boolean allow)
-   {
-	   isAllowRule = allow;
-   }
+    /**
+     * Constructor for a ALLOW or DENY ALL
+     *
+     * @param allow True for ALLOW, False for DENY
+     */
+    public IpV4SubnetFilterRule(boolean allow) {
+        isAllowRule = allow;
+    }
 
-   /**
-    * @param allow True for ALLOW, False for DENY
-    * @param inetAddress
-    * @param cidrNetMask
-    */
-   public IpV4SubnetFilterRule(boolean allow, InetAddress inetAddress, int cidrNetMask)
-   {
-      super(inetAddress, cidrNetMask);
-      isAllowRule = allow;
-   }
+    /** @param allow True for ALLOW, False for DENY */
+    public IpV4SubnetFilterRule(boolean allow, InetAddress inetAddress, int cidrNetMask) {
+        super(inetAddress, cidrNetMask);
+        isAllowRule = allow;
+    }
 
-   /**
-    * @param allow True for ALLOW, False for DENY
-    * @param inetAddress
-    * @param netMask
-    */
-   public IpV4SubnetFilterRule(boolean allow, InetAddress inetAddress, String netMask)
-   {
-      super(inetAddress, netMask);
-      isAllowRule = allow;
-   }
+    /** @param allow True for ALLOW, False for DENY */
+    public IpV4SubnetFilterRule(boolean allow, InetAddress inetAddress, String netMask) {
+        super(inetAddress, netMask);
+        isAllowRule = allow;
+    }
 
-   /**
-    * @param allow True for ALLOW, False for DENY
-    * @param netAddress
-    * @throws UnknownHostException
-    */
-   public IpV4SubnetFilterRule(boolean allow, String netAddress) throws UnknownHostException
-   {
-      super(netAddress);
-      isAllowRule = allow;
-   }
+    /** @param allow True for ALLOW, False for DENY */
+    public IpV4SubnetFilterRule(boolean allow, String netAddress) throws UnknownHostException {
+        super(netAddress);
+        isAllowRule = allow;
+    }
 
-   @Override
-   public boolean isAllowRule()
-   {
-      return isAllowRule;
-   }
+    @Override
+    public boolean isAllowRule() {
+        return isAllowRule;
+    }
 
-   @Override
-   public boolean isDenyRule()
-   {
-      return !isAllowRule;
-   }
+    @Override
+    public boolean isDenyRule() {
+        return !isAllowRule;
+    }
 
 }

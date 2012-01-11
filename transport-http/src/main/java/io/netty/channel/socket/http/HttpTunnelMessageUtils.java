@@ -40,7 +40,7 @@ import io.netty.handler.codec.http.HttpVersion;
  * Utility class for creating http requests for the operation of the full duplex
  * http tunnel, and verifying that received requests are of the correct types.
  */
-public class HttpTunnelMessageUtils {
+final class HttpTunnelMessageUtils {
 
     private static final String HTTP_URL_PREFIX = "http://";
 
@@ -332,5 +332,9 @@ public class HttpTunnelMessageUtils {
             response.setContent(null);
         }
         return response;
+    }
+
+    private HttpTunnelMessageUtils() {
+        // Unused
     }
 }

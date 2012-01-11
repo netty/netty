@@ -51,7 +51,7 @@ package io.netty.channel;
  *     public void login(String username, password) {
  *         {@link Channels}.write(
  *                 <b>this.ctx</b>,
- *                 {@link Channels}.succeededFuture(<b>this.ctx</t>.getChannel()</b>),
+ *                 {@link Channels}.succeededFuture(<b>this.ctx.getChannel()</b>),
  *                 new LoginMessage(username, password));
  *     }
  *     ...

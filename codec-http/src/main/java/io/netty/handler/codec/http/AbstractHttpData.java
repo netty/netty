@@ -23,17 +23,12 @@ import java.nio.charset.Charset;
 public abstract class AbstractHttpData implements HttpData {
 
     protected final String name;
-
-    protected long definedSize = 0;
-
-    protected long size = 0;
-
+    protected long definedSize;
+    protected long size;
     protected Charset charset = HttpCodecUtil.DEFAULT_CHARSET;
+    protected boolean completed;
 
-    protected boolean completed = false;
-
-    public AbstractHttpData(String name, Charset charset, long size)
-    throws NullPointerException, IllegalArgumentException {
+    public AbstractHttpData(String name, Charset charset, long size) {
         if (name == null) {
             throw new NullPointerException("name");
         }

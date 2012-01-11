@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
  * their termination.  An {@link Executor} which is not an {@link ExecutorService}
  * will be ignored silently.
  */
-public class ExecutorUtil {
+public final class ExecutorUtil {
 
     /**
      * Returns {@code true} if and only if the specified {@code executor}

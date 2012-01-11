@@ -34,13 +34,10 @@ import io.netty.channel.MessageEvent;
 /**
  * {@link WritableByteChannel} implementation which will take care to wrap the {@link ByteBuffer} to a {@link ChannelBuffer} and forward it to the next {@link ChannelDownstreamHandler} in the {@link ChannelPipeline} on every {@link #write(ByteBuffer)}
  * operation.
- * 
-
-
  */
 public class ChannelWritableByteChannel implements WritableByteChannel {
 
-    private boolean closed = false;
+    private boolean closed;
     private final ChannelHandlerContext context;
     private final ChannelFutureAggregator aggregator;
     private final SocketAddress remote;

@@ -50,7 +50,7 @@ import io.netty.util.CharsetUtil;
 public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandler.class);
 
-    private WebSocketServerHandshaker handshaker = null;
+    private WebSocketServerHandshaker handshaker;
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {

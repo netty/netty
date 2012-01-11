@@ -50,12 +50,12 @@ public class HttpPostRequestDecoder {
     /**
      * Does request have a body to decode
      */
-    private boolean bodyToDecode = false;
+    private boolean bodyToDecode;
 
     /**
      * Does the last chunk already received
      */
-    private boolean isLastChunk = false;
+    private boolean isLastChunk;
 
     /**
      * HttpDatas from Body
@@ -71,28 +71,28 @@ public class HttpPostRequestDecoder {
     /**
      * The current channelBuffer
      */
-    private ChannelBuffer undecodedChunk = null;
+    private ChannelBuffer undecodedChunk;
 
     /**
      * Does this request is a Multipart request
      */
-    private boolean isMultipart = false;
+    private boolean isMultipart;
 
     /**
      * Body HttpDatas current position
      */
-    private int bodyListHttpDataRank = 0;
+    private int bodyListHttpDataRank;
 
     /**
      * If multipart, this is the boundary for the flobal multipart
      */
-    private String multipartDataBoundary = null;
+    private String multipartDataBoundary;
 
     /**
      * If multipart, there could be internal multiparts (mixed) to the global multipart.
      * Only one level is allowed.
      */
-    private String multipartMixedBoundary = null;
+    private String multipartMixedBoundary;
 
     /**
      * Current status
@@ -102,17 +102,17 @@ public class HttpPostRequestDecoder {
     /**
      * Used in Multipart
      */
-    private Map<String, Attribute> currentFieldAttributes = null;
+    private Map<String, Attribute> currentFieldAttributes;
 
     /**
      * The current FileUpload that is currently in decode process
      */
-    private FileUpload currentFileUpload = null;
+    private FileUpload currentFileUpload;
 
     /**
      * The current Attribute that is currently in decode process
      */
-    private Attribute currentAttribute = null;
+    private Attribute currentAttribute;
 
     /**
     *
@@ -122,8 +122,7 @@ public class HttpPostRequestDecoder {
     * @throws ErrorDataDecoderException if the default charset was wrong when decoding or other errors
     */
     public HttpPostRequestDecoder(HttpRequest request)
-            throws ErrorDataDecoderException, IncompatibleDataDecoderException,
-            NullPointerException {
+            throws ErrorDataDecoderException, IncompatibleDataDecoderException {
         this(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
                 request, HttpCodecUtil.DEFAULT_CHARSET);
     }
@@ -137,8 +136,7 @@ public class HttpPostRequestDecoder {
      * @throws ErrorDataDecoderException if the default charset was wrong when decoding or other errors
      */
     public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request)
-            throws ErrorDataDecoderException, IncompatibleDataDecoderException,
-            NullPointerException {
+            throws ErrorDataDecoderException, IncompatibleDataDecoderException {
         this(factory, request, HttpCodecUtil.DEFAULT_CHARSET);
     }
 
@@ -153,7 +151,7 @@ public class HttpPostRequestDecoder {
      */
     public HttpPostRequestDecoder(HttpDataFactory factory, HttpRequest request,
             Charset charset) throws ErrorDataDecoderException,
-            IncompatibleDataDecoderException, NullPointerException {
+            IncompatibleDataDecoderException {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
@@ -446,9 +444,9 @@ public class HttpPostRequestDecoder {
                 case DISPOSITION:// search '='
                     if (read == '=') {
                         currentStatus = MultiPartStatus.FIELD;
-                        equalpos = currentpos-1;
+                        equalpos = currentpos - 1;
                         String key = decodeAttribute(
-                                undecodedChunk.toString(firstpos, equalpos-firstpos, charset),
+                                undecodedChunk.toString(firstpos, equalpos - firstpos, charset),
                                 charset);
                         currentAttribute = factory.createAttribute(request, key);
                         firstpos = currentpos;
@@ -467,8 +465,8 @@ public class HttpPostRequestDecoder {
                 case FIELD:// search '&' or end of line
                     if (read == '&') {
                         currentStatus = MultiPartStatus.DISPOSITION;
-                        ampersandpos = currentpos-1;
-                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos-firstpos));
+                        ampersandpos = currentpos - 1;
+                        setFinalBuffer(undecodedChunk.slice(firstpos, ampersandpos - firstpos));
                         firstpos = currentpos;
                         contRead = true;
                     } else if (read == HttpCodecUtil.CR) {
@@ -477,9 +475,9 @@ public class HttpPostRequestDecoder {
                             currentpos++;
                             if (read == HttpCodecUtil.LF) {
                                 currentStatus = MultiPartStatus.PREEPILOGUE;
-                                ampersandpos = currentpos-2;
+                                ampersandpos = currentpos - 2;
                                 setFinalBuffer(
-                                        undecodedChunk.slice(firstpos, ampersandpos-firstpos));
+                                        undecodedChunk.slice(firstpos, ampersandpos - firstpos));
                                 firstpos = currentpos;
                                 contRead = false;
                             } else {
@@ -492,9 +490,9 @@ public class HttpPostRequestDecoder {
                         }
                     } else if (read == HttpCodecUtil.LF) {
                         currentStatus = MultiPartStatus.PREEPILOGUE;
-                        ampersandpos = currentpos-1;
+                        ampersandpos = currentpos - 1;
                         setFinalBuffer(
-                                undecodedChunk.slice(firstpos, ampersandpos-firstpos));
+                                undecodedChunk.slice(firstpos, ampersandpos - firstpos));
                         firstpos = currentpos;
                         contRead = false;
                     }
@@ -509,7 +507,7 @@ public class HttpPostRequestDecoder {
                 ampersandpos = currentpos;
                 if (ampersandpos > firstpos) {
                     setFinalBuffer(
-                            undecodedChunk.slice(firstpos, ampersandpos-firstpos));
+                            undecodedChunk.slice(firstpos, ampersandpos - firstpos));
                 } else if (! currentAttribute.isCompleted()) {
                     setFinalBuffer(ChannelBuffers.EMPTY_BUFFER);
                 }
@@ -521,7 +519,7 @@ public class HttpPostRequestDecoder {
                 // reset index except if to continue in case of FIELD status
                 if (currentStatus == MultiPartStatus.FIELD) {
                     currentAttribute.addContent(
-                            undecodedChunk.slice(firstpos, currentpos-firstpos),
+                            undecodedChunk.slice(firstpos, currentpos - firstpos),
                             false);
                     firstpos = currentpos;
                 }
@@ -1231,7 +1229,7 @@ public class HttpPostRequestDecoder {
                 // so go back of delimiter size
                 try {
                     currentAttribute.addContent(
-                            undecodedChunk.slice(readerIndex, lastPosition-readerIndex),
+                            undecodedChunk.slice(readerIndex, lastPosition - readerIndex),
                             true);
                 } catch (IOException e) {
                     throw new ErrorDataDecoderException(e);
@@ -1240,7 +1238,7 @@ public class HttpPostRequestDecoder {
             } else {
                 try {
                     currentAttribute.addContent(
-                            undecodedChunk.slice(readerIndex, lastPosition-readerIndex),
+                            undecodedChunk.slice(readerIndex, lastPosition - readerIndex),
                             false);
                 } catch (IOException e) {
                     throw new ErrorDataDecoderException(e);

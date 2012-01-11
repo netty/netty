@@ -15,15 +15,23 @@
  */
 package io.netty.channel.iostream;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.*;
+import static io.netty.channel.Channels.*;
 
 import java.io.OutputStream;
 import java.io.PushbackInputStream;
 import java.util.concurrent.ExecutorService;
 
-import static io.netty.channel.Channels.*;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.AbstractChannelSink;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelState;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.MessageEvent;
 
 /**
  * A {@link io.netty.channel.ChannelSink} implementation which reads from

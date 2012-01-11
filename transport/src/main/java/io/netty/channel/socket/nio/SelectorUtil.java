@@ -40,4 +40,8 @@ final class SelectorUtil {
                     " raised by a Selector - JDK bug?", e);
         }
     }
+
+    private SelectorUtil() {
+        // Unused
+    }
 }

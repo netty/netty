@@ -15,20 +15,11 @@
  */
 package io.netty.handler.ipfilter;
 
-/**
- * This Interface defines an Ip Filter Rule.
- */
-public interface IpFilterRule extends IpSet
-{
-   /**
-    *
-    * @return True if this Rule is an ALLOW rule
-    */
-   boolean isAllowRule();
+/** This Interface defines an Ip Filter Rule. */
+public interface IpFilterRule extends IpSet {
+    /** @return True if this Rule is an ALLOW rule */
+    boolean isAllowRule();
 
-   /**
-    *
-    * @return True if this Rule is a DENY rule
-    */
-   boolean isDenyRule();
+    /** @return True if this Rule is a DENY rule */
+    boolean isDenyRule();
 }

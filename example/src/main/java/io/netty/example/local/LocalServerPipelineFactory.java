@@ -73,7 +73,7 @@ public class LocalServerPipelineFactory implements ChannelPipelineFactory {
                     Channels.close(e.getChannel());
                     return;
                 }
-                System.err.println("SERVER:"+msg);
+                System.err.println("SERVER:" + msg);
                 // Write back
                 Channels.write(e.getChannel(), msg);
             }

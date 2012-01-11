@@ -23,7 +23,8 @@ import io.netty.util.CharsetUtil;
 /**
  * Shared Static object between HttpMessageDecoder, HttpPostRequestDecoder and HttpPostRequestEncoder
  */
-public class HttpPostBodyUtil {
+final class HttpPostBodyUtil {
+
     public static int chunkSize = 8096;
     /**
      * HTTP content disposition header name.

@@ -25,7 +25,7 @@ import io.netty.util.CharsetUtil;
  */
 public class ContinuationWebSocketFrame extends WebSocketFrame {
 
-    private String aggregatedText = null;
+    private String aggregatedText;
 
     /**
      * Creates a new empty continuation frame.

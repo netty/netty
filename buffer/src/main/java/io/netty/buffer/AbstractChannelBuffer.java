@@ -135,7 +135,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     
     @Override
     public boolean getBoolean(int index) {
-        return (getByte(index) == 1);
+        return getByte(index) != 0;
     }
 
     @Override
@@ -278,7 +278,7 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
     
     @Override
     public boolean readBoolean() {
-        return (readByte() == 1);
+        return readByte() != 0;
     }
 
     @Override

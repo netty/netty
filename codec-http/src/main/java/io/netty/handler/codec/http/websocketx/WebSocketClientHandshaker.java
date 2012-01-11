@@ -36,20 +36,14 @@ public abstract class WebSocketClientHandshaker {
 
     private WebSocketVersion version = WebSocketVersion.UNKNOWN;
 
-    private boolean openingHandshakeCompleted = false;
+    private boolean openingHandshakeCompleted;
 
-    private String subProtocolRequest = null;
+    private String subProtocolRequest;
 
-    private String subProtocolResponse = null;
+    private String subProtocolResponse;
 
-    protected Map<String, String> customHeaders = null;
+    protected Map<String, String> customHeaders;
 
-    /**
-     * 
-     * @param webSocketURL
-     * @param version
-     * @param subProtocol
-     */
     public WebSocketClientHandshaker(URI webSocketURL, WebSocketVersion version, String subProtocol,
             Map<String, String> customHeaders) {
         this.webSocketURL = webSocketURL;

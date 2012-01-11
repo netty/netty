@@ -53,9 +53,9 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler impleme
     private URI url;
     private final WebSocketCallback callback;
     private Channel channel;
-    private WebSocketClientHandshaker handshaker = null;
+    private WebSocketClientHandshaker handshaker;
     private final WebSocketVersion version;
-    private Map<String, String> customHeaders = null;
+    private Map<String, String> customHeaders;
 
     public WebSocketClientHandler(ClientBootstrap bootstrap, URI url, WebSocketVersion version,
             WebSocketCallback callback, Map<String, String> customHeaders) {

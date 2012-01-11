@@ -24,14 +24,12 @@ package io.netty.example.http.websocketx.client;
 import java.io.IOException;
 
 /**
- * Copied from https://github.com/cgbystrom/netty-tools
- * 
  * A WebSocket related exception
+ *
+ * Copied from https://github.com/cgbystrom/netty-tools
  */
 public class WebSocketException extends IOException {
 
-    /**
- */
     private static final long serialVersionUID = 1L;
 
     public WebSocketException(String s) {

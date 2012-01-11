@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 /**
  * Accesses the system property swallowing a {@link SecurityException}.
  */
-public class SystemPropertyUtil {
+public final class SystemPropertyUtil {
 
     /**
      * Returns the value of the Java system property with the specified

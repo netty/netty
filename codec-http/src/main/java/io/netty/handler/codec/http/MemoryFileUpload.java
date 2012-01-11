@@ -24,15 +24,14 @@ import java.nio.charset.Charset;
  */
 public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUpload {
 
-    private String filename = null;
+    private String filename;
 
-    private String contentType = null;
+    private String contentType;
 
-    private String contentTransferEncoding = null;
+    private String contentTransferEncoding;
 
     public MemoryFileUpload(String name, String filename, String contentType,
-            String contentTransferEncoding, Charset charset, long size)
-            throws NullPointerException, IllegalArgumentException {
+            String contentTransferEncoding, Charset charset, long size) {
         super(name, charset, size);
         setFilename(filename);
         setContentType(contentType);
@@ -116,11 +115,11 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
     @Override
     public String toString() {
         return HttpPostBodyUtil.CONTENT_DISPOSITION+": "+
-            HttpPostBodyUtil.FORM_DATA+"; "+HttpPostBodyUtil.NAME+"=\"" + getName() +
-            "\"; "+HttpPostBodyUtil.FILENAME+"=\"" + filename + "\"\r\n" +
-            HttpHeaders.Names.CONTENT_TYPE+": " + contentType +
-            (charset != null? "; "+HttpHeaders.Values.CHARSET+"=" + charset + "\r\n" : "\r\n") +
-            HttpHeaders.Names.CONTENT_LENGTH+": " + length() + "\r\n" +
+            HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME+"=\"" + getName() +
+            "\"; " + HttpPostBodyUtil.FILENAME + "=\"" + filename + "\"\r\n" +
+            HttpHeaders.Names.CONTENT_TYPE + ": " + contentType +
+            (charset != null? "; " + HttpHeaders.Values.CHARSET + "=" + charset + "\r\n" : "\r\n") +
+            HttpHeaders.Names.CONTENT_LENGTH + ": " + length() + "\r\n" +
             "Completed: " + isCompleted() +
             "\r\nIsInMemory: " + isInMemory();
     }

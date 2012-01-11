@@ -36,8 +36,7 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
      * @throws IllegalArgumentException
      * @throws IOException
      */
-    public MemoryAttribute(String name, String value)
-            throws NullPointerException, IllegalArgumentException, IOException {
+    public MemoryAttribute(String name, String value) throws IOException {
         super(name, HttpCodecUtil.DEFAULT_CHARSET, 0); // Attribute have no default size
         setValue(value);
     }

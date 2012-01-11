@@ -15,7 +15,14 @@
  */
 package io.netty.channel.sctp;
 
-import com.sun.nio.sctp.*;
+import com.sun.nio.sctp.AbstractNotificationHandler;
+import com.sun.nio.sctp.AssociationChangeNotification;
+import com.sun.nio.sctp.HandlerResult;
+import com.sun.nio.sctp.Notification;
+import com.sun.nio.sctp.PeerAddressChangeNotification;
+import com.sun.nio.sctp.SendFailedNotification;
+import com.sun.nio.sctp.ShutdownNotification;
+
 import io.netty.channel.Channels;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;

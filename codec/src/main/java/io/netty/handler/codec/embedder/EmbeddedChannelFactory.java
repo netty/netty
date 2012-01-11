@@ -21,7 +21,7 @@ import io.netty.channel.ChannelPipeline;
 
 /**
  */
-class EmbeddedChannelFactory implements ChannelFactory {
+final class EmbeddedChannelFactory implements ChannelFactory {
 
     static final ChannelFactory INSTANCE = new EmbeddedChannelFactory();
 

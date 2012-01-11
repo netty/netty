@@ -30,60 +30,50 @@ import io.netty.channel.ChannelStateEvent;
  * Handler that block any new connection if there are already a currently active
  * channel connected with the same InetAddress (IP).<br>
  * <br>
- *
+ * <p/>
  * Take care to not change isBlocked method except if you know what you are doing
  * since it is used to test if the current closed connection is to be removed
  * or not from the map of currently connected channel.
  */
 @Sharable
-public class OneIpFilterHandler extends IpFilteringHandlerImpl
-{
-   /**
-    * HashMap of current remote connected InetAddress
-    */
-   private final ConcurrentMap<InetAddress, Boolean> connectedSet = new ConcurrentHashMap<InetAddress, Boolean>();
+public class OneIpFilterHandler extends IpFilteringHandlerImpl {
+    /** HashMap of current remote connected InetAddress */
+    private final ConcurrentMap<InetAddress, Boolean> connectedSet = new ConcurrentHashMap<InetAddress, Boolean>();
 
-   /* (non-Javadoc)
+    /* (non-Javadoc)
     * @see io.netty.handler.ipfilter.IpFilteringHandler#accept(io.netty.channel.ChannelHandlerContext, io.netty.channel.ChannelEvent, java.net.InetSocketAddress)
     */
-   @Override
-   protected boolean accept(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress)
-         throws Exception
-   {
-      InetAddress inetAddress = inetSocketAddress.getAddress();
-      if (connectedSet.containsKey(inetAddress))
-      {
-         return false;
-      }
-      connectedSet.put(inetAddress, Boolean.TRUE);
-      return true;
-   }
+    @Override
+    protected boolean accept(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress)
+            throws Exception {
+        InetAddress inetAddress = inetSocketAddress.getAddress();
+        if (connectedSet.containsKey(inetAddress)) {
+            return false;
+        }
+        connectedSet.put(inetAddress, Boolean.TRUE);
+        return true;
+    }
 
-   /* (non-Javadoc)
+    /* (non-Javadoc)
     * @see io.netty.handler.ipfilter.IpFilteringHandler#handleUpstream(io.netty.channel.ChannelHandlerContext, io.netty.channel.ChannelEvent)
     */
-   @Override
-   public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception
-   {
-      super.handleUpstream(ctx, e);
-      // Try to remove entry from Map if already exists
-      if (e instanceof ChannelStateEvent)
-      {
-         ChannelStateEvent evt = (ChannelStateEvent) e;
-         if (evt.getState() == ChannelState.CONNECTED)
-         {
-            if (evt.getValue() == null)
-            {
-               // DISCONNECTED but was this channel blocked or not
-               if (isBlocked(ctx))
-               {
-                  // remove inetsocketaddress from set since this channel was not blocked before
-                  InetSocketAddress inetSocketAddress = (InetSocketAddress) e.getChannel().getRemoteAddress();
-                  connectedSet.remove(inetSocketAddress.getAddress());
-               }
+    @Override
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+        super.handleUpstream(ctx, e);
+        // Try to remove entry from Map if already exists
+        if (e instanceof ChannelStateEvent) {
+            ChannelStateEvent evt = (ChannelStateEvent) e;
+            if (evt.getState() == ChannelState.CONNECTED) {
+                if (evt.getValue() == null) {
+                    // DISCONNECTED but was this channel blocked or not
+                    if (isBlocked(ctx)) {
+                        // remove inetsocketaddress from set since this channel was not blocked before
+                        InetSocketAddress inetSocketAddress = (InetSocketAddress) e.getChannel().getRemoteAddress();
+                        connectedSet.remove(inetSocketAddress.getAddress());
+                    }
+                }
             }
-         }
-      }
-   }
+        }
+    }
 
 }

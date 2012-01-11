@@ -26,8 +26,6 @@ import java.net.SocketAddress;
  */
 public class IOStreamAddress extends SocketAddress {
 
-    /**
- */
     private static final long serialVersionUID = -4382415449059935960L;
 
     private final InputStream inputStream;

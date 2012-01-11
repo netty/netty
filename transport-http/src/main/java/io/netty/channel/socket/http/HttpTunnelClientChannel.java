@@ -41,7 +41,7 @@ import io.netty.logging.InternalLoggerFactory;
  * this type are designed to emulate a normal TCP based socket channel as far as is feasible within the limitations
  * of the HTTP 1.1 protocol, and the usage patterns permitted by commonly used HTTP proxies and firewalls.
  */
-public class HttpTunnelClientChannel extends AbstractChannel implements
+final class HttpTunnelClientChannel extends AbstractChannel implements
         SocketChannel {
 
     static final InternalLogger LOG = InternalLoggerFactory

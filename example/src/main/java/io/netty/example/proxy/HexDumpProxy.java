@@ -42,6 +42,20 @@ public class HexDumpProxy {
         String remoteHost = args[1];
         int remotePort = Integer.parseInt(args[2]);
 
+        run(localPort, remoteHost, remotePort);
+    }
+
+    private final int localPort;
+    private final String remoteHost;
+    private final int remotePort;
+
+    public HexDumpProxy(int localPort, String remoteHost, int remotePort) {
+        this.localPort = localPort;
+        this.remoteHost = remoteHost;
+        this.remotePort = remotePort;
+    }
+
+    public void run() {
         System.err.println(
                 "Proxying *:" + localPort + " to " +
                 remoteHost + ':' + remotePort + " ...");

@@ -37,7 +37,7 @@ import java.util.regex.Pattern;
  * Provides information which is specific to a NIO service provider
  * implementation.
  */
-class SctpProviderMetadata {
+final class SctpProviderMetadata {
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SctpProviderMetadata.class);
 

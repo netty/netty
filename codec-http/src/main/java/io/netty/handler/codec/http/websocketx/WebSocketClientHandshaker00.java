@@ -45,7 +45,7 @@ import io.netty.handler.codec.http.HttpVersion;
  */
 public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
-    private byte[] expectedChallengeResponseBytes = null;
+    private byte[] expectedChallengeResponseBytes;
 
     /**
      * Constructor specifying the destination web socket location and version to initiate

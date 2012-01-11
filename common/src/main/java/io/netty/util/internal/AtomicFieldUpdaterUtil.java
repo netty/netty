@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  */
-class AtomicFieldUpdaterUtil {
+final class AtomicFieldUpdaterUtil {
 
     private static final boolean AVAILABLE;
 
@@ -49,7 +49,7 @@ class AtomicFieldUpdaterUtil {
         AVAILABLE = available;
     }
 
-    static <T, V> AtomicReferenceFieldUpdater<T,V> newRefUpdater(Class<T> tclass, Class<V> vclass, String fieldName) {
+    static <T, V> AtomicReferenceFieldUpdater<T, V> newRefUpdater(Class<T> tclass, Class<V> vclass, String fieldName) {
         if (AVAILABLE) {
             return AtomicReferenceFieldUpdater.newUpdater(tclass, vclass, fieldName);
         } else {

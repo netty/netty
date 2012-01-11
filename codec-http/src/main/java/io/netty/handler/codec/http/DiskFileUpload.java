@@ -22,7 +22,7 @@ import java.nio.charset.Charset;
  * Disk FileUpload implementation that stores file into real files
  */
 public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
-    public static String baseDirectory = null;
+    public static String baseDirectory;
 
     public static boolean deleteOnExitTemporaryFile = true;
 
@@ -30,15 +30,14 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     public static String postfix = ".tmp";
 
-    private String filename = null;
+    private String filename;
 
-    private String contentType = null;
+    private String contentType;
 
-    private String contentTransferEncoding = null;
+    private String contentTransferEncoding;
 
     public DiskFileUpload(String name, String filename, String contentType,
-            String contentTransferEncoding, Charset charset, long size)
-            throws NullPointerException, IllegalArgumentException {
+            String contentTransferEncoding, Charset charset, long size) {
         super(name, charset, size);
         setFilename(filename);
         setContentType(contentType);
@@ -127,12 +126,12 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     @Override
     public String toString() {
-        return HttpPostBodyUtil.CONTENT_DISPOSITION+": "+
-            HttpPostBodyUtil.FORM_DATA+"; "+HttpPostBodyUtil.NAME+"=\"" + getName() +
-                "\"; "+HttpPostBodyUtil.FILENAME+"=\"" + filename + "\"\r\n" +
-                HttpHeaders.Names.CONTENT_TYPE+": " + contentType +
-                (charset != null? "; "+HttpHeaders.Values.CHARSET+"=" + charset + "\r\n" : "\r\n") +
-                HttpHeaders.Names.CONTENT_LENGTH+": " + length() + "\r\n" +
+        return HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
+            HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME + "=\"" + getName() +
+                "\"; " + HttpPostBodyUtil.FILENAME + "=\"" + filename + "\"\r\n" +
+                HttpHeaders.Names.CONTENT_TYPE + ": " + contentType +
+                (charset != null? "; " + HttpHeaders.Values.CHARSET + "=" + charset + "\r\n" : "\r\n") +
+                HttpHeaders.Names.CONTENT_LENGTH + ": " + length() + "\r\n" +
                 "Completed: " + isCompleted() +
                 "\r\nIsInMemory: " + isInMemory() + "\r\nRealFile: " +
                 file.getAbsolutePath() + " DefaultDeleteAfter: " +

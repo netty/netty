@@ -5,7 +5,7 @@
 *.ipr
 *.iws
 .geany
-*/target
+/target
 */target
 /reports
 */reports

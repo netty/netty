@@ -35,7 +35,7 @@ final class SocketSendBufferPool {
     private static final int ALIGN_SHIFT = 4;
     private static final int ALIGN_MASK = 15;
 
-    PreallocationRef poolHead = null;
+    PreallocationRef poolHead;
     Preallocation current = new Preallocation(DEFAULT_PREALLOCATION_SIZE);
 
     SocketSendBufferPool() {

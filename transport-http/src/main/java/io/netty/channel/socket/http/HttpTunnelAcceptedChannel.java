@@ -36,7 +36,7 @@ import io.netty.channel.socket.SocketChannelConfig;
  * to change over the lifecycle of a tunnel, especially when an HTTP proxy is in
  * use.
  */
-class HttpTunnelAcceptedChannel extends AbstractChannel implements
+final class HttpTunnelAcceptedChannel extends AbstractChannel implements
         SocketChannel, HttpTunnelAcceptedChannelReceiver {
 
     private final HttpTunnelAcceptedChannelConfig config;

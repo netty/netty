@@ -19,7 +19,7 @@ package io.netty.util;
  * A utility class that provides the convenient shutdown of
  * {@link ExternalResourceReleasable}s.
  */
-public class ExternalResourceUtil {
+public final class ExternalResourceUtil {
 
     /**
      * Releases the specified {@link ExternalResourceReleasable}s.

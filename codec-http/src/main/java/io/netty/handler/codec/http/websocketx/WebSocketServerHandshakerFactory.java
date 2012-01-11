@@ -32,7 +32,7 @@ public class WebSocketServerHandshakerFactory {
 
     private final String subProtocols;
 
-    private boolean allowExtensions = false;
+    private boolean allowExtensions;
 
     /**
      * Constructor specifying the destination web socket location

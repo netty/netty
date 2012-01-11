@@ -35,11 +35,11 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
      */
     public static long MINSIZE = 0x4000;
 
-    private boolean useDisk = false;
+    private boolean useDisk;
 
-    private boolean checkSize = false;
+    private boolean checkSize;
 
-    private long minSize = 0L;
+    private long minSize;
 
     /**
      * Keep all HttpDatas until cleanAllHttpDatas() is called.
@@ -91,8 +91,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     }
     
     @Override
-    public Attribute createAttribute(HttpRequest request, String name) throws NullPointerException,
-            IllegalArgumentException {
+    public Attribute createAttribute(HttpRequest request, String name) {
         if (useDisk) {
             Attribute attribute = new DiskAttribute(name);
             List<HttpData> fileToDelete = getList(request);
@@ -111,8 +110,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
      * @see io.netty.handler.codec.http2.HttpDataFactory#createAttribute(java.lang.String, java.lang.String)
      */
     @Override
-    public Attribute createAttribute(HttpRequest request, String name, String value)
-            throws NullPointerException, IllegalArgumentException {
+    public Attribute createAttribute(HttpRequest request, String name, String value) {
         if (useDisk) {
             Attribute attribute;
             try {
@@ -143,7 +141,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     @Override
     public FileUpload createFileUpload(HttpRequest request, String name, String filename,
             String contentType, String contentTransferEncoding, Charset charset,
-            long size) throws NullPointerException, IllegalArgumentException {
+            long size) {
         if (useDisk) {
             FileUpload fileUpload = new DiskFileUpload(name, filename, contentType,
                     contentTransferEncoding, charset, size);

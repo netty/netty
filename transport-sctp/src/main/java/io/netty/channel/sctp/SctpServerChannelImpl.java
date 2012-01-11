@@ -15,9 +15,7 @@
  */
 package io.netty.channel.sctp;
 
-import io.netty.channel.*;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import static io.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -30,7 +28,13 @@ import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static io.netty.channel.Channels.fireChannelOpen;
+import io.netty.channel.AbstractServerChannel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  */
@@ -110,12 +114,12 @@ class SctpServerChannelImpl extends AbstractServerChannel
 
     @Override
     public InetSocketAddress getRemoteAddress() {
-        return null;// not available for server channel
+        return null; // not available for server channel
     }
 
     @Override
     public Set<InetSocketAddress> getAllRemoteAddresses() {
-        return null;// not available for server channel
+        return null; // not available for server channel
     }
 
     @Override

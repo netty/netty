@@ -36,7 +36,7 @@ import io.netty.logging.InternalLoggerFactory;
 
 /**
  */
-class OioServerSocketChannel extends AbstractServerChannel
+final class OioServerSocketChannel extends AbstractServerChannel
                              implements ServerSocketChannel {
 
     private static final InternalLogger logger =

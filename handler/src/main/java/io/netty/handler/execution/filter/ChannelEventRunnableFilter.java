@@ -22,8 +22,8 @@ import io.netty.handler.execution.ChannelEventRunnable;
 public interface ChannelEventRunnableFilter {
     
     /**
-     * Return <code>true<code> if the {@link ChannelEventRunnable} should get handled by the {@link Executor}
+     * Return <code>true</code> if the {@link ChannelEventRunnable} should get handled by the {@link Executor}
      * 
      */
-    public boolean filter(ChannelEventRunnable event);
+    boolean filter(ChannelEventRunnable event);
 }

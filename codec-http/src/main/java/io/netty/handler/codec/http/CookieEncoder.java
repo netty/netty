@@ -145,7 +145,7 @@ public class CookieEncoder {
                     addQuoted(sb, CookieHeaderNames.COMMENTURL, cookie.getCommentUrl());
                 }
 
-                if(!cookie.getPorts().isEmpty()) {
+                if (!cookie.getPorts().isEmpty()) {
                     sb.append(CookieHeaderNames.PORT);
                     sb.append((char) HttpCodecUtil.EQUALS);
                     sb.append((char) HttpCodecUtil.DOUBLE_QUOTE);
@@ -189,7 +189,7 @@ public class CookieEncoder {
             }
 
             if (cookie.getVersion() >= 1) {
-                if(!cookie.getPorts().isEmpty()) {
+                if (!cookie.getPorts().isEmpty()) {
                     sb.append('$');
                     sb.append(CookieHeaderNames.PORT);
                     sb.append((char) HttpCodecUtil.EQUALS);
@@ -204,8 +204,10 @@ public class CookieEncoder {
             }
         }
 
-        if(sb.length() > 0)
-        	sb.setLength(sb.length() - 1);
+        if (sb.length() > 0) {
+            sb.setLength(sb.length() - 1);
+        }
+
         return sb.toString();
     }
 

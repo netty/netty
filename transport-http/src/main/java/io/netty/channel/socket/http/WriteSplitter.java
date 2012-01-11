@@ -25,7 +25,7 @@ import io.netty.buffer.ChannelBuffers;
  * Provides functionality to split a provided ChannelBuffer into multiple fragments which fit
  * under a specified size threshold.
  */
-public final class WriteSplitter {
+final class WriteSplitter {
 
     public static List<ChannelBuffer> split(ChannelBuffer buffer,
             int splitThreshold) {
@@ -50,4 +50,7 @@ public final class WriteSplitter {
         return fragmentList;
     }
 
+    private WriteSplitter() {
+        // Unused
+    }
 }

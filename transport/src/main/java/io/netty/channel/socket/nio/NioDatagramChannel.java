@@ -44,7 +44,7 @@ import io.netty.util.internal.ThreadLocalBoolean;
 /**
  * Provides an NIO based {@link io.netty.channel.socket.DatagramChannel}.
  */
-class NioDatagramChannel extends AbstractChannel
+final class NioDatagramChannel extends AbstractChannel
                                 implements io.netty.channel.socket.DatagramChannel {
 
     /**

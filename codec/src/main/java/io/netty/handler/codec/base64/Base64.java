@@ -32,7 +32,7 @@ import io.netty.buffer.HeapChannelBufferFactory;
  * @apiviz.landmark
  * @apiviz.uses io.netty.handler.codec.base64.Base64Dialect
  */
-public class Base64 {
+public final class Base64 {
 
     /** Maximum line length (76) of Base64 output. */
     private static final int MAX_LINE_LENGTH = 76;
@@ -207,7 +207,7 @@ public class Base64 {
         // We have to shift left 24 in order to flush out the 1's that appear
         // when Java treats a value as negative that is cast from a byte to an int.
         int inBuff =
-                (numSigBytes > 0? src.getByte(srcOffset    ) << 24 >>>  8 : 0) |
+                (numSigBytes > 0? src.getByte(srcOffset)     << 24 >>>  8 : 0) |
                 (numSigBytes > 1? src.getByte(srcOffset + 1) << 24 >>> 16 : 0) |
                 (numSigBytes > 2? src.getByte(srcOffset + 2) << 24 >>> 24 : 0);
 
@@ -301,9 +301,9 @@ public class Base64 {
             sbiDecode = DECODABET[sbiCrop];
 
             if (sbiDecode >= WHITE_SPACE_ENC) { // White space, Equals sign or better
-                if (sbiDecode >= EQUALS_SIGN_ENC) {
+                if (sbiDecode >= EQUALS_SIGN_ENC) { // Equals sign or better
                     b4[b4Posn ++] = sbiCrop;
-                    if (b4Posn > 3) {
+                    if (b4Posn > 3) { // Quartet built
                         outBuffPosn += decode4to3(
                                 b4, 0, dest, outBuffPosn, dialect);
                         b4Posn = 0;
@@ -312,10 +312,9 @@ public class Base64 {
                         if (sbiCrop == EQUALS_SIGN) {
                             break;
                         }
-                    } // end if: quartet built
-                } // end if: equals sign or better
-            } // end if: white space, equals sign or better
-            else {
+                    }
+                }
+            } else {
                 throw new IllegalArgumentException(
                         "bad Base64 input character at " + i + ": " +
                         src.getUnsignedByte(i) + " (decimal)");
@@ -331,18 +330,16 @@ public class Base64 {
 
         byte[] DECODABET = decodabet(dialect);
 
-        // Example: Dk==
         if (src[srcOffset + 2] == EQUALS_SIGN) {
+            // Example: Dk==
             int outBuff =
                     (DECODABET[src[srcOffset    ]] & 0xFF) << 18 |
                     (DECODABET[src[srcOffset + 1]] & 0xFF) << 12;
 
             dest.setByte(destOffset, (byte) (outBuff >>> 16));
             return 1;
-        }
-
-        // Example: DkL=
-        else if (src[srcOffset + 3] == EQUALS_SIGN) {
+        } else if (src[srcOffset + 3] == EQUALS_SIGN) {
+            // Example: DkL=
             int outBuff =
                     (DECODABET[src[srcOffset    ]] & 0xFF) << 18 |
                     (DECODABET[src[srcOffset + 1]] & 0xFF) << 12 |
@@ -351,10 +348,8 @@ public class Base64 {
             dest.setByte(destOffset    , (byte) (outBuff >>> 16));
             dest.setByte(destOffset + 1, (byte) (outBuff >>>  8));
             return 2;
-        }
-
-        // Example: DkLE
-        else {
+        } else {
+            // Example: DkLE
             int outBuff;
             try {
                 outBuff =

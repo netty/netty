@@ -49,7 +49,7 @@ import io.netty.handler.ssl.SslHandler;
  *     to validate the client certificate.</li>
  * </ul>
  */
-public class SecureChatSslContextFactory {
+public final class SecureChatSslContextFactory {
 
     private static final String PROTOCOL = "TLS";
     private static final SSLContext SERVER_CONTEXT;
@@ -98,5 +98,9 @@ public class SecureChatSslContextFactory {
 
     public static SSLContext getClientContext() {
         return CLIENT_CONTEXT;
+    }
+
+    private SecureChatSslContextFactory() {
+        // Unused
     }
 }

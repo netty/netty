@@ -22,7 +22,7 @@ import java.util.List;
  * Conversion utility class to parse a property represented as a string or
  * an object.
  */
-public class ConversionUtil {
+public final class ConversionUtil {
 
     /**
      * Converts the specified object into an integer.
@@ -88,8 +88,8 @@ public class ConversionUtil {
     }
 
     private static final String[] INTEGERS = {
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-        "10","11","12","13","14","15",
+        "0",  "1",  "2",  "3",  "4",  "5",  "6",  "7",  "8",  "9",
+        "10", "11", "12", "13", "14", "15",
     };
 
     public static String toString(int value) {

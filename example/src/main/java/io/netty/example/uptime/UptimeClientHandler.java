@@ -84,8 +84,7 @@ public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
         if (cause instanceof ReadTimeoutException) {
             // The connection was OK but there was no traffic for last period.
             println("Disconnecting due to no inbound traffic");
-        }
-        else {
+        } else {
             cause.printStackTrace();
         }
         ctx.getChannel().close();

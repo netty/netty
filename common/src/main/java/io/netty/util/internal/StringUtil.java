@@ -20,7 +20,7 @@ import java.util.Formatter;
 /**
  * String utility class.
  */
-public class StringUtil {
+public final class StringUtil {
 
     private StringUtil() {
         // Unused.

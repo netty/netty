@@ -24,7 +24,7 @@ import io.netty.buffer.ChannelBuffers;
  * Disk implementation of Attributes
  */
 public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
-    public static String baseDirectory = null;
+    public static String baseDirectory;
 
     public static boolean deleteOnExitTemporaryFile = true;
 
@@ -47,8 +47,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
      * @throws IllegalArgumentException
      * @throws IOException
      */
-    public DiskAttribute(String name, String value)
-            throws NullPointerException, IllegalArgumentException, IOException {
+    public DiskAttribute(String name, String value) throws IOException {
         super(name, HttpCodecUtil.DEFAULT_CHARSET, 0); // Attribute have no default size
         setValue(value);
     }
@@ -133,7 +132,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
 
     @Override
     protected String getDiskFilename() {
-        return getName()+postfix;
+        return getName() + postfix;
     }
 
     @Override

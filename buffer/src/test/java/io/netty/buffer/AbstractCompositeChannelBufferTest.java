@@ -102,16 +102,16 @@ public abstract class AbstractCompositeChannelBufferTest extends
         b.skipBytes(6);
         b.markReaderIndex();
         assertEquals(a.readerIndex(), b.readerIndex());
-        a.readerIndex(a.readerIndex()-1);
-        b.readerIndex(b.readerIndex()-1);
+        a.readerIndex(a.readerIndex() - 1);
+        b.readerIndex(b.readerIndex() - 1);
         assertEquals(a.readerIndex(), b.readerIndex());
-        a.writerIndex(a.writerIndex()-1);
+        a.writerIndex(a.writerIndex() - 1);
         a.markWriterIndex();
-        b.writerIndex(b.writerIndex()-1);
+        b.writerIndex(b.writerIndex() - 1);
         b.markWriterIndex();
         assertEquals(a.writerIndex(), b.writerIndex());
-        a.writerIndex(a.writerIndex()+1);
-        b.writerIndex(b.writerIndex()+1);
+        a.writerIndex(a.writerIndex() + 1);
+        b.writerIndex(b.writerIndex() + 1);
         assertEquals(a.writerIndex(), b.writerIndex());
         assertTrue(ChannelBuffers.equals(a, b));
         // now discard
@@ -256,7 +256,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         a = wrappedBuffer(order, new byte[] { 1  });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 1 }, new byte[1]));
         // to enable writeBytes
-        b.writerIndex(b.writerIndex()-1);
+        b.writerIndex(b.writerIndex() - 1);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 2 }));
         assertFalse(ChannelBuffers.equals(a, b));
@@ -265,7 +265,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         a = wrappedBuffer(order, new byte[] { 1, 2, 3 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 1 }, new byte[2]));
         // to enable writeBytes
-        b.writerIndex(b.writerIndex()-2);
+        b.writerIndex(b.writerIndex() - 2);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 2 }));
         b.writeBytes(wrappedBuffer(order, new byte[] { 3 }));
@@ -275,7 +275,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         a = wrappedBuffer(order, new byte[] { 1, 2, 3 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4 }, 1, 3));
         // to enable writeBytes
-        b.writerIndex(b.writerIndex()-1);
+        b.writerIndex(b.writerIndex() - 1);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4 }, 3, 1));
         assertTrue(ChannelBuffers.equals(a, b));
@@ -284,7 +284,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         a = wrappedBuffer(order, new byte[] { 1, 2, 3 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 1, 2 }, new byte[1]));
         // to enable writeBytes
-        b.writerIndex(b.writerIndex()-1);
+        b.writerIndex(b.writerIndex() - 1);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 4 }));
         assertFalse(ChannelBuffers.equals(a, b));
@@ -293,7 +293,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         a = wrappedBuffer(order, new byte[] { 1, 2, 3 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 0, 1, 2, 4, 5 }, 1, 3));
         // to enable writeBytes
-        b.writerIndex(b.writerIndex()-1);
+        b.writerIndex(b.writerIndex() - 1);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 0, 1, 2, 4, 5 }, 3, 1));
         assertFalse(ChannelBuffers.equals(a, b));
@@ -302,7 +302,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         a = wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 1, 2, 3 }, new byte[7]));
         // to enable writeBytes
-        b.writerIndex(b.writerIndex()-7);
+        b.writerIndex(b.writerIndex() - 7);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 4, 5, 6 }));
         b.writeBytes(
@@ -313,7 +313,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         a = wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 1, 10));
         // to enable writeBytes
-        b.writerIndex(b.writerIndex()-5);
+        b.writerIndex(b.writerIndex() - 5);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}, 6, 5));
         assertTrue(ChannelBuffers.equals(a, b));
@@ -322,7 +322,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         a = wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 6 }, new byte[5]));
         // to enable writeBytes
-        b.writerIndex(b.writerIndex()-5);
+        b.writerIndex(b.writerIndex() - 5);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 7, 8, 5, 9, 10 }));
         assertFalse(ChannelBuffers.equals(a, b));
@@ -331,7 +331,7 @@ public abstract class AbstractCompositeChannelBufferTest extends
         a = wrappedBuffer(order, new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         b = wrappedBuffer(wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 1, 10));
         // to enable writeBytes
-        b.writerIndex(b.writerIndex()-5);
+        b.writerIndex(b.writerIndex() - 5);
         b.writeBytes(
                 wrappedBuffer(order, new byte[] { 0, 1, 2, 3, 4, 6, 7, 8, 5, 9, 10, 11 }, 6, 5));
         assertFalse(ChannelBuffers.equals(a, b));

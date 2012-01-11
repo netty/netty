@@ -49,277 +49,214 @@ import io.netty.channel.ChannelHandlerContext;
  * if possible.</b><br><br><br>
  * <b>This handler should be created only once and reused on every pipeline since it handles
  * a global status of what is allowed or blocked.</b><br><br>
- *
+ * <p/>
  * Note that {@link IpSubnetFilterRule} which supports IPV4 and IPV6 should be used with as much as
  * possible no mixed IP protocol. Both IPV4 and IPV6 are supported but a mix (IpFilter in IPV6 notation
  * and the address from the channel in IPV4, or the reverse) can lead to wrong result.
  */
 @Sharable
-public class IpFilterRuleHandler extends IpFilteringHandlerImpl
-{
-   /**
-    * List of {@link IpFilterRule}
-    */
-   private final CopyOnWriteArrayList<IpFilterRule> ipFilterRuleList = new CopyOnWriteArrayList<IpFilterRule>();
+public class IpFilterRuleHandler extends IpFilteringHandlerImpl {
+    /** List of {@link IpFilterRule} */
+    private final CopyOnWriteArrayList<IpFilterRule> ipFilterRuleList = new CopyOnWriteArrayList<IpFilterRule>();
 
-   /**
-    * Constructor from a new list of IpFilterRule
-    * @param newList
-    */
-   public IpFilterRuleHandler(List<IpFilterRule> newList)
-   {
-      if (newList != null)
-      {
-         ipFilterRuleList.addAll(newList);
-      }
-   }
+    /** Constructor from a new list of IpFilterRule */
+    public IpFilterRuleHandler(List<IpFilterRule> newList) {
+        if (newList != null) {
+            ipFilterRuleList.addAll(newList);
+        }
+    }
 
-   /**
-    * Empty constructor (no IpFilterRule in the List at construction). In such a situation,
-    * empty list implies allow all.
-    */
-   public IpFilterRuleHandler()
-   {
-   }
+    /**
+     * Empty constructor (no IpFilterRule in the List at construction). In such a situation,
+     * empty list implies allow all.
+     */
+    public IpFilterRuleHandler() {
+    }
 
-   // Below are methods directly inspired from CopyOnWriteArrayList methods
-   /**
-    * Add an ipFilterRule in the list at the end
-    * @param ipFilterRule
-    */
-   public void add(IpFilterRule ipFilterRule)
-   {
-      if (ipFilterRule == null)
-      {
-         throw new NullPointerException("IpFilterRule can not be null");
-      }
-      ipFilterRuleList.add(ipFilterRule);
-   }
+    // Below are methods directly inspired from CopyOnWriteArrayList methods
 
-   /**
-    * Add an ipFilterRule in the list at the specified position (shifting to the right other elements)
-    * @param index
-    * @param ipFilterRule
-    */
-   public void add(int index, IpFilterRule ipFilterRule)
-   {
-      if (ipFilterRule == null)
-      {
-         throw new NullPointerException("IpFilterRule can not be null");
-      }
-      ipFilterRuleList.add(index, ipFilterRule);
-   }
+    /** Add an ipFilterRule in the list at the end */
+    public void add(IpFilterRule ipFilterRule) {
+        if (ipFilterRule == null) {
+            throw new NullPointerException("IpFilterRule can not be null");
+        }
+        ipFilterRuleList.add(ipFilterRule);
+    }
 
-   /**
-    * Appends all of the elements in the specified collection to the end of this list,
-    * in the order that they are returned by the specified collection's iterator.
-    * @param c
-    */
-   public void addAll(Collection<IpFilterRule> c)
-   {
-      if (c == null)
-      {
-         throw new NullPointerException("Collection can not be null");
-      }
-      ipFilterRuleList.addAll(c);
-   }
+    /** Add an ipFilterRule in the list at the specified position (shifting to the right other elements) */
+    public void add(int index, IpFilterRule ipFilterRule) {
+        if (ipFilterRule == null) {
+            throw new NullPointerException("IpFilterRule can not be null");
+        }
+        ipFilterRuleList.add(index, ipFilterRule);
+    }
 
-   /**
-    * Inserts all of the elements in the specified collection into this list, starting at the specified position.
-    * @param index
-    * @param c
-    */
-   public void addAll(int index, Collection<IpFilterRule> c)
-   {
-      if (c == null)
-      {
-         throw new NullPointerException("Collection can not be null");
-      }
-      ipFilterRuleList.addAll(index, c);
-   }
+    /**
+     * Appends all of the elements in the specified collection to the end of this list,
+     * in the order that they are returned by the specified collection's iterator.
+     */
+    public void addAll(Collection<IpFilterRule> c) {
+        if (c == null) {
+            throw new NullPointerException("Collection can not be null");
+        }
+        ipFilterRuleList.addAll(c);
+    }
 
-   /**
-    * Append the element if not present.
-    * @param c
-    * @return the number of elements added
-    */
-   public int addAllAbsent(Collection<IpFilterRule> c)
-   {
-      if (c == null)
-      {
-         throw new NullPointerException("Collection can not be null");
-      }
-      return ipFilterRuleList.addAllAbsent(c);
-   }
+    /** Inserts all of the elements in the specified collection into this list, starting at the specified position. */
+    public void addAll(int index, Collection<IpFilterRule> c) {
+        if (c == null) {
+            throw new NullPointerException("Collection can not be null");
+        }
+        ipFilterRuleList.addAll(index, c);
+    }
 
-   /**
-    * Append the element if not present.
-    * @param ipFilterRule
-    * @return true if the element was added
-    */
-   public boolean addIfAbsent(IpFilterRule ipFilterRule)
-   {
-      if (ipFilterRule == null)
-      {
-         throw new NullPointerException("IpFilterRule can not be null");
-      }
-      return ipFilterRuleList.addIfAbsent(ipFilterRule);
-   }
+    /**
+     * Append the element if not present.
+     *
+     * @return the number of elements added
+     */
+    public int addAllAbsent(Collection<IpFilterRule> c) {
+        if (c == null) {
+            throw new NullPointerException("Collection can not be null");
+        }
+        return ipFilterRuleList.addAllAbsent(c);
+    }
 
-   /**
-    * Clear the list
-    */
-   public void clear()
-   {
-      ipFilterRuleList.clear();
-   }
+    /**
+     * Append the element if not present.
+     *
+     * @return true if the element was added
+     */
+    public boolean addIfAbsent(IpFilterRule ipFilterRule) {
+        if (ipFilterRule == null) {
+            throw new NullPointerException("IpFilterRule can not be null");
+        }
+        return ipFilterRuleList.addIfAbsent(ipFilterRule);
+    }
 
-   /**
-    * Returns true if this list contains the specified element
-    * @param ipFilterRule
-    * @return true if this list contains the specified element
-    */
-   public boolean contains(IpFilterRule ipFilterRule)
-   {
-      if (ipFilterRule == null)
-      {
-         throw new NullPointerException("IpFilterRule can not be null");
-      }
-      return ipFilterRuleList.contains(ipFilterRule);
-   }
+    /** Clear the list */
+    public void clear() {
+        ipFilterRuleList.clear();
+    }
 
-   /**
-    * Returns true if this list contains all of the elements of the specified collection
-    * @param c
-    * @return true if this list contains all of the elements of the specified collection
-    */
-   public boolean containsAll(Collection<IpFilterRule> c)
-   {
-      if (c == null)
-      {
-         throw new NullPointerException("Collection can not be null");
-      }
-      return ipFilterRuleList.containsAll(c);
-   }
+    /**
+     * Returns true if this list contains the specified element
+     *
+     * @return true if this list contains the specified element
+     */
+    public boolean contains(IpFilterRule ipFilterRule) {
+        if (ipFilterRule == null) {
+            throw new NullPointerException("IpFilterRule can not be null");
+        }
+        return ipFilterRuleList.contains(ipFilterRule);
+    }
 
-   /**
-    * Returns the element at the specified position in this list
-    * @param index
-    * @return the element at the specified position in this list
-    */
-   public IpFilterRule get(int index)
-   {
-      return ipFilterRuleList.get(index);
-   }
+    /**
+     * Returns true if this list contains all of the elements of the specified collection
+     *
+     * @return true if this list contains all of the elements of the specified collection
+     */
+    public boolean containsAll(Collection<IpFilterRule> c) {
+        if (c == null) {
+            throw new NullPointerException("Collection can not be null");
+        }
+        return ipFilterRuleList.containsAll(c);
+    }
 
-   /**
-    * Returns true if this list contains no elements
-    * @return true if this list contains no elements
-    */
-   public boolean isEmpty()
-   {
-      return ipFilterRuleList.isEmpty();
-   }
+    /**
+     * Returns the element at the specified position in this list
+     *
+     * @return the element at the specified position in this list
+     */
+    public IpFilterRule get(int index) {
+        return ipFilterRuleList.get(index);
+    }
 
-   /**
-    * Remove the ipFilterRule from the list
-    * @param ipFilterRule
-    */
-   public void remove(IpFilterRule ipFilterRule)
-   {
-      if (ipFilterRule == null)
-      {
-         throw new NullPointerException("IpFilterRule can not be null");
-      }
-      ipFilterRuleList.remove(ipFilterRule);
-   }
+    /**
+     * Returns true if this list contains no elements
+     *
+     * @return true if this list contains no elements
+     */
+    public boolean isEmpty() {
+        return ipFilterRuleList.isEmpty();
+    }
 
-   /**
-    * Removes the element at the specified position in this list
-    * @param index
-    * @return the element previously at the specified position
-    */
-   public IpFilterRule remove(int index)
-   {
-      return ipFilterRuleList.remove(index);
-   }
+    /** Remove the ipFilterRule from the list */
+    public void remove(IpFilterRule ipFilterRule) {
+        if (ipFilterRule == null) {
+            throw new NullPointerException("IpFilterRule can not be null");
+        }
+        ipFilterRuleList.remove(ipFilterRule);
+    }
 
-   /**
-    * Removes from this list all of its elements that are contained in the specified collection
-    * @param c
-    */
-   public void removeAll(Collection<IpFilterRule> c)
-   {
-      if (c == null)
-      {
-         throw new NullPointerException("Collection can not be null");
-      }
-      ipFilterRuleList.removeAll(c);
-   }
+    /**
+     * Removes the element at the specified position in this list
+     *
+     * @return the element previously at the specified position
+     */
+    public IpFilterRule remove(int index) {
+        return ipFilterRuleList.remove(index);
+    }
 
-   /**
-    * Retains only the elements in this list that are contained in the specified collection
-    * @param c
-    */
-   public void retainAll(Collection<IpFilterRule> c)
-   {
-      if (c == null)
-      {
-         throw new NullPointerException("Collection can not be null");
-      }
-      ipFilterRuleList.retainAll(c);
-   }
+    /** Removes from this list all of its elements that are contained in the specified collection */
+    public void removeAll(Collection<IpFilterRule> c) {
+        if (c == null) {
+            throw new NullPointerException("Collection can not be null");
+        }
+        ipFilterRuleList.removeAll(c);
+    }
 
-   /**
-    * Replaces the element at the specified position in this list with the specified element
-    * @param index
-    * @param ipFilterRule
-    * @return the element previously at the specified position
-    */
-   public IpFilterRule set(int index, IpFilterRule ipFilterRule)
-   {
-      if (ipFilterRule == null)
-      {
-         throw new NullPointerException("IpFilterRule can not be null");
-      }
-      return ipFilterRuleList.set(index, ipFilterRule);
-   }
+    /** Retains only the elements in this list that are contained in the specified collection */
+    public void retainAll(Collection<IpFilterRule> c) {
+        if (c == null) {
+            throw new NullPointerException("Collection can not be null");
+        }
+        ipFilterRuleList.retainAll(c);
+    }
 
-   /**
-    * Returns the number of elements in this list.
-    * @return the number of elements in this list.
-    */
-   public int size()
-   {
-      return ipFilterRuleList.size();
-   }
+    /**
+     * Replaces the element at the specified position in this list with the specified element
+     *
+     * @return the element previously at the specified position
+     */
+    public IpFilterRule set(int index, IpFilterRule ipFilterRule) {
+        if (ipFilterRule == null) {
+            throw new NullPointerException("IpFilterRule can not be null");
+        }
+        return ipFilterRuleList.set(index, ipFilterRule);
+    }
 
-   /* (non-Javadoc)
+    /**
+     * Returns the number of elements in this list.
+     *
+     * @return the number of elements in this list.
+     */
+    public int size() {
+        return ipFilterRuleList.size();
+    }
+
+    /* (non-Javadoc)
     * @see io.netty.handler.ipfilter.IpFilteringHandler#accept(io.netty.channel.ChannelHandlerContext, io.netty.channel.ChannelEvent, java.net.InetSocketAddress)
     */
-   @Override
-   protected boolean accept(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress)
-         throws Exception
-   {
-      if (ipFilterRuleList.isEmpty())
-      {
-         // No limitation neither in deny or allow, so accept
-         return true;
-      }
-      InetAddress inetAddress = inetSocketAddress.getAddress();
-      Iterator<IpFilterRule> iterator = ipFilterRuleList.iterator();
-      IpFilterRule ipFilterRule = null;
-      while (iterator.hasNext())
-      {
-         ipFilterRule = iterator.next();
-         if (ipFilterRule.contains(inetAddress))
-         {
-            // Match founds, is it a ALLOW or DENY rule
-            return ipFilterRule.isAllowRule();
-         }
-      }
-      // No limitation founds and no allow either, but as it is like Firewall rules, it is therefore accepted
-      return true;
-   }
+    @Override
+    protected boolean accept(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress)
+            throws Exception {
+        if (ipFilterRuleList.isEmpty()) {
+            // No limitation neither in deny or allow, so accept
+            return true;
+        }
+        InetAddress inetAddress = inetSocketAddress.getAddress();
+        Iterator<IpFilterRule> iterator = ipFilterRuleList.iterator();
+        IpFilterRule ipFilterRule = null;
+        while (iterator.hasNext()) {
+            ipFilterRule = iterator.next();
+            if (ipFilterRule.contains(inetAddress)) {
+                // Match founds, is it a ALLOW or DENY rule
+                return ipFilterRule.isAllowRule();
+            }
+        }
+        // No limitation founds and no allow either, but as it is like Firewall rules, it is therefore accepted
+        return true;
+    }
 
 }

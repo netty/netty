@@ -15,19 +15,31 @@
  */
 package io.netty.channel.sctp;
 
-import com.sun.nio.sctp.Association;
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.*;
-import io.netty.channel.sctp.SctpSendBufferPool.SendBuffer;
-import io.netty.util.internal.ThreadLocalBoolean;
+import static io.netty.channel.Channels.*;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.netty.channel.Channels.fireChannelInterestChanged;
+import com.sun.nio.sctp.Association;
+
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.AbstractChannel;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.sctp.SctpSendBufferPool.SendBuffer;
+import io.netty.util.internal.ThreadLocalBoolean;
 
 /**
  */
@@ -102,7 +114,7 @@ class SctpChannelImpl extends AbstractChannel implements SctpChannel {
             try {
                 final Set<SocketAddress> allLocalAddresses = channel.getAllLocalAddresses();
                 final Set<InetSocketAddress> addresses = new HashSet<InetSocketAddress>(allLocalAddresses.size());
-                for(SocketAddress socketAddress: allLocalAddresses) {
+                for (SocketAddress socketAddress: allLocalAddresses) {
                     addresses.add((InetSocketAddress) socketAddress);
                 }
                 return addresses;
@@ -132,7 +144,7 @@ class SctpChannelImpl extends AbstractChannel implements SctpChannel {
             try {
                 final Set<SocketAddress> allLocalAddresses = channel.getRemoteAddresses();
                 final Set<InetSocketAddress> addresses = new HashSet<InetSocketAddress>(allLocalAddresses.size());
-                for(SocketAddress socketAddress: allLocalAddresses) {
+                for (SocketAddress socketAddress: allLocalAddresses) {
                     addresses.add((InetSocketAddress) socketAddress);
                 }
                 return addresses;

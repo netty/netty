@@ -42,7 +42,7 @@ final class UTF8Output {
             12, 12, 12, 12, 12, 12, 12, 12 };
 
     private int state = UTF8_ACCEPT;
-    private int codep = 0;
+    private int codep;
 
     private final StringBuilder stringBuilder;
 
@@ -60,7 +60,7 @@ final class UTF8Output {
     public void write(int b) {
         byte type = TYPES[b & 0xFF];
 
-        codep = (state != UTF8_ACCEPT) ? (b & 0x3f) | (codep << 6) : (0xff >> type) & (b);
+        codep = (state != UTF8_ACCEPT) ? (b & 0x3f) | (codep << 6) : (0xff >> type) & b;
 
         state = STATES[state + type];
 

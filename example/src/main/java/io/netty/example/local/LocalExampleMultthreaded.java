@@ -66,7 +66,7 @@ public class LocalExampleMultthreaded {
         // Read commands from array
         String[] commands = { "First", "Second", "Third", "quit" };
         for (int j = 0; j < 5 ; j++) {
-            System.err.println("Start "+j);
+            System.err.println("Start " + j);
             ChannelFuture channelFuture = cb.connect(socketAddress);
             channelFuture.awaitUninterruptibly();
             if (! channelFuture.isSuccess()) {
@@ -87,7 +87,7 @@ public class LocalExampleMultthreaded {
             channelFuture.getChannel().close();
             // Wait until the connection is closed or the connection attempt fails.
             channelFuture.getChannel().getCloseFuture().awaitUninterruptibly();
-            System.err.println("End "+j);
+            System.err.println("End " + j);
         }
 
         // Release all resources

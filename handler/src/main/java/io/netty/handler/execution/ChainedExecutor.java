@@ -28,7 +28,7 @@ import java.util.concurrent.Executor;
  * 
  *
  */
-public class ChainedExecutor implements Executor, ExternalResourceReleasable{
+public class ChainedExecutor implements Executor, ExternalResourceReleasable {
 
     private final Executor cur;
     private final Executor next;
@@ -43,9 +43,15 @@ public class ChainedExecutor implements Executor, ExternalResourceReleasable{
      * @param next    the {@link Executor} to use if the {@link ChannelEventRunnableFilter} does not match
      */
     public ChainedExecutor(ChannelEventRunnableFilter filter, Executor cur, Executor next) {
-        if (cur == null) throw new NullPointerException("cur");
-        if (next == null) throw new NullPointerException("next");
-        if (filter == null) throw new NullPointerException("filter");
+        if (cur == null) {
+            throw new NullPointerException("cur");
+        }
+        if (next == null) {
+            throw new NullPointerException("next");
+        }
+        if (filter == null) {
+            throw new NullPointerException("filter");
+        }
         
         this.cur = cur;
         this.next = next;

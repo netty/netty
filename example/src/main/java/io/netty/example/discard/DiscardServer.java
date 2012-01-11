@@ -30,6 +30,11 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 public class DiscardServer {
 
     public static void main(String[] args) throws Exception {
+        new DiscardServer().run();
+
+    }
+
+    public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new NioServerSocketChannelFactory(

@@ -21,18 +21,15 @@ package io.netty.handler.ipfilter;
  * <br>
  * Users can add an {@link IpFilterListener} to add specific actions in case a connection is allowed or refused.
  */
-public interface IpFilteringHandler
-{
-   
-   /**
-    * Sets the filter listener.
-    * 
-    * @param listener the new ip filter listener
-    */
-   void setIpFilterListener(IpFilterListener listener);
+public interface IpFilteringHandler {
 
-   /**
-    * Remove the filter listener.
-    */
-   void removeIpFilterListener();
+    /**
+     * Sets the filter listener.
+     *
+     * @param listener the new ip filter listener
+     */
+    void setIpFilterListener(IpFilterListener listener);
+
+    /** Remove the filter listener. */
+    void removeIpFilterListener();
 }

@@ -18,19 +18,16 @@
  * <p>This package contains an example web socket web server with server SSL.
  * <p>To run this example, follow the steps below:
  * <dl>
- * 	<dt>Step 1. Generate Your Key</dt>
- * 	<dd>
- * 		<code>keytool -genkey -keystore mySrvKeystore -keyalg RSA</code>. 
- * 		Make sure that you set the key password to be the same the key file password.
- * 	</dd>
- * 	<dt>Step 2. Specify your key store file and password as system properties</dt>
- * 	<dd>
- * 		<code>-Dkeystore.file.path=&lt;path to mySrvKeystore&gt; -Dkeystore.file.password=&lt;password&gt;</code>
- * 	</dd>
- * 	<dt>Step 3. Run WebSocketSslServer as a Java application</dt>
- * 	<dd>
- * 		Once started, you can test the web server against your browser by navigating to https://localhost:8081/
- * 	</dd>
+ *   <dt>Step 1. Generate Your Key
+ *   <dd>
+ *     <code>keytool -genkey -keystore mySrvKeystore -keyalg RSA</code>.
+ *     Make sure that you set the key password to be the same the key file password.
+ *   <dt>Step 2. Specify your key store file and password as system properties
+ *   <dd>
+ *     <code>-Dkeystore.file.path=&lt;path to mySrvKeystore&gt; -Dkeystore.file.password=&lt;password&gt;</code>
+ *   <dt>Step 3. Run WebSocketSslServer as a Java application
+ *   <dd>
+ *     Once started, you can test the web server against your browser by navigating to https://localhost:8081/
  * </dl>
  * <p>To find out more about setting up key stores, refer to this
  * <a href="http://download.oracle.com/javase/6/docs/technotes/guides/security/jsse/JSSERefGuide.html">giude</a>.

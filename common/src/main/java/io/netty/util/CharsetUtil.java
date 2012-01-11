@@ -26,7 +26,7 @@ import java.util.Map;
  * A utility class that provides various common operations and constants
  * related with {@link Charset} and its relevant classes.
  */
-public class CharsetUtil {
+public final class CharsetUtil {
 
     /**
      * 16-bit UTF (UCS Transformation Format) whose byte order is identified by
@@ -61,7 +61,7 @@ public class CharsetUtil {
     public static final Charset US_ASCII = Charset.forName("US-ASCII");
 
     private static final ThreadLocal<Map<Charset, CharsetEncoder>> encoders =
-        new ThreadLocal<Map<Charset,CharsetEncoder>>() {
+        new ThreadLocal<Map<Charset, CharsetEncoder>>() {
             @Override
             protected Map<Charset, CharsetEncoder> initialValue() {
                 return new IdentityHashMap<Charset, CharsetEncoder>();
@@ -69,7 +69,7 @@ public class CharsetUtil {
         };
 
     private static final ThreadLocal<Map<Charset, CharsetDecoder>> decoders =
-        new ThreadLocal<Map<Charset,CharsetDecoder>>() {
+        new ThreadLocal<Map<Charset, CharsetDecoder>>() {
             @Override
             protected Map<Charset, CharsetDecoder> initialValue() {
                 return new IdentityHashMap<Charset, CharsetDecoder>();

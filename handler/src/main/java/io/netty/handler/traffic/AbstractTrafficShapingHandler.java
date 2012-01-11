@@ -70,22 +70,22 @@ public abstract class AbstractTrafficShapingHandler extends
     /**
      * Traffic Counter
      */
-    protected TrafficCounter trafficCounter = null;
+    protected TrafficCounter trafficCounter;
 
     /**
      * Executor to associated to any TrafficCounter
      */
-    protected Executor executor = null;
+    protected Executor executor;
 
     /**
      * Limit in B/s to apply to write
      */
-    private long writeLimit = 0;
+    private long writeLimit;
 
     /**
      * Limit in B/s to apply to read
      */
-    private long readLimit = 0;
+    private long readLimit;
 
     /**
      * Delay between two performance snapshots
@@ -129,7 +129,7 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     public AbstractTrafficShapingHandler(Executor executor, long writeLimit,
             long readLimit, long checkInterval) {
-	    init(executor, writeLimit, readLimit, checkInterval);
+        init(executor, writeLimit, readLimit, checkInterval);
     }
 
     /**
@@ -142,7 +142,7 @@ public abstract class AbstractTrafficShapingHandler extends
      */
     public AbstractTrafficShapingHandler(Executor executor, long writeLimit,
             long readLimit) {
-	    init(executor, writeLimit, readLimit, DEFAULT_CHECK_INTERVAL);
+        init(executor, writeLimit, readLimit, DEFAULT_CHECK_INTERVAL);
     }
 
     /**
@@ -161,7 +161,7 @@ public abstract class AbstractTrafficShapingHandler extends
         writeLimit = newWriteLimit;
         readLimit = newReadLimit;
         if (trafficCounter != null) {
-            trafficCounter.resetAccounting(System.currentTimeMillis()+1);
+            trafficCounter.resetAccounting(System.currentTimeMillis() + 1);
         }
     }
 
@@ -193,12 +193,12 @@ public abstract class AbstractTrafficShapingHandler extends
         /**
          * Associated ChannelHandlerContext
          */
-        private ChannelHandlerContext ctx = null;
+        private ChannelHandlerContext ctx;
 
         /**
          * Time to wait before clearing the channel
          */
-        private long timeToWait = 0;
+        private long timeToWait;
 
         /**
          * @param ctx

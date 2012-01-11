@@ -26,7 +26,7 @@ import io.netty.util.UnsafeDetectUtil;
 
 
  */
-public class QueueFactory {
+public final class QueueFactory {
     
     private static final boolean useUnsafe = UnsafeDetectUtil.isUnsafeFound(QueueFactory.class.getClassLoader());
     
@@ -41,7 +41,7 @@ public class QueueFactory {
      * @param itemClass  the {@link Class} type which will be used as {@link BlockingQueue} items
      * @return queue     the {@link BlockingQueue} implementation
      */
-    public static final <T> BlockingQueue<T> createQueue(Class<T> itemClass) {
+    public static <T> BlockingQueue<T> createQueue(Class<T> itemClass) {
         if (useUnsafe) {
             return new LinkedTransferQueue<T>();
         } else {
@@ -56,7 +56,7 @@ public class QueueFactory {
      * @param itemClass   the {@link Class} type which will be used as {@link BlockingQueue} items
      * @return queue      the {@link BlockingQueue} implementation
      */
-    public static final <T> BlockingQueue<T> createQueue(Collection<? extends T> collection, Class<T> itemClass) {
+    public static <T> BlockingQueue<T> createQueue(Collection<? extends T> collection, Class<T> itemClass) {
         if (useUnsafe) {
             return new LinkedTransferQueue<T>(collection);
         } else {

@@ -15,14 +15,19 @@
  */
 package io.netty.channel.sctp;
 
-import com.sun.nio.sctp.SctpChannel;
-import io.netty.channel.*;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
+import static io.netty.channel.Channels.*;
 
 import java.io.IOException;
 
-import static io.netty.channel.Channels.fireChannelOpen;
+import com.sun.nio.sctp.SctpChannel;
+
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  */

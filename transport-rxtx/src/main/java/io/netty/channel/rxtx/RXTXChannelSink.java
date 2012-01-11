@@ -276,7 +276,7 @@ public class RXTXChannelSink extends AbstractChannelSink {
 
     SerialPort serialPort;
 
-    volatile boolean closed = false;
+    volatile boolean closed;
 
     @Override
     public void eventSunk(final ChannelPipeline pipeline, final ChannelEvent e) throws Exception {

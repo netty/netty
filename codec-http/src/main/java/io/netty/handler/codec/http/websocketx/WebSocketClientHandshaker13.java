@@ -46,11 +46,11 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
     public static final String MAGIC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-    private String expectedChallengeResponseString = null;
+    private String expectedChallengeResponseString;
 
     private static final String protocol = null;
 
-    private boolean allowExtensions = false;
+    private boolean allowExtensions;
 
     /**
      * Constructor specifying the destination web socket location and version to initiate

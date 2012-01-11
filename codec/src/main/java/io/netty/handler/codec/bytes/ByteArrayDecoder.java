@@ -56,7 +56,7 @@ public class ByteArrayDecoder extends OneToOneDecoder {
         if (!(msg instanceof ChannelBuffer)) {
             return msg;
         }
-        ChannelBuffer buf = (ChannelBuffer )msg;
+        ChannelBuffer buf = (ChannelBuffer) msg;
         byte[] array;
         if (buf.hasArray()) {
             if (buf.arrayOffset() == 0 && buf.readableBytes() == buf.capacity()) {

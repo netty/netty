@@ -31,7 +31,7 @@ final class SctpReceiveBufferPool {
         super();
     }
 
-    final ByteBuffer acquire(int size) {
+    ByteBuffer acquire(int size) {
         final SoftReference<ByteBuffer>[] pool = this.pool;
         for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
@@ -60,7 +60,7 @@ final class SctpReceiveBufferPool {
         return buf;
     }
 
-    final void release(ByteBuffer buffer) {
+    void release(ByteBuffer buffer) {
         final SoftReference<ByteBuffer>[] pool = this.pool;
         for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
@@ -72,7 +72,7 @@ final class SctpReceiveBufferPool {
 
         // pool is full - replace one
         final int capacity = buffer.capacity();
-        for (int i = 0; i< POOL_SIZE; i ++) {
+        for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
             ByteBuffer pooled = ref.get();
             if (pooled == null) {
@@ -87,7 +87,7 @@ final class SctpReceiveBufferPool {
         }
     }
 
-    private static final int normalizeCapacity(int capacity) {
+    private static int normalizeCapacity(int capacity) {
         // Normalize to multiple of 1024
         int q = capacity >>> 10;
         int r = capacity & 1023;

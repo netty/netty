@@ -15,21 +15,17 @@
  */
 package io.netty.channel.sctp;
 
-import com.sun.nio.sctp.*;
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
-import io.netty.channel.Channel;
-import io.netty.channel.*;
-import io.netty.channel.sctp.SctpSendBufferPool.SendBuffer;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.DeadLockProofWorker;
-import io.netty.util.internal.QueueFactory;
+import static io.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.*;
+import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.NotYetConnectedException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
@@ -39,7 +35,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static io.netty.channel.Channels.*;
+import com.sun.nio.sctp.MessageInfo;
+
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBufferFactory;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.ReceiveBufferSizePredictor;
+import io.netty.channel.sctp.SctpSendBufferPool.SendBuffer;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.DeadLockProofWorker;
+import io.netty.util.internal.QueueFactory;
 
 /**
  */

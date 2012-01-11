@@ -94,7 +94,7 @@ public class ProtobufDecoder extends OneToOneDecoder {
         ChannelBuffer buf = (ChannelBuffer) msg;
         if (buf.hasArray()) {
             final int offset = buf.readerIndex();
-            if(extensionRegistry == null) {
+            if (extensionRegistry == null) {
                 return prototype.newBuilderForType().mergeFrom(
                         buf.array(), buf.arrayOffset() + offset, buf.readableBytes()).build();
             } else {

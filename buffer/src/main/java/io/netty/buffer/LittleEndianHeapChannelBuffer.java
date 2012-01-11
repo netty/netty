@@ -59,67 +59,67 @@ public class LittleEndianHeapChannelBuffer extends HeapChannelBuffer {
 
     @Override
     public short getShort(int index) {
-        return (short) (array[index] & 0xFF | array[index+1] << 8);
+        return (short) (array[index] & 0xFF | array[index + 1] << 8);
     }
 
     @Override
     public int getUnsignedMedium(int index) {
-        return (array[index  ] & 0xff) <<  0 |
-               (array[index+1] & 0xff) <<  8 |
-               (array[index+2] & 0xff) << 16;
+        return (array[index]     & 0xff) <<  0 |
+               (array[index + 1] & 0xff) <<  8 |
+               (array[index + 2] & 0xff) << 16;
     }
 
     @Override
     public int getInt(int index) {
-        return (array[index  ] & 0xff) <<  0 |
-               (array[index+1] & 0xff) <<  8 |
-               (array[index+2] & 0xff) << 16 |
-               (array[index+3] & 0xff) << 24;
+        return (array[index]     & 0xff) <<  0 |
+               (array[index + 1] & 0xff) <<  8 |
+               (array[index + 2] & 0xff) << 16 |
+               (array[index + 3] & 0xff) << 24;
     }
 
     @Override
     public long getLong(int index) {
-        return ((long) array[index]   & 0xff) <<  0 |
-               ((long) array[index+1] & 0xff) <<  8 |
-               ((long) array[index+2] & 0xff) << 16 |
-               ((long) array[index+3] & 0xff) << 24 |
-               ((long) array[index+4] & 0xff) << 32 |
-               ((long) array[index+5] & 0xff) << 40 |
-               ((long) array[index+6] & 0xff) << 48 |
-               ((long) array[index+7] & 0xff) << 56;
+        return ((long) array[index]     & 0xff) <<  0 |
+               ((long) array[index + 1] & 0xff) <<  8 |
+               ((long) array[index + 2] & 0xff) << 16 |
+               ((long) array[index + 3] & 0xff) << 24 |
+               ((long) array[index + 4] & 0xff) << 32 |
+               ((long) array[index + 5] & 0xff) << 40 |
+               ((long) array[index + 6] & 0xff) << 48 |
+               ((long) array[index + 7] & 0xff) << 56;
     }
 
     @Override
     public void setShort(int index, int value) {
-        array[index  ] = (byte) (value >>> 0);
-        array[index+1] = (byte) (value >>> 8);
+        array[index]     = (byte) (value >>> 0);
+        array[index + 1] = (byte) (value >>> 8);
     }
 
     @Override
     public void setMedium(int index, int   value) {
-        array[index  ] = (byte) (value >>> 0);
-        array[index+1] = (byte) (value >>> 8);
-        array[index+2] = (byte) (value >>> 16);
+        array[index]     = (byte) (value >>> 0);
+        array[index + 1] = (byte) (value >>> 8);
+        array[index + 2] = (byte) (value >>> 16);
     }
 
     @Override
     public void setInt(int index, int   value) {
-        array[index  ] = (byte) (value >>> 0);
-        array[index+1] = (byte) (value >>> 8);
-        array[index+2] = (byte) (value >>> 16);
-        array[index+3] = (byte) (value >>> 24);
+        array[index]     = (byte) (value >>> 0);
+        array[index + 1] = (byte) (value >>> 8);
+        array[index + 2] = (byte) (value >>> 16);
+        array[index + 3] = (byte) (value >>> 24);
     }
 
     @Override
     public void setLong(int index, long  value) {
-        array[index  ] = (byte) (value >>> 0);
-        array[index+1] = (byte) (value >>> 8);
-        array[index+2] = (byte) (value >>> 16);
-        array[index+3] = (byte) (value >>> 24);
-        array[index+4] = (byte) (value >>> 32);
-        array[index+5] = (byte) (value >>> 40);
-        array[index+6] = (byte) (value >>> 48);
-        array[index+7] = (byte) (value >>> 56);
+        array[index]     = (byte) (value >>> 0);
+        array[index + 1] = (byte) (value >>> 8);
+        array[index + 2] = (byte) (value >>> 16);
+        array[index + 3] = (byte) (value >>> 24);
+        array[index + 4] = (byte) (value >>> 32);
+        array[index + 5] = (byte) (value >>> 40);
+        array[index + 6] = (byte) (value >>> 48);
+        array[index + 7] = (byte) (value >>> 56);
     }
 
     @Override

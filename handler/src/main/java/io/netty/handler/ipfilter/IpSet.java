@@ -17,17 +17,14 @@ package io.netty.handler.ipfilter;
 
 import java.net.InetAddress;
 
-/**
- * This Interface defines an IpSet object.
- */
-public interface IpSet
-{
-   /**
-    * Compares the given InetAddress against the IpSet and returns true if
-    * the InetAddress is contained in this Rule and false if not.
-    * @param inetAddress1
-    * @return returns true if the given IP address is contained in the current
-    * IpSet.
-    */
-   boolean contains(InetAddress inetAddress1);
+/** This Interface defines an IpSet object. */
+public interface IpSet {
+    /**
+     * Compares the given InetAddress against the IpSet and returns true if
+     * the InetAddress is contained in this Rule and false if not.
+     *
+     * @return returns true if the given IP address is contained in the current
+     *         IpSet.
+     */
+    boolean contains(InetAddress inetAddress1);
 }

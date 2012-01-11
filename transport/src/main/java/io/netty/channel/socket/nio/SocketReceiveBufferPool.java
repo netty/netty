@@ -68,7 +68,7 @@ final class SocketReceiveBufferPool {
 
         // pool is full - replace one
         final int capacity = buffer.capacity();
-        for (int i = 0; i< POOL_SIZE; i ++) {
+        for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
             ByteBuffer pooled = ref.get();
             if (pooled == null) {

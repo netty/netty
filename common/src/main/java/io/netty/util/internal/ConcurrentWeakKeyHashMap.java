@@ -72,7 +72,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
     /**
      * The maximum capacity, used if a higher value is implicitly specified by
      * either of the constructors with arguments.  MUST be a power of two
-     * <= 1<<30 to ensure that entries are indexable using integers.
+     * &lt;= 1&lt;&lt;30 to ensure that entries are indexable using integers.
      */
     static final int MAXIMUM_CAPACITY = 1 << 30;
 
@@ -307,7 +307,7 @@ public final class ConcurrentWeakKeyHashMap<K, V> extends AbstractMap<K, V> impl
 
         Segment(int initialCapacity, float lf) {
             loadFactor = lf;
-            setTable(HashEntry.<K, V> newArray(initialCapacity));
+            setTable(HashEntry.<K, V>newArray(initialCapacity));
         }
 
         @SuppressWarnings("unchecked")

@@ -19,7 +19,7 @@ import java.lang.ref.Reference;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ClassResolvers {
+public final class ClassResolvers {
 
     /**
      * cache disabled
@@ -85,5 +85,9 @@ public class ClassResolvers {
         }
 
         return ClassResolvers.class.getClassLoader();
+    }
+
+    private ClassResolvers() {
+        // Unused
     }
 }

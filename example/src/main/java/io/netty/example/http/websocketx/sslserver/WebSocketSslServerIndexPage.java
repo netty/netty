@@ -22,7 +22,7 @@ import io.netty.util.CharsetUtil;
 /**
  * Generates the demo HTML page which is served at http://localhost:8080/
  */
-public class WebSocketSslServerIndexPage {
+public final class WebSocketSslServerIndexPage {
 
     private static final String NEWLINE = "\r\n";
 
@@ -88,5 +88,9 @@ public class WebSocketSslServerIndexPage {
                                 + "<textarea id=\"responseText\" style=\"width: 500px; height:300px;\"></textarea>"
                                 + NEWLINE + "</form>" + NEWLINE + "</body>" + NEWLINE + "</html>" + NEWLINE,
                         CharsetUtil.US_ASCII);
+    }
+
+    private WebSocketSslServerIndexPage() {
+        // Unused
     }
 }

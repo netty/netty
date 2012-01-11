@@ -32,14 +32,11 @@ import io.netty.buffer.ChannelBuffers;
  */
 public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
-    protected File file = null;
+    protected File file;
+    private boolean isRenamed;
+    private FileChannel fileChannel;
 
-    private boolean isRenamed = false;
-
-    private FileChannel fileChannel = null;
-
-    public AbstractDiskHttpData(String name, Charset charset, long size)
-            throws NullPointerException, IllegalArgumentException {
+    public AbstractDiskHttpData(String name, Charset charset, long size) {
         super(name, charset, size);
     }
 
@@ -191,7 +188,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         file = tempFile();
         FileOutputStream outputStream = new FileOutputStream(file);
         FileChannel localfileChannel = outputStream.getChannel();
-        byte[] bytes = new byte[4096*4];
+        byte[] bytes = new byte[4096 * 4];
         ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
         int read = inputStream.read(bytes);
         int written = 0;

@@ -29,8 +29,7 @@ public interface HttpDataFactory {
     * @throws NullPointerException
     * @throws IllegalArgumentException
     */
-    Attribute createAttribute(HttpRequest request, String name)
-           throws NullPointerException, IllegalArgumentException;
+    Attribute createAttribute(HttpRequest request, String name);
 
     /**
      *
@@ -41,8 +40,7 @@ public interface HttpDataFactory {
      * @throws NullPointerException
      * @throws IllegalArgumentException
      */
-    Attribute createAttribute(HttpRequest request, String name, String value)
-            throws NullPointerException, IllegalArgumentException;
+    Attribute createAttribute(HttpRequest request, String name, String value);
 
     /**
      *
@@ -56,7 +54,7 @@ public interface HttpDataFactory {
      */
     FileUpload createFileUpload(HttpRequest request, String name, String filename,
                                 String contentType, String contentTransferEncoding, Charset charset,
-                                long size) throws NullPointerException, IllegalArgumentException;
+                                long size);
 
     /**
      * Remove the given InterfaceHttpData from clean list (will not delete the file, except if the file

@@ -194,7 +194,7 @@ public class SslHandler extends FrameDecoder
     private final Queue<PendingWrite> pendingUnencryptedWrites = new LinkedList<PendingWrite>();
     private final Queue<MessageEvent> pendingEncryptedWrites = QueueFactory.createQueue(MessageEvent.class);
     private final NonReentrantLock pendingEncryptedWritesLock = new NonReentrantLock();
-    private volatile boolean issueHandshake = false;
+    private volatile boolean issueHandshake;
     
     private static final ChannelFutureListener HANDSHAKE_LISTENER = new ChannelFutureListener() {
 

@@ -106,7 +106,7 @@ public class QueryStringEncoder {
                 sb.append(encodeComponent(param.name, charset));
                 sb.append("=");
                 sb.append(encodeComponent(param.value, charset));
-                if(i != params.size() - 1) {
+                if (i != params.size() - 1) {
                     sb.append("&");
                 }
             }

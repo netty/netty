@@ -122,8 +122,8 @@ public abstract class AbstractSocketSslEchoTest {
         cb.getPipeline().addLast("handler", ch);
 
         if (isExecutorRequired()) {
-            sb.getPipeline().addFirst("executor",new ExecutionHandler(eventExecutor));
-            cb.getPipeline().addFirst("executor",new ExecutionHandler(eventExecutor));
+            sb.getPipeline().addFirst("executor", new ExecutionHandler(eventExecutor));
+            cb.getPipeline().addFirst("executor", new ExecutionHandler(eventExecutor));
         }
 
         Channel sc = sb.bind(new InetSocketAddress(0));
@@ -368,7 +368,7 @@ public abstract class AbstractSocketSslEchoTest {
      *          -keystore cert.jks
      * </pre>
      */
-    private static class BogusKeyStore {
+    private static final class BogusKeyStore {
         private static final short[] DATA = {
             0xfe, 0xed, 0xfe, 0xed, 0x00, 0x00, 0x00, 0x02,
             0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01,

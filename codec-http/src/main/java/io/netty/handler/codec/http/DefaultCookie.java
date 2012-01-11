@@ -283,7 +283,7 @@ public class DefaultCookie implements Cookie {
         } else if (that.getDomain() == null) {
             return false;
         }
-	    return getDomain().equalsIgnoreCase(that.getDomain());
+        return getDomain().equalsIgnoreCase(that.getDomain());
     }
 
     @Override

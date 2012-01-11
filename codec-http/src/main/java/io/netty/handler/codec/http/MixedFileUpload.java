@@ -26,16 +26,15 @@ import io.netty.buffer.ChannelBuffer;
  * Mixed implementation using both in Memory and in File with a limit of size
  */
 public class MixedFileUpload implements FileUpload {
-    private FileUpload fileUpload = null;
+    private FileUpload fileUpload;
 
-    private long limitSize = 0;
+    private long limitSize;
 
-    private long definedSize = 0;
+    private long definedSize;
 
     public MixedFileUpload(String name, String filename, String contentType,
             String contentTransferEncoding, Charset charset, long size,
-            long limitSize) throws NullPointerException,
-            IllegalArgumentException {
+            long limitSize) {
         this.limitSize = limitSize;
         if (size > this.limitSize) {
             fileUpload = new DiskFileUpload(name, filename, contentType,
@@ -57,7 +56,7 @@ public class MixedFileUpload implements FileUpload {
                         .getContentType(), fileUpload
                         .getContentTransferEncoding(), fileUpload.getCharset(),
                         definedSize);
-                if (((MemoryFileUpload) fileUpload).getChannelBuffer() != null){
+                if (((MemoryFileUpload) fileUpload).getChannelBuffer() != null) {
                     diskFileUpload.addContent(((MemoryFileUpload) fileUpload)
                         .getChannelBuffer(), last);
                 }

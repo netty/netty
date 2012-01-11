@@ -171,7 +171,7 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
     void flushWriteBuffer() {
         DefaultLocalChannel pairedChannel = this.pairedChannel;
         if (pairedChannel != null) {
-            if (pairedChannel.isConnected()){
+            if (pairedChannel.isConnected()) {
                 // Channel is open and connected and channelConnected event has
                 // been fired.
                 if (!delivering.get()) {
@@ -179,7 +179,7 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
                     try {
                         for (;;) {
                             MessageEvent e = writeBuffer.poll();
-                            if(e == null) {
+                            if (e == null) {
                                 break;
                             }
 
@@ -206,7 +206,7 @@ final class DefaultLocalChannel extends AbstractChannel implements LocalChannel 
 
             for (;;) {
                 MessageEvent e = writeBuffer.poll();
-                if(e == null) {
+                if (e == null) {
                     break;
                 }
 

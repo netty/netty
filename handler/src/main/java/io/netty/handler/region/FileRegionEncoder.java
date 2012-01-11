@@ -40,7 +40,7 @@ import io.netty.channel.MessageEvent;
 
  */
 @ChannelHandler.Sharable
-public class FileRegionEncoder implements ChannelDownstreamHandler{
+public class FileRegionEncoder implements ChannelDownstreamHandler {
 
     @Override
     public void handleDownstream(

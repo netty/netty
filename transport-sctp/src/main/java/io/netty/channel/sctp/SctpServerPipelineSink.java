@@ -15,21 +15,32 @@
  */
 package io.netty.channel.sctp;
 
-import com.sun.nio.sctp.SctpChannel;
-import io.netty.channel.*;
-import io.netty.channel.Channel;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.DeadLockProofWorker;
+import static io.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
-import java.nio.channels.*;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ClosedSelectorException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.netty.channel.Channels.*;
+import com.sun.nio.sctp.SctpChannel;
+
+import io.netty.channel.AbstractChannelSink;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelState;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.MessageEvent;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.DeadLockProofWorker;
 
 /**
  */

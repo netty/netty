@@ -15,11 +15,7 @@
  */
 package io.netty.channel.sctp;
 
-import io.netty.channel.*;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.DeadLockProofWorker;
-import io.netty.util.internal.QueueFactory;
+import static io.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -35,7 +31,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.netty.channel.Channels.*;
+import io.netty.channel.AbstractChannelSink;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelState;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.MessageEvent;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.DeadLockProofWorker;
+import io.netty.util.internal.QueueFactory;
 
 /**
  */

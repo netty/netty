@@ -26,20 +26,16 @@ import io.netty.buffer.ChannelBuffer;
  * Mixed implementation using both in Memory and in File with a limit of size
  */
 public class MixedAttribute implements Attribute {
-    private Attribute attribute = null;
+    private Attribute attribute;
 
-    private long limitSize = 0;
+    private long limitSize;
 
-    public MixedAttribute(String name,
-            long limitSize) throws NullPointerException,
-            IllegalArgumentException {
+    public MixedAttribute(String name, long limitSize) {
         this.limitSize = limitSize;
         attribute = new MemoryAttribute(name);
     }
 
-    public MixedAttribute(String name, String value,
-            long limitSize) throws NullPointerException,
-            IllegalArgumentException {
+    public MixedAttribute(String name, String value, long limitSize) {
         this.limitSize = limitSize;
         if (value.length() > this.limitSize) {
             try {
@@ -62,8 +58,7 @@ public class MixedAttribute implements Attribute {
     }
 
     @Override
-    public void addContent(ChannelBuffer buffer, boolean last)
-            throws IOException {
+    public void addContent(ChannelBuffer buffer, boolean last) throws IOException {
         if (attribute instanceof MemoryAttribute) {
             if (attribute.length() + buffer.readableBytes() > limitSize) {
                 DiskAttribute diskAttribute = new DiskAttribute(attribute

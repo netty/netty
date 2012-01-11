@@ -36,7 +36,7 @@ public class ChannelFutureAggregator implements ChannelFutureListener {
     }
 
     public void addFuture(ChannelFuture future) {
-        synchronized(this) {
+        synchronized (this) {
             if (pendingFutures == null) {
                 pendingFutures = new HashSet<ChannelFuture>();
             }

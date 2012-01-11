@@ -37,7 +37,7 @@ import io.netty.util.internal.SystemPropertyUtil;
  * Provides information which is specific to a NIO service provider
  * implementation.
  */
-class NioProviderMetadata {
+final class NioProviderMetadata {
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioProviderMetadata.class);
 

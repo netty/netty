@@ -28,6 +28,11 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 public class FactorialServer {
 
     public static void main(String[] args) throws Exception {
+        new FactorialServer().run();
+
+    }
+
+    public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new NioServerSocketChannelFactory(

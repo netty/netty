@@ -145,8 +145,8 @@ import io.netty.handler.codec.serialization.ObjectDecoder;
  * header from the frame.  If you don't want to strip the prepended header, you
  * could specify <tt>0</tt> for <tt>initialBytesToSkip</tt>.
  * <pre>
- * lengthFieldOffset</b>   = 1 (= the length of HDR1)
- * lengthFieldLength</b>   = 2
+ * lengthFieldOffset   = 1 (= the length of HDR1)
+ * lengthFieldLength   = 2
  * <b>lengthAdjustment</b>    = <b>1</b> (= the length of HDR2)
  * <b>initialBytesToStrip</b> = <b>3</b> (= the length of HDR1 + LEN)
  *
@@ -403,14 +403,12 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
             this.tooLongFrameLength = 0;
             discardingTooLongFrame = false;
             if ((!failFast) ||
-                (failFast && firstDetectionOfTooLongFrame))
-            {
+                (failFast && firstDetectionOfTooLongFrame)) {
                 fail(ctx, tooLongFrameLength);
             }
         } else {
             // Keep discarding and notify handlers if necessary.
-            if (failFast && firstDetectionOfTooLongFrame)
-            {
+            if (failFast && firstDetectionOfTooLongFrame) {
                 fail(ctx, this.tooLongFrameLength);
             }
         }

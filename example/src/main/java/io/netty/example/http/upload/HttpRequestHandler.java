@@ -66,14 +66,14 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
 
     private volatile HttpRequest request;
 
-    private volatile boolean readingChunks = false;
+    private volatile boolean readingChunks;
 
     private final StringBuilder responseContent = new StringBuilder();
 
     private static final HttpDataFactory factory = new DefaultHttpDataFactory(
             DefaultHttpDataFactory.MINSIZE); // Disk if size exceed MINSIZE
 
-    private HttpPostRequestDecoder decoder = null;
+    private HttpPostRequestDecoder decoder;
     static {
         DiskFileUpload.deleteOnExitTemporaryFile = true; // should delete file
                                                          // on exit (in normal

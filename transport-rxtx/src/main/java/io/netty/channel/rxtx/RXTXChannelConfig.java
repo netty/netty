@@ -108,9 +108,9 @@ public class RXTXChannelConfig extends DefaultChannelConfig {
 
     private int baudrate = 115200;
 
-    private boolean dtr = false;
+    private boolean dtr;
 
-    private boolean rts = false;
+    private boolean rts;
 
     private Stopbits stopbits = RXTXChannelConfig.Stopbits.STOPBITS_1;
 

@@ -26,175 +26,140 @@ import io.netty.logging.InternalLoggerFactory;
 
 /**
  */
-public class CIDR6 extends CIDR
-{
+public class CIDR6 extends CIDR {
 
-   private static final InternalLogger logger = InternalLoggerFactory.getInstance(CIDR6.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CIDR6.class);
 
-   /**
-    * The big integer for the base address
-    */
-   private BigInteger addressBigInt;
+    /** The big integer for the base address */
+    private BigInteger addressBigInt;
 
-   /**
-    * The big integer for the end address
-    */
-   private final BigInteger addressEndBigInt;
+    /** The big integer for the end address */
+    private final BigInteger addressEndBigInt;
 
-   /**
-    * @param newaddress
-    * @param newmask
-    */
-   protected CIDR6(Inet6Address newaddress, int newmask)
-   {
-      cidrMask = newmask;
-      addressBigInt = ipv6AddressToBigInteger(newaddress);
-      BigInteger mask = ipv6CidrMaskToMask(newmask);
-      try
-      {
-         addressBigInt = addressBigInt.and(mask);
-         baseAddress = bigIntToIPv6Address(addressBigInt);
-      }
-      catch (UnknownHostException e)
-      {
-         // this should never happen.
-      }
-      addressEndBigInt = addressBigInt.add(ipv6CidrMaskToBaseAddress(cidrMask)).subtract(BigInteger.ONE);
-   }
+    /**
+     * @param newaddress
+     * @param newmask
+     */
+    protected CIDR6(Inet6Address newaddress, int newmask) {
+        cidrMask = newmask;
+        addressBigInt = ipv6AddressToBigInteger(newaddress);
+        BigInteger mask = ipv6CidrMaskToMask(newmask);
+        try {
+            addressBigInt = addressBigInt.and(mask);
+            baseAddress = bigIntToIPv6Address(addressBigInt);
+        } catch (UnknownHostException e) {
+            // this should never happen.
+        }
+        addressEndBigInt = addressBigInt.add(ipv6CidrMaskToBaseAddress(cidrMask)).subtract(BigInteger.ONE);
+    }
 
-   @Override
-   public InetAddress getEndAddress()
-   {
-      try
-      {
-         return bigIntToIPv6Address(addressEndBigInt);
-      }
-      catch (UnknownHostException e)
-      {
-         logger.error("invalid ip address calculated as an end address");
-         return null;
-      }
-   }
+    @Override
+    public InetAddress getEndAddress() {
+        try {
+            return bigIntToIPv6Address(addressEndBigInt);
+        } catch (UnknownHostException e) {
+            logger.error("invalid ip address calculated as an end address");
+            return null;
+        }
+    }
 
-   @Override
-   public int compareTo(CIDR arg)
-   {
-      if (arg instanceof CIDR4)
-      {
-         BigInteger net = ipv6AddressToBigInteger(arg.baseAddress);
-         int res = net.compareTo(addressBigInt);
-         if (res == 0)
-         {
-            if (arg.cidrMask == cidrMask)
-            {
-               return 0;
+    @Override
+    public int compareTo(CIDR arg) {
+        if (arg instanceof CIDR4) {
+            BigInteger net = ipv6AddressToBigInteger(arg.baseAddress);
+            int res = net.compareTo(addressBigInt);
+            if (res == 0) {
+                if (arg.cidrMask == cidrMask) {
+                    return 0;
+                } else if (arg.cidrMask < cidrMask) {
+                    return -1;
+                }
+                return 1;
             }
-            else if (arg.cidrMask < cidrMask)
-            {
-               return -1;
+            return res;
+        }
+        CIDR6 o = (CIDR6) arg;
+        if (o.addressBigInt.equals(addressBigInt) && o.cidrMask == cidrMask) {
+            return 0;
+        }
+        int res = o.addressBigInt.compareTo(addressBigInt);
+        if (res == 0) {
+            if (o.cidrMask < cidrMask) {
+                // greater Mask means less IpAddresses so -1
+                return -1;
             }
             return 1;
-         }
-         return res;
-      }
-      CIDR6 o = (CIDR6) arg;
-      if (o.addressBigInt.equals(addressBigInt) && o.cidrMask == cidrMask)
-      {
-         return 0;
-      }
-      int res = o.addressBigInt.compareTo(addressBigInt);
-      if (res == 0)
-      {
-         if (o.cidrMask < cidrMask)
-         {
-            // greater Mask means less IpAddresses so -1
-            return -1;
-         }
-         return 1;
-      }
-      return res;
-   }
+        }
+        return res;
+    }
 
-   /* (non-Javadoc)
+    /* (non-Javadoc)
     * @see io.netty.handler.ipfilter.CIDR#contains(java.net.InetAddress)
     */
-   @Override
-   public boolean contains(InetAddress inetAddress)
-   {
-      BigInteger search = ipv6AddressToBigInteger(inetAddress);
-      return search.compareTo(addressBigInt) >= 0 && search.compareTo(addressEndBigInt) <= 0;
-   }
+    @Override
+    public boolean contains(InetAddress inetAddress) {
+        BigInteger search = ipv6AddressToBigInteger(inetAddress);
+        return search.compareTo(addressBigInt) >= 0 && search.compareTo(addressEndBigInt) <= 0;
+    }
 
-   /** Given an IPv6 baseAddress length, return the block length.  I.e., a
-    *  baseAddress length of 96 will return 2**32. */
-   private static BigInteger ipv6CidrMaskToBaseAddress(int cidrMask)
-   {
-      return BigInteger.ONE.shiftLeft(128 - cidrMask);
-   }
+    /**
+     * Given an IPv6 baseAddress length, return the block length.  I.e., a
+     * baseAddress length of 96 will return 2**32.
+     */
+    private static BigInteger ipv6CidrMaskToBaseAddress(int cidrMask) {
+        return BigInteger.ONE.shiftLeft(128 - cidrMask);
+    }
 
-   private static BigInteger ipv6CidrMaskToMask(int cidrMask)
-   {
-      return BigInteger.ONE.shiftLeft(128 - cidrMask).subtract(BigInteger.ONE).not();
-   }
+    private static BigInteger ipv6CidrMaskToMask(int cidrMask) {
+        return BigInteger.ONE.shiftLeft(128 - cidrMask).subtract(BigInteger.ONE).not();
+    }
 
-   /** Given an IPv6 address, convert it into a BigInteger.
-    * @param addr
-    * @return the integer representation of the InetAddress
-    *
-    *  @throws IllegalArgumentException if the address is not an IPv6
-    *  address.
-    */
-   private static BigInteger ipv6AddressToBigInteger(InetAddress addr)
-   {
-      byte[] ipv6;
-      if (addr instanceof Inet4Address)
-      {
-         ipv6 = getIpV6FromIpV4((Inet4Address) addr);
-      }
-      else
-      {
-         ipv6 = addr.getAddress();
-      }
-      if (ipv6[0] == -1)
-      {
-         return new BigInteger(1, ipv6);
-      }
-      return new BigInteger(ipv6);
-   }
+    /**
+     * Given an IPv6 address, convert it into a BigInteger.
+     *
+     * @return the integer representation of the InetAddress
+     * @throws IllegalArgumentException if the address is not an IPv6
+     *                                  address.
+     */
+    private static BigInteger ipv6AddressToBigInteger(InetAddress addr) {
+        byte[] ipv6;
+        if (addr instanceof Inet4Address) {
+            ipv6 = getIpV6FromIpV4((Inet4Address) addr);
+        } else {
+            ipv6 = addr.getAddress();
+        }
+        if (ipv6[0] == -1) {
+            return new BigInteger(1, ipv6);
+        }
+        return new BigInteger(ipv6);
+    }
 
-   /** Convert a big integer into an IPv6 address.
-   * @param addr
-   * @return the inetAddress from the integer
-   *
-   *  @throws UnknownHostException if the big integer is too large,
-   *  and thus an invalid IPv6 address.
-   */
-   private static InetAddress bigIntToIPv6Address(BigInteger addr) throws UnknownHostException
-   {
-      byte[] a = new byte[16];
-      byte[] b = addr.toByteArray();
-      if (b.length > 16 && !(b.length == 17 && b[0] == 0))
-      {
-         throw new UnknownHostException("invalid IPv6 address (too big)");
-      }
-      if (b.length == 16)
-      {
-         return InetAddress.getByAddress(b);
-      }
-      // handle the case where the IPv6 address starts with "FF".
-      if (b.length == 17)
-      {
-         System.arraycopy(b, 1, a, 0, 16);
-      }
-      else
-      {
-         // copy the address into a 16 byte array, zero-filled.
-         int p = 16 - b.length;
-         for (int i = 0; i < b.length; i++)
-         {
-            a[p + i] = b[i];
-         }
-      }
-      return InetAddress.getByAddress(a);
-   }
+    /**
+     * Convert a big integer into an IPv6 address.
+     *
+     * @return the inetAddress from the integer
+     * @throws UnknownHostException if the big integer is too large,
+     *                              and thus an invalid IPv6 address.
+     */
+    private static InetAddress bigIntToIPv6Address(BigInteger addr) throws UnknownHostException {
+        byte[] a = new byte[16];
+        byte[] b = addr.toByteArray();
+        if (b.length > 16 && !(b.length == 17 && b[0] == 0)) {
+            throw new UnknownHostException("invalid IPv6 address (too big)");
+        }
+        if (b.length == 16) {
+            return InetAddress.getByAddress(b);
+        }
+        // handle the case where the IPv6 address starts with "FF".
+        if (b.length == 17) {
+            System.arraycopy(b, 1, a, 0, 16);
+        } else {
+            // copy the address into a 16 byte array, zero-filled.
+            int p = 16 - b.length;
+            for (int i = 0; i < b.length; i++) {
+                a[p + i] = b[i];
+            }
+        }
+        return InetAddress.getByAddress(a);
+    }
 }

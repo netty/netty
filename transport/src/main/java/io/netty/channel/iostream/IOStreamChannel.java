@@ -15,9 +15,14 @@
  */
 package io.netty.channel.iostream;
 
-import io.netty.channel.*;
-
 import java.net.SocketAddress;
+
+import io.netty.channel.AbstractChannel;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
 
 /**
  * A channel to an {@link java.io.InputStream} and an

@@ -117,7 +117,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     public NioClientSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor,
             int workerCount) {
-    	this(bossExecutor, workerExecutor, DEFAULT_BOSS_COUNT, workerCount);
+        this(bossExecutor, workerExecutor, DEFAULT_BOSS_COUNT, workerCount);
     }
     
     /**
@@ -135,7 +135,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     public NioClientSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor,
             int bossCount, int workerCount) {
-    	
+
         if (bossExecutor == null) {
             throw new NullPointerException("bossExecutor");
         }

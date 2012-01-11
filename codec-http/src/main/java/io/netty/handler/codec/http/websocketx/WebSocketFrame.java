@@ -31,7 +31,7 @@ public abstract class WebSocketFrame {
     /**
      * RSV1, RSV2, RSV3 used for extensions
      */
-    private int rsv = 0;
+    private int rsv;
 
     /**
      * Contents of this frame
