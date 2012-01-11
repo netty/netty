@@ -140,7 +140,7 @@ public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
         if (cookieString != null) {
             CookieDecoder cookieDecoder = new CookieDecoder();
             Set<Cookie> cookies = cookieDecoder.decode(cookieString);
-            if(!cookies.isEmpty()) {
+            if (!cookies.isEmpty()) {
                 // Reset the cookies if necessary.
                 CookieEncoder cookieEncoder = new CookieEncoder(true);
                 for (Cookie cookie : cookies) {

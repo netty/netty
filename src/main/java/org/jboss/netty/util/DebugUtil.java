@@ -32,7 +32,7 @@ import org.jboss.netty.util.internal.SystemPropertyUtil;
  * {@link ChannelPipeline} or {@link ChannelSink} are retained as it is to help
  * debugging Netty.
  */
-public class DebugUtil {
+public final class DebugUtil {
 
     /**
      * Returns {@code true} if and only if Netty debug mode is enabled.

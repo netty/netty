@@ -39,8 +39,7 @@ final class LocalServerChannelSink extends AbstractChannelSink {
         Channel channel = e.getChannel();
         if (channel instanceof DefaultLocalServerChannel) {
             handleServerChannel(e);
-        }
-        else if (channel instanceof DefaultLocalChannel) {
+        } else if (channel instanceof DefaultLocalChannel) {
             handleAcceptedChannel(e);
         }
     }

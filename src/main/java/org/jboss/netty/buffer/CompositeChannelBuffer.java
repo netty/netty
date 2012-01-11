@@ -326,8 +326,8 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
             setShort(index, (short) (value >> 8));
             setByte(index + 2, (byte) value);
         } else {
-            setShort(index    , (short) value);
-            setByte (index + 2, (byte) (value >>> 16));
+            setShort(index   , (short) value);
+            setByte(index + 2, (byte) (value >>> 16));
         }
     }
 

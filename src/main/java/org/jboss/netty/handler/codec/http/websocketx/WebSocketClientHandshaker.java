@@ -36,13 +36,13 @@ public abstract class WebSocketClientHandshaker {
 
     private WebSocketVersion version = WebSocketVersion.UNKNOWN;
 
-    private boolean openingHandshakeCompleted = false;
+    private boolean openingHandshakeCompleted;
 
-    private String subProtocolRequest = null;
+    private String subProtocolRequest;
 
-    private String subProtocolResponse = null;
+    private String subProtocolResponse;
 
-    protected Map<String, String> customHeaders = null;
+    protected Map<String, String> customHeaders;
 
     /**
      * Base constructor

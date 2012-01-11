@@ -543,7 +543,7 @@ public class HashedWheelTimer implements Timer {
             }
 
             if (isCancelled()) {
-                buf.append (", cancelled");
+                buf.append(", cancelled");
             }
 
             return buf.append(')').toString();

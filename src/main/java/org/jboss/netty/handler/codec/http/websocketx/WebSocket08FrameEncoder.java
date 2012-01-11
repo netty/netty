@@ -66,7 +66,7 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
     private static final byte OPCODE_PING = 0x9;
     private static final byte OPCODE_PONG = 0xA;
 
-    private boolean maskPayload = false;
+    private boolean maskPayload;
 
     /**
      * Constructor
@@ -116,7 +116,7 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
 
             int b0 = 0;
             if (frame.isFinalFragment()) {
-                b0 |= (1 << 7);
+                b0 |= 1 << 7;
             }
             b0 |= (frame.getRsv() % 8) << 4;
             b0 |= opcode % 128;
@@ -138,13 +138,13 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
             } else if (length <= 0xFFFF) {
                 header = ChannelBuffers.buffer(4 + maskLength);
                 header.writeByte(b0);
-                header.writeByte(this.maskPayload ? (0xFE) : 126);
+                header.writeByte(this.maskPayload ? 0xFE : 126);
                 header.writeByte((length >>> 8) & 0xFF);
-                header.writeByte((length) & 0xFF);
+                header.writeByte(length & 0xFF);
             } else {
                 header = ChannelBuffers.buffer(10 + maskLength);
                 header.writeByte(b0);
-                header.writeByte(this.maskPayload ? (0xFF) : 127);
+                header.writeByte(this.maskPayload ? 0xFF : 127);
                 header.writeLong(length);
             }
 

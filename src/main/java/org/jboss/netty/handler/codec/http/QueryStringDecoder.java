@@ -143,7 +143,7 @@ public class QueryStringDecoder {
      * Creates a new decoder that decodes the specified URI encoded in the
      * specified charset.
      */
-    public QueryStringDecoder(URI uri, Charset charset){
+    public QueryStringDecoder(URI uri, Charset charset) {
         this(uri, charset, DEFAULT_MAX_PARAMS);
     }
     
@@ -174,7 +174,7 @@ public class QueryStringDecoder {
      * @deprecated Use {@link #QueryStringDecoder(URI, Charset)} instead.
      */
     @Deprecated
-    public QueryStringDecoder(URI uri, String charset){
+    public QueryStringDecoder(URI uri, String charset) {
         this(uri, Charset.forName(charset));
     }
 
@@ -190,8 +190,7 @@ public class QueryStringDecoder {
             int pathEndPos = uri.indexOf('?');
             if (pathEndPos < 0) {
                 path = uri;
-            }
-            else {
+            } else {
                 return path = uri.substring(0, pathEndPos);
             }
         }

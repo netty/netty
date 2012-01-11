@@ -125,8 +125,7 @@ class HttpTunnelingClientSocketChannel extends AbstractChannel
     public ChannelFuture write(Object message, SocketAddress remoteAddress) {
         if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
             return super.write(message, null);
-        }
-        else {
+        } else {
             return getUnsupportedOperationFuture();
         }
     }

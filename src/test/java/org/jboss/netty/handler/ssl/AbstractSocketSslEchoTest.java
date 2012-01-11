@@ -108,8 +108,8 @@ public abstract class AbstractSocketSslEchoTest {
         cb.getPipeline().addLast("handler", ch);
 
         if (isExecutorRequired()) {
-            sb.getPipeline().addFirst("executor",new ExecutionHandler(eventExecutor));
-            cb.getPipeline().addFirst("executor",new ExecutionHandler(eventExecutor));
+            sb.getPipeline().addFirst("executor", new ExecutionHandler(eventExecutor));
+            cb.getPipeline().addFirst("executor", new ExecutionHandler(eventExecutor));
         }
 
         Channel sc = sb.bind(new InetSocketAddress(0));

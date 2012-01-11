@@ -47,7 +47,7 @@ import org.jboss.netty.util.internal.ConversionUtil;
  * {@link ChannelHandlerContext#sendDownstream(ChannelEvent)} by yourself.
  * @apiviz.landmark
  */
-public class Channels {
+public final class Channels {
 
     // pipeline factory methods
 

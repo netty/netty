@@ -67,7 +67,7 @@ final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
                 break;
             }
         } else if (e instanceof MessageEvent) {
-            channel.writeReal(((ChannelBuffer) ((MessageEvent) e).getMessage()), future);
+            channel.writeReal((ChannelBuffer) ((MessageEvent) e).getMessage(), future);
         }
     }
 }

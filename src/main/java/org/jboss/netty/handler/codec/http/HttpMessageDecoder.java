@@ -568,11 +568,9 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 if (nextByte == HttpCodecUtil.LF) {
                     return sb.toString();
                 }
-            }
-            else if (nextByte == HttpCodecUtil.LF) {
+            } else if (nextByte == HttpCodecUtil.LF) {
                 return sb.toString();
-            }
-            else {
+            } else {
                 if (lineLength >= maxLineLength) {
                     // TODO: Respond with Bad Request and discard the traffic
                     //    or close the connection.

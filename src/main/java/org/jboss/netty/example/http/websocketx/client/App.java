@@ -37,13 +37,7 @@ import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 public class App {
 
     public static void main(String[] args) throws Exception {
-        ConsoleHandler ch = new ConsoleHandler();
-        ch.setLevel(Level.FINE);
-        Logger.getLogger("").addHandler(ch);
-        Logger.getLogger("").setLevel(Level.FINE);
-
-        runClient();
-        System.exit(0);
+        new App().runClient();
     }
 
     /**
@@ -51,7 +45,7 @@ public class App {
      * 
      * @throws Exception
      */
-    public static void runClient() throws Exception {
+    public void runClient() throws Exception {
 
         MyCallbackHandler callbackHandler = new MyCallbackHandler();
         WebSocketClientFactory factory = new WebSocketClientFactory();
@@ -95,7 +89,7 @@ public class App {
      * Our web socket callback handler for this app
      */
     public static class MyCallbackHandler implements WebSocketCallback {
-        public boolean connected = false;
+        public boolean connected;
         public ArrayList<String> messagesReceived = new ArrayList<String>();
 
         public MyCallbackHandler() {

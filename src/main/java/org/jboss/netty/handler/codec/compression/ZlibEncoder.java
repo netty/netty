@@ -157,7 +157,7 @@ public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChanne
                 ZlibUtil.fail(z, "initialization failure", resultCode);
             } else {
                 resultCode = z.deflateSetDictionary(dictionary, dictionary.length);
-                if (resultCode != JZlib.Z_OK){
+                if (resultCode != JZlib.Z_OK) {
                     ZlibUtil.fail(z, "failed to set the dictionary", resultCode);
                 }
             }

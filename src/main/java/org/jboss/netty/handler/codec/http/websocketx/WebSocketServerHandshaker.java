@@ -31,7 +31,7 @@ public abstract class WebSocketServerHandshaker {
 
     private String subProtocols;
 
-    private String[] subProtocolsArray = null;
+    private String[] subProtocolsArray;
 
     private WebSocketVersion version = WebSocketVersion.UNKNOWN;
 

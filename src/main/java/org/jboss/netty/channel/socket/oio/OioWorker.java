@@ -137,7 +137,7 @@ class OioWorker implements Runnable {
                     }
                 } finally {
                     if (fr instanceof DefaultFileRegion) {
-                        if (((DefaultFileRegion)fr).releaseAfterTransfer()) {
+                        if (((DefaultFileRegion) fr).releaseAfterTransfer()) {
                             fr.releaseExternalResources();
                         }
                     }

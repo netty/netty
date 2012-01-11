@@ -42,7 +42,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @param <V> the type of mapped values
  */
 public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
-        implements ConcurrentMap<K, V>{
+        implements ConcurrentMap<K, V> {
 
     /**
      * The default initial capacity for this table, used when not otherwise
@@ -65,7 +65,7 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
     /**
      * The maximum capacity, used if a higher value is implicitly specified by
      * either of the constructors with arguments.  MUST be a power of two
-     * <= 1<<30 to ensure that entries are indexable using integers.
+     * &lt;= 1&lt;&lt;30 to ensure that entries are indexable using integers.
      */
     static final int MAXIMUM_CAPACITY = 1 << 30;
 
@@ -131,7 +131,7 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
      * @param hash the hash code for the key
      * @return the segment
      */
-    final Segment<K, V> segmentFor(int hash) {
+    Segment<K, V> segmentFor(int hash) {
         return segments[hash >>> segmentShift & segmentMask];
     }
 
@@ -166,21 +166,21 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
         }
 
         @SuppressWarnings("unchecked")
-        final K key() {
+        K key() {
             return (K) key;
         }
 
         @SuppressWarnings("unchecked")
-        final V value() {
+        V value() {
             return (V) value;
         }
 
-        final void setValue(V value) {
+        void setValue(V value) {
             this.value = value;
         }
 
         @SuppressWarnings("unchecked")
-        static final <K, V> HashEntry<K, V>[] newArray(int i) {
+        static <K, V> HashEntry<K, V>[] newArray(int i) {
             return new HashEntry[i];
         }
     }
@@ -262,11 +262,11 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
 
         Segment(int initialCapacity, float lf) {
             loadFactor = lf;
-            setTable(HashEntry.<K, V> newArray(initialCapacity));
+            setTable(HashEntry.<K, V>newArray(initialCapacity));
         }
 
         @SuppressWarnings("unchecked")
-        static final <K, V> Segment<K, V>[] newArray(int i) {
+        static <K, V> Segment<K, V>[] newArray(int i) {
             return new Segment[i];
         }
 
@@ -916,8 +916,6 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @return the previous value associated with the specified key, or
      *         <tt>null</tt> if there was no mapping for the key
      * @throws NullPointerException if the specified key or value is null
@@ -960,8 +958,6 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @throws NullPointerException if the specified key is null
      */
     public boolean remove(Object key, Object value) {
@@ -973,8 +969,6 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @throws NullPointerException if any of the arguments are null
      */
     public boolean replace(K key, V oldValue, V newValue) {
@@ -986,8 +980,6 @@ public final class ConcurrentIdentityHashMap<K, V> extends AbstractMap<K, V>
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @return the previous value associated with the specified key, or
      *         <tt>null</tt> if there was no mapping for the key
      * @throws NullPointerException if the specified key or value is null

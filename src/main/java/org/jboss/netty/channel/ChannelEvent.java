@@ -55,7 +55,7 @@ import org.jboss.netty.channel.socket.ServerSocketChannel;
  *
  * <table border="1" cellspacing="0" cellpadding="6">
  * <tr>
- * <th>Event name</th></th><th>Event type and condition</th><th>Meaning</th>
+ * <th>Event name</th><th>Event type and condition</th><th>Meaning</th>
  * </tr>
  * <tr>
  * <td>{@code "messageReceived"}</td>

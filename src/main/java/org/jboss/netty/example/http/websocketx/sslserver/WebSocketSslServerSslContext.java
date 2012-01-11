@@ -28,7 +28,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 /**
  * Creates a {@link SSLContext} for just server certificates.
  */
-public class WebSocketSslServerSslContext {
+public final class WebSocketSslServerSslContext {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketSslServerSslContext.class);
     private static final String PROTOCOL = "TLS";
@@ -98,5 +98,4 @@ public class WebSocketSslServerSslContext {
     public SSLContext getServerContext() {
         return _serverContext;
     }
-
 }

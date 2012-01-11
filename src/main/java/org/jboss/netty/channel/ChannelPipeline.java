@@ -219,7 +219,7 @@ public interface ChannelPipeline {
      * @throws NullPointerException
      *         if the specified name or handler is {@code null}
      */
-    void addFirst (String name, ChannelHandler handler);
+    void addFirst(String name, ChannelHandler handler);
 
     /**
      * Appends a {@link ChannelHandler} at the last position of this pipeline.
@@ -232,7 +232,7 @@ public interface ChannelPipeline {
      * @throws NullPointerException
      *         if the specified name or handler is {@code null}
      */
-    void addLast  (String name, ChannelHandler handler);
+    void addLast(String name, ChannelHandler handler);
 
     /**
      * Inserts a {@link ChannelHandler} before an existing handler of this
@@ -266,7 +266,7 @@ public interface ChannelPipeline {
      * @throws NullPointerException
      *         if the specified baseName, name, or handler is {@code null}
      */
-    void addAfter (String baseName, String name, ChannelHandler handler);
+    void addAfter(String baseName, String name, ChannelHandler handler);
 
     /**
      * Removes the specified {@link ChannelHandler} from this pipeline.

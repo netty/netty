@@ -36,14 +36,14 @@ final class SocketSendBufferPool {
     private static final int ALIGN_SHIFT = 4;
     private static final int ALIGN_MASK = 15;
 
-    PreallocationRef poolHead = null;
+    PreallocationRef poolHead;
     Preallocation current = new Preallocation(DEFAULT_PREALLOCATION_SIZE);
 
     SocketSendBufferPool() {
         super();
     }
 
-    final SendBuffer acquire(Object message) {
+    SendBuffer acquire(Object message) {
         if (message instanceof ChannelBuffer) {
             return acquire((ChannelBuffer) message);
         } else if (message instanceof FileRegion) {
@@ -54,14 +54,14 @@ final class SocketSendBufferPool {
                 "unsupported message type: " + message.getClass());
     }
 
-    private final SendBuffer acquire(FileRegion src) {
+    private SendBuffer acquire(FileRegion src) {
         if (src.getCount() == 0) {
             return EMPTY_BUFFER;
         }
         return new FileSendBuffer(src);
     }
 
-    private final SendBuffer acquire(ChannelBuffer src) {
+    private SendBuffer acquire(ChannelBuffer src) {
         final int size = src.readableBytes();
         if (size == 0) {
             return EMPTY_BUFFER;
@@ -107,7 +107,7 @@ final class SocketSendBufferPool {
         return dst;
     }
 
-    private final Preallocation getPreallocation() {
+    private Preallocation getPreallocation() {
         Preallocation current = this.current;
         if (current.refCnt == 0) {
             current.buffer.clear();
@@ -117,7 +117,7 @@ final class SocketSendBufferPool {
         return getPreallocation0();
     }
 
-    private final Preallocation getPreallocation0() {
+    private Preallocation getPreallocation0() {
         PreallocationRef ref = poolHead;
         if (ref != null) {
             do {
@@ -136,7 +136,7 @@ final class SocketSendBufferPool {
         return new Preallocation(DEFAULT_PREALLOCATION_SIZE);
     }
 
-    private static final int align(int pos) {
+    private static int align(int pos) {
         int q = pos >>> ALIGN_SHIFT;
         int r = pos & ALIGN_MASK;
         if (r != 0) {
@@ -287,7 +287,7 @@ final class SocketSendBufferPool {
 
         public void release() {
             if (file instanceof DefaultFileRegion) {
-                if (((DefaultFileRegion)file).releaseAfterTransfer()) {
+                if (((DefaultFileRegion) file).releaseAfterTransfer()) {
                     // Make sure the FileRegion resource are released otherwise it may cause a FD leak or something similar
                     file.releaseExternalResources();
                 }
@@ -301,23 +301,23 @@ final class SocketSendBufferPool {
             super();
         }
 
-        public final boolean finished() {
+        public boolean finished() {
             return true;
         }
 
-        public final long writtenBytes() {
+        public long writtenBytes() {
             return 0;
         }
 
-        public final long totalBytes() {
+        public long totalBytes() {
             return 0;
         }
 
-        public final long transferTo(WritableByteChannel ch) throws IOException {
+        public long transferTo(WritableByteChannel ch) throws IOException {
             return 0;
         }
 
-        public final long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
+        public long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
             return 0;
         }
 

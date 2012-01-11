@@ -46,7 +46,7 @@ public class HttpHeaders {
         /**
          * {@code "Accept-Encoding"}
          */
-        public static final String ACCEPT_ENCODING= "Accept-Encoding";
+        public static final String ACCEPT_ENCODING = "Accept-Encoding";
         /**
          * {@code "Accept-Language"}
          */
@@ -54,11 +54,11 @@ public class HttpHeaders {
         /**
          * {@code "Accept-Ranges"}
          */
-        public static final String ACCEPT_RANGES= "Accept-Ranges";
+        public static final String ACCEPT_RANGES = "Accept-Ranges";
         /**
          * {@code "Accept-Patch"}
          */
-        public static final String ACCEPT_PATCH= "Accept-Patch";
+        public static final String ACCEPT_PATCH = "Accept-Patch";
         /**
          * {@code "Age"}
          */
@@ -90,7 +90,7 @@ public class HttpHeaders {
         /**
          * {@code "Content-Language"}
          */
-        public static final String CONTENT_LANGUAGE= "Content-Language";
+        public static final String CONTENT_LANGUAGE = "Content-Language";
         /**
          * {@code "Content-Length"}
          */
@@ -114,7 +114,7 @@ public class HttpHeaders {
         /**
          * {@code "Content-Type"}
          */
-        public static final String CONTENT_TYPE= "Content-Type";
+        public static final String CONTENT_TYPE = "Content-Type";
         /**
          * {@code "Cookie"}
          */
@@ -158,7 +158,7 @@ public class HttpHeaders {
         /**
          * {@code "If-Range"}
          */
-        public static final String IF_RANGE= "If-Range";
+        public static final String IF_RANGE = "If-Range";
         /**
          * {@code "If-Unmodified-Since"}
          */
@@ -226,15 +226,15 @@ public class HttpHeaders {
         /**
          * {@code "Sec-WebSocket-Version"}
          */
-    	public static final String SEC_WEBSOCKET_VERSION = "Sec-WebSocket-Version";
+        public static final String SEC_WEBSOCKET_VERSION = "Sec-WebSocket-Version";
         /**
          * {@code "Sec-WebSocket-Key"}
          */
-    	public static final String SEC_WEBSOCKET_KEY = "Sec-WebSocket-Key";
+        public static final String SEC_WEBSOCKET_KEY = "Sec-WebSocket-Key";
         /**
          * {@code "Sec-WebSocket-Accept"}
          */
-    	public static final String SEC_WEBSOCKET_ACCEPT = "Sec-WebSocket-Accept";
+        public static final String SEC_WEBSOCKET_ACCEPT = "Sec-WebSocket-Accept";
         /**
          * {@code "Server"}
          */

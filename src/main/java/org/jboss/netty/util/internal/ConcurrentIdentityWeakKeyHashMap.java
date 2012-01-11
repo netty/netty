@@ -72,7 +72,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
     /**
      * The maximum capacity, used if a higher value is implicitly specified by
      * either of the constructors with arguments.  MUST be a power of two
-     * <= 1<<30 to ensure that entries are indexable using integers.
+     * &lt;= 1&lt;&lt;30 to ensure that entries are indexable using integers.
      */
     static final int MAXIMUM_CAPACITY = 1 << 30;
 
@@ -138,7 +138,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
      * @param hash the hash code for the key
      * @return the segment
      */
-    final Segment<K, V> segmentFor(int hash) {
+    Segment<K, V> segmentFor(int hash) {
         return segments[hash >>> segmentShift & segmentMask];
     }
 
@@ -160,11 +160,11 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
             this.hash = hash;
         }
 
-        public final int keyHash() {
+        public int keyHash() {
             return hash;
         }
 
-        public final Object keyRef() {
+        public Object keyRef() {
             return this;
         }
     }
@@ -197,16 +197,16 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
         }
 
         @SuppressWarnings("unchecked")
-        final K key() {
+        K key() {
             return ((WeakReference<K>) keyRef).get();
         }
 
-        final V value() {
+        V value() {
             return dereferenceValue(valueRef);
         }
 
         @SuppressWarnings("unchecked")
-        final V dereferenceValue(Object value) {
+        V dereferenceValue(Object value) {
             if (value instanceof WeakKeyReference) {
                 return ((Reference<V>) value).get();
             }
@@ -214,12 +214,12 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
             return (V) value;
         }
 
-        final void setValue(V value) {
+        void setValue(V value) {
             this.valueRef = value;
         }
 
         @SuppressWarnings("unchecked")
-        static final <K, V> HashEntry<K, V>[] newArray(int i) {
+        static <K, V> HashEntry<K, V>[] newArray(int i) {
             return new HashEntry[i];
         }
     }
@@ -307,11 +307,11 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
 
         Segment(int initialCapacity, float lf) {
             loadFactor = lf;
-            setTable(HashEntry.<K, V> newArray(initialCapacity));
+            setTable(HashEntry.<K, V>newArray(initialCapacity));
         }
 
         @SuppressWarnings("unchecked")
-        static final <K, V> Segment<K, V>[] newArray(int i) {
+        static <K, V> Segment<K, V>[] newArray(int i) {
             return new Segment[i];
         }
 
@@ -611,7 +611,7 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
         }
 
         @SuppressWarnings("rawtypes")
-        final void removeStale() {
+        void removeStale() {
             WeakKeyReference ref;
             while ((ref = (WeakKeyReference) refQueue.poll()) != null) {
                 remove(ref.keyRef(), ref.keyHash(), null, true);
@@ -979,8 +979,6 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @return the previous value associated with the specified key, or
      *         <tt>null</tt> if there was no mapping for the key
      * @throws NullPointerException if the specified key or value is null
@@ -1023,8 +1021,6 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @throws NullPointerException if the specified key is null
      */
     public boolean remove(Object key, Object value) {
@@ -1036,8 +1032,6 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @throws NullPointerException if any of the arguments are null
      */
     public boolean replace(K key, V oldValue, V newValue) {
@@ -1049,8 +1043,6 @@ public final class ConcurrentIdentityWeakKeyHashMap<K, V> extends AbstractMap<K,
     }
 
     /**
-     * {@inheritDoc}
-     *
      * @return the previous value associated with the specified key, or
      *         <tt>null</tt> if there was no mapping for the key
      * @throws NullPointerException if the specified key or value is null

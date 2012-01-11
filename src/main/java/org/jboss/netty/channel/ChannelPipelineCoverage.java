@@ -39,12 +39,12 @@ public @interface ChannelPipelineCoverage {
     /**
      * {@code "all"}
      */
-    public static final String ALL = "all";
+    String ALL = "all";
 
     /**
      * {@code "one"}
      */
-    public static final String ONE = "one";
+    String ONE = "one";
 
     /**
      * The value of this annotation

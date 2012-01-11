@@ -30,7 +30,7 @@ import org.jboss.netty.util.ThreadRenamingRunnable;
  * {@link StackTraceElement}s.  Please note that the stack trace simplification
  * is disabled if {@linkplain DebugUtil debug mode} is turned on.
  */
-public class StackTraceSimplifier {
+public final class StackTraceSimplifier {
 
     private static final boolean SIMPLIFY_STACK_TRACE = !DebugUtil.isDebugEnabled();
     private static final Pattern EXCLUDED_STACK_TRACE =
@@ -79,5 +79,9 @@ public class StackTraceSimplifier {
 
         e.setStackTrace(
                 simpleTrace.toArray(new StackTraceElement[simpleTrace.size()]));
+    }
+
+    private StackTraceSimplifier() {
+        // Unused
     }
 }

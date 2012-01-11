@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
  */
-public class UnsafeDetectUtil {
+public final class UnsafeDetectUtil {
 
     private static final String UNSAFE = "sun.misc.Unsafe";
     private static final boolean UNSAFE_FOUND = isUnsafeFound(AtomicInteger.class.getClassLoader());

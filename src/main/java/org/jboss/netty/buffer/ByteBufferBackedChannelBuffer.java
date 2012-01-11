@@ -97,9 +97,9 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     }
 
     public int getUnsignedMedium(int index) {
-        return  (getByte(index)   & 0xff) << 16 |
-                (getByte(index+1) & 0xff) <<  8 |
-                (getByte(index+2) & 0xff) <<  0;
+        return  (getByte(index)     & 0xff) << 16 |
+                (getByte(index + 1) & 0xff) <<  8 |
+                (getByte(index + 2) & 0xff) <<  0;
     }
 
     public int getInt(int index) {
@@ -154,9 +154,9 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
     }
 
     public void setMedium(int index, int   value) {
-        setByte(index,   (byte) (value >>> 16));
-        setByte(index+1, (byte) (value >>>  8));
-        setByte(index+2, (byte) (value >>>  0));
+        setByte(index,     (byte) (value >>> 16));
+        setByte(index + 1, (byte) (value >>>  8));
+        setByte(index + 2, (byte) (value >>>  0));
     }
 
     public void setInt(int index, int   value) {

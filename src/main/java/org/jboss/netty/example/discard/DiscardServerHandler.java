@@ -34,7 +34,7 @@ public class DiscardServerHandler extends SimpleChannelUpstreamHandler {
     private static final Logger logger = Logger.getLogger(
             DiscardServerHandler.class.getName());
 
-    private long transferredBytes = 0;
+    private long transferredBytes;
 
     public long getTransferredBytes() {
         return transferredBytes;
@@ -53,7 +53,7 @@ public class DiscardServerHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
         // Discard received data silently by doing nothing.
-        transferredBytes += (((ChannelBuffer) e.getMessage()).readableBytes());
+        transferredBytes += ((ChannelBuffer) e.getMessage()).readableBytes();
     }
 
     @Override

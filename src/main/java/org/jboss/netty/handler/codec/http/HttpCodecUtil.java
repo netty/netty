@@ -22,7 +22,7 @@ import org.jboss.netty.util.CharsetUtil;
 
 /**
  */
-class HttpCodecUtil {
+final class HttpCodecUtil {
     //space ' '
     static final byte SP = 32;
 

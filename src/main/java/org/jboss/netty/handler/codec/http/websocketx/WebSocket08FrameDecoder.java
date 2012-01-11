@@ -64,20 +64,20 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     private static final byte OPCODE_PING = 0x9;
     private static final byte OPCODE_PONG = 0xA;
 
-    private UTF8Output fragmentedFramesText = null;
-    private int fragmentedFramesCount = 0;
+    private UTF8Output fragmentedFramesText;
+    private int fragmentedFramesCount;
 
     private boolean frameFinalFlag;
     private int frameRsv;
     private int frameOpcode;
     private long framePayloadLength;
-    private ChannelBuffer framePayload = null;
-    private int framePayloadBytesRead = 0;
+    private ChannelBuffer framePayload;
+    private int framePayloadBytesRead;
     private ChannelBuffer maskingKey;
 
-    private boolean allowExtensions = false;
-    private boolean maskedPayload = false;
-    private boolean receivedClosingHandshake = false;
+    private boolean allowExtensions;
+    private boolean maskedPayload;
+    private boolean receivedClosingHandshake;
 
     public enum State {
         FRAME_START, MASKING_KEY, PAYLOAD, CORRUPT
@@ -118,7 +118,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
             byte b = buffer.readByte();
             frameFinalFlag = (b & 0x80) != 0;
             frameRsv = (b & 0x70) >> 4;
-            frameOpcode = (b & 0x0F);
+            frameOpcode = b & 0x0F;
 
             if (logger.isDebugEnabled()) {
                 logger.debug("Decoding WebSocket Frame opCode=" + frameOpcode);
@@ -127,7 +127,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
             // MASK, PAYLOAD LEN 1
             b = buffer.readByte();
             boolean frameMasked = (b & 0x80) != 0;
-            int framePayloadLen1 = (b & 0x7F);
+            int framePayloadLen1 = b & 0x7F;
 
             if (frameRsv != 0 && !this.allowExtensions) {
                 protocolViolation(channel, "RSV != 0 and no extension negotiated, RSV:" + frameRsv);

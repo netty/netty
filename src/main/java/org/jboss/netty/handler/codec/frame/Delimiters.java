@@ -21,7 +21,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
 /**
  * A set of commonly used delimiters for {@link DelimiterBasedFrameDecoder}.
  */
-public class Delimiters {
+public final class Delimiters {
 
     /**
      * Returns a {@code NUL (0x00)} delimiter, which could be used for

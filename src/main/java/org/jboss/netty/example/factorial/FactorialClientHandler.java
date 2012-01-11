@@ -45,7 +45,7 @@ public class FactorialClientHandler extends SimpleChannelUpstreamHandler {
 
     // Stateful properties
     private int i = 1;
-    private int receivedMessages = 0;
+    private int receivedMessages;
     private final int count;
     final BlockingQueue<BigInteger> answer = new LinkedBlockingQueue<BigInteger>();
 

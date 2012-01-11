@@ -26,7 +26,7 @@ import org.jboss.netty.util.UnsafeDetectUtil;
 
 
  */
-public class QueueFactory {
+public final class QueueFactory {
     
     private static final boolean useUnsafe = UnsafeDetectUtil.isUnsafeFound(QueueFactory.class.getClassLoader());
     

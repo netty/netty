@@ -85,7 +85,7 @@ import org.jboss.netty.util.CharsetUtil;
  * @apiviz.landmark
  * @apiviz.has org.jboss.netty.buffer.ChannelBuffer oneway - - creates
  */
-public class ChannelBuffers {
+public final class ChannelBuffers {
 
     /**
      * Big endian byte order.
@@ -308,7 +308,7 @@ public class ChannelBuffers {
             return EMPTY_BUFFER;
         }
         if (buffer.hasArray()) {
-            return wrappedBuffer(buffer.order(), buffer.array(), buffer.arrayOffset() + buffer.position(),buffer.remaining());
+            return wrappedBuffer(buffer.order(), buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
         } else {
             return new ByteBufferBackedChannelBuffer(buffer);
         }

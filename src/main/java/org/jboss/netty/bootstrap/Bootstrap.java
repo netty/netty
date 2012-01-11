@@ -215,7 +215,7 @@ public class Bootstrap implements ExternalResourceReleasable {
         }
 
         ChannelPipeline pipeline = pipeline();
-        for(Map.Entry<String, ChannelHandler> e: pipelineMap.entrySet()) {
+        for (Map.Entry<String, ChannelHandler> e: pipelineMap.entrySet()) {
             pipeline.addLast(e.getKey(), e.getValue());
         }
 
@@ -310,7 +310,7 @@ public class Bootstrap implements ExternalResourceReleasable {
     }
 
     /**
-     * {@inheritDoc}  This method simply delegates the call to
+     * This method simply delegates the call to
      * {@link ChannelFactory#releaseExternalResources()}.
      */
     public void releaseExternalResources() {

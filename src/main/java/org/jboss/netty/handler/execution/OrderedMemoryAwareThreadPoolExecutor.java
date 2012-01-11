@@ -295,7 +295,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
             tasks.add(command);
             
 
-            if (isRunning.get() == false) {
+            if (!isRunning.get()) {
                 doUnorderedExecute(this);
             }
         }

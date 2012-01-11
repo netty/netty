@@ -211,17 +211,17 @@ public final class HttpTunnelingSocketChannelConfig implements SocketChannelConf
             return true;
         }
 
-        if (key.equals("serverName")){
+        if (key.equals("serverName")) {
             setServerName(String.valueOf(value));
-        } else if (key.equals("serverPath")){
+        } else if (key.equals("serverPath")) {
             setServerPath(String.valueOf(value));
         } else if (key.equals("sslContext")) {
             setSslContext((SSLContext) value);
-        } else if (key.equals("enabledSslCipherSuites")){
+        } else if (key.equals("enabledSslCipherSuites")) {
             setEnabledSslCipherSuites(ConversionUtil.toStringArray(value));
-        } else if (key.equals("enabledSslProtocols")){
+        } else if (key.equals("enabledSslProtocols")) {
             setEnabledSslProtocols(ConversionUtil.toStringArray(value));
-        } else if (key.equals("enableSslSessionCreation")){
+        } else if (key.equals("enableSslSessionCreation")) {
             setEnableSslSessionCreation(ConversionUtil.toBoolean(value));
         } else {
             return false;

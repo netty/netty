@@ -29,7 +29,7 @@ import org.jboss.netty.util.internal.QueueFactory;
 
 
  */
-abstract class AbstractWriteRequestQueue implements BlockingQueue<MessageEvent>{
+abstract class AbstractWriteRequestQueue implements BlockingQueue<MessageEvent> {
 
     protected final BlockingQueue<MessageEvent> queue;
 
