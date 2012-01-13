@@ -23,9 +23,6 @@ import java.util.logging.Level;
 
 import org.junit.Test;
 
-
-/**
- */
 public class JdkLoggerTest {
     private static final Exception e = new Exception();
 

@@ -37,10 +37,6 @@ public class ChannelLocal<T> {
 
 
     private final ChannelFutureListener remover = new ChannelFutureListener() {
-        /*
-         * (non-Javadoc)
-         * @see org.jboss.netty.channel.ChannelFutureListener#operationComplete(org.jboss.netty.channel.ChannelFuture)
-         */
         public void operationComplete(ChannelFuture future) throws Exception {
             remove(future.getChannel());
         }

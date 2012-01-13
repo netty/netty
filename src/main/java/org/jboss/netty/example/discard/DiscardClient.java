@@ -50,8 +50,6 @@ public class DiscardClient {
         }
         
         new DiscardClient(host, port, firstMessageSize).run();
-
-
     }
     
     private final String host;

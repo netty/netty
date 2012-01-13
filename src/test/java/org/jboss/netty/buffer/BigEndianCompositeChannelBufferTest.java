@@ -17,6 +17,7 @@ package org.jboss.netty.buffer;
 
 
 /**
+ * Tests big-endian composite channel buffers
  */
 public class BigEndianCompositeChannelBufferTest extends AbstractCompositeChannelBufferTest {
     public BigEndianCompositeChannelBufferTest() {

@@ -24,8 +24,6 @@ import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
 import org.junit.Before;
 import org.junit.Test;
 
-/**
- */
 public class ProtobufVarint32LengthFieldPrependerTest {
 
     private EncoderEmbedder<ChannelBuffer> embedder;

@@ -29,9 +29,6 @@ import org.jboss.netty.util.DummyHandler;
 import org.jboss.netty.util.TestUtil;
 import org.junit.Test;
 
-
-/**
- */
 public class NioClientSocketShutdownTimeTest {
 
     @Test

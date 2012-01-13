@@ -20,6 +20,7 @@ import java.nio.ByteBuffer;
 import org.junit.Test;
 
 /**
+ * Tests ByteBuffer backed heap channel buffers
  */
 public class ByteBufferBackedHeapChannelBufferTest extends AbstractChannelBufferTest {
 

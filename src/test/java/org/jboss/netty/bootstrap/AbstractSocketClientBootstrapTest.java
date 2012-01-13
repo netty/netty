@@ -38,6 +38,7 @@ import org.junit.Test;
 
 
 /**
+ * An abstract test class to test socket client bootstraps
  */
 public abstract class AbstractSocketClientBootstrapTest {
 

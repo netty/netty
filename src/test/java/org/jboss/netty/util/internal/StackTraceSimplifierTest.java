@@ -26,9 +26,6 @@ import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.junit.Test;
 
-
-/**
- */
 public class StackTraceSimplifierTest {
 
     @Test

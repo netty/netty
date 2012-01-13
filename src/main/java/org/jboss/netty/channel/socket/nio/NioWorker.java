@@ -50,8 +50,6 @@ import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.QueueFactory;
 
-/**
- */
 class NioWorker implements Runnable {
 
     private static final InternalLogger logger =

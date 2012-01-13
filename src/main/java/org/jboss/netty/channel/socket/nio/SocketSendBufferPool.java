@@ -26,8 +26,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.DefaultFileRegion;
 import org.jboss.netty.channel.FileRegion;
 
-/**
- */
 final class SocketSendBufferPool {
 
     private static final SendBuffer EMPTY_BUFFER = new EmptySendBuffer();

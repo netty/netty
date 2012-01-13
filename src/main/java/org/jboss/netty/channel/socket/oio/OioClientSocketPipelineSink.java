@@ -32,8 +32,6 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 
-/**
- */
 class OioClientSocketPipelineSink extends AbstractChannelSink {
 
     private final Executor workerExecutor;

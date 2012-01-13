@@ -21,7 +21,6 @@ import org.junit.Test;
 
 /**
  * Unit test for {@link StringUtil}.
- * <p/>
  */
 public class StringUtilTest {
 

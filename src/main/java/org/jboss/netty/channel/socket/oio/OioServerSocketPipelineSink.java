@@ -36,8 +36,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 
-/**
- */
 class OioServerSocketPipelineSink extends AbstractChannelSink {
 
     static final InternalLogger logger =

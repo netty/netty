@@ -21,9 +21,6 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-
-/**
- */
 public class JBossLoggerTest {
     private static final Exception e = new Exception();
 

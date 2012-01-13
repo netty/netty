@@ -29,8 +29,6 @@ import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.ChannelBufferIndexFinder;
 import org.jboss.netty.buffer.ChannelBuffers;
 
-/**
- */
 class ReplayingDecoderBuffer implements ChannelBuffer {
 
     private static final Error REPLAY = new ReplayError();

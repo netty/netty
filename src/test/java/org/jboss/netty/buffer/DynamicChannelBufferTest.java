@@ -22,6 +22,7 @@ import java.nio.ByteOrder;
 import org.junit.Test;
 
 /**
+ * Tests dynamic channel buffers
  */
 public class DynamicChannelBufferTest extends AbstractChannelBufferTest {
 

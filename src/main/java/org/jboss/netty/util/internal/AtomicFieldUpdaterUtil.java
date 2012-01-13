@@ -18,8 +18,6 @@ package org.jboss.netty.util.internal;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-/**
- */
 final class AtomicFieldUpdaterUtil {
 
     private static final boolean AVAILABLE;

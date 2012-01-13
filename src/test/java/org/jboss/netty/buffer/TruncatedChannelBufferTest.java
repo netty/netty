@@ -20,6 +20,7 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 
 /**
+ * Tests truncated channel buffers
  */
 public class TruncatedChannelBufferTest extends AbstractChannelBufferTest {
 

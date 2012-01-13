@@ -20,6 +20,7 @@ import static org.junit.Assert.*;
 import java.nio.ByteOrder;
 
 /**
+ * Tests big-endian direct channel buffers
  */
 public class BigEndianDirectChannelBufferTest extends AbstractChannelBufferTest {
 

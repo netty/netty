@@ -20,6 +20,7 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 
 /**
+ * Tests big-endian heap channel buffers
  */
 public class BigEndianHeapChannelBufferTest extends AbstractChannelBufferTest {
 

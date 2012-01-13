@@ -199,17 +199,11 @@ public class SslHandler extends FrameDecoder
     private volatile boolean issueHandshake;
     
     private static final ChannelFutureListener HANDSHAKE_LISTENER = new ChannelFutureListener() {
-
-        /*
-         * (non-Javadoc)
-         * @see org.jboss.netty.channel.ChannelFutureListener#operationComplete(org.jboss.netty.channel.ChannelFuture)
-         */
         public void operationComplete(ChannelFuture future) throws Exception {
             if (!future.isSuccess()) {
                 Channels.fireExceptionCaught(future.getChannel(), future.getCause());
             }
         }
-
     };
     
     /**
@@ -435,7 +429,7 @@ public class SslHandler extends FrameDecoder
      * Enables or disables the automatic handshake once the {@link Channel} is
      * connected. The value will only have affect if its set before the
      * {@link Channel} is connected.
- */
+     */
     public void setIssueHandshake(boolean issueHandshake) {
         this.issueHandshake = issueHandshake;
     }

@@ -31,8 +31,6 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.DefaultFileRegion;
 import org.jboss.netty.channel.FileRegion;
 
-/**
- */
 class OioWorker implements Runnable {
 
     private static final Pattern SOCKET_CLOSED_MESSAGE = Pattern.compile(

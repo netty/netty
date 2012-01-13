@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-/**
- */
 final class CookieHeaderNames {
     static final String PATH = "Path";
 

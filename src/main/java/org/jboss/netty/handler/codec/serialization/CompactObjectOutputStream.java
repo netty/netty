@@ -21,8 +21,6 @@ import java.io.ObjectStreamClass;
 import java.io.OutputStream;
 import java.io.Serializable;
 
-/**
- */
 class CompactObjectOutputStream extends ObjectOutputStream {
 
     static final int TYPE_FAT_DESCRIPTOR = 0;

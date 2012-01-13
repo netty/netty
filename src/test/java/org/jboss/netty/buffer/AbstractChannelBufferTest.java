@@ -33,6 +33,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
+ * An abstract test class for channel buffers
  */
 public abstract class AbstractChannelBufferTest {
 

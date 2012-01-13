@@ -26,6 +26,7 @@ import java.util.List;
 import org.junit.Test;
 
 /**
+ * An abstract test class for composite channel buffers
  */
 public abstract class AbstractCompositeChannelBufferTest extends
         AbstractChannelBufferTest {

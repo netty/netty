@@ -21,8 +21,6 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 
-/**
- */
 public class HexDumpProxyPipelineFactory implements ChannelPipelineFactory {
 
     private final ClientSocketChannelFactory cf;

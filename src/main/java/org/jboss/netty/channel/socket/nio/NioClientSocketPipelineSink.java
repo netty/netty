@@ -46,8 +46,6 @@ import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.QueueFactory;
 
-/**
- */
 class NioClientSocketPipelineSink extends AbstractChannelSink {
 
     static final InternalLogger logger =

@@ -35,8 +35,6 @@ import org.jboss.netty.channel.socket.DatagramChannel;
 import org.jboss.netty.channel.socket.DatagramChannelConfig;
 import org.jboss.netty.channel.socket.DefaultDatagramChannelConfig;
 
-/**
- */
 final class OioDatagramChannel extends AbstractChannel
                                 implements DatagramChannel {
 

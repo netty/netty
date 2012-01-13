@@ -22,6 +22,7 @@ import java.nio.ByteOrder;
 import org.junit.Test;
 
 /**
+ * Tests little-endian heap channel buffers
  */
 public class LittleEndianHeapChannelBufferTest extends AbstractChannelBufferTest {
 

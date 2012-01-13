@@ -31,8 +31,6 @@ import org.jboss.netty.channel.socket.DefaultSocketChannelConfig;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 
-/**
- */
 abstract class OioSocketChannel extends AbstractChannel
                                 implements SocketChannel {
 

@@ -21,6 +21,7 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 
 /**
+ * A test for New I/O socket client bootstraps
  */
 public class NioSocketClientBootstrapTest extends
         AbstractSocketClientBootstrapTest {

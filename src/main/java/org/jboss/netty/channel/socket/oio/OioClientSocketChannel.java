@@ -25,8 +25,6 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 
-/**
- */
 class OioClientSocketChannel extends OioSocketChannel {
 
     volatile PushbackInputStream in;

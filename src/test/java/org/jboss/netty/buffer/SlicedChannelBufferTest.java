@@ -22,6 +22,7 @@ import java.util.Random;
 import org.junit.Test;
 
 /**
+ * Tests sliced channel buffers
  */
 public class SlicedChannelBufferTest extends AbstractChannelBufferTest {
 

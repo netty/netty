@@ -35,8 +35,6 @@ import org.jboss.netty.example.localtime.LocalTimeProtocol.LocalTimes;
 import org.jboss.netty.example.localtime.LocalTimeProtocol.Location;
 import org.jboss.netty.example.localtime.LocalTimeProtocol.Locations;
 
-/**
- */
 public class LocalTimeServerHandler extends SimpleChannelUpstreamHandler {
 
     private static final Logger logger = Logger.getLogger(

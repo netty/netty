@@ -26,8 +26,6 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 
-/**
- */
 final class HttpTunnelingClientSocketPipelineSink extends AbstractChannelSink {
 
     HttpTunnelingClientSocketPipelineSink() {

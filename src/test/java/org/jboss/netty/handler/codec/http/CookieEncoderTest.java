@@ -24,9 +24,6 @@ import java.util.Date;
 
 import org.junit.Test;
 
-
-/**
- */
 public class CookieEncoderTest {
     @Test
     public void testEncodingSingleCookieV0() {

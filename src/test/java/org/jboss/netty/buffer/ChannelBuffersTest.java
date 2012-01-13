@@ -31,6 +31,7 @@ import org.easymock.classextension.EasyMock;
 import org.junit.Test;
 
 /**
+ * Tests channel buffers
  */
 public class ChannelBuffersTest {
 

@@ -18,8 +18,6 @@ package org.jboss.netty.handler.codec.http;
 import org.junit.Assert;
 import org.junit.Test;
 
-/**
- */
 public class DefaultHttpMessageTest {
 
     @Test

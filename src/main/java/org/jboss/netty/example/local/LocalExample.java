@@ -33,8 +33,6 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.handler.logging.LoggingHandler;
 import org.jboss.netty.logging.InternalLogLevel;
 
-/**
- */
 public class LocalExample {
     public static void main(String[] args) throws Exception {
         // Address to bind on / connect to.

@@ -27,8 +27,6 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 
-/**
- */
 final class LocalServerChannelSink extends AbstractChannelSink {
 
     LocalServerChannelSink() {

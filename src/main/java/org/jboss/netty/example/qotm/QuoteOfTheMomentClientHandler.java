@@ -20,8 +20,6 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
-/**
- */
 public class QuoteOfTheMomentClientHandler extends SimpleChannelUpstreamHandler {
 
     @Override

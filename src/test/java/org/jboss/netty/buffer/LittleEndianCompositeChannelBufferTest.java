@@ -17,6 +17,7 @@ package org.jboss.netty.buffer;
 
 
 /**
+ * Tests little-endian composite channel buffers
  */
 public class LittleEndianCompositeChannelBufferTest extends AbstractCompositeChannelBufferTest {
     public LittleEndianCompositeChannelBufferTest() {

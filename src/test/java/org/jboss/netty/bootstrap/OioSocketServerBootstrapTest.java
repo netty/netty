@@ -21,6 +21,7 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
 
 /**
+ * A socket server bootstrap test for "Old" I/O
  */
 public class OioSocketServerBootstrapTest extends
         AbstractSocketServerBootstrapTest {

@@ -24,8 +24,6 @@ import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
-/**
- */
 public class HexDumpProxy {
 
     public static void main(String[] args) throws Exception {

@@ -25,8 +25,6 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
 import org.junit.Test;
 
-/**
- */
 public class ReplayingDecoderTest {
 
     @Test

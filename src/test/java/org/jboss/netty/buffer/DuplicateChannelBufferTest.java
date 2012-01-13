@@ -20,6 +20,7 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 
 /**
+ * Tests duplicated channel buffers
  */
 public class DuplicateChannelBufferTest extends AbstractChannelBufferTest {
 

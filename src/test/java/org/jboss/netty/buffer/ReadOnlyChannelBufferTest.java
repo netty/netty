@@ -29,6 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
 import org.junit.Test;
 
 /**
+ * Tests read-only channel buffers
  */
 public class ReadOnlyChannelBufferTest {
 

@@ -28,8 +28,6 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ReceiveBufferSizePredictor;
 
-/**
- */
 class OioDatagramWorker implements Runnable {
 
     private final OioDatagramChannel channel;

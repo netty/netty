@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.util.internal;
 
-/**
- */
 public class ThreadLocalBoolean extends ThreadLocal<Boolean> {
 
     private final boolean defaultValue;

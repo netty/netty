@@ -21,8 +21,6 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioServerSocketChannelFactory;
 
-/**
- */
 public class OioOioSocketEchoTest extends AbstractSocketEchoTest {
 
     @Override

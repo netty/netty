@@ -27,6 +27,7 @@ import org.junit.Test;
 
 
 /**
+ * A test to make sure that a bootstrap can recognize ordered maps
  */
 public class BootstrapOrderedMapTest {
 

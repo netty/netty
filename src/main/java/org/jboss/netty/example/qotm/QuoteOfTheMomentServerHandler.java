@@ -22,8 +22,6 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
-/**
- */
 public class QuoteOfTheMomentServerHandler extends SimpleChannelUpstreamHandler {
 
     private static final Random random = new Random();

@@ -32,8 +32,6 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import org.jboss.netty.handler.logging.LoggingHandler;
 import org.jboss.netty.logging.InternalLogLevel;
 
-/**
- */
 public class LocalExampleMultthreaded {
 
     public static void main(String[] args) throws Exception {

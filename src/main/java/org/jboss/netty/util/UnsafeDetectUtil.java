@@ -20,9 +20,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Utility which checks if {@value #UNSAFE} class can be found in the classpath
- *
-
-
  */
 public final class UnsafeDetectUtil {
 

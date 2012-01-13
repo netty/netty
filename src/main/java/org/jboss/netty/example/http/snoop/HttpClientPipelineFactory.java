@@ -26,8 +26,6 @@ import org.jboss.netty.handler.codec.http.HttpClientCodec;
 import org.jboss.netty.handler.codec.http.HttpContentDecompressor;
 import org.jboss.netty.handler.ssl.SslHandler;
 
-/**
- */
 public class HttpClientPipelineFactory implements ChannelPipelineFactory {
 
     private final boolean ssl;

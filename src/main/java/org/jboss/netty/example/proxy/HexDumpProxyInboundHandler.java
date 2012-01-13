@@ -30,8 +30,6 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 
-/**
- */
 public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
 
     private final ClientSocketChannelFactory cf;

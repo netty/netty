@@ -24,8 +24,6 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 
-/**
- */
 final class NioAcceptedSocketChannel extends NioSocketChannel {
 
     final Thread bossThread;

@@ -23,9 +23,6 @@ import java.util.concurrent.Executor;
 
 import org.junit.Test;
 
-
-/**
- */
 public class ThreadRenamingRunnableTest {
 
     @Test(expected = NullPointerException.class)

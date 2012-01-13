@@ -29,8 +29,6 @@ import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 
-/**
- */
 public class LocalServerPipelineFactory implements ChannelPipelineFactory {
 
     private final ExecutionHandler executionHandler;

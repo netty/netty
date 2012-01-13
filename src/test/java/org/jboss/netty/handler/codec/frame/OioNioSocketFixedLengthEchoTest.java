@@ -21,8 +21,6 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioClientSocketChannelFactory;
 
-/**
- */
 public class OioNioSocketFixedLengthEchoTest extends AbstractSocketFixedLengthEchoTest {
 
     @Override

@@ -34,6 +34,7 @@ import org.junit.Test;
 
 
 /**
+ * A bootstrap test
  */
 public class BootstrapTest {
     @Test(expected = IllegalStateException.class)

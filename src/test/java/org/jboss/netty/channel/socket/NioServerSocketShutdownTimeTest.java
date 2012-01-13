@@ -31,9 +31,6 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.util.TestUtil;
 import org.junit.Test;
 
-
-/**
- */
 public class NioServerSocketShutdownTimeTest {
 
     @Test(timeout = 10000)

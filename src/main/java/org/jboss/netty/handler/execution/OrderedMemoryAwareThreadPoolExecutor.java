@@ -281,15 +281,11 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
 
     private final class ChildExecutor implements Executor, Runnable {
         private final Queue<Runnable> tasks = QueueFactory.createQueue(Runnable.class);
-        private final AtomicBoolean isRunning = new AtomicBoolean(false);
+        private final AtomicBoolean isRunning = new AtomicBoolean();
         
         ChildExecutor() {
         }
 
-        /*
-         * (non-Javadoc)
-         * @see java.util.concurrent.Executor#execute(java.lang.Runnable)
-         */
         public void execute(Runnable command) {
             // TODO: What todo if the add return false ?
             tasks.add(command);
@@ -300,10 +296,6 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
             }
         }
 
-        /*
-         * (non-Javadoc)
-         * @see java.lang.Runnable#run()
-         */
         public void run() {
             // check if its already running by using CAS. If so just return here. So in the worst case the thread
             // is executed and do nothing

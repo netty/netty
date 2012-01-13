@@ -23,6 +23,7 @@ import org.junit.Test;
 
 
 /**
+ * Tests channel buffer streams
  */
 public class ChannelBufferStreamTest {
 

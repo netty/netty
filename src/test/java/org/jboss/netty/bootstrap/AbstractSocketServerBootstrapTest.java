@@ -45,6 +45,7 @@ import org.junit.Test;
 
 
 /**
+ * An abstract test class to test server socket bootstraps
  */
 public abstract class AbstractSocketServerBootstrapTest {
 
