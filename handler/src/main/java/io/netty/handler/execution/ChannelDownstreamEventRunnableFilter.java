@@ -25,5 +25,4 @@ public class ChannelDownstreamEventRunnableFilter implements ChannelEventRunnabl
     public boolean filter(ChannelEventRunnable event) {
         return event instanceof ChannelDownstreamEventRunnable;
     }
-
 }

@@ -16,16 +16,14 @@
 package io.netty.handler.execution;
 
 
+import java.util.concurrent.Executor;
+
 import io.netty.util.ExternalResourceReleasable;
 import io.netty.util.internal.ExecutorUtil;
 
-import java.util.concurrent.Executor;
-
 /**
- * A special {@link Executor} which allows to <code>chain</code> {@link Executor}'s. This allows build some complex logic which can help to
- * build up SEDA in an easy fashion
- * 
- *
+ * A special {@link Executor} which allows to chain a series of
+ * {@link Executor}s and {@link ChannelEventRunnableFilter}.
  */
 public class ChainedExecutor implements Executor, ExternalResourceReleasable {
 
@@ -42,19 +40,19 @@ public class ChainedExecutor implements Executor, ExternalResourceReleasable {
      * @param next    the {@link Executor} to use if the {@link ChannelEventRunnableFilter} does not match
      */
     public ChainedExecutor(ChannelEventRunnableFilter filter, Executor cur, Executor next) {
+        if (filter == null) {
+            throw new NullPointerException("filter");
+        }
         if (cur == null) {
             throw new NullPointerException("cur");
         }
         if (next == null) {
             throw new NullPointerException("next");
         }
-        if (filter == null) {
-            throw new NullPointerException("filter");
-        }
-        
+
+        this.filter = filter;
         this.cur = cur;
         this.next = next;
-        this.filter = filter;
     }
     
     /**
@@ -84,5 +82,4 @@ public class ChainedExecutor implements Executor, ExternalResourceReleasable {
             ((ExternalResourceReleasable) executor).releaseExternalResources();
         }
     }
-
 }

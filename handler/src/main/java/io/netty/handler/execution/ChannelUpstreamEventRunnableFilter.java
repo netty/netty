@@ -17,14 +17,10 @@ package io.netty.handler.execution;
 
 /**
  * {@link ChannelEventRunnableFilter} which matches {@link ChannelDownstreamEventRunnable}
- * 
- *
  */
 public class ChannelUpstreamEventRunnableFilter implements ChannelEventRunnableFilter {
-
     @Override
     public boolean filter(ChannelEventRunnable event) {
         return event instanceof ChannelDownstreamEventRunnable;
     }
-
 }

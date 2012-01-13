@@ -62,8 +62,8 @@ import io.netty.util.internal.SharedResourceMisuseDetector;
  * <ul>
  *   <li>you are using {@link MemoryAwareThreadPoolExecutor} independently from
  *       {@link ExecutionHandler},</li>
- *   <li>you are submitting a task whose type is not {@link ChannelUpstreamEventRunnable}, or</li>
- *   <li>the message type of the {@link MessageEvent} in the {@link ChannelUpstreamEventRunnable}
+ *   <li>you are submitting a task whose type is not {@link ChannelEventRunnable}, or</li>
+ *   <li>the message type of the {@link MessageEvent} in the {@link ChannelEventRunnable}
  *       is not {@link ChannelBuffer}.</li>
  * </ul>
  * Here is an example that demonstrates how to implement an {@link ObjectSizeEstimator}
@@ -313,7 +313,10 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
     @Override
     public void execute(Runnable command) {
-        if (!(command instanceof ChannelUpstreamEventRunnable)) {
+        if (command instanceof ChannelDownstreamEventRunnable) {
+            throw new RejectedExecutionException("command must be enclosed with an upstream event.");
+        }
+        if (!(command instanceof ChannelEventRunnable)) {
             command = new MemoryAwareRunnable(command);
         }
 
@@ -396,8 +399,8 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         long maxChannelMemorySize = settings.maxChannelMemorySize;
 
         int increment;
-        if (task instanceof ChannelUpstreamEventRunnable) {
-            increment = ((ChannelUpstreamEventRunnable) task).estimatedSize;
+        if (task instanceof ChannelEventRunnable) {
+            increment = ((ChannelEventRunnable) task).estimatedSize;
         } else {
             increment = ((MemoryAwareRunnable) task).estimatedSize;
         }
@@ -475,9 +478,6 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
     }
 
     private static final class NewThreadRunsPolicy implements RejectedExecutionHandler {
-        NewThreadRunsPolicy() {
-        }
-
         @Override
         public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
             try {

@@ -17,8 +17,6 @@ package io.netty.handler.execution;
 
 import java.util.concurrent.Executor;
 
-import io.netty.handler.execution.ChannelEventRunnable;
-
 public interface ChannelEventRunnableFilter {
     
     /**

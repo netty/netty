@@ -21,6 +21,6 @@
  * @apiviz.exclude ^java\.lang\.
  * @apiviz.exclude \.netty\.channel\.
  * @apiviz.exclude \.ExternalResourceReleasable$
- * @apiviz.exclude \.ChannelEventRunnable$
+ * @apiviz.exclude \.Channel[A-Za-z]*EventRunnable[A-Za-z]*$
  */
 package io.netty.handler.execution;

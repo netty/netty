@@ -35,5 +35,4 @@ public class ChannelDownstreamEventRunnable extends ChannelEventRunnable {
     public void run() {
         ctx.sendDownstream(e);
     }
-
 }

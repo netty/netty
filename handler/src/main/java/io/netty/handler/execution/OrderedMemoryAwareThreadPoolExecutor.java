@@ -127,6 +127,7 @@ import io.netty.util.internal.QueueFactory;
  * use a weak key map such as <a href="http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/src/jsr166y/ConcurrentWeakHashMap.java?view=markup">ConcurrentWeakHashMap</a>
  * or synchronized {@link WeakHashMap} instead of managing the life cycle of the
  * keys by yourself.
+ *
  * @apiviz.landmark
  */
 public class OrderedMemoryAwareThreadPoolExecutor extends
@@ -281,9 +282,6 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
         private final Queue<Runnable> tasks = QueueFactory.createQueue(Runnable.class);
         private final AtomicBoolean isRunning = new AtomicBoolean();
         
-        ChildExecutor() {
-        }
-
         @Override
         public void execute(Runnable command) {
             // TODO: What todo if the add return false ?

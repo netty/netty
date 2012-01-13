@@ -22,6 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelDownstreamHandler;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPipelineFactory;
@@ -29,7 +30,6 @@ import io.netty.channel.ChannelState;
 import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.ChannelUpstreamHandler;
 import io.netty.channel.Channels;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.util.ExternalResourceReleasable;
 import io.netty.util.internal.ExecutorUtil;
 
@@ -93,7 +93,6 @@ import io.netty.util.internal.ExecutorUtil;
  * You can implement an alternative thread model such as
  * <a href="http://en.wikipedia.org/wiki/Staged_event-driven_architecture">SEDA</a>
  * by adding more than one {@link ExecutionHandler} to the pipeline.
- * Alternative you may want to have a look at {@link SedaExecutor}.
  *
  * <h3>Using other {@link Executor} implementation</h3>
  *
@@ -102,6 +101,7 @@ import io.netty.util.internal.ExecutorUtil;
  * that other {@link Executor} implementation might break your application
  * because they often do not maintain event execution order nor interact with
  * I/O threads to control the incoming traffic and avoid {@link OutOfMemoryError}.
+ *
  * @apiviz.landmark
  * @apiviz.has java.util.concurrent.ThreadPoolExecutor
  */
@@ -119,6 +119,10 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
         this(executor, false);
     }
     
+    /**
+     * Creates a new instance with the specified {@link Executor}.
+     * Specify an {@link OrderedMemoryAwareThreadPoolExecutor} if unsure.
+     */
     public ExecutionHandler(Executor executor, boolean handleDownstream) {
         if (executor == null) {
             throw new NullPointerException("executor");
@@ -140,6 +144,7 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
      */
     @Override
     public void releaseExternalResources() {
+        Executor executor = getExecutor();
         ExecutorUtil.terminate(executor);
         if (executor instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) executor).releaseExternalResources();
@@ -167,9 +172,6 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
     
     /**
      * Handle suspended reads
-     *  
-     * @param ctx
-     * @param e
      */
     protected boolean handleReadSuspend(ChannelHandlerContext ctx, ChannelEvent e) {
         if (e instanceof ChannelStateEvent) {
@@ -187,6 +189,7 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
                 }
             }
         }
+
         return false;
     }
 }
