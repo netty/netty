@@ -105,8 +105,6 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
         e.getChannel().close();
     }
 
-    /**
-     */
     private static final class Greeter implements ChannelFutureListener {
 
         private final SslHandler sslHandler;

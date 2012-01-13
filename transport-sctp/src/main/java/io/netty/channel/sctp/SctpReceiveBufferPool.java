@@ -18,8 +18,6 @@ package io.netty.channel.sctp;
 import java.lang.ref.SoftReference;
 import java.nio.ByteBuffer;
 
-/**
- */
 final class SctpReceiveBufferPool {
 
     private static final int POOL_SIZE = 8;

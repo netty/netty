@@ -22,9 +22,6 @@ import java.io.InputStream;
 
 import org.junit.Test;
 
-
-/**
- */
 public class SwitchableInputStreamTest {
 
     @Test

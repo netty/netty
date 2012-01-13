@@ -30,8 +30,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.FileRegion;
 
-/**
- */
 class OioWorker implements Runnable {
 
     private static final Pattern SOCKET_CLOSED_MESSAGE = Pattern.compile(

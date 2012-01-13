@@ -44,8 +44,6 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.util.CharsetUtil;
 
-/**
- */
 public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
 
     private HttpRequest request;

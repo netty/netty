@@ -97,6 +97,7 @@ public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
 
     /**
      * Create a new decoder with the specified maximum object size and the {@link ClassLoader} wrapped in {@link ClassResolvers#weakCachingResolver(ClassLoader)}
+     *
      * @param maxObjectSize  the maximum byte length of the serialized object.
      *                       if the length of the received object is greater
      *                       than this value, {@link StreamCorruptedException}

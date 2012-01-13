@@ -31,8 +31,6 @@ import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 
-/**
- */
 abstract class OioSocketChannel extends AbstractChannel
                                 implements SocketChannel {
 

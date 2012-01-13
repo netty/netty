@@ -18,8 +18,6 @@ package io.netty.handler.codec.replay;
 import io.netty.buffer.ChannelBufferFactory;
 import io.netty.buffer.DynamicChannelBuffer;
 
-/**
- */
 class UnsafeDynamicChannelBuffer extends DynamicChannelBuffer {
 
     UnsafeDynamicChannelBuffer(ChannelBufferFactory factory) {

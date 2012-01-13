@@ -23,12 +23,6 @@ import java.util.concurrent.TimeUnit;
 import io.netty.channel.MessageEvent;
 import io.netty.util.internal.QueueFactory;
 
-/**
- * 
- *
-
-
- */
 abstract class AbstractWriteRequestQueue implements BlockingQueue<MessageEvent> {
 
     protected final BlockingQueue<MessageEvent> queue;

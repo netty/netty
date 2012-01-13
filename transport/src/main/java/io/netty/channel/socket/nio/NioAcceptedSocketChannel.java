@@ -24,8 +24,6 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 
-/**
- */
 final class NioAcceptedSocketChannel extends NioSocketChannel {
 
     final Thread bossThread;

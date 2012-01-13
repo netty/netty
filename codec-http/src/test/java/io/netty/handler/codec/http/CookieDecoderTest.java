@@ -28,8 +28,6 @@ import java.util.Set;
 
 import org.junit.Test;
 
-/**
- */
 public class CookieDecoderTest {
     @Test
     public void testDecodingSingleCookieV0() {

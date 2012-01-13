@@ -27,7 +27,7 @@ public final class RtspHeaders {
 
     /**
      * Standard RTSP header names.
- */
+     */
     public static final class Names {
         /**
          * {@code "Accept"}
@@ -212,7 +212,7 @@ public final class RtspHeaders {
 
     /**
      * Standard RTSP header values.
- */
+     */
     public static final class Values {
         /**
          * {@code "append"}

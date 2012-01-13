@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.nio.ByteBuffer;
 
-/**
- */
 final class SctpSendBufferPool {
 
     private static final SendBuffer EMPTY_BUFFER = new EmptySendBuffer();

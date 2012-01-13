@@ -22,8 +22,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
 import java.io.StreamCorruptedException;
 
-/**
- */
 class CompactObjectInputStream extends ObjectInputStream {
     
     private final ClassResolver classResolver;

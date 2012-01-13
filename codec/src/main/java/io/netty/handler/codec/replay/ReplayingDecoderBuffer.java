@@ -29,8 +29,6 @@ import io.netty.buffer.ChannelBufferFactory;
 import io.netty.buffer.ChannelBufferIndexFinder;
 import io.netty.buffer.ChannelBuffers;
 
-/**
- */
 class ReplayingDecoderBuffer implements ChannelBuffer {
 
     private static final Error REPLAY = new ReplayError();

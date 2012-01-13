@@ -24,9 +24,6 @@ import java.util.Set;
 
 import org.junit.Test;
 
-
-/**
- */
 public class MapBackedSetTest {
 
     @Test

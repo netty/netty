@@ -21,8 +21,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPipelineFactory;
 import io.netty.channel.socket.ClientSocketChannelFactory;
 
-/**
- */
 public class HexDumpProxyPipelineFactory implements ChannelPipelineFactory {
 
     private final ClientSocketChannelFactory cf;

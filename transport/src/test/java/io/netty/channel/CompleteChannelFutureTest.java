@@ -23,9 +23,6 @@ import java.util.concurrent.TimeUnit;
 import org.junit.Before;
 import org.junit.Test;
 
-
-/**
- */
 public class CompleteChannelFutureTest {
 
     private final Channel channel = createMock(Channel.class);

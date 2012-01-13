@@ -41,8 +41,6 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.DeadLockProofWorker;
 
-/**
- */
 class NioServerSocketPipelineSink extends AbstractChannelSink {
 
     static final InternalLogger logger =

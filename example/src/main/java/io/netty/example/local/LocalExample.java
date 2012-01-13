@@ -33,8 +33,6 @@ import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.logging.InternalLogLevel;
 
-/**
- */
 public class LocalExample {
     public static void main(String[] args) throws Exception {
         // Address to bind on / connect to.

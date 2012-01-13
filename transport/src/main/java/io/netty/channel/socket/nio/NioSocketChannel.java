@@ -35,8 +35,6 @@ import io.netty.channel.MessageEvent;
 import io.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import io.netty.util.internal.ThreadLocalBoolean;
 
-/**
- */
 class NioSocketChannel extends AbstractChannel
                                 implements io.netty.channel.socket.SocketChannel {
 

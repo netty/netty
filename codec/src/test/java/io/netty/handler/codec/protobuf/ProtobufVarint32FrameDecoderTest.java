@@ -25,8 +25,6 @@ import io.netty.handler.codec.embedder.DecoderEmbedder;
 import org.junit.Before;
 import org.junit.Test;
 
-/**
- */
 public class ProtobufVarint32FrameDecoderTest {
 
     private DecoderEmbedder<ChannelBuffer> embedder;

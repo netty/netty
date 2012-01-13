@@ -35,8 +35,6 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
 
-/**
- */
 final class OioDatagramChannel extends AbstractChannel
                                 implements DatagramChannel {
 

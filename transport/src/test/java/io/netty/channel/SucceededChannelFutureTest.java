@@ -20,9 +20,6 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-
-/**
- */
 public class SucceededChannelFutureTest {
     @Test
     public void testConstantProperties() {

@@ -22,8 +22,6 @@ import io.netty.channel.ExceptionEvent;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelUpstreamHandler;
 
-/**
- */
 public class QuoteOfTheMomentServerHandler extends SimpleChannelUpstreamHandler {
 
     private static final Random random = new Random();

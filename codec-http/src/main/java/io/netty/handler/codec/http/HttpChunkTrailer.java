@@ -36,7 +36,7 @@ public interface HttpChunkTrailer extends HttpChunk {
      * header name, the first value is returned.
      *
      * @return the header value or {@code null} if there is no such header
- */
+     */
     String getHeader(String name);
 
     /**

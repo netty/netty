@@ -25,8 +25,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.embedder.DecoderEmbedder;
 import org.junit.Test;
 
-/**
- */
 public class ReplayingDecoderTest {
 
     @Test

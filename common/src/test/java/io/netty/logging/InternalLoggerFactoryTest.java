@@ -22,9 +22,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-
-/**
- */
 public class InternalLoggerFactoryTest {
     private static final Exception e = new Exception();
     private InternalLoggerFactory oldLoggerFactory;

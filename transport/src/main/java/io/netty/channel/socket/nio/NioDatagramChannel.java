@@ -315,7 +315,7 @@ final class NioDatagramChannel extends AbstractChannel
 
     /**
      * WriteTask is a simple runnable performs writes by delegating the {@link NioDatagramWorker}.
- */
+     */
     private final class WriteTask implements Runnable {
         WriteTask() {
         }

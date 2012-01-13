@@ -29,8 +29,6 @@ import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.execution.ExecutionHandler;
 
-/**
- */
 public class LocalServerPipelineFactory implements ChannelPipelineFactory {
 
     private final ExecutionHandler executionHandler;

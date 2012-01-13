@@ -25,8 +25,6 @@ import java.nio.channels.WritableByteChannel;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.FileRegion;
 
-/**
- */
 final class SocketSendBufferPool {
 
     private static final SendBuffer EMPTY_BUFFER = new EmptySendBuffer();

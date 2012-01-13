@@ -21,8 +21,6 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import io.netty.channel.socket.oio.OioServerSocketChannelFactory;
 
-/**
- */
 public class NioOioSocketObjectStreamEchoTest extends AbstractSocketObjectStreamEchoTest {
 
     @Override

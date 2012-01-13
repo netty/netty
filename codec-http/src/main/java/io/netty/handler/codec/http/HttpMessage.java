@@ -40,7 +40,7 @@ public interface HttpMessage {
      * value is returned.
      *
      * @return the header value or {@code null} if there is no such header
- */
+     */
     String getHeader(String name);
 
     /**

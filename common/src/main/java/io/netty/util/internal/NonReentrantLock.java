@@ -20,8 +20,6 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 
-/**
- */
 public final class NonReentrantLock extends AbstractQueuedSynchronizer
                              implements Lock {
 

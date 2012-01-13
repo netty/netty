@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.Selector;
 
-/**
- */
 final class SelectorUtil {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SelectorUtil.class);

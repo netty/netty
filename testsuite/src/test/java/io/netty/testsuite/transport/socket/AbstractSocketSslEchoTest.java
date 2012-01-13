@@ -64,9 +64,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-
-/**
- */
 public abstract class AbstractSocketSslEchoTest {
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(AbstractSocketSslEchoTest.class);

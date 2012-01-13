@@ -22,8 +22,6 @@ import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import io.netty.testsuite.transport.socket.AbstractSocketEchoTest;
 
-/**
- */
 public class NioNioSocketEchoTest extends AbstractSocketEchoTest {
 
     @Override

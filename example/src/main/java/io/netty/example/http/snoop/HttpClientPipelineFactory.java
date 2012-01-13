@@ -28,8 +28,6 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.logging.InternalLogLevel;
 
-/**
- */
 public class HttpClientPipelineFactory implements ChannelPipelineFactory {
 
     private final boolean ssl;

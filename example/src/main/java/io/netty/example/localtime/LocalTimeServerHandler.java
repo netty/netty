@@ -35,8 +35,6 @@ import io.netty.example.localtime.LocalTimeProtocol.LocalTimes;
 import io.netty.example.localtime.LocalTimeProtocol.Location;
 import io.netty.example.localtime.LocalTimeProtocol.Locations;
 
-/**
- */
 public class LocalTimeServerHandler extends SimpleChannelUpstreamHandler {
 
     private static final Logger logger = Logger.getLogger(

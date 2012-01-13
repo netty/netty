@@ -30,8 +30,6 @@ import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.MessageEvent;
 import io.netty.util.internal.DeadLockProofWorker;
 
-/**
- */
 class OioDatagramPipelineSink extends AbstractChannelSink {
 
     private final Executor workerExecutor;

@@ -31,7 +31,6 @@ public class DiscardServer {
 
     public static void main(String[] args) throws Exception {
         new DiscardServer().run();
-
     }
 
     public void run() {

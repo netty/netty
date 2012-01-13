@@ -31,9 +31,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import io.netty.util.SocketAddresses;
 import org.junit.Test;
 
-
-/**
- */
 public class NioServerSocketShutdownTimeTest {
 
     @Test(timeout = 10000)

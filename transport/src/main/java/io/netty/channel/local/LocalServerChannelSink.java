@@ -27,8 +27,6 @@ import io.netty.channel.ChannelState;
 import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.MessageEvent;
 
-/**
- */
 final class LocalServerChannelSink extends AbstractChannelSink {
 
     LocalServerChannelSink() {

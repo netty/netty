@@ -279,7 +279,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
 
     private final class ChildExecutor implements Executor, Runnable {
         private final Queue<Runnable> tasks = QueueFactory.createQueue(Runnable.class);
-        private final AtomicBoolean isRunning = new AtomicBoolean(false);
+        private final AtomicBoolean isRunning = new AtomicBoolean();
         
         ChildExecutor() {
         }

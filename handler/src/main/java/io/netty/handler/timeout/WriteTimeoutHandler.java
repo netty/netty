@@ -189,8 +189,6 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
         }
     }
 
-    /**
-     */
     private static final class TimeoutCanceller implements ChannelFutureListener {
         private final Timeout timeout;
 

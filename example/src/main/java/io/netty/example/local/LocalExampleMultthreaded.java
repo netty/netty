@@ -32,8 +32,6 @@ import io.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.logging.InternalLogLevel;
 
-/**
- */
 public class LocalExampleMultthreaded {
 
     public static void main(String[] args) throws Exception {

@@ -30,8 +30,6 @@ import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelUpstreamHandler;
 import io.netty.channel.socket.ClientSocketChannelFactory;
 
-/**
- */
 public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
 
     private final ClientSocketChannelFactory cf;

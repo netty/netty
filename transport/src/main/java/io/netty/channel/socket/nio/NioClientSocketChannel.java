@@ -28,8 +28,6 @@ import io.netty.channel.ChannelSink;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
-/**
- */
 final class NioClientSocketChannel extends NioSocketChannel {
 
     private static final InternalLogger logger =

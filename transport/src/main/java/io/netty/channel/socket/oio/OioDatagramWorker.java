@@ -28,8 +28,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ReceiveBufferSizePredictor;
 
-/**
- */
 class OioDatagramWorker implements Runnable {
 
     private final OioDatagramChannel channel;

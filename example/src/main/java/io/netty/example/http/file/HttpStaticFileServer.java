@@ -21,8 +21,6 @@ import java.util.concurrent.Executors;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
-/**
- */
 public class HttpStaticFileServer {
     public static void main(String[] args) {
         // Configure the server.

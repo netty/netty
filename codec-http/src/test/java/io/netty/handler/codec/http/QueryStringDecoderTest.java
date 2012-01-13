@@ -22,8 +22,6 @@ import io.netty.util.CharsetUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
-/**
- */
 public class QueryStringDecoderTest {
 
     @Test

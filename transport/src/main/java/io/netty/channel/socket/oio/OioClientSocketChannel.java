@@ -25,8 +25,6 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 
-/**
- */
 final class OioClientSocketChannel extends OioSocketChannel {
 
     volatile PushbackInputStream in;

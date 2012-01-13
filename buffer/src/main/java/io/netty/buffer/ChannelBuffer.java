@@ -130,6 +130,8 @@ import java.nio.charset.UnsupportedCharsetException;
  *      +-------------------+------------------+------------------+
  *      |                   |                  |                  |
  *      0      <=      readerIndex   <=   writerIndex    <=    capacity
+ *
+ *
  *  AFTER discardReadBytes()
  *
  *      +------------------+--------------------------------------+
@@ -160,6 +162,8 @@ import java.nio.charset.UnsupportedCharsetException;
  *      +-------------------+------------------+------------------+
  *      |                   |                  |                  |
  *      0      <=      readerIndex   <=   writerIndex    <=    capacity
+ *
+ *
  *  AFTER clear()
  *
  *      +---------------------------------------------------------+
@@ -1352,7 +1356,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * @throws IndexOutOfBoundsException
      *         if {@code src.readableBytes} is greater than
      *            {@code this.writableBytes}
- */
+     */
     void writeBytes(ChannelBuffer src);
 
     /**
@@ -1606,7 +1610,7 @@ public interface ChannelBuffer extends Comparable<ChannelBuffer> {
      * This method is identical to {@code buf.copy(buf.readerIndex(), buf.readableBytes())}.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
- */
+     */
     ChannelBuffer copy();
 
     /**

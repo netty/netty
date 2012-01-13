@@ -21,10 +21,8 @@ import java.util.concurrent.BlockingQueue;
 import io.netty.util.UnsafeDetectUtil;
 
 /**
- * This factory should be used to create the "optimal" {@link BlockingQueue} instance for the running JVM. 
- *
-
-
+ * This factory should be used to create the "optimal" {@link BlockingQueue}
+ * instance for the running JVM.
  */
 public final class QueueFactory {
     

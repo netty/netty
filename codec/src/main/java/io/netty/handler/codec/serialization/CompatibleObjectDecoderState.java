@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.serialization;
 
-/**
- */
 enum CompatibleObjectDecoderState {
     READ_HEADER,
     READ_OBJECT,

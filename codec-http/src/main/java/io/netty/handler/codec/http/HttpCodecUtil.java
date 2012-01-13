@@ -20,8 +20,6 @@ import java.util.List;
 
 import io.netty.util.CharsetUtil;
 
-/**
- */
 final class HttpCodecUtil {
     //space ' '
     static final byte SP = 32;

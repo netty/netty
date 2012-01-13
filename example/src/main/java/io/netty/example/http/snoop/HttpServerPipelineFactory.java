@@ -25,8 +25,6 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.logging.InternalLogLevel;
 
-/**
- */
 public class HttpServerPipelineFactory implements ChannelPipelineFactory {
     @Override
     public ChannelPipeline getPipeline() throws Exception {

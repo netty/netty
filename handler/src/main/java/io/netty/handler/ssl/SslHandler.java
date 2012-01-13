@@ -414,7 +414,7 @@ public class SslHandler extends FrameDecoder
     /**
      * Enables or disables the automatic handshake once the {@link Channel} is connected. The value will only have affect if its set before the 
      * {@link Channel} is connected.
- */
+     */
     public void setIssueHandshake(boolean issueHandshake) {
         this.issueHandshake = issueHandshake;
     }

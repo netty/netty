@@ -18,8 +18,6 @@ package io.netty.channel.socket.nio;
 import java.lang.ref.SoftReference;
 import java.nio.ByteBuffer;
 
-/**
- */
 final class SocketReceiveBufferPool {
 
     private static final int POOL_SIZE = 8;

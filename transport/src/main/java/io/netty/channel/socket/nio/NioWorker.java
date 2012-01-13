@@ -49,8 +49,6 @@ import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.DeadLockProofWorker;
 import io.netty.util.internal.QueueFactory;
 
-/**
- */
 class NioWorker implements Runnable {
 
     private static final InternalLogger logger =

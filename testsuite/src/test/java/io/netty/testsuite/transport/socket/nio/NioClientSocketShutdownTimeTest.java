@@ -30,8 +30,6 @@ import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import io.netty.testsuite.util.DummyHandler;
 import io.netty.util.SocketAddresses;
 
-/**
- */
 public class NioClientSocketShutdownTimeTest {
 
     @Test

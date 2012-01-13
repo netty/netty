@@ -27,8 +27,6 @@ import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
-/**
- */
 public class HttpClientPipelineFactory implements ChannelPipelineFactory {
     private final boolean ssl;
 

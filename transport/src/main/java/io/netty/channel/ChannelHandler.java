@@ -218,7 +218,7 @@ public interface ChannelHandler {
      * <p>
      * This annotation is provided for documentation purpose, just like
      * <a href="http://www.javaconcurrencyinpractice.com/annotations/doc/">the JCIP annotations</a>.
- */
+     */
     @Inherited
     @Documented
     @Target(ElementType.TYPE)

@@ -20,9 +20,6 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-
-/**
- */
 public class Log4JLoggerTest {
     private static final Exception e = new Exception();
 
