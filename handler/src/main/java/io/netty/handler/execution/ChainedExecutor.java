@@ -16,7 +16,6 @@
 package io.netty.handler.execution;
 
 
-import io.netty.handler.execution.filter.ChannelEventRunnableFilter;
 import io.netty.util.ExternalResourceReleasable;
 import io.netty.util.internal.ExecutorUtil;
 

@@ -22,7 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 /**
  * A {@link ChannelEventRunnable} which sends the specified {@link ChannelEvent} downstream.
  */
-public final class ChannelDownstreamEventRunnable extends ChannelEventRunnable {
+public class ChannelDownstreamEventRunnable extends ChannelEventRunnable {
 
     public ChannelDownstreamEventRunnable(ChannelHandlerContext ctx, ChannelEvent e) {
         super(ctx, e);

@@ -13,17 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.execution.filter;
+package io.netty.handler.execution;
 
-import java.util.concurrent.Executor;
+/**
+ * {@link ChannelEventRunnableFilter} implementation which matches {@link ChannelDownstreamEventRunnable}
+ *
+ */
+public class ChannelDownstreamEventRunnableFilter implements ChannelEventRunnableFilter {
 
-import io.netty.handler.execution.ChannelEventRunnable;
+    @Override
+    public boolean filter(ChannelEventRunnable event) {
+        return event instanceof ChannelDownstreamEventRunnable;
+    }
 
-public interface ChannelEventRunnableFilter {
-    
-    /**
-     * Return <code>true</code> if the {@link ChannelEventRunnable} should get handled by the {@link Executor}
-     * 
-     */
-    boolean filter(ChannelEventRunnable event);
 }

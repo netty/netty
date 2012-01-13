@@ -25,7 +25,7 @@ import io.netty.channel.ChannelHandlerContext;
  * Most users will not see this type at all because it is used by
  * {@link Executor} implementers only
  */
-public final class ChannelUpstreamEventRunnable extends ChannelEventRunnable {
+public class ChannelUpstreamEventRunnable extends ChannelEventRunnable {
 
 
     /**
