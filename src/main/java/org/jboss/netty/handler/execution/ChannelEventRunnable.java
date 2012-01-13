@@ -15,21 +15,14 @@
  */
 package org.jboss.netty.handler.execution;
 
-import java.util.concurrent.Executor;
-
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.util.EstimatableObjectWrapper;
 
-/**
- * a {@link Runnable} which sends the specified {@link ChannelEvent} upstream.
- * Most users will not see this type at all because it is used by
- * {@link Executor} implementors only
- */
-public class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper {
-
-    private final ChannelHandlerContext ctx;
-    private final ChannelEvent e;
+public abstract class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper {
+    
+    protected final ChannelHandlerContext ctx;
+    protected final ChannelEvent e;
     int estimatedSize;
 
     /**
@@ -54,13 +47,6 @@ public class ChannelEventRunnable implements Runnable, EstimatableObjectWrapper 
      */
     public ChannelEvent getEvent() {
         return e;
-    }
-
-    /**
-     * Sends the event upstream.
-     */
-    public void run() {
-        ctx.sendUpstream(e);
     }
 
     public Object unwrap() {

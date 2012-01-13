@@ -332,6 +332,9 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
 
     @Override
     public void execute(Runnable command) {
+        if (command instanceof ChannelDownstreamEventRunnable) {
+            throw new RejectedExecutionException("command must be enclosed with an upstream event.");
+        }
         if (!(command instanceof ChannelEventRunnable)) {
             command = new MemoryAwareRunnable(command);
         }
@@ -468,8 +471,8 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
      * make sure important tasks are not counted.
      */
     protected boolean shouldCount(Runnable task) {
-        if (task instanceof ChannelEventRunnable) {
-            ChannelEventRunnable r = (ChannelEventRunnable) task;
+        if (task instanceof ChannelUpstreamEventRunnable) {
+            ChannelUpstreamEventRunnable r = (ChannelUpstreamEventRunnable) task;
             ChannelEvent e = r.getEvent();
             if (e instanceof WriteCompletionEvent) {
                 return false;
@@ -494,10 +497,6 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
     }
 
     private static final class NewThreadRunsPolicy implements RejectedExecutionHandler {
-        NewThreadRunsPolicy() {
-            super();
-        }
-
         public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
             try {
                 final Thread t = new Thread(r, "Temporary task executor");
@@ -530,7 +529,6 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
         private int waiters;
 
         Limiter(long limit) {
-            super();
             this.limit = limit;
         }
 
@@ -540,7 +538,7 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
                 try {
                     wait();
                 } catch (InterruptedException e) {
-                    // Ignore
+                    Thread.currentThread().interrupt();
                 } finally {
                     waiters --;
                 }

@@ -283,9 +283,6 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
         private final Queue<Runnable> tasks = QueueFactory.createQueue(Runnable.class);
         private final AtomicBoolean isRunning = new AtomicBoolean();
         
-        ChildExecutor() {
-        }
-
         public void execute(Runnable command) {
             // TODO: What todo if the add return false ?
             tasks.add(command);

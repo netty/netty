@@ -13,14 +13,25 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package org.jboss.netty.handler.execution;
+
+
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
- * {@link java.util.concurrent.Executor}-based implementation of various
- * thread models that separate business logic from I/O threads
- *
- * @apiviz.exclude ^java\.lang\.
- * @apiviz.exclude \.netty\.channel\.
- * @apiviz.exclude \.ExternalResourceReleasable$
- * @apiviz.exclude \.Channel[A-Za-z]*EventRunnable[A-Za-z]*$
+ * A {@link ChannelEventRunnable} which sends the specified {@link ChannelEvent} downstream.
  */
-package org.jboss.netty.handler.execution;
+public class ChannelDownstreamEventRunnable extends ChannelEventRunnable {
+
+    public ChannelDownstreamEventRunnable(ChannelHandlerContext ctx, ChannelEvent e) {
+        super(ctx, e);
+    }
+
+    /**
+     * Send the {@link ChannelEvent} downstream
+     */
+    public void run() {
+        ctx.sendDownstream(e);
+    }
+}

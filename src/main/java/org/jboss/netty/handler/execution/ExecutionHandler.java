@@ -22,6 +22,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -29,7 +30,6 @@ import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.internal.ExecutorUtil;
 
@@ -109,16 +109,26 @@ import org.jboss.netty.util.internal.ExecutorUtil;
 public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler, ExternalResourceReleasable {
 
     private final Executor executor;
+    private final boolean handleDownstream;
 
     /**
      * Creates a new instance with the specified {@link Executor}.
      * Specify an {@link OrderedMemoryAwareThreadPoolExecutor} if unsure.
      */
     public ExecutionHandler(Executor executor) {
+        this(executor, false);
+    }
+
+    /**
+     * Creates a new instance with the specified {@link Executor}.
+     * Specify an {@link OrderedMemoryAwareThreadPoolExecutor} if unsure.
+     */
+    public ExecutionHandler(Executor executor, boolean handleDownstream) {
         if (executor == null) {
             throw new NullPointerException("executor");
         }
         this.executor = executor;
+        this.handleDownstream = handleDownstream;
     }
 
     /**
@@ -133,16 +143,34 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
      * and wait for its termination.
      */
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(getExecutor());
+        Executor executor = getExecutor();
+        ExecutorUtil.terminate(executor);
+        if (executor instanceof ExternalResourceReleasable) {
+            ((ExternalResourceReleasable) executor).releaseExternalResources();
+        }
     }
 
     public void handleUpstream(
             ChannelHandlerContext context, ChannelEvent e) throws Exception {
-        executor.execute(new ChannelEventRunnable(context, e));
+        executor.execute(new ChannelUpstreamEventRunnable(context, e));
     }
 
     public void handleDownstream(
             ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+        // check if the read was suspend
+        if (!handleReadSuspend(ctx, e)) {
+            if (handleDownstream) {
+                executor.execute(new ChannelDownstreamEventRunnable(ctx, e));
+            } else {
+                ctx.sendDownstream(e);
+            }
+        }
+    }
+
+    /**
+     * Handle suspended reads
+     */
+    protected boolean handleReadSuspend(ChannelHandlerContext ctx, ChannelEvent e) {
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent cse = (ChannelStateEvent) e;
             if (cse.getState() == ChannelState.INTEREST_OPS &&
@@ -154,11 +182,11 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
                     // Drop the request silently if MemoryAwareThreadPool has
                     // set the flag.
                     e.getFuture().setSuccess();
-                    return;
+                    return true;
                 }
             }
         }
 
-        ctx.sendDownstream(e);
+        return false;
     }
 }
