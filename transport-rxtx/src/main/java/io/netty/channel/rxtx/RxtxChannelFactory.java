@@ -27,22 +27,22 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.util.internal.ExecutorUtil;
 
 /**
- * A {@link ChannelFactory} for creating {@link RRXTXChannel} instances.
+ * A {@link ChannelFactory} for creating {@link RxtxChannel} instances.
  */
-public class RRXTXChannelFactory implements ChannelFactory {
+public class RxtxChannelFactory implements ChannelFactory {
 
     private final ChannelGroup channels = new DefaultChannelGroup("RXTXChannelFactory-ChannelGroup");
 
     private final ExecutorService executor;
 
-    public RRXTXChannelFactory(ExecutorService executor) {
+    public RxtxChannelFactory(ExecutorService executor) {
         this.executor = executor;
     }
 
     @Override
     public Channel newChannel(final ChannelPipeline pipeline) {
-        RRXTXChannelSink sink = new RRXTXChannelSink(executor);
-        RRXTXChannel channel = new RRXTXChannel(null, this, pipeline, sink);
+        RxtxChannelSink sink = new RxtxChannelSink(executor);
+        RxtxChannel channel = new RxtxChannel(null, this, pipeline, sink);
         sink.setChannel(channel);
         channels.add(channel);
         return channel;

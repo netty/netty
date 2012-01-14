@@ -48,17 +48,17 @@ import io.netty.channel.UpstreamMessageEvent;
 /**
  * A {@link ChannelSink} implementation of the RXTX support for Netty.
  */
-public class RRXTXChannelSink extends AbstractChannelSink {
+public class RxtxChannelSink extends AbstractChannelSink {
 
     private static class WriteRunnable implements Runnable {
 
         private final DefaultChannelFuture future;
 
-        private final RRXTXChannelSink channelSink;
+        private final RxtxChannelSink channelSink;
 
         private final ChannelBuffer message;
 
-        public WriteRunnable(final DefaultChannelFuture future, final RRXTXChannelSink channelSink,
+        public WriteRunnable(final DefaultChannelFuture future, final RxtxChannelSink channelSink,
                              final ChannelBuffer message) {
             this.future = future;
             this.channelSink = channelSink;
@@ -83,9 +83,9 @@ public class RRXTXChannelSink extends AbstractChannelSink {
 
         private final DefaultChannelFuture channelFuture;
 
-        private final RRXTXChannelSink channelSink;
+        private final RxtxChannelSink channelSink;
 
-        ConnectRunnable(final DefaultChannelFuture channelFuture, final RRXTXChannelSink channelSink) {
+        ConnectRunnable(final DefaultChannelFuture channelFuture, final RxtxChannelSink channelSink) {
             this.channelFuture = channelFuture;
             this.channelSink = channelSink;
         }
@@ -145,9 +145,9 @@ public class RRXTXChannelSink extends AbstractChannelSink {
 
         private final DefaultChannelFuture channelFuture;
 
-        private final RRXTXChannelSink channelSink;
+        private final RxtxChannelSink channelSink;
 
-        public DisconnectRunnable(final DefaultChannelFuture channelFuture, final RRXTXChannelSink channelSink) {
+        public DisconnectRunnable(final DefaultChannelFuture channelFuture, final RxtxChannelSink channelSink) {
             this.channelFuture = channelFuture;
             this.channelSink = channelSink;
         }
@@ -203,20 +203,20 @@ public class RRXTXChannelSink extends AbstractChannelSink {
 
     private final Executor executor;
 
-    final RRXTXChannelConfig config;
+    final RxtxChannelConfig config;
 
-    RRXTXChannel channel;
+    RxtxChannel channel;
 
-    public RRXTXChannelSink(final Executor executor) {
+    public RxtxChannelSink(final Executor executor) {
         this.executor = executor;
-        config = new RRXTXChannelConfig();
+        config = new RxtxChannelConfig();
     }
 
     public boolean isConnected() {
         return inputStream != null && outputStream != null;
     }
 
-    public RRXTXDeviceAddress getRemoteAddress() {
+    public RxtxDeviceAddress getRemoteAddress() {
         return remoteAddress;
     }
 
@@ -228,15 +228,15 @@ public class RRXTXChannelSink extends AbstractChannelSink {
         return config;
     }
 
-    public void setChannel(final RRXTXChannel channel) {
+    public void setChannel(final RxtxChannel channel) {
         this.channel = channel;
     }
 
     private static class RXTXSerialPortEventListener implements SerialPortEventListener {
 
-        private final RRXTXChannelSink channelSink;
+        private final RxtxChannelSink channelSink;
 
-        public RXTXSerialPortEventListener(final RRXTXChannelSink channelSink) {
+        public RXTXSerialPortEventListener(final RxtxChannelSink channelSink) {
             this.channelSink = channelSink;
         }
 
@@ -268,7 +268,7 @@ public class RRXTXChannelSink extends AbstractChannelSink {
         }
     }
 
-    RRXTXDeviceAddress remoteAddress;
+    RxtxDeviceAddress remoteAddress;
 
     BufferedOutputStream outputStream;
 
@@ -302,7 +302,7 @@ public class RRXTXChannelSink extends AbstractChannelSink {
 
                 case CONNECTED:
                     if (value != null) {
-                        remoteAddress = (RRXTXDeviceAddress) value;
+                        remoteAddress = (RxtxDeviceAddress) value;
                         executor.execute(new ConnectRunnable((DefaultChannelFuture) future, this));
                     } else {
                         executor.execute(new DisconnectRunnable((DefaultChannelFuture) future, this));

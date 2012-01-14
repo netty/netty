@@ -29,26 +29,26 @@ import io.netty.channel.ChannelSink;
 /**
  * A channel to a serial device using the RXTX library.
  */
-public class RRXTXChannel extends AbstractChannel {
+public class RxtxChannel extends AbstractChannel {
 
-    RRXTXChannel(final Channel parent, final ChannelFactory factory, final ChannelPipeline pipeline,
-                 final ChannelSink sink) {
+    RxtxChannel(final Channel parent, final ChannelFactory factory, final ChannelPipeline pipeline,
+                final ChannelSink sink) {
         super(parent, factory, pipeline, sink);
     }
 
     @Override
     public ChannelConfig getConfig() {
-        return ((RRXTXChannelSink) getPipeline().getSink()).getConfig();
+        return ((RxtxChannelSink) getPipeline().getSink()).getConfig();
     }
 
     @Override
     public boolean isBound() {
-        return ((RRXTXChannelSink) getPipeline().getSink()).isBound();
+        return ((RxtxChannelSink) getPipeline().getSink()).isBound();
     }
 
     @Override
     public boolean isConnected() {
-        return ((RRXTXChannelSink) getPipeline().getSink()).isConnected();
+        return ((RxtxChannelSink) getPipeline().getSink()).isConnected();
     }
 
     @Override
@@ -58,7 +58,7 @@ public class RRXTXChannel extends AbstractChannel {
 
     @Override
     public SocketAddress getRemoteAddress() {
-        return ((RRXTXChannelSink) getPipeline().getSink()).getRemoteAddress();
+        return ((RxtxChannelSink) getPipeline().getSink()).getRemoteAddress();
     }
 
     @Override
