@@ -32,8 +32,15 @@ import java.util.concurrent.Executors;
  */
 public class SctpClient {
 
-    public static void main(String[] args) throws Exception {
+    private final String host;
+    private final int port;
+    
+    public SctpClient(String host, int port) {
+        this.host = host;
+        this.port = port;
+    }
 
+    public void run() {
         // Configure the client.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new SctpClientSocketChannelFactory(
@@ -57,14 +64,31 @@ public class SctpClient {
         bootstrap.setOption("sctpNoDelay", true);
 
         // Start the connection attempt.
-        ChannelFuture future = bootstrap.connect(new InetSocketAddress("localhost", 2955), new InetSocketAddress("localhost", 2956));
+        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
 
         // Wait until the connection is closed or the connection attempt fails.
         future.getChannel().getCloseFuture().awaitUninterruptibly();
 
-       //  Please check SctpClientHandler to see, how echo message is sent & received
+        //  Please check SctpClientHandler to see, how echo message is sent & received
 
         // Shut down thread pools to exit.
         bootstrap.releaseExternalResources();
+    }
+
+    public static void main(String[] args) throws Exception {
+        // Print usage if no argument is specified.
+        if (args.length != 2) {
+            System.err.println(
+                    "Usage: " + SctpClient.class.getSimpleName() +
+                    " <host> <port>");
+            return;
+        }
+
+        // Parse options.
+        final String host = args[0];
+        final int port = Integer.parseInt(args[1]);
+        final int firstMessageSize;
+
+        new SctpClient(host, port).run();
     }
 }

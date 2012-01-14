@@ -30,8 +30,14 @@ import java.util.concurrent.Executors;
  * Echoes back any received data from a client.
  */
 public class SctpServer {
+    
+    private final int port;
+    
+    public SctpServer(int port) {
+        this.port = port;
+    }
 
-    public static void main(String[] args) throws Exception {
+    public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new SctpServerSocketChannelFactory(
@@ -54,6 +60,16 @@ public class SctpServer {
         bootstrap.setOption("child.sctpNoDelay", true);
 
         // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress("localhost", 2955));
+        bootstrap.bind(new InetSocketAddress(port));
+    }
+    
+    public static void main(String[] args) throws Exception {
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = 2955;
+        }
+        new SctpServer(port).run();
     }
 }

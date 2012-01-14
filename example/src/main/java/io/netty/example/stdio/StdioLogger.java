@@ -39,10 +39,9 @@ import io.netty.handler.codec.string.StringEncoder;
  */
 public class StdioLogger {
 
-    private static volatile boolean running = true;
+    private volatile boolean running = true;
 
-    public static void main(String[] args) {
-
+    public void run() {
         final ExecutorService executorService = Executors.newCachedThreadPool();
         final ClientBootstrap bootstrap = new ClientBootstrap(new IoStreamChannelFactory(executorService));
 
@@ -64,7 +63,7 @@ public class StdioLogger {
                             e.getChannel().write("Message received: " + message);
                         }
                         if ("exit".equals(message)) {
-                            StdioLogger.running = false;
+                            running = false;
                         }
                         super.messageReceived(ctx, e);
                     }
@@ -93,7 +92,9 @@ public class StdioLogger {
 
         // Shut down all thread pools to exit.
         bootstrap.releaseExternalResources();
-
     }
 
+    public static void main(String[] args) {
+        new StdioLogger().run();
+    }
 }

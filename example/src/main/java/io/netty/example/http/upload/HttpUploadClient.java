@@ -27,43 +27,43 @@ import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.handler.codec.http.CookieEncoder;
 import io.netty.handler.codec.http.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DiskAttribute;
 import io.netty.handler.codec.http.DiskFileUpload;
-import io.netty.handler.codec.http.InterfaceHttpData;
-import io.netty.handler.codec.http.HttpPostRequestEncoder;
 import io.netty.handler.codec.http.HttpDataFactory;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpPostRequestEncoder;
+import io.netty.handler.codec.http.HttpPostRequestEncoder.ErrorDataEncoderException;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.HttpPostRequestEncoder.ErrorDataEncoderException;
+import io.netty.handler.codec.http.InterfaceHttpData;
+import io.netty.handler.codec.http.QueryStringEncoder;
 
 /**
  */
 public class HttpUploadClient {
+    
+    private final String baseUri;
+    private final String filePath;
+    
+    public HttpUploadClient(String baseUri, String filePath) {
+        this.baseUri = baseUri;
+        this.filePath = filePath;
+    }
 
-    public static void main(String[] args) {
-        if (args.length != 2) {
-            System.err.println(
-                    "Usage: " + HttpUploadClient.class.getSimpleName() +
-                    " baseURI Filepath");
-            return;
-        }
-
-        String baseURI = args[0];
+    public void run() {
         String postSimple, postFile, get;
-        if (baseURI.endsWith("/")) {
-            postSimple = baseURI + "formpost";
-            postFile = baseURI + "formpostmultipart";
-            get = baseURI + "formget";
+        if (baseUri.endsWith("/")) {
+            postSimple = baseUri + "formpost";
+            postFile = baseUri + "formpostmultipart";
+            get = baseUri + "formget";
         } else {
-            postSimple = baseURI + "/formpost";
-            postFile = baseURI + "/formpostmultipart";
-            get = baseURI + "/formget";
+            postSimple = baseUri + "/formpost";
+            postFile = baseUri + "/formpostmultipart";
+            get = baseUri + "/formget";
         }
         URI uriSimple;
         try {
@@ -97,7 +97,7 @@ public class HttpUploadClient {
             System.err.println("Error: " + e.getMessage());
             return;
         }
-        File file = new File(args[1]);
+        File file = new File(filePath);
         if (! file.canRead()) {
             System.err.println("A correct path is needed");
             return;
@@ -135,7 +135,7 @@ public class HttpUploadClient {
             return;
         }
         // Multipart Post form: factory used
-        formpostmultipart(bootstrap, host, port, uriFile, file, factory, headers, bodylist);
+        formpostmultipart(bootstrap, host, port, uriFile, factory, headers, bodylist);
 
         // Shut down executor threads to exit.
         bootstrap.releaseExternalResources();
@@ -216,13 +216,7 @@ public class HttpUploadClient {
 
     /**
      * Standard post without multipart but already support on Factory (memory management)
-     * @param bootstrap
-     * @param host
-     * @param port
-     * @param uriSimple
-     * @param file
-     * @param factory
-     * @param headers
+     *
      * @return the list of HttpData object (attribute and file) to be reused on next post
      */
     private static List<InterfaceHttpData> formpost(ClientBootstrap bootstrap,
@@ -311,17 +305,9 @@ public class HttpUploadClient {
 
     /**
      * Multipart example
-     * @param bootstrap
-     * @param host
-     * @param port
-     * @param uriFile
-     * @param file
-     * @param factory
-     * @param headers
-     * @param bodylist
      */
     private static void formpostmultipart(ClientBootstrap bootstrap, String host, int port,
-            URI uriFile, File file, HttpDataFactory factory,
+            URI uriFile, HttpDataFactory factory,
             List<Entry<String, String>> headers, List<InterfaceHttpData> bodylist) {
         // XXX /formpostmultipart
         // Start the connection attempt.
@@ -390,12 +376,19 @@ public class HttpUploadClient {
         channel.getCloseFuture().awaitUninterruptibly();
     }
 
+    public static void main(String[] args) {
+        if (args.length != 2) {
+            System.err.println(
+                    "Usage: " + HttpUploadClient.class.getSimpleName() +
+                    " baseURI filePath");
+            return;
+        }
 
+        String baseUri = args[0];
+        String filePath = args[1];
 
-
-
-
-
+        new HttpUploadClient(baseUri, filePath).run();
+    }
 
     // use to simulate a big TEXTAREA field in a form
     private static final String textArea =
