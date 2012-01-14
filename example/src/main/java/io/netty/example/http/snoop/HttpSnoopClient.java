@@ -32,13 +32,13 @@ import io.netty.handler.codec.http.HttpVersion;
 
 /**
  * A simple HTTP client that prints out the content of the HTTP response to
- * {@link System#out} to test {@link HttpServer}.
+ * {@link System#out} to test {@link HttpSnoopServer}.
  */
-public class HttpClient {
+public class HttpSnoopClient {
 
     private final URI uri;
 
-    public HttpClient(URI uri) {
+    public HttpSnoopClient(URI uri) {
         this.uri = uri;
     }
 
@@ -68,7 +68,7 @@ public class HttpClient {
                         Executors.newCachedThreadPool()));
 
         // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new HttpClientPipelineFactory(ssl));
+        bootstrap.setPipelineFactory(new HttpSnoopClientPipelineFactory(ssl));
 
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
@@ -107,12 +107,12 @@ public class HttpClient {
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println(
-                    "Usage: " + HttpClient.class.getSimpleName() +
+                    "Usage: " + HttpSnoopClient.class.getSimpleName() +
                     " <URL>");
             return;
         }
 
         URI uri = new URI(args[0]);
-        new HttpClient(uri).run();
+        new HttpSnoopClient(uri).run();
     }
 }

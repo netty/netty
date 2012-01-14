@@ -25,11 +25,11 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * An HTTP server that sends back the content of the received HTTP request
  * in a pretty plaintext form.
  */
-public class HttpServer {
+public class HttpSnoopServer {
 
     private final int port;
 
-    public HttpServer(int port) {
+    public HttpSnoopServer(int port) {
         this.port = port;
     }
 
@@ -41,7 +41,7 @@ public class HttpServer {
                         Executors.newCachedThreadPool()));
 
         // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new HttpServerPipelineFactory());
+        bootstrap.setPipelineFactory(new HttpSnoopServerPipelineFactory());
 
         // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress(port));
@@ -54,6 +54,6 @@ public class HttpServer {
         } else {
             port = 8080;
         }
-        new HttpServer(port).run();
+        new HttpSnoopServer(port).run();
     }
 }

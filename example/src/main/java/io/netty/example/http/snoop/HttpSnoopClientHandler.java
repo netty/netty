@@ -23,7 +23,7 @@ import io.netty.handler.codec.http.HttpChunk;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.CharsetUtil;
 
-public class HttpResponseHandler extends SimpleChannelUpstreamHandler {
+public class HttpSnoopClientHandler extends SimpleChannelUpstreamHandler {
 
     private boolean readingChunks;
 

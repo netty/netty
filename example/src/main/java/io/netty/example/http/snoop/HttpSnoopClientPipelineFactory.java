@@ -28,11 +28,11 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.logging.InternalLogLevel;
 
-public class HttpClientPipelineFactory implements ChannelPipelineFactory {
+public class HttpSnoopClientPipelineFactory implements ChannelPipelineFactory {
 
     private final boolean ssl;
 
-    public HttpClientPipelineFactory(boolean ssl) {
+    public HttpSnoopClientPipelineFactory(boolean ssl) {
         this.ssl = ssl;
     }
 
@@ -59,7 +59,7 @@ public class HttpClientPipelineFactory implements ChannelPipelineFactory {
         // Uncomment the following line if you don't want to handle HttpChunks.
         //pipeline.addLast("aggregator", new HttpChunkAggregator(1048576));
 
-        pipeline.addLast("handler", new HttpResponseHandler());
+        pipeline.addLast("handler", new HttpSnoopClientHandler());
         return pipeline;
     }
 }

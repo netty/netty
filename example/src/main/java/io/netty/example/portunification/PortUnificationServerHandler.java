@@ -24,7 +24,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.example.factorial.BigIntegerDecoder;
 import io.netty.example.factorial.FactorialServerHandler;
 import io.netty.example.factorial.NumberEncoder;
-import io.netty.example.http.snoop.HttpRequestHandler;
+import io.netty.example.http.snoop.HttpSnoopServerHandler;
 import io.netty.example.securechat.SecureChatSslContextFactory;
 import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.compression.ZlibEncoder;
@@ -144,7 +144,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
         p.addLast("decoder", new HttpRequestDecoder());
         p.addLast("encoder", new HttpResponseEncoder());
         p.addLast("deflater", new HttpContentCompressor());
-        p.addLast("handler", new HttpRequestHandler());
+        p.addLast("handler", new HttpSnoopServerHandler());
         p.remove(this);
     }
 
