@@ -194,10 +194,6 @@ class NioSocketChannel extends AbstractChannel
             super();
         }
 
-        /*
-         * (non-Javadoc)
-         * @see java.util.concurrent.BlockingQueue#offer(java.lang.Object)
-         */
         public boolean offer(MessageEvent e) {
             boolean success = queue.offer(e);
             assert success;
@@ -219,10 +215,6 @@ class NioSocketChannel extends AbstractChannel
             return true;
         }
 
-        /*
-         * (non-Javadoc)
-         * @see java.util.Queue#poll()
-         */
         public MessageEvent poll() {
             MessageEvent e = queue.poll();
             if (e != null) {

@@ -16,6 +16,7 @@
 package org.jboss.netty.example.http.tunnel;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -42,18 +43,13 @@ import org.jboss.netty.logging.InternalLogLevel;
  */
 public class HttpTunnelingClientExample {
 
-    public static void main(String[] args) throws Exception {
-        if (args.length != 1) {
-            System.err.println(
-                    "Usage: " + HttpTunnelingClientExample.class.getSimpleName() +
-                    " <URL>");
-            System.err.println(
-                    "Example: " + HttpTunnelingClientExample.class.getSimpleName() +
-                    " http://localhost:8080/netty-tunnel");
-            return;
-        }
+    private final URI uri;
+    
+    public HttpTunnelingClientExample(URI uri) {
+        this.uri = uri;
+    }
 
-        URI uri = new URI(args[0]);
+    public void run() throws IOException {
         String scheme = uri.getScheme() == null? "http" : uri.getScheme();
 
         // Configure the client.
@@ -113,5 +109,20 @@ public class HttpTunnelingClientExample {
 
         // Shut down all threads.
         b.releaseExternalResources();
+    }
+
+    public static void main(String[] args) throws Exception {
+        if (args.length != 1) {
+            System.err.println(
+                    "Usage: " + HttpTunnelingClientExample.class.getSimpleName() +
+                    " <URL>");
+            System.err.println(
+                    "Example: " + HttpTunnelingClientExample.class.getSimpleName() +
+                    " http://localhost:8080/netty-tunnel");
+            return;
+        }
+
+        URI uri = new URI(args[0]);
+        new HttpTunnelingClientExample(uri).run();
     }
 }

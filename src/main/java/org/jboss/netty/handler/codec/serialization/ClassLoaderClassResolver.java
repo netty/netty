@@ -23,11 +23,6 @@ class ClassLoaderClassResolver implements ClassResolver {
         this.classLoader = classLoader;
     }
 
-    
-    /*
-     * (non-Javadoc)
-     * @see org.jboss.netty.handler.codec.serialization.ClassResolver#resolve(java.lang.String)
-     */
     public Class<?> resolve(String className) throws ClassNotFoundException {
         try {
             return classLoader.loadClass(className);

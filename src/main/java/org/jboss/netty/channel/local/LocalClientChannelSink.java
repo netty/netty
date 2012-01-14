@@ -76,8 +76,7 @@ final class LocalClientChannelSink extends AbstractChannelSink {
                 future.setSuccess();
                 break;
             }
-        }
-        else if (e instanceof MessageEvent) {
+        } else if (e instanceof MessageEvent) {
             MessageEvent event = (MessageEvent) e;
             DefaultLocalChannel channel = (DefaultLocalChannel) event.getChannel();
             boolean offered = channel.writeBuffer.offer(event);

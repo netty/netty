@@ -39,7 +39,7 @@ public final class QueueFactory {
      * @param itemClass  the {@link Class} type which will be used as {@link BlockingQueue} items
      * @return queue     the {@link BlockingQueue} implementation
      */
-    public static final <T> BlockingQueue<T> createQueue(Class<T> itemClass) {
+    public static <T> BlockingQueue<T> createQueue(Class<T> itemClass) {
         if (useUnsafe) {
             return new LinkedTransferQueue<T>();
         } else {
@@ -54,7 +54,7 @@ public final class QueueFactory {
      * @param itemClass   the {@link Class} type which will be used as {@link BlockingQueue} items
      * @return queue      the {@link BlockingQueue} implementation
      */
-    public static final <T> BlockingQueue<T> createQueue(Collection<? extends T> collection, Class<T> itemClass) {
+    public static <T> BlockingQueue<T> createQueue(Collection<? extends T> collection, Class<T> itemClass) {
         if (useUnsafe) {
             return new LinkedTransferQueue<T>(collection);
         } else {

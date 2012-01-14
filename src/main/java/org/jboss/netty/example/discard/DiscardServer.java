@@ -29,10 +29,12 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
  */
 public class DiscardServer {
 
-    public static void main(String[] args) throws Exception {
-        new DiscardServer().run();
-    }
+    private final int port;
 
+    public DiscardServer(int port) {
+        this.port = port;
+    }
+    
     public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
@@ -48,6 +50,16 @@ public class DiscardServer {
         });
 
         // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(8080));
+        bootstrap.bind(new InetSocketAddress(port));
+    }
+
+    public static void main(String[] args) throws Exception {
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = 8080;
+        }
+        new DiscardServer(port).run();
     }
 }

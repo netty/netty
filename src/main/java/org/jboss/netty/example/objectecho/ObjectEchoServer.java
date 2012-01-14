@@ -24,6 +24,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.example.echo.EchoServer;
+import org.jboss.netty.handler.codec.serialization.ClassResolvers;
 import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 
@@ -31,8 +32,14 @@ import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
  * Modification of {@link EchoServer} which utilizes Java object serialization.
  */
 public class ObjectEchoServer {
+    
+    private final int port;
 
-    public static void main(String[] args) throws Exception {
+    public ObjectEchoServer(int port) {
+        this.port = port;
+    }
+
+    public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new NioServerSocketChannelFactory(
@@ -50,6 +57,16 @@ public class ObjectEchoServer {
         });
 
         // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(8080));
+        bootstrap.bind(new InetSocketAddress(port));
+    }
+
+    public static void main(String[] args) throws Exception {
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = 8080;
+        }
+        new ObjectEchoServer(port).run();
     }
 }

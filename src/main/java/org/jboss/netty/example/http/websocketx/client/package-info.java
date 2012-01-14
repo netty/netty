@@ -16,9 +16,8 @@
 
 /**
  * <p>This is an example web service client.
- * <p>To run this example, you must first start 
- * <tt>org.jboss.netty.example.http.websocketx.server.WebSocketServer</tt>
- * <p>Next, run <tt>org.jboss.netty.example.http.websocketx.client.App</tt>. 
+ * <p>To run this example, you must first start {@link WebSocketServer} and
+ * then {@link WebSocketClient}.
  */
 package org.jboss.netty.example.http.websocketx.client;
 

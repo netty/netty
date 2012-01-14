@@ -33,28 +33,6 @@ import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
  */
 public class EchoClient {
 
-    public static void main(String[] args) throws Exception {
-        // Print usage if no argument is specified.
-        if (args.length < 2 || args.length > 3) {
-            System.err.println(
-                    "Usage: " + EchoClient.class.getSimpleName() +
-                    " <host> <port> [<first message size>]");
-            return;
-        }
-
-        // Parse options.
-        final String host = args[0];
-        final int port = Integer.parseInt(args[1]);
-        final int firstMessageSize;
-        if (args.length == 3) {
-            firstMessageSize = Integer.parseInt(args[2]);
-        } else {
-            firstMessageSize = 256;
-        }
-        
-        new EchoClient(host, port, firstMessageSize).run();
-    }
-
     private final String host;
     private final int port;
     private final int firstMessageSize;
@@ -88,5 +66,27 @@ public class EchoClient {
 
         // Shut down thread pools to exit.
         bootstrap.releaseExternalResources();
+    }
+
+    public static void main(String[] args) throws Exception {
+        // Print usage if no argument is specified.
+        if (args.length < 2 || args.length > 3) {
+            System.err.println(
+                    "Usage: " + EchoClient.class.getSimpleName() +
+                    " <host> <port> [<first message size>]");
+            return;
+        }
+
+        // Parse options.
+        final String host = args[0];
+        final int port = Integer.parseInt(args[1]);
+        final int firstMessageSize;
+        if (args.length == 3) {
+            firstMessageSize = Integer.parseInt(args[2]);
+        } else {
+            firstMessageSize = 256;
+        }
+
+        new EchoClient(host, port, firstMessageSize).run();
     }
 }

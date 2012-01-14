@@ -37,7 +37,13 @@ import org.jboss.netty.util.CharsetUtil;
  */
 public class QuoteOfTheMomentServer {
 
-    public static void main(String[] args) throws Exception {
+    private final int port;
+
+    public QuoteOfTheMomentServer(int port) {
+        this.port = port;
+    }
+
+    public void run() {
         DatagramChannelFactory f =
             new NioDatagramChannelFactory(Executors.newCachedThreadPool());
 
@@ -71,6 +77,16 @@ public class QuoteOfTheMomentServer {
                 new FixedReceiveBufferSizePredictorFactory(1024));
 
         // Bind to the port and start the service.
-        b.bind(new InetSocketAddress(8080));
+        b.bind(new InetSocketAddress(port));
+    }
+
+    public static void main(String[] args) throws Exception {
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = 8080;
+        }
+        new QuoteOfTheMomentServer(port).run();
     }
 }
