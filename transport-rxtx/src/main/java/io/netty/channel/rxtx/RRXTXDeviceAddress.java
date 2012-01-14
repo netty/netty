@@ -21,7 +21,7 @@ import java.net.SocketAddress;
  * A {@link SocketAddress} subclass to wrap the serial port address of a RXTX
  * device (e.g. COM1, /dev/ttyUSB0).
  */
-public class RXTXDeviceAddress extends SocketAddress {
+public class RRXTXDeviceAddress extends SocketAddress {
 
     private static final long serialVersionUID = -2907820090993709523L;
 
@@ -31,7 +31,7 @@ public class RXTXDeviceAddress extends SocketAddress {
      *
      * @param deviceAddress the address of the device (e.g. COM1, /dev/ttyUSB0, ...)
      */
-    public RXTXDeviceAddress(String deviceAddress) {
+    public RRXTXDeviceAddress(String deviceAddress) {
         this.deviceAddress = deviceAddress;
     }
 

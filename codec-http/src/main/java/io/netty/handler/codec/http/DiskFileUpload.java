@@ -49,17 +49,11 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
         return HttpDataType.FileUpload;
     }
 
-    /* (non-Javadoc)
-     * @see io.netty.handler.codec.http2.FileUpload#getFilename()
-     */
     @Override
     public String getFilename() {
         return filename;
     }
 
-    /* (non-Javadoc)
-     * @see io.netty.handler.codec.http2.FileUpload#setFilename(java.lang.String)
-     */
     @Override
     public void setFilename(String filename) {
         if (filename == null) {

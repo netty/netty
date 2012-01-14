@@ -114,8 +114,8 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
 
     @Override
     public String toString() {
-        return HttpPostBodyUtil.CONTENT_DISPOSITION+": "+
-            HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME+"=\"" + getName() +
+        return HttpPostBodyUtil.CONTENT_DISPOSITION + ": " +
+            HttpPostBodyUtil.FORM_DATA + "; " + HttpPostBodyUtil.NAME + "=\"" + getName() +
             "\"; " + HttpPostBodyUtil.FILENAME + "=\"" + filename + "\"\r\n" +
             HttpHeaders.Names.CONTENT_TYPE + ": " + contentType +
             (charset != null? "; " + HttpHeaders.Values.CHARSET + "=" + charset + "\r\n" : "\r\n") +

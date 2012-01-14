@@ -23,7 +23,7 @@ import io.netty.util.internal.ConversionUtil;
 /**
  * A configuration class for RXTX device connections.
  */
-public class RXTXChannelConfig extends DefaultChannelConfig {
+public class RRXTXChannelConfig extends DefaultChannelConfig {
 
     public enum Stopbits {
 
@@ -112,18 +112,18 @@ public class RXTXChannelConfig extends DefaultChannelConfig {
 
     private boolean rts;
 
-    private Stopbits stopbits = RXTXChannelConfig.Stopbits.STOPBITS_1;
+    private Stopbits stopbits = RRXTXChannelConfig.Stopbits.STOPBITS_1;
 
-    private Databits databits = RXTXChannelConfig.Databits.DATABITS_8;
+    private Databits databits = RRXTXChannelConfig.Databits.DATABITS_8;
 
-    private Paritybit paritybit = RXTXChannelConfig.Paritybit.NONE;
+    private Paritybit paritybit = RRXTXChannelConfig.Paritybit.NONE;
 
-    public RXTXChannelConfig() {
+    public RRXTXChannelConfig() {
         // work with defaults ...
     }
 
-    public RXTXChannelConfig(final int baudrate, final boolean dtr, final boolean rts, final Stopbits stopbits,
-                             final Databits databits, final Paritybit paritybit) {
+    public RRXTXChannelConfig(final int baudrate, final boolean dtr, final boolean rts, final Stopbits stopbits,
+                              final Databits databits, final Paritybit paritybit) {
         this.baudrate = baudrate;
         this.dtr = dtr;
         this.rts = rts;

@@ -106,9 +106,6 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         return new MemoryAttribute(name);
     }
 
-    /* (non-Javadoc)
-     * @see io.netty.handler.codec.http2.HttpDataFactory#createAttribute(java.lang.String, java.lang.String)
-     */
     @Override
     public Attribute createAttribute(HttpRequest request, String name, String value) {
         if (useDisk) {
@@ -135,9 +132,6 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         }
     }
 
-    /* (non-Javadoc)
-     * @see io.netty.handler.codec.http2.HttpDataFactory#createFileUpload(java.lang.String, java.lang.String, java.lang.String)
-     */
     @Override
     public FileUpload createFileUpload(HttpRequest request, String name, String filename,
             String contentType, String contentTransferEncoding, Charset charset,

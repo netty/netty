@@ -174,9 +174,6 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
 
     }
 
-    /* (non-Javadoc)
-    * @see java.lang.Comparable#compareTo(java.lang.Object)
-    */
     @Override
     public int compareTo(Object o) {
         if (o == null) {
