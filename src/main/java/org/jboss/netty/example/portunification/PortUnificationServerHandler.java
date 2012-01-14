@@ -24,7 +24,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.example.factorial.BigIntegerDecoder;
 import org.jboss.netty.example.factorial.FactorialServerHandler;
 import org.jboss.netty.example.factorial.NumberEncoder;
-import org.jboss.netty.example.http.snoop.HttpRequestHandler;
+import org.jboss.netty.example.http.snoop.HttpSnoopServerHandler;
 import org.jboss.netty.example.securechat.SecureChatSslContextFactory;
 import org.jboss.netty.handler.codec.compression.ZlibDecoder;
 import org.jboss.netty.handler.codec.compression.ZlibEncoder;
@@ -144,7 +144,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
         p.addLast("decoder", new HttpRequestDecoder());
         p.addLast("encoder", new HttpResponseEncoder());
         p.addLast("deflater", new HttpContentCompressor());
-        p.addLast("handler", new HttpRequestHandler());
+        p.addLast("handler", new HttpSnoopServerHandler());
         p.remove(this);
     }
 

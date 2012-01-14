@@ -23,7 +23,7 @@ import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.util.CharsetUtil;
 
-public class HttpResponseHandler extends SimpleChannelUpstreamHandler {
+public class HttpSnoopClientHandler extends SimpleChannelUpstreamHandler {
 
     private boolean readingChunks;
 

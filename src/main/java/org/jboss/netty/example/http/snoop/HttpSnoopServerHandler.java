@@ -44,7 +44,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.QueryStringDecoder;
 import org.jboss.netty.util.CharsetUtil;
 
-public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
+public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
 
     private HttpRequest request;
     private boolean readingChunks;
