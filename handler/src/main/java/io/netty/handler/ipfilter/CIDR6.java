@@ -93,9 +93,6 @@ public class CIDR6 extends CIDR {
         return res;
     }
 
-    /* (non-Javadoc)
-    * @see io.netty.handler.ipfilter.CIDR#contains(java.net.InetAddress)
-    */
     @Override
     public boolean contains(InetAddress inetAddress) {
         BigInteger search = ipv6AddressToBigInteger(inetAddress);

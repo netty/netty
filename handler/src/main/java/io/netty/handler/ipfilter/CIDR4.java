@@ -88,9 +88,6 @@ public class CIDR4 extends CIDR {
         return 1;
     }
 
-    /* (non-Javadoc)
-    * @see io.netty.handler.ipfilter.CIDR#contains(java.net.InetAddress)
-    */
     @Override
     public boolean contains(InetAddress inetAddress) {
         int search = ipv4AddressToInt(inetAddress);

@@ -95,9 +95,6 @@ public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, 
         }
     }
 
-    /* (non-Javadoc)
-    * @see io.netty.channel.ChannelUpstreamHandler#handleUpstream(io.netty.channel.ChannelHandlerContext, io.netty.channel.ChannelEvent)
-    */
     @Override
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
@@ -153,17 +150,11 @@ public abstract class IpFilteringHandlerImpl implements ChannelUpstreamHandler, 
         ctx.sendUpstream(e);
     }
 
-    /* (non-Javadoc)
-    * @see io.netty.handler.ipfilter.IpFilteringHandler#setIpFilterListener(io.netty.handler.ipfilter.IpFilterListener)
-    */
     @Override
     public void setIpFilterListener(IpFilterListener listener) {
         this.listener = listener;
     }
 
-    /* (non-Javadoc)
-    * @see io.netty.handler.ipfilter.IpFilteringHandler#removeIpFilterListener()
-    */
     @Override
     public void removeIpFilterListener() {
         this.listener = null;

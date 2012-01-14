@@ -369,9 +369,6 @@ public abstract class AbstractTrafficShapingHandler extends
         return trafficCounter;
     }
 
-    /* (non-Javadoc)
-     * @see io.netty.util.ExternalResourceReleasable#releaseExternalResources()
-     */
     @Override
     public void releaseExternalResources() {
         if (trafficCounter != null) {

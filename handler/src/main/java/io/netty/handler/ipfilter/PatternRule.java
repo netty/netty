@@ -81,25 +81,16 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
         return this.pattern;
     }
 
-    /* (non-Javadoc)
-    * @see io.netty.handler.ipfilter.IpFilterRule#isAllowRule()
-    */
     @Override
     public boolean isAllowRule() {
         return isAllowRule;
     }
 
-    /* (non-Javadoc)
-    * @see io.netty.handler.ipfilter.IpFilterRule#isDenyRule()
-    */
     @Override
     public boolean isDenyRule() {
         return !isAllowRule;
     }
 
-    /* (non-Javadoc)
-    * @see io.netty.handler.ipfilter.IpSet#contains(java.net.InetAddress)
-    */
     @Override
     public boolean contains(InetAddress inetAddress) {
         if (localhost) {

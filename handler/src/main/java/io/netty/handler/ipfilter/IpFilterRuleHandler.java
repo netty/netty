@@ -235,9 +235,6 @@ public class IpFilterRuleHandler extends IpFilteringHandlerImpl {
         return ipFilterRuleList.size();
     }
 
-    /* (non-Javadoc)
-    * @see io.netty.handler.ipfilter.IpFilteringHandler#accept(io.netty.channel.ChannelHandlerContext, io.netty.channel.ChannelEvent, java.net.InetSocketAddress)
-    */
     @Override
     protected boolean accept(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress)
             throws Exception {

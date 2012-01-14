@@ -27,22 +27,22 @@ import io.netty.util.internal.ExecutorUtil;
 import java.util.concurrent.ExecutorService;
 
 /**
- * A {@link io.netty.channel.ChannelFactory} for creating {@link IOStreamChannel} instances.
+ * A {@link io.netty.channel.ChannelFactory} for creating {@link IoStreamChannel} instances.
  */
-public class IOStreamChannelFactory implements ChannelFactory {
+public class IoStreamChannelFactory implements ChannelFactory {
 
     private final ChannelGroup channels = new DefaultChannelGroup("IOStreamChannelFactory-ChannelGroup");
 
     private final ExecutorService executorService;
 
-    public IOStreamChannelFactory(ExecutorService executorService) {
+    public IoStreamChannelFactory(ExecutorService executorService) {
         this.executorService = executorService;
     }
 
     @Override
     public Channel newChannel(final ChannelPipeline pipeline) {
-        IOStreamChannelSink sink = new IOStreamChannelSink(executorService);
-        IOStreamChannel channel = new IOStreamChannel(this, pipeline, sink);
+        IoStreamChannelSink sink = new IoStreamChannelSink(executorService);
+        IoStreamChannel channel = new IoStreamChannel(this, pipeline, sink);
         sink.setChannel(channel);
         channels.add(channel);
         return channel;

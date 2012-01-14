@@ -28,25 +28,25 @@ import io.netty.channel.ChannelSink;
  * A channel to an {@link java.io.InputStream} and an
  * {@link java.io.OutputStream}.
  */
-public class IOStreamChannel extends AbstractChannel {
+public class IoStreamChannel extends AbstractChannel {
 
-    IOStreamChannel(final ChannelFactory factory, final ChannelPipeline pipeline, final ChannelSink sink) {
+    IoStreamChannel(final ChannelFactory factory, final ChannelPipeline pipeline, final ChannelSink sink) {
         super(null, factory, pipeline, sink);
     }
 
     @Override
     public ChannelConfig getConfig() {
-        return ((IOStreamChannelSink) getPipeline().getSink()).getConfig();
+        return ((IoStreamChannelSink) getPipeline().getSink()).getConfig();
     }
 
     @Override
     public boolean isBound() {
-        return ((IOStreamChannelSink) getPipeline().getSink()).isBound();
+        return ((IoStreamChannelSink) getPipeline().getSink()).isBound();
     }
 
     @Override
     public boolean isConnected() {
-        return ((IOStreamChannelSink) getPipeline().getSink()).isConnected();
+        return ((IoStreamChannelSink) getPipeline().getSink()).isConnected();
     }
 
     @Override
@@ -56,7 +56,7 @@ public class IOStreamChannel extends AbstractChannel {
 
     @Override
     public SocketAddress getRemoteAddress() {
-        return ((IOStreamChannelSink) getPipeline().getSink()).getRemoteAddress();
+        return ((IoStreamChannelSink) getPipeline().getSink()).getRemoteAddress();
     }
 
     @Override

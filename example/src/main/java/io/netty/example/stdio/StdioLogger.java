@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.iostream;
+package io.netty.example.stdio;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -27,24 +27,24 @@ import io.netty.channel.ChannelPipelineFactory;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelHandler;
-import io.netty.channel.iostream.IOStreamAddress;
-import io.netty.channel.iostream.IOStreamChannelFactory;
+import io.netty.channel.iostream.IoStreamAddress;
+import io.netty.channel.iostream.IoStreamChannelFactory;
 import io.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.frame.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 
 /**
- * An example demonstrating the use of the {@link io.netty.channel.iostream.IOStreamChannel}.
+ * An example demonstrating the use of the {@link io.netty.channel.iostream.IoStreamChannel}.
  */
-public class IOStream {
+public class StdioLogger {
 
     private static volatile boolean running = true;
 
     public static void main(String[] args) {
 
         final ExecutorService executorService = Executors.newCachedThreadPool();
-        final ClientBootstrap bootstrap = new ClientBootstrap(new IOStreamChannelFactory(executorService));
+        final ClientBootstrap bootstrap = new ClientBootstrap(new IoStreamChannelFactory(executorService));
 
         // Configure the event pipeline factory.
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
@@ -64,7 +64,7 @@ public class IOStream {
                             e.getChannel().write("Message received: " + message);
                         }
                         if ("exit".equals(message)) {
-                            IOStream.running = false;
+                            StdioLogger.running = false;
                         }
                         super.messageReceived(ctx, e);
                     }
@@ -75,7 +75,7 @@ public class IOStream {
         });
 
         // Make a new connection.
-        ChannelFuture connectFuture = bootstrap.connect(new IOStreamAddress(System.in, System.out));
+        ChannelFuture connectFuture = bootstrap.connect(new IoStreamAddress(System.in, System.out));
 
         // Wait until the connection is made successfully.
         Channel channel = connectFuture.awaitUninterruptibly().getChannel();

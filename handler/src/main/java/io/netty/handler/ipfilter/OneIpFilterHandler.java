@@ -40,9 +40,6 @@ public class OneIpFilterHandler extends IpFilteringHandlerImpl {
     /** HashMap of current remote connected InetAddress */
     private final ConcurrentMap<InetAddress, Boolean> connectedSet = new ConcurrentHashMap<InetAddress, Boolean>();
 
-    /* (non-Javadoc)
-    * @see io.netty.handler.ipfilter.IpFilteringHandler#accept(io.netty.channel.ChannelHandlerContext, io.netty.channel.ChannelEvent, java.net.InetSocketAddress)
-    */
     @Override
     protected boolean accept(ChannelHandlerContext ctx, ChannelEvent e, InetSocketAddress inetSocketAddress)
             throws Exception {
@@ -54,9 +51,6 @@ public class OneIpFilterHandler extends IpFilteringHandlerImpl {
         return true;
     }
 
-    /* (non-Javadoc)
-    * @see io.netty.handler.ipfilter.IpFilteringHandler#handleUpstream(io.netty.channel.ChannelHandlerContext, io.netty.channel.ChannelEvent)
-    */
     @Override
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
         super.handleUpstream(ctx, e);

@@ -22,9 +22,9 @@ import java.net.SocketAddress;
 /**
  * A {@link java.net.SocketAddress} implementation holding an
  * {@link java.io.InputStream} and an {@link java.io.OutputStream} instance used
- * as "remote" address to connect to with a {@link IOStreamChannel}.
+ * as "remote" address to connect to with a {@link IoStreamChannel}.
  */
-public class IOStreamAddress extends SocketAddress {
+public class IoStreamAddress extends SocketAddress {
 
     private static final long serialVersionUID = -4382415449059935960L;
 
@@ -32,7 +32,7 @@ public class IOStreamAddress extends SocketAddress {
 
     private final OutputStream outputStream;
 
-    public IOStreamAddress(final InputStream inputStream, final OutputStream outputStream) {
+    public IoStreamAddress(final InputStream inputStream, final OutputStream outputStream) {
 
         this.inputStream = inputStream;
         this.outputStream = outputStream;

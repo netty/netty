@@ -37,13 +37,13 @@ import io.netty.channel.MessageEvent;
  * A {@link io.netty.channel.ChannelSink} implementation which reads from
  * an {@link java.io.InputStream} and writes to an {@link java.io.OutputStream}.
  */
-public class IOStreamChannelSink extends AbstractChannelSink {
+public class IoStreamChannelSink extends AbstractChannelSink {
 
     private static class ReadRunnable implements Runnable {
 
-        private final IOStreamChannelSink channelSink;
+        private final IoStreamChannelSink channelSink;
 
-        public ReadRunnable(final IOStreamChannelSink channelSink) {
+        public ReadRunnable(final IoStreamChannelSink channelSink) {
             this.channelSink = channelSink;
         }
 
@@ -88,9 +88,9 @@ public class IOStreamChannelSink extends AbstractChannelSink {
 
     private final ExecutorService executorService;
 
-    private IOStreamChannel channel;
+    private IoStreamChannel channel;
 
-    public IOStreamChannelSink(final ExecutorService executorService) {
+    public IoStreamChannelSink(final ExecutorService executorService) {
         this.executorService = executorService;
     }
 
@@ -98,7 +98,7 @@ public class IOStreamChannelSink extends AbstractChannelSink {
         return inputStream != null && outputStream != null;
     }
 
-    public IOStreamAddress getRemoteAddress() {
+    public IoStreamAddress getRemoteAddress() {
         return remoteAddress;
     }
 
@@ -110,11 +110,11 @@ public class IOStreamChannelSink extends AbstractChannelSink {
         return config;
     }
 
-    public void setChannel(final IOStreamChannel channel) {
+    public void setChannel(final IoStreamChannel channel) {
         this.channel = channel;
     }
 
-    private IOStreamAddress remoteAddress;
+    private IoStreamAddress remoteAddress;
 
     private OutputStream outputStream;
 
@@ -139,7 +139,7 @@ public class IOStreamChannelSink extends AbstractChannelSink {
                 if (Boolean.FALSE.equals(value)) {
                     outputStream = null;
                     inputStream = null;
-                    ((IOStreamChannel) e.getChannel()).doSetClosed();
+                    ((IoStreamChannel) e.getChannel()).doSetClosed();
                 }
                 break;
 
@@ -148,7 +148,7 @@ public class IOStreamChannelSink extends AbstractChannelSink {
 
             case CONNECTED:
                 if (value != null) {
-                    remoteAddress = (IOStreamAddress) value;
+                    remoteAddress = (IoStreamAddress) value;
                     outputStream = remoteAddress.getOutputStream();
                     inputStream = new PushbackInputStream(remoteAddress.getInputStream());
                     executorService.execute(new ReadRunnable(this));
