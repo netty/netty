@@ -23,7 +23,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 /**
  */
-public class HttpServer {
+public class HttpUploadServer {
     public static void main(String[] args) {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
@@ -32,7 +32,7 @@ public class HttpServer {
                         Executors.newCachedThreadPool()));
 
         // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new HttpServerPipelineFactory());
+        bootstrap.setPipelineFactory(new HttpUploadServerPipelineFactory());
 
         // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress(8080));

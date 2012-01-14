@@ -60,7 +60,7 @@ import io.netty.handler.codec.http.InterfaceHttpData.HttpDataType;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.util.CharsetUtil;
 
-public class HttpRequestHandler extends SimpleChannelUpstreamHandler {
+public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
 
     private volatile HttpRequest request;
 

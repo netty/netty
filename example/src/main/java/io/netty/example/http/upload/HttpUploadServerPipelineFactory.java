@@ -23,7 +23,7 @@ import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 
-public class HttpServerPipelineFactory implements ChannelPipelineFactory {
+public class HttpUploadServerPipelineFactory implements ChannelPipelineFactory {
     @Override
     public ChannelPipeline getPipeline() throws Exception {
         // Create a default pipeline implementation.
@@ -41,7 +41,7 @@ public class HttpServerPipelineFactory implements ChannelPipelineFactory {
         // Remove the following line if you don't want automatic content compression.
         pipeline.addLast("deflater", new HttpContentCompressor());
 
-        pipeline.addLast("handler", new HttpRequestHandler());
+        pipeline.addLast("handler", new HttpUploadServerHandler());
         return pipeline;
     }
 }

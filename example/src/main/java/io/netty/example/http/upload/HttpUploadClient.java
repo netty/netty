@@ -44,12 +44,12 @@ import io.netty.handler.codec.http.HttpPostRequestEncoder.ErrorDataEncoderExcept
 
 /**
  */
-public class HttpClient {
+public class HttpUploadClient {
 
     public static void main(String[] args) {
         if (args.length != 2) {
             System.err.println(
-                    "Usage: " + HttpClient.class.getSimpleName() +
+                    "Usage: " + HttpUploadClient.class.getSimpleName() +
                     " baseURI Filepath");
             return;
         }
@@ -110,7 +110,7 @@ public class HttpClient {
                         Executors.newCachedThreadPool()));
 
         // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new HttpClientPipelineFactory(ssl));
+        bootstrap.setPipelineFactory(new HttpUploadClientPipelineFactory(ssl));
 
         // setup the factory: here using a mixed memory/disk based on size threshold
         HttpDataFactory factory = new DefaultHttpDataFactory(

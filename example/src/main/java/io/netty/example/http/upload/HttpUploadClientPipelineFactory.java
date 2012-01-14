@@ -27,10 +27,10 @@ import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
-public class HttpClientPipelineFactory implements ChannelPipelineFactory {
+public class HttpUploadClientPipelineFactory implements ChannelPipelineFactory {
     private final boolean ssl;
 
-    public HttpClientPipelineFactory(boolean ssl) {
+    public HttpUploadClientPipelineFactory(boolean ssl) {
         this.ssl = ssl;
     }
 
@@ -56,7 +56,7 @@ public class HttpClientPipelineFactory implements ChannelPipelineFactory {
         // to be used since huge file transfer
         pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());
         
-        pipeline.addLast("handler", new HttpResponseHandler());
+        pipeline.addLast("handler", new HttpUploadClientHandler());
         return pipeline;
     }
 }
