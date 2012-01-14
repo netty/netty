@@ -38,7 +38,13 @@ import io.netty.util.CharsetUtil;
  */
 public class QuoteOfTheMomentClient {
 
-    public static void main(String[] args) throws Exception {
+    private final int port;
+
+    public QuoteOfTheMomentClient(int port) {
+        this.port = port;
+    }
+
+    public void run() {
         DatagramChannelFactory f =
             new NioDatagramChannelFactory(Executors.newCachedThreadPool());
 
@@ -46,7 +52,6 @@ public class QuoteOfTheMomentClient {
 
         // Configure the pipeline factory.
         b.setPipelineFactory(new ChannelPipelineFactory() {
-            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(
                         new StringEncoder(CharsetUtil.ISO_8859_1),
@@ -75,7 +80,7 @@ public class QuoteOfTheMomentClient {
         DatagramChannel c = (DatagramChannel) b.bind(new InetSocketAddress(0));
 
         // Broadcast the QOTM request to port 8080.
-        c.write("QOTM?", new InetSocketAddress("255.255.255.255", 8080));
+        c.write("QOTM?", new InetSocketAddress("255.255.255.255", port));
 
         // QuoteOfTheMomentClientHandler will close the DatagramChannel when a
         // response is received.  If the channel is not closed within 5 seconds,
@@ -86,5 +91,15 @@ public class QuoteOfTheMomentClient {
         }
 
         f.releaseExternalResources();
+    }
+
+    public static void main(String[] args) throws Exception {
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = 8080;
+        }
+        new QuoteOfTheMomentClient(port).run();
     }
 }

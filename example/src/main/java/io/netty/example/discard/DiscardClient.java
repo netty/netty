@@ -30,6 +30,41 @@ import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
  */
 public class DiscardClient {
 
+    private final String host;
+    private final int port;
+    private final int firstMessageSize;
+
+    public DiscardClient(String host, int port, int firstMessageSize) {
+        this.host = host;
+        this.port = port;
+        this.firstMessageSize = firstMessageSize;
+    }
+
+    public void run() {
+        // Configure the client.
+        ClientBootstrap bootstrap = new ClientBootstrap(
+                new NioClientSocketChannelFactory(
+                        Executors.newCachedThreadPool(),
+                        Executors.newCachedThreadPool()));
+
+        // Set up the pipeline factory.
+        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+            public ChannelPipeline getPipeline() throws Exception {
+                return Channels.pipeline(
+                        new DiscardClientHandler(firstMessageSize));
+            }
+        });
+
+        // Start the connection attempt.
+        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
+
+        // Wait until the connection is closed or the connection attempt fails.
+        future.getChannel().getCloseFuture().awaitUninterruptibly();
+
+        // Shut down thread pools to exit.
+        bootstrap.releaseExternalResources();
+    }
+
     public static void main(String[] args) throws Exception {
         // Print usage if no argument is specified.
         if (args.length < 2 || args.length > 3) {
@@ -48,43 +83,7 @@ public class DiscardClient {
         } else {
             firstMessageSize = 256;
         }
-        
+
         new DiscardClient(host, port, firstMessageSize).run();
-    }
-    
-    private final String host;
-    private final int port;
-    private final int firstMessageSize;
-    
-    public DiscardClient(String host, int port, int firstMessageSize) {
-        this.host = host;
-        this.port = port;
-        this.firstMessageSize = firstMessageSize;
-    }
-
-    public void run() {
-        // Configure the client.
-        ClientBootstrap bootstrap = new ClientBootstrap(
-                new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
-                        Executors.newCachedThreadPool()));
-
-        // Set up the pipeline factory.
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            @Override
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(
-                        new DiscardClientHandler(firstMessageSize));
-            }
-        });
-
-        // Start the connection attempt.
-        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
-
-        // Wait until the connection is closed or the connection attempt fails.
-        future.getChannel().getCloseFuture().awaitUninterruptibly();
-
-        // Shut down thread pools to exit.
-        bootstrap.releaseExternalResources();
     }
 }

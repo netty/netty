@@ -29,26 +29,6 @@ import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
  */
 public class FactorialClient {
 
-    public static void main(String[] args) throws Exception {
-        // Print usage if no argument is specified.
-        if (args.length != 3) {
-            System.err.println(
-                    "Usage: " + FactorialClient.class.getSimpleName() +
-                    " <host> <port> <count>");
-            return;
-        }
-
-        // Parse options.
-        String host = args[0];
-        int port = Integer.parseInt(args[1]);
-        int count = Integer.parseInt(args[2]);
-        if (count <= 0) {
-            throw new IllegalArgumentException("count must be a positive integer.");
-        }
-
-        new FactorialClient(host, port, count).run();
-    }
-
     private final String host;
     private final int port;
     private final int count;
@@ -86,5 +66,25 @@ public class FactorialClient {
 
         // Shut down all thread pools to exit.
         bootstrap.releaseExternalResources();
+    }
+
+    public static void main(String[] args) throws Exception {
+        // Print usage if no argument is specified.
+        if (args.length != 3) {
+            System.err.println(
+                    "Usage: " + FactorialClient.class.getSimpleName() +
+                    " <host> <port> <count>");
+            return;
+        }
+
+        // Parse options.
+        String host = args[0];
+        int port = Integer.parseInt(args[1]);
+        int count = Integer.parseInt(args[2]);
+        if (count <= 0) {
+            throw new IllegalArgumentException("count must be a positive integer.");
+        }
+
+        new FactorialClient(host, port, count).run();
     }
 }

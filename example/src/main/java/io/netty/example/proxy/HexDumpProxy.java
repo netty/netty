@@ -26,23 +26,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 public class HexDumpProxy {
 
-    public static void main(String[] args) throws Exception {
-        // Validate command line options.
-        if (args.length != 3) {
-            System.err.println(
-                    "Usage: " + HexDumpProxy.class.getSimpleName() +
-                    " <local port> <remote host> <remote port>");
-            return;
-        }
-
-        // Parse command line options.
-        int localPort = Integer.parseInt(args[0]);
-        String remoteHost = args[1];
-        int remotePort = Integer.parseInt(args[2]);
-
-        new HexDumpProxy(localPort, remoteHost, remotePort).run();
-    }
-
     private final int localPort;
     private final String remoteHost;
     private final int remotePort;
@@ -72,5 +55,22 @@ public class HexDumpProxy {
 
         // Start up the server.
         sb.bind(new InetSocketAddress(localPort));
+    }
+
+    public static void main(String[] args) throws Exception {
+        // Validate command line options.
+        if (args.length != 3) {
+            System.err.println(
+                    "Usage: " + HexDumpProxy.class.getSimpleName() +
+                    " <local port> <remote host> <remote port>");
+            return;
+        }
+
+        // Parse command line options.
+        int localPort = Integer.parseInt(args[0]);
+        String remoteHost = args[1];
+        int remotePort = Integer.parseInt(args[2]);
+
+        new HexDumpProxy(localPort, remoteHost, remotePort).run();
     }
 }

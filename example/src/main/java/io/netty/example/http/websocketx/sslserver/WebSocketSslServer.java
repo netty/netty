@@ -43,11 +43,35 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * </ul>
  */
 public class WebSocketSslServer {
+
+    private final int port;
+
+    public WebSocketSslServer(int port) {
+        this.port = port;
+    }
+
+    public void run() {
+        // Configure the server.
+        ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
+                Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
+
+        // Set up the event pipeline factory.
+        bootstrap.setPipelineFactory(new WebSocketSslServerPipelineFactory());
+
+        // Bind and start to accept incoming connections.
+        bootstrap.bind(new InetSocketAddress(port));
+
+        System.out.println("Web socket server started at port " + port + '.');
+        System.out.println("Open your browser and navigate to https://localhost:" + port + '/');
+    }
+
     public static void main(String[] args) {
-        ConsoleHandler ch = new ConsoleHandler();
-        ch.setLevel(Level.FINE);
-        Logger.getLogger("").addHandler(ch);
-        Logger.getLogger("").setLevel(Level.FINE);
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = 8443;
+        }
 
         String keyStoreFilePath = System.getProperty("keystore.file.path");
         if (keyStoreFilePath == null || keyStoreFilePath.isEmpty()) {
@@ -61,17 +85,6 @@ public class WebSocketSslServer {
             System.exit(1);
         }
 
-        // Configure the server.
-        ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
-                Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
-
-        // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new WebSocketSslServerPipelineFactory());
-
-        // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(8081));
-
-        System.out
-                .println("Web Socket Server started on 8081. Open your browser and navigate to https://localhost:8081/");
+        new WebSocketSslServer(port).run();
     }
 }

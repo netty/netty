@@ -28,13 +28,15 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * A Web Socket echo server for running the <a href="http://www.tavendo.de/autobahn/testsuite.html">autobahn</a> test
  * suite
  */
-public class WebSocketServer {
-    public static void main(String[] args) {
-        ConsoleHandler ch = new ConsoleHandler();
-        ch.setLevel(Level.FINE);
-        Logger.getLogger("").addHandler(ch);
-        Logger.getLogger("").setLevel(Level.FINE);
+public class AutobahnServer {
 
+    private final int port;
+
+    public AutobahnServer(int port) {
+        this.port = port;
+    }
+
+    public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
                 Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
@@ -42,11 +44,21 @@ public class WebSocketServer {
         // bootstrap.setOption("child.tcpNoDelay", true);
 
         // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory());
+        bootstrap.setPipelineFactory(new AutobahnServerPipelineFactory());
 
         // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(9000));
+        bootstrap.bind(new InetSocketAddress(port));
 
-        System.out.println("Web Socket Server started on localhost:9000.");
+        System.out.println("Web Socket Server started at port " + port);
+    }
+
+    public static void main(String[] args) {
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = 9000;
+        }
+        new AutobahnServer(port).run();
     }
 }

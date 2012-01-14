@@ -47,7 +47,7 @@
  *    }
  * </code>
  * 
- * <p>10. Run <tt>WebSocketServer</tt> in this package
+ * <p>10. Run <tt>AutobahnServer</tt> in this package
  * 
  * <p>11. Run the test <tt>python fuzzing_client.py</tt>. Note that the actual test case python code is 
  * located in <tt>/usr/local/lib/python2.6/dist-packages/autobahn-0.4.3-py2.6.egg/autobahn/cases</tt> 

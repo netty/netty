@@ -16,9 +16,8 @@
 
 /**
  * <p>This is an example web service client.
- * <p>To run this example, you must first start 
- * <tt>io.netty.example.http.websocketx.server.WebSocketServer</tt>
- * <p>Next, run <tt>io.netty.example.http.websocketx.client.App</tt>. 
+ * <p>To run this example, you must first start {@link WebSocketServer} and
+ * then {@link WebSocketClient}.
  */
 package io.netty.example.http.websocketx.client;
 

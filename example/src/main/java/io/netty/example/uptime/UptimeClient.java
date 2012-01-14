@@ -42,19 +42,15 @@ public class UptimeClient {
     // Reconnect when the server sends nothing for 10 seconds.
     private static final int READ_TIMEOUT = 10;
 
-    public static void main(String[] args) throws Exception {
-        // Print usage if no argument is specified.
-        if (args.length != 2) {
-            System.err.println(
-                    "Usage: " + UptimeClient.class.getSimpleName() +
-                    " <host> <port>");
-            return;
-        }
+    private final String host;
+    private final int port;
 
-        // Parse options.
-        String host = args[0];
-        int port = Integer.parseInt(args[1]);
+    public UptimeClient(String host, int port) {
+        this.host = host;
+        this.port = port;
+    }
 
+    public void run() {
         // Initialize the timer that schedules subsequent reconnection attempts.
         final Timer timer = new HashedWheelTimer();
 
@@ -72,7 +68,6 @@ public class UptimeClient {
             private final ChannelHandler uptimeHandler =
                 new UptimeClientHandler(bootstrap, timer);
 
-            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(
                         timeoutHandler, uptimeHandler);
@@ -85,5 +80,21 @@ public class UptimeClient {
         // Initiate the first connection attempt - the rest is handled by
         // UptimeClientHandler.
         bootstrap.connect();
+    }
+
+    public static void main(String[] args) throws Exception {
+        // Print usage if no argument is specified.
+        if (args.length != 2) {
+            System.err.println(
+                    "Usage: " + UptimeClient.class.getSimpleName() +
+                    " <host> <port>");
+            return;
+        }
+
+        // Parse options.
+        String host = args[0];
+        int port = Integer.parseInt(args[1]);
+
+        new UptimeClient(host, port).run();
     }
 }

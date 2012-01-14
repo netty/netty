@@ -27,8 +27,10 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  */
 public class FactorialServer {
 
-    public static void main(String[] args) throws Exception {
-        new FactorialServer().run();
+    private final int port;
+
+    public FactorialServer(int port) {
+        this.port = port;
     }
 
     public void run() {
@@ -42,6 +44,16 @@ public class FactorialServer {
         bootstrap.setPipelineFactory(new FactorialServerPipelineFactory());
 
         // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(8080));
+        bootstrap.bind(new InetSocketAddress(port));
+    }
+
+    public static void main(String[] args) throws Exception {
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = 8080;
+        }
+        new FactorialServer(port).run();
     }
 }

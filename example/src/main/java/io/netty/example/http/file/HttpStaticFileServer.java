@@ -22,7 +22,14 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 public class HttpStaticFileServer {
-    public static void main(String[] args) {
+
+    private final int port;
+
+    public HttpStaticFileServer(int port) {
+        this.port = port;
+    }
+
+    public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new NioServerSocketChannelFactory(
@@ -33,6 +40,16 @@ public class HttpStaticFileServer {
         bootstrap.setPipelineFactory(new HttpStaticFileServerPipelineFactory());
 
         // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(8080));
+        bootstrap.bind(new InetSocketAddress(port));
+    }
+
+    public static void main(String[] args) {
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = 8080;
+        }
+        new HttpStaticFileServer(port).run();
     }
 }

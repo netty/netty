@@ -26,7 +26,14 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * in a pretty plaintext form.
  */
 public class HttpServer {
-    public static void main(String[] args) {
+
+    private final int port;
+
+    public HttpServer(int port) {
+        this.port = port;
+    }
+
+    public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new NioServerSocketChannelFactory(
@@ -37,6 +44,16 @@ public class HttpServer {
         bootstrap.setPipelineFactory(new HttpServerPipelineFactory());
 
         // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(8080));
+        bootstrap.bind(new InetSocketAddress(port));
+    }
+
+    public static void main(String[] args) {
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = 8080;
+        }
+        new HttpServer(port).run();
     }
 }

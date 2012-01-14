@@ -16,6 +16,7 @@
 package io.netty.example.securechat;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
@@ -31,19 +32,15 @@ import io.netty.example.telnet.TelnetClient;
  */
 public class SecureChatClient {
 
-    public static void main(String[] args) throws Exception {
-        // Print usage if no argument is specified.
-        if (args.length != 2) {
-            System.err.println(
-                    "Usage: " + SecureChatClient.class.getSimpleName() +
-                    " <host> <port>");
-            return;
-        }
+    private final String host;
+    private final int port;
 
-        // Parse options.
-        String host = args[0];
-        int port = Integer.parseInt(args[1]);
+    public SecureChatClient(String host, int port) {
+        this.host = host;
+        this.port = port;
+    }
 
+    public void run() throws IOException {
         // Configure the client.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
@@ -95,5 +92,21 @@ public class SecureChatClient {
 
         // Shut down all thread pools to exit.
         bootstrap.releaseExternalResources();
+    }
+
+    public static void main(String[] args) throws Exception {
+        // Print usage if no argument is specified.
+        if (args.length != 2) {
+            System.err.println(
+                    "Usage: " + SecureChatClient.class.getSimpleName() +
+                    " <host> <port>");
+            return;
+        }
+
+        // Parse options.
+        String host = args[0];
+        int port = Integer.parseInt(args[1]);
+
+        new SecureChatClient(host, port).run();
     }
 }

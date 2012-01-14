@@ -16,6 +16,7 @@
 package io.netty.example.local;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 
 import io.netty.bootstrap.ClientBootstrap;
@@ -34,9 +35,16 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.logging.InternalLogLevel;
 
 public class LocalExample {
-    public static void main(String[] args) throws Exception {
+
+    private final String port;
+
+    public LocalExample(String port) {
+        this.port = port;
+    }
+
+    public void run() throws IOException {
         // Address to bind on / connect to.
-        LocalAddress socketAddress = new LocalAddress("1");
+        LocalAddress socketAddress = new LocalAddress(port);
 
         // Configure the server.
         ServerBootstrap sb = new ServerBootstrap(
@@ -55,7 +63,6 @@ public class LocalExample {
 
         // Set up the client-side pipeline factory.
         cb.setPipelineFactory(new ChannelPipelineFactory() {
-            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(
                         new StringDecoder(),
@@ -94,5 +101,9 @@ public class LocalExample {
         // Release all resources used by the local transport.
         cb.releaseExternalResources();
         sb.releaseExternalResources();
+    }
+
+    public static void main(String[] args) throws Exception {
+        new LocalExample("1").run();
     }
 }

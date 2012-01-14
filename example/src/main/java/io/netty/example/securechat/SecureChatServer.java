@@ -27,7 +27,13 @@ import io.netty.example.telnet.TelnetServer;
  */
 public class SecureChatServer {
 
-    public static void main(String[] args) throws Exception {
+    private final int port;
+
+    public SecureChatServer(int port) {
+        this.port = port;
+    }
+
+    public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new NioServerSocketChannelFactory(
@@ -38,6 +44,16 @@ public class SecureChatServer {
         bootstrap.setPipelineFactory(new SecureChatServerPipelineFactory());
 
         // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(8080));
+        bootstrap.bind(new InetSocketAddress(port));
+    }
+
+    public static void main(String[] args) throws Exception {
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = 8443;
+        }
+        new SecureChatServer(port).run();
     }
 }

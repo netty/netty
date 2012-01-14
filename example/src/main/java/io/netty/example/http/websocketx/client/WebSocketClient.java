@@ -21,34 +21,116 @@
 //THE SOFTWARE.
 package io.netty.example.http.websocketx.client;
 
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.HashMap;
+import java.util.concurrent.Executors;
+
+import io.netty.bootstrap.ClientBootstrap;
+import io.netty.buffer.ChannelBuffers;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPipelineFactory;
+import io.netty.channel.Channels;
+import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.handler.codec.http.HttpResponseDecoder;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 
-/**
- * Copied from https://github.com/cgbystrom/netty-tools
- */
-public interface WebSocketClient {
+public class WebSocketClient {
 
-    /**
-     * Connect to server Host and port is setup by the factory.
-     * 
-     * @return Connect future. Fires when connected.
-     */
-    ChannelFuture connect();
+    private final URI uri;
+    
+    public WebSocketClient(URI uri) {
+        this.uri = uri;
+    }
+    
+    public void run() throws Exception {
+        ClientBootstrap bootstrap =
+                new ClientBootstrap(
+                        new NioClientSocketChannelFactory(
+                                Executors.newCachedThreadPool(),
+                                Executors.newCachedThreadPool()));
 
-    /**
-     * Disconnect from the server
-     * 
-     * @return Disconnect future. Fires when disconnected.
-     */
-    ChannelFuture disconnect();
+        String protocol = uri.getScheme();
+        if (!protocol.equals("ws")) {
+            throw new IllegalArgumentException("Unsupported protocol: " + protocol);
+        }
 
-    /**
-     * Send data to server
-     * 
-     * @param frame
-     *            Data for sending
-     * @return Write future. Will fire when the data is sent.
-     */
-    ChannelFuture send(WebSocketFrame frame);
+        HashMap<String, String> customHeaders = new HashMap<String, String>();
+        customHeaders.put("MyHeader", "MyValue");
+
+        // Connect with V13 (RFC 6455). You can change it to V08 or V00.
+        // If you change it to V00, ping is not supported and remember to change
+        // HttpResponseDecoder to WebSocketHttpResponseDecoder in the pipeline.
+        final WebSocketClientHandshaker handshaker =
+                new WebSocketClientHandshakerFactory().newHandshaker(
+                        uri, WebSocketVersion.V13, null, false, customHeaders);
+        
+        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+            public ChannelPipeline getPipeline() throws Exception {
+                ChannelPipeline pipeline = Channels.pipeline();
+
+                // If you wish to support HyBi V00, you need to use
+                // WebSocketHttpResponseDecoder instead for
+                // HttpResponseDecoder.
+                pipeline.addLast("decoder", new HttpResponseDecoder());
+
+                pipeline.addLast("encoder", new HttpRequestEncoder());
+                pipeline.addLast("ws-handler", new WebSocketClientHandler(handshaker));
+                return pipeline;
+            }
+        });
+
+        // Connect
+        System.out.println("WebSocket Client connecting");
+        ChannelFuture future =
+                bootstrap.connect(
+                        new InetSocketAddress(uri.getHost(), uri.getPort()));
+        future.awaitUninterruptibly();
+        
+        Channel ch = future.getChannel();
+
+        handshaker.performOpeningHandshake(ch);
+        
+        Thread.sleep(1000);
+        
+        // Send 10 messages and wait for responses
+        System.out.println("WebSocket Client sending message");
+        for (int i = 0; i < 10; i++) {
+            ch.write(new TextWebSocketFrame("Message #" + i));
+        }
+        Thread.sleep(1000);
+
+        // Ping
+        System.out.println("WebSocket Client sending ping");
+        ch.write(new PingWebSocketFrame(ChannelBuffers.copiedBuffer(new byte[] { 1, 2, 3, 4, 5, 6 })));
+        Thread.sleep(1000);
+
+        // Close
+        System.out.println("WebSocket Client sending close");
+        ch.write(new CloseWebSocketFrame());
+
+        // WebSocketClientHandler will close the connection when the server
+        // responds to the CloseWebSocketFrame.
+        ch.getCloseFuture().awaitUninterruptibly();
+
+        bootstrap.releaseExternalResources();
+    }
+
+    public static void main(String[] args) throws Exception {
+        URI uri;
+        if (args.length > 0) {
+            uri = new URI(args[0]);
+        } else {
+            uri = new URI("ws://localhost:8080/websocket");
+        }
+        new WebSocketClient(uri).run();
+    }
 }

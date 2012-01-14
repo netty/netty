@@ -22,68 +22,39 @@
 
 package io.netty.example.http.websocketx.client;
 
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.Map;
-
-import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.ExceptionEvent;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelUpstreamHandler;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
-import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.util.CharsetUtil;
 
-/**
- * Copied from https://github.com/cgbystrom/netty-tools
- * 
- * Handles socket communication for a connected WebSocket client Not intended for end-users. Please use
- * {@link WebSocketClient} or {@link WebSocketCallback} for controlling your client.
- */
-public class WebSocketClientHandler extends SimpleChannelUpstreamHandler implements WebSocketClient {
+public class WebSocketClientHandler extends SimpleChannelUpstreamHandler {
 
-    private final ClientBootstrap bootstrap;
-    private URI url;
-    private final WebSocketCallback callback;
-    private Channel channel;
-    private WebSocketClientHandshaker handshaker;
-    private final WebSocketVersion version;
-    private Map<String, String> customHeaders;
+    private final WebSocketClientHandshaker handshaker;
 
-    public WebSocketClientHandler(ClientBootstrap bootstrap, URI url, WebSocketVersion version,
-            WebSocketCallback callback, Map<String, String> customHeaders) {
-        this.bootstrap = bootstrap;
-        this.url = url;
-        this.version = version;
-        this.callback = callback;
-        this.customHeaders = customHeaders;
-    }
-
-    @Override
-    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        channel = e.getChannel();
-        this.handshaker = new WebSocketClientHandshakerFactory()
-                .newHandshaker(url, version, null, false, customHeaders);
-        handshaker.performOpeningHandshake(channel);
+    public WebSocketClientHandler(WebSocketClientHandshaker handshaker) {
+        this.handshaker = handshaker;
     }
 
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        callback.onDisconnect(this);
+        System.out.println("WebSocket Client disconnected!");
     }
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+        Channel ch = ctx.getChannel();
         if (!handshaker.isOpeningHandshakeCompleted()) {
-            handshaker.performClosingHandshake(ctx.getChannel(), (HttpResponse) e.getMessage());
-            callback.onConnect(this);
+            handshaker.performClosingHandshake(ch, (HttpResponse) e.getMessage());
+            System.out.println("WebSocket Client connected!");
             return;
         }
 
@@ -94,36 +65,21 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler impleme
         }
 
         WebSocketFrame frame = (WebSocketFrame) e.getMessage();
-        callback.onMessage(this, frame);
+        if (frame instanceof TextWebSocketFrame) {
+            TextWebSocketFrame textFrame = (TextWebSocketFrame) frame;
+            System.out.println("WebSocket Client received message: " + textFrame.getText());
+        } else if (frame instanceof PongWebSocketFrame) {
+            System.out.println("WebSocket Client received pong");
+        } else if (frame instanceof CloseWebSocketFrame) {
+            System.out.println("WebSocket Client received closing");
+            ch.close();
+        }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
         final Throwable t = e.getCause();
-        callback.onError(t);
+        t.printStackTrace();
         e.getChannel().close();
-    }
-
-    @Override
-    public ChannelFuture connect() {
-        return bootstrap.connect(new InetSocketAddress(url.getHost(), url.getPort()));
-    }
-
-    @Override
-    public ChannelFuture disconnect() {
-        return channel.close();
-    }
-
-    @Override
-    public ChannelFuture send(WebSocketFrame frame) {
-        return channel.write(frame);
-    }
-
-    public URI getUrl() {
-        return url;
-    }
-
-    public void setUrl(URI url) {
-        this.url = url;
     }
 }

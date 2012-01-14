@@ -47,8 +47,8 @@ import io.netty.util.CharsetUtil;
 /**
  * Handles handshakes and messages
  */
-public class WebSocketServerHandler extends SimpleChannelUpstreamHandler {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandler.class);
+public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AutobahnServerHandler.class);
 
     private WebSocketServerHandshaker handshaker;
 

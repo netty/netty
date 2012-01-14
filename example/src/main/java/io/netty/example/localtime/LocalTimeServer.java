@@ -27,7 +27,13 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  */
 public class LocalTimeServer {
 
-    public static void main(String[] args) throws Exception {
+    private final int port;
+
+    public LocalTimeServer(int port) {
+        this.port = port;
+    }
+
+    public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new NioServerSocketChannelFactory(
@@ -38,6 +44,16 @@ public class LocalTimeServer {
         bootstrap.setPipelineFactory(new LocalTimeServerPipelineFactory());
 
         // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(8080));
+        bootstrap.bind(new InetSocketAddress(port));
+    }
+
+    public static void main(String[] args) throws Exception {
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = 8080;
+        }
+        new LocalTimeServer(port).run();
     }
 }

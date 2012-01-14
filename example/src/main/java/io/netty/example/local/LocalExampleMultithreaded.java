@@ -32,10 +32,16 @@ import io.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.logging.InternalLogLevel;
 
-public class LocalExampleMultthreaded {
+public class LocalExampleMultithreaded {
 
-    public static void main(String[] args) throws Exception {
-        LocalAddress socketAddress = new LocalAddress("1");
+    private final String port;
+
+    public LocalExampleMultithreaded(String port) {
+        this.port = port;
+    }
+
+    public void run() {
+        LocalAddress socketAddress = new LocalAddress(port);
 
         OrderedMemoryAwareThreadPoolExecutor eventExecutor =
             new OrderedMemoryAwareThreadPoolExecutor(
@@ -52,7 +58,6 @@ public class LocalExampleMultthreaded {
                 new DefaultLocalClientChannelFactory());
 
         cb.setPipelineFactory(new ChannelPipelineFactory() {
-            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(
                         new StringDecoder(),
@@ -92,5 +97,9 @@ public class LocalExampleMultthreaded {
         cb.releaseExternalResources();
         sb.releaseExternalResources();
         eventExecutor.shutdownNow();
+    }
+
+    public static void main(String[] args) throws Exception {
+        new LocalExampleMultithreaded("1").run();
     }
 }

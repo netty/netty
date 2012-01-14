@@ -36,15 +36,13 @@ import io.netty.handler.codec.http.HttpVersion;
  */
 public class HttpClient {
 
-    public static void main(String[] args) throws Exception {
-        if (args.length != 1) {
-            System.err.println(
-                    "Usage: " + HttpClient.class.getSimpleName() +
-                    " <URL>");
-            return;
-        }
+    private final URI uri;
 
-        URI uri = new URI(args[0]);
+    public HttpClient(URI uri) {
+        this.uri = uri;
+    }
+
+    public void run() {
         String scheme = uri.getScheme() == null? "http" : uri.getScheme();
         String host = uri.getHost() == null? "localhost" : uri.getHost();
         int port = uri.getPort();
@@ -104,5 +102,17 @@ public class HttpClient {
 
         // Shut down executor threads to exit.
         bootstrap.releaseExternalResources();
+    }
+
+    public static void main(String[] args) throws Exception {
+        if (args.length != 1) {
+            System.err.println(
+                    "Usage: " + HttpClient.class.getSimpleName() +
+                    " <URL>");
+            return;
+        }
+
+        URI uri = new URI(args[0]);
+        new HttpClient(uri).run();
     }
 }

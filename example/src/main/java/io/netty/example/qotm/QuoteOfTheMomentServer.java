@@ -37,7 +37,13 @@ import io.netty.util.CharsetUtil;
  */
 public class QuoteOfTheMomentServer {
 
-    public static void main(String[] args) throws Exception {
+    private final int port;
+
+    public QuoteOfTheMomentServer(int port) {
+        this.port = port;
+    }
+
+    public void run() {
         DatagramChannelFactory f =
             new NioDatagramChannelFactory(Executors.newCachedThreadPool());
 
@@ -45,7 +51,6 @@ public class QuoteOfTheMomentServer {
 
         // Configure the pipeline factory.
         b.setPipelineFactory(new ChannelPipelineFactory() {
-            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(
                         new StringEncoder(CharsetUtil.ISO_8859_1),
@@ -54,7 +59,7 @@ public class QuoteOfTheMomentServer {
             }
         });
 
-        // Server doesn't need to enable broadcast to listen to a broadcast.
+        // Enable broadcast
         b.setOption("broadcast", "false");
 
         // Allow packets as large as up to 1024 bytes (default is 768).
@@ -72,6 +77,16 @@ public class QuoteOfTheMomentServer {
                 new FixedReceiveBufferSizePredictorFactory(1024));
 
         // Bind to the port and start the service.
-        b.bind(new InetSocketAddress(8080));
+        b.bind(new InetSocketAddress(port));
+    }
+
+    public static void main(String[] args) throws Exception {
+        int port;
+        if (args.length > 0) {
+            port = Integer.parseInt(args[0]);
+        } else {
+            port = 8080;
+        }
+        new QuoteOfTheMomentServer(port).run();
     }
 }
