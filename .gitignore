@@ -4,9 +4,9 @@
 *.iml
 *.ipr
 *.iws
+.idea/
 .geany
 /target
 */target
 /reports
 */reports
-
