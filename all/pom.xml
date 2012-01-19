@@ -41,26 +41,27 @@
 
   <build>
     <plugins>
-      <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.2.2</version>
-        <executions>
-          <execution>
-            <id>all-in-one</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <appendAssemblyId>false</appendAssemblyId>
-              <descriptors>
-                <descriptor>${project.basedir}/assembly.xml</descriptor>
-              </descriptors>
-              <tarLongFileMode>gnu</tarLongFileMode>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+                <execution>
+                    <id>unpack-dependencies</id>
+                    <phase>generate-resources</phase>
+                    <goals>
+                        <goal>unpack-dependencies</goal>
+                    </goals>
+                    <configuration>
+                        <includes>**/io/netty/**/*.class</includes>
+                        <excludes>**/*.properties</excludes>
+                        <outputDirectory>${project.build.directory}/classes
+                        </outputDirectory>
+                        <overWriteReleases>false</overWriteReleases>
+                        <overWriteSnapshots>true</overWriteSnapshots>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
 
       <!-- Disable all plugin executions configured by jar packaging -->
       <plugin>
@@ -104,12 +105,13 @@
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <version>2.3.2</version>
-        <executions>
-          <execution>
-            <id>default-jar</id>
-            <phase>none</phase>
-          </execution>
-        </executions>
+          <configuration>
+              <archive>
+                  <manifestFile>
+                      ${project.build.directory}/classes/META-INF/MANIFEST.MF
+                  </manifestFile>
+              </archive>
+          </configuration>
       </plugin>
     </plugins>
   </build>
