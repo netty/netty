@@ -168,6 +168,27 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
     }
 
+    public ChannelFuture rethrowIfFailed() throws Exception {
+        if (!isDone()) {
+            return this;
+        }
+
+        Throwable cause = getCause();
+        if (cause == null) {
+            return this;
+        }
+
+        if (cause instanceof Exception) {
+            throw (Exception) cause;
+        }
+
+        if (cause instanceof Error) {
+            throw (Error) cause;
+        }
+
+        throw new RuntimeException(cause);
+    }
+
     public ChannelFuture await() throws InterruptedException {
         if (Thread.interrupted()) {
             throw new InterruptedException();

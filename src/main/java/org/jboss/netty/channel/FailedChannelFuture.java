@@ -45,4 +45,16 @@ public class FailedChannelFuture extends CompleteChannelFuture {
     public boolean isSuccess() {
         return false;
     }
+
+    public ChannelFuture rethrowIfFailed() throws Exception {
+        if (cause instanceof Exception) {
+            throw (Exception) cause;
+        }
+
+        if (cause instanceof Error) {
+            throw (Error) cause;
+        }
+
+        throw new RuntimeException(cause);
+    }
 }

@@ -96,6 +96,10 @@ public class CompleteChannelFutureTest {
         public boolean isSuccess() {
             throw new Error();
         }
+
+        public ChannelFuture rethrowIfFailed() throws Exception {
+            throw new Error();
+        }
     }
 
     private static class ExpectedError extends Error {

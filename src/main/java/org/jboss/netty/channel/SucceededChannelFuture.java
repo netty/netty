@@ -38,4 +38,8 @@ public class SucceededChannelFuture extends CompleteChannelFuture {
     public boolean isSuccess() {
         return true;
     }
+
+    public ChannelFuture rethrowIfFailed() throws Exception {
+        return this;
+    }
 }
