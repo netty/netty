@@ -99,6 +99,11 @@ public class CompleteChannelFutureTest {
         public boolean isSuccess() {
             throw new Error();
         }
+        
+        @Override
+        public ChannelFuture rethrowIfFailed() throws Exception {
+            throw new Error();
+        }
     }
 
     private static class ExpectedError extends Error {

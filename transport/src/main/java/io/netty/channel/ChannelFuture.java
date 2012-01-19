@@ -259,6 +259,12 @@ public interface ChannelFuture {
     void removeListener(ChannelFutureListener listener);
 
     /**
+     * Rethrows the exception that caused this future fail if this future is
+     * complete and failed.
+     */
+    ChannelFuture rethrowIfFailed() throws Exception;
+
+    /**
      * Waits for this future to be completed.
      *
      * @throws InterruptedException

@@ -40,4 +40,9 @@ public class SucceededChannelFuture extends CompleteChannelFuture {
     public boolean isSuccess() {
         return true;
     }
+
+    @Override
+    public ChannelFuture rethrowIfFailed() throws Exception {
+        return this;
+    }
 }
