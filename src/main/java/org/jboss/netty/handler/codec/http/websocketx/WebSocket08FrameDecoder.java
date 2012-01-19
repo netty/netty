@@ -75,8 +75,8 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     private int framePayloadBytesRead;
     private ChannelBuffer maskingKey;
 
-    private boolean allowExtensions;
-    private boolean maskedPayload;
+    private final boolean allowExtensions;
+    private final boolean maskedPayload;
     private boolean receivedClosingHandshake;
 
     public enum State {
@@ -129,12 +129,12 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
             boolean frameMasked = (b & 0x80) != 0;
             int framePayloadLen1 = b & 0x7F;
 
-            if (frameRsv != 0 && !this.allowExtensions) {
+            if (frameRsv != 0 && !allowExtensions) {
                 protocolViolation(channel, "RSV != 0 and no extension negotiated, RSV:" + frameRsv);
                 return null;
             }
 
-            if (this.maskedPayload && !frameMasked) {
+            if (maskedPayload && !frameMasked) {
                 protocolViolation(channel, "unmasked client to server frame");
                 return null;
             }
@@ -211,7 +211,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
 
             checkpoint(State.MASKING_KEY);
         case MASKING_KEY:
-            if (this.maskedPayload) {
+            if (maskedPayload) {
                 maskingKey = buffer.readBytes(4);
             }
             checkpoint(State.PAYLOAD);
@@ -236,7 +236,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                     framePayload = channel.getConfig().getBufferFactory().getBuffer(toFrameLength(framePayloadLength));
                 }
                 framePayload.writeBytes(payloadBuffer);
-                framePayloadBytesRead = framePayloadBytesRead + rbytes;
+                framePayloadBytesRead += rbytes;
 
                 // Return null to wait for more bytes to arrive
                 return null;
@@ -258,7 +258,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
             }
 
             // Unmask data if needed
-            if (this.maskedPayload) {
+            if (maskedPayload) {
                 unmask(framePayload);
             }
 
@@ -269,7 +269,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
             } else if (frameOpcode == OPCODE_PONG) {
                 return new PongWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
             } else if (frameOpcode == OPCODE_CLOSE) {
-                this.receivedClosingHandshake = true;
+                receivedClosingHandshake = true;
                 return new CloseWebSocketFrame(frameFinalFlag, frameRsv);
             }
 

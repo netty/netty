@@ -27,11 +27,6 @@
  * </ul>
  * </p>
  * <p>
- * In the future, as the specification develops, more versions will be supported.
- * This contrasts the <tt>org.jboss.netty.handler.codec.http.websocket</tt> package which only
- * supports draft-ietf-hybi-thewebsocketprotocol-00.  
- * </p>
- * <p>
  * For the detailed instruction on adding add Web Socket support to your HTTP
  * server, take a look into the <tt>WebSocketServerX</tt> example located in the
  * {@code org.jboss.netty.example.http.websocket} package.

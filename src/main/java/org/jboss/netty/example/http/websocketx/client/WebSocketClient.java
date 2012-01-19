@@ -100,7 +100,7 @@ public class WebSocketClient {
         
         Channel ch = future.getChannel();
 
-        handshaker.performOpeningHandshake(ch);
+        handshaker.handshake(ch);
         
         Thread.sleep(1000);
         

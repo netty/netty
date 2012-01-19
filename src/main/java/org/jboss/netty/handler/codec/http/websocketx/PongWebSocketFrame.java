@@ -27,7 +27,7 @@ public class PongWebSocketFrame extends WebSocketFrame {
      * Creates a new empty pong frame.
      */
     public PongWebSocketFrame() {
-        this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+        setBinaryData(ChannelBuffers.EMPTY_BUFFER);
     }
 
     /**
@@ -37,7 +37,7 @@ public class PongWebSocketFrame extends WebSocketFrame {
      *            the content of the frame.
      */
     public PongWebSocketFrame(ChannelBuffer binaryData) {
-        this.setBinaryData(binaryData);
+        setBinaryData(binaryData);
     }
 
     /**
@@ -51,9 +51,9 @@ public class PongWebSocketFrame extends WebSocketFrame {
      *            the content of the frame.
      */
     public PongWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
-        this.setFinalFragment(finalFragment);
-        this.setRsv(rsv);
-        this.setBinaryData(binaryData);
+        setFinalFragment(finalFragment);
+        setRsv(rsv);
+        setBinaryData(binaryData);
     }
 
     @Override

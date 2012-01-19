@@ -27,8 +27,8 @@ public class PingWebSocketFrame extends WebSocketFrame {
      * Creates a new empty ping frame.
      */
     public PingWebSocketFrame() {
-        this.setFinalFragment(true);
-        this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+        setFinalFragment(true);
+        setBinaryData(ChannelBuffers.EMPTY_BUFFER);
     }
 
     /**
@@ -38,7 +38,7 @@ public class PingWebSocketFrame extends WebSocketFrame {
      *            the content of the frame.
      */
     public PingWebSocketFrame(ChannelBuffer binaryData) {
-        this.setBinaryData(binaryData);
+        setBinaryData(binaryData);
     }
 
     /**
@@ -52,9 +52,9 @@ public class PingWebSocketFrame extends WebSocketFrame {
      *            the content of the frame.
      */
     public PingWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
-        this.setFinalFragment(finalFragment);
-        this.setRsv(rsv);
-        this.setBinaryData(binaryData);
+        setFinalFragment(finalFragment);
+        setRsv(rsv);
+        setBinaryData(binaryData);
     }
 
     @Override

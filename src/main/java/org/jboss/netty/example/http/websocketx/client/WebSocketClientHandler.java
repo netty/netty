@@ -52,8 +52,8 @@ public class WebSocketClientHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         Channel ch = ctx.getChannel();
-        if (!handshaker.isOpeningHandshakeCompleted()) {
-            handshaker.performClosingHandshake(ch, (HttpResponse) e.getMessage());
+        if (!handshaker.isHandshakeComplete()) {
+            handshaker.finishHandshake(ch, (HttpResponse) e.getMessage());
             System.out.println("WebSocket Client connected!");
             return;
         }

@@ -17,7 +17,11 @@ package org.jboss.netty.handler.codec.http.websocketx;
 
 /**
  * <p>
- * Version of the web socket wire protocol.
+ * Versions of the web socket specification.
+ * </p>
+ * <p>
+ * A specification is tied to one wire protocol version but a protocol version may have use by more than 1 version of
+ * the specification.
  * </p>
  */
 public enum WebSocketVersion {
@@ -42,6 +46,9 @@ public enum WebSocketVersion {
      */
     V13;
 
+    /**
+     * @return Value for HTTP Header 'Sec-WebSocket-Version'
+     */
     public String toHttpHeaderValue() {
         if (this == V00) {
             return "0";
@@ -50,6 +57,6 @@ public enum WebSocketVersion {
         } else if (this == V13) {
             return "13";
         }
-        throw new IllegalArgumentException(this.toString() + " cannot be converted to a HttpHeaderValue.");
+        throw new IllegalStateException("Unknown web socket version: " + this);
     }
 }

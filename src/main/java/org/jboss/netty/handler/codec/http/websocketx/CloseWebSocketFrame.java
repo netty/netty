@@ -26,7 +26,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * Creates a new empty close frame.
      */
     public CloseWebSocketFrame() {
-        this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+        setBinaryData(ChannelBuffers.EMPTY_BUFFER);
     }
 
     /**
@@ -38,8 +38,8 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      *            reserved bits used for protocol extensions
      */
     public CloseWebSocketFrame(boolean finalFragment, int rsv) {
-        this.setFinalFragment(finalFragment);
-        this.setRsv(rsv);
+        setFinalFragment(finalFragment);
+        setRsv(rsv);
     }
 
     @Override
