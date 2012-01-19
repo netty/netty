@@ -76,7 +76,7 @@ public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
         if (this.handshaker == null) {
             wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.getChannel());
         } else {
-            this.handshaker.performOpeningHandshake(ctx.getChannel(), req);
+            this.handshaker.handshake(ctx.getChannel(), req);
         }
     }
 
@@ -85,7 +85,7 @@ public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
                 .format("Channel %s received %s", ctx.getChannel().getId(), frame.getClass().getSimpleName()));
 
         if (frame instanceof CloseWebSocketFrame) {
-            this.handshaker.performClosingHandshake(ctx.getChannel(), (CloseWebSocketFrame) frame);
+            this.handshaker.close(ctx.getChannel(), (CloseWebSocketFrame) frame);
         } else if (frame instanceof PingWebSocketFrame) {
             ctx.getChannel().write(
                     new PongWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));

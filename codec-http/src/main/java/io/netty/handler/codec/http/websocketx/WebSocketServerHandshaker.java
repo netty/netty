@@ -17,10 +17,13 @@ package io.netty.handler.codec.http.websocketx;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.CharsetUtil;
@@ -30,55 +33,54 @@ import io.netty.util.CharsetUtil;
  */
 public abstract class WebSocketServerHandshaker {
 
-    private String webSocketURL;
+    private final String webSocketUrl;
 
-    private String subProtocols;
+    private final String[] subprotocols;
 
-    private String[] subProtocolsArray;
-
-    private WebSocketVersion version = WebSocketVersion.UNKNOWN;
+    private final WebSocketVersion version;
 
     /**
      * Constructor specifying the destination web socket location
      * 
-     * @param webSocketURL
+     * @param version
+     *            the protocol version
+     * @param webSocketUrl
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
-     * @param subProtocols
+     * @param subprotocols
      *            CSV of supported protocols. Null if sub protocols not supported.
      */
-    public WebSocketServerHandshaker(String webSocketURL, String subProtocols) {
-        this.webSocketURL = webSocketURL;
-        this.subProtocols = subProtocols;
-
-        if (this.subProtocols != null) {
-            this.subProtocolsArray = subProtocols.split(",");
-            for (int i = 0; i < this.subProtocolsArray.length; i++) {
-                this.subProtocolsArray[i] = this.subProtocolsArray[i].trim();
+    protected WebSocketServerHandshaker(
+            WebSocketVersion version, String webSocketUrl, String subprotocols) {
+        this.version = version;
+        this.webSocketUrl = webSocketUrl;
+        if (subprotocols != null) {
+            String[] subprotocolArray = subprotocols.split(",");
+            for (int i = 0; i < subprotocolArray.length; i++) {
+                subprotocolArray[i] = subprotocolArray[i].trim();
             }
+            this.subprotocols = subprotocolArray;
+        } else {
+            this.subprotocols = new String[0];
         }
     }
 
     /**
      * Returns the URL of the web socket
      */
-    public String getWebSocketURL() {
-        return webSocketURL;
-    }
-
-    public void setWebSocketURL(String webSocketURL) {
-        this.webSocketURL = webSocketURL;
+    public String getWebSocketUrl() {
+        return webSocketUrl;
     }
 
     /**
      * Returns the CSV of supported sub protocols
      */
-    public String getSubProtocols() {
-        return subProtocols;
-    }
-
-    public void setSubProtocols(String subProtocols) {
-        this.subProtocols = subProtocols;
+    public Set<String> getSubprotocols() {
+        Set<String> ret = new LinkedHashSet<String>();
+        for (String p: this.subprotocols) {
+            ret.add(p);
+        }
+        return ret;
     }
 
     /**
@@ -88,10 +90,6 @@ public abstract class WebSocketServerHandshaker {
         return version;
     }
 
-    public void setVersion(WebSocketVersion version) {
-        this.version = version;
-    }
-
     /**
      * Performs the opening handshake
      * 
@@ -99,9 +97,8 @@ public abstract class WebSocketServerHandshaker {
      *            Channel
      * @param req
      *            HTTP Request
-     * @throws NoSuchAlgorithmException
      */
-    public abstract void performOpeningHandshake(Channel channel, HttpRequest req);
+    public abstract ChannelFuture handshake(Channel channel, HttpRequest req);
 
     /**
      * Performs the closing handshake
@@ -111,71 +108,27 @@ public abstract class WebSocketServerHandshaker {
      * @param frame
      *            Closing Frame that was received
      */
-    public abstract void performClosingHandshake(Channel channel, CloseWebSocketFrame frame);
-
-    /**
-     * Performs an MD5 hash
-     * 
-     * @param bytes
-     *            Data to hash
-     * @return Hashed data
-     */
-    protected byte[] md5(byte[] bytes) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            return md.digest(bytes);
-        } catch (NoSuchAlgorithmException e) {
-            throw new InternalError("MD5 not supported on this platform");
-        }
-    }
-
-    /**
-     * SHA-1 hashing. Instance this we think it is not thread safe
-     * 
-     * @param bytes
-     *            byte to hash
-     * @return hashed
-     */
-    protected byte[] sha1(byte[] bytes) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA1");
-            return md.digest(bytes);
-        } catch (NoSuchAlgorithmException e) {
-            throw new InternalError("SHA-1 not supported on this platform");
-        }
-    }
-
-    /**
-     * Base 64 encoding
-     * 
-     * @param bytes
-     *            Bytes to encode
-     * @return encoded string
-     */
-    protected String base64Encode(byte[] bytes) {
-        ChannelBuffer hashed = ChannelBuffers.wrappedBuffer(bytes);
-        return Base64.encode(hashed).toString(CharsetUtil.UTF_8);
-    }
+    public abstract ChannelFuture close(Channel channel, CloseWebSocketFrame frame);
 
     /**
      * Selects the first matching supported sub protocol
      * 
-     * @param requestedSubProtocol
+     * @param requestedSubprotocols
      *            CSV of protocols to be supported. e.g. "chat, superchat"
      * @return First matching supported sub protocol. Null if not found.
      */
-    protected String selectSubProtocol(String requestedSubProtocol) {
-        if (requestedSubProtocol == null || this.subProtocolsArray == null) {
+    protected String selectSubprotocol(String requestedSubprotocols) {
+        if (requestedSubprotocols == null || subprotocols.length == 0) {
             return null;
         }
 
-        String[] requesteSubProtocolsArray = requestedSubProtocol.split(",");
-        for (int i = 0; i < requesteSubProtocolsArray.length; i++) {
-            String requesteSubProtocol = requesteSubProtocolsArray[i].trim();
+        String[] requesteSubprotocolArray = requestedSubprotocols.split(",");
+        for (String p: requesteSubprotocolArray) {
+            String requestedSubprotocol = p.trim();
 
-            for (String supportedSubProtocol : this.subProtocolsArray) {
-                if (requesteSubProtocol.equals(supportedSubProtocol)) {
-                    return requesteSubProtocol;
+            for (String supportedSubprotocol: subprotocols) {
+                if (requestedSubprotocol.equals(supportedSubprotocol)) {
+                    return requestedSubprotocol;
                 }
             }
         }

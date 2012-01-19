@@ -15,34 +15,24 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaders.Names.ORIGIN;
-import static io.netty.handler.codec.http.HttpHeaders.Names.SEC_WEBSOCKET_KEY1;
-import static io.netty.handler.codec.http.HttpHeaders.Names.SEC_WEBSOCKET_KEY2;
-import static io.netty.handler.codec.http.HttpHeaders.Names.SEC_WEBSOCKET_LOCATION;
-import static io.netty.handler.codec.http.HttpHeaders.Names.SEC_WEBSOCKET_ORIGIN;
-import static io.netty.handler.codec.http.HttpHeaders.Names.SEC_WEBSOCKET_PROTOCOL;
-import static io.netty.handler.codec.http.HttpHeaders.Names.WEBSOCKET_LOCATION;
-import static io.netty.handler.codec.http.HttpHeaders.Names.WEBSOCKET_ORIGIN;
-import static io.netty.handler.codec.http.HttpHeaders.Names.WEBSOCKET_PROTOCOL;
-import static io.netty.handler.codec.http.HttpHeaders.Values.WEBSOCKET;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-
-import java.security.NoSuchAlgorithmException;
+import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpHeaders.Values.*;
+import static io.netty.handler.codec.http.HttpVersion.*;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.HttpChunkAggregator;
 import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpChunkAggregator;
+import io.netty.handler.codec.http.HttpHeaders.Names;
+import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpHeaders.Names;
-import io.netty.handler.codec.http.HttpHeaders.Values;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
@@ -66,11 +56,11 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
-     * @param subProtocols
+     * @param subprotocols
      *            CSV of supported protocols
      */
-    public WebSocketServerHandshaker00(String webSocketURL, String subProtocols) {
-        super(webSocketURL, subProtocols);
+    public WebSocketServerHandshaker00(String webSocketURL, String subprotocols) {
+        super(WebSocketVersion.V00, webSocketURL, subprotocols);
     }
 
     /**
@@ -117,20 +107,18 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            Channel
      * @param req
      *            HTTP request
-     * @throws NoSuchAlgorithmException
      */
     @Override
-    public void performOpeningHandshake(Channel channel, HttpRequest req) {
+    public ChannelFuture handshake(Channel channel, HttpRequest req) {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s WS Version 00 server handshake", channel.getId()));
         }
-        this.setVersion(WebSocketVersion.V00);
 
         // Serve the WebSocket handshake request.
         if (!Values.UPGRADE.equalsIgnoreCase(req.getHeader(CONNECTION))
                 || !WEBSOCKET.equalsIgnoreCase(req.getHeader(Names.UPGRADE))) {
-            return;
+            throw new WebSocketHandshakeException("not a WebSocket handshake request: missing upgrade");
         }
 
         // Hixie 75 does not contain these headers while Hixie 76 does
@@ -146,10 +134,10 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         if (isHixie76) {
             // New handshake method with a challenge:
             res.addHeader(SEC_WEBSOCKET_ORIGIN, req.getHeader(ORIGIN));
-            res.addHeader(SEC_WEBSOCKET_LOCATION, this.getWebSocketURL());
+            res.addHeader(SEC_WEBSOCKET_LOCATION, getWebSocketUrl());
             String protocol = req.getHeader(SEC_WEBSOCKET_PROTOCOL);
             if (protocol != null) {
-                res.addHeader(SEC_WEBSOCKET_PROTOCOL, selectSubProtocol(protocol));
+                res.addHeader(SEC_WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
             }
 
             // Calculate the answer of the challenge.
@@ -162,15 +150,15 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             input.writeInt(a);
             input.writeInt(b);
             input.writeLong(c);
-            ChannelBuffer output = ChannelBuffers.wrappedBuffer(this.md5(input.array()));
+            ChannelBuffer output = ChannelBuffers.wrappedBuffer(WebSocketUtil.md5(input.array()));
             res.setContent(output);
         } else {
             // Old Hixie 75 handshake method with no challenge:
             res.addHeader(WEBSOCKET_ORIGIN, req.getHeader(ORIGIN));
-            res.addHeader(WEBSOCKET_LOCATION, this.getWebSocketURL());
+            res.addHeader(WEBSOCKET_LOCATION, getWebSocketUrl());
             String protocol = req.getHeader(WEBSOCKET_PROTOCOL);
             if (protocol != null) {
-                res.addHeader(WEBSOCKET_PROTOCOL, selectSubProtocol(protocol));
+                res.addHeader(WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
             }
         }
 
@@ -179,9 +167,11 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         p.remove(HttpChunkAggregator.class);
         p.replace(HttpRequestDecoder.class, "wsdecoder", new WebSocket00FrameDecoder());
 
-        channel.write(res);
+        ChannelFuture future = channel.write(res);
 
         p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket00FrameEncoder());
+
+        return future;
     }
 
     /**
@@ -193,7 +183,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            Web Socket frame that was received
      */
     @Override
-    public void performClosingHandshake(Channel channel, CloseWebSocketFrame frame) {
-        channel.write(frame);
+    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
+        return channel.write(frame);
     }
 }

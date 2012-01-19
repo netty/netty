@@ -18,7 +18,7 @@ package io.netty.handler.codec.http.websocketx;
 /**
  * Exception during handshaking process
  */
-public class WebSocketHandshakeException extends Exception {
+public class WebSocketHandshakeException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 

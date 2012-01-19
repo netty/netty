@@ -33,7 +33,7 @@ import io.netty.handler.codec.replay.VoidEnum;
  */
 public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
 
-    public static final int DEFAULT_MAX_FRAME_SIZE = 16384;
+    private static final int DEFAULT_MAX_FRAME_SIZE = 16384;
 
     private final int maxFrameSize;
     private boolean receivedClosingHandshake;
@@ -70,7 +70,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
             return decodeBinaryFrame(type, buffer);
         } else {
             // Decode a 0xff terminated UTF-8 string
-            return decodeTextFrame(type, buffer);
+            return decodeTextFrame(buffer);
         }
     }
 
@@ -92,7 +92,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
             }
         } while ((b & 0x80) == 0x80);
 
-        if (type == ((byte) 0xFF) && frameSize == 0) {
+        if (type == (byte) 0xFF && frameSize == 0) {
             receivedClosingHandshake = true;
             return new CloseWebSocketFrame();
         }
@@ -100,7 +100,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
         return new BinaryWebSocketFrame(buffer.readBytes((int) frameSize));
     }
 
-    private WebSocketFrame decodeTextFrame(byte type, ChannelBuffer buffer) throws TooLongFrameException {
+    private WebSocketFrame decodeTextFrame(ChannelBuffer buffer) throws TooLongFrameException {
         int ridx = buffer.readerIndex();
         int rbytes = actualReadableBytes();
         int delimPos = buffer.indexOf(ridx, ridx + rbytes, (byte) 0xFF);

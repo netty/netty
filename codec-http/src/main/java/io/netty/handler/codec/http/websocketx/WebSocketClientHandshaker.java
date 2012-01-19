@@ -23,6 +23,7 @@ import java.util.Map;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.CharsetUtil;
@@ -32,35 +33,44 @@ import io.netty.util.CharsetUtil;
  */
 public abstract class WebSocketClientHandshaker {
 
-    private URI webSocketURL;
+    private final URI webSocketUrl;
 
-    private WebSocketVersion version = WebSocketVersion.UNKNOWN;
+    private final WebSocketVersion version;
 
-    private boolean openingHandshakeCompleted;
+    private boolean handshakeComplete;
 
-    private String subProtocolRequest;
+    private final String expectedSubprotocol;
 
-    private String subProtocolResponse;
+    private String actualSubprotocol;
 
-    protected Map<String, String> customHeaders;
+    protected final Map<String, String> customHeaders;
 
-    public WebSocketClientHandshaker(URI webSocketURL, WebSocketVersion version, String subProtocol,
+    /**
+     * Base constructor
+     *
+     * @param webSocketUrl
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     */
+    public WebSocketClientHandshaker(URI webSocketUrl, WebSocketVersion version, String subprotocol,
             Map<String, String> customHeaders) {
-        this.webSocketURL = webSocketURL;
+        this.webSocketUrl = webSocketUrl;
         this.version = version;
-        this.subProtocolRequest = subProtocol;
+        expectedSubprotocol = subprotocol;
         this.customHeaders = customHeaders;
     }
 
     /**
      * Returns the URI to the web socket. e.g. "ws://myhost.com/path"
      */
-    public URI getWebSocketURL() {
-        return webSocketURL;
-    }
-
-    protected void setWebSocketURL(URI webSocketURL) {
-        this.webSocketURL = webSocketURL;
+    public URI getWebSocketUrl() {
+        return webSocketUrl;
     }
 
     /**
@@ -70,133 +80,50 @@ public abstract class WebSocketClientHandshaker {
         return version;
     }
 
-    protected void setVersion(WebSocketVersion version) {
-        this.version = version;
-    }
-
     /**
      * Flag to indicate if the opening handshake is complete
      */
-    public boolean isOpeningHandshakeCompleted() {
-        return openingHandshakeCompleted;
+    public boolean isHandshakeComplete() {
+        return handshakeComplete;
     }
 
-    protected void setOpenningHandshakeCompleted(boolean openningHandshakeCompleted) {
-        this.openingHandshakeCompleted = openningHandshakeCompleted;
+    protected void setHandshakeComplete() {
+        handshakeComplete = true;
     }
 
     /**
      * Returns the sub protocol request sent to the server as specified in the constructor
      */
-    public String getSubProtocolRequest() {
-        return subProtocolRequest;
-    }
-
-    protected void setSubProtocolRequest(String subProtocolRequest) {
-        this.subProtocolRequest = subProtocolRequest;
+    public String getExpectedSubprotocol() {
+        return expectedSubprotocol;
     }
 
     /**
      * Returns the sub protocol response and sent by the server. Only available after end of handshake.
      */
-    public String getSubProtocolResponse() {
-        return subProtocolResponse;
+    public String getActualSubprotocol() {
+        return actualSubprotocol;
     }
 
-    protected void setSubProtocolResponse(String subProtocolResponse) {
-        this.subProtocolResponse = subProtocolResponse;
+    protected void setActualSubprotocol(String actualSubprotocol) {
+        this.actualSubprotocol = actualSubprotocol;
     }
 
     /**
-     * Performs the opening handshake
+     * Begins the opening handshake
      * 
      * @param channel
      *            Channel
      */
-    public abstract void performOpeningHandshake(Channel channel);
+    public abstract ChannelFuture handshake(Channel channel);
 
     /**
-     * Performs the closing handshake
+     * Validates and finishes the opening handshake initiated by {@link #handshake}}.
      * 
      * @param channel
      *            Channel
      * @param response
      *            HTTP response containing the closing handshake details
      */
-    public abstract void performClosingHandshake(Channel channel, HttpResponse response)
-            throws WebSocketHandshakeException;
-
-    /**
-     * Performs an MD5 hash
-     * 
-     * @param bytes
-     *            Data to hash
-     * @return Hashed data
-     */
-    protected byte[] md5(byte[] bytes) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            return md.digest(bytes);
-        } catch (NoSuchAlgorithmException e) {
-            throw new InternalError("MD5 not supported on this platform");
-        }
-    }
-
-    /**
-     * Performs an SHA-1 hash
-     * 
-     * @param bytes
-     *            Data to hash
-     * @return Hashed data
-     */
-    protected byte[] sha1(byte[] bytes) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA1");
-            return md.digest(bytes);
-        } catch (NoSuchAlgorithmException e) {
-            throw new InternalError("SHA-1 not supported on this platform");
-        }
-    }
-
-    /**
-     * Base 64 encoding
-     * 
-     * @param bytes
-     *            Bytes to encode
-     * @return encoded string
-     */
-    protected String base64Encode(byte[] bytes) {
-        ChannelBuffer hashed = ChannelBuffers.wrappedBuffer(bytes);
-        return Base64.encode(hashed).toString(CharsetUtil.UTF_8);
-    }
-
-    /**
-     * Creates some random bytes
-     * 
-     * @param size
-     *            Number of random bytes to create
-     * @return random bytes
-     */
-    protected byte[] createRandomBytes(int size) {
-        byte[] bytes = new byte[size];
-
-        for (int i = 0; i < size; i++) {
-            bytes[i] = (byte) createRandomNumber(0, 255);
-        }
-
-        return bytes;
-    }
-
-    /**
-     * Generates a random number
-     * 
-     * @param min
-     *            Minimum value
-     * @param max
-     *            Maximum value
-     * @return Random number
-     */
-    protected int createRandomNumber(int min, int max) {
-        return (int) (Math.random() * max + min);
-    }
+    public abstract void finishHandshake(Channel channel, HttpResponse response);
 }

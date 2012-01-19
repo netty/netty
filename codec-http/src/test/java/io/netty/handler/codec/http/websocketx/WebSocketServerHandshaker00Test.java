@@ -76,7 +76,7 @@ public class WebSocketServerHandshaker00Test {
         req.setContent(buffer);
         
         WebSocketServerHandshaker00 handsaker = new WebSocketServerHandshaker00("ws://example.com/chat", "chat");
-        handsaker.performOpeningHandshake(channelMock, req);
+        handsaker.handshake(channelMock, req);
         
         Assert.assertEquals("ws://example.com/chat", res.getValue().getHeader(Names.SEC_WEBSOCKET_LOCATION));
         Assert.assertEquals("chat", res.getValue().getHeader(Names.SEC_WEBSOCKET_PROTOCOL));

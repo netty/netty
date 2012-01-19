@@ -57,6 +57,6 @@ public enum WebSocketVersion {
         } else if (this == V13) {
             return "13";
         }
-        throw new IllegalArgumentException(this.toString() + " does not have a HttpHeaderValue.");
+        throw new IllegalStateException("Unknown web socket version: " + this);
     }
 }

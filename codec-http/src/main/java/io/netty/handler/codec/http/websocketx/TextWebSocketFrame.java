@@ -28,7 +28,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
      * Creates a new empty text frame.
      */
     public TextWebSocketFrame() {
-        this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+        setBinaryData(ChannelBuffers.EMPTY_BUFFER);
     }
 
     /**
@@ -39,9 +39,9 @@ public class TextWebSocketFrame extends WebSocketFrame {
      */
     public TextWebSocketFrame(String text) {
         if (text == null || text.isEmpty()) {
-            this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+            setBinaryData(ChannelBuffers.EMPTY_BUFFER);
         } else {
-            this.setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
+            setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
         }
     }
 
@@ -52,7 +52,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
      *            the content of the frame. Must be UTF-8 encoded
      */
     public TextWebSocketFrame(ChannelBuffer binaryData) {
-        this.setBinaryData(binaryData);
+        setBinaryData(binaryData);
     }
 
     /**
@@ -66,12 +66,12 @@ public class TextWebSocketFrame extends WebSocketFrame {
      *            String to put in the frame
      */
     public TextWebSocketFrame(boolean finalFragment, int rsv, String text) {
-        this.setFinalFragment(finalFragment);
-        this.setRsv(rsv);
+        setFinalFragment(finalFragment);
+        setRsv(rsv);
         if (text == null || text.isEmpty()) {
-            this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+            setBinaryData(ChannelBuffers.EMPTY_BUFFER);
         } else {
-            this.setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
+            setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
         }
     }
 
@@ -86,19 +86,19 @@ public class TextWebSocketFrame extends WebSocketFrame {
      *            the content of the frame. Must be UTF-8 encoded
      */
     public TextWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
-        this.setFinalFragment(finalFragment);
-        this.setRsv(rsv);
-        this.setBinaryData(binaryData);
+        setFinalFragment(finalFragment);
+        setRsv(rsv);
+        setBinaryData(binaryData);
     }
 
     /**
      * Returns the text data in this frame
      */
     public String getText() {
-        if (this.getBinaryData() == null) {
+        if (getBinaryData() == null) {
             return null;
         }
-        return this.getBinaryData().toString(CharsetUtil.UTF_8);
+        return getBinaryData().toString(CharsetUtil.UTF_8);
     }
 
     /**
@@ -111,7 +111,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
         if (text == null) {
             throw new NullPointerException("text");
         }
-        this.setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
+        setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
     }
 
     @Override

@@ -27,7 +27,7 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
      * Creates a new empty binary frame.
      */
     public BinaryWebSocketFrame() {
-        this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+        setBinaryData(ChannelBuffers.EMPTY_BUFFER);
     }
 
     /**
@@ -37,7 +37,7 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
      *            the content of the frame.
      */
     public BinaryWebSocketFrame(ChannelBuffer binaryData) {
-        this.setBinaryData(binaryData);
+        setBinaryData(binaryData);
     }
 
     /**
@@ -51,9 +51,9 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
      *            the content of the frame.
      */
     public BinaryWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
-        this.setFinalFragment(finalFragment);
-        this.setRsv(rsv);
-        this.setBinaryData(binaryData);
+        setFinalFragment(finalFragment);
+        setRsv(rsv);
+        setBinaryData(binaryData);
     }
 
     @Override

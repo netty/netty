@@ -66,7 +66,7 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
     private static final byte OPCODE_PING = 0x9;
     private static final byte OPCODE_PONG = 0xA;
 
-    private boolean maskPayload;
+    private final boolean maskPayload;
 
     /**
      * Constructor
@@ -82,7 +82,7 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
     @Override
     protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
 
-        byte[] mask = null;
+        byte[] mask;
 
         if (msg instanceof WebSocketFrame) {
             WebSocketFrame frame = (WebSocketFrame) msg;
@@ -118,7 +118,7 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
             if (frame.isFinalFragment()) {
                 b0 |= 1 << 7;
             }
-            b0 |= (frame.getRsv() % 8) << 4;
+            b0 |= frame.getRsv() % 8 << 4;
             b0 |= opcode % 128;
 
             ChannelBuffer header;
@@ -129,27 +129,27 @@ public class WebSocket08FrameEncoder extends OneToOneEncoder {
                         + length);
             }
 
-            int maskLength = this.maskPayload ? 4 : 0;
+            int maskLength = maskPayload ? 4 : 0;
             if (length <= 125) {
                 header = ChannelBuffers.buffer(2 + maskLength);
                 header.writeByte(b0);
-                byte b = (byte) (this.maskPayload ? (0x80 | (byte) length) : (byte) length);
+                byte b = (byte) (maskPayload ? 0x80 | (byte) length : (byte) length);
                 header.writeByte(b);
             } else if (length <= 0xFFFF) {
                 header = ChannelBuffers.buffer(4 + maskLength);
                 header.writeByte(b0);
-                header.writeByte(this.maskPayload ? 0xFE : 126);
-                header.writeByte((length >>> 8) & 0xFF);
+                header.writeByte(maskPayload ? 0xFE : 126);
+                header.writeByte(length >>> 8 & 0xFF);
                 header.writeByte(length & 0xFF);
             } else {
                 header = ChannelBuffers.buffer(10 + maskLength);
                 header.writeByte(b0);
-                header.writeByte(this.maskPayload ? 0xFF : 127);
+                header.writeByte(maskPayload ? 0xFF : 127);
                 header.writeLong(length);
             }
 
             // Write payload
-            if (this.maskPayload) {
+            if (maskPayload) {
                 Integer random = (int) (Math.random() * Integer.MAX_VALUE);
                 mask = ByteBuffer.allocate(4).putInt(random).array();
                 header.writeBytes(mask);

@@ -68,7 +68,7 @@ public class WebSocketServerHandshaker13Test {
         req.setHeader(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
         req.setHeader(Names.SEC_WEBSOCKET_VERSION, "13");
         WebSocketServerHandshaker13 handsaker = new WebSocketServerHandshaker13("ws://example.com/chat", "chat", false);
-        handsaker.performOpeningHandshake(channelMock, req);
+        handsaker.handshake(channelMock, req);
 
         Assert.assertEquals("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.getValue().getHeader(Names.SEC_WEBSOCKET_ACCEPT));
         Assert.assertEquals("chat", res.getValue().getHeader(Names.SEC_WEBSOCKET_PROTOCOL));

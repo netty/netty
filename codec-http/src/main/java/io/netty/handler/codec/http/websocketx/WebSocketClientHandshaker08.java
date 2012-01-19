@@ -19,6 +19,7 @@ import java.net.URI;
 import java.util.Map;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders.Names;
 import io.netty.handler.codec.http.HttpHeaders.Values;
@@ -50,7 +51,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
 
     private static final String protocol = null;
 
-    private boolean allowExtensions;
+    private final boolean allowExtensions;
 
     /**
      * Constructor specifying the destination web socket location and version to initiate
@@ -60,16 +61,16 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      *            sent to this URL.
      * @param version
      *            Version of web socket specification to use to connect to the server
-     * @param subProtocol
+     * @param subprotocol
      *            Sub protocol request sent to the server.
      * @param allowExtensions
      *            Allow extensions to be used in the reserved bits of the web socket frame
      * @param customHeaders
      *            Map of custom headers to add to the client request
      */
-    public WebSocketClientHandshaker08(URI webSocketURL, WebSocketVersion version, String subProtocol,
+    public WebSocketClientHandshaker08(URI webSocketURL, WebSocketVersion version, String subprotocol,
             boolean allowExtensions, Map<String, String> customHeaders) {
-        super(webSocketURL, version, subProtocol, customHeaders);
+        super(webSocketURL, version, subprotocol, customHeaders);
         this.allowExtensions = allowExtensions;
     }
 
@@ -94,25 +95,25 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      *            Channel into which we can write our request
      */
     @Override
-    public void performOpeningHandshake(Channel channel) {
+    public ChannelFuture handshake(Channel channel) {
         // Get path
-        URI wsURL = this.getWebSocketURL();
+        URI wsURL = getWebSocketUrl();
         String path = wsURL.getPath();
         if (wsURL.getQuery() != null && wsURL.getQuery().length() > 0) {
             path = wsURL.getPath() + "?" + wsURL.getQuery();
         }
 
         // Get 16 bit nonce and base 64 encode it
-        byte[] nonce = createRandomBytes(16);
-        String key = base64Encode(nonce);
+        byte[] nonce = WebSocketUtil.randomBytes(16);
+        String key = WebSocketUtil.base64(nonce);
 
         String acceptSeed = key + MAGIC_GUID;
-        byte[] sha1 = sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
-        this.expectedChallengeResponseString = base64Encode(sha1);
+        byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
+        expectedChallengeResponseString = WebSocketUtil.base64(sha1);
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("WS Version 08 Client Handshake key: %s. Expected response: %s.", key,
-                    this.expectedChallengeResponseString));
+                    expectedChallengeResponseString));
         }
 
         // Format request
@@ -133,9 +134,11 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
             }
         }
 
-        channel.write(request);
+        ChannelFuture future = channel.write(request);
 
         channel.getPipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket08FrameEncoder(true));
+
+        return future;
     }
 
     /**
@@ -158,8 +161,8 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      * @throws WebSocketHandshakeException
      */
     @Override
-    public void performClosingHandshake(Channel channel, HttpResponse response) throws WebSocketHandshakeException {
-        final HttpResponseStatus status = new HttpResponseStatus(101, "Switching Protocols");
+    public void finishHandshake(Channel channel, HttpResponse response) {
+        final HttpResponseStatus status = HttpResponseStatus.SWITCHING_PROTOCOLS;
 
         if (!response.getStatus().equals(status)) {
             throw new WebSocketHandshakeException("Invalid handshake response status: " + response.getStatus());
@@ -178,15 +181,14 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         }
 
         String accept = response.getHeader(Names.SEC_WEBSOCKET_ACCEPT);
-        if (accept == null || !accept.equals(this.expectedChallengeResponseString)) {
+        if (accept == null || !accept.equals(expectedChallengeResponseString)) {
             throw new WebSocketHandshakeException(String.format("Invalid challenge. Actual: %s. Expected: %s", accept,
-                    this.expectedChallengeResponseString));
+                    expectedChallengeResponseString));
         }
 
         channel.getPipeline().replace(HttpResponseDecoder.class, "ws-decoder",
-                new WebSocket08FrameDecoder(false, this.allowExtensions));
+                new WebSocket08FrameDecoder(false, allowExtensions));
 
-        this.setOpenningHandshakeCompleted(true);
+        setHandshakeComplete();
     }
-
 }

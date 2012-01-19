@@ -31,7 +31,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      * Creates a new empty continuation frame.
      */
     public ContinuationWebSocketFrame() {
-        this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+        setBinaryData(ChannelBuffers.EMPTY_BUFFER);
     }
 
     /**
@@ -41,7 +41,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      *            the content of the frame.
      */
     public ContinuationWebSocketFrame(ChannelBuffer binaryData) {
-        this.setBinaryData(binaryData);
+        setBinaryData(binaryData);
     }
 
     /**
@@ -55,9 +55,9 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      *            the content of the frame.
      */
     public ContinuationWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData) {
-        this.setFinalFragment(finalFragment);
-        this.setRsv(rsv);
-        this.setBinaryData(binaryData);
+        setFinalFragment(finalFragment);
+        setRsv(rsv);
+        setBinaryData(binaryData);
     }
 
     /**
@@ -73,9 +73,9 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      *            Aggregated text set by decoder on the final continuation frame of a fragmented text message
      */
     public ContinuationWebSocketFrame(boolean finalFragment, int rsv, ChannelBuffer binaryData, String aggregatedText) {
-        this.setFinalFragment(finalFragment);
-        this.setRsv(rsv);
-        this.setBinaryData(binaryData);
+        setFinalFragment(finalFragment);
+        setRsv(rsv);
+        setBinaryData(binaryData);
         this.aggregatedText = aggregatedText;
     }
 
@@ -90,19 +90,19 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      *            text content of the frame.
      */
     public ContinuationWebSocketFrame(boolean finalFragment, int rsv, String text) {
-        this.setFinalFragment(finalFragment);
-        this.setRsv(rsv);
-        this.setText(text);
+        setFinalFragment(finalFragment);
+        setRsv(rsv);
+        setText(text);
     }
 
     /**
      * Returns the text data in this frame
      */
     public String getText() {
-        if (this.getBinaryData() == null) {
+        if (getBinaryData() == null) {
             return null;
         }
-        return this.getBinaryData().toString(CharsetUtil.UTF_8);
+        return getBinaryData().toString(CharsetUtil.UTF_8);
     }
 
     /**
@@ -113,9 +113,9 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      */
     public void setText(String text) {
         if (text == null || text.isEmpty()) {
-            this.setBinaryData(ChannelBuffers.EMPTY_BUFFER);
+            setBinaryData(ChannelBuffers.EMPTY_BUFFER);
         } else {
-            this.setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
+            setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
         }
     }
 

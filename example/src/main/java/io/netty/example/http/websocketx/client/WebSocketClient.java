@@ -97,21 +97,17 @@ public class WebSocketClient {
         
         Channel ch = future.getChannel();
 
-        handshaker.performOpeningHandshake(ch);
-        
-        Thread.sleep(1000);
+        handshaker.handshake(ch).awaitUninterruptibly();
         
         // Send 10 messages and wait for responses
         System.out.println("WebSocket Client sending message");
         for (int i = 0; i < 10; i++) {
             ch.write(new TextWebSocketFrame("Message #" + i));
         }
-        Thread.sleep(1000);
 
         // Ping
         System.out.println("WebSocket Client sending ping");
-        ch.write(new PingWebSocketFrame(ChannelBuffers.copiedBuffer(new byte[] { 1, 2, 3, 4, 5, 6 })));
-        Thread.sleep(1000);
+        ch.write(new PingWebSocketFrame(ChannelBuffers.copiedBuffer(new byte[]{1, 2, 3, 4, 5, 6})));
 
         // Close
         System.out.println("WebSocket Client sending close");

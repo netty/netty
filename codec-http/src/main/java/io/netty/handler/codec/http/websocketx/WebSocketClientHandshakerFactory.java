@@ -31,7 +31,7 @@ public class WebSocketClientHandshakerFactory {
      *            sent to this URL.
      * @param version
      *            Version of web socket specification to use to connect to the server
-     * @param subProtocol
+     * @param subprotocol
      *            Sub protocol request sent to the server. Null if no sub-protocol support is required.
      * @param allowExtensions
      *            Allow extensions to be used in the reserved bits of the web socket frame
@@ -39,16 +39,16 @@ public class WebSocketClientHandshakerFactory {
      *            Custom HTTP headers to send during the handshake
      * @throws WebSocketHandshakeException
      */
-    public WebSocketClientHandshaker newHandshaker(URI webSocketURL, WebSocketVersion version, String subProtocol,
+    public WebSocketClientHandshaker newHandshaker(URI webSocketURL, WebSocketVersion version, String subprotocol,
             boolean allowExtensions, Map<String, String> customHeaders) throws WebSocketHandshakeException {
         if (version == WebSocketVersion.V13) {
-            return new WebSocketClientHandshaker13(webSocketURL, version, subProtocol, allowExtensions, customHeaders);
+            return new WebSocketClientHandshaker13(webSocketURL, version, subprotocol, allowExtensions, customHeaders);
         }
         if (version == WebSocketVersion.V08) {
-            return new WebSocketClientHandshaker08(webSocketURL, version, subProtocol, allowExtensions, customHeaders);
+            return new WebSocketClientHandshaker08(webSocketURL, version, subprotocol, allowExtensions, customHeaders);
         }
         if (version == WebSocketVersion.V00) {
-            return new WebSocketClientHandshaker00(webSocketURL, version, subProtocol, customHeaders);
+            return new WebSocketClientHandshaker00(webSocketURL, version, subprotocol, customHeaders);
         }
 
         throw new WebSocketHandshakeException("Protocol version " + version.toString() + " not supported.");
