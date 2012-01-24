@@ -32,6 +32,7 @@ import io.netty.util.internal.jzlib.ZStream;
 public class ZlibDecoder extends OneToOneDecoder {
 
     private final ZStream z = new ZStream();
+    private byte[] dictionary;
     private volatile boolean finished;
 
     /**
@@ -72,17 +73,13 @@ public class ZlibDecoder extends OneToOneDecoder {
         if (dictionary == null) {
             throw new NullPointerException("dictionary");
         }
+        this.dictionary = dictionary;
 
         synchronized (z) {
             int resultCode;
             resultCode = z.inflateInit(JZlib.W_ZLIB);
             if (resultCode != JZlib.Z_OK) {
                 ZlibUtil.fail(z, "initialization failure", resultCode);
-            } else {
-                resultCode = z.inflateSetDictionary(dictionary, dictionary.length);
-                if (resultCode != JZlib.Z_OK) {
-                    ZlibUtil.fail(z, "failed to set the dictionary", resultCode);
-                }
             }
         }
     }
@@ -131,6 +128,16 @@ public class ZlibDecoder extends OneToOneDecoder {
                     z.next_out_index = 0;
 
                     switch (resultCode) {
+                    case JZlib.Z_NEED_DICT:
+                        if (dictionary == null) {
+                            ZlibUtil.fail(z, "decompression failure", resultCode);
+                        } else {
+                            resultCode = z.inflateSetDictionary(dictionary, dictionary.length);
+                            if (resultCode != JZlib.Z_OK) {
+                                ZlibUtil.fail(z, "failed to set the dictionary", resultCode);
+                            }
+                        }
+                        break;
                     case JZlib.Z_STREAM_END:
                         finished = true; // Do not decode anymore.
                         z.inflateEnd();
