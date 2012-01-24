@@ -50,7 +50,6 @@ final class SocketReceiveBufferPool {
         }
 
         ByteBuffer buf = ByteBuffer.allocateDirect(normalizeCapacity(size));
-        buf.clear();
         return buf;
     }
 
