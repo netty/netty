@@ -39,18 +39,19 @@ public final class UnsafeDetectUtil {
         } catch (ClassNotFoundException e) {
             return false;
         } catch (SecurityException e) {
-        	return false;
-		} catch (PrivilegedActionException e) {
-			return false;
-		}
+            return false;
+        } catch (PrivilegedActionException e) {
+            return false;
+        }
     }
     
     private static boolean hasUnsafeField(final Class<?> unsafeClass) throws PrivilegedActionException {
-    		return AccessController.doPrivileged (new PrivilegedExceptionAction<Boolean>() {
-			    public Boolean run() throws Exception {
-			        unsafeClass.getDeclaredField(THE_UNSAFE);
-			        return true;
-			    }});
+        return AccessController.doPrivileged(new PrivilegedExceptionAction<Boolean>() {
+            public Boolean run() throws Exception {
+                unsafeClass.getDeclaredField(THE_UNSAFE);
+                return true;
+            }
+        });
     }
     
     public static boolean isUnsafeFound() {
