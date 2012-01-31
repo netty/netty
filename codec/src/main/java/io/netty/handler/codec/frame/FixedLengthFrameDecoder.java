@@ -16,6 +16,7 @@
 package io.netty.handler.codec.frame;
 
 import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -38,20 +39,30 @@ import io.netty.channel.ChannelHandlerContext;
 public class FixedLengthFrameDecoder extends FrameDecoder {
 
     private final int frameLength;
+    private final boolean allocateFullBuffer;
+
+    /**
+     * Calls {@link #FixedLengthFrameDecoder(int, boolean)} with <code>false</code>
+     */
+    public FixedLengthFrameDecoder(int frameLength) {
+        this(frameLength, false);
+    }
 
     /**
      * Creates a new instance.
      *
      * @param frameLength  the length of the frame
+     * @param allocateFullBuffer <code>true</code> if the cumulative {@link ChannelBuffer} should use the {@link #frameLength} as its initial size
      */
-    public FixedLengthFrameDecoder(int frameLength) {
+    public FixedLengthFrameDecoder(int frameLength, boolean allocateFullBuffer) {
         if (frameLength <= 0) {
             throw new IllegalArgumentException(
                     "frameLength must be a positive integer: " + frameLength);
         }
         this.frameLength = frameLength;
+        this.allocateFullBuffer = allocateFullBuffer;
     }
-
+    
     @Override
     protected Object decode(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer) throws Exception {
@@ -61,4 +72,13 @@ public class FixedLengthFrameDecoder extends FrameDecoder {
             return buffer.readBytes(frameLength);
         }
     }
+
+    @Override
+    protected ChannelBuffer createCumulationDynamicBuffer(ChannelHandlerContext ctx) {
+        if (allocateFullBuffer) {
+            return ChannelBuffers.dynamicBuffer(frameLength, ctx.getChannel().getConfig().getBufferFactory());
+        }
+        return super.createCumulationDynamicBuffer(ctx);
+    }
+
 }
