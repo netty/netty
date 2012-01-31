@@ -363,10 +363,20 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
     private ChannelBuffer cumulation(ChannelHandlerContext ctx) {
         ChannelBuffer c = cumulation;
         if (c == null) {
-            c = ChannelBuffers.dynamicBuffer(
-                    ctx.getChannel().getConfig().getBufferFactory());
+            c = createCumulationDynamicBuffer(ctx);
             cumulation = c;
         }
         return c;
+    }
+    
+    /**
+     * Create a new {@link ChannelBuffer} which is used for the cumulation. Be aware that this MUST be a dynamic buffer. Sub-classes may override this to provide a 
+     * dynamic {@link ChannelBuffer} which has some prelocated size that better fit their need.
+     * 
+     * @param ctx {@link ChannelHandlerContext} for this handler
+     * @return buffer the {@link ChannelBuffer} which is used for cumulation
+     */
+    protected ChannelBuffer createCumulationDynamicBuffer(ChannelHandlerContext ctx) {
+        return ChannelBuffers.dynamicBuffer(ctx.getChannel().getConfig().getBufferFactory());
     }
 }
