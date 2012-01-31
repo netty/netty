@@ -484,7 +484,9 @@ class NioWorker implements Runnable {
                 } catch (AsynchronousCloseException e) {
                     // Doesn't need a user attention - ignore.
                 } catch (Throwable t) {
-                    buf.release();
+                    if (buf != null) {
+                        buf.release();
+                    }
                     channel.currentWriteEvent = null;
                     channel.currentWriteBuffer = null;
                     buf = null;
