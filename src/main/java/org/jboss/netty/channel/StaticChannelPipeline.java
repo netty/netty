@@ -30,7 +30,10 @@ import org.jboss.netty.util.internal.ConversionUtil;
  * disabled dynamic insertion and removal of {@link ChannelHandler}s.
  * An attempt to insert, remove, or replace a handler in this pipeline will
  * trigger an {@link UnsupportedOperationException}.
+ * 
+ * @deprecated use {@link DefaultChannelPipeline}
  */
+@Deprecated
 public class StaticChannelPipeline implements ChannelPipeline {
 
     // FIXME Code duplication with DefaultChannelPipeline
