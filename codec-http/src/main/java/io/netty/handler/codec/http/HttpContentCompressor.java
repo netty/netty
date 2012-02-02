@@ -123,13 +123,43 @@ public class HttpContentCompressor extends HttpContentEncoder {
                         new ZlibEncoder(wrapper, compressionLevel, windowBits, memLevel)));
     }
 
-    private ZlibWrapper determineWrapper(String acceptEncoding) {
-        // FIXME: Use the Q value.
-        if (acceptEncoding.indexOf("gzip") >= 0) {
-            return ZlibWrapper.GZIP;
+    protected ZlibWrapper determineWrapper(String acceptEncoding) {
+        float starQ = -1.0f;
+        float gzipQ = -1.0f;
+        float deflateQ = -1.0f;
+        for (String encoding : acceptEncoding.split(",")) {
+            float q = 1.0f;
+            int equalsPos = encoding.indexOf('=');
+            if (equalsPos != -1) {
+                try {
+                    q = Float.valueOf(encoding.substring(equalsPos + 1));
+                } catch (NumberFormatException e) {
+                    // Ignore encoding
+                    q = 0.0f;
+                }
+            }
+            if (encoding.indexOf("*") >= 0) {
+                starQ = q;
+            } else if (encoding.indexOf("gzip") >= 0 && q > gzipQ) {
+                gzipQ = q;
+            } else if (encoding.indexOf("deflate") >= 0 && q > deflateQ) {
+                deflateQ = q;
+            }
         }
-        if (acceptEncoding.indexOf("deflate") >= 0) {
-            return ZlibWrapper.ZLIB;
+        if (gzipQ > 0.0f || deflateQ > 0.0f) {
+            if (gzipQ >= deflateQ) {
+                return ZlibWrapper.GZIP;
+            } else {
+                return ZlibWrapper.ZLIB;
+            }
+        }
+        if (starQ > 0.0f) {
+            if (gzipQ == -1.0f) {
+                return ZlibWrapper.GZIP;
+            }
+            if (deflateQ == -1.0f) {
+                return ZlibWrapper.ZLIB;
+            }
         }
         return null;
     }
