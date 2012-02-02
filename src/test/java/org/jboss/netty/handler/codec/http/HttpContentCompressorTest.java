@@ -20,9 +20,6 @@ import org.junit.Test;
 
 public class HttpContentCompressorTest {
 
-    private HttpContentCompressor httpContentCompressor =
-        new HttpContentCompressor();
-
     @Test
     public void testGetTargetContentEncoding() throws Exception {
         HttpContentCompressor compressor = new HttpContentCompressor();
