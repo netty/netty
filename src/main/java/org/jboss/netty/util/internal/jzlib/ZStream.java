@@ -124,9 +124,13 @@ public final class ZStream {
         return deflateInit(level, bits, WrapperType.ZLIB);
     }
 
-    public int deflateInit(int level, int bits, @SuppressWarnings("rawtypes") Enum wrapperType) {
+    public int deflateInit(int level, int bits, Enum<?> wrapperType) {
+        return deflateInit(level, bits, JZlib.DEF_MEM_LEVEL, wrapperType);
+    }
+
+    public int deflateInit(int level, int bits, int memLevel, @SuppressWarnings("rawtypes") Enum wrapperType) {
         dstate = new Deflate();
-        return dstate.deflateInit(this, level, bits, (WrapperType) wrapperType);
+        return dstate.deflateInit(this, level, bits, memLevel, (WrapperType) wrapperType);
     }
 
     public int deflate(int flush) {
