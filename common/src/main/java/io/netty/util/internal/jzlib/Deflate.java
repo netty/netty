@@ -1296,9 +1296,9 @@ final class Deflate {
         return lookahead;
     }
 
-    int deflateInit(ZStream strm, int level, int bits, WrapperType wrapperType) {
+    int deflateInit(ZStream strm, int level, int bits, int memLevel, WrapperType wrapperType) {
         return deflateInit2(strm, level, JZlib.Z_DEFLATED, bits,
-                JZlib.DEF_MEM_LEVEL, JZlib.Z_DEFAULT_STRATEGY, wrapperType);
+                memLevel, JZlib.Z_DEFAULT_STRATEGY, wrapperType);
     }
 
     private int deflateInit2(ZStream strm, int level, int method, int windowBits,
