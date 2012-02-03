@@ -259,7 +259,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
             ChannelStateEvent se = (ChannelStateEvent) e;
             if (se.getState() == ChannelState.OPEN &&
                 !channel.isOpen()) {
-                childExecutors.remove(channel);
+                removeChildExecutor(key);
             }
         }
         return executor;
