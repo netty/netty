@@ -28,8 +28,6 @@ public class DefaultSpdyNoOpFrame implements SpdyNoOpFrame {
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(getClass().getSimpleName());
-        return buf.toString();
+        return getClass().getSimpleName();
     }
 }

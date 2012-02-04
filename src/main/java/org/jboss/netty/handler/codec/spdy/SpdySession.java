@@ -43,17 +43,15 @@ final class SpdySession {
             activeStreams.put(new Integer(streamID),
                               new StreamState(remoteSideClosed, localSideClosed));
         }
-        return;
     }
 
     public void removeStream(int streamID) {
         activeStreams.remove(new Integer(streamID));
-        return;
     }
 
     public boolean isRemoteSideClosed(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
-        return (state == null) || state.isRemoteSideClosed();
+        return state == null || state.isRemoteSideClosed();
     }
 
     public void closeRemoteSide(int streamID) {
@@ -69,7 +67,7 @@ final class SpdySession {
 
     public boolean isLocalSideClosed(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
-        return (state == null) || state.isLocalSideClosed();
+        return state == null || state.isLocalSideClosed();
     }
 
     public void closeLocalSide(int streamID) {
@@ -85,7 +83,7 @@ final class SpdySession {
 
     public boolean hasReceivedReply(int streamID) {
         StreamState state = activeStreams.get(new Integer(streamID));
-        return (state != null) && state.hasReceivedReply();
+        return state != null && state.hasReceivedReply();
     }
 
     public void receivedReply(int streamID) {
