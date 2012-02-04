@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
-import java.util.Formatter;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 
 final class SpdyCodecUtil {
