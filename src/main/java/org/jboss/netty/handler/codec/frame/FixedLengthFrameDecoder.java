@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.codec.frame;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
@@ -38,18 +39,28 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 public class FixedLengthFrameDecoder extends FrameDecoder {
 
     private final int frameLength;
-
+    private final boolean allocateFullBuffer;
+    
+    /**
+     * Calls {@link #FixedLengthFrameDecoder(int, boolean)} with <code>false</code>
+     */
+    public FixedLengthFrameDecoder(int frameLength) {
+        this(frameLength, false);
+    }
+    
     /**
      * Creates a new instance.
      *
      * @param frameLength  the length of the frame
+     * @param allocateFullBuffer <code>true</code> if the cumulative {@link ChannelBuffer} should use the {@link #frameLength} as its initial size
      */
-    public FixedLengthFrameDecoder(int frameLength) {
+    public FixedLengthFrameDecoder(int frameLength, boolean allocateFullBuffer) {        
         if (frameLength <= 0) {
             throw new IllegalArgumentException(
                     "frameLength must be a positive integer: " + frameLength);
         }
         this.frameLength = frameLength;
+        this.allocateFullBuffer = allocateFullBuffer;
     }
 
     @Override
@@ -60,5 +71,13 @@ public class FixedLengthFrameDecoder extends FrameDecoder {
         } else {
             return buffer.readBytes(frameLength);
         }
+    }
+    
+    @Override
+    protected ChannelBuffer createCumulationDynamicBuffer(ChannelHandlerContext ctx) {
+        if (allocateFullBuffer) {
+            return ChannelBuffers.dynamicBuffer(frameLength, ctx.getChannel().getConfig().getBufferFactory());
+        }
+        return super.createCumulationDynamicBuffer(ctx);
     }
 }
