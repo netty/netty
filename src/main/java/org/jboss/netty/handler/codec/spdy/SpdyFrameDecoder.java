@@ -250,6 +250,10 @@ public class SpdyFrameDecoder extends FrameDecoder {
     }
 
     private ChannelBuffer decompress(ChannelBuffer compressed) throws Exception {
+        if ((compressed.readableBytes() == 2) &&
+            (compressed.getShort(compressed.readerIndex()) == 0)) {
+            return compressed;
+        }
         headerBlockDecompressor.offer(compressed);
         return headerBlockDecompressor.poll();
     }

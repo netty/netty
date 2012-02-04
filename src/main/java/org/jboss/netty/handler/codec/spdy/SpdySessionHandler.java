@@ -236,8 +236,16 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         } else if (msg instanceof SpdyHeadersFrame) {
 
             SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
+            int streamID = spdyHeadersFrame.getStreamID();
+
+            // Check if we received a valid HEADERS frame
             if (spdyHeadersFrame.isInvalid()) {
-                issueStreamError(ctx, e, spdyHeadersFrame.getStreamID(), SpdyStreamStatus.PROTOCOL_ERROR);
+                issueStreamError(ctx, e, streamID, SpdyStreamStatus.PROTOCOL_ERROR);
+                return;
+            }
+
+            if (spdySession.isRemoteSideClosed(streamID)) {
+                issueStreamError(ctx, e, streamID, SpdyStreamStatus.INVALID_STREAM);
                 return;
             }
         }
@@ -331,6 +339,15 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             e.getFuture().setFailure(PROTOCOL_EXCEPTION);
             return;
 
+        } else if (msg instanceof SpdyHeadersFrame) {
+
+            SpdyHeadersFrame spdyHeadersFrame = (SpdyHeadersFrame) msg;
+            int streamID = spdyHeadersFrame.getStreamID();
+
+            if (spdySession.isLocalSideClosed(streamID)) {
+                e.getFuture().setFailure(PROTOCOL_EXCEPTION);
+                return;
+            }
         }
 
         ctx.sendDownstream(evt);
@@ -372,18 +389,27 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
     private synchronized void updateConcurrentStreams(SpdySettingsFrame settings, boolean remote) {
         int newConcurrentStreams = settings.getValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS);
-        if (newConcurrentStreams > 0) {
-            if (remote) {
-                remoteConcurrentStreams = newConcurrentStreams;
-                if ((localConcurrentStreams == 0) || localConcurrentStreams > remoteConcurrentStreams) {
-                    maxConcurrentStreams = remoteConcurrentStreams;
-                }
-            } else {
-                localConcurrentStreams = newConcurrentStreams;
-                if ((remoteConcurrentStreams == 0) || remoteConcurrentStreams > localConcurrentStreams) {
-                    maxConcurrentStreams = localConcurrentStreams;
-                }
-            }
+        if (remote) {
+            remoteConcurrentStreams = newConcurrentStreams;
+        } else {
+            localConcurrentStreams = newConcurrentStreams;
+        }
+        if (localConcurrentStreams == remoteConcurrentStreams) {
+            maxConcurrentStreams = localConcurrentStreams;
+            return;
+        }
+        if (localConcurrentStreams == 0) {
+            maxConcurrentStreams = remoteConcurrentStreams;
+            return;
+        }
+        if (remoteConcurrentStreams == 0) {
+            maxConcurrentStreams = localConcurrentStreams;
+            return;
+        }
+        if (localConcurrentStreams > remoteConcurrentStreams) {
+            maxConcurrentStreams = remoteConcurrentStreams;
+        } else {
+            maxConcurrentStreams = localConcurrentStreams;
         }
     }
 
