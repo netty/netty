@@ -15,18 +15,12 @@
  */
 package org.jboss.netty.handler.codec.http.websocketx;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.handler.codec.base64.Base64;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.util.CharsetUtil;
 
 /**
  * Base class for server side web socket opening and closing handshakes
