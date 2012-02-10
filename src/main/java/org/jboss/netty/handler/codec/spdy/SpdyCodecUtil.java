@@ -140,6 +140,14 @@ final class SpdyCodecUtil {
     }
 
     /**
+     * Returns {@code true} if ID is for a server initiated stream or ping.
+     */
+    static boolean isServerID(int ID) {
+        // Server initiated streams and pings have even IDs
+        return ID % 2 == 0;
+    }
+
+    /**
      * Validate a SPDY header name.
      */
     static void validateHeaderName(String name) {
