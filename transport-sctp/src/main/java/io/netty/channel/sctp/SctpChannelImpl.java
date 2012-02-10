@@ -297,8 +297,8 @@ class SctpChannelImpl extends AbstractChannel implements SctpChannel {
 
         private int getMessageSize(MessageEvent e) {
             Object m = e.getMessage();
-            if (m instanceof ChannelBuffer) {
-                return ((ChannelBuffer) m).readableBytes();
+            if (m instanceof SctpPayload) {
+                return ((SctpPayload) m).getPayloadBuffer().readableBytes();
             }
             return 0;
         }
