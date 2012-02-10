@@ -86,7 +86,7 @@ class SctpWorker implements Runnable {
 
         boolean server = !(channel instanceof SctpClientChannel);
         Runnable registerTask = new RegisterTask(channel, future, server);
-        notificationHandler = new SctpNotificationHandler(channel, this);
+        notificationHandler = new SctpNotificationHandler(channel);
         Selector selector;
 
         synchronized (startStopLock) {

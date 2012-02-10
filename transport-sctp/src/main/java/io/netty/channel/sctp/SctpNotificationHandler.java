@@ -23,6 +23,7 @@ import com.sun.nio.sctp.PeerAddressChangeNotification;
 import com.sun.nio.sctp.SendFailedNotification;
 import com.sun.nio.sctp.ShutdownNotification;
 
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.Channels;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -36,21 +37,15 @@ class SctpNotificationHandler extends AbstractNotificationHandler {
             InternalLoggerFactory.getInstance(SctpNotificationHandler.class);
 
     private final SctpChannelImpl sctpChannel;
-    private final SctpWorker sctpWorker;
+    private final ChannelPipeline pipeline;
 
-    public SctpNotificationHandler(SctpChannelImpl sctpChannel, SctpWorker sctpWorker) {
+    SctpNotificationHandler(SctpChannelImpl sctpChannel) {
         this.sctpChannel = sctpChannel;
-        this.sctpWorker = sctpWorker;
+        this.pipeline = sctpChannel.getPipeline();
     }
 
     @Override
     public HandlerResult handleNotification(AssociationChangeNotification notification, Object o) {
-        fireNotificationReceived(notification, o);
-        return HandlerResult.CONTINUE;
-    }
-
-    @Override
-    public HandlerResult handleNotification(Notification notification, Object o) {
         fireNotificationReceived(notification, o);
         return HandlerResult.CONTINUE;
     }
@@ -69,11 +64,11 @@ class SctpNotificationHandler extends AbstractNotificationHandler {
 
     @Override
     public HandlerResult handleNotification(ShutdownNotification notification, Object o) {
-        sctpWorker.close(sctpChannel, Channels.succeededFuture(sctpChannel));
+        Channels.fireChannelDisconnected(sctpChannel);
         return HandlerResult.RETURN;
     }
 
     private void fireNotificationReceived(Notification notification, Object o) {
-        sctpChannel.getPipeline().sendUpstream(new SctpNotificationEvent(sctpChannel, notification, o));
+        pipeline.sendUpstream(new SctpNotificationEvent(sctpChannel, notification, o));
     }
 }
