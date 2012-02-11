@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.sun.nio.sctp.Association;
 
-import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
@@ -297,8 +296,8 @@ class SctpChannelImpl extends AbstractChannel implements SctpChannel {
 
         private int getMessageSize(MessageEvent e) {
             Object m = e.getMessage();
-            if (m instanceof SctpPayload) {
-                return ((SctpPayload) m).getPayloadBuffer().readableBytes();
+            if (m instanceof SctpFrame) {
+                return ((SctpFrame) m).getPayloadBuffer().readableBytes();
             }
             return 0;
         }

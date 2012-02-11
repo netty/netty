@@ -39,15 +39,15 @@ final class SctpSendBufferPool {
     }
 
     SendBuffer acquire(Object message) {
-        if (message instanceof SctpPayload) {
-            return acquire((SctpPayload) message);
+        if (message instanceof SctpFrame) {
+            return acquire((SctpFrame) message);
         } else {
             throw new IllegalArgumentException(
-                    "unsupported message type: " + message.getClass() + " required io.netty.channel.sctp.SctpPayload instance");
+                    "unsupported message type: " + message.getClass() + " required io.netty.channel.sctp.SctpFrame instance");
         }
     }
 
-    private SendBuffer acquire(SctpPayload message) {
+    private SendBuffer acquire(SctpFrame message) {
         final ChannelBuffer src = message.getPayloadBuffer();
         final int streamNo = message.getStreamIdentifier();
         final int protocolId = message.getProtocolIdentifier();

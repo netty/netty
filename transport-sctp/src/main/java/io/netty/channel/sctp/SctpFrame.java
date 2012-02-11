@@ -20,20 +20,20 @@ import io.netty.buffer.ChannelBuffers;
 
 /**
  */
-public final class SctpPayload {
+public final class SctpFrame {
     private final int streamIdentifier;
     private final int protocolIdentifier;
     private final ChannelBuffer payloadBuffer;
 
     /**
      * Essential data that is being carried within SCTP Data Chunk
-     * @param streamIdentifier that you want to send the payload
      * @param protocolIdentifier of payload
+     * @param streamIdentifier that you want to send the payload
      * @param payloadBuffer channel buffer
      */
-    public SctpPayload(int streamIdentifier, int protocolIdentifier, ChannelBuffer payloadBuffer) {
-        this.streamIdentifier = streamIdentifier;
+    public SctpFrame(int protocolIdentifier, int streamIdentifier, ChannelBuffer payloadBuffer) {
         this.protocolIdentifier = protocolIdentifier;
+        this.streamIdentifier = streamIdentifier;
         this.payloadBuffer = payloadBuffer;
     }
 
@@ -56,7 +56,7 @@ public final class SctpPayload {
     @Override
     public String toString() {
         return new StringBuilder().
-                append("SctpPayload{").
+                append("SctpFrame{").
                 append("streamIdentifier=").
                 append(streamIdentifier).
                 append(", protocolIdentifier=").

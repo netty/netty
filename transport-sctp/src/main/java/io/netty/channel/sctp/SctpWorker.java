@@ -343,7 +343,7 @@ class SctpWorker implements Runnable {
 
             // Fire the event.
             fireMessageReceived(channel,
-                    new SctpPayload(messageInfo.streamNumber(),
+                    new SctpFrame(messageInfo.streamNumber(),
                             messageInfo.payloadProtocolID(),
                             buffer),
                     messageInfo.address());
