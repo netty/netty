@@ -62,7 +62,7 @@ class SctpServerChannelImpl extends AbstractServerChannel
             serverChannel = com.sun.nio.sctp.SctpServerChannel.open();
         } catch (IOException e) {
             throw new ChannelException(
-                    "Failed to open a server socket.", e);
+                    "Failed to open a server sctp channel.", e);
         }
 
         try {
@@ -72,7 +72,7 @@ class SctpServerChannelImpl extends AbstractServerChannel
                 serverChannel.close();
             } catch (IOException e2) {
                 logger.warn(
-                        "Failed to close a partially initialized socket.", e2);
+                        "Failed to close a partially initialized sctp channel.", e2);
             }
 
             throw new ChannelException("Failed to enter non-blocking mode.", e);

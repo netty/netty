@@ -41,7 +41,7 @@ final class SctpClientChannel extends SctpChannelImpl {
         try {
             underlayingChannel = SctpChannel.open();
         } catch (IOException e) {
-            throw new ChannelException("Failed to open a socket.", e);
+            throw new ChannelException("Failed to open a sctp channel.", e);
         }
 
         boolean success = false;
@@ -56,7 +56,7 @@ final class SctpClientChannel extends SctpChannelImpl {
                     underlayingChannel.close();
                 } catch (IOException e) {
                     logger.warn(
-                            "Failed to close a partially initialized socket.",
+                            "Failed to close a partially initialized sctp channel.",
                             e);
                 }
             }
