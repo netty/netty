@@ -28,17 +28,17 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
 public class SctpFrameEncoder extends OneToOneEncoder {
 
     private final int protocolIdentifier;
-    private final SctpWriteStreamSelector sctpWriteStreamSelector;
+    private final OutboundStreamSelector sctpWriteStreamSelector;
 
     public SctpFrameEncoder() {
         this(0);
     }
 
     public SctpFrameEncoder(int protocolIdentifier) {
-        this(protocolIdentifier, new DefaultSctpWriteStreamSelector());
+        this(protocolIdentifier, new DefaultOutboundStreamSelector());
     }
 
-    public SctpFrameEncoder(final int protocolIdentifier, final SctpWriteStreamSelector sctpWriteStreamSelector) {
+    public SctpFrameEncoder(final int protocolIdentifier, final OutboundStreamSelector sctpWriteStreamSelector) {
         if (sctpWriteStreamSelector == null) {
             throw new NullPointerException("sctpWriteStreamSelector");
         }

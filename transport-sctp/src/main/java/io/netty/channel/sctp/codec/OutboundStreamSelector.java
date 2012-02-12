@@ -17,6 +17,6 @@ package io.netty.channel.sctp.codec;
 
 import io.netty.channel.sctp.SctpChannel;
 
-public interface SctpWriteStreamSelector {
+public interface OutboundStreamSelector {
     int streamIdentifier(SctpChannel sctpChannel, Object msg);
 }

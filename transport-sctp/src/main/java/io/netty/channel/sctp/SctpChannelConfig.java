@@ -32,8 +32,6 @@ import io.netty.channel.ChannelConfig;
  * </tr><tr>
  * <td>{@code "sctpNoDelay"}</td><td>{@link #setSctpNoDelay(boolean)}}</td>
  * </tr><tr>
- * <td>{@code "soLinger"}</td><td>{@link #setSoLinger(int)}</td>
- * </tr><tr>
  * <td>{@code "receiveBufferSize"}</td><td>{@link #setReceiveBufferSize(int)}</td>
  * </tr><tr>
  * <td>{@code "sendBufferSize"}</td><td>{@link #setSendBufferSize(int)}</td>
@@ -53,16 +51,6 @@ public interface SctpChannelConfig extends ChannelConfig {
      * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SCTP_NODELAY}</a> option.
      */
     void setSctpNoDelay(boolean sctpNoDelay);
-
-    /**
-     * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_LINGER}</a> option.
-     */
-    int getSoLinger();
-
-    /**
-     * Sets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_LINGER}</a> option.
-     */
-    void setSoLinger(int soLinger);
 
     /**
      * Gets the <a href="http://openjdk.java.net/projects/sctp/javadoc/com/sun/nio/sctp/SctpStandardSocketOption.html">{@code SO_SNDBUF}</a> option.

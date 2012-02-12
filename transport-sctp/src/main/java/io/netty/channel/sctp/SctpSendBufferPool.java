@@ -43,7 +43,7 @@ final class SctpSendBufferPool {
             return acquire((SctpFrame) message);
         } else {
             throw new IllegalArgumentException(
-                    "unsupported message type: " + message.getClass() + " required io.netty.channel.sctp.SctpFrame instance");
+                    "unsupported message type: " + message.getClass() + " required: io.netty.channel.sctp.SctpFrame");
         }
     }
 

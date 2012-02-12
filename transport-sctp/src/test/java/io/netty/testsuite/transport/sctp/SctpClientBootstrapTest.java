@@ -13,13 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.sctp.codec;
+package io.netty.testsuite.transport.sctp;
 
-import io.netty.channel.sctp.SctpChannel;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.sctp.SctpClientSocketChannelFactory;
+import io.netty.testsuite.transport.AbstractSocketClientBootstrapTest;
 
-public class DefaultSctpWriteStreamSelector implements SctpWriteStreamSelector {
+import java.util.concurrent.Executor;
+
+public class SctpClientBootstrapTest extends AbstractSocketClientBootstrapTest {
     @Override
-    public int streamIdentifier(SctpChannel sctpChannel, Object msg) {
-        return 1;
+    protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
+        return new SctpClientSocketChannelFactory(executor, executor);
     }
 }

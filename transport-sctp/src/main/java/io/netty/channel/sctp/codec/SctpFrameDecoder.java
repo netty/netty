@@ -15,23 +15,62 @@
  */
 package io.netty.channel.sctp.codec;
 
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.sctp.SctpChannel;
 import io.netty.channel.sctp.SctpFrame;
 import io.netty.handler.codec.oneone.OneToOneDecoder;
 
 /**
- * SCTP Frame Decoder which just extract payload channel buffer
+ * SCTP Frame Decoder which extract payload channel buffer
+ * Note: Supported SCTP Frame Interleave Level - 0
  */
 
 public class SctpFrameDecoder extends OneToOneDecoder {
+
+    private final InboundStreamFilter inboundStreamFilter;
+
+    private volatile ChannelBuffer cumulation;
+
+    public SctpFrameDecoder() {
+        this.inboundStreamFilter = new DefaultInboundStreamFilter();
+    }
+
+    public SctpFrameDecoder(InboundStreamFilter inboundStreamFilter) {
+        this.inboundStreamFilter = inboundStreamFilter;
+    }
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
         if (!(msg instanceof SctpFrame)) {
             return msg;
         }
+        final SctpChannel sctpChannel = (SctpChannel) channel;
+        final SctpFrame sctpFrame = (SctpFrame) msg;
 
-        return ((SctpFrame) msg).getPayloadBuffer();
+        if (inboundStreamFilter.filter(sctpChannel, sctpFrame)) {
+
+            final boolean complete = sctpFrame.getMessageInfo().isComplete();
+            if (complete) {
+                if (cumulation == null) {
+                    return sctpFrame.getPayloadBuffer();
+                } else {
+                    final ChannelBuffer extractedFrame = ChannelBuffers.wrappedBuffer(cumulation, sctpFrame.getPayloadBuffer());
+                    cumulation = null;
+                    return extractedFrame;
+                }
+            } else {
+                if (cumulation == null) {
+                    cumulation = sctpFrame.getPayloadBuffer();
+                } else {
+                    cumulation = ChannelBuffers.wrappedBuffer(cumulation, sctpFrame.getPayloadBuffer());
+                }
+                return null;
+            }
+        } else {
+            return msg;
+        }
     }
 }

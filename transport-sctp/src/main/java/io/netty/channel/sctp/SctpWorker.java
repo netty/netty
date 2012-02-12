@@ -310,10 +310,10 @@ class SctpWorker implements Runnable {
             messageInfo = channel.channel.receive(bb, null, notificationHandler);
             if (messageInfo != null) {
                 messageReceived = true;
-                if (messageInfo.isComplete()) {
+                if (!messageInfo.isUnordered()) {
                     failure = false;
                 } else {
-                    logger.error("Received incomplete sctp packet, can not continue! Expected SCTP_EXPLICIT_COMPLETE message");
+                    logger.error("Received unordered SCTP Packet");
                     failure = true;
                 }
             } else {
@@ -343,9 +343,7 @@ class SctpWorker implements Runnable {
 
             // Fire the event.
             fireMessageReceived(channel,
-                    new SctpFrame(messageInfo.streamNumber(),
-                            messageInfo.payloadProtocolID(),
-                            buffer),
+                    new SctpFrame(messageInfo, buffer),
                     messageInfo.address());
         } else {
             recvBufferPool.release(bb);

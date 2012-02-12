@@ -15,6 +15,7 @@
  */
 package io.netty.channel.sctp;
 
+import com.sun.nio.sctp.MessageInfo;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 
@@ -23,7 +24,10 @@ import io.netty.buffer.ChannelBuffers;
 public final class SctpFrame {
     private final int streamIdentifier;
     private final int protocolIdentifier;
+
     private final ChannelBuffer payloadBuffer;
+
+    private MessageInfo msgInfo;
 
     /**
      * Essential data that is being carried within SCTP Data Chunk
@@ -34,6 +38,13 @@ public final class SctpFrame {
     public SctpFrame(int protocolIdentifier, int streamIdentifier, ChannelBuffer payloadBuffer) {
         this.protocolIdentifier = protocolIdentifier;
         this.streamIdentifier = streamIdentifier;
+        this.payloadBuffer = payloadBuffer;
+    }
+
+    public SctpFrame(MessageInfo msgInfo, ChannelBuffer payloadBuffer) {
+        this.msgInfo = msgInfo;
+        this.streamIdentifier = msgInfo.streamNumber();
+        this.protocolIdentifier = msgInfo.payloadProtocolID();
         this.payloadBuffer = payloadBuffer;
     }
 
@@ -51,6 +62,10 @@ public final class SctpFrame {
         } else {
             return ChannelBuffers.EMPTY_BUFFER;
         }
+    }
+
+    public MessageInfo getMessageInfo() {
+        return msgInfo;
     }
 
     @Override

@@ -14,7 +14,9 @@
  * under the License.
  */
 
-/**
- * NIO -based SCTP channel API implementation.
- */
-package io.netty.channel.sctp;
+package io.netty.testsuite.util;
+
+public class SctpSocketAddresses {
+    //io.netty.util.SocketAddresses.LOCALHOST interface has MTU SIZE issues with SCTP, we have  to use local loop back interface for testing
+    public final static String LOOP_BACK = "127.0.0.1";
+}

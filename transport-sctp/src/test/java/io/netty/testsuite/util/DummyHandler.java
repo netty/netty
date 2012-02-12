@@ -13,8 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.testsuite.util;
 
-/**
- * NIO -based SCTP channel API implementation.
- */
-package io.netty.channel.sctp;
+import io.netty.channel.ChannelDownstreamHandler;
+import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelUpstreamHandler;
+
+public class DummyHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
+
+    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
+            throws Exception {
+        ctx.sendUpstream(e);
+    }
+
+    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
+            throws Exception {
+        ctx.sendDownstream(e);
+    }
+}

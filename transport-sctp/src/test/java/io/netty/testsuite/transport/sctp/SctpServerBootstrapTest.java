@@ -13,8 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.testsuite.transport.sctp;
 
-/**
- * NIO -based SCTP channel API implementation.
- */
-package io.netty.channel.sctp;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.sctp.SctpClientSocketChannelFactory;
+import io.netty.channel.sctp.SctpServerSocketChannelFactory;
+import io.netty.testsuite.transport.AbstractSocketServerBootstrapTest;
+
+import java.util.concurrent.Executor;
+
+public class SctpServerBootstrapTest extends AbstractSocketServerBootstrapTest {
+    @Override
+    protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
+        return new SctpServerSocketChannelFactory(executor, executor);
+    }
+}

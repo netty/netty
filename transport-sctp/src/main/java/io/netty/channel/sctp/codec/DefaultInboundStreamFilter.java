@@ -13,8 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.channel.sctp.codec;
 
-/**
- * NIO -based SCTP channel API implementation.
- */
-package io.netty.channel.sctp;
+import io.netty.channel.sctp.SctpChannel;
+import io.netty.channel.sctp.SctpFrame;
+
+public class DefaultInboundStreamFilter implements InboundStreamFilter {
+    @Override
+    public boolean filter(SctpChannel sctpChannel, SctpFrame sctpFrame) {
+        return true;
+    }
+}
