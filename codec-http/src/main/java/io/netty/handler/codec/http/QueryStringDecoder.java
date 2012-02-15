@@ -154,12 +154,22 @@ public class QueryStringDecoder {
             throw new IllegalArgumentException(
                     "maxParams: " + maxParams + " (expected: a positive integer)");
         }
+        
+        String rawPath = uri.getRawPath();
+        if (rawPath != null) {
+            hasPath = true;
+        } else {
+            rawPath ="";
+            hasPath = false;
+        }
+        // Also take care of cut of things like "http://localhost" 
+        String newUri = rawPath + "?" + uri.getRawQuery();
 
         // http://en.wikipedia.org/wiki/Query_string
-        this.uri = uri.toASCIIString().replace(';', '&');
+        this.uri = newUri.replace(';', '&');
         this.charset = charset;
         this.maxParams = maxParams;
-        hasPath = false;
+
     }
 
     /**
