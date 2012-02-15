@@ -105,7 +105,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
      *            HTTP request
      */
     @Override
-    public ChannelFuture handshake(Channel channel, HttpRequest req) {
+    public ChannelFuture handshake(Channel channel, HttpRequest req) throws Exception {
 
         if (logger.isDebugEnabled()) {
             logger.debug(String.format("Channel %s WS Version 8 server handshake", channel.getId()));
@@ -118,7 +118,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
             throw new WebSocketHandshakeException("not a WebSocket request: missing key");
         }
         String acceptSeed = key + WEBSOCKET_08_ACCEPT_GUID;
-        byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
+        byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII.name()));
         String accept = WebSocketUtil.base64(sha1);
 
         if (logger.isDebugEnabled()) {

@@ -92,7 +92,7 @@ public abstract class WebSocketServerHandshaker {
      * @param req
      *            HTTP Request
      */
-    public abstract ChannelFuture handshake(Channel channel, HttpRequest req);
+    public abstract ChannelFuture handshake(Channel channel, HttpRequest req) throws Exception;
 
     /**
      * Performs the closing handshake

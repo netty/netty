@@ -112,7 +112,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      *            text to store
      */
     public void setText(String text) {
-        if (text == null || text.isEmpty()) {
+        if (text == null || text.length() == 0) {
             setBinaryData(ChannelBuffers.EMPTY_BUFFER);
         } else {
             setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
