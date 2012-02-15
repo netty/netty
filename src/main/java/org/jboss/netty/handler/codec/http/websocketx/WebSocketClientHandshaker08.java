@@ -95,7 +95,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      *            Channel into which we can write our request
      */
     @Override
-    public ChannelFuture handshake(Channel channel) {
+    public ChannelFuture handshake(Channel channel) throws Exception {
         // Get path
         URI wsURL = getWebSocketUrl();
         String path = wsURL.getPath();
@@ -108,7 +108,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         String key = WebSocketUtil.base64(nonce);
 
         String acceptSeed = key + MAGIC_GUID;
-        byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
+        byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII.name()));
         expectedChallengeResponseString = WebSocketUtil.base64(sha1);
 
         if (logger.isDebugEnabled()) {

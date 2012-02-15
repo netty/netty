@@ -38,7 +38,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
      *            String to put in the frame
      */
     public TextWebSocketFrame(String text) {
-        if (text == null || text.isEmpty()) {
+        if (text == null || text.length() == 0) {
             setBinaryData(ChannelBuffers.EMPTY_BUFFER);
         } else {
             setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));
@@ -68,7 +68,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
     public TextWebSocketFrame(boolean finalFragment, int rsv, String text) {
         setFinalFragment(finalFragment);
         setRsv(rsv);
-        if (text == null || text.isEmpty()) {
+        if (text == null || text.length() == 0) {
             setBinaryData(ChannelBuffers.EMPTY_BUFFER);
         } else {
             setBinaryData(ChannelBuffers.copiedBuffer(text, CharsetUtil.UTF_8));

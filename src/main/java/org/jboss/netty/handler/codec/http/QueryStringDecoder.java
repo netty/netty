@@ -15,6 +15,7 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
@@ -219,7 +220,7 @@ public class QueryStringDecoder {
                 }
                 decodeParams(uri.substring(pathLength + 1));
             } else {
-                if (uri.isEmpty()) {
+                if (uri.length() == 0) {
                     return Collections.emptyMap();
                 }
                 decodeParams(uri);
@@ -387,7 +388,11 @@ public class QueryStringDecoder {
                     break;
             }
         }
-        return new String(buf, 0, pos, charset);
+        try {
+            return new String(buf, 0, pos, charset.name());
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalArgumentException("unsupported encoding: " + charset.name());
+        }
     }
 
     /**
