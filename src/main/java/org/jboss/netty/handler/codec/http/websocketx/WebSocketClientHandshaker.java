@@ -109,7 +109,7 @@ public abstract class WebSocketClientHandshaker {
      * @param channel
      *            Channel
      */
-    public abstract ChannelFuture handshake(Channel channel);
+    public abstract ChannelFuture handshake(Channel channel) throws Exception;
 
     /**
      * Validates and finishes the opening handshake initiated by {@link #handshake}}.
