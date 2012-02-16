@@ -57,7 +57,7 @@ public class SctpMultiStreamingEchoTest {
     }
 
     static {
-        int protocolId = 3;
+        int protocolId = 0;//unknown
         for(int streamNumber = 0; streamNumber <= 3; streamNumber ++) {
             sctpFrames [streamNumber] = new SctpFrame(protocolId, streamNumber, makeRandomFrame());
         }
