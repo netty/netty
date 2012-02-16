@@ -49,7 +49,8 @@ public class DefaultSctpServerChannelConfig extends DefaultServerChannelConfig
         }
 
         if (key.equals("sctpInitMaxStreams")) {
-            setInitMaxStreams((InitMaxStreams) value);
+            final Integer maxInOutStreams = ConversionUtil.toInt(value);
+            setInitMaxStreams(InitMaxStreams.create(maxInOutStreams, maxInOutStreams));
         } else if (key.equals("backlog")) {
             setBacklog(ConversionUtil.toInt(value));
         } else {

@@ -13,11 +13,26 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.channel.sctp;
 
-package io.netty.testsuite.util;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelState;
+import io.netty.channel.DownstreamChannelStateEvent;
 
-public class SctpSocketAddresses {
-    //io.netty.util.SocketAddresses.LOCALHOST interface has MTU SIZE issues with SCTP, we have  to use local loop back interface for testing
-    public final static String LOOP_BACK = "127.0.0.1";
-    public final static String LOOP_BACK2 = "127.0.0.2";
+import java.net.InetAddress;
+
+public class SctpUnbindAddressEvent extends DownstreamChannelStateEvent {
+
+    /**
+     * Creates a new instance.
+     */
+    public SctpUnbindAddressEvent(Channel channel, ChannelFuture future, InetAddress value) {
+        super(channel, future, ChannelState.INTEREST_OPS, value);
+    }
+
+    @Override
+    public InetAddress getValue() {
+        return (InetAddress) super.getValue();
+    }
 }

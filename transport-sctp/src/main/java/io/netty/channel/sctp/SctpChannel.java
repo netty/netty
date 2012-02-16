@@ -17,6 +17,7 @@ package io.netty.channel.sctp;
 
 import com.sun.nio.sctp.Association;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.socket.nio.NioSocketChannelConfig;
@@ -57,6 +58,17 @@ public interface SctpChannel extends Channel {
      * Return all remote addresses of the SCTP channel.
      */
     Set<InetSocketAddress> getAllRemoteAddresses();
+
+    /**
+     * Bind a multi-homing address to the already bound channel
+     */
+    ChannelFuture bindAddress(InetAddress localAddress);
+
+
+    /**
+     *  Unbind a multi-homing address from a already established channel
+     */
+    ChannelFuture unbindAddress(InetAddress localAddress);
 
     /**
      * Get the underlying SCTP association

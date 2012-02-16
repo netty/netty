@@ -17,6 +17,7 @@ package io.netty.channel.sctp;
 
 import static io.netty.channel.Channels.*;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Collections;
@@ -150,6 +151,20 @@ class SctpChannelImpl extends AbstractChannel implements SctpChannel {
             } catch (Throwable t) {
                 return Collections.emptySet();
             }
+    }
+
+    @Override
+    public ChannelFuture bindAddress(InetAddress localAddress) {
+        ChannelFuture future = future(this);
+        getPipeline().sendDownstream(new SctpBindAddressEvent(this, future, localAddress));
+        return future;
+    }
+
+    @Override
+    public ChannelFuture unbindAddress(InetAddress localAddress) {
+        ChannelFuture future = future(this);
+        getPipeline().sendDownstream(new SctpUnbindAddressEvent(this, future, localAddress));
+        return future;
     }
 
     @Override

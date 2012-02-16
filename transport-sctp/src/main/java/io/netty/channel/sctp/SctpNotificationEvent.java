@@ -62,4 +62,13 @@ public class SctpNotificationEvent implements ChannelEvent {
     public Object getValue() {
         return value;
     }
+
+    @Override
+    public String toString() {
+        return "SctpNotificationEvent{" +
+                "channel=" + channel +
+                ", notification=" + notification +
+                ", value=" + value +
+                '}';
+    }
 }

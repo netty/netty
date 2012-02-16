@@ -51,7 +51,8 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
         } else if (key.equals("sctpNoDelay")) {
             setSctpNoDelay(ConversionUtil.toBoolean(value));
         } else if (key.equals("sctpInitMaxStreams")) {
-            setInitMaxStreams((InitMaxStreams) value);
+            final Integer maxInOutStreams = ConversionUtil.toInt(value);
+            setInitMaxStreams(InitMaxStreams.create(maxInOutStreams, maxInOutStreams));
         } else {
             return false;
         }

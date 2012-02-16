@@ -762,8 +762,8 @@ class SctpWorker implements Runnable {
                     channel.channel.register(
                             selector, channel.getRawInterestOps(), channel);
                 }
+                channel.setConnected();
                 if (future != null) {
-                    channel.setConnected();
                     future.setSuccess();
                 }
             } catch (IOException e) {

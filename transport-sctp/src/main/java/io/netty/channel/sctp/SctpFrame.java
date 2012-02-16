@@ -69,6 +69,41 @@ public final class SctpFrame {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        SctpFrame sctpFrame = (SctpFrame) o;
+
+        if (protocolIdentifier != sctpFrame.protocolIdentifier) {
+            return false;
+        }
+
+        if (streamIdentifier != sctpFrame.streamIdentifier) {
+            return false;
+        }
+
+        if (!payloadBuffer.equals(sctpFrame.payloadBuffer)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = streamIdentifier;
+        result = 31 * result + protocolIdentifier;
+        result = 31 * result + payloadBuffer.hashCode();
+        return result;
+    }
+
+    @Override
     public String toString() {
         return new StringBuilder().
                 append("SctpFrame{").
