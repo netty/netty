@@ -56,10 +56,12 @@ public class DefaultChannelFuture implements ChannelFuture {
     public static void setUseDeadLockChecker(boolean useDeadLockChecker) {
         if (!useDeadLockChecker && !disabledDeadLockCheckerOnce) {
             disabledDeadLockCheckerOnce = true;
-            logger.debug(
-                    "The dead lock checker in " +
-                    DefaultChannelFuture.class.getSimpleName() +
-                    " has been disabled as requested at your own risk.");
+            if (logger.isDebugEnabled()) {
+                logger.debug(
+                        "The dead lock checker in " +
+                        DefaultChannelFuture.class.getSimpleName() +
+                        " has been disabled as requested at your own risk.");
+            }
         }
         DefaultChannelFuture.useDeadLockChecker = useDeadLockChecker;
     }
@@ -396,9 +398,11 @@ public class DefaultChannelFuture implements ChannelFuture {
         try {
             l.operationComplete(this);
         } catch (Throwable t) {
-            logger.warn(
-                    "An exception was thrown by " +
-                    ChannelFutureListener.class.getSimpleName() + ".", t);
+            if (logger.isWarnEnabled()) {
+                logger.warn(
+                        "An exception was thrown by " +
+                        ChannelFutureListener.class.getSimpleName() + ".", t);
+            }
         }
     }
 
@@ -435,9 +439,11 @@ public class DefaultChannelFuture implements ChannelFuture {
         try {
             l.operationProgressed(this, amount, current, total);
         } catch (Throwable t) {
-            logger.warn(
-                    "An exception was thrown by " +
-                    ChannelFutureProgressListener.class.getSimpleName() + ".", t);
+            if (logger.isWarnEnabled()) {
+                logger.warn(
+                        "An exception was thrown by " +
+                        ChannelFutureProgressListener.class.getSimpleName() + ".", t);
+            }
         }
     }
 }
