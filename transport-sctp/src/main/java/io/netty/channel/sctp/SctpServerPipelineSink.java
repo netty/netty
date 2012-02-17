@@ -246,8 +246,10 @@ class SctpServerPipelineSink extends AbstractChannelSink {
                         // Closed as requested.
                         break;
                     } catch (Throwable e) {
-                        logger.warn(
-                                "Failed to accept a connection.", e);
+                        if (logger.isWarnEnabled()) {
+                            logger.warn(
+                                    "Failed to accept a connection.", e);
+                        }
                         try {
                             Thread.sleep(1000);
                         } catch (InterruptedException e1) {
@@ -271,14 +273,18 @@ class SctpServerPipelineSink extends AbstractChannelSink {
                         SctpServerPipelineSink.this, acceptedSocket,
                         worker, currentThread), null);
             } catch (Exception e) {
-                logger.warn(
-                        "Failed to initialize an accepted socket.", e);
+                if (logger.isWarnEnabled()) {
+                    logger.warn(
+                            "Failed to initialize an accepted socket.", e);
+                }
                 try {
                     acceptedSocket.close();
                 } catch (IOException e2) {
-                    logger.warn(
-                            "Failed to close a partially accepted socket.",
-                            e2);
+                    if (logger.isWarnEnabled()) {
+                        logger.warn(
+                                "Failed to close a partially accepted socket.",
+                                e2);
+                    }
                 }
             }
         }
@@ -288,7 +294,9 @@ class SctpServerPipelineSink extends AbstractChannelSink {
             try {
                 selector.close();
             } catch (Exception e) {
-                logger.warn("Failed to close a selector.", e);
+                if (logger.isWarnEnabled()) {
+                    logger.warn("Failed to close a selector.", e);
+                }
             }
         }
     }

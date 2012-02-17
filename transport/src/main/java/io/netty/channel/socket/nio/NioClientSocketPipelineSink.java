@@ -208,7 +208,9 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                             try {
                                 selector.close();
                             } catch (Throwable t) {
-                                logger.warn("Failed to close a selector.", t);
+                                if (logger.isWarnEnabled()) {
+                                    logger.warn("Failed to close a selector.", t);
+                                }
                             }
                             this.selector = selector = null;
                             // The method will return to the caller at this point.
@@ -302,8 +304,11 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                                     try {
                                         selector.close();
                                     } catch (IOException e) {
-                                        logger.warn(
-                                                "Failed to close a selector.", e);
+                                        if (logger.isWarnEnabled()) {
+                                            logger.warn(
+                                                    "Failed to close a selector.", e);
+                                        }
+
                                     } finally {
                                         this.selector = null;
                                     }
@@ -320,8 +325,11 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                         shutdown = false;
                     }
                 } catch (Throwable t) {
-                    logger.warn(
-                            "Unexpected exception in the selector loop.", t);
+                    if (logger.isWarnEnabled()) {
+                        logger.warn(
+                                "Unexpected exception in the selector loop.", t);
+                    }
+
 
                     // Prevent possible consecutive immediate failures.
                     try {

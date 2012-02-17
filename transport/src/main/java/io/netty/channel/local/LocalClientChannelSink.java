@@ -116,8 +116,10 @@ final class LocalClientChannelSink extends AbstractChannelSink {
         } catch (Exception e) {
             future.setFailure(e);
             fireExceptionCaught(channel, e);
-            logger.warn(
-                    "Failed to initialize an accepted socket.", e);
+            if (logger.isWarnEnabled()) {
+                logger.warn(
+                        "Failed to initialize an accepted socket.", e);
+            }
             return;
         }
 

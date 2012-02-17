@@ -53,11 +53,13 @@ class DefaultNioSctpChannelConfig extends DefaultSctpChannelConfig implements Ni
         if (getWriteBufferHighWaterMark() < getWriteBufferLowWaterMark()) {
             // Recover the integrity of the configuration with a sensible value.
             setWriteBufferLowWaterMark0(getWriteBufferHighWaterMark() >>> 1);
-            // Notify the user about misconfiguration.
-            logger.warn(
-                    "writeBufferLowWaterMark cannot be greater than " +
-                            "writeBufferHighWaterMark; setting to the half of the " +
-                            "writeBufferHighWaterMark.");
+            if (logger.isWarnEnabled()) {
+                // Notify the user about misconfiguration.
+                logger.warn(
+                        "writeBufferLowWaterMark cannot be greater than " +
+                                "writeBufferHighWaterMark; setting to the half of the " +
+                                "writeBufferHighWaterMark.");
+            }
         }
     }
 

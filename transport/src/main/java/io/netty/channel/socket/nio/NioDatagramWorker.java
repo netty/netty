@@ -155,7 +155,9 @@ class NioDatagramWorker implements Runnable {
                             // Release the Selector if the execution fails.
                             selector.close();
                         } catch (final Throwable t) {
-                            logger.warn("Failed to close a selector.", t);
+                            if (logger.isWarnEnabled()) {
+                                logger.warn("Failed to close a selector.", t);
+                            }
                         }
                         this.selector = selector = null;
                         // The method will return to the caller at this point.

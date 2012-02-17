@@ -24,16 +24,11 @@ import com.sun.nio.sctp.SendFailedNotification;
 import com.sun.nio.sctp.ShutdownNotification;
 
 import io.netty.channel.Channels;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 
 /**
  */
 
 class SctpNotificationHandler extends AbstractNotificationHandler {
-
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(SctpNotificationHandler.class);
 
     private final SctpChannelImpl sctpChannel;
     private final SctpWorker sctpWorker;

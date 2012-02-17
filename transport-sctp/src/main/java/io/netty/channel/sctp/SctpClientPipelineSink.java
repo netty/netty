@@ -289,8 +289,10 @@ class SctpClientPipelineSink extends AbstractChannelSink {
                                     try {
                                         selector.close();
                                     } catch (IOException e) {
-                                        logger.warn(
-                                                "Failed to close a selector.", e);
+                                        if (logger.isWarnEnabled()) {
+                                            logger.warn(
+                                                    "Failed to close a selector.", e);
+                                        }
                                     } finally {
                                         this.selector = null;
                                     }
@@ -307,8 +309,10 @@ class SctpClientPipelineSink extends AbstractChannelSink {
                         shutdown = false;
                     }
                 } catch (Throwable t) {
-                    logger.warn(
-                            "Unexpected exception in the selector loop.", t);
+                    if (logger.isWarnEnabled()) {
+                        logger.warn(
+                                "Unexpected exception in the selector loop.", t);
+                    }
 
                     // Prevent possible consecutive immediate failures.
                     try {

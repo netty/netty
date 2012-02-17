@@ -55,9 +55,11 @@ final class SctpClientChannel extends SctpChannelImpl {
                 try {
                     underlayingChannel.close();
                 } catch (IOException e) {
-                    logger.warn(
-                            "Failed to close a partially initialized socket.",
-                            e);
+                    if (logger.isWarnEnabled()) {
+                        logger.warn(
+                                "Failed to close a partially initialized socket.",
+                                e);
+                    }
                 }
             }
         }
