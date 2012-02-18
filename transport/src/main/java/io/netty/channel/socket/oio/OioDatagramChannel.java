@@ -134,12 +134,12 @@ final class OioDatagramChannel extends AbstractOioChannel
     }
 
     @Override
-    InetSocketAddress getLocalSocketAddress() throws Exception{
+    InetSocketAddress getLocalSocketAddress() throws Exception {
         return (InetSocketAddress) socket.getLocalSocketAddress();
     }
 
     @Override
-    InetSocketAddress getRemoteSocketAddress() throws Exception{
+    InetSocketAddress getRemoteSocketAddress() throws Exception {
         return (InetSocketAddress) socket.getRemoteSocketAddress();
     }
 

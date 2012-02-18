@@ -15,279 +15,38 @@
  */
 package io.netty.channel.socket.nio;
 
-import static io.netty.channel.Channels.*;
+import static io.netty.channel.Channels.fireChannelBound;
+import static io.netty.channel.Channels.fireChannelConnected;
+import static io.netty.channel.Channels.fireExceptionCaught;
+import static io.netty.channel.Channels.fireMessageReceived;
+import static io.netty.channel.Channels.succeededFuture;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBufferFactory;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ReceiveBufferSizePredictor;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousCloseException;
-import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.Iterator;
-import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.ReceiveBufferSizePredictor;
-import io.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.DeadLockProofWorker;
-import io.netty.util.internal.QueueFactory;
-
-class NioWorker implements Runnable {
-
-    private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(NioWorker.class);
-
-    private static final int CONSTRAINT_LEVEL = NioProviderMetadata.CONSTRAINT_LEVEL;
-
-    static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
-
-    private final Executor executor;
-    private boolean started;
-    private volatile Thread thread;
-    volatile Selector selector;
-    private final AtomicBoolean wakenUp = new AtomicBoolean();
-    private final ReadWriteLock selectorGuard = new ReentrantReadWriteLock();
-    private final Object startStopLock = new Object();
-    private final Queue<Runnable> registerTaskQueue = QueueFactory.createQueue(Runnable.class);
-    private final Queue<Runnable> writeTaskQueue = QueueFactory.createQueue(Runnable.class);
-    private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
+class NioWorker extends AbstractNioWorker {
 
     private final SocketReceiveBufferPool recvBufferPool = new SocketReceiveBufferPool();
-    private final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
 
     NioWorker(Executor executor) {
-        this.executor = executor;
+        super(executor);
     }
 
-    void register(NioSocketChannel channel, ChannelFuture future) {
 
-        boolean server = !(channel instanceof NioClientSocketChannel);
-        Runnable registerTask = new RegisterTask(channel, future, server);
-        Selector selector;
-
-        synchronized (startStopLock) {
-            if (!started) {
-                // Open a selector if this worker didn't start yet.
-                try {
-                    this.selector = selector = Selector.open();
-                } catch (Throwable t) {
-                    throw new ChannelException(
-                            "Failed to create a selector.", t);
-                }
-
-                // Start the worker thread with the new Selector.
-                boolean success = false;
-                try {
-                    DeadLockProofWorker.start(executor, this);
-                    success = true;
-                } finally {
-                    if (!success) {
-                        // Release the Selector if the execution fails.
-                        try {
-                            selector.close();
-                        } catch (Throwable t) {
-                            logger.warn("Failed to close a selector.", t);
-                        }
-                        this.selector = selector = null;
-                        // The method will return to the caller at this point.
-                    }
-                }
-            } else {
-                // Use the existing selector if this worker has been started.
-                selector = this.selector;
-            }
-
-            assert selector != null && selector.isOpen();
-
-            started = true;
-            boolean offered = registerTaskQueue.offer(registerTask);
-            assert offered;
-        }
-
-        if (wakenUp.compareAndSet(false, true)) {
-            selector.wakeup();
-        }
-    }
 
     @Override
-    public void run() {
-        thread = Thread.currentThread();
-
-        boolean shutdown = false;
-        Selector selector = this.selector;
-        for (;;) {
-            wakenUp.set(false);
-
-            if (CONSTRAINT_LEVEL != 0) {
-                selectorGuard.writeLock().lock();
-                    // This empty synchronization block prevents the selector
-                    // from acquiring its lock.
-                selectorGuard.writeLock().unlock();
-            }
-
-            try {
-                SelectorUtil.select(selector);
-
-                // 'wakenUp.compareAndSet(false, true)' is always evaluated
-                // before calling 'selector.wakeup()' to reduce the wake-up
-                // overhead. (Selector.wakeup() is an expensive operation.)
-                //
-                // However, there is a race condition in this approach.
-                // The race condition is triggered when 'wakenUp' is set to
-                // true too early.
-                //
-                // 'wakenUp' is set to true too early if:
-                // 1) Selector is waken up between 'wakenUp.set(false)' and
-                //    'selector.select(...)'. (BAD)
-                // 2) Selector is waken up between 'selector.select(...)' and
-                //    'if (wakenUp.get()) { ... }'. (OK)
-                //
-                // In the first case, 'wakenUp' is set to true and the
-                // following 'selector.select(...)' will wake up immediately.
-                // Until 'wakenUp' is set to false again in the next round,
-                // 'wakenUp.compareAndSet(false, true)' will fail, and therefore
-                // any attempt to wake up the Selector will fail, too, causing
-                // the following 'selector.select(...)' call to block
-                // unnecessarily.
-                //
-                // To fix this problem, we wake up the selector again if wakenUp
-                // is true immediately after selector.select(...).
-                // It is inefficient in that it wakes up the selector for both
-                // the first case (BAD - wake-up required) and the second case
-                // (OK - no wake-up required).
-
-                if (wakenUp.get()) {
-                    selector.wakeup();
-                }
-
-                cancelledKeys = 0;
-                processRegisterTaskQueue();
-                processWriteTaskQueue();
-                processSelectedKeys(selector.selectedKeys());
-
-                // Exit the loop when there's nothing to handle.
-                // The shutdown flag is used to delay the shutdown of this
-                // loop to avoid excessive Selector creation when
-                // connections are registered in a one-by-one manner instead of
-                // concurrent manner.
-                if (selector.keys().isEmpty()) {
-                    if (shutdown ||
-                        executor instanceof ExecutorService && ((ExecutorService) executor).isShutdown()) {
-
-                        synchronized (startStopLock) {
-                            if (registerTaskQueue.isEmpty() && selector.keys().isEmpty()) {
-                                started = false;
-                                try {
-                                    selector.close();
-                                } catch (IOException e) {
-                                    logger.warn(
-                                            "Failed to close a selector.", e);
-                                } finally {
-                                    this.selector = null;
-                                }
-                                break;
-                            } else {
-                                shutdown = false;
-                            }
-                        }
-                    } else {
-                        // Give one more second.
-                        shutdown = true;
-                    }
-                } else {
-                    shutdown = false;
-                }
-            } catch (Throwable t) {
-                logger.warn(
-                        "Unexpected exception in the selector loop.", t);
-
-                // Prevent possible consecutive immediate failures that lead to
-                // excessive CPU consumption.
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    // Ignore.
-                }
-            }
-        }
-    }
-
-    private void processRegisterTaskQueue() throws IOException {
-        for (;;) {
-            final Runnable task = registerTaskQueue.poll();
-            if (task == null) {
-                break;
-            }
-
-            task.run();
-            cleanUpCancelledKeys();
-        }
-    }
-
-    private void processWriteTaskQueue() throws IOException {
-        for (;;) {
-            final Runnable task = writeTaskQueue.poll();
-            if (task == null) {
-                break;
-            }
-
-            task.run();
-            cleanUpCancelledKeys();
-        }
-    }
-
-    private void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException {
-        for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
-            SelectionKey k = i.next();
-            i.remove();
-            try {
-                int readyOps = k.readyOps();
-                if ((readyOps & SelectionKey.OP_READ) != 0 || readyOps == 0) {
-                    if (!read(k)) {
-                        // Connection already closed - no need to handle write.
-                        continue;
-                    }
-                }
-                if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                    writeFromSelectorLoop(k);
-                }
-            } catch (CancelledKeyException e) {
-                close(k);
-            }
-
-            if (cleanUpCancelledKeys()) {
-                break; // break the loop to avoid ConcurrentModificationException
-            }
-        }
-    }
-
-    private boolean cleanUpCancelledKeys() throws IOException {
-        if (cancelledKeys >= CLEANUP_INTERVAL) {
-            cancelledKeys = 0;
-            selector.selectNow();
-            return true;
-        }
-        return false;
-    }
-
-    private boolean read(SelectionKey k) {
+    protected boolean read(SelectionKey k) {
         final SocketChannel ch = (SocketChannel) k.channel();
         final NioSocketChannel channel = (NioSocketChannel) k.attachment();
 
@@ -343,47 +102,9 @@ class NioWorker implements Runnable {
         return true;
     }
 
-    private void close(SelectionKey k) {
-        NioSocketChannel ch = (NioSocketChannel) k.attachment();
-        close(ch, succeededFuture(ch));
-    }
 
-    void writeFromUserCode(final NioSocketChannel channel) {
-        if (!channel.isConnected()) {
-            cleanUpWriteBuffer(channel);
-            return;
-        }
-
-        if (scheduleWriteIfNecessary(channel)) {
-            return;
-        }
-
-        // From here, we are sure Thread.currentThread() == workerThread.
-
-        if (channel.writeSuspended) {
-            return;
-        }
-
-        if (channel.inWriteNowLoop) {
-            return;
-        }
-
-        write0(channel);
-    }
-
-    void writeFromTaskLoop(final NioSocketChannel ch) {
-        if (!ch.writeSuspended) {
-            write0(ch);
-        }
-    }
-
-    void writeFromSelectorLoop(final SelectionKey k) {
-        NioSocketChannel ch = (NioSocketChannel) k.attachment();
-        ch.writeSuspended = false;
-        write0(ch);
-    }
-
-    private boolean scheduleWriteIfNecessary(final NioSocketChannel channel) {
+    @Override
+    protected boolean scheduleWriteIfNecessary(final AbstractNioChannel<?> channel) {
         final Thread currentThread = Thread.currentThread();
         final Thread workerThread = thread;
         if (currentThread != workerThread) {
@@ -417,310 +138,13 @@ class NioWorker implements Runnable {
 
         return false;
     }
-
-    private void write0(NioSocketChannel channel) {
-        boolean open = true;
-        boolean addOpWrite = false;
-        boolean removeOpWrite = false;
-
-        long writtenBytes = 0;
-
-        final SocketSendBufferPool sendBufferPool = this.sendBufferPool;
-        final SocketChannel ch = channel.socket;
-        final Queue<MessageEvent> writeBuffer = channel.writeBuffer;
-        final int writeSpinCount = channel.getConfig().getWriteSpinCount();
-        synchronized (channel.writeLock) {
-            channel.inWriteNowLoop = true;
-            for (;;) {
-                MessageEvent evt = channel.currentWriteEvent;
-                SendBuffer buf;
-                if (evt == null) {
-                    if ((channel.currentWriteEvent = evt = writeBuffer.poll()) == null) {
-                        removeOpWrite = true;
-                        channel.writeSuspended = false;
-                        break;
-                    }
-
-                    channel.currentWriteBuffer = buf = sendBufferPool.acquire(evt.getMessage());
-                } else {
-                    buf = channel.currentWriteBuffer;
-                }
-
-                ChannelFuture future = evt.getFuture();
-                try {
-                    long localWrittenBytes = 0;
-                    for (int i = writeSpinCount; i > 0; i --) {
-                        localWrittenBytes = buf.transferTo(ch);
-                        if (localWrittenBytes != 0) {
-                            writtenBytes += localWrittenBytes;
-                            break;
-                        }
-                        if (buf.finished()) {
-                            break;
-                        }
-                    }
-
-                    if (buf.finished()) {
-                        // Successful write - proceed to the next message.
-                        buf.release();
-                        channel.currentWriteEvent = null;
-                        channel.currentWriteBuffer = null;
-                        evt = null;
-                        buf = null;
-                        future.setSuccess();
-                    } else {
-                        // Not written fully - perhaps the kernel buffer is full.
-                        addOpWrite = true;
-                        channel.writeSuspended = true;
-
-                        if (localWrittenBytes > 0) {
-                            // Notify progress listeners if necessary.
-                            future.setProgress(
-                                    localWrittenBytes,
-                                    buf.writtenBytes(), buf.totalBytes());
-                        }
-                        break;
-                    }
-                } catch (AsynchronousCloseException e) {
-                    // Doesn't need a user attention - ignore.
-                } catch (Throwable t) {
-                    if (buf != null) {
-                        buf.release();
-                    }
-                    channel.currentWriteEvent = null;
-                    channel.currentWriteBuffer = null;
-                    buf = null;
-                    evt = null;
-                    future.setFailure(t);
-                    fireExceptionCaught(channel, t);
-                    if (t instanceof IOException) {
-                        open = false;
-                        close(channel, succeededFuture(channel));
-                    }
-                }
-            }
-            channel.inWriteNowLoop = false;
-
-            // Initially, the following block was executed after releasing
-            // the writeLock, but there was a race condition, and it has to be
-            // executed before releasing the writeLock:
-            //
-            //     https://issues.jboss.org/browse/NETTY-410
-            //
-            if (open) {
-                if (addOpWrite) {
-                    setOpWrite(channel);
-                } else if (removeOpWrite) {
-                    clearOpWrite(channel);
-                }
-            }
-        }
-
-        fireWriteComplete(channel, writtenBytes);
+    
+    @Override
+    protected Runnable createRegisterTask(AbstractNioChannel<?> channel, ChannelFuture future) {
+        boolean server = !(channel instanceof NioClientSocketChannel);
+        return new RegisterTask((NioSocketChannel) channel, future, server);
     }
-
-    private void setOpWrite(NioSocketChannel channel) {
-        Selector selector = this.selector;
-        SelectionKey key = channel.socket.keyFor(selector);
-        if (key == null) {
-            return;
-        }
-        if (!key.isValid()) {
-            close(key);
-            return;
-        }
-
-        // interestOps can change at any time and at any thread.
-        // Acquire a lock to avoid possible race condition.
-        synchronized (channel.interestOpsLock) {
-            int interestOps = channel.getRawInterestOps();
-            if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                interestOps |= SelectionKey.OP_WRITE;
-                key.interestOps(interestOps);
-                channel.setRawInterestOpsNow(interestOps);
-            }
-        }
-    }
-
-    private void clearOpWrite(NioSocketChannel channel) {
-        Selector selector = this.selector;
-        SelectionKey key = channel.socket.keyFor(selector);
-        if (key == null) {
-            return;
-        }
-        if (!key.isValid()) {
-            close(key);
-            return;
-        }
-
-        // interestOps can change at any time and at any thread.
-        // Acquire a lock to avoid possible race condition.
-        synchronized (channel.interestOpsLock) {
-            int interestOps = channel.getRawInterestOps();
-            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                interestOps &= ~SelectionKey.OP_WRITE;
-                key.interestOps(interestOps);
-                channel.setRawInterestOpsNow(interestOps);
-            }
-        }
-    }
-
-    void close(NioSocketChannel channel, ChannelFuture future) {
-        boolean connected = channel.isConnected();
-        boolean bound = channel.isBound();
-        try {
-            channel.socket.close();
-            cancelledKeys ++;
-
-            if (channel.setClosed()) {
-                future.setSuccess();
-                if (connected) {
-                    fireChannelDisconnected(channel);
-                }
-                if (bound) {
-                    fireChannelUnbound(channel);
-                }
-
-                cleanUpWriteBuffer(channel);
-                fireChannelClosed(channel);
-            } else {
-                future.setSuccess();
-            }
-        } catch (Throwable t) {
-            future.setFailure(t);
-            fireExceptionCaught(channel, t);
-        }
-    }
-
-    private void cleanUpWriteBuffer(NioSocketChannel channel) {
-        Exception cause = null;
-        boolean fireExceptionCaught = false;
-
-        // Clean up the stale messages in the write buffer.
-        synchronized (channel.writeLock) {
-            MessageEvent evt = channel.currentWriteEvent;
-            if (evt != null) {
-                // Create the exception only once to avoid the excessive overhead
-                // caused by fillStackTrace.
-                if (channel.isOpen()) {
-                    cause = new NotYetConnectedException();
-                } else {
-                    cause = new ClosedChannelException();
-                }
-
-                ChannelFuture future = evt.getFuture();
-                channel.currentWriteBuffer.release();
-                channel.currentWriteBuffer = null;
-                channel.currentWriteEvent = null;
-                evt = null;
-                future.setFailure(cause);
-                fireExceptionCaught = true;
-            }
-
-            Queue<MessageEvent> writeBuffer = channel.writeBuffer;
-            if (!writeBuffer.isEmpty()) {
-                // Create the exception only once to avoid the excessive overhead
-                // caused by fillStackTrace.
-                if (cause == null) {
-                    if (channel.isOpen()) {
-                        cause = new NotYetConnectedException();
-                    } else {
-                        cause = new ClosedChannelException();
-                    }
-                }
-
-                for (;;) {
-                    evt = writeBuffer.poll();
-                    if (evt == null) {
-                        break;
-                    }
-                    evt.getFuture().setFailure(cause);
-                    fireExceptionCaught = true;
-                }
-            }
-        }
-
-        if (fireExceptionCaught) {
-            fireExceptionCaught(channel, cause);
-        }
-    }
-
-    void setInterestOps(
-            NioSocketChannel channel, ChannelFuture future, int interestOps) {
-        boolean changed = false;
-        try {
-            // interestOps can change at any time and at any thread.
-            // Acquire a lock to avoid possible race condition.
-            synchronized (channel.interestOpsLock) {
-                Selector selector = this.selector;
-                SelectionKey key = channel.socket.keyFor(selector);
-
-                if (key == null || selector == null) {
-                    // Not registered to the worker yet.
-                    // Set the rawInterestOps immediately; RegisterTask will pick it up.
-                    channel.setRawInterestOpsNow(interestOps);
-                    return;
-                }
-
-                // Override OP_WRITE flag - a user cannot change this flag.
-                interestOps &= ~Channel.OP_WRITE;
-                interestOps |= channel.getRawInterestOps() & Channel.OP_WRITE;
-
-                switch (CONSTRAINT_LEVEL) {
-                case 0:
-                    if (channel.getRawInterestOps() != interestOps) {
-                        key.interestOps(interestOps);
-                        if (Thread.currentThread() != thread &&
-                            wakenUp.compareAndSet(false, true)) {
-                            selector.wakeup();
-                        }
-                        changed = true;
-                    }
-                    break;
-                case 1:
-                case 2:
-                    if (channel.getRawInterestOps() != interestOps) {
-                        if (Thread.currentThread() == thread) {
-                            key.interestOps(interestOps);
-                            changed = true;
-                        } else {
-                            selectorGuard.readLock().lock();
-                            try {
-                                if (wakenUp.compareAndSet(false, true)) {
-                                    selector.wakeup();
-                                }
-                                key.interestOps(interestOps);
-                                changed = true;
-                            } finally {
-                                selectorGuard.readLock().unlock();
-                            }
-                        }
-                    }
-                    break;
-                default:
-                    throw new Error();
-                }
-
-                if (changed) {
-                    channel.setRawInterestOpsNow(interestOps);
-                }
-            }
-
-            future.setSuccess();
-            if (changed) {
-                fireChannelInterestChanged(channel);
-            }
-        } catch (CancelledKeyException e) {
-            // setInterestOps() was called on a closed channel.
-            ClosedChannelException cce = new ClosedChannelException();
-            future.setFailure(cce);
-            fireExceptionCaught(channel, cce);
-        } catch (Throwable t) {
-            future.setFailure(t);
-            fireExceptionCaught(channel, t);
-        }
-    }
-
+    
     private final class RegisterTask implements Runnable {
         private final NioSocketChannel channel;
         private final ChannelFuture future;
@@ -738,6 +162,7 @@ class NioWorker implements Runnable {
         public void run() {
             SocketAddress localAddress = channel.getLocalAddress();
             SocketAddress remoteAddress = channel.getRemoteAddress();
+
             if (localAddress == null || remoteAddress == null) {
                 if (future != null) {
                     future.setFailure(new ClosedChannelException());
@@ -748,11 +173,11 @@ class NioWorker implements Runnable {
 
             try {
                 if (server) {
-                    channel.socket.configureBlocking(false);
+                    channel.channel.configureBlocking(false);
                 }
 
                 synchronized (channel.interestOpsLock) {
-                    channel.socket.register(
+                    channel.channel.register(
                             selector, channel.getRawInterestOps(), channel);
                 }
                 if (future != null) {
@@ -776,4 +201,5 @@ class NioWorker implements Runnable {
             fireChannelConnected(channel, remoteAddress);
         }
     }
+
 }

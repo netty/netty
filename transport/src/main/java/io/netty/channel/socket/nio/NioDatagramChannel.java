@@ -15,36 +15,23 @@
  */
 package io.netty.channel.socket.nio;
 
-import static io.netty.channel.Channels.*;
+import static io.netty.channel.Channels.fireChannelOpen;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
+import io.netty.channel.socket.DatagramChannelConfig;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
-import java.net.SocketAddress;
 import java.nio.channels.DatagramChannel;
-import java.util.Queue;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.AbstractChannel;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelSink;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.socket.DatagramChannelConfig;
-import io.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
-import io.netty.util.internal.LegacyLinkedTransferQueue;
-import io.netty.util.internal.ThreadLocalBoolean;
 
 /**
  * Provides an NIO based {@link io.netty.channel.socket.DatagramChannel}.
  */
-final class NioDatagramChannel extends AbstractChannel
+final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel>
                                 implements io.netty.channel.socket.DatagramChannel {
 
     /**
@@ -52,67 +39,7 @@ final class NioDatagramChannel extends AbstractChannel
      */
     private final NioDatagramChannelConfig config;
 
-    /**
-     * The {@link NioDatagramWorker} for this NioDatagramChannnel.
-     */
-    final NioDatagramWorker worker;
-
-    /**
-     * The {@link DatagramChannel} that this channel uses.
-     */
-    private final java.nio.channels.DatagramChannel datagramChannel;
-
-    /**
-     * Monitor object to synchronize access to InterestedOps.
-     */
-    final Object interestOpsLock = new Object();
-
-    /**
-     * Monitor object for synchronizing access to the {@link WriteRequestQueue}.
-     */
-    final Object writeLock = new Object();
-
-    /**
-     * WriteTask that performs write operations.
-     */
-    final Runnable writeTask = new WriteTask();
-
-    /**
-     * Indicates if there is a {@link WriteTask} in the task queue.
-     */
-    final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
-
-    /**
-     * Queue of write {@link MessageEvent}s.
-     */
-    final Queue<MessageEvent> writeBufferQueue = new WriteRequestQueue();
-
-    /**
-     * Keeps track of the number of bytes that the {@link WriteRequestQueue} currently
-     * contains.
-     */
-    final AtomicInteger writeBufferSize = new AtomicInteger();
-
-    /**
-     * Keeps track of the highWaterMark.
-     */
-    final AtomicInteger highWaterMarkCounter = new AtomicInteger();
-
-    /**
-     * The current write {@link MessageEvent}
-     */
-    MessageEvent currentWriteEvent;
-    SendBuffer currentWriteBuffer;
-
-    /**
-     * Boolean that indicates that write operation is in progress.
-     */
-    boolean inWriteNowLoop;
-    boolean writeSuspended;
-
-    private volatile InetSocketAddress localAddress;
-    volatile InetSocketAddress remoteAddress;
-
+   
     static NioDatagramChannel create(ChannelFactory factory,
             ChannelPipeline pipeline, ChannelSink sink, NioDatagramWorker worker) {
         NioDatagramChannel instance =
@@ -124,13 +51,11 @@ final class NioDatagramChannel extends AbstractChannel
     private NioDatagramChannel(final ChannelFactory factory,
             final ChannelPipeline pipeline, final ChannelSink sink,
             final NioDatagramWorker worker) {
-        super(null, factory, pipeline, sink);
-        this.worker = worker;
-        datagramChannel = openNonBlockingChannel();
-        config = new DefaultNioDatagramChannelConfig(datagramChannel.socket());
+        super(null, factory, pipeline, sink, worker, openNonBlockingChannel());
+        config = new DefaultNioDatagramChannelConfig(channel.socket());
     }
 
-    private DatagramChannel openNonBlockingChannel() {
+    private static DatagramChannel openNonBlockingChannel() {
         try {
             final DatagramChannel channel = DatagramChannel.open();
             channel.configureBlocking(false);
@@ -140,44 +65,15 @@ final class NioDatagramChannel extends AbstractChannel
         }
     }
 
-    @Override
-    public InetSocketAddress getLocalAddress() {
-        InetSocketAddress localAddress = this.localAddress;
-        if (localAddress == null) {
-            try {
-                this.localAddress = localAddress =
-                    (InetSocketAddress) datagramChannel.socket().getLocalSocketAddress();
-            } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
-                return null;
-            }
-        }
-        return localAddress;
-    }
-
-    @Override
-    public InetSocketAddress getRemoteAddress() {
-        InetSocketAddress remoteAddress = this.remoteAddress;
-        if (remoteAddress == null) {
-            try {
-                this.remoteAddress = remoteAddress =
-                    (InetSocketAddress) datagramChannel.socket().getRemoteSocketAddress();
-            } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
-                return null;
-            }
-        }
-        return remoteAddress;
-    }
 
     @Override
     public boolean isBound() {
-        return isOpen() && datagramChannel.socket().isBound();
+        return isOpen() && channel.socket().isBound();
     }
 
     @Override
     public boolean isConnected() {
-        return datagramChannel.isConnected();
+        return channel.isConnected();
     }
 
     @Override
@@ -191,140 +87,7 @@ final class NioDatagramChannel extends AbstractChannel
     }
 
     DatagramChannel getDatagramChannel() {
-        return datagramChannel;
-    }
-
-    @Override
-    public int getInterestOps() {
-        if (!isOpen()) {
-            return Channel.OP_WRITE;
-        }
-
-        int interestOps = getRawInterestOps();
-        int writeBufferSize = this.writeBufferSize.get();
-        if (writeBufferSize != 0) {
-            if (highWaterMarkCounter.get() > 0) {
-                int lowWaterMark = getConfig().getWriteBufferLowWaterMark();
-                if (writeBufferSize >= lowWaterMark) {
-                    interestOps |= Channel.OP_WRITE;
-                } else {
-                    interestOps &= ~Channel.OP_WRITE;
-                }
-            } else {
-                int highWaterMark = getConfig().getWriteBufferHighWaterMark();
-                if (writeBufferSize >= highWaterMark) {
-                    interestOps |= Channel.OP_WRITE;
-                } else {
-                    interestOps &= ~Channel.OP_WRITE;
-                }
-            }
-        } else {
-            interestOps &= ~Channel.OP_WRITE;
-        }
-
-        return interestOps;
-    }
-
-    int getRawInterestOps() {
-        return super.getInterestOps();
-    }
-
-    void setRawInterestOpsNow(int interestOps) {
-        super.setInterestOpsNow(interestOps);
-    }
-
-    @Override
-    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
-        if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
-            return super.write(message, null);
-        } else {
-            return super.write(message, remoteAddress);
-        }
-    }
-
-    /**
-     * {@link WriteRequestQueue} is an extension of {@link AbstractWriteRequestQueue}
-     * that adds support for highWaterMark checking of the write buffer size.
-     */
-    private final class WriteRequestQueue extends
-            AbstractWriteRequestQueue {
-
-        private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
-
-       
-        /**
-         * This method first delegates to {@link LegacyLinkedTransferQueue#offer(Object)} and
-         * adds support for keeping track of the size of the this write buffer.
-         */
-        @Override
-        public boolean offer(MessageEvent e) {
-            boolean success = queue.offer(e);
-            assert success;
-
-            int messageSize = getMessageSize(e);
-            int newWriteBufferSize = writeBufferSize.addAndGet(messageSize);
-            int highWaterMark = getConfig().getWriteBufferHighWaterMark();
-
-            if (newWriteBufferSize >= highWaterMark) {
-                if (newWriteBufferSize - messageSize < highWaterMark) {
-                    highWaterMarkCounter.incrementAndGet();
-                    if (!notifying.get()) {
-                        notifying.set(Boolean.TRUE);
-                        fireChannelInterestChanged(NioDatagramChannel.this);
-                        notifying.set(Boolean.FALSE);
-                    }
-                }
-            }
-            return true;
-        }
-
-        /**
-         * This method first delegates to {@link LegacyLinkedTransferQueue#poll()} and
-         * adds support for keeping track of the size of the this writebuffers queue.
-         */
-        @Override
-        public MessageEvent poll() {
-            MessageEvent e = queue.poll();
-            if (e != null) {
-                int messageSize = getMessageSize(e);
-                int newWriteBufferSize = writeBufferSize.addAndGet(-messageSize);
-                int lowWaterMark = getConfig().getWriteBufferLowWaterMark();
-
-                if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
-                    if (newWriteBufferSize + messageSize >= lowWaterMark) {
-                        highWaterMarkCounter.decrementAndGet();
-                        if (isBound() && !notifying.get()) {
-                            notifying.set(Boolean.TRUE);
-                            fireChannelInterestChanged(NioDatagramChannel.this);
-                            notifying.set(Boolean.FALSE);
-                        }
-                    }
-                }
-            }
-            return e;
-        }
-
-        private int getMessageSize(MessageEvent e) {
-            Object m = e.getMessage();
-            if (m instanceof ChannelBuffer) {
-                return ((ChannelBuffer) m).readableBytes();
-            }
-            return 0;
-        }
-    }
-
-    /**
-     * WriteTask is a simple runnable performs writes by delegating the {@link NioDatagramWorker}.
-     */
-    private final class WriteTask implements Runnable {
-        WriteTask() {
-        }
-
-        @Override
-        public void run() {
-            writeTaskInTaskQueue.set(false);
-            worker.writeFromTaskLoop(NioDatagramChannel.this);
-        }
+        return channel;
     }
 
     @Override
@@ -347,5 +110,15 @@ final class NioDatagramChannel extends AbstractChannel
     public void leaveGroup(InetSocketAddress multicastAddress,
             NetworkInterface networkInterface) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    InetSocketAddress getLocalSocketAddress() throws Exception {
+        return (InetSocketAddress) channel.socket().getLocalSocketAddress();
+    }
+
+    @Override
+    InetSocketAddress getRemoteSocketAddress() throws Exception {
+        return (InetSocketAddress) channel.socket().getRemoteSocketAddress();
     }
 }

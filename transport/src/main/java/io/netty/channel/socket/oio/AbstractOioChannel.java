@@ -26,7 +26,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 
-abstract class AbstractOioChannel extends AbstractChannel{
+abstract class AbstractOioChannel extends AbstractChannel {
     private volatile InetSocketAddress localAddress;
     volatile InetSocketAddress remoteAddress;
     volatile Thread workerThread;
