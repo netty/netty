@@ -159,7 +159,7 @@ public class QueryStringDecoder {
         if (rawPath != null) {
             hasPath = true;
         } else {
-            rawPath ="";
+            rawPath = "";
             hasPath = false;
         }
         // Also take care of cut of things like "http://localhost" 
