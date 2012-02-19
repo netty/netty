@@ -380,7 +380,7 @@ abstract class AbstractNioWorker implements Runnable {
         final SocketSendBufferPool sendBufferPool = this.sendBufferPool;
         final WritableByteChannel ch = channel.channel;
         final Queue<MessageEvent> writeBuffer = channel.writeBufferQueue;
-        final int writeSpinCount = ((NioChannelConfig) channel.getConfig()).getWriteSpinCount();
+        final int writeSpinCount = channel.getConfig().getWriteSpinCount();
         synchronized (channel.writeLock) {
             channel.inWriteNowLoop = true;
             for (;;) {

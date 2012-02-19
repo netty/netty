@@ -145,6 +145,9 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
         return remoteAddress;
     }
     
+    @Override
+    public abstract NioChannelConfig getConfig();
+    
     int getRawInterestOps() {
         return super.getInterestOps();
     }
@@ -172,14 +175,14 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
         int writeBufferSize = this.writeBufferSize.get();
         if (writeBufferSize != 0) {
             if (highWaterMarkCounter.get() > 0) {
-                int lowWaterMark = ((NioChannelConfig) getConfig()).getWriteBufferLowWaterMark();
+                int lowWaterMark = getConfig().getWriteBufferLowWaterMark();
                 if (writeBufferSize >= lowWaterMark) {
                     interestOps |= Channel.OP_WRITE;
                 } else {
                     interestOps &= ~Channel.OP_WRITE;
                 }
             } else {
-                int highWaterMark = ((NioChannelConfig) getConfig()).getWriteBufferHighWaterMark();
+                int highWaterMark = getConfig().getWriteBufferHighWaterMark();
                 if (writeBufferSize >= highWaterMark) {
                     interestOps |= Channel.OP_WRITE;
                 } else {
@@ -333,7 +336,7 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
 
             int messageSize = getMessageSize(e);
             int newWriteBufferSize = writeBufferSize.addAndGet(messageSize);
-            int highWaterMark =  ((NioChannelConfig) getConfig()).getWriteBufferHighWaterMark();
+            int highWaterMark =  getConfig().getWriteBufferHighWaterMark();
 
             if (newWriteBufferSize >= highWaterMark) {
                 if (newWriteBufferSize - messageSize < highWaterMark) {
@@ -354,7 +357,7 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
             if (e != null) {
                 int messageSize = getMessageSize(e);
                 int newWriteBufferSize = writeBufferSize.addAndGet(-messageSize);
-                int lowWaterMark = ((NioChannelConfig) getConfig()).getWriteBufferLowWaterMark();
+                int lowWaterMark = getConfig().getWriteBufferLowWaterMark();
 
                 if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
                     if (newWriteBufferSize + messageSize >= lowWaterMark) {
