@@ -32,5 +32,7 @@ public abstract class MessageInfo {
     public abstract int payloadProtocolID();
     public abstract MessageInfo payloadProtocolID(int ppid);
     public abstract boolean isComplete();
+    public abstract boolean isUnordered();
+    public abstract MessageInfo unordered(boolean b);
 
 }

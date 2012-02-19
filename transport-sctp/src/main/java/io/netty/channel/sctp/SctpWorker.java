@@ -86,7 +86,7 @@ class SctpWorker implements Runnable {
 
         boolean server = !(channel instanceof SctpClientChannel);
         Runnable registerTask = new RegisterTask(channel, future, server);
-        notificationHandler = new SctpNotificationHandler(channel, this);
+        notificationHandler = new SctpNotificationHandler(channel);
         Selector selector;
 
         synchronized (startStopLock) {
@@ -315,11 +315,11 @@ class SctpWorker implements Runnable {
             messageInfo = channel.channel.receive(bb, null, notificationHandler);
             if (messageInfo != null) {
                 messageReceived = true;
-                if (messageInfo.isComplete()) {
+                if (!messageInfo.isUnordered()) {
                     failure = false;
                 } else {
                     if (logger.isErrorEnabled()) {
-                        logger.error("Received incomplete sctp packet, can not continue! Expected SCTP_EXPLICIT_COMPLETE message");
+                        logger.error("Received unordered SCTP Packet");
                     }
                     failure = true;
                 }
@@ -350,9 +350,7 @@ class SctpWorker implements Runnable {
 
             // Fire the event.
             fireMessageReceived(channel,
-                    new SctpPayload(messageInfo.streamNumber(),
-                            messageInfo.payloadProtocolID(),
-                            buffer),
+                    new SctpFrame(messageInfo, buffer),
                     messageInfo.address());
         } else {
             recvBufferPool.release(bb);
@@ -771,8 +769,8 @@ class SctpWorker implements Runnable {
                     channel.channel.register(
                             selector, channel.getRawInterestOps(), channel);
                 }
+                channel.setConnected();
                 if (future != null) {
-                    channel.setConnected();
                     future.setSuccess();
                 }
             } catch (IOException e) {

@@ -18,6 +18,7 @@ package io.netty.channel.sctp;
 import static io.netty.channel.Channels.*;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.channels.CancelledKeyException;
@@ -94,6 +95,16 @@ class SctpServerPipelineSink extends AbstractChannelSink {
             } else {
                 close(channel, future);
             }
+        case INTEREST_OPS:
+            if (event instanceof SctpBindAddressEvent) {
+                SctpBindAddressEvent bindAddressEvent = (SctpBindAddressEvent) event;
+                bindAddress(channel, bindAddressEvent.getFuture(), bindAddressEvent.getValue());
+            }
+
+            if (event instanceof SctpUnbindAddressEvent) {
+                SctpUnbindAddressEvent unbindAddressEvent = (SctpUnbindAddressEvent) event;
+                unbindAddress(channel, unbindAddressEvent.getFuture(), unbindAddressEvent.getValue());
+            }
             break;
         }
     }
@@ -155,6 +166,30 @@ class SctpServerPipelineSink extends AbstractChannelSink {
             if (!bossStarted && bound) {
                 close(channel, future);
             }
+        }
+    }
+
+    private void bindAddress(
+            SctpServerChannelImpl channel, ChannelFuture future,
+            InetAddress localAddress) {
+        try {
+            channel.serverChannel.bindAddress(localAddress);
+            future.setSuccess();
+        } catch (Throwable t) {
+            future.setFailure(t);
+            fireExceptionCaught(channel, t);
+        }
+    }
+
+    private void unbindAddress(
+            SctpServerChannelImpl channel, ChannelFuture future,
+            InetAddress localAddress) {
+        try {
+            channel.serverChannel.unbindAddress(localAddress);
+            future.setSuccess();
+        } catch (Throwable t) {
+            future.setFailure(t);
+            fireExceptionCaught(channel, t);
         }
     }
 

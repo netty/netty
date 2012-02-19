@@ -15,8 +15,10 @@
  */
 package io.netty.channel.sctp;
 
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ServerChannel;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Set;
 
@@ -24,6 +26,17 @@ import java.util.Set;
  * A SCTP {@link io.netty.channel.ServerChannel} which accepts incoming SCTP connections.
  */
 public interface SctpServerChannel extends ServerChannel {
+    /**
+     * Bind a multi-homing address to the already bound channel
+     */
+    ChannelFuture bindAddress(InetAddress localAddress);
+
+
+    /**
+     *  Unbind a multi-homing address from a already established channel
+     */
+    ChannelFuture unbindAddress(InetAddress localAddress);
+
     /**
      * Returns the configuration of this channel.
      */

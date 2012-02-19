@@ -35,5 +35,36 @@
       <artifactId>netty-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-handler</artifactId>
+      <version>${project.version}</version>
+    </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+       <plugin>
+       <artifactId>maven-surefire-plugin</artifactId>
+       <version>2.7.2</version>
+       <executions>
+         <execution>
+           <id>default-test</id>
+           <configuration>
+               <!--
+                 Ignore SCTP Test cases by default
+                 Note: Java SCTP only available for Linux and Solaris
+               -->
+               <skipTests>true</skipTests>
+           </configuration>
+         </execution>
+       </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>

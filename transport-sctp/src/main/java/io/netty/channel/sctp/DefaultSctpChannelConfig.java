@@ -50,10 +50,9 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
             setSendBufferSize(ConversionUtil.toInt(value));
         } else if (key.equals("sctpNoDelay")) {
             setSctpNoDelay(ConversionUtil.toBoolean(value));
-        } else if (key.equals("soLinger")) {
-            setSoLinger(ConversionUtil.toInt(value));
         } else if (key.equals("sctpInitMaxStreams")) {
-            setInitMaxStreams((InitMaxStreams) value);
+            final Integer maxInOutStreams = ConversionUtil.toInt(value);
+            setInitMaxStreams(InitMaxStreams.create(maxInOutStreams, maxInOutStreams));
         } else {
             return false;
         }
@@ -73,24 +72,6 @@ class DefaultSctpChannelConfig extends DefaultChannelConfig implements SctpChann
     public void setSctpNoDelay(boolean sctpNoDelay) {
         try {
             channel.setOption(SCTP_NODELAY, sctpNoDelay);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    @Override
-    public int getSoLinger() {
-        try {
-            return channel.getOption(SO_LINGER);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
-    @Override
-    public void setSoLinger(int soLinger) {
-        try {
-            channel.setOption(SO_LINGER, soLinger);
         } catch (IOException e) {
             throw new ChannelException(e);
         }

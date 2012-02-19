@@ -34,5 +34,18 @@ public class SctpStandardSocketOptions {
     public static final SctpSocketOption<Integer> SO_SNDBUF = null;
 
     public static class InitMaxStreams {
+
+        public static InitMaxStreams create(int i, int i1) {
+            return null;
+        }
+
+        public int maxInStreams() {
+            return 0;
+        }
+
+        public int maxOutStreams() {
+            return 0;
+        }
+
     }
 }

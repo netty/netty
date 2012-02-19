@@ -164,7 +164,7 @@ public abstract class AbstractSocketSpdyEchoTest {
     protected abstract ChannelFactory newServerSocketChannelFactory(Executor executor);
     protected abstract ChannelFactory newClientSocketChannelFactory(Executor executor);
 
-    @Test
+    @Test(timeout = 10000)
     public void testSpdyEcho() throws Throwable {
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
