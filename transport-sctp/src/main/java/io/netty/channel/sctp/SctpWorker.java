@@ -307,26 +307,12 @@ class SctpWorker implements Runnable {
         final int predictedRecvBufSize = predictor.nextReceiveBufferSize();
 
         boolean messageReceived = false;
-        boolean failure = true;
         MessageInfo messageInfo = null;
 
         ByteBuffer bb = recvBufferPool.acquire(predictedRecvBufSize);
         try {
             messageInfo = channel.channel.receive(bb, null, notificationHandler);
-            if (messageInfo != null) {
-                messageReceived = true;
-                if (!messageInfo.isUnordered()) {
-                    failure = false;
-                } else {
-                    if (logger.isErrorEnabled()) {
-                        logger.error("Received unordered SCTP Packet");
-                    }
-                    failure = true;
-                }
-            } else {
-                messageReceived = false;
-                failure = false;
-            }
+            messageReceived = messageInfo != null;
         } catch (ClosedChannelException e) {
             // Can happen, and does not need a user attention.
         } catch (Throwable t) {
@@ -356,7 +342,7 @@ class SctpWorker implements Runnable {
             recvBufferPool.release(bb);
         }
 
-        if (channel.channel.isBlocking() && !messageReceived || failure) {
+        if (channel.channel.isBlocking() && !messageReceived) {
             k.cancel(); // Some JDK implementations run into an infinite loop without this.
             close(channel, succeededFuture(channel));
             return false;
