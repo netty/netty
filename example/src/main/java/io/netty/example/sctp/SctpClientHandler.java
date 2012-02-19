@@ -25,7 +25,7 @@ import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.ExceptionEvent;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelUpstreamHandler;
-import io.netty.channel.sctp.SctpPayload;
+import io.netty.channel.sctp.SctpFrame;
 
 /**
  * Handler implementation for the echo client.  It initiates the message
@@ -47,7 +47,7 @@ public class SctpClientHandler extends SimpleChannelUpstreamHandler {
      */
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent stateEvent) {
-        stateEvent.getChannel().write(new SctpPayload(0, 0, ChannelBuffers.wrappedBuffer("SCTP ECHO".getBytes())));
+        stateEvent.getChannel().write(new SctpFrame(0, 0, ChannelBuffers.wrappedBuffer("SCTP ECHO".getBytes())));
     }
 
     @Override

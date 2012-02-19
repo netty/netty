@@ -18,6 +18,7 @@ package io.netty.channel.sctp;
 import static io.netty.channel.Channels.*;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.Selector;
@@ -31,6 +32,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import io.netty.channel.AbstractServerChannel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 import io.netty.logging.InternalLogger;
@@ -62,7 +64,7 @@ class SctpServerChannelImpl extends AbstractServerChannel
             serverChannel = com.sun.nio.sctp.SctpServerChannel.open();
         } catch (IOException e) {
             throw new ChannelException(
-                    "Failed to open a server socket.", e);
+                    "Failed to open a server sctp channel.", e);
         }
 
         try {
@@ -83,6 +85,20 @@ class SctpServerChannelImpl extends AbstractServerChannel
         config = new DefaultSctpServerChannelConfig(serverChannel);
 
         fireChannelOpen(this);
+    }
+
+    @Override
+    public ChannelFuture bindAddress(InetAddress localAddress) {
+        ChannelFuture future = future(this);
+        getPipeline().sendDownstream(new SctpBindAddressEvent(this, future, localAddress));
+        return future;
+    }
+
+    @Override
+    public ChannelFuture unbindAddress(InetAddress localAddress) {
+        ChannelFuture future = future(this);
+        getPipeline().sendDownstream(new SctpUnbindAddressEvent(this, future, localAddress));
+        return future;
     }
 
     @Override

@@ -15,25 +15,36 @@
  */
 package io.netty.channel.sctp;
 
+import com.sun.nio.sctp.MessageInfo;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 
 /**
  */
-public final class SctpPayload {
+public final class SctpFrame {
     private final int streamIdentifier;
     private final int protocolIdentifier;
+
     private final ChannelBuffer payloadBuffer;
+
+    private MessageInfo msgInfo;
 
     /**
      * Essential data that is being carried within SCTP Data Chunk
-     * @param streamIdentifier that you want to send the payload
      * @param protocolIdentifier of payload
+     * @param streamIdentifier that you want to send the payload
      * @param payloadBuffer channel buffer
      */
-    public SctpPayload(int streamIdentifier, int protocolIdentifier, ChannelBuffer payloadBuffer) {
-        this.streamIdentifier = streamIdentifier;
+    public SctpFrame(int protocolIdentifier, int streamIdentifier, ChannelBuffer payloadBuffer) {
         this.protocolIdentifier = protocolIdentifier;
+        this.streamIdentifier = streamIdentifier;
+        this.payloadBuffer = payloadBuffer;
+    }
+
+    public SctpFrame(MessageInfo msgInfo, ChannelBuffer payloadBuffer) {
+        this.msgInfo = msgInfo;
+        this.streamIdentifier = msgInfo.streamNumber();
+        this.protocolIdentifier = msgInfo.payloadProtocolID();
         this.payloadBuffer = payloadBuffer;
     }
 
@@ -53,10 +64,49 @@ public final class SctpPayload {
         }
     }
 
+    public MessageInfo getMessageInfo() {
+        return msgInfo;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        SctpFrame sctpFrame = (SctpFrame) o;
+
+        if (protocolIdentifier != sctpFrame.protocolIdentifier) {
+            return false;
+        }
+
+        if (streamIdentifier != sctpFrame.streamIdentifier) {
+            return false;
+        }
+
+        if (!payloadBuffer.equals(sctpFrame.payloadBuffer)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = streamIdentifier;
+        result = 31 * result + protocolIdentifier;
+        result = 31 * result + payloadBuffer.hashCode();
+        return result;
+    }
+
     @Override
     public String toString() {
         return new StringBuilder().
-                append("SctpPayload{").
+                append("SctpFrame{").
                 append("streamIdentifier=").
                 append(streamIdentifier).
                 append(", protocolIdentifier=").

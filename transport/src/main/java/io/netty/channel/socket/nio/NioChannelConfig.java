@@ -25,7 +25,7 @@ import io.netty.channel.ChannelConfig;
  * Special {@link ChannelConfig} sub-type which offers extra methods which are useful for NIO.
  *
  */
-public interface NioChannelConfig extends ChannelConfig{
+public interface NioChannelConfig extends ChannelConfig {
 
     /**
      * Returns the high water mark of the write buffer.  If the number of bytes
