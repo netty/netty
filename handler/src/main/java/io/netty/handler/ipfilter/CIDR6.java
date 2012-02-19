@@ -58,7 +58,9 @@ public class CIDR6 extends CIDR {
         try {
             return bigIntToIPv6Address(addressEndBigInt);
         } catch (UnknownHostException e) {
-            logger.error("invalid ip address calculated as an end address");
+            if (logger.isErrorEnabled()) {
+                logger.error("invalid ip address calculated as an end address");
+            }
             return null;
         }
     }

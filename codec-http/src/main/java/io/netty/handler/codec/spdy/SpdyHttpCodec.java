@@ -36,34 +36,20 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelUpstreamHandler;
 
 /**
- * A combination of {@link SpdyFrameDecoder} and {@link SpdyFrameEncoder}.
- * @apiviz.has io.netty.handler.codec.spdy.SpdyFrameDecoder
- * @apiviz.has io.netty.handler.codec.spdy.SpdyFrameEncoder
+ * A combination of {@link SpdyHttpDecoder} and {@link SpdyHttpEncoder}
+ * @apiviz.has io.netty.handler.codec.sdpy.SpdyHttpDecoder
+ * @apiviz.has io.netty.handler.codec.spdy.SpdyHttpEncoder
  */
-public class SpdyFrameCodec implements ChannelUpstreamHandler,
-       ChannelDownstreamHandler {
+public class SpdyHttpCodec implements ChannelUpstreamHandler, ChannelDownstreamHandler {
 
-    private final SpdyFrameDecoder decoder;
-    private final SpdyFrameEncoder encoder;
-
-    /**
-     * Creates a new instance with the default decoder and encoder options
-     * ({@code maxChunkSize (8192)}, {@code maxFrameSize (65536)},
-     * {@code maxHeaderSize (16384)}, {@code compressionLevel (6)},
-     * {@code windowBits (15)}, and {@code memLevel (8)}).
-     */
-    public SpdyFrameCodec() {
-        this(8192, 65536, 16384, 6, 15, 8);
-    }
+    private final SpdyHttpDecoder decoder;
+    private final SpdyHttpEncoder encoder = new SpdyHttpEncoder();
 
     /**
-     * Creates a new instance with the specified decoder and encoder options.
+     * Creates a new instance with the specified decoder options.
      */
-    public SpdyFrameCodec(
-            int maxChunkSize, int maxFrameSize, int maxHeaderSize,
-            int compressionLevel, int windowBits, int memLevel) {
-        decoder = new SpdyFrameDecoder(maxChunkSize, maxFrameSize, maxHeaderSize);
-        encoder = new SpdyFrameEncoder(compressionLevel, windowBits, memLevel);
+    public SpdyHttpCodec(int maxContentLength) {
+        decoder = new SpdyHttpDecoder(maxContentLength);
     }
 
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)

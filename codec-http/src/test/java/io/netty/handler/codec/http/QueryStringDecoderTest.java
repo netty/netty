@@ -15,8 +15,11 @@
  */
 package io.netty.handler.codec.http;
 
+import java.net.URI;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import io.netty.util.CharsetUtil;
 import org.junit.Assert;
@@ -164,5 +167,92 @@ public class QueryStringDecoderTest {
         QueryStringDecoder ad = new QueryStringDecoder(actual, CharsetUtil.UTF_8);
         Assert.assertEquals(ed.getPath(), ad.getPath());
         Assert.assertEquals(ed.getParameters(), ad.getParameters());
+    }
+
+    // See #189
+    @Test
+    public void testURI() {
+        URI uri = URI.create("http://localhost:8080/foo?param1=value1&param2=value2&param3=value3");
+        QueryStringDecoder decoder = new QueryStringDecoder(uri);
+        Assert.assertEquals("/foo", decoder.getPath());
+        Map<String, List<String>> params =  decoder.getParameters();
+        Assert.assertEquals(3, params.size());
+        Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
+        
+        Entry<String, List<String>> entry = entries.next();
+        Assert.assertEquals("param1", entry.getKey());
+        Assert.assertEquals(1, entry.getValue().size());
+        Assert.assertEquals("value1", entry.getValue().get(0));
+
+        
+        entry = entries.next();
+        Assert.assertEquals("param2", entry.getKey());
+        Assert.assertEquals(1, entry.getValue().size());
+        Assert.assertEquals("value2", entry.getValue().get(0));
+        
+        entry = entries.next();
+        Assert.assertEquals("param3", entry.getKey());
+        Assert.assertEquals(1, entry.getValue().size());
+        Assert.assertEquals("value3", entry.getValue().get(0));
+        
+        Assert.assertFalse(entries.hasNext());
+    }
+    
+    // See #189
+    @Test
+    public void testURISlashPath() {
+        URI uri = URI.create("http://localhost:8080/?param1=value1&param2=value2&param3=value3");
+        QueryStringDecoder decoder = new QueryStringDecoder(uri);
+        Assert.assertEquals("/", decoder.getPath());
+        Map<String, List<String>> params =  decoder.getParameters();
+        Assert.assertEquals(3, params.size());
+        Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
+        
+        Entry<String, List<String>> entry = entries.next();
+        Assert.assertEquals("param1", entry.getKey());
+        Assert.assertEquals(1, entry.getValue().size());
+        Assert.assertEquals("value1", entry.getValue().get(0));
+
+        
+        entry = entries.next();
+        Assert.assertEquals("param2", entry.getKey());
+        Assert.assertEquals(1, entry.getValue().size());
+        Assert.assertEquals("value2", entry.getValue().get(0));
+        
+        entry = entries.next();
+        Assert.assertEquals("param3", entry.getKey());
+        Assert.assertEquals(1, entry.getValue().size());
+        Assert.assertEquals("value3", entry.getValue().get(0));
+        
+        Assert.assertFalse(entries.hasNext());
+    }
+    
+    // See #189
+    @Test
+    public void testURINoPath() {
+        URI uri = URI.create("http://localhost:8080?param1=value1&param2=value2&param3=value3");
+        QueryStringDecoder decoder = new QueryStringDecoder(uri);
+        Assert.assertEquals("", decoder.getPath());
+        Map<String, List<String>> params =  decoder.getParameters();
+        Assert.assertEquals(3, params.size());
+        Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
+        
+        Entry<String, List<String>> entry = entries.next();
+        Assert.assertEquals("param1", entry.getKey());
+        Assert.assertEquals(1, entry.getValue().size());
+        Assert.assertEquals("value1", entry.getValue().get(0));
+
+        
+        entry = entries.next();
+        Assert.assertEquals("param2", entry.getKey());
+        Assert.assertEquals(1, entry.getValue().size());
+        Assert.assertEquals("value2", entry.getValue().get(0));
+        
+        entry = entries.next();
+        Assert.assertEquals("param3", entry.getKey());
+        Assert.assertEquals(1, entry.getValue().size());
+        Assert.assertEquals("value3", entry.getValue().get(0));
+        
+        Assert.assertFalse(entries.hasNext());
     }
 }

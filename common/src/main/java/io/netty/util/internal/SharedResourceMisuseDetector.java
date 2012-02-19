@@ -43,12 +43,14 @@ public class SharedResourceMisuseDetector {
 
     public void increase() {
         if (activeInstances.incrementAndGet() > MAX_ACTIVE_INSTANCES) {
-            if (logged.compareAndSet(false, true)) {
-                logger.warn(
-                        "You are creating too many " + type.getSimpleName() +
-                        " instances.  " + type.getSimpleName() +
-                        " is a shared resource that must be reused across the" +
-                        " application, so that only a few instances are created.");
+            if (logger.isWarnEnabled()) {
+                if (logged.compareAndSet(false, true)) {
+                    logger.warn(
+                            "You are creating too many " + type.getSimpleName() +
+                            " instances.  " + type.getSimpleName() +
+                            " is a shared resource that must be reused across the" +
+                            " application, so that only a few instances are created.");
+                }
             }
         }
     }

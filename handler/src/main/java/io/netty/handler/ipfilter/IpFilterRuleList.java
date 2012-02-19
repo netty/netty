@@ -69,7 +69,9 @@ public class IpFilterRuleList extends ArrayList<IpFilterRule> {
             return;
         }
         if (!(rule.startsWith("+") || rule.startsWith("-"))) {
-            logger.error("syntax error in ip filter rule:" + rule);
+            if (logger.isErrorEnabled()) {
+                logger.error("syntax error in ip filter rule:" + rule);
+            }
             return;
         }
 
@@ -80,10 +82,14 @@ public class IpFilterRuleList extends ArrayList<IpFilterRule> {
             try {
                 this.add(new IpSubnetFilterRule(allow, rule.substring(3)));
             } catch (UnknownHostException e) {
-                logger.error("error parsing ip filter " + rule, e);
+                if (logger.isErrorEnabled()) {
+                    logger.error("error parsing ip filter " + rule, e);
+                }
             }
         } else {
-            logger.error("syntax error in ip filter rule:" + rule);
+            if (logger.isErrorEnabled()) {
+                logger.error("syntax error in ip filter rule:" + rule);
+            }
         }
     }
 }

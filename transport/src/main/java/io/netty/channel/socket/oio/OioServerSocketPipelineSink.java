@@ -203,14 +203,18 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                                     workerExecutor,
                                     new OioWorker(acceptedChannel));
                         } catch (Exception e) {
-                            logger.warn(
-                                    "Failed to initialize an accepted socket.", e);
+                            if (logger.isWarnEnabled()) {
+                                logger.warn(
+                                        "Failed to initialize an accepted socket.", e);
+                            }
                             try {
                                 acceptedSocket.close();
                             } catch (IOException e2) {
-                                logger.warn(
-                                        "Failed to close a partially accepted socket.",
-                                        e2);
+                                if (logger.isWarnEnabled()) {
+                                    logger.warn(
+                                            "Failed to close a partially accepted socket.",
+                                            e2);
+                                }
                             }
                         }
                     } catch (SocketTimeoutException e) {
@@ -221,9 +225,12 @@ class OioServerSocketPipelineSink extends AbstractChannelSink {
                         if (!channel.socket.isBound() || channel.socket.isClosed()) {
                             break;
                         }
+                        
+                        if (logger.isWarnEnabled()) {
+                            logger.warn(
+                                    "Failed to accept a connection.", e);
+                        }
 
-                        logger.warn(
-                                "Failed to accept a connection.", e);
                         try {
                             Thread.sleep(1000);
                         } catch (InterruptedException e1) {

@@ -15,12 +15,8 @@
  */
 package io.netty.channel.socket.nio;
 
-import java.nio.ByteBuffer;
-import java.nio.channels.WritableByteChannel;
-
 import io.netty.channel.AdaptiveReceiveBufferSizePredictor;
 import io.netty.channel.AdaptiveReceiveBufferSizePredictorFactory;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ReceiveBufferSizePredictor;
 import io.netty.channel.ReceiveBufferSizePredictorFactory;
@@ -52,60 +48,8 @@ import io.netty.channel.socket.SocketChannelConfig;
  * </tr>
  * </table>
  */
-public interface NioSocketChannelConfig extends SocketChannelConfig {
+public interface NioSocketChannelConfig extends SocketChannelConfig, NioChannelConfig {
 
-    /**
-     * Returns the high water mark of the write buffer.  If the number of bytes
-     * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
-     * will start to return {@code false}.
-     */
-    int getWriteBufferHighWaterMark();
-
-    /**
-     * Sets the high water mark of the write buffer.  If the number of bytes
-     * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
-     * will start to return {@code false}.
-     */
-    void setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
-
-    /**
-     * Returns the low water mark of the write buffer.  Once the number of bytes
-     * queued in the write buffer exceeded the
-     * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link Channel#isWritable()} will return
-     * {@code true} again.
-     */
-    int getWriteBufferLowWaterMark();
-
-    /**
-     * Sets the low water mark of the write buffer.  Once the number of bytes
-     * queued in the write buffer exceeded the
-     * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link Channel#isWritable()} will return
-     * {@code true} again.
-     */
-    void setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
-
-    /**
-     * Returns the maximum loop count for a write operation until
-     * {@link WritableByteChannel#write(ByteBuffer)} returns a non-zero value.
-     * It is similar to what a spin lock is used for in concurrency programming.
-     * It improves memory utilization and write throughput depending on
-     * the platform that JVM runs on.  The default value is {@code 16}.
-     */
-    int getWriteSpinCount();
-
-    /**
-     * Sets the maximum loop count for a write operation until
-     * {@link WritableByteChannel#write(ByteBuffer)} returns a non-zero value.
-     * It is similar to what a spin lock is used for in concurrency programming.
-     * It improves memory utilization and write throughput depending on
-     * the platform that JVM runs on.  The default value is {@code 16}.
-     *
-     * @throws IllegalArgumentException
-     *         if the specified value is {@code 0} or less than {@code 0}
-     */
-    void setWriteSpinCount(int writeSpinCount);
 
     /**
      * Returns the {@link ReceiveBufferSizePredictor} which predicts the

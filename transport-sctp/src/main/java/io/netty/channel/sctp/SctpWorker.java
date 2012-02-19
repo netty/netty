@@ -110,7 +110,9 @@ class SctpWorker implements Runnable {
                         try {
                             selector.close();
                         } catch (Throwable t) {
-                            logger.warn("Failed to close a selector.", t);
+                            if (logger.isWarnEnabled()) {
+                                logger.warn("Failed to close a selector.", t);
+                            }
                         }
                         this.selector = selector = null;
                         // The method will return to the caller at this point.
@@ -204,8 +206,10 @@ class SctpWorker implements Runnable {
                                 try {
                                     selector.close();
                                 } catch (IOException e) {
-                                    logger.warn(
-                                            "Failed to close a selector.", e);
+                                    if (logger.isWarnEnabled()) {
+                                        logger.warn(
+                                                "Failed to close a selector.", e);
+                                    }
                                 } finally {
                                     this.selector = null;
                                 }
@@ -222,9 +226,10 @@ class SctpWorker implements Runnable {
                     shutdown = false;
                 }
             } catch (Throwable t) {
-                logger.warn(
-                        "Unexpected exception in the selector loop.", t);
-
+                if (logger.isWarnEnabled()) {
+                    logger.warn(
+                            "Unexpected exception in the selector loop.", t);
+                }
                 // Prevent possible consecutive immediate failures that lead to
                 // excessive CPU consumption.
                 try {
@@ -313,7 +318,9 @@ class SctpWorker implements Runnable {
                 if (!messageInfo.isUnordered()) {
                     failure = false;
                 } else {
-                    logger.error("Received unordered SCTP Packet");
+                    if (logger.isErrorEnabled()) {
+                        logger.error("Received unordered SCTP Packet");
+                    }
                     failure = true;
                 }
             } else {

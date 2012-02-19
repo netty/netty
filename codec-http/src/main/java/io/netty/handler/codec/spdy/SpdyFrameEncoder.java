@@ -48,11 +48,23 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
  */
 public class SpdyFrameEncoder extends OneToOneEncoder {
 
-    private final EncoderEmbedder<ChannelBuffer> headerBlockCompressor =
-        new EncoderEmbedder<ChannelBuffer>(new ZlibEncoder(9, SPDY_DICT));
+    private final EncoderEmbedder<ChannelBuffer> headerBlockCompressor;
 
+    /**
+     * Creates a new instance with the default {@code compressionLevel (6)},
+     * {@code windowBits (15)}, and {@code memLevel (8)}.
+     */
     public SpdyFrameEncoder() {
+        this(6, 15, 8);
+    }
+
+    /**
+     * Creates a new instance with the specified parameters.
+     */
+    public SpdyFrameEncoder(int compressionLevel, int windowBits, int memLevel) {
         super();
+        headerBlockCompressor = new EncoderEmbedder<ChannelBuffer>(
+                new ZlibEncoder(compressionLevel, windowBits, memLevel, SPDY_DICT));
     }
 
     @Override

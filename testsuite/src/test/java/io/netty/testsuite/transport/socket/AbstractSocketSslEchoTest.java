@@ -129,7 +129,9 @@ public abstract class AbstractSocketSslEchoTest {
         ChannelFuture ccf = cb.connect(new InetSocketAddress(SocketAddresses.LOCALHOST, port));
         ccf.awaitUninterruptibly();
         if (!ccf.isSuccess()) {
-            logger.error("Connection attempt failed", ccf.getCause());
+            if(logger.isErrorEnabled()) {
+                logger.error("Connection attempt failed", ccf.getCause());
+            }
             sc.close().awaitUninterruptibly();
         }
         assertTrue(ccf.isSuccess());
@@ -238,9 +240,11 @@ public abstract class AbstractSocketSslEchoTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
-            logger.warn(
-                    "Unexpected exception from the " +
-                    (server? "server" : "client") + " side", e.getCause());
+            if (logger.isWarnEnabled()) {
+                logger.warn(
+                        "Unexpected exception from the " +
+                        (server? "server" : "client") + " side", e.getCause());
+            }
 
             exception.compareAndSet(null, e.getCause());
             e.getChannel().close();

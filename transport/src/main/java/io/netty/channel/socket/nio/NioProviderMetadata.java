@@ -70,18 +70,25 @@ final class NioProviderMetadata {
 
             if (constraintLevel < 0) {
                 constraintLevel = 2;
-                logger.debug(
-                        "Couldn't determine the NIO constraint level from " +
-                        "the system properties; using the safest level (2)");
+                if (logger.isDebugEnabled()) {
+                    logger.debug(
+                            "Couldn't determine the NIO constraint level from " +
+                            "the system properties; using the safest level (2)");
+                }
             } else if (constraintLevel != 0) {
-                logger.info(
-                        "Using the autodetected NIO constraint level: " +
-                        constraintLevel +
-                        " (Use better NIO provider for better performance)");
+                if (logger.isInfoEnabled()) {
+                    logger.info(
+                            "Using the autodetected NIO constraint level: " +
+                            constraintLevel +
+                            " (Use better NIO provider for better performance)");
+                }
             } else {
-                logger.debug(
-                        "Using the autodetected NIO constraint level: " +
-                        constraintLevel);
+                if (logger.isDebugEnabled()) {
+                    logger.debug(
+                            "Using the autodetected NIO constraint level: " +
+                            constraintLevel);
+                }
+
             }
         }
 
@@ -235,7 +242,9 @@ final class NioProviderMetadata {
                     ch.socket().bind(new InetSocketAddress(0));
                     ch.configureBlocking(false);
                 } catch (Throwable e) {
-                    logger.warn("Failed to configure a temporary socket.", e);
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("Failed to configure a temporary socket.", e);
+                    }
                     return -1;
                 }
 
@@ -243,7 +252,9 @@ final class NioProviderMetadata {
                 try {
                     loop = new SelectorLoop();
                 } catch (Throwable e) {
-                    logger.warn("Failed to open a temporary selector.", e);
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("Failed to open a temporary selector.", e);
+                    }
                     return -1;
                 }
 
@@ -251,7 +262,9 @@ final class NioProviderMetadata {
                 try {
                     ch.register(loop.selector, 0);
                 } catch (Throwable e) {
-                    logger.warn("Failed to register a temporary selector.", e);
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("Failed to register a temporary selector.", e);
+                    }
                     return -1;
                 }
 
@@ -337,7 +350,9 @@ final class NioProviderMetadata {
                     try {
                         ch.close();
                     } catch (Throwable e) {
-                        logger.warn("Failed to close a temporary socket.", e);
+                        if (logger.isWarnEnabled()) {
+                            logger.warn("Failed to close a temporary socket.", e);
+                        }
                     }
                 }
 
@@ -367,7 +382,9 @@ final class NioProviderMetadata {
                     try {
                         loop.selector.close();
                     } catch (Throwable e) {
-                        logger.warn("Failed to close a temporary selector.", e);
+                        if (logger.isWarnEnabled()) {
+                            logger.warn("Failed to close a temporary selector.", e);
+                        }
                     }
                 }
             }
@@ -405,7 +422,9 @@ final class NioProviderMetadata {
                     }
                     keys.clear();
                 } catch (IOException e) {
-                    logger.warn("Failed to wait for a temporary selector.", e);
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("Failed to wait for a temporary selector.", e);
+                    }
                 }
             }
         }

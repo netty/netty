@@ -32,10 +32,13 @@ final class SelectorUtil {
         try {
             selector.select(10); // does small timeout give more throughput + less CPU usage?
         } catch (CancelledKeyException e) {
-            // Harmless exception - log anyway
-            logger.debug(
-                    CancelledKeyException.class.getSimpleName() +
-                    " raised by a Selector - JDK bug?", e);
+            if (logger.isDebugEnabled()) {
+                // Harmless exception - log anyway
+                logger.debug(
+                        CancelledKeyException.class.getSimpleName() +
+                        " raised by a Selector - JDK bug?", e);
+            }
+
         }
     }
 

@@ -32,10 +32,13 @@ final class SelectorUtil {
         try {
             selector.select(500);
         } catch (CancelledKeyException e) {
+            if (logger.isDebugEnabled()) {
+                logger.debug(
+                        CancelledKeyException.class.getSimpleName() +
+                        " raised by a Selector - JDK bug?", e);
+            }
             // Harmless exception - log anyway
-            logger.debug(
-                    CancelledKeyException.class.getSimpleName() +
-                    " raised by a Selector - JDK bug?", e);
+
         }
     }
 

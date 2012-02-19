@@ -44,11 +44,42 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
  */
 public class SpdyFrameDecoder extends FrameDecoder {
 
+    private final int maxChunkSize;
+    private final int maxFrameSize;
+    private final int maxHeaderSize;
+
     private final DecoderEmbedder<ChannelBuffer> headerBlockDecompressor =
         new DecoderEmbedder<ChannelBuffer>(new ZlibDecoder(SPDY_DICT));
 
+    /**
+     * Creates a new instance with the default {@code maxChunkSize (8192)},
+     * {@code maxFrameSize (65536)}, and {@code maxHeaderSize (16384)}.
+     */
     public SpdyFrameDecoder() {
-        super();
+        this(8192, 65536, 16384);
+    }
+
+    /**
+     * Creates a new instance with the specified parameters.
+     */
+    public SpdyFrameDecoder(
+            int maxChunkSize, int maxFrameSize, int maxHeaderSize) {
+        super(true); // Enable unfold for data frames
+        if (maxChunkSize <= 0) {
+            throw new IllegalArgumentException(
+                    "maxChunkSize must be a positive integer: " + maxChunkSize);
+        }
+        if (maxFrameSize <= 0) {
+            throw new IllegalArgumentException(
+                    "maxFrameSize must be a positive integer: " + maxFrameSize);
+        }
+        if (maxHeaderSize <= 0) {
+            throw new IllegalArgumentException(
+                    "maxHeaderSize must be a positive integer: " + maxHeaderSize);
+        }
+        this.maxChunkSize = maxChunkSize;
+        this.maxFrameSize = maxFrameSize;
+        this.maxHeaderSize = maxHeaderSize;
     }
 
     @Override
@@ -66,6 +97,12 @@ public class SpdyFrameDecoder extends FrameDecoder {
         int lengthOffset = frameOffset + SPDY_HEADER_LENGTH_OFFSET;
         int dataLength   = getUnsignedMedium(buffer, lengthOffset);
         int frameLength  = SPDY_HEADER_SIZE + dataLength;
+
+        // Throw exception if frameLength exceeds maxFrameSize
+        if (frameLength > maxFrameSize) {
+            throw new SpdyProtocolException(
+                    "Frame length exceeds " + maxFrameSize + ": " + frameLength);
+        }
 
         // Wait until entire frame is readable
         if (buffer.readableBytes() < frameLength) {
@@ -98,12 +135,25 @@ public class SpdyFrameDecoder extends FrameDecoder {
             int streamID = getUnsignedInt(buffer, frameOffset);
             buffer.skipBytes(SPDY_HEADER_SIZE);
 
-            SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(streamID);
-            spdyDataFrame.setLast((flags & SPDY_DATA_FLAG_FIN) != 0);
-            spdyDataFrame.setCompressed((flags & SPDY_DATA_FLAG_COMPRESS) != 0);
-            spdyDataFrame.setData(buffer.readBytes(dataLength));
+            // Generate data frames that do not exceed maxChunkSize
+            int numFrames = dataLength / maxChunkSize;
+            if (dataLength % maxChunkSize != 0) {
+                numFrames ++;
+            }
+            SpdyDataFrame[] frames = new SpdyDataFrame[numFrames];
+            for (int i = 0; i < numFrames; i++) {
+                int chunkSize = Math.min(maxChunkSize, dataLength);
+                SpdyDataFrame spdyDataFrame = new DefaultSpdyDataFrame(streamID);
+                spdyDataFrame.setCompressed((flags & SPDY_DATA_FLAG_COMPRESS) != 0);
+                spdyDataFrame.setData(buffer.readBytes(chunkSize));
+                dataLength -= chunkSize;
+                if (dataLength == 0) {
+                    spdyDataFrame.setLast((flags & SPDY_DATA_FLAG_FIN) != 0);
+                }
+                frames[i] = spdyDataFrame;
+            }
 
-            return spdyDataFrame;
+            return frames;
         }
     }
 
@@ -276,6 +326,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
             throw new SpdyProtocolException(
                     "Received invalid header block");
         }
+        int headerSize = 0;
         int numEntries = getUnsignedShort(headerBlock, headerBlock.readerIndex());
         headerBlock.skipBytes(2);
         for (int i = 0; i < numEntries; i ++) {
@@ -288,6 +339,11 @@ public class SpdyFrameDecoder extends FrameDecoder {
             if (nameLength == 0) {
                 headerFrame.setInvalid();
                 return;
+            }
+            headerSize += nameLength;
+            if (headerSize > maxHeaderSize) {
+                throw new SpdyProtocolException(
+                        "Header block exceeds " + maxHeaderSize);
             }
             if (headerBlock.readableBytes() < nameLength) {
                 throw new SpdyProtocolException(
@@ -309,6 +365,11 @@ public class SpdyFrameDecoder extends FrameDecoder {
             if (valueLength == 0) {
                 headerFrame.setInvalid();
                 return;
+            }
+            headerSize += valueLength;
+            if (headerSize > maxHeaderSize) {
+                throw new SpdyProtocolException(
+                        "Header block exceeds " + maxHeaderSize);
             }
             if (headerBlock.readableBytes() < valueLength) {
                 throw new SpdyProtocolException(
