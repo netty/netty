@@ -612,6 +612,7 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
     @SuppressWarnings("unchecked")
     static <E> E cast(Object item) {
         // assert item == null || item.getClass() != Node.class;
+        // Explicit cast, see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6302954
         return (E) item;
     }
 
@@ -653,7 +654,8 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
                             }
                         }
                         LockSupport.unpark(p.waiter);
-                        return LegacyLinkedTransferQueue.cast(item);
+                        // Explicit cast, see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6302954
+                        return (E) LegacyLinkedTransferQueue.cast(item);
                     }
                 }
                 Node n = p.next;
@@ -737,7 +739,8 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
             if (item != e) {                  // matched
                 // assert item != s;
                 s.forgetContents();           // avoid garbage
-                return LegacyLinkedTransferQueue.cast(item);
+                // Explicit cast, see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6302954
+                return (E) LegacyLinkedTransferQueue.cast(item);
             }
             if ((w.isInterrupted() || timed && nanos <= 0) &&
                     s.casItem(e, s)) {        // cancel
@@ -825,7 +828,8 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
             Object item = p.item;
             if (p.isData) {
                 if (item != null && item != p) {
-                    return LegacyLinkedTransferQueue.cast(item);
+                    // Explicit cast, see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6302954
+                    return (E) LegacyLinkedTransferQueue.cast(item);
                 }
             }
             else if (item == null) {
@@ -878,7 +882,8 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
                 Object item = p.item;
                 if (p.isData) {
                     if (item != null && item != p) {
-                        nextItem = LegacyLinkedTransferQueue.cast(item);
+                        // Explicit cast, see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6302954
+                        nextItem = (E) LegacyLinkedTransferQueue.cast(item);
                         nextNode = p;
                         return;
                     }
