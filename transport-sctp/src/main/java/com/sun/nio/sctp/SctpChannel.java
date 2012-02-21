@@ -52,4 +52,6 @@ public abstract class SctpChannel extends AbstractSelectableChannel {
 
     public abstract <T> MessageInfo receive(ByteBuffer dst, T attachment, NotificationHandler<T> handler) throws IOException;
     public abstract int send(ByteBuffer src, MessageInfo messageInfo) throws IOException;
+    
+    public abstract Set<SctpSocketOption<?>> supportedOptions();
 }
