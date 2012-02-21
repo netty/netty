@@ -18,9 +18,6 @@ package io.netty.channel.sctp;
 import com.sun.nio.sctp.Association;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.channel.socket.nio.NioSocketChannelConfig;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;

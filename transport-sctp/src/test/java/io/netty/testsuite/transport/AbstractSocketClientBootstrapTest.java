@@ -15,7 +15,6 @@
  */
 package io.netty.testsuite.transport;
 
-import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
 import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.ChannelFactory;
@@ -40,7 +39,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 

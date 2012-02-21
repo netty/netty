@@ -16,7 +16,6 @@
 package io.netty.testsuite.transport.sctp;
 
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.sctp.SctpClientSocketChannelFactory;
 import io.netty.channel.sctp.SctpServerSocketChannelFactory;
 import io.netty.testsuite.transport.AbstractSocketServerBootstrapTest;
 
