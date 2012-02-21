@@ -227,4 +227,45 @@ public class ClientBootstrap extends Bootstrap {
         // Connect.
         return ch.connect(remoteAddress);
     }
+
+    /**
+     * Attempts to bind a channel with the specified {@code localAddress}. later the channel can be connected
+     * to a remoteAddress by calling {@link Channel#connect(SocketAddress)}.This method is useful where bind and connect
+     * need to be done in separate steps. (For example, SCTP Multihoming)
+     *
+     * @return a future object which notifies when this bind attempt
+     *         succeeds or fails
+     *
+     * @throws ChannelPipelineException
+     *         if this bootstrap's {@link #setPipelineFactory(ChannelPipelineFactory) pipelineFactory}
+     *            failed to create a new {@link ChannelPipeline}
+     */
+    public ChannelFuture bind(final SocketAddress localAddress) {
+
+        if (localAddress == null) {
+            throw new NullPointerException("localAddress");
+        }
+
+        ChannelPipeline pipeline;
+        try {
+            pipeline = getPipelineFactory().getPipeline();
+        } catch (Exception e) {
+            throw new ChannelPipelineException("Failed to initialize a pipeline.", e);
+        }
+
+        // Set the options.
+        Channel ch = getFactory().newChannel(pipeline);
+        boolean success = false;
+        try {
+            ch.getConfig().setOptions(getOptions());
+            success = true;
+        } finally {
+            if (!success) {
+                ch.close();
+            }
+        }
+
+        // Bind.
+        return ch.bind(localAddress);
+    }
 }

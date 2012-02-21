@@ -382,9 +382,11 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         try {
             l.operationComplete(this);
         } catch (Throwable t) {
-            logger.warn(
-                    "An exception was thrown by " +
-                    ChannelFutureListener.class.getSimpleName() + ".", t);
+            if (logger.isWarnEnabled()) {
+                logger.warn(
+                        "An exception was thrown by " +
+                        ChannelFutureListener.class.getSimpleName() + ".", t);
+            }
         }
     }
 }

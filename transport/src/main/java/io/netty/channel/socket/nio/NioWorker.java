@@ -43,8 +43,6 @@ class NioWorker extends AbstractNioWorker {
         super(executor);
     }
 
-
-
     @Override
     protected boolean read(SelectionKey k) {
         final SocketChannel ch = (SocketChannel) k.channel();

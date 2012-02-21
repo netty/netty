@@ -92,7 +92,9 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         try {
             flush(ctx);
         } catch (Exception e) {
-            logger.warn("Unexpected exception while sending chunks.", e);
+            if (logger.isWarnEnabled()) {
+                logger.warn("Unexpected exception while sending chunks.", e);
+            }
         }
     }
 
@@ -270,7 +272,9 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         try {
             chunks.close();
         } catch (Throwable t) {
-            logger.warn("Failed to close a chunked input.", t);
+            if (logger.isWarnEnabled()) {
+                logger.warn("Failed to close a chunked input.", t);
+            }
         }
     }
 }

@@ -19,6 +19,7 @@ import static io.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
@@ -98,7 +99,15 @@ class SctpClientPipelineSink extends AbstractChannelSink {
                 }
                 break;
             case INTEREST_OPS:
-                channel.worker.setInterestOps(channel, future, ((Integer) value).intValue());
+                if (event instanceof SctpBindAddressEvent) {
+                   SctpBindAddressEvent bindAddressEvent = (SctpBindAddressEvent) event;
+                   bindAddress(channel, bindAddressEvent.getFuture(), bindAddressEvent.getValue());
+                } else if (event instanceof SctpUnbindAddressEvent) {
+                    SctpUnbindAddressEvent unbindAddressEvent = (SctpUnbindAddressEvent) event;
+                    unbindAddress(channel, unbindAddressEvent.getFuture(), unbindAddressEvent.getValue());
+                } else {
+                    channel.worker.setInterestOps(channel, future, ((Integer) value).intValue());
+                }
                 break;
             }
         } else if (e instanceof MessageEvent) {
@@ -124,6 +133,32 @@ class SctpClientPipelineSink extends AbstractChannelSink {
             fireExceptionCaught(channel, t);
         }
     }
+
+    private void bindAddress(
+            SctpClientChannel channel, ChannelFuture future,
+            InetAddress localAddress) {
+        try {
+            channel.channel.bindAddress(localAddress);
+            future.setSuccess();
+        } catch (Throwable t) {
+            future.setFailure(t);
+            fireExceptionCaught(channel, t);
+        }
+    }
+
+    private void unbindAddress(
+            SctpClientChannel channel, ChannelFuture future,
+            InetAddress localAddress) {
+        try {
+            channel.channel.unbindAddress(localAddress);
+            future.setSuccess();
+        } catch (Throwable t) {
+            future.setFailure(t);
+            fireExceptionCaught(channel, t);
+        }
+    }
+
+
 
     private void connect(
             final SctpClientChannel channel, final ChannelFuture cf,
@@ -289,8 +324,10 @@ class SctpClientPipelineSink extends AbstractChannelSink {
                                     try {
                                         selector.close();
                                     } catch (IOException e) {
-                                        logger.warn(
-                                                "Failed to close a selector.", e);
+                                        if (logger.isWarnEnabled()) {
+                                            logger.warn(
+                                                    "Failed to close a selector.", e);
+                                        }
                                     } finally {
                                         this.selector = null;
                                     }
@@ -307,8 +344,10 @@ class SctpClientPipelineSink extends AbstractChannelSink {
                         shutdown = false;
                     }
                 } catch (Throwable t) {
-                    logger.warn(
-                            "Unexpected exception in the selector loop.", t);
+                    if (logger.isWarnEnabled()) {
+                        logger.warn(
+                                "Unexpected exception in the selector loop.", t);
+                    }
 
                     // Prevent possible consecutive immediate failures.
                     try {

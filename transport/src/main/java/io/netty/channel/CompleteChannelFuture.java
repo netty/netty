@@ -48,9 +48,11 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
         try {
             listener.operationComplete(this);
         } catch (Throwable t) {
-            logger.warn(
-                    "An exception was thrown by " +
-                    ChannelFutureListener.class.getSimpleName() + ".", t);
+            if (logger.isWarnEnabled()) {
+                logger.warn(
+                        "An exception was thrown by " +
+                        ChannelFutureListener.class.getSimpleName() + ".", t);
+            }
         }
     }
 

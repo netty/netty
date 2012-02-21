@@ -86,7 +86,7 @@ class SctpWorker implements Runnable {
 
         boolean server = !(channel instanceof SctpClientChannel);
         Runnable registerTask = new RegisterTask(channel, future, server);
-        notificationHandler = new SctpNotificationHandler(channel, this);
+        notificationHandler = new SctpNotificationHandler(channel);
         Selector selector;
 
         synchronized (startStopLock) {
@@ -110,7 +110,9 @@ class SctpWorker implements Runnable {
                         try {
                             selector.close();
                         } catch (Throwable t) {
-                            logger.warn("Failed to close a selector.", t);
+                            if (logger.isWarnEnabled()) {
+                                logger.warn("Failed to close a selector.", t);
+                            }
                         }
                         this.selector = selector = null;
                         // The method will return to the caller at this point.
@@ -204,8 +206,10 @@ class SctpWorker implements Runnable {
                                 try {
                                     selector.close();
                                 } catch (IOException e) {
-                                    logger.warn(
-                                            "Failed to close a selector.", e);
+                                    if (logger.isWarnEnabled()) {
+                                        logger.warn(
+                                                "Failed to close a selector.", e);
+                                    }
                                 } finally {
                                     this.selector = null;
                                 }
@@ -222,9 +226,10 @@ class SctpWorker implements Runnable {
                     shutdown = false;
                 }
             } catch (Throwable t) {
-                logger.warn(
-                        "Unexpected exception in the selector loop.", t);
-
+                if (logger.isWarnEnabled()) {
+                    logger.warn(
+                            "Unexpected exception in the selector loop.", t);
+                }
                 // Prevent possible consecutive immediate failures that lead to
                 // excessive CPU consumption.
                 try {
@@ -310,10 +315,12 @@ class SctpWorker implements Runnable {
             messageInfo = channel.channel.receive(bb, null, notificationHandler);
             if (messageInfo != null) {
                 messageReceived = true;
-                if (messageInfo.isComplete()) {
+                if (!messageInfo.isUnordered()) {
                     failure = false;
                 } else {
-                    logger.error("Received incomplete sctp packet, can not continue! Expected SCTP_EXPLICIT_COMPLETE message");
+                    if (logger.isErrorEnabled()) {
+                        logger.error("Received unordered SCTP Packet");
+                    }
                     failure = true;
                 }
             } else {
@@ -343,9 +350,7 @@ class SctpWorker implements Runnable {
 
             // Fire the event.
             fireMessageReceived(channel,
-                    new SctpPayload(messageInfo.streamNumber(),
-                            messageInfo.payloadProtocolID(),
-                            buffer),
+                    new SctpFrame(messageInfo, buffer),
                     messageInfo.address());
         } else {
             recvBufferPool.release(bb);
@@ -764,8 +769,8 @@ class SctpWorker implements Runnable {
                     channel.channel.register(
                             selector, channel.getRawInterestOps(), channel);
                 }
+                channel.setConnected();
                 if (future != null) {
-                    channel.setConnected();
                     future.setSuccess();
                 }
             } catch (IOException e) {

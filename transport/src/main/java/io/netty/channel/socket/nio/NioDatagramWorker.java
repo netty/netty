@@ -48,8 +48,6 @@ class NioDatagramWorker extends AbstractNioWorker {
         super(executor);
     }
 
- 
-
     @Override
     protected boolean read(final SelectionKey key) {
         final NioDatagramChannel channel = (NioDatagramChannel) key.attachment();

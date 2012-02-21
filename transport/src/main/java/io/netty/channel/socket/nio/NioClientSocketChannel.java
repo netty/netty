@@ -52,9 +52,12 @@ final class NioClientSocketChannel extends NioSocketChannel {
                 try {
                     socket.close();
                 } catch (IOException e) {
-                    logger.warn(
-                            "Failed to close a partially initialized socket.",
-                            e);
+                    if (logger.isWarnEnabled()) {
+                        logger.warn(
+                                "Failed to close a partially initialized socket.",
+                                e);
+                    }
+
                 }
             }
         }

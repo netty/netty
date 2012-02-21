@@ -158,7 +158,9 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
                 return true;
             }
         } catch (UnknownHostException e) {
-            logger.info("error getting ip of localhost", e);
+            if (logger.isInfoEnabled()) {
+                logger.info("error getting ip of localhost", e);
+            }
         }
         try {
             InetAddress[] addrs = InetAddress.getAllByName("127.0.0.1");
@@ -168,7 +170,9 @@ public class PatternRule implements IpFilterRule, Comparable<Object> {
                 }
             }
         } catch (UnknownHostException e) {
-            logger.info("error getting ip of localhost", e);
+            if (logger.isInfoEnabled()) {
+                logger.info("error getting ip of localhost", e);
+            }
         }
         return false;
 
