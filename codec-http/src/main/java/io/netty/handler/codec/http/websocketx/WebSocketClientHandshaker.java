@@ -16,17 +16,11 @@
 package io.netty.handler.codec.http.websocketx;
 
 import java.net.URI;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.util.CharsetUtil;
 
 /**
  * Base class for web socket client handshake implementations
@@ -111,7 +105,7 @@ public abstract class WebSocketClientHandshaker {
 
     /**
      * Begins the opening handshake
-     * 
+     *
      * @param channel
      *            Channel
      */
@@ -119,7 +113,7 @@ public abstract class WebSocketClientHandshaker {
 
     /**
      * Validates and finishes the opening handshake initiated by {@link #handshake}}.
-     * 
+     *
      * @param channel
      *            Channel
      * @param response
