@@ -23,8 +23,6 @@ import io.netty.channel.*;
 import io.netty.channel.sctp.SctpClientSocketChannelFactory;
 import io.netty.channel.sctp.SctpFrame;
 import io.netty.channel.sctp.SctpServerSocketChannelFactory;
-import io.netty.channel.sctp.codec.SctpFrameDecoder;
-import io.netty.channel.sctp.codec.SctpFrameEncoder;
 import io.netty.testsuite.util.SctpSocketAddresses;
 import io.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
