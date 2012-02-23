@@ -5,7 +5,6 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.embedder.DecoderEmbedder;
 import org.junit.Test;
 
-import java.util.Map;
 import java.util.Random;
 
 import static org.junit.Assert.*;
@@ -111,10 +110,9 @@ public class HttpMessageDecoderTest {
         assertFalse(decode.containsHeader("en-us"));
     }
 
-    @Test
-    public void microBenchmark() {
+    public static void main(String[] args) {
         long start = System.currentTimeMillis();
-        int iterations = 200000;
+        int iterations = args == null || args.length < 1 ? 200000 : Integer.parseInt(args[0]);
         for (int i = 0; i < iterations; i++) {
             DecoderEmbedder decoderEmbedder = createEmbedder();
             decoderEmbedder.offer(ChannelBuffers.copiedBuffer(("GET / HTTP/1.1\n" +
@@ -137,18 +135,18 @@ public class HttpMessageDecoderTest {
         System.out.println(iterations * 1000 / newdiff + " header blocks per second");
     }
 
-    private void getHeaders(HttpMessage headerBlockVersion) {
-        headerBlockVersion.getHeader("Accept-Language");
-        headerBlockVersion.getHeader("Host");
-        headerBlockVersion.getHeader("User-Agent");
-        headerBlockVersion.getHeader("Accept");
-        headerBlockVersion.getHeader("Accept-Languages");
-        headerBlockVersion.getHeader("Cookie");
-        headerBlockVersion.getHeader("Connection");
+    private static void getHeaders(HttpMessage message) {
+        message.getHeader("Accept-Language");
+        message.getHeader("Host");
+        message.getHeader("User-Agent");
+        message.getHeader("Accept");
+        message.getHeader("Accept-Languages");
+        message.getHeader("Cookie");
+        message.getHeader("Connection");
     }
 
 
-    private DecoderEmbedder createEmbedder() {
+    private static DecoderEmbedder createEmbedder() {
         HttpMessageDecoder httpMessageDecoder = new HttpMessageDecoder() {
             @Override
             protected boolean isDecodingRequest() {
