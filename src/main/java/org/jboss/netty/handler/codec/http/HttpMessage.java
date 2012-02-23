@@ -161,4 +161,12 @@ public interface HttpMessage {
      */
     @Deprecated
     boolean isKeepAlive();
+
+    /**
+     * An optimization when we have a complete headerblock, preparsed.
+     *
+     * @param headerBlock
+     * @param headers
+     */
+    void setHeaderBlock(ChannelBuffer headerBlock, int mapOffset, int headers);
 }

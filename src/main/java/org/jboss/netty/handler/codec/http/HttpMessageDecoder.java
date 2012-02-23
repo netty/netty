@@ -415,38 +415,123 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         }
     }
 
+    public static final int MAX_HEADERS = 32;
+    public static final int INT_SIZE = 4;
+    public static final int NAME_START = 0;
+    public static final int NAME_END = INT_SIZE;
+    public static final int VALUE_START = 2 * INT_SIZE;
+    public static final int VALUE_END = 3 * INT_SIZE;
+    public static final int POSITIONS = 4;
+
     private State readHeaders(ChannelBuffer buffer) throws TooLongFrameException {
-        headerSize = 0;
-        final HttpMessage message = this.message;
-        String line = readHeader(buffer);
-        String name = null;
-        String value = null;
-        if (line.length() != 0) {
-            message.clearHeaders();
-            do {
-                char firstChar = line.charAt(0);
-                if (name != null && (firstChar == ' ' || firstChar == '\t')) {
-                    value = value + ' ' + line.trim();
-                } else {
-                    if (name != null) {
-                        message.addHeader(name, value);
-                    }
-                    String[] header = splitHeader(line);
-                    name = header[0];
-                    value = header[1];
+        int start = buffer.readerIndex();
+        boolean first = true;
+        scan:
+        for (;;) {
+            try {
+                // Protect against CRLF first or last
+                byte nextByte = buffer.readByte();
+                switch (nextByte) {
+                    case HttpCodecUtil.CR:
+                        nextByte = buffer.readByte();
+                        if (nextByte != HttpCodecUtil.LF) {
+                            break;
+                        }
+                    case HttpCodecUtil.LF:
+                        nextByte = buffer.readByte();
+                        if (nextByte == HttpCodecUtil.CR) {
+                            nextByte = buffer.readByte();
+                        }
+                        if (nextByte == HttpCodecUtil.LF || first) {
+                            break scan;
+                        }
                 }
-
-                line = readHeader(buffer);
-            } while (line.length() != 0);
-
-            // Add the last header.
-            if (name != null) {
-                message.addHeader(name, value);
+            } catch (Error error) {
+                System.out.println("Rereading headers: " + (buffer.readerIndex() - start));
+                throw error;
+            }
+            if (first) {
+                first = false;
             }
         }
+        buffer.readerIndex(start);
+        
+        // Header block handling
+        headerSize = 0;
+        ChannelBuffer headerBlock = ChannelBuffers.dynamicBuffer(maxHeaderSize + POSITIONS * MAX_HEADERS * INT_SIZE);
+        int headers = 0;
+        
+        HttpMessage message = this.message;
+        message.clearHeaders();
+        for (;;) {
+            int nameStart = headerSize;
+            int nameEnd = 0;
+            int valueStart = 0;
+            int valueEnd;
+            boolean cr = false;
+            loop:
+            for (;;) {
+                byte nextByte = buffer.readByte();
+                headerSize++;
+
+                switch (nextByte) {
+                case HttpCodecUtil.COLON:
+                    if (nameEnd == 0) {
+                        nameEnd = headerSize - 1;
+                        // Skip the space after the colon
+                        nextByte = buffer.readByte();
+                        headerSize++;
+                        valueStart = headerSize;
+                    }
+                    break;
+                case HttpCodecUtil.CR:
+                    cr = true;
+                    nextByte = buffer.readByte();
+                    headerSize++;
+                    if (nextByte == HttpCodecUtil.LF) {
+                        valueEnd = headerSize - 2;
+                        break loop;
+                    }
+                    break;
+                case HttpCodecUtil.LF:
+                    valueEnd = headerSize - 1;
+                    break loop;
+                }
+
+                // Abort decoding if the header part is too large.
+                if (headerSize >= maxHeaderSize) {
+                    // TODO: Respond with Bad Request and discard the traffic
+                    //    or close the connection.
+                    //       No need to notify the upstream handlers - just log.
+                    //       If decoding a response, just throw an exception.
+                    throw new TooLongFrameException(
+                            "HTTP header is larger than " +
+                            maxHeaderSize + " bytes.");
+
+                }
+            }
+
+            if (nameStart == headerSize - 1 || (cr && nameStart == headerSize - 2)) {
+                break;
+            }
+            char firstChar = (char) headerBlock.getByte(nameStart);
+            if (valueStart != 0 && (firstChar == ' ' || firstChar == '\t')) {
+                // continue parsing the value
+            } else {
+                int base = maxHeaderSize + headers * INT_SIZE * POSITIONS;
+                headerBlock.setInt(base + NAME_START, nameStart);
+                headerBlock.setInt(base + NAME_END, nameEnd);
+                headerBlock.setInt(base + VALUE_START, valueStart);
+                headerBlock.setInt(base + VALUE_END, valueEnd);
+                headers++;
+            }
+        }
+        buffer.readerIndex(start);
+        headerBlock.setBytes(0, buffer, headerSize);
+        buffer.readerIndex(start + headerSize);
+        message.setHeaderBlock(headerBlock, maxHeaderSize, headers);
 
         State nextState;
-
         if (isContentAlwaysEmpty(message)) {
             nextState = State.SKIP_CONTROL_CHARS;
         } else if (message.isChunked()) {

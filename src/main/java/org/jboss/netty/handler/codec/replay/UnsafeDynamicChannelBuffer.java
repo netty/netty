@@ -21,7 +21,7 @@ import org.jboss.netty.buffer.DynamicChannelBuffer;
 class UnsafeDynamicChannelBuffer extends DynamicChannelBuffer {
 
     UnsafeDynamicChannelBuffer(ChannelBufferFactory factory) {
-        super(factory.getDefaultOrder(), 256, factory);
+        super(factory.getDefaultOrder(), 4096, factory);
     }
 
     @Override
