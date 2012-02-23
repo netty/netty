@@ -8,6 +8,7 @@ import org.junit.Test;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class HttpMessageDecoderTest {
@@ -89,7 +90,8 @@ public class HttpMessageDecoderTest {
         assertTrue(decode.containsHeader("Connection"));
         assertEquals("en-us", decode.getHeader("Accept-Language"));
         assertEquals(1, decode.getHeaders("Cookie").size());
-
+        decode.removeHeader("en-us");
+        assertFalse(decode.containsHeader("en-us"));
     }
 
     private DecoderEmbedder createEmbedder() {

@@ -39,6 +39,7 @@ public class DefaultHttpMessage implements HttpMessage {
     private boolean chunked;
     private ChannelBuffer headerBlock;
     private int mapOffset;
+    private int numHeaders;
 
     /**
      * Creates a new instance.
@@ -63,6 +64,26 @@ public class DefaultHttpMessage implements HttpMessage {
 
     public void removeHeader(final String name) {
         headers.removeHeader(name);
+        if (headerBlock != null) {
+            int length = name.length();
+            for (int i = 0; i < numHeaders; i++) {
+                int base = mapOffset + i * INT_SIZE * POSITIONS;
+                int nameStart = headerBlock.getInt(base);
+                int nameEnd = headerBlock.getInt(base + NAME_END);
+                int nameLength = nameEnd - nameStart;
+                if (length == nameLength) {
+                    int valueStart = headerBlock.getInt(base + VALUE_START);
+                    int valueEnd = headerBlock.getInt(base + VALUE_END);
+                    int valueLength = valueEnd - valueStart;
+                    if (valueLength >= 0) {
+                        if (checkEquals(name, nameStart, nameLength)) {
+                            // Remove the name
+                            headerBlock.setInt(base + NAME_END, nameStart);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @Deprecated
@@ -76,11 +97,7 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public boolean isChunked() {
-        if (chunked) {
-            return true;
-        } else {
-            return HttpCodecUtil.isTransferEncodingChunked(this);
-        }
+        return chunked || HttpCodecUtil.isTransferEncodingChunked(this);
     }
 
     public void setChunked(boolean chunked) {
@@ -95,13 +112,15 @@ public class DefaultHttpMessage implements HttpMessage {
         return HttpHeaders.isKeepAlive(this);
     }
 
-    public void setHeaderBlock(ChannelBuffer headerBlock, int mapOffset, int headers) {
+    public void setHeaderBlock(ChannelBuffer headerBlock, int mapOffset, int numHeaders) {
         this.headerBlock = headerBlock;
         this.mapOffset = mapOffset;
+        this.numHeaders = numHeaders;
     }
 
     public void clearHeaders() {
         headers.clearHeaders();
+        headerBlock = null;
     }
 
     public void setContent(ChannelBuffer content) {
@@ -119,20 +138,18 @@ public class DefaultHttpMessage implements HttpMessage {
         // We can override what we read
         String header = headers.getHeader(name);
         if (header == null && headerBlock != null) {
-            for (int i = 0; i < 32; i++) {
+            int length = name.length();
+            for (int i = 0; i < numHeaders; i++) {
                 int base = mapOffset + i * INT_SIZE * POSITIONS;
                 int nameStart = headerBlock.getInt(base);
                 int nameEnd = headerBlock.getInt(base + NAME_END);
-                if (headerBlock.getByte(nameEnd) == 0) {
-                    break;
-                }
                 int nameLength = nameEnd - nameStart;
-                if (name.length() == nameLength) {
+                if (length == nameLength) {
                     int valueStart = headerBlock.getInt(base + VALUE_START);
                     int valueEnd = headerBlock.getInt(base + VALUE_END);
                     int valueLength = valueEnd - valueStart;
                     if (valueLength >= 0) {
-                        if (name.equals(new String(getHeaderBytes(nameStart, nameLength)))) {
+                        if (checkEquals(name, nameStart, nameLength)) {
                             byte[] valueBuffer = getHeaderBytes(valueStart, valueLength);
                             return new String(valueBuffer);
                         }
@@ -143,43 +160,49 @@ public class DefaultHttpMessage implements HttpMessage {
         return header;
     }
 
+    private boolean checkEquals(String name, int nameStart, int nameLength) {
+        for (int i = 0; i < nameLength; i++) {
+            if (name.charAt(i) != headerBlock.getByte(nameStart + i)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public List<String> getHeaders(final String name) {
-        List<String> list = new ArrayList<String>();
         if (headerBlock != null) {
-            for (int i = 0; i < 32; i++) {
+            List<String> list = new ArrayList<String>();
+            int length = name.length();
+            for (int i = 0; i < numHeaders; i++) {
                 int base = mapOffset + i * INT_SIZE * POSITIONS;
                 int nameStart = headerBlock.getInt(base);
                 int nameEnd = headerBlock.getInt(base + NAME_END);
-                if (headerBlock.getByte(nameEnd) == 0) {
-                    break;
-                }
                 int nameLength = nameEnd - nameStart;
-                if (name.length() == nameLength) {
+                if (length == nameLength) {
                     int valueStart = headerBlock.getInt(base + VALUE_START);
                     int valueEnd = headerBlock.getInt(base + VALUE_END);
                     int valueLength = valueEnd - valueStart;
                     if (valueLength >= 0) {
-                        if (name.equals(new String(getHeaderBytes(nameStart, nameLength)))) {
+                        if (checkEquals(name, nameStart, nameLength)) {
                             list.add(new String(getHeaderBytes(valueStart, valueLength)));
                         }
                     }
                 }
             }
+            list.addAll(headers.getHeaders(name));
+            return list;
+        } else {
+            return headers.getHeaders(name);
         }
-        list.addAll(headers.getHeaders(name));
-        return list;
     }
 
     public List<Map.Entry<String, String>> getHeaders() {
         if (headerBlock != null) {
             List<Map.Entry<String, String>> list = new ArrayList<Map.Entry<String, String>>();
-            for (int i = 0; i < 32; i++) {
+            for (int i = 0; i < numHeaders; i++) {
                 int base = mapOffset + i * INT_SIZE * POSITIONS;
                 int nameStart = headerBlock.getInt(base);
                 int nameEnd = headerBlock.getInt(base + NAME_END);
-                if (headerBlock.getByte(nameEnd) == 0) {
-                    break;
-                }
                 int valueStart = headerBlock.getInt(base + VALUE_START);
                 int valueEnd = headerBlock.getInt(base + VALUE_END);
                 int nameLength = nameEnd - nameStart;
@@ -211,19 +234,39 @@ public class DefaultHttpMessage implements HttpMessage {
     }
 
     public boolean containsHeader(final String name) {
-        return getHeader(name) != null;
+        if (headers.containsHeader(name)) {
+            return true;
+        } else {
+            if (headerBlock != null) {
+                int length = name.length();
+                for (int i = 0; i < numHeaders; i++) {
+                    int base = mapOffset + i * INT_SIZE * POSITIONS;
+                    int nameStart = headerBlock.getInt(base);
+                    int nameEnd = headerBlock.getInt(base + NAME_END);
+                    int nameLength = nameEnd - nameStart;
+                    if (length == nameLength) {
+                        int valueStart = headerBlock.getInt(base + VALUE_START);
+                        int valueEnd = headerBlock.getInt(base + VALUE_END);
+                        int valueLength = valueEnd - valueStart;
+                        if (valueLength >= 0) {
+                            if (checkEquals(name, nameStart, nameLength)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
     }
 
     public Set<String> getHeaderNames() {
         if (headerBlock != null) {
             Set<String> headerNames = new HashSet<String>();
-            for (int i = 0; i < 32; i++) {
+            for (int i = 0; i < numHeaders; i++) {
                 int base = mapOffset + i * INT_SIZE * POSITIONS;
                 int nameStart = headerBlock.getInt(base);
                 int nameEnd = headerBlock.getInt(base + NAME_END);
-                if (headerBlock.getByte(nameEnd) == 0) {
-                    break;
-                }
                 int valueStart = headerBlock.getInt(base + VALUE_START);
                 int valueEnd = headerBlock.getInt(base + VALUE_END);
                 int nameLength = nameEnd - nameStart;
