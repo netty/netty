@@ -15,8 +15,6 @@
  */
 package org.jboss.netty.handler.codec.http;
 
-import java.util.List;
-
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -24,6 +22,8 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
+
+import java.util.List;
 
 /**
  * Decodes {@link ChannelBuffer}s into {@link HttpMessage}s and
@@ -428,27 +428,22 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         boolean first = true;
         scan:
         for (;;) {
-            try {
-                // Protect against CRLF first or last
-                byte nextByte = buffer.readByte();
-                switch (nextByte) {
-                    case HttpCodecUtil.CR:
+            // Protect against CRLF first or last
+            byte nextByte = buffer.readByte();
+            switch (nextByte) {
+                case HttpCodecUtil.CR:
+                    nextByte = buffer.readByte();
+                    if (nextByte != HttpCodecUtil.LF) {
+                        break;
+                    }
+                case HttpCodecUtil.LF:
+                    nextByte = buffer.readByte();
+                    if (nextByte == HttpCodecUtil.CR) {
                         nextByte = buffer.readByte();
-                        if (nextByte != HttpCodecUtil.LF) {
-                            break;
-                        }
-                    case HttpCodecUtil.LF:
-                        nextByte = buffer.readByte();
-                        if (nextByte == HttpCodecUtil.CR) {
-                            nextByte = buffer.readByte();
-                        }
-                        if (nextByte == HttpCodecUtil.LF || first) {
-                            break scan;
-                        }
-                }
-            } catch (Error error) {
-                System.out.println("Rereading headers: " + (buffer.readerIndex() - start));
-                throw error;
+                    }
+                    if (nextByte == HttpCodecUtil.LF || first) {
+                        break scan;
+                    }
             }
             if (first) {
                 first = false;
@@ -463,39 +458,54 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         
         HttpMessage message = this.message;
         message.clearHeaders();
+        int valueSkip = 0;
+        int valueStart = 0;
+        done:
         for (;;) {
             int nameStart = headerSize;
             int nameEnd = 0;
-            int valueStart = 0;
             int valueEnd;
             boolean cr = false;
             loop:
             for (;;) {
                 byte nextByte = buffer.readByte();
+                headerBlock.setByte(headerSize - valueSkip, nextByte);
                 headerSize++;
 
                 switch (nextByte) {
-                case HttpCodecUtil.COLON:
-                    if (nameEnd == 0) {
-                        nameEnd = headerSize - 1;
-                        // Skip the space after the colon
+                    case HttpCodecUtil.COLON:
+                        if (nameEnd == 0) {
+                            nameEnd = headerSize - 1;
+                            // Skip the space after the colon
+                            nextByte = buffer.readByte();
+                            headerSize++;
+                            valueStart = headerSize;
+                        }
+                        break;
+                    case HttpCodecUtil.CR:
+                        cr = true;
                         nextByte = buffer.readByte();
                         headerSize++;
-                        valueStart = headerSize;
-                    }
-                    break;
-                case HttpCodecUtil.CR:
-                    cr = true;
-                    nextByte = buffer.readByte();
-                    headerSize++;
-                    if (nextByte == HttpCodecUtil.LF) {
-                        valueEnd = headerSize - 2;
+                        if (nextByte != HttpCodecUtil.LF) {
+                            break;
+                        }
+                    case HttpCodecUtil.LF:
+                        if (nameStart == headerSize - 1 || (cr && nameStart == headerSize - 2)) {
+                            break done;
+                        }
+                        int endSize = cr ? 2 : 1;
+                        cr = false;
+                        if (buffer.readableBytes() > 0) {
+                            char nextChar = (char) buffer.getByte(start + headerSize);
+                            if (nextChar == ' ' || nextChar == '\t') {
+                                valueSkip += endSize + 1;
+                                buffer.readByte();
+                                headerSize++;
+                                continue;
+                            }
+                        }
+                        valueEnd = headerSize - endSize - valueSkip;
                         break loop;
-                    }
-                    break;
-                case HttpCodecUtil.LF:
-                    valueEnd = headerSize - 1;
-                    break loop;
                 }
 
                 // Abort decoding if the header part is too large.
@@ -511,24 +521,15 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
                 }
             }
 
-            if (nameStart == headerSize - 1 || (cr && nameStart == headerSize - 2)) {
-                break;
-            }
-            char firstChar = (char) headerBlock.getByte(nameStart);
-            if (valueStart != 0 && (firstChar == ' ' || firstChar == '\t')) {
-                // continue parsing the value
-            } else {
-                int base = maxHeaderSize + headers * INT_SIZE * POSITIONS;
-                headerBlock.setInt(base + NAME_START, nameStart);
-                headerBlock.setInt(base + NAME_END, nameEnd);
-                headerBlock.setInt(base + VALUE_START, valueStart);
-                headerBlock.setInt(base + VALUE_END, valueEnd);
-                headers++;
-            }
+            int base = maxHeaderSize + headers * INT_SIZE * POSITIONS;
+            headerBlock.setInt(base + NAME_START, nameStart);
+            headerBlock.setInt(base + NAME_END, nameEnd);
+            headerBlock.setInt(base + VALUE_START, valueStart);
+            headerBlock.setInt(base + VALUE_END, valueEnd);
+            valueSkip = 0;
+            valueStart = 0;
+            headers++;
         }
-        buffer.readerIndex(start);
-        headerBlock.setBytes(0, buffer, headerSize);
-        buffer.readerIndex(start + headerSize);
         message.setHeaderBlock(headerBlock, maxHeaderSize, headers);
 
         State nextState;
