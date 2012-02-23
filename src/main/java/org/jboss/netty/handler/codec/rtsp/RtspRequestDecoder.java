@@ -17,6 +17,7 @@ package org.jboss.netty.handler.codec.rtsp;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
+import org.jboss.netty.handler.codec.http.DefaultHttpMessage;
 import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -67,7 +68,7 @@ public class RtspRequestDecoder extends RtspMessageDecoder {
     }
 
     @Override
-    protected HttpMessage createMessage(String[] initialLine) throws Exception {
+    protected DefaultHttpMessage createMessage(String[] initialLine) throws Exception {
         return new DefaultHttpRequest(RtspVersions.valueOf(initialLine[2]),
                 RtspMethods.valueOf(initialLine[0]), initialLine[1]);
     }

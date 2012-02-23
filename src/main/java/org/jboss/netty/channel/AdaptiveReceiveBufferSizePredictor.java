@@ -32,7 +32,7 @@ public class AdaptiveReceiveBufferSizePredictor implements
         ReceiveBufferSizePredictor {
 
     static final int DEFAULT_MINIMUM = 64;
-    static final int DEFAULT_INITIAL = 1024;
+    static final int DEFAULT_INITIAL = 4096;
     static final int DEFAULT_MAXIMUM = 65536;
 
     private static final int INDEX_INCREMENT = 4;

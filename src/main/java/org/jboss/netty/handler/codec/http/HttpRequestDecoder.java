@@ -72,7 +72,7 @@ public class HttpRequestDecoder extends HttpMessageDecoder {
     }
 
     @Override
-    protected HttpMessage createMessage(String[] initialLine) throws Exception {
+    protected DefaultHttpMessage createMessage(String[] initialLine) throws Exception {
         return new DefaultHttpRequest(
                 HttpVersion.valueOf(initialLine[2]), HttpMethod.valueOf(initialLine[0]), initialLine[1]);
     }

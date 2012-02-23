@@ -562,15 +562,10 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
     private ChannelBuffer cumulation(ChannelHandlerContext ctx) {
         ChannelBuffer buf = this.cumulation;
         if (buf == null) {
-            
-            if (cumulation == null) {
-                ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
-                buf = new UnsafeDynamicChannelBuffer(factory);
-                cumulation = buf;
-                replayable = new ReplayingDecoderBuffer(buf);
-            } else {
-                buf = cumulation;
-            }
+            ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
+            buf = new UnsafeDynamicChannelBuffer(factory);
+            cumulation = buf;
+            replayable = new ReplayingDecoderBuffer(buf);
         }
         return buf;
     }
