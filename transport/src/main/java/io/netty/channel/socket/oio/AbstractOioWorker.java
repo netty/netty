@@ -24,20 +24,26 @@ import static io.netty.channel.Channels.succeededFuture;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.Channels;
+import io.netty.channel.socket.Worker;
+import io.netty.util.internal.QueueFactory;
 
 import java.io.IOException;
+import java.util.Queue;
 
 /**
  * Abstract base class for Oio-Worker implementations
  *
  * @param <C> {@link AbstractOioChannel}
  */
-abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Runnable {
+abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker{
 
+    private final Queue<Runnable> eventQueue = QueueFactory.createQueue(Runnable.class);
+    
     protected final C channel;
 
     public AbstractOioWorker(C channel) {
         this.channel = channel;
+        channel.worker = this;
     }
 
     @Override
@@ -60,9 +66,13 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Runnab
             }
             
             try {
-               if (!process()) {
-                   break;
-               }
+                boolean cont = process();
+                
+                processEventQueue();
+                
+                if (!cont) {
+                    break;
+                }
             } catch (Throwable t) {
                 if (!channel.isSocketClosed()) {
                     fireExceptionCaught(channel, t);
@@ -79,6 +89,24 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Runnab
         close(channel, succeededFuture(channel));
     }
     
+    
+    @Override
+    public void fireEventLater(Runnable eventRunnable) {
+        assert eventQueue.offer(eventRunnable);
+    }
+    
+    private void processEventQueue() throws IOException {
+        for (;;) {
+            final Runnable task = eventQueue.poll();
+            if (task == null) {
+                break;
+            }
+
+            task.run();
+        }
+    }
+    
+
     /**
      * Process the incoming messages and also is responsible for call {@link Channels#fireMessageReceived(Channel, Object)} once a message
      * was processed without errors. 

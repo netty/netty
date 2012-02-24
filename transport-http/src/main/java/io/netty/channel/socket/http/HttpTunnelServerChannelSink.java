@@ -17,7 +17,6 @@ package io.netty.channel.socket.http;
 
 import java.net.SocketAddress;
 
-import io.netty.channel.AbstractChannelSink;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -27,7 +26,7 @@ import io.netty.channel.socket.ServerSocketChannel;
 
 /**
  */
-class HttpTunnelServerChannelSink extends AbstractChannelSink {
+class HttpTunnelServerChannelSink extends AbstractHttpChannelSink {
 
     private ChannelFutureListener closeHook;
 

@@ -19,14 +19,13 @@ package io.netty.channel.socket.http;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import io.netty.channel.AbstractChannelSink;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelPipeline;
 
 /**
  * A fake channel sink for use in testing
  */
-public class FakeChannelSink extends AbstractChannelSink {
+public class FakeChannelSink extends AbstractHttpChannelSink {
 
     public Queue<ChannelEvent> events = new LinkedList<ChannelEvent>();
 

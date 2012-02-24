@@ -32,7 +32,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import io.netty.channel.AbstractChannelSink;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -48,7 +47,7 @@ import io.netty.util.internal.QueueFactory;
 
 /**
  */
-class SctpClientPipelineSink extends AbstractChannelSink {
+class SctpClientPipelineSink extends AbstractScptChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SctpClientPipelineSink.class);

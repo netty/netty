@@ -45,6 +45,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.ReceiveBufferSizePredictor;
 import io.netty.channel.sctp.SctpSendBufferPool.SendBuffer;
+import io.netty.channel.socket.Worker;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.DeadLockProofWorker;
@@ -53,7 +54,7 @@ import io.netty.util.internal.QueueFactory;
 /**
  */
 @SuppressWarnings("unchecked")
-class SctpWorker implements Runnable {
+class SctpWorker implements Worker {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SctpWorker.class);
@@ -71,6 +72,8 @@ class SctpWorker implements Runnable {
     private final Object startStopLock = new Object();
     private final Queue<Runnable> registerTaskQueue = QueueFactory.createQueue(Runnable.class);
     private final Queue<Runnable> writeTaskQueue = QueueFactory.createQueue(Runnable.class);
+    private final Queue<Runnable> eventQueue = QueueFactory.createQueue(Runnable.class);
+
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
     private final SctpReceiveBufferPool recvBufferPool = new SctpReceiveBufferPool();
@@ -188,6 +191,7 @@ class SctpWorker implements Runnable {
 
                 cancelledKeys = 0;
                 processRegisterTaskQueue();
+                processEventQueue();
                 processWriteTaskQueue();
                 processSelectedKeys(selector.selectedKeys());
 
@@ -240,7 +244,14 @@ class SctpWorker implements Runnable {
             }
         }
     }
-
+    
+    public void fireEventLater(Runnable eventRunnable) {
+       assert eventQueue.offer(eventRunnable);
+       
+       // wake up the selector to speed things
+       selector.wakeup();
+    }
+    
     private void processRegisterTaskQueue() throws IOException {
         for (; ;) {
             final Runnable task = registerTaskQueue.poll();
@@ -264,7 +275,19 @@ class SctpWorker implements Runnable {
             cleanUpCancelledKeys();
         }
     }
+    
+    private void processEventQueue() throws IOException {
+        for (;;) {
+            final Runnable task = eventQueue.poll();
+            if (task == null) {
+                break;
+            }
 
+            task.run();
+            cleanUpCancelledKeys();
+        }
+    }
+    
     private void processSelectedKeys(final Set<SelectionKey> selectedKeys) throws IOException {
         for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
             SelectionKey k = i.next();

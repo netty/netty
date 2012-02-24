@@ -37,4 +37,6 @@ public interface ChannelSink {
      * one of its {@link ChannelHandler}s process a {@link ChannelEvent}.
      */
     void exceptionCaught(ChannelPipeline pipeline, ChannelEvent e, ChannelPipelineException cause) throws Exception;
+    
+    void fireEventLater(ChannelPipeline pipeline, ChannelEvent e) throws Exception;
 }

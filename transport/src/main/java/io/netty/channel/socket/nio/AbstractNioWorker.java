@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.MessageEvent;
+import io.netty.channel.socket.Worker;
 import io.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -44,7 +45,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-abstract class AbstractNioWorker implements Runnable {
+abstract class AbstractNioWorker implements Worker {
     /**
      * Internal Netty logger.
      */
@@ -106,6 +107,9 @@ abstract class AbstractNioWorker implements Runnable {
      */
     protected final Queue<Runnable> writeTaskQueue = QueueFactory.createQueue(Runnable.class);
 
+    private final Queue<Runnable> eventQueue = QueueFactory.createQueue(Runnable.class);
+
+    
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
     private final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
@@ -216,6 +220,7 @@ abstract class AbstractNioWorker implements Runnable {
 
                 cancelledKeys = 0;
                 processRegisterTaskQueue();
+                processEventQueue();
                 processWriteTaskQueue();
                 processSelectedKeys(selector.selectedKeys());
 
@@ -266,7 +271,13 @@ abstract class AbstractNioWorker implements Runnable {
         }
     }
     
-
+    public void fireEventLater(Runnable eventRunnable) {
+       assert eventQueue.offer(eventRunnable);
+       
+       // wake up the selector to speed things
+       selector.wakeup();
+    }
+    
     private void processRegisterTaskQueue() throws IOException {
         for (;;) {
             final Runnable task = registerTaskQueue.poll();
@@ -282,6 +293,18 @@ abstract class AbstractNioWorker implements Runnable {
     private void processWriteTaskQueue() throws IOException {
         for (;;) {
             final Runnable task = writeTaskQueue.poll();
+            if (task == null) {
+                break;
+            }
+
+            task.run();
+            cleanUpCancelledKeys();
+        }
+    }
+    
+    private void processEventQueue() throws IOException {
+        for (;;) {
+            final Runnable task = eventQueue.poll();
             if (task == null) {
                 break;
             }

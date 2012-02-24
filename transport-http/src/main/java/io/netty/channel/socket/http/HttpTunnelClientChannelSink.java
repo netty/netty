@@ -17,7 +17,6 @@ package io.netty.channel.socket.http;
 
 import java.net.InetSocketAddress;
 
-import io.netty.channel.AbstractChannelSink;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelStateEvent;
@@ -27,7 +26,7 @@ import io.netty.channel.MessageEvent;
  * Sink of a client channel, deals with sunk events and then makes appropriate calls
  * on the channel itself to push data.
  */
-class HttpTunnelClientChannelSink extends AbstractChannelSink {
+class HttpTunnelClientChannelSink extends AbstractHttpChannelSink {
 
     @Override
     public void eventSunk(ChannelPipeline pipeline, ChannelEvent e)

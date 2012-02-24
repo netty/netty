@@ -18,7 +18,6 @@ package io.netty.channel.socket.http;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.AbstractChannelSink;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelFuture;
@@ -33,7 +32,7 @@ import io.netty.channel.MessageEvent;
  * from here to the ServerMessageSwitch, which queues the data awaiting a poll request from the
  * client end of the tunnel.
  */
-class HttpTunnelAcceptedChannelSink extends AbstractChannelSink {
+class HttpTunnelAcceptedChannelSink extends AbstractHttpChannelSink {
 
     final SaturationManager saturationManager;
 
