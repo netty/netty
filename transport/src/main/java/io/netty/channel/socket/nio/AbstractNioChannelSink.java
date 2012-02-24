@@ -28,13 +28,18 @@ public abstract class AbstractNioChannelSink extends AbstractChannelSink{
         Channel ch = e.getChannel();
         if (ch instanceof AbstractNioChannel<?>) {
             AbstractNioChannel<?> channel = (AbstractNioChannel<?>) ch;
-            channel.worker.fireEventLater(new Runnable() {
+            // check if the current thread is a worker thread if so we can send the event now
+            if (channel.worker.thread != Thread.currentThread()) {
+                channel.worker.fireEventLater(new Runnable() {
                 
-                @Override
-                public void run() {
-                    pipeline.sendUpstream(e);
-                }
-            });
+                    @Override
+                    public void run() {
+                        pipeline.sendUpstream(e);
+                    }
+                });
+            } else {
+                pipeline.sendUpstream(e);
+            }
         } else {
             throw new UnsupportedOperationException();
         }

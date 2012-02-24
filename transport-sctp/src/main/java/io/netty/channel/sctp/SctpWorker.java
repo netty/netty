@@ -65,7 +65,7 @@ class SctpWorker implements Worker {
 
     private final Executor executor;
     private boolean started;
-    private volatile Thread thread;
+    volatile Thread thread;
     volatile Selector selector;
     private final AtomicBoolean wakenUp = new AtomicBoolean();
     private final ReadWriteLock selectorGuard = new ReentrantReadWriteLock();

@@ -30,7 +30,7 @@ public abstract class AbstractOioChannelSink extends AbstractChannelSink{
         if (ch instanceof AbstractOioChannel) {
             AbstractOioChannel channel = (AbstractOioChannel) ch;
             Worker worker = channel.worker;
-            if (worker != null) {
+            if (worker != null && channel.workerThread != Thread.currentThread()) {
                 channel.worker.fireEventLater(new Runnable() {
                     
                     @Override
@@ -39,7 +39,7 @@ public abstract class AbstractOioChannelSink extends AbstractChannelSink{
                     }
                 });
             } else {
-                // no worker thread yet so just fire the event now
+                // no worker thread yet or the current thread is a worker thread so just fire the event now
                 pipeline.sendUpstream(e);
             }
            
