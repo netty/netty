@@ -177,12 +177,4 @@ public class IoStreamChannelSink extends AbstractChannelSink {
             }
         }
     }
-
-    /**
-     * This just calls {@link ChannelPipeline#sendUpstream(ChannelEvent)} as the transport does not support it
-     */
-    @Override
-    public void fireUpstreamEventLater(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
-        pipeline.sendUpstream(e);
-    }
 }

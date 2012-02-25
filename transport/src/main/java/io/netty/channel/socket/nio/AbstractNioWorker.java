@@ -504,7 +504,7 @@ abstract class AbstractNioWorker implements Worker {
     }
 
     static boolean isIoThread(AbstractNioChannel<?> channel) {
-        return Thread.currentThread() == channel.worker.thread;
+        return channel.worker.thread == null || Thread.currentThread() == channel.worker.thread;
     }
     
     private void setOpWrite(AbstractNioChannel<?> channel) {

@@ -30,7 +30,7 @@ import java.util.Queue;
  *
  * @param <C> {@link AbstractOioChannel}
  */
-abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker{
+abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker {
 
     private final Queue<Runnable> eventQueue = QueueFactory.createQueue(Runnable.class);
     
@@ -85,7 +85,7 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
     }
     
     static boolean isIoThead(AbstractOioChannel channel) {
-        return Thread.currentThread() == channel.workerThread;
+        return channel.workerThread == null || Thread.currentThread() == channel.workerThread;
     }
     
     @Override

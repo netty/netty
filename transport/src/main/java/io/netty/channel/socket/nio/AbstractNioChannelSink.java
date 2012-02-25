@@ -21,7 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelPipeline;
 
-public abstract class AbstractNioChannelSink extends AbstractChannelSink{
+public abstract class AbstractNioChannelSink extends AbstractChannelSink {
 
     @Override
     public void fireUpstreamEventLater(final ChannelPipeline pipeline, final ChannelEvent e) throws Exception {
@@ -41,9 +41,19 @@ public abstract class AbstractNioChannelSink extends AbstractChannelSink{
                 pipeline.sendUpstream(e);
             }
         } else {
-            throw new UnsupportedOperationException();
+            super.fireUpstreamEventLater(pipeline, e);
         }
 
+    }
+
+    @Override
+    protected boolean isFireExceptionCaughtLater(ChannelEvent event, Throwable actualCause) {
+        Channel channel = event.getChannel();
+        boolean fireLater = false;
+        if (channel instanceof AbstractNioChannel<?>) {
+            fireLater =  !AbstractNioWorker.isIoThread((AbstractNioChannel<?>) channel);
+        }
+        return fireLater;
     }
 
 }

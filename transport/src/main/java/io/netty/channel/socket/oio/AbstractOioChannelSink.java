@@ -22,7 +22,7 @@ import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.Worker;
 
-public abstract class AbstractOioChannelSink extends AbstractChannelSink{
+public abstract class AbstractOioChannelSink extends AbstractChannelSink {
 
     @Override
     public void fireUpstreamEventLater(final ChannelPipeline pipeline, final ChannelEvent e) throws Exception {
@@ -44,9 +44,19 @@ public abstract class AbstractOioChannelSink extends AbstractChannelSink{
             }
            
         } else {
-            throw new UnsupportedOperationException();
+            super.fireUpstreamEventLater(pipeline, e);
         }
 
+    }
+
+    @Override
+    protected boolean isFireExceptionCaughtLater(ChannelEvent event, Throwable actualCause) {
+        Channel channel = event.getChannel();
+        boolean fireLater = false;
+        if (channel instanceof AbstractOioChannel) {
+            fireLater = !AbstractOioWorker.isIoThead((AbstractOioChannel) channel);
+        }
+        return fireLater;
     }
 
 }
