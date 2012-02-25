@@ -321,6 +321,20 @@ public final class Channels {
     public static void fireWriteComplete(ChannelHandlerContext ctx, long amount) {
         ctx.sendUpstream(new DefaultWriteCompletionEvent(ctx.getChannel(), amount));
     }
+    
+    
+    
+    /**
+     * Sends a {@code "channelInterestChanged"} event to the first
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
+     * the specified {@link Channel} once the io-thread runs again.
+     */
+    public static void fireChannelInterestChangedLater(Channel channel) {
+        channel.getPipeline().sendUpstreamLater(
+                new UpstreamChannelStateEvent(
+                        channel, ChannelState.INTEREST_OPS, Channel.OP_READ));
+    }
+    
     /**
      * Sends a {@code "channelInterestChanged"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
@@ -349,6 +363,17 @@ public final class Channels {
     /**
      * Sends a {@code "channelDisconnected"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
+     * the specified {@link Channel} once the io-thread runs again.
+     */
+    public static void fireChannelDisconnectedLater(Channel channel) {
+        channel.getPipeline().sendUpstreamLater(
+                new UpstreamChannelStateEvent(
+                        channel, ChannelState.CONNECTED, null));
+    }
+    
+    /**
+     * Sends a {@code "channelDisconnected"} event to the first
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
      */
     public static void fireChannelDisconnected(Channel channel) {
@@ -368,6 +393,18 @@ public final class Channels {
                 ctx.getChannel(), ChannelState.CONNECTED, null));
     }
 
+    
+    
+    /**
+     * Sends a {@code "channelUnbound"} event to the first
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
+     * the specified {@link Channel} once the io-thread runs again.
+     */
+    public static void fireChannelUnboundLater(Channel channel) {
+        channel.getPipeline().sendUpstreamLater(new UpstreamChannelStateEvent(
+                channel, ChannelState.BOUND, null));
+    }
+    
     /**
      * Sends a {@code "channelUnbound"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
@@ -390,6 +427,24 @@ public final class Channels {
                 ctx.getChannel(), ChannelState.BOUND, null));
     }
 
+    
+    
+    /**
+     * Sends a {@code "channelClosed"} event to the first
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
+     * the specified {@link Channel} once the io-thread runs again.
+     */
+    public static void fireChannelClosedLater(Channel channel) {
+        channel.getPipeline().sendUpstream(
+                new UpstreamChannelStateEvent(
+                        channel, ChannelState.OPEN, Boolean.FALSE));
+
+        // Notify the parent handler.
+        if (channel.getParent() != null) {
+            fireChildChannelStateChangedLater(channel.getParent(), channel);
+        }
+    }
+    
     /**
      * Sends a {@code "channelClosed"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
@@ -418,6 +473,19 @@ public final class Channels {
                         ctx.getChannel(), ChannelState.OPEN, Boolean.FALSE));
     }
 
+    
+    
+    /**
+     * Sends a {@code "exceptionCaught"} event to the first
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
+     * the specified {@link Channel} once the io-thread runs again.
+     */
+    public static void fireExceptionCaughtLater(Channel channel, Throwable cause) {
+        channel.getPipeline().sendUpstream(
+                new DefaultExceptionEvent(channel, cause));
+    }
+
+    
     /**
      * Sends a {@code "exceptionCaught"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
@@ -444,6 +512,13 @@ public final class Channels {
                 new DefaultChildChannelStateEvent(channel, childChannel));
     }
 
+    private static void fireChildChannelStateChangedLater(
+            Channel channel, Channel childChannel) {
+        channel.getPipeline().sendUpstreamLater(
+                new DefaultChildChannelStateEvent(channel, childChannel));
+    }
+
+    
     /**
      * Sends a {@code "bind"} request to the last
      * {@link ChannelDownstreamHandler} in the {@link ChannelPipeline} of
