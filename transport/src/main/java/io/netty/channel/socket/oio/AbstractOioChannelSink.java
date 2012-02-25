@@ -30,7 +30,7 @@ public abstract class AbstractOioChannelSink extends AbstractChannelSink {
         if (ch instanceof AbstractOioChannel) {
             AbstractOioChannel channel = (AbstractOioChannel) ch;
             Worker worker = channel.worker;
-            if (worker != null && channel.workerThread != Thread.currentThread()) {
+            if (worker != null && !AbstractOioWorker.isIoThead(channel)) {
                 channel.worker.executeInIoThread(new Runnable() {
                     
                     @Override

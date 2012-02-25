@@ -81,11 +81,11 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
         channel.workerThread = null;
 
         // Clean up.
-        close(channel, succeededFuture(channel));
+        close(channel, succeededFuture(channel), true);
     }
     
     static boolean isIoThead(AbstractOioChannel channel) {
-        return channel.workerThread == null || Thread.currentThread() == channel.workerThread;
+        return Thread.currentThread() == channel.workerThread;
     }
     
     @Override
@@ -164,9 +164,12 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
     }
     
     static void close(AbstractOioChannel channel, ChannelFuture future) {
+        close(channel, future, isIoThead(channel));
+    }
+    
+    private static void close(AbstractOioChannel channel, ChannelFuture future, boolean iothread) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
-        boolean iothread = isIoThead(channel);
         
         try {
             channel.closeSocket();

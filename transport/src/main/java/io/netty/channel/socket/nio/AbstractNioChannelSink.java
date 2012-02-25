@@ -29,7 +29,7 @@ public abstract class AbstractNioChannelSink extends AbstractChannelSink {
         if (ch instanceof AbstractNioChannel<?>) {
             AbstractNioChannel<?> channel = (AbstractNioChannel<?>) ch;
             // check if the current thread is a worker thread if so we can send the event now
-            if (channel.worker.thread != Thread.currentThread()) {
+            if (!AbstractNioWorker.isIoThread(channel)) {
                 channel.worker.executeInIoThread(new Runnable() {
                 
                     @Override
