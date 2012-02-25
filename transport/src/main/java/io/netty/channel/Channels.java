@@ -481,7 +481,7 @@ public final class Channels {
      * the specified {@link Channel} once the io-thread runs again.
      */
     public static void fireExceptionCaughtLater(Channel channel, Throwable cause) {
-        channel.getPipeline().sendUpstream(
+        channel.getPipeline().sendUpstreamLater(
                 new DefaultExceptionEvent(channel, cause));
     }
 
