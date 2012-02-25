@@ -245,7 +245,8 @@ class SctpWorker implements Worker {
         }
     }
     
-    public void fireEventLater(Runnable eventRunnable) {
+    @Override
+    public void executeInIoThread(Runnable eventRunnable) {
        assert eventQueue.offer(eventRunnable);
        
        // wake up the selector to speed things

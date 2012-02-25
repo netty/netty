@@ -24,13 +24,13 @@ import io.netty.channel.ChannelPipeline;
 public abstract class AbstractNioChannelSink extends AbstractChannelSink{
 
     @Override
-    public void fireEventLater(final ChannelPipeline pipeline, final ChannelEvent e) throws Exception {
+    public void fireUpstreamEventLater(final ChannelPipeline pipeline, final ChannelEvent e) throws Exception {
         Channel ch = e.getChannel();
         if (ch instanceof AbstractNioChannel<?>) {
             AbstractNioChannel<?> channel = (AbstractNioChannel<?>) ch;
             // check if the current thread is a worker thread if so we can send the event now
             if (channel.worker.thread != Thread.currentThread()) {
-                channel.worker.fireEventLater(new Runnable() {
+                channel.worker.executeInIoThread(new Runnable() {
                 
                     @Override
                     public void run() {

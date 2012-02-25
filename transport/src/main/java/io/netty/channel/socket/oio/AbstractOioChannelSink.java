@@ -25,13 +25,13 @@ import io.netty.channel.socket.Worker;
 public abstract class AbstractOioChannelSink extends AbstractChannelSink{
 
     @Override
-    public void fireEventLater(final ChannelPipeline pipeline, final ChannelEvent e) throws Exception {
+    public void fireUpstreamEventLater(final ChannelPipeline pipeline, final ChannelEvent e) throws Exception {
         Channel ch = e.getChannel();
         if (ch instanceof AbstractOioChannel) {
             AbstractOioChannel channel = (AbstractOioChannel) ch;
             Worker worker = channel.worker;
             if (worker != null && channel.workerThread != Thread.currentThread()) {
-                channel.worker.fireEventLater(new Runnable() {
+                channel.worker.executeInIoThread(new Runnable() {
                     
                     @Override
                     public void run() {

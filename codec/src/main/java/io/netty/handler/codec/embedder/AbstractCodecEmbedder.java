@@ -226,7 +226,7 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
         }
 
         @Override
-        public void fireEventLater(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
+        public void fireUpstreamEventLater(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
             handleEvent(e);
         }
     }

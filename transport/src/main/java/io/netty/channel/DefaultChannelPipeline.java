@@ -586,7 +586,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public void sendUpstreamLater(ChannelEvent e) {
         try {
-            getSink().fireEventLater(this, e);
+            getSink().fireUpstreamEventLater(this, e);
         } catch (Throwable t) {
             notifyHandlerException(e, t);
         }
@@ -843,7 +843,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void fireEventLater(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
+        public void fireUpstreamEventLater(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
             if (logger.isWarnEnabled()) {
                 logger.warn("Not attached yet; discarding: " + e);
             }

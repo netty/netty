@@ -23,7 +23,7 @@ import io.netty.channel.ChannelPipeline;
 public abstract class AbstractHttpChannelSink extends AbstractChannelSink{
 
     @Override
-    public void fireEventLater(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
+    public void fireUpstreamEventLater(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         pipeline.sendUpstream(e);
     }
 

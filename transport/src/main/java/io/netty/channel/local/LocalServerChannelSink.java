@@ -46,7 +46,7 @@ final class LocalServerChannelSink extends AbstractChannelSink {
      * Just fire the event now by calling {@link ChannelPipeline#sendUpstream(ChannelEvent)} as this implementation does not support it otherwise
      */
     @Override
-    public void fireEventLater(ChannelPipeline pipeline, ChannelEvent event) throws Exception {
+    public void fireUpstreamEventLater(ChannelPipeline pipeline, ChannelEvent event) throws Exception {
         pipeline.sendUpstream(event);
     }
     

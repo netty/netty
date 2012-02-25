@@ -24,13 +24,13 @@ import io.netty.channel.ChannelPipeline;
 public abstract class AbstractScptChannelSink extends AbstractChannelSink{
 
     @Override
-    public void fireEventLater(final ChannelPipeline pipeline, final ChannelEvent e) throws Exception {
+    public void fireUpstreamEventLater(final ChannelPipeline pipeline, final ChannelEvent e) throws Exception {
         Channel ch = e.getChannel();
         if (ch instanceof SctpChannelImpl) {
             SctpChannelImpl channel = (SctpChannelImpl) ch;
             // check if the current thread is a worker thread, and only fire the event later if thats not the case
             if (channel.worker.thread != Thread.currentThread()) {
-                channel.worker.fireEventLater(new Runnable() {
+                channel.worker.executeInIoThread(new Runnable() {
                 
                     @Override
                     public void run() {

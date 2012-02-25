@@ -16,7 +16,16 @@
 
 package io.netty.channel.socket;
 
+/**
+ * A {@link Worker} is responsible to dispatch IO operations
+ *
+ */
 public interface Worker extends Runnable{
 
-    void fireEventLater(Runnable eventRunnable);
+    /**
+     * Execute the given {@link Runnable} in the IO-Thread. This may be now or later once the IO-Thread do some other work.
+     * 
+     * @param task the {@link Runnable} to execute 
+     */
+    void executeInIoThread(Runnable task);
 }
