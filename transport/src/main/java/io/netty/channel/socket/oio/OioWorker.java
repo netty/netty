@@ -65,11 +65,16 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
             OioSocketChannel channel, ChannelFuture future,
             Object message) {
 
+        boolean iothread = isIoThead(channel);
         OutputStream out = channel.getOutputStream();
         if (out == null) {
             Exception e = new ClosedChannelException();
             future.setFailure(e);
-            fireExceptionCaught(channel, e);
+            if (iothread) {
+                fireExceptionCaught(channel, e);
+            } else {
+                fireExceptionCaughtLater(channel, e);
+            }
             return;
         }
 
@@ -106,7 +111,11 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
                 }
             }
 
-            fireWriteComplete(channel, length);
+            if (iothread) {
+                fireWriteComplete(channel, length);
+            } else {
+                fireWriteCompleteLater(channel, length);
+            }
             future.setSuccess();
  
         } catch (Throwable t) {
@@ -118,7 +127,11 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
                 t = new ClosedChannelException();
             }
             future.setFailure(t);
-            fireExceptionCaught(channel, t);
+            if (iothread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+            }
         }
     }
 

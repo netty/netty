@@ -301,6 +301,21 @@ public final class Channels {
     /**
      * Sends a {@code "writeComplete"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
+     * the specified {@link Channel} in the next io-thread.
+     */
+    public static void fireWriteCompleteLater(Channel channel, long amount) {
+        if (amount == 0) {
+            return;
+        }
+
+        channel.getPipeline().sendUpstreamLater(
+                new DefaultWriteCompletionEvent(channel, amount));
+    }
+
+    
+    /**
+     * Sends a {@code "writeComplete"} event to the first
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
      */
     public static void fireWriteComplete(Channel channel, long amount) {

@@ -15,12 +15,7 @@
  */
 package io.netty.channel.socket.oio;
 
-import static io.netty.channel.Channels.fireChannelClosed;
-import static io.netty.channel.Channels.fireChannelDisconnected;
-import static io.netty.channel.Channels.fireChannelInterestChanged;
-import static io.netty.channel.Channels.fireChannelUnbound;
-import static io.netty.channel.Channels.fireExceptionCaught;
-import static io.netty.channel.Channels.succeededFuture;
+import static io.netty.channel.Channels.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.Channels;
@@ -89,6 +84,9 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
         close(channel, succeededFuture(channel));
     }
     
+    static boolean isIoThead(AbstractOioChannel channel) {
+        return Thread.currentThread() == channel.workerThread;
+    }
     
     @Override
     public void executeInIoThread(Runnable eventRunnable) {
@@ -120,7 +118,8 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
     
     static void setInterestOps(
             AbstractOioChannel channel, ChannelFuture future, int interestOps) {
-
+        boolean iothread = isIoThead(channel);
+        
         // Override OP_WRITE flag - a user cannot change this flag.
         interestOps &= ~Channel.OP_WRITE;
         interestOps |= channel.getInterestOps() & Channel.OP_WRITE;
@@ -148,18 +147,27 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
                         workerThread.interrupt();
                     }
                 }
-
-                fireChannelInterestChanged(channel);
+                if (iothread) {
+                    fireChannelInterestChanged(channel);
+                } else {
+                    fireChannelInterestChangedLater(channel);
+                }
             }
         } catch (Throwable t) {
             future.setFailure(t);
-            fireExceptionCaught(channel, t);
+            if (iothread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+            }
         }
     }
     
     static void close(AbstractOioChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
+        boolean iothread = isIoThead(channel);
+        
         try {
             channel.closeSocket();
             if (channel.setClosed()) {
@@ -171,18 +179,34 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
                     if (workerThread != null && currentThread != workerThread) {
                         workerThread.interrupt();
                     }
-                    fireChannelDisconnected(channel);
+                    if (iothread) {
+                        fireChannelDisconnected(channel);
+                    } else {
+                        fireChannelDisconnectedLater(channel);
+                    }
                 }
                 if (bound) {
-                    fireChannelUnbound(channel);
+                    if (iothread) {
+                        fireChannelUnbound(channel);
+                    } else {
+                        fireChannelUnboundLater(channel);
+                    }
                 }
-                fireChannelClosed(channel);
+                if (iothread) {
+                    fireChannelClosed(channel);
+                } else {
+                    fireChannelClosedLater(channel);
+                }
             } else {
                 future.setSuccess();
             }
         } catch (Throwable t) {
             future.setFailure(t);
-            fireExceptionCaught(channel, t);
+            if (iothread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+            }
         }
     }
 }

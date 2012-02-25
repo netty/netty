@@ -398,6 +398,7 @@ abstract class AbstractNioWorker implements Worker {
         boolean open = true;
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
+        boolean iothread = isIoThread(channel);
 
         long writtenBytes = 0;
 
@@ -468,7 +469,11 @@ abstract class AbstractNioWorker implements Worker {
                     buf = null;
                     evt = null;
                     future.setFailure(t);
-                    fireExceptionCaught(channel, t);
+                    if (iothread) {
+                        fireExceptionCaught(channel, t);
+                    } else {
+                        fireExceptionCaughtLater(channel, t);
+                    }
                     if (t instanceof IOException) {
                         open = false;
                         close(channel, succeededFuture(channel));
@@ -491,10 +496,17 @@ abstract class AbstractNioWorker implements Worker {
                 }
             }
         }
-
-        fireWriteComplete(channel, writtenBytes);
+        if (iothread) {
+            fireWriteComplete(channel, writtenBytes);
+        } else {
+            fireWriteCompleteLater(channel, writtenBytes);
+        }
     }
 
+    static boolean isIoThread(AbstractNioChannel<?> channel) {
+        return Thread.currentThread() == channel.worker.thread;
+    }
+    
     private void setOpWrite(AbstractNioChannel<?> channel) {
         Selector selector = this.selector;
         SelectionKey key = channel.channel.keyFor(selector);
@@ -545,6 +557,8 @@ abstract class AbstractNioWorker implements Worker {
     void close(AbstractNioChannel<?> channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
+        boolean iothread = isIoThread(channel);
+        
         try {
             channel.channel.close();
             cancelledKeys ++;
@@ -552,20 +566,36 @@ abstract class AbstractNioWorker implements Worker {
             if (channel.setClosed()) {
                 future.setSuccess();
                 if (connected) {
-                    fireChannelDisconnected(channel);
+                    if (iothread) {
+                        fireChannelDisconnected(channel);
+                    } else {
+                        fireChannelDisconnectedLater(channel);
+                    }
                 }
                 if (bound) {
-                    fireChannelUnbound(channel);
+                    if (iothread) {
+                        fireChannelUnbound(channel);
+                    } else {
+                        fireChannelUnboundLater(channel);
+                    }
                 }
 
                 cleanUpWriteBuffer(channel);
-                fireChannelClosed(channel);
+                if (iothread) {
+                    fireChannelClosed(channel);
+                } else {
+                    fireChannelClosedLater(channel);
+                }
             } else {
                 future.setSuccess();
             }
         } catch (Throwable t) {
             future.setFailure(t);
-            fireExceptionCaught(channel, t);
+            if (iothread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+            }
         }
     }
 
@@ -618,12 +648,17 @@ abstract class AbstractNioWorker implements Worker {
         }
 
         if (fireExceptionCaught) {
-            fireExceptionCaught(channel, cause);
+            if (isIoThread(channel)) {
+                fireExceptionCaught(channel, cause);
+            } else {
+                fireExceptionCaughtLater(channel, cause);
+            }
         }
     }
 
     void setInterestOps(AbstractNioChannel<?> channel, ChannelFuture future, int interestOps) {
         boolean changed = false;
+        boolean iothread = isIoThread(channel);
         try {
             // interestOps can change at any time and at any thread.
             // Acquire a lock to avoid possible race condition.
@@ -684,16 +719,28 @@ abstract class AbstractNioWorker implements Worker {
 
             future.setSuccess();
             if (changed) {
-                fireChannelInterestChanged(channel);
+                if (iothread) {
+                    fireChannelInterestChanged(channel);
+                } else {
+                    fireChannelInterestChangedLater(channel);
+                }
             }
         } catch (CancelledKeyException e) {
             // setInterestOps() was called on a closed channel.
             ClosedChannelException cce = new ClosedChannelException();
             future.setFailure(cce);
-            fireExceptionCaught(channel, cce);
+            if (iothread) {
+                fireExceptionCaught(channel, cce);
+            } else {
+                fireExceptionCaughtLater(channel, cce);
+            }
         } catch (Throwable t) {
             future.setFailure(t);
-            fireExceptionCaught(channel, t);
+            if (iothread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+            }
         }
     }
     
