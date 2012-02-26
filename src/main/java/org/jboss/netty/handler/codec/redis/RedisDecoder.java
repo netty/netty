@@ -1,13 +1,13 @@
 package org.jboss.netty.handler.codec.redis;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferIndexFinder;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 
-import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.charset.Charset;
 
 enum State {
 
@@ -18,6 +18,7 @@ public class RedisDecoder extends ReplayingDecoder<State> {
     private static final char CR = '\r';
     private static final char LF = '\n';
     private static final char ZERO = '0';
+    public static final Charset UTF_8 = Charset.forName("UTF-8");
 
     // We track the current multibulk reply in the case
     // where we do not get a complete reply in a single
@@ -74,10 +75,14 @@ public class RedisDecoder extends ReplayingDecoder<State> {
         int code = is.readByte();
         switch (code) {
             case StatusReply.MARKER: {
-                return new StatusReply(new DataInputStream(new ChannelBufferInputStream(is)).readLine());
+              String status = is.readBytes(is.bytesBefore(ChannelBufferIndexFinder.CRLF)).toString(UTF_8);
+              is.skipBytes(2);
+              return new StatusReply(status);
             }
             case ErrorReply.MARKER: {
-                return new ErrorReply(new DataInputStream(new ChannelBufferInputStream(is)).readLine());
+              String error = is.readBytes(is.bytesBefore(ChannelBufferIndexFinder.CRLF)).toString(UTF_8);
+              is.skipBytes(2);
+              return new ErrorReply(error);
             }
             case IntegerReply.MARKER: {
                 return new IntegerReply(readInteger(is));
@@ -110,18 +115,5 @@ public class RedisDecoder extends ReplayingDecoder<State> {
         }
         reply.read(this, is);
         return reply;
-    }
-
-    private static class ChannelBufferInputStream extends InputStream {
-        private final ChannelBuffer is;
-
-        public ChannelBufferInputStream(ChannelBuffer is) {
-            this.is = is;
-        }
-
-        @Override
-        public int read() throws IOException {
-            return is.readByte();
-        }
     }
 }

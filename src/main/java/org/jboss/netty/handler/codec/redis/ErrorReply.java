@@ -4,13 +4,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 
 import java.io.IOException;
 
-/**
- * Created by IntelliJ IDEA.
- * User: sam
- * Date: 7/29/11
- * Time: 10:23 AM
- * To change this template use File | Settings | File Templates.
- */
 public class ErrorReply extends Reply {
     public static final char MARKER = '-';
     private static final byte[] ERR = "ERR ".getBytes(UTF_8);

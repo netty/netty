@@ -42,27 +42,24 @@ public class MultiBulkReply extends Reply {
     public void write(ChannelBuffer os) throws IOException {
         os.writeByte(MARKER);
         if (byteArrays == null) {
-            os.writeBytes(Command.NEG_ONE);
-            os.writeBytes(Command.CRLF);
+            os.writeBytes(Command.NEG_ONE_AND_CRLF);
         } else {
-            os.writeBytes(Command.numToBytes(byteArrays.length));
-            os.writeBytes(Command.CRLF);
+            os.writeBytes(Command.numAndCRLF(byteArrays.length));
             for (Object value : byteArrays) {
                 if (value == null) {
                     os.writeByte(BulkReply.MARKER);
-                    os.writeBytes(Command.NEG_ONE);
+                    os.writeBytes(Command.NEG_ONE_AND_CRLF);
                 } else if (value instanceof byte[]) {
                     byte[] bytes = (byte[]) value;
                     os.writeByte(BulkReply.MARKER);
                     int length = bytes.length;
-                    os.writeBytes(Command.numToBytes(length));
-                    os.writeBytes(Command.CRLF);
+                    os.writeBytes(Command.numAndCRLF(length));
                     os.writeBytes(bytes);
+                    os.writeBytes(Command.CRLF);
                 } else if (value instanceof Number) {
                     os.writeByte(IntegerReply.MARKER);
-                    os.writeBytes(Command.numToBytes(((Number) value).longValue()));
+                    os.writeBytes(Command.numAndCRLF(((Number) value).longValue()));
                 }
-                os.writeBytes(Command.CRLF);
             }
         }
     }

@@ -15,12 +15,11 @@ public class BulkReply extends Reply {
     public void write(ChannelBuffer os) throws IOException {
         os.writeByte(MARKER);
         if (bytes == null) {
-            os.writeBytes(Command.NEG_ONE);
+            os.writeBytes(Command.NEG_ONE_AND_CRLF);
         } else {
-            os.writeBytes(Command.numToBytes(bytes.length));
-            os.writeBytes(Command.CRLF);
+            os.writeBytes(Command.numAndCRLF(bytes.length));
             os.writeBytes(bytes);
+            os.writeBytes(Command.CRLF);
         }
-        os.writeBytes(Command.CRLF);
     }
 }

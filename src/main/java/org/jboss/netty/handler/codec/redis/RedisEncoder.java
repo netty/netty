@@ -35,6 +35,8 @@ public class RedisEncoder extends SimpleChannelDownstreamHandler {
                 }
             });
             Channels.write(ctx, future, cb);
+        } else {
+            super.writeRequested(ctx, e);
         }
     }
 }
