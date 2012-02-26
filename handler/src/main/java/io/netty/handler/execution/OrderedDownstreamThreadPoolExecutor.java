@@ -71,24 +71,6 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
     }
 
     /**
-     * Creates a new instance.
-     *
-     * @param corePoolSize          the maximum number of active threads
-     * @param keepAliveTime         the amount of time for an inactive thread to shut itself down
-     * @param unit                  the {@link TimeUnit} of {@code keepAliveTime}
-     * @param threadFactory         the {@link ThreadFactory} of this pool
-     * @param objectSizeEstimator   the {@link ObjectSizeEstimator} of this pool
-     */
-    public OrderedDownstreamThreadPoolExecutor(
-            int corePoolSize,
-            long keepAliveTime, TimeUnit unit,
-            ObjectSizeEstimator objectSizeEstimator, ThreadFactory threadFactory) {
-        super(corePoolSize, 0L, 0L,
-                keepAliveTime, unit, objectSizeEstimator, threadFactory);
-    }
-
-    
-    /**
      * Return <code>null</code>
      */
     @Override
