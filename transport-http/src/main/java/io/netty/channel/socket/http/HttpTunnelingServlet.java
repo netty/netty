@@ -118,7 +118,9 @@ public class HttpTunnelingServlet extends HttpServlet {
         try {
             destroyChannelFactory(channelFactory);
         } catch (Exception e) {
-            logger.warn("Failed to destroy a channel factory.", e);
+            if (logger.isWarnEnabled()) {
+                logger.warn("Failed to destroy a channel factory.", e);
+            }
         }
     }
 
@@ -130,7 +132,9 @@ public class HttpTunnelingServlet extends HttpServlet {
     protected void service(HttpServletRequest req, HttpServletResponse res)
             throws ServletException, IOException {
         if (!"POST".equalsIgnoreCase(req.getMethod())) {
-            logger.warn("Unallowed method: " + req.getMethod());
+            if (logger.isWarnEnabled()) {
+                logger.warn("Unallowed method: " + req.getMethod());
+            }
             res.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
             return;
         }
@@ -144,7 +148,9 @@ public class HttpTunnelingServlet extends HttpServlet {
         ChannelFuture future = channel.connect(remoteAddress).awaitUninterruptibly();
         if (!future.isSuccess()) {
             Throwable cause = future.getCause();
-            logger.warn("Endpoint unavailable: " + cause.getMessage(), cause);
+            if (logger.isWarnEnabled()) {
+                logger.warn("Endpoint unavailable: " + cause.getMessage(), cause);
+            }
             res.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
             return;
         }
@@ -233,7 +239,9 @@ public class HttpTunnelingServlet extends HttpServlet {
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-            logger.warn("Unexpected exception while HTTP tunneling", e.getCause());
+            if (logger.isWarnEnabled()) {
+                logger.warn("Unexpected exception while HTTP tunneling", e.getCause());
+            }
             e.getChannel().close();
         }
     }
