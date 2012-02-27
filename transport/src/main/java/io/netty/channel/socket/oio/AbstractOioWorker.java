@@ -90,8 +90,9 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
     
     @Override
     public void executeInIoThread(Runnable eventRunnable) {
-        assert eventQueue.offer(eventRunnable);
+        boolean added = eventQueue.offer(eventRunnable);
         
+        assert added;
         // as we set the SO_TIMEOUT to 1 second this task will get picked up in 1 second at latest
     }
     

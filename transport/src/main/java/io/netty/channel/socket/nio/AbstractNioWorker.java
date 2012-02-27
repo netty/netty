@@ -273,7 +273,9 @@ abstract class AbstractNioWorker implements Worker {
     
     @Override
     public void executeInIoThread(Runnable eventRunnable) {
-       assert eventQueue.offer(eventRunnable);
+       boolean added = eventQueue.offer(eventRunnable);
+      
+       assert added;
        
        // wake up the selector to speed things
        selector.wakeup();
