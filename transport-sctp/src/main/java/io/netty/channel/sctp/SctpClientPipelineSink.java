@@ -47,7 +47,7 @@ import io.netty.util.internal.QueueFactory;
 
 /**
  */
-class SctpClientPipelineSink extends AbstractScptChannelSink {
+class SctpClientPipelineSink extends AbstractSctpChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SctpClientPipelineSink.class);

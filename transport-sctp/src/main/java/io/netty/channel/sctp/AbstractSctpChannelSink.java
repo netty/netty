@@ -21,7 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelPipeline;
 
-public abstract class AbstractScptChannelSink extends AbstractChannelSink {
+public abstract class AbstractSctpChannelSink extends AbstractChannelSink {
 
     @Override
     public void fireUpstreamEventLater(final ChannelPipeline pipeline, final ChannelEvent e) throws Exception {

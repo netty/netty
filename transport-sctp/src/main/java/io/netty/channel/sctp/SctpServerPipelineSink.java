@@ -44,7 +44,7 @@ import io.netty.util.internal.DeadLockProofWorker;
 
 /**
  */
-class SctpServerPipelineSink extends AbstractScptChannelSink {
+class SctpServerPipelineSink extends AbstractSctpChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SctpServerPipelineSink.class);
