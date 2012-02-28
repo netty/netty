@@ -340,6 +340,7 @@
             <exclude>**/Abstract*</exclude>
             <exclude>**/TestUtil*</exclude>
           </excludes>
+          <runOrder>random</runOrder>
         </configuration>
       </plugin>
       <plugin>
