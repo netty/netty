@@ -15,10 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.util.Map;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -34,6 +30,10 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.CharsetUtil;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.util.Map;
 
 /**
  * <p>
