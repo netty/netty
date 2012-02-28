@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.util.Map;
 
@@ -36,14 +37,16 @@ import io.netty.util.CharsetUtil;
 
 /**
  * <p>
- * Performs client side opening and closing handshakes for web socket specification version <a
- * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17" >draft-ietf-hybi-thewebsocketprotocol-
- * 17</a>
+ * Performs client side opening and closing handshakes for web socket
+ * specification version <a
+ * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17"
+ * >draft-ietf-hybi-thewebsocketprotocol- 17</a>
  * </p>
  */
 public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketClientHandshaker13.class);
+    private static final InternalLogger logger = InternalLoggerFactory
+            .getInstance(WebSocketClientHandshaker13.class);
 
     public static final String MAGIC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -54,21 +57,26 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
     private final boolean allowExtensions;
 
     /**
-     * Constructor specifying the destination web socket location and version to initiate
+     * Constructor specifying the destination web socket location and version to
+     * initiate
      * 
      * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            URL for web socket communications. e.g
+     *            "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
      * @param version
-     *            Version of web socket specification to use to connect to the server
+     *            Version of web socket specification to use to connect to the
+     *            server
      * @param subprotocol
      *            Sub protocol request sent to the server.
      * @param allowExtensions
-     *            Allow extensions to be used in the reserved bits of the web socket frame
+     *            Allow extensions to be used in the reserved bits of the web
+     *            socket frame
      * @param customHeaders
      *            Map of custom headers to add to the client request
      */
-    public WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
+    public WebSocketClientHandshaker13(URI webSocketURL,
+            WebSocketVersion version, String subprotocol,
             boolean allowExtensions, Map<String, String> customHeaders) {
         super(webSocketURL, version, subprotocol, customHeaders);
         this.allowExtensions = allowExtensions;
@@ -108,16 +116,25 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         String key = WebSocketUtil.base64(nonce);
 
         String acceptSeed = key + MAGIC_GUID;
-        byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
+        byte[] sha1;
+        try {
+            sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII
+                    .name()));
+        } catch (UnsupportedEncodingException e) {
+            // Should not occur
+            throw new RuntimeException(e);
+        }
         expectedChallengeResponseString = WebSocketUtil.base64(sha1);
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("WS Version 13 Client Handshake key: %s. Expected response: %s.", key,
-                    expectedChallengeResponseString));
+            logger.debug(String
+                    .format("WS Version 13 Client Handshake key: %s. Expected response: %s.",
+                            key, expectedChallengeResponseString));
         }
 
         // Format request
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+                HttpMethod.GET, path);
         request.addHeader(Names.UPGRADE, Values.WEBSOCKET.toLowerCase());
         request.addHeader(Names.CONNECTION, Values.UPGRADE);
         request.addHeader(Names.SEC_WEBSOCKET_KEY, key);
@@ -133,10 +150,11 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
                 request.addHeader(header, customHeaders.get(header));
             }
         }
-        
+
         ChannelFuture future = channel.write(request);
 
-        channel.getPipeline().replace(HttpRequestEncoder.class, "ws-encoder", new WebSocket13FrameEncoder(true));
+        channel.getPipeline().replace(HttpRequestEncoder.class, "ws-encoder",
+                new WebSocket13FrameEncoder(true));
 
         return future;
     }
@@ -157,32 +175,39 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * @param channel
      *            Channel
      * @param response
-     *            HTTP response returned from the server for the request sent by beginOpeningHandshake00().
+     *            HTTP response returned from the server for the request sent by
+     *            beginOpeningHandshake00().
      * @throws WebSocketHandshakeException
      */
     @Override
-    public void finishHandshake(Channel channel, HttpResponse response) throws WebSocketHandshakeException {
+    public void finishHandshake(Channel channel, HttpResponse response)
+            throws WebSocketHandshakeException {
         final HttpResponseStatus status = HttpResponseStatus.SWITCHING_PROTOCOLS;
 
         if (!response.getStatus().equals(status)) {
-            throw new WebSocketHandshakeException("Invalid handshake response status: " + response.getStatus());
+            throw new WebSocketHandshakeException(
+                    "Invalid handshake response status: "
+                            + response.getStatus());
         }
 
         String upgrade = response.getHeader(Names.UPGRADE);
         if (upgrade == null || !upgrade.equals(Values.WEBSOCKET.toLowerCase())) {
-            throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
-                    + response.getHeader(Names.UPGRADE));
+            throw new WebSocketHandshakeException(
+                    "Invalid handshake response upgrade: "
+                            + response.getHeader(Names.UPGRADE));
         }
 
         String connection = response.getHeader(Names.CONNECTION);
         if (connection == null || !connection.equals(Values.UPGRADE)) {
-            throw new WebSocketHandshakeException("Invalid handshake response connection: "
-                    + response.getHeader(Names.CONNECTION));
+            throw new WebSocketHandshakeException(
+                    "Invalid handshake response connection: "
+                            + response.getHeader(Names.CONNECTION));
         }
 
         String accept = response.getHeader(Names.SEC_WEBSOCKET_ACCEPT);
         if (accept == null || !accept.equals(expectedChallengeResponseString)) {
-            throw new WebSocketHandshakeException(String.format("Invalid challenge. Actual: %s. Expected: %s", accept,
+            throw new WebSocketHandshakeException(String.format(
+                    "Invalid challenge. Actual: %s. Expected: %s", accept,
                     expectedChallengeResponseString));
         }
 

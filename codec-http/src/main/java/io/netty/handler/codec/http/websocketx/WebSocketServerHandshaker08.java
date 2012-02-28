@@ -18,6 +18,10 @@ package io.netty.handler.codec.http.websocketx;
 import static io.netty.handler.codec.http.HttpHeaders.Values.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
+import java.io.UnsupportedEncodingException;
+
+import javax.management.RuntimeErrorException;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -36,14 +40,16 @@ import io.netty.util.CharsetUtil;
 
 /**
  * <p>
- * Performs server side opening and closing handshakes for web socket specification version <a
- * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10" >draft-ietf-hybi-thewebsocketprotocol-
- * 10</a>
+ * Performs server side opening and closing handshakes for web socket
+ * specification version <a
+ * href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10"
+ * >draft-ietf-hybi-thewebsocketprotocol- 10</a>
  * </p>
  */
 public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker08.class);
+    private static final InternalLogger logger = InternalLoggerFactory
+            .getInstance(WebSocketServerHandshaker08.class);
 
     public static final String WEBSOCKET_08_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -53,14 +59,17 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
      * Constructor specifying the destination web socket location
      * 
      * @param webSocketURL
-     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            URL for web socket communications. e.g
+     *            "ws://myhost.com/mypath". Subsequent web socket frames will be
      *            sent to this URL.
      * @param subprotocols
      *            CSV of supported protocols
      * @param allowExtensions
-     *            Allow extensions to be used in the reserved bits of the web socket frame
+     *            Allow extensions to be used in the reserved bits of the web
+     *            socket frame
      */
-    public WebSocketServerHandshaker08(String webSocketURL, String subprotocols, boolean allowExtensions) {
+    public WebSocketServerHandshaker08(String webSocketURL,
+            String subprotocols, boolean allowExtensions) {
         super(WebSocketVersion.V08, webSocketURL, subprotocols);
         this.allowExtensions = allowExtensions;
     }
@@ -68,8 +77,8 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
     /**
      * <p>
      * Handle the web socket handshake for the web socket specification <a href=
-     * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08">HyBi version 8 to 10</a>. Version 8, 9 and
-     * 10 share the same wire protocol.
+     * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08">HyBi
+     * version 8 to 10</a>. Version 8, 9 and 10 share the same wire protocol.
      * </p>
      * 
      * <p>
@@ -108,21 +117,33 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
     public ChannelFuture handshake(Channel channel, HttpRequest req) {
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s WS Version 8 server handshake", channel.getId()));
+            logger.debug(String.format(
+                    "Channel %s WS Version 8 server handshake", channel.getId()));
         }
 
-        HttpResponse res = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
+        HttpResponse res = new DefaultHttpResponse(HTTP_1_1,
+                HttpResponseStatus.SWITCHING_PROTOCOLS);
 
         String key = req.getHeader(Names.SEC_WEBSOCKET_KEY);
         if (key == null) {
-            throw new WebSocketHandshakeException("not a WebSocket request: missing key");
+            throw new WebSocketHandshakeException(
+                    "not a WebSocket request: missing key");
         }
         String acceptSeed = key + WEBSOCKET_08_ACCEPT_GUID;
-        byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
+        byte[] sha1;
+        try {
+            sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII
+                    .name()));
+        } catch (UnsupportedEncodingException e) {
+            // Should not occur
+            throw new RuntimeException(e);
+        }
         String accept = WebSocketUtil.base64(sha1);
 
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("WS Version 8 Server Handshake key: %s. Response: %s.", key, accept));
+            logger.debug(String.format(
+                    "WS Version 8 Server Handshake key: %s. Response: %s.",
+                    key, accept));
         }
 
         res.setStatus(HttpResponseStatus.SWITCHING_PROTOCOLS);
@@ -131,7 +152,8 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
         res.addHeader(Names.SEC_WEBSOCKET_ACCEPT, accept);
         String protocol = req.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
         if (protocol != null) {
-            res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, selectSubprotocol(protocol));
+            res.addHeader(Names.SEC_WEBSOCKET_PROTOCOL,
+                    selectSubprotocol(protocol));
         }
 
         ChannelFuture future = channel.write(res);
@@ -142,8 +164,10 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
             p.remove(HttpChunkAggregator.class);
         }
 
-        p.replace(HttpRequestDecoder.class, "wsdecoder", new WebSocket08FrameDecoder(true, allowExtensions));
-        p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket08FrameEncoder(false));
+        p.replace(HttpRequestDecoder.class, "wsdecoder",
+                new WebSocket08FrameDecoder(true, allowExtensions));
+        p.replace(HttpResponseEncoder.class, "wsencoder",
+                new WebSocket08FrameEncoder(false));
 
         return future;
     }

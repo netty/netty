@@ -60,7 +60,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     @Override
     public String getValue() throws IOException {
         byte [] bytes = get();
-        return new String(bytes, charset);
+        return new String(bytes, charset.name());
     }
 
     @Override
@@ -68,7 +68,7 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
         if (value == null) {
             throw new NullPointerException("value");
         }
-        byte [] bytes = value.getBytes(charset);
+        byte [] bytes = value.getBytes(charset.name());
         ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(bytes);
         if (definedSize > 0) {
             definedSize = buffer.readableBytes();
