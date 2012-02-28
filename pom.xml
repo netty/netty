@@ -264,6 +264,18 @@
           </dependency>
         </dependencies>
       </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.12</version>
+        <configuration>
+          <forkMode>never</forkMode>
+          <excludes>
+            <exclude>**/Abstract*</exclude>
+            <exclude>**/TestUtil*</exclude>
+          </excludes>
+          <runOrder>random</runOrder>
+        </configuration>
+      </plugin>
     </plugins>
 
     <!-- Workaround for the 'M2E plugin execution not covered' problem.
