@@ -56,7 +56,7 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
         if (value == null) {
             throw new NullPointerException("value");
         }
-        byte [] bytes = value.getBytes(charset);
+        byte [] bytes = value.getBytes(charset.name());
         ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(bytes);
         if (definedSize > 0) {
             definedSize = buffer.readableBytes();
