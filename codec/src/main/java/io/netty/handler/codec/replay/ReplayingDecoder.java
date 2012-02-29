@@ -452,7 +452,6 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                     cumulation.readerIndex(input.readerIndex());
                     replayable = new ReplayingDecoderBuffer(cumulation);
                 } else {
-                    System.out.println("B");
                     ChannelBuffer cumulation = this.cumulation =
                             newCumulationBuffer(ctx, input.readableBytes());
                     cumulation.writeBytes(input);
