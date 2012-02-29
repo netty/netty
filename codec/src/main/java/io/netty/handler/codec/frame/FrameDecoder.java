@@ -361,6 +361,6 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
             ChannelHandlerContext ctx, int minimumCapacity) {
         ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
         return ChannelBuffers.dynamicBuffer(
-                factory.getDefaultOrder(), minimumCapacity, factory);
+                factory.getDefaultOrder(), Math.max(minimumCapacity, 256), factory);
     }
 }
