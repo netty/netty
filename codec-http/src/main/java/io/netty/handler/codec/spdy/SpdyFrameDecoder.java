@@ -16,6 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.compression.ZlibDecoder;
@@ -33,8 +34,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
     private final int maxFrameSize;
     private final int maxHeaderSize;
 
-    private final DecoderEmbedder<ChannelBuffer> headerBlockDecompressor =
-        new DecoderEmbedder<ChannelBuffer>(new ZlibDecoder(SPDY_DICT));
+    private final SpdyZlibDecoder headerBlockDecompressor = new SpdyZlibDecoder();
 
     /**
      * Creates a new instance with the default {@code maxChunkSize (8192)},
@@ -114,7 +114,9 @@ public class SpdyFrameDecoder extends FrameDecoder {
             int type = getUnsignedShort(buffer, typeOffset);
             buffer.skipBytes(SPDY_HEADER_SIZE);
 
-            return decodeControlFrame(type, flags, buffer.readBytes(dataLength));
+            int readerIndex = buffer.readerIndex();
+            buffer.skipBytes(dataLength);
+            return decodeControlFrame(type, flags, buffer.slice(readerIndex, dataLength));
         } else {
             // Decode data frame common header
             int streamID = getUnsignedInt(buffer, frameOffset);
@@ -166,7 +168,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
             spdySynStreamFrame.setLast(last);
             spdySynStreamFrame.setUnidirectional(unid);
 
-            decodeHeaderBlock(spdySynStreamFrame, decompress(data));
+            decodeHeaderBlock(spdySynStreamFrame, data);
 
             return spdySynStreamFrame;
 
@@ -184,7 +186,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
             last = (flags & SPDY_FLAG_FIN) != 0;
             spdySynReplyFrame.setLast(last);
 
-            decodeHeaderBlock(spdySynReplyFrame, decompress(data));
+            decodeHeaderBlock(spdySynReplyFrame, data);
 
             return spdySynReplyFrame;
 
@@ -284,7 +286,7 @@ public class SpdyFrameDecoder extends FrameDecoder {
 
             SpdyHeadersFrame spdyHeadersFrame = new DefaultSpdyHeadersFrame(streamID);
 
-            decodeHeaderBlock(spdyHeadersFrame, decompress(data));
+            decodeHeaderBlock(spdyHeadersFrame, data);
 
             return spdyHeadersFrame;
 
@@ -296,31 +298,38 @@ public class SpdyFrameDecoder extends FrameDecoder {
         }
     }
 
-    private ChannelBuffer decompress(ChannelBuffer compressed) throws Exception {
-        if ((compressed.readableBytes() == 2) &&
-            (compressed.getShort(compressed.readerIndex()) == 0)) {
-            return compressed;
+    private boolean ensureBytes(ChannelBuffer decompressed, int bytes) throws Exception {
+        if (decompressed.readableBytes() >= bytes) {
+            return true;
         }
-        headerBlockDecompressor.offer(compressed);
-        return headerBlockDecompressor.poll();
+        decompressed.discardReadBytes();
+        headerBlockDecompressor.decode(decompressed);
+        return decompressed.readableBytes() >= bytes;
     }
 
     private void decodeHeaderBlock(SpdyHeaderBlock headerFrame, ChannelBuffer headerBlock)
             throws Exception {
-        if (headerBlock.readableBytes() < 2) {
+        if ((headerBlock.readableBytes() == 2) &&
+            (headerBlock.getShort(headerBlock.readerIndex()) == 0)) {
+            return;
+        }
+
+        headerBlockDecompressor.setInput(headerBlock);
+        ChannelBuffer decompressed = ChannelBuffers.dynamicBuffer(8192);
+        headerBlockDecompressor.decode(decompressed);
+
+        if (decompressed.readableBytes() < 2) {
             throw new SpdyProtocolException(
                     "Received invalid header block");
         }
         int headerSize = 0;
-        int numEntries = getUnsignedShort(headerBlock, headerBlock.readerIndex());
-        headerBlock.skipBytes(2);
+        int numEntries = decompressed.readUnsignedShort();
         for (int i = 0; i < numEntries; i ++) {
-            if (headerBlock.readableBytes() < 2) {
+            if (!ensureBytes(decompressed, 2)) {
                 throw new SpdyProtocolException(
                         "Received invalid header block");
             }
-            int nameLength = getUnsignedShort(headerBlock, headerBlock.readerIndex());
-            headerBlock.skipBytes(2);
+            int nameLength = decompressed.readUnsignedShort();
             if (nameLength == 0) {
                 headerFrame.setInvalid();
                 return;
@@ -330,23 +339,22 @@ public class SpdyFrameDecoder extends FrameDecoder {
                 throw new SpdyProtocolException(
                         "Header block exceeds " + maxHeaderSize);
             }
-            if (headerBlock.readableBytes() < nameLength) {
+            if (!ensureBytes(decompressed, nameLength)) {
                 throw new SpdyProtocolException(
                         "Received invalid header block");
             }
             byte[] nameBytes = new byte[nameLength];
-            headerBlock.readBytes(nameBytes);
+            decompressed.readBytes(nameBytes);
             String name = new String(nameBytes, "UTF-8");
             if (headerFrame.containsHeader(name)) {
                 throw new SpdyProtocolException(
                         "Received duplicate header name: " + name);
             }
-            if (headerBlock.readableBytes() < 2) {
+            if (!ensureBytes(decompressed, 2)) {
                 throw new SpdyProtocolException(
                         "Received invalid header block");
             }
-            int valueLength = getUnsignedShort(headerBlock, headerBlock.readerIndex());
-            headerBlock.skipBytes(2);
+            int valueLength = decompressed.readUnsignedShort();
             if (valueLength == 0) {
                 headerFrame.setInvalid();
                 return;
@@ -356,15 +364,15 @@ public class SpdyFrameDecoder extends FrameDecoder {
                 throw new SpdyProtocolException(
                         "Header block exceeds " + maxHeaderSize);
             }
-            if (headerBlock.readableBytes() < valueLength) {
+            if (!ensureBytes(decompressed, valueLength)) {
                 throw new SpdyProtocolException(
                         "Received invalid header block");
             }
             byte[] valueBytes = new byte[valueLength];
-            headerBlock.readBytes(valueBytes);
+            decompressed.readBytes(valueBytes);
             int index = 0;
             int offset = 0;
-            while (index < valueBytes.length) {
+            while (index < valueLength) {
                 while (index < valueBytes.length && valueBytes[index] != (byte) 0) {
                     index ++;
                 }

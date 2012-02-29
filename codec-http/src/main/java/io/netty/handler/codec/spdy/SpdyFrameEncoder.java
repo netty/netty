@@ -15,25 +15,26 @@
  */
 package io.netty.handler.codec.spdy;
 
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+
 import java.nio.ByteOrder;
 import java.util.Set;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.compression.ZlibEncoder;
-import io.netty.handler.codec.embedder.EncoderEmbedder;
+import io.netty.channel.ChannelStateEvent;
 import io.netty.handler.codec.oneone.OneToOneEncoder;
-
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 /**
  * Encodes a SPDY Data or Control Frame into a {@link ChannelBuffer}.
  */
 public class SpdyFrameEncoder extends OneToOneEncoder {
 
-    private final EncoderEmbedder<ChannelBuffer> headerBlockCompressor;
+    private volatile boolean finished;
+    private final SpdyZlibEncoder headerBlockCompressor;
 
     /**
      * Creates a new instance with the default {@code compressionLevel (6)},
@@ -48,8 +49,27 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
      */
     public SpdyFrameEncoder(int compressionLevel, int windowBits, int memLevel) {
         super();
-        headerBlockCompressor = new EncoderEmbedder<ChannelBuffer>(
-                new ZlibEncoder(compressionLevel, windowBits, memLevel, SPDY_DICT));
+        headerBlockCompressor = new SpdyZlibEncoder(compressionLevel);
+    }
+
+    @Override
+    public void handleDownstream(
+            ChannelHandlerContext ctx, ChannelEvent evt) throws Exception {
+        if (evt instanceof ChannelStateEvent) {
+            ChannelStateEvent e = (ChannelStateEvent) evt;
+            switch (e.getState()) {
+            case OPEN:
+            case CONNECTED:
+            case BOUND:
+                if (Boolean.FALSE.equals(e.getValue()) || e.getValue() == null) {
+                    synchronized (headerBlockCompressor) {
+                        finished = true;
+                        headerBlockCompressor.end();
+                    }
+                }
+            }
+        }
+        super.handleDownstream(ctx, evt);
     }
 
     @Override
@@ -263,7 +283,13 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
         if (uncompressed.readableBytes() == 0) {
             return ChannelBuffers.EMPTY_BUFFER;
         }
-        headerBlockCompressor.offer(uncompressed);
-        return headerBlockCompressor.poll();
+        ChannelBuffer compressed = ChannelBuffers.dynamicBuffer();
+        synchronized (headerBlockCompressor) {
+            if (!finished) {
+                headerBlockCompressor.setInput(uncompressed);
+                headerBlockCompressor.encode(compressed);
+            }
+        }
+        return compressed;
     }
 }
