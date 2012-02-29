@@ -119,9 +119,7 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
             if (task == null) {
                 break;
             }
-            if (!task.isCancelled()) {
-                task.run();
-            }
+            task.run();
         }
     }
     

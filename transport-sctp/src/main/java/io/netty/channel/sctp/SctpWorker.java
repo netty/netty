@@ -74,7 +74,7 @@ class SctpWorker implements Worker {
     private final Object startStopLock = new Object();
     private final Queue<Runnable> registerTaskQueue = QueueFactory.createQueue(Runnable.class);
     private final Queue<Runnable> writeTaskQueue = QueueFactory.createQueue(Runnable.class);
-    private final Queue<ChannelRunnableWrapper> eventQueue = QueueFactory.createQueue(ChannelRunnableWrapper.class);
+    private final Queue<Runnable> eventQueue = QueueFactory.createQueue(Runnable.class);
 
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
@@ -301,13 +301,11 @@ class SctpWorker implements Worker {
     
     private void processEventQueue() throws IOException {
         for (;;) {
-            final ChannelRunnableWrapper task = eventQueue.poll();
+            final Runnable task = eventQueue.poll();
             if (task == null) {
                 break;
             }
-            if (!task.isCancelled()) {
-                task.run();
-            }
+            task.run();
             cleanUpCancelledKeys();
         }
     }
