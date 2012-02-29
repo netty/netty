@@ -443,14 +443,7 @@ public interface ChannelPipeline {
     void sendUpstream(ChannelEvent e);
 
 
-    /**
-     * Sends the specified {@link ChannelEvent} to the first
-     * {@link ChannelUpstreamHandler} in this pipeline when the next IO-Worker operation is performed.
-     *
-     * @throws NullPointerException
-     *         if the specified event is {@code null}
-     */
-    void sendUpstreamLater(ChannelEvent e);
+    ChannelFuture execute(Runnable task);
 
     /**
      * Sends the specified {@link ChannelEvent} to the last

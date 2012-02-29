@@ -18,30 +18,20 @@ package io.netty.channel.sctp;
 
 import io.netty.channel.AbstractChannelSink;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 
 public abstract class AbstractSctpChannelSink extends AbstractChannelSink {
 
     @Override
-    public void fireUpstreamEventLater(final ChannelPipeline pipeline, final ChannelEvent e) throws Exception {
-        Channel ch = e.getChannel();
+    public ChannelFuture execute(ChannelPipeline pipeline, final Runnable task) {
+        Channel ch = pipeline.getChannel();
         if (ch instanceof SctpChannelImpl) {
             SctpChannelImpl channel = (SctpChannelImpl) ch;
-            // check if the current thread is a worker thread, and only fire the event later if thats not the case
-            if (channel.worker.thread != Thread.currentThread()) {
-                channel.worker.executeInIoThread(new Runnable() {
-                
-                    @Override
-                    public void run() {
-                        pipeline.sendUpstream(e);
-                    }
-                });
-            } else {
-                pipeline.sendUpstream(e);
-            }
+            return channel.worker.executeInIoThread(channel, task);
+             
         } else {
-            super.fireUpstreamEventLater(pipeline, e);
+            return super.execute(pipeline, task);
         }
 
     }

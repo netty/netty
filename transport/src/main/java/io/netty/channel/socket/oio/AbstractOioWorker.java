@@ -19,11 +19,13 @@ import static io.netty.channel.Channels.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.Channels;
+import io.netty.channel.socket.ChannelRunnableWrapper;
 import io.netty.channel.socket.Worker;
 import io.netty.util.internal.QueueFactory;
 
 import java.io.IOException;
 import java.util.Queue;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * Abstract base class for Oio-Worker implementations
@@ -84,16 +86,31 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
         close(channel, succeededFuture(channel), true);
     }
     
-    static boolean isIoThead(AbstractOioChannel channel) {
+    static boolean isIoThread(AbstractOioChannel channel) {
         return Thread.currentThread() == channel.workerThread;
     }
     
     @Override
-    public void executeInIoThread(Runnable eventRunnable) {
-        boolean added = eventQueue.offer(eventRunnable);
-        
-        assert added;
-        // as we set the SO_TIMEOUT to 1 second this task will get picked up in 1 second at latest
+    public ChannelFuture executeInIoThread(Channel channel, Runnable task) {
+        if (channel instanceof AbstractOioChannel && isIoThread((AbstractOioChannel) channel)) {
+            try {
+                task.run();
+                return succeededFuture(channel);
+            } catch (Throwable t) {
+                return failedFuture(channel, t);
+            }
+        } else {
+            ChannelRunnableWrapper channelRunnable = new ChannelRunnableWrapper(channel, task);
+            boolean added = eventQueue.offer(channelRunnable);
+            
+            if (added) {
+                // as we set the SO_TIMEOUT to 1 second this task will get picked up in 1 second at latest
+
+            } else {
+                channelRunnable.setFailure(new RejectedExecutionException("Unable to queue task " + task));
+            }
+            return channelRunnable;
+        }
     }
     
     private void processEventQueue() throws IOException {
@@ -119,7 +136,7 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
     
     static void setInterestOps(
             AbstractOioChannel channel, ChannelFuture future, int interestOps) {
-        boolean iothread = isIoThead(channel);
+        boolean iothread = isIoThread(channel);
         
         // Override OP_WRITE flag - a user cannot change this flag.
         interestOps &= ~Channel.OP_WRITE;
@@ -165,7 +182,7 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
     }
     
     static void close(AbstractOioChannel channel, ChannelFuture future) {
-        close(channel, future, isIoThead(channel));
+        close(channel, future, isIoThread(channel));
     }
     
     private static void close(AbstractOioChannel channel, ChannelFuture future, boolean iothread) {

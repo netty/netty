@@ -39,7 +39,7 @@ public interface ChannelSink {
     void exceptionCaught(ChannelPipeline pipeline, ChannelEvent e, ChannelPipelineException cause) throws Exception;
     
     /**
-     * Schedule the given {@link ChannelEvent} for later execution (in the io-thread). Some implementation may not support his and just fire it directly
+     * Execute the given {@link Runnable} later in the io-thread. Some implementation may not support his and just execute it directly
      */
-    void fireUpstreamEventLater(ChannelPipeline pipeline, ChannelEvent e) throws Exception;
+    ChannelFuture execute(ChannelPipeline pipeline, Runnable task);
 }

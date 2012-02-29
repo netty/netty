@@ -63,7 +63,7 @@ class OioDatagramWorker extends AbstractOioWorker<OioDatagramChannel> {
     static void write(
             OioDatagramChannel channel, ChannelFuture future,
             Object message, SocketAddress remoteAddress) {
-        boolean iothread = isIoThead(channel);
+        boolean iothread = isIoThread(channel);
         
         try {
             ChannelBuffer buf = (ChannelBuffer) message;
@@ -105,7 +105,7 @@ class OioDatagramWorker extends AbstractOioWorker<OioDatagramChannel> {
     
     static void disconnect(OioDatagramChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
-        boolean iothread = isIoThead(channel);
+        boolean iothread = isIoThread(channel);
         
         try {
             channel.socket.disconnect();

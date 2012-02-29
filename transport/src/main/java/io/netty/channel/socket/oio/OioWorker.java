@@ -65,7 +65,7 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
             OioSocketChannel channel, ChannelFuture future,
             Object message) {
 
-        boolean iothread = isIoThead(channel);
+        boolean iothread = isIoThread(channel);
         OutputStream out = channel.getOutputStream();
         if (out == null) {
             Exception e = new ClosedChannelException();

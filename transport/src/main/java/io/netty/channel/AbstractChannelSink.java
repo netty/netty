@@ -55,12 +55,17 @@ public abstract class AbstractChannelSink implements ChannelSink {
     }
 
     /**
-     * This implementation just send the event now via {@link ChannelPipeline#sendUpstream(ChannelEvent)}. Sub-classes should override this if they can handle it
+     * This implementation just directly call {@link Runnable#run()}. Sub-classes should override this if they can handle it
      * in a better way
      */
     @Override
-    public void fireUpstreamEventLater(ChannelPipeline pipeline, ChannelEvent e) throws Exception {
-        pipeline.sendUpstream(e);
+    public ChannelFuture execute(ChannelPipeline pipeline, Runnable task) {
+        try {
+            task.run();
+            return Channels.succeededFuture(pipeline.getChannel());
+        } catch (Throwable t) {
+            return Channels.failedFuture(pipeline.getChannel(), t);
+        }
     }
 
 }

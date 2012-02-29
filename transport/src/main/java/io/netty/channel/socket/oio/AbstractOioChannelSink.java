@@ -19,33 +19,25 @@ package io.netty.channel.socket.oio;
 import io.netty.channel.AbstractChannelSink;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.Worker;
 
 public abstract class AbstractOioChannelSink extends AbstractChannelSink {
 
     @Override
-    public void fireUpstreamEventLater(final ChannelPipeline pipeline, final ChannelEvent e) throws Exception {
-        Channel ch = e.getChannel();
+    public ChannelFuture execute(final ChannelPipeline pipeline, final Runnable task) {
+        Channel ch = pipeline.getChannel();
         if (ch instanceof AbstractOioChannel) {
             AbstractOioChannel channel = (AbstractOioChannel) ch;
             Worker worker = channel.worker;
-            if (worker != null && !AbstractOioWorker.isIoThead(channel)) {
-                channel.worker.executeInIoThread(new Runnable() {
-                    
-                    @Override
-                    public void run() {
-                        pipeline.sendUpstream(e);
-                    }
-                });
-            } else {
-                // no worker thread yet or the current thread is a worker thread so just fire the event now
-                pipeline.sendUpstream(e);
+            if (worker != null) {
+                return channel.worker.executeInIoThread(ch, task);
             }
-           
-        } else {
-            super.fireUpstreamEventLater(pipeline, e);
-        }
+        } 
+            
+        return super.execute(pipeline, task);
+        
 
     }
 
@@ -54,7 +46,7 @@ public abstract class AbstractOioChannelSink extends AbstractChannelSink {
         Channel channel = event.getChannel();
         boolean fireLater = false;
         if (channel instanceof AbstractOioChannel) {
-            fireLater = !AbstractOioWorker.isIoThead((AbstractOioChannel) channel);
+            fireLater = !AbstractOioWorker.isIoThread((AbstractOioChannel) channel);
         }
         return fireLater;
     }

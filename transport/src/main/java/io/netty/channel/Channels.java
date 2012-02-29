@@ -303,13 +303,14 @@ public final class Channels {
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel} in the next io-thread.
      */
-    public static void fireWriteCompleteLater(Channel channel, long amount) {
-        if (amount == 0) {
-            return;
-        }
-
-        channel.getPipeline().sendUpstreamLater(
-                new DefaultWriteCompletionEvent(channel, amount));
+    public static ChannelFuture fireWriteCompleteLater(final Channel channel, final long amount) {
+        return channel.getPipeline().execute(new Runnable() {
+            @Override
+            public void run() {
+                fireWriteComplete(channel, amount);
+            }
+        });
+        
     }
 
     
@@ -344,10 +345,15 @@ public final class Channels {
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel} once the io-thread runs again.
      */
-    public static void fireChannelInterestChangedLater(Channel channel) {
-        channel.getPipeline().sendUpstreamLater(
-                new UpstreamChannelStateEvent(
-                        channel, ChannelState.INTEREST_OPS, Channel.OP_READ));
+    public static ChannelFuture fireChannelInterestChangedLater(final Channel channel) {
+        return channel.getPipeline().execute(new Runnable() {
+            
+            @Override
+            public void run() {
+                fireChannelInterestChanged(channel);
+                
+            }
+        });
     }
     
     /**
@@ -380,10 +386,14 @@ public final class Channels {
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel} once the io-thread runs again.
      */
-    public static void fireChannelDisconnectedLater(Channel channel) {
-        channel.getPipeline().sendUpstreamLater(
-                new UpstreamChannelStateEvent(
-                        channel, ChannelState.CONNECTED, null));
+    public static ChannelFuture fireChannelDisconnectedLater(final Channel channel) {
+        return channel.getPipeline().execute(new Runnable() {
+            
+            @Override
+            public void run() {
+                fireChannelDisconnected(channel);
+            }
+        });
     }
     
     /**
@@ -415,9 +425,14 @@ public final class Channels {
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel} once the io-thread runs again.
      */
-    public static void fireChannelUnboundLater(Channel channel) {
-        channel.getPipeline().sendUpstreamLater(new UpstreamChannelStateEvent(
-                channel, ChannelState.BOUND, null));
+    public static ChannelFuture fireChannelUnboundLater(final Channel channel) {
+        return channel.getPipeline().execute(new Runnable() {
+            
+            @Override
+            public void run() {
+                fireChannelUnbound(channel);
+            }
+        });
     }
     
     /**
@@ -449,15 +464,15 @@ public final class Channels {
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel} once the io-thread runs again.
      */
-    public static void fireChannelClosedLater(Channel channel) {
-        channel.getPipeline().sendUpstream(
-                new UpstreamChannelStateEvent(
-                        channel, ChannelState.OPEN, Boolean.FALSE));
-
-        // Notify the parent handler.
-        if (channel.getParent() != null) {
-            fireChildChannelStateChangedLater(channel.getParent(), channel);
-        }
+    public static ChannelFuture fireChannelClosedLater(final Channel channel) {
+        return channel.getPipeline().execute(new Runnable() {
+            
+            @Override
+            public void run() {
+                fireChannelClosed(channel);
+            }
+        });
+      
     }
     
     /**
@@ -495,9 +510,14 @@ public final class Channels {
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel} once the io-thread runs again.
      */
-    public static void fireExceptionCaughtLater(Channel channel, Throwable cause) {
-        channel.getPipeline().sendUpstreamLater(
-                new DefaultExceptionEvent(channel, cause));
+    public static ChannelFuture fireExceptionCaughtLater(final Channel channel, final Throwable cause) {
+        return channel.getPipeline().execute(new Runnable() {
+            
+            @Override
+            public void run() {
+                fireExceptionCaught(channel, cause);
+            }
+        });
     }
 
     
@@ -527,13 +547,7 @@ public final class Channels {
                 new DefaultChildChannelStateEvent(channel, childChannel));
     }
 
-    private static void fireChildChannelStateChangedLater(
-            Channel channel, Channel childChannel) {
-        channel.getPipeline().sendUpstreamLater(
-                new DefaultChildChannelStateEvent(channel, childChannel));
-    }
 
-    
     /**
      * Sends a {@code "bind"} request to the last
      * {@link ChannelDownstreamHandler} in the {@link ChannelPipeline} of

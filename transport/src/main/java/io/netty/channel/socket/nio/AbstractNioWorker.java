@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.MessageEvent;
+import io.netty.channel.socket.ChannelRunnableWrapper;
 import io.netty.channel.socket.Worker;
 import io.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import io.netty.logging.InternalLogger;
@@ -41,6 +42,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -272,13 +274,28 @@ abstract class AbstractNioWorker implements Worker {
     }
     
     @Override
-    public void executeInIoThread(Runnable eventRunnable) {
-       boolean added = eventQueue.offer(eventRunnable);
-      
-       assert added;
+    public ChannelFuture executeInIoThread(Channel channel, Runnable task) {
+       if (channel instanceof AbstractNioChannel<?> && isIoThread((AbstractNioChannel<?>) channel)) {
+           try {
+               task.run();
+               return succeededFuture(channel);
+           } catch (Throwable t) {
+               return failedFuture(channel, t);
+           }
+       } else {
+           ChannelRunnableWrapper channelRunnable = new ChannelRunnableWrapper(channel, task);
+           boolean added = eventQueue.offer(channelRunnable);
+           
+           if (added) {
+               // wake up the selector to speed things
+               selector.wakeup();
+           } else {
+               channelRunnable.setFailure(new RejectedExecutionException("Unable to queue task " + task));
+           }
+           return channelRunnable;
+       }
        
-       // wake up the selector to speed things
-       selector.wakeup();
+       
     }
     
     private void processRegisterTaskQueue() throws IOException {
