@@ -30,7 +30,6 @@ public class HttpSnoopServerPipelineFactory implements ChannelPipelineFactory {
     public ChannelPipeline getPipeline() throws Exception {
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();
-        pipeline.addLast("log", new LoggingHandler(InternalLogLevel.INFO));
 
         // Uncomment the following line if you want HTTPS
         //SSLEngine engine = SecureChatSslContextFactory.getServerContext().createSSLEngine();
