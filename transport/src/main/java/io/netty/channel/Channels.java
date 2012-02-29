@@ -520,7 +520,22 @@ public final class Channels {
         });
     }
 
-    
+    /**
+     * Sends a {@code "exceptionCaught"} event to the
+     * {@link ChannelUpstreamHandler} which is placed in the closest upstream
+     * from the handler associated with the specified
+     * {@link ChannelHandlerContext} once the io-thread runs again.
+     */
+    public static ChannelFuture fireExceptionCaughtLater(final ChannelHandlerContext ctx, final Throwable cause) {
+        return ctx.getPipeline().execute(new Runnable() {
+
+            @Override
+            public void run() {
+                fireExceptionCaught(ctx, cause);
+            }
+        });
+    }
+
     /**
      * Sends a {@code "exceptionCaught"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of

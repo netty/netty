@@ -169,16 +169,14 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
             }
             currentEvent.getFuture().setFailure(cause);
             fireExceptionCaught = true;
-
-            currentEvent = null;
         }
         
 
         if (fireExceptionCaught) {
             if (fireNow) {
-                fireExceptionCaught(ctx.getChannel(), cause);
+                fireExceptionCaught(ctx, cause);
             } else {
-                fireExceptionCaughtLater(ctx.getChannel(), cause);
+                fireExceptionCaughtLater(ctx, cause);
             }
         }
     }
@@ -227,7 +225,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                         if (fireNow) {  
                             fireExceptionCaught(ctx, t);
                         } else {
-                            fireExceptionCaughtLater(ctx.getChannel(), t);
+                            fireExceptionCaughtLater(ctx, t);
                         }
 
                         closeInput(chunks);
