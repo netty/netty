@@ -21,7 +21,7 @@ import io.netty.channel.DefaultChannelFuture;
 public class ChannelRunnableWrapper extends DefaultChannelFuture implements Runnable {
 
     private final Runnable task;
-    private boolean started = false;
+    private boolean started;
     
     public ChannelRunnableWrapper(Channel channel, Runnable task) {
         super(channel, true);
@@ -30,7 +30,7 @@ public class ChannelRunnableWrapper extends DefaultChannelFuture implements Runn
 
     @Override
     public void run() {
-        synchronized(this) {
+        synchronized (this) {
             if (!isCancelled()) {
                 started = true;
             } else {
