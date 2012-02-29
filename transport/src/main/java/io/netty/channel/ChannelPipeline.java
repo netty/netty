@@ -432,7 +432,6 @@ public interface ChannelPipeline {
      */
     ChannelHandlerContext getContext(Class<? extends ChannelHandler> handlerType);
 
-
     /**
      * Sends the specified {@link ChannelEvent} to the first
      * {@link ChannelUpstreamHandler} in this pipeline.
@@ -442,9 +441,6 @@ public interface ChannelPipeline {
      */
     void sendUpstream(ChannelEvent e);
 
-
-    ChannelFuture execute(Runnable task);
-
     /**
      * Sends the specified {@link ChannelEvent} to the last
      * {@link ChannelDownstreamHandler} in this pipeline.
@@ -453,6 +449,12 @@ public interface ChannelPipeline {
      *         if the specified event is {@code null}
      */
     void sendDownstream(ChannelEvent e);
+
+    /**
+     * Schedules the specified task to be executed in the I/O thread associated
+     * with this pipeline's {@link Channel}.
+     */
+    ChannelFuture execute(Runnable task);
 
     /**
      * Returns the {@link Channel} that this pipeline is attached to.

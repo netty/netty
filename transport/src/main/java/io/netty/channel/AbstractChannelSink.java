@@ -67,5 +67,4 @@ public abstract class AbstractChannelSink implements ChannelSink {
             return Channels.failedFuture(pipeline.getChannel(), t);
         }
     }
-
 }

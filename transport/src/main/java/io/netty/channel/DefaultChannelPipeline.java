@@ -585,11 +585,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public ChannelFuture execute(Runnable task) {
-        return getSink().execute(this, task);
-    }
-
-    @Override
     public void sendDownstream(ChannelEvent e) {
         DefaultChannelHandlerContext tail = getActualDownstreamContext(this.tail);
         if (tail == null) {
@@ -653,6 +648,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         return realCtx;
+    }
+
+    @Override
+    public ChannelFuture execute(Runnable task) {
+        return getSink().execute(this, task);
     }
 
     protected void notifyHandlerException(ChannelEvent e, Throwable t) {
