@@ -16,7 +16,9 @@
 package io.netty.channel.socket.nio;
 
 import static io.netty.channel.Channels.fireChannelDisconnected;
+import static io.netty.channel.Channels.fireChannelDisconnectedLater;
 import static io.netty.channel.Channels.fireExceptionCaught;
+import static io.netty.channel.Channels.fireExceptionCaughtLater;
 import static io.netty.channel.Channels.fireMessageReceived;
 import static io.netty.channel.Channels.succeededFuture;
 import io.netty.buffer.ChannelBufferFactory;
@@ -126,15 +128,24 @@ class NioDatagramWorker extends AbstractNioWorker {
 
     static void disconnect(NioDatagramChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
+        boolean iothread = isIoThread(channel);
         try {
             channel.getDatagramChannel().disconnect();
             future.setSuccess();
             if (connected) {
-                fireChannelDisconnected(channel);
+                if (iothread) {
+                    fireChannelDisconnected(channel);
+                } else {
+                    fireChannelDisconnectedLater(channel);
+                }
             }
         } catch (Throwable t) {
             future.setFailure(t);
-            fireExceptionCaught(channel, t);
+            if (iothread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+            }
         }
     }
 

@@ -442,6 +442,9 @@ public interface ChannelPipeline {
      */
     void sendUpstream(ChannelEvent e);
 
+
+    ChannelFuture execute(Runnable task);
+
     /**
      * Sends the specified {@link ChannelEvent} to the last
      * {@link ChannelDownstreamHandler} in this pipeline.

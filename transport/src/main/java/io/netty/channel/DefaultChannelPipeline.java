@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.RejectedExecutionException;
 
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -584,6 +585,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public ChannelFuture execute(Runnable task) {
+        return getSink().execute(this, task);
+    }
+
+    @Override
     public void sendDownstream(ChannelEvent e) {
         DefaultChannelHandlerContext tail = getActualDownstreamContext(this.tail);
         if (tail == null) {
@@ -832,5 +838,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 ChannelEvent e, ChannelPipelineException cause) throws Exception {
             throw cause;
         }
+
+        @Override
+        public ChannelFuture execute(ChannelPipeline pipeline, Runnable task) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("Not attached yet; rejecting: " +  task);
+            }
+            return Channels.failedFuture(pipeline.getChannel(), new RejectedExecutionException("Not attached yet"));
+        }
+
     }
 }

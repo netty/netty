@@ -21,6 +21,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.MessageEvent;
+import io.netty.channel.socket.ChannelRunnableWrapper;
+import io.netty.channel.socket.Worker;
 import io.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
@@ -40,11 +42,12 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-abstract class AbstractNioWorker implements Runnable {
+abstract class AbstractNioWorker implements Worker {
     /**
      * Internal Netty logger.
      */
@@ -106,6 +109,9 @@ abstract class AbstractNioWorker implements Runnable {
      */
     protected final Queue<Runnable> writeTaskQueue = QueueFactory.createQueue(Runnable.class);
 
+    private final Queue<Runnable> eventQueue = QueueFactory.createQueue(Runnable.class);
+
+    
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
     private final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
@@ -216,6 +222,7 @@ abstract class AbstractNioWorker implements Runnable {
 
                 cancelledKeys = 0;
                 processRegisterTaskQueue();
+                processEventQueue();
                 processWriteTaskQueue();
                 processSelectedKeys(selector.selectedKeys());
 
@@ -266,7 +273,31 @@ abstract class AbstractNioWorker implements Runnable {
         }
     }
     
-
+    @Override
+    public ChannelFuture executeInIoThread(Channel channel, Runnable task) {
+       if (channel instanceof AbstractNioChannel<?> && isIoThread((AbstractNioChannel<?>) channel)) {
+           try {
+               task.run();
+               return succeededFuture(channel);
+           } catch (Throwable t) {
+               return failedFuture(channel, t);
+           }
+       } else {
+           ChannelRunnableWrapper channelRunnable = new ChannelRunnableWrapper(channel, task);
+           boolean added = eventQueue.offer(channelRunnable);
+           
+           if (added) {
+               // wake up the selector to speed things
+               selector.wakeup();
+           } else {
+               channelRunnable.setFailure(new RejectedExecutionException("Unable to queue task " + task));
+           }
+           return channelRunnable;
+       }
+       
+       
+    }
+    
     private void processRegisterTaskQueue() throws IOException {
         for (;;) {
             final Runnable task = registerTaskQueue.poll();
@@ -282,6 +313,18 @@ abstract class AbstractNioWorker implements Runnable {
     private void processWriteTaskQueue() throws IOException {
         for (;;) {
             final Runnable task = writeTaskQueue.poll();
+            if (task == null) {
+                break;
+            }
+
+            task.run();
+            cleanUpCancelledKeys();
+        }
+    }
+    
+    private void processEventQueue() throws IOException {
+        for (;;) {
+            final Runnable task = eventQueue.poll();
             if (task == null) {
                 break;
             }
@@ -374,6 +417,7 @@ abstract class AbstractNioWorker implements Runnable {
         boolean open = true;
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
+        boolean iothread = isIoThread(channel);
 
         long writtenBytes = 0;
 
@@ -444,7 +488,11 @@ abstract class AbstractNioWorker implements Runnable {
                     buf = null;
                     evt = null;
                     future.setFailure(t);
-                    fireExceptionCaught(channel, t);
+                    if (iothread) {
+                        fireExceptionCaught(channel, t);
+                    } else {
+                        fireExceptionCaughtLater(channel, t);
+                    }
                     if (t instanceof IOException) {
                         open = false;
                         close(channel, succeededFuture(channel));
@@ -467,10 +515,17 @@ abstract class AbstractNioWorker implements Runnable {
                 }
             }
         }
-
-        fireWriteComplete(channel, writtenBytes);
+        if (iothread) {
+            fireWriteComplete(channel, writtenBytes);
+        } else {
+            fireWriteCompleteLater(channel, writtenBytes);
+        }
     }
 
+    static boolean isIoThread(AbstractNioChannel<?> channel) {
+        return Thread.currentThread() == channel.worker.thread;
+    }
+    
     private void setOpWrite(AbstractNioChannel<?> channel) {
         Selector selector = this.selector;
         SelectionKey key = channel.channel.keyFor(selector);
@@ -521,6 +576,8 @@ abstract class AbstractNioWorker implements Runnable {
     void close(AbstractNioChannel<?> channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
+        boolean iothread = isIoThread(channel);
+        
         try {
             channel.channel.close();
             cancelledKeys ++;
@@ -528,20 +585,36 @@ abstract class AbstractNioWorker implements Runnable {
             if (channel.setClosed()) {
                 future.setSuccess();
                 if (connected) {
-                    fireChannelDisconnected(channel);
+                    if (iothread) {
+                        fireChannelDisconnected(channel);
+                    } else {
+                        fireChannelDisconnectedLater(channel);
+                    }
                 }
                 if (bound) {
-                    fireChannelUnbound(channel);
+                    if (iothread) {
+                        fireChannelUnbound(channel);
+                    } else {
+                        fireChannelUnboundLater(channel);
+                    }
                 }
 
                 cleanUpWriteBuffer(channel);
-                fireChannelClosed(channel);
+                if (iothread) {
+                    fireChannelClosed(channel);
+                } else {
+                    fireChannelClosedLater(channel);
+                }
             } else {
                 future.setSuccess();
             }
         } catch (Throwable t) {
             future.setFailure(t);
-            fireExceptionCaught(channel, t);
+            if (iothread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+            }
         }
     }
 
@@ -594,12 +667,17 @@ abstract class AbstractNioWorker implements Runnable {
         }
 
         if (fireExceptionCaught) {
-            fireExceptionCaught(channel, cause);
+            if (isIoThread(channel)) {
+                fireExceptionCaught(channel, cause);
+            } else {
+                fireExceptionCaughtLater(channel, cause);
+            }
         }
     }
 
     void setInterestOps(AbstractNioChannel<?> channel, ChannelFuture future, int interestOps) {
         boolean changed = false;
+        boolean iothread = isIoThread(channel);
         try {
             // interestOps can change at any time and at any thread.
             // Acquire a lock to avoid possible race condition.
@@ -660,16 +738,28 @@ abstract class AbstractNioWorker implements Runnable {
 
             future.setSuccess();
             if (changed) {
-                fireChannelInterestChanged(channel);
+                if (iothread) {
+                    fireChannelInterestChanged(channel);
+                } else {
+                    fireChannelInterestChangedLater(channel);
+                }
             }
         } catch (CancelledKeyException e) {
             // setInterestOps() was called on a closed channel.
             ClosedChannelException cce = new ClosedChannelException();
             future.setFailure(cce);
-            fireExceptionCaught(channel, cce);
+            if (iothread) {
+                fireExceptionCaught(channel, cce);
+            } else {
+                fireExceptionCaughtLater(channel, cce);
+            }
         } catch (Throwable t) {
             future.setFailure(t);
-            fireExceptionCaught(channel, t);
+            if (iothread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+            }
         }
     }
     

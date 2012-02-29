@@ -22,9 +22,11 @@ import java.util.ConcurrentModificationException;
 import java.util.LinkedList;
 import java.util.Queue;
 
+import io.netty.channel.Channels;
 import io.netty.buffer.ChannelBufferFactory;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -223,6 +225,16 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
             }
 
             throw new CodecEmbedderException(actualCause);
+        }
+
+        @Override
+        public ChannelFuture execute(ChannelPipeline pipeline, Runnable task) {
+            try {
+                task.run();
+                return Channels.succeededFuture(pipeline.getChannel());
+            } catch (Throwable t) {
+                return Channels.failedFuture(pipeline.getChannel(), t);
+            }
         }
     }
 
