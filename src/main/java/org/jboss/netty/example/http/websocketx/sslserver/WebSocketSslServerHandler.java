@@ -96,7 +96,7 @@ public class WebSocketSslServerHandler extends SimpleChannelUpstreamHandler {
         if (this.handshaker == null) {
             wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.getChannel());
         } else {
-            this.handshaker.handshake(ctx.getChannel(), req);
+            this.handshaker.handshake(ctx.getChannel(), req).addListener(WebSocketServerHandshaker.HANDSHAKE_LISTENER);
         }
     }
 
@@ -116,7 +116,9 @@ public class WebSocketSslServerHandler extends SimpleChannelUpstreamHandler {
 
         // Send the uppercase string back.
         String request = ((TextWebSocketFrame) frame).getText();
-        logger.debug(String.format("Channel %s received %s", ctx.getChannel().getId(), request));
+        if (logger.isDebugEnabled()) {
+            logger.debug(String.format("Channel %s received %s", ctx.getChannel().getId(), request));
+        }
         ctx.getChannel().write(new TextWebSocketFrame(request.toUpperCase()));
     }
 

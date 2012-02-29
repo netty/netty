@@ -20,6 +20,8 @@ import java.util.Set;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
 /**
@@ -33,6 +35,18 @@ public abstract class WebSocketServerHandshaker {
 
     private final WebSocketVersion version;
 
+    /**
+     * {@link ChannelFutureListener} which will call {@link Channels#fireExceptionCaught(org.jboss.netty.channel.ChannelHandlerContext, Throwable)} 
+     * if the {@link ChannelFuture} was not sucessful.
+     */
+    public static final ChannelFutureListener HANDSHAKE_LISTENER = new ChannelFutureListener() {
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (!future.isSuccess()) {
+                Channels.fireExceptionCaught(future.getChannel(), future.getCause());
+            }
+        }
+    };
+    
     /**
      * Constructor specifying the destination web socket location
      * 

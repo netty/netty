@@ -15,6 +15,7 @@
  */
 package org.jboss.netty.handler.codec.http;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
@@ -162,12 +163,22 @@ public class QueryStringDecoder {
             throw new IllegalArgumentException(
                     "maxParams: " + maxParams + " (expected: a positive integer)");
         }
+        
+        String rawPath = uri.getRawPath();
+        if (rawPath != null) {
+            hasPath = true;
+        } else {
+            rawPath = "";
+            hasPath = false;
+        }
+        // Also take care of cut of things like "http://localhost" 
+        String newUri = rawPath + "?" + uri.getRawQuery();
 
         // http://en.wikipedia.org/wiki/Query_string
-        this.uri = uri.toASCIIString().replace(';', '&');
+        this.uri = newUri.replace(';', '&');
         this.charset = charset;
         this.maxParams = maxParams;
-        hasPath = false;
+
     }
 
     /**
@@ -209,7 +220,7 @@ public class QueryStringDecoder {
                 }
                 decodeParams(uri.substring(pathLength + 1));
             } else {
-                if (uri.isEmpty()) {
+                if (uri.length() == 0) {
                     return Collections.emptyMap();
                 }
                 decodeParams(uri);
@@ -377,7 +388,11 @@ public class QueryStringDecoder {
                     break;
             }
         }
-        return new String(buf, 0, pos, charset);
+        try {
+            return new String(buf, 0, pos, charset.name());
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalArgumentException("unsupported encoding: " + charset.name());
+        }
     }
 
     /**

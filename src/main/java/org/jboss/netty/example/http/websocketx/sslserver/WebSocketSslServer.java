@@ -71,13 +71,13 @@ public class WebSocketSslServer {
         }
 
         String keyStoreFilePath = System.getProperty("keystore.file.path");
-        if (keyStoreFilePath == null || keyStoreFilePath.isEmpty()) {
+        if (keyStoreFilePath == null || keyStoreFilePath.length() == 0) {
             System.out.println("ERROR: System property keystore.file.path not set. Exiting now!");
             System.exit(1);
         }
 
         String keyStoreFilePassword = System.getProperty("keystore.file.password");
-        if (keyStoreFilePassword == null || keyStoreFilePassword.isEmpty()) {
+        if (keyStoreFilePassword == null || keyStoreFilePassword.length() == 0) {
             System.out.println("ERROR: System property keystore.file.password not set. Exiting now!");
             System.exit(1);
         }

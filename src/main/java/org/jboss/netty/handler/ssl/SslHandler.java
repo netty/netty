@@ -511,7 +511,9 @@ public class SslHandler extends FrameDecoder
                 try {
                     engine.closeInbound();
                 } catch (SSLException ex) {
-                    logger.debug("Failed to clean up SSLEngine.", ex);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Failed to clean up SSLEngine.", ex);
+                    }
                 }
             }
         }
@@ -527,9 +529,12 @@ public class SslHandler extends FrameDecoder
                 synchronized (ignoreClosedChannelExceptionLock) {
                     if (ignoreClosedChannelException > 0) {
                         ignoreClosedChannelException --;
-                        logger.debug(
-                                "Swallowing an exception raised while " +
-                                "writing non-app data", cause);
+                        if (logger.isDebugEnabled()) {
+                            logger.debug(
+                                    "Swallowing an exception raised while " +
+                                    "writing non-app data", cause);
+                        }
+                       
                         return;
                     }
                 }
@@ -538,10 +543,12 @@ public class SslHandler extends FrameDecoder
                 if (IGNORABLE_ERROR_MESSAGE.matcher(message).matches()) {
                     // It is safe to ignore the 'connection reset by peer' or
                     // 'broken pipe' error after sending closure_notify.
-                    logger.debug(
-                            "Swallowing a 'connection reset by peer / " +
-                            "broken pipe' error occurred while writing " +
-                            "'closure_notify'", cause);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug(
+                                "Swallowing a 'connection reset by peer / " +
+                                "broken pipe' error occurred while writing " +
+                                "'closure_notify'", cause);
+                    }
 
                     // Close the connection explicitly just in case the transport
                     // did not close the connection automatically.
@@ -978,7 +985,7 @@ public class SslHandler extends FrameDecoder
             outAppBuf.flip();
 
             if (outAppBuf.hasRemaining()) {
-                ChannelBuffer frame = ChannelBuffers.buffer(outAppBuf.remaining());
+                ChannelBuffer frame = ctx.getChannel().getConfig().getBufferFactory().getBuffer(outAppBuf.remaining());
                 frame.writeBytes(outAppBuf.array(), 0, frame.capacity());
                 return frame;
             } else {
@@ -1097,9 +1104,12 @@ public class SslHandler extends FrameDecoder
             try {
                 engine.closeInbound();
             } catch (SSLException e) {
-                logger.debug(
-                        "SSLEngine.closeInbound() raised an exception after " +
-                        "a handshake failure.", e);
+                if (logger.isDebugEnabled()) {
+                    logger.debug(
+                            "SSLEngine.closeInbound() raised an exception after " +
+                            "a handshake failure.", e);
+                }
+
             }
         }
         
@@ -1118,7 +1128,9 @@ public class SslHandler extends FrameDecoder
             try {
                 unwrap(context, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
             } catch (SSLException ex) {
-                logger.debug("Failed to unwrap before sending a close_notify message", ex);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Failed to unwrap before sending a close_notify message", ex);
+                }
             }
 
             if (!engine.isInboundDone()) {
@@ -1130,7 +1142,9 @@ public class SslHandler extends FrameDecoder
                                 new ClosingChannelFutureListener(context, e));
                         success = true;
                     } catch (SSLException ex) {
-                        logger.debug("Failed to encode a close_notify message", ex);
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Failed to encode a close_notify message", ex);
+                        }
                     }
                 }
             } else {

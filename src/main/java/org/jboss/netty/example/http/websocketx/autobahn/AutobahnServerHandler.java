@@ -76,13 +76,16 @@ public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
         if (this.handshaker == null) {
             wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.getChannel());
         } else {
-            this.handshaker.handshake(ctx.getChannel(), req);
+            this.handshaker.handshake(ctx.getChannel(), req).addListener(WebSocketServerHandshaker.HANDSHAKE_LISTENER);
         }
     }
 
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
-        logger.debug(String
-                .format("Channel %s received %s", ctx.getChannel().getId(), frame.getClass().getSimpleName()));
+        if (logger.isDebugEnabled()) {
+            logger.debug(String
+                    .format("Channel %s received %s", ctx.getChannel().getId(), frame.getClass().getSimpleName()));
+        }
+
 
         if (frame instanceof CloseWebSocketFrame) {
             this.handshaker.close(ctx.getChannel(), (CloseWebSocketFrame) frame);

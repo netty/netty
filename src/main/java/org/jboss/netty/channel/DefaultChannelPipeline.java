@@ -348,7 +348,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 remove((DefaultChannelHandlerContext) ctx);
                 removed = true;
             } catch (Throwable t2) {
-                logger.warn("Failed to remove a handler: " + ctx.getName(), t2);
+                if (logger.isWarnEnabled()) {
+                    logger.warn("Failed to remove a handler: " + ctx.getName(), t2);
+                }
             }
 
             if (removed) {
@@ -545,8 +547,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public void sendUpstream(ChannelEvent e) {
         DefaultChannelHandlerContext head = getActualUpstreamContext(this.head);
         if (head == null) {
-            logger.warn(
-                    "The pipeline contains no upstream handlers; discarding: " + e);
+            if (logger.isWarnEnabled()) {
+                logger.warn(
+                        "The pipeline contains no upstream handlers; discarding: " + e);
+            }
+
             return;
         }
 
@@ -628,9 +633,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     protected void notifyHandlerException(ChannelEvent e, Throwable t) {
         if (e instanceof ExceptionEvent) {
-            logger.warn(
-                    "An exception was thrown by a user handler " +
-                    "while handling an exception event (" + e + ")", t);
+            if (logger.isWarnEnabled()) {
+                logger.warn(
+                        "An exception was thrown by a user handler " +
+                        "while handling an exception event (" + e + ")", t);
+            }
+
             return;
         }
 
@@ -644,7 +652,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         try {
             sink.exceptionCaught(this, e, pe);
         } catch (Exception e1) {
-            logger.warn("An exception was thrown by an exception handler.", e1);
+            if (logger.isWarnEnabled()) {
+                logger.warn("An exception was thrown by an exception handler.", e1);
+            }
         }
     }
 
@@ -785,7 +795,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         public void eventSunk(ChannelPipeline pipeline, ChannelEvent e) {
-            logger.warn("Not attached yet; discarding: " + e);
+            if (logger.isWarnEnabled()) {
+                logger.warn("Not attached yet; discarding: " + e);
+            }
+                
         }
 
         public void exceptionCaught(ChannelPipeline pipeline,

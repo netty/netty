@@ -213,7 +213,9 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                             try {
                                 selector.close();
                             } catch (Throwable t) {
-                                logger.warn("Failed to close a selector.", t);
+                                if (logger.isWarnEnabled()) {
+                                    logger.warn("Failed to close a selector.", t);
+                                }
                             }
                             this.selector = selector = null;
                             // The method will return to the caller at this point.
@@ -244,7 +246,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                 wakenUp.set(false);
 
                 try {
-                    int selectedKeyCount = selector.select(500);
+                    int selectedKeyCount = selector.select(10);
 
                     // 'wakenUp.compareAndSet(false, true)' is always evaluated
                     // before calling 'selector.wakeup()' to reduce the wake-up
@@ -284,9 +286,9 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                         processSelectedKeys(selector.selectedKeys());
                     }
 
-                    // Handle connection timeout every 0.5 seconds approximately.
+                    // Handle connection timeout every 10 milliseconds approximately.
                     long currentTimeNanos = System.nanoTime();
-                    if (currentTimeNanos - lastConnectTimeoutCheckTimeNanos >= 500 * 1000000L) {
+                    if (currentTimeNanos - lastConnectTimeoutCheckTimeNanos >= 10 * 1000000L) {
                         lastConnectTimeoutCheckTimeNanos = currentTimeNanos;
                         processConnectTimeout(selector.keys(), currentTimeNanos);
                     }
@@ -306,8 +308,11 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                                     try {
                                         selector.close();
                                     } catch (IOException e) {
-                                        logger.warn(
-                                                "Failed to close a selector.", e);
+                                        if (logger.isWarnEnabled()) {
+                                            logger.warn(
+                                                    "Failed to close a selector.", e);
+                                        }
+
                                     } finally {
                                         this.selector = null;
                                     }
@@ -324,8 +329,11 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                         shutdown = false;
                     }
                 } catch (Throwable t) {
-                    logger.warn(
-                            "Unexpected exception in the selector loop.", t);
+                    if (logger.isWarnEnabled()) {
+                        logger.warn(
+                                "Unexpected exception in the selector loop.", t);
+                    }
+
 
                     // Prevent possible consecutive immediate failures.
                     try {

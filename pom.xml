@@ -256,7 +256,7 @@
                   <version>[1.6.0,)</version>
                 </requireJavaVersion>
                 <requireMavenVersion>
-                  <version>[3.0.3,)</version>
+                  <version>[3.0.2,)</version>
                 </requireMavenVersion>
               </rules>
             </configuration>
@@ -275,6 +275,31 @@
           <showDeprecation>true</showDeprecation>
           <showWarnings>true</showWarnings>
         </configuration>
+      </plugin>
+      <plugin>
+        <!-- ensure that only methods available in java 1.5 can
+             be used even when compiling with java 1.6+ -->
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>animal-sniffer-maven-plugin</artifactId>
+        <version>1.7</version>
+        <configuration>
+          <signature>
+            <groupId>org.codehaus.mojo.signature</groupId>
+            <artifactId>java15</artifactId>
+            <version>1.0</version>
+          </signature>
+          <ignores>
+            <ignore>sun.misc.Unsafe</ignore>
+          </ignores>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
@@ -315,6 +340,7 @@
             <exclude>**/Abstract*</exclude>
             <exclude>**/TestUtil*</exclude>
           </excludes>
+          <runOrder>random</runOrder>
         </configuration>
       </plugin>
       <plugin>
@@ -561,38 +587,6 @@
           <attach>${attach-distribution}</attach>
           <appendAssemblyId>true</appendAssemblyId>
           <tarLongFileMode>gnu</tarLongFileMode>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-gpg-plugin</artifactId>
-        <version>1.4</version>
-        <executions>
-          <execution>
-            <id>sign-artifacts</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>sign</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-release-plugin</artifactId>
-        <version>2.2.1</version>
-        <configuration>
-          <!-- We don't want to use the default release profile because it
-               causes the JavaDoc and source jars to be deployed twice. -->
-          <useReleaseProfile>false</useReleaseProfile>
-          <!-- Activate a custom profile called "release" -->
-          <arguments>-Prelease</arguments>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-eclipse-plugin</artifactId>
-        <version>2.8</version>
-        <configuration>
-          <downloadSources>true</downloadSources>
-          <addVersionToProjectName>true</addVersionToProjectName>
         </configuration>
       </plugin>
       <plugin>
