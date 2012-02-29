@@ -20,8 +20,8 @@ import io.netty.buffer.DynamicChannelBuffer;
 
 class UnsafeDynamicChannelBuffer extends DynamicChannelBuffer {
 
-    UnsafeDynamicChannelBuffer(ChannelBufferFactory factory) {
-        super(factory.getDefaultOrder(), 256, factory);
+    UnsafeDynamicChannelBuffer(ChannelBufferFactory factory, int minimumCapacity) {
+        super(factory.getDefaultOrder(), minimumCapacity, factory);
     }
 
     @Override
