@@ -25,11 +25,14 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
+import io.netty.channel.socket.Worker;
 
 abstract class AbstractOioChannel extends AbstractChannel {
     private volatile InetSocketAddress localAddress;
     volatile InetSocketAddress remoteAddress;
     volatile Thread workerThread;
+    volatile Worker worker;
+    
     final Object interestOpsLock = new Object();
 
     AbstractOioChannel(

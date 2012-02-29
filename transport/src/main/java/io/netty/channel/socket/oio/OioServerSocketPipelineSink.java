@@ -24,7 +24,6 @@ import java.net.SocketTimeoutException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import io.netty.channel.AbstractChannelSink;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelFuture;
@@ -36,7 +35,7 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.DeadLockProofWorker;
 
-class OioServerSocketPipelineSink extends AbstractChannelSink {
+class OioServerSocketPipelineSink extends AbstractOioChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(OioServerSocketPipelineSink.class);

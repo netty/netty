@@ -22,7 +22,6 @@ import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import io.netty.channel.AbstractChannelSink;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -35,7 +34,7 @@ import io.netty.channel.MessageEvent;
  * Receives downstream events from a {@link ChannelPipeline}.  It contains
  * an array of I/O workers.
  */
-class NioDatagramPipelineSink extends AbstractChannelSink {
+class NioDatagramPipelineSink extends AbstractNioChannelSink {
 
     private final NioDatagramWorker[] workers;
     private final AtomicInteger workerIndex = new AtomicInteger();

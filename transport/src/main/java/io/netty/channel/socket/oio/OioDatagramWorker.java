@@ -63,6 +63,8 @@ class OioDatagramWorker extends AbstractOioWorker<OioDatagramChannel> {
     static void write(
             OioDatagramChannel channel, ChannelFuture future,
             Object message, SocketAddress remoteAddress) {
+        boolean iothread = isIoThread(channel);
+        
         try {
             ChannelBuffer buf = (ChannelBuffer) message;
             int offset = buf.readerIndex();
@@ -84,27 +86,45 @@ class OioDatagramWorker extends AbstractOioWorker<OioDatagramChannel> {
                 packet.setSocketAddress(remoteAddress);
             }
             channel.socket.send(packet);
-            fireWriteComplete(channel, length);
+            if (iothread) {
+                fireWriteComplete(channel, length);
+            } else {
+                fireWriteCompleteLater(channel, length);
+            }
             future.setSuccess();
         } catch (Throwable t) {
             future.setFailure(t);
-            fireExceptionCaught(channel, t);
+            if (iothread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+            }
         }
     }
 
     
     static void disconnect(OioDatagramChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
+        boolean iothread = isIoThread(channel);
+        
         try {
             channel.socket.disconnect();
             future.setSuccess();
             if (connected) {
                 // Notify.
-                fireChannelDisconnected(channel);
+                if (iothread) {
+                    fireChannelDisconnected(channel);
+                } else {
+                    fireChannelDisconnectedLater(channel);
+                }
             }
         } catch (Throwable t) {
             future.setFailure(t);
-            fireExceptionCaught(channel, t);
+            if (iothread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+            }
         }
     }
 

@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.sun.nio.sctp.SctpChannel;
 
-import io.netty.channel.AbstractChannelSink;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelFuture;
@@ -45,7 +44,7 @@ import io.netty.util.internal.DeadLockProofWorker;
 
 /**
  */
-class SctpServerPipelineSink extends AbstractChannelSink {
+class SctpServerPipelineSink extends AbstractSctpChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SctpServerPipelineSink.class);

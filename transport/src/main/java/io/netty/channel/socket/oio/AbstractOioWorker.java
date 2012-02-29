@@ -15,29 +15,32 @@
  */
 package io.netty.channel.socket.oio;
 
-import static io.netty.channel.Channels.fireChannelClosed;
-import static io.netty.channel.Channels.fireChannelDisconnected;
-import static io.netty.channel.Channels.fireChannelInterestChanged;
-import static io.netty.channel.Channels.fireChannelUnbound;
-import static io.netty.channel.Channels.fireExceptionCaught;
-import static io.netty.channel.Channels.succeededFuture;
+import static io.netty.channel.Channels.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.Channels;
+import io.netty.channel.socket.ChannelRunnableWrapper;
+import io.netty.channel.socket.Worker;
+import io.netty.util.internal.QueueFactory;
 
 import java.io.IOException;
+import java.util.Queue;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * Abstract base class for Oio-Worker implementations
  *
  * @param <C> {@link AbstractOioChannel}
  */
-abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Runnable {
+abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker {
 
+    private final Queue<Runnable> eventQueue = QueueFactory.createQueue(Runnable.class);
+    
     protected final C channel;
 
     public AbstractOioWorker(C channel) {
         this.channel = channel;
+        channel.worker = this;
     }
 
     @Override
@@ -60,9 +63,13 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Runnab
             }
             
             try {
-               if (!process()) {
-                   break;
-               }
+                boolean cont = process();
+                
+                processEventQueue();
+                
+                if (!cont) {
+                    break;
+                }
             } catch (Throwable t) {
                 if (!channel.isSocketClosed()) {
                     fireExceptionCaught(channel, t);
@@ -76,9 +83,48 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Runnab
         channel.workerThread = null;
 
         // Clean up.
-        close(channel, succeededFuture(channel));
+        close(channel, succeededFuture(channel), true);
     }
     
+    static boolean isIoThread(AbstractOioChannel channel) {
+        return Thread.currentThread() == channel.workerThread;
+    }
+    
+    @Override
+    public ChannelFuture executeInIoThread(Channel channel, Runnable task) {
+        if (channel instanceof AbstractOioChannel && isIoThread((AbstractOioChannel) channel)) {
+            try {
+                task.run();
+                return succeededFuture(channel);
+            } catch (Throwable t) {
+                return failedFuture(channel, t);
+            }
+        } else {
+            ChannelRunnableWrapper channelRunnable = new ChannelRunnableWrapper(channel, task);
+            boolean added = eventQueue.offer(channelRunnable);
+            
+            if (added) {
+                // as we set the SO_TIMEOUT to 1 second this task will get picked up in 1 second at latest
+
+            } else {
+                channelRunnable.setFailure(new RejectedExecutionException("Unable to queue task " + task));
+            }
+            return channelRunnable;
+        }
+    }
+    
+    private void processEventQueue() throws IOException {
+        for (;;) {
+            final Runnable task = eventQueue.poll();
+            if (task == null) {
+                break;
+            }
+
+            task.run();
+        }
+    }
+    
+
     /**
      * Process the incoming messages and also is responsible for call {@link Channels#fireMessageReceived(Channel, Object)} once a message
      * was processed without errors. 
@@ -90,7 +136,8 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Runnab
     
     static void setInterestOps(
             AbstractOioChannel channel, ChannelFuture future, int interestOps) {
-
+        boolean iothread = isIoThread(channel);
+        
         // Override OP_WRITE flag - a user cannot change this flag.
         interestOps &= ~Channel.OP_WRITE;
         interestOps |= channel.getInterestOps() & Channel.OP_WRITE;
@@ -118,18 +165,30 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Runnab
                         workerThread.interrupt();
                     }
                 }
-
-                fireChannelInterestChanged(channel);
+                if (iothread) {
+                    fireChannelInterestChanged(channel);
+                } else {
+                    fireChannelInterestChangedLater(channel);
+                }
             }
         } catch (Throwable t) {
             future.setFailure(t);
-            fireExceptionCaught(channel, t);
+            if (iothread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+            }
         }
     }
     
     static void close(AbstractOioChannel channel, ChannelFuture future) {
+        close(channel, future, isIoThread(channel));
+    }
+    
+    private static void close(AbstractOioChannel channel, ChannelFuture future, boolean iothread) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
+        
         try {
             channel.closeSocket();
             if (channel.setClosed()) {
@@ -141,18 +200,34 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Runnab
                     if (workerThread != null && currentThread != workerThread) {
                         workerThread.interrupt();
                     }
-                    fireChannelDisconnected(channel);
+                    if (iothread) {
+                        fireChannelDisconnected(channel);
+                    } else {
+                        fireChannelDisconnectedLater(channel);
+                    }
                 }
                 if (bound) {
-                    fireChannelUnbound(channel);
+                    if (iothread) {
+                        fireChannelUnbound(channel);
+                    } else {
+                        fireChannelUnboundLater(channel);
+                    }
                 }
-                fireChannelClosed(channel);
+                if (iothread) {
+                    fireChannelClosed(channel);
+                } else {
+                    fireChannelClosedLater(channel);
+                }
             } else {
                 future.setSuccess();
             }
         } catch (Throwable t) {
             future.setFailure(t);
-            fireExceptionCaught(channel, t);
+            if (iothread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+            }
         }
     }
 }
