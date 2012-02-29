@@ -445,18 +445,24 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                 // seems like there is something readable left in the input buffer
                 // or decoder wants a replay - create the cumulation buffer and
                 // copy the input into it
-                if (checkpoint >= 0) {
-                    ChannelBuffer cumulation = this.cumulation =
+                ChannelBuffer cumulation;
+                if (checkpoint > 0) {
+                    int bytesToPreserve = inputSize - (checkpoint - oldReaderIndex);
+                    cumulation = this.cumulation =
+                            newCumulationBuffer(ctx, bytesToPreserve);
+                    cumulation.writeBytes(input, checkpoint, bytesToPreserve);
+                } else if (checkpoint == 0) {
+                    cumulation = this.cumulation =
                             newCumulationBuffer(ctx, inputSize);
                     cumulation.writeBytes(input, oldReaderIndex, inputSize);
                     cumulation.readerIndex(input.readerIndex());
-                    replayable = new ReplayingDecoderBuffer(cumulation);
+
                 } else {
-                    ChannelBuffer cumulation = this.cumulation =
+                    cumulation = this.cumulation =
                             newCumulationBuffer(ctx, input.readableBytes());
                     cumulation.writeBytes(input);
-                    replayable = new ReplayingDecoderBuffer(cumulation);
                 }
+                replayable = new ReplayingDecoderBuffer(cumulation);
             } else {
                 this.cumulation = null;
                 replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
