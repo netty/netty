@@ -446,18 +446,24 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                 // seems like there is something readable left in the input buffer
                 // or decoder wants a replay - create the cumulation buffer and
                 // copy the input into it
-                if (checkpoint >= 0) {
-                    ChannelBuffer cumulation = this.cumulation =
+                ChannelBuffer cumulation;
+                if (checkpoint > 0) {
+                    int bytesToPreserve = inputSize - (checkpoint - oldReaderIndex);
+                    cumulation = this.cumulation =
+                            newCumulationBuffer(ctx, bytesToPreserve);
+                    cumulation.writeBytes(input, checkpoint, bytesToPreserve);
+                } else if (checkpoint == 0) {
+                    cumulation = this.cumulation =
                             newCumulationBuffer(ctx, inputSize);
                     cumulation.writeBytes(input, oldReaderIndex, inputSize);
                     cumulation.readerIndex(input.readerIndex());
-                    replayable = new ReplayingDecoderBuffer(cumulation);
+
                 } else {
-                    ChannelBuffer cumulation = this.cumulation =
+                    cumulation = this.cumulation =
                             newCumulationBuffer(ctx, input.readableBytes());
                     cumulation.writeBytes(input);
-                    replayable = new ReplayingDecoderBuffer(cumulation);
                 }
+                replayable = new ReplayingDecoderBuffer(cumulation);
             } else {
                 this.cumulation = null;
                 replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
@@ -591,9 +597,19 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
         }
     }
 
-    private ChannelBuffer newCumulationBuffer(
+    /**
+     * Create a new {@link ChannelBuffer} which is used for the cumulation.
+     * Be aware that this MUST be a dynamic buffer. Sub-classes may override
+     * this to provide a dynamic {@link ChannelBuffer} which has some
+     * pre-allocated size that better fit their need.
+     *
+     * @param ctx {@link ChannelHandlerContext} for this handler
+     * @return buffer the {@link ChannelBuffer} which is used for cumulation
+     */
+    protected ChannelBuffer newCumulationBuffer(
             ChannelHandlerContext ctx, int minimumCapacity) {
-        return new UnsafeDynamicChannelBuffer(
-                ctx.getChannel().getConfig().getBufferFactory(), minimumCapacity);
+        ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
+        return ChannelBuffers.dynamicBuffer(
+                factory.getDefaultOrder(), Math.max(minimumCapacity, 256), factory);
     }
 }
