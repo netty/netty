@@ -972,7 +972,7 @@ public class SslHandler extends FrameDecoder
             outAppBuf.flip();
 
             if (outAppBuf.hasRemaining()) {
-                ChannelBuffer frame = ChannelBuffers.buffer(outAppBuf.remaining());
+                ChannelBuffer frame = ctx.getChannel().getConfig().getBufferFactory().getBuffer(outAppBuf.remaining());
                 frame.writeBytes(outAppBuf.array(), 0, frame.capacity());
                 return frame;
             } else {
