@@ -20,7 +20,7 @@ import io.netty.channel.DefaultChannelFuture;
 
 public class ChannelRunnableWrapper extends DefaultChannelFuture implements Runnable {
 
-    private Runnable task;
+    private final Runnable task;
 
     public ChannelRunnableWrapper(Channel channel, Runnable task) {
         super(channel, true);
