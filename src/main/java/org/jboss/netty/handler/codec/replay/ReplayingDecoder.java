@@ -18,6 +18,7 @@ package org.jboss.netty.handler.codec.replay;
 import java.net.SocketAddress;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler;
@@ -597,9 +598,19 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
         }
     }
 
-    private ChannelBuffer newCumulationBuffer(
+    /**
+     * Create a new {@link ChannelBuffer} which is used for the cumulation.
+     * Be aware that this MUST be a dynamic buffer. Sub-classes may override
+     * this to provide a dynamic {@link ChannelBuffer} which has some
+     * pre-allocated size that better fit their need.
+     *
+     * @param ctx {@link ChannelHandlerContext} for this handler
+     * @return buffer the {@link ChannelBuffer} which is used for cumulation
+     */
+    protected ChannelBuffer newCumulationBuffer(
             ChannelHandlerContext ctx, int minimumCapacity) {
-        return new UnsafeDynamicChannelBuffer(
-                ctx.getChannel().getConfig().getBufferFactory(), minimumCapacity);
+        ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
+        return ChannelBuffers.dynamicBuffer(
+                factory.getDefaultOrder(), Math.max(minimumCapacity, 256), factory);
     }
 }
