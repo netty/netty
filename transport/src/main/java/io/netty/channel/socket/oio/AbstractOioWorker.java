@@ -34,7 +34,7 @@ import java.util.concurrent.RejectedExecutionException;
  */
 abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker {
 
-    private final Queue<Runnable> eventQueue = QueueFactory.createQueue(Runnable.class);
+    private final Queue<ChannelRunnableWrapper> eventQueue = QueueFactory.createQueue(ChannelRunnableWrapper.class);
     
     protected final C channel;
 
@@ -115,12 +115,13 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
     
     private void processEventQueue() throws IOException {
         for (;;) {
-            final Runnable task = eventQueue.poll();
+            final ChannelRunnableWrapper task = eventQueue.poll();
             if (task == null) {
                 break;
             }
-
-            task.run();
+            if (!task.isCancelled()) {
+                task.run();
+            }
         }
     }
     

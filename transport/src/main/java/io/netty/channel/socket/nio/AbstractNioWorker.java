@@ -109,7 +109,7 @@ abstract class AbstractNioWorker implements Worker {
      */
     protected final Queue<Runnable> writeTaskQueue = QueueFactory.createQueue(Runnable.class);
 
-    private final Queue<Runnable> eventQueue = QueueFactory.createQueue(Runnable.class);
+    private final Queue<ChannelRunnableWrapper> eventQueue = QueueFactory.createQueue(ChannelRunnableWrapper.class);
 
     
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
@@ -324,12 +324,13 @@ abstract class AbstractNioWorker implements Worker {
     
     private void processEventQueue() throws IOException {
         for (;;) {
-            final Runnable task = eventQueue.poll();
+            final ChannelRunnableWrapper task = eventQueue.poll();
             if (task == null) {
                 break;
             }
-
-            task.run();
+            if (!task.isCancelled()) {
+                task.run();
+            }
             cleanUpCancelledKeys();
         }
     }
