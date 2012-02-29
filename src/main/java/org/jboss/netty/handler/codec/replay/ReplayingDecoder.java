@@ -18,7 +18,6 @@ package org.jboss.netty.handler.codec.replay;
 import java.net.SocketAddress;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler;
@@ -30,7 +29,6 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.frame.FrameDecoder;
-import org.jboss.netty.util.CharsetUtil;
 
 /**
  * A specialized variation of {@link FrameDecoder} which enables implementation
