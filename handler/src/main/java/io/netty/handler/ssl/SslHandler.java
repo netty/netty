@@ -594,7 +594,7 @@ public class SslHandler extends FrameDecoder
                     buffer.readerIndex()) & 0x80) != 0 ? 2 : 3;
             int majorVersion = buffer.getUnsignedByte(
                     buffer.readerIndex() + headerLength + 1);
-            if (majorVersion >= 2 && majorVersion < 10) {
+            if (majorVersion == 2 || majorVersion == 3) {
                 // SSLv2
                 if (headerLength == 2) {
                     packetLength = (getShort(buffer, buffer.readerIndex()) & 0x7FFF) + 2;
