@@ -17,6 +17,8 @@ package io.netty.handler.execution;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelEvent;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -136,4 +138,28 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
         doExecute(command);
     }
     
+    @Override
+    protected Executor getChildExecutor(ChannelEvent e) {
+        final Object key = getChildExecutorKey(e);
+        Executor executor = childExecutors.get(key);
+        if (executor == null) {
+            executor = new ChildExecutor();
+            Executor oldExecutor = childExecutors.putIfAbsent(key, executor);
+            if (oldExecutor != null) {
+                executor = oldExecutor;
+            } else {
+                
+                // register a listener so that the ChildExecutor will get removed once the channel was closed
+                e.getChannel().getCloseFuture().addListener(new ChannelFutureListener() {
+                    
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        removeChildExecutor(key);
+                    }
+                });
+            }
+        }
+
+        return executor;
+    }
+
 }
