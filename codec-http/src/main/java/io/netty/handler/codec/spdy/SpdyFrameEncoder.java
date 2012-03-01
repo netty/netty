@@ -34,7 +34,7 @@ import io.netty.handler.codec.oneone.OneToOneEncoder;
 public class SpdyFrameEncoder extends OneToOneEncoder {
 
     private volatile boolean finished;
-    private final SpdyZlibEncoder headerBlockCompressor;
+    private final SpdyHeaderBlockCompressor headerBlockCompressor;
 
     /**
      * Creates a new instance with the default {@code compressionLevel (6)},
@@ -49,7 +49,7 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
      */
     public SpdyFrameEncoder(int compressionLevel, int windowBits, int memLevel) {
         super();
-        headerBlockCompressor = new SpdyZlibEncoder(compressionLevel);
+        headerBlockCompressor = SpdyHeaderBlockCompressor.newInstance(compressionLevel, windowBits, memLevel);
     }
 
     @Override

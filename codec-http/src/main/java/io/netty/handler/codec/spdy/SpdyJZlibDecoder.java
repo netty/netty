@@ -28,21 +28,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jboss.netty.handler.codec.spdy;
+package io.netty.handler.codec.spdy;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.compression.CompressionException;
-import org.jboss.netty.util.internal.jzlib.JZlib;
-import org.jboss.netty.util.internal.jzlib.ZStream;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.handler.codec.compression.CompressionException;
+import io.netty.util.internal.jzlib.JZlib;
+import io.netty.util.internal.jzlib.ZStream;
 
-import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
-class SpdyZlibDecoder {
+class SpdyJZlibDecoder extends SpdyHeaderBlockDecompressor {
 
     private final byte[] out = new byte[8192];
     private final ZStream z = new ZStream();
 
-    public SpdyZlibDecoder() {
+    public SpdyJZlibDecoder() {
         int resultCode;
         resultCode = z.inflateInit(JZlib.W_ZLIB);
         if (resultCode != JZlib.Z_OK) {
@@ -51,6 +51,7 @@ class SpdyZlibDecoder {
         z.next_out = out;
     }
 
+    @Override
     public void setInput(ChannelBuffer compressed) {
         byte[] in = new byte[compressed.readableBytes()];
         compressed.readBytes(in);
@@ -59,6 +60,7 @@ class SpdyZlibDecoder {
         z.avail_in = in.length;
     }
 
+    @Override
     public void decode(ChannelBuffer decompressed) {
         z.next_out_index = 0;
         z.avail_out = out.length;

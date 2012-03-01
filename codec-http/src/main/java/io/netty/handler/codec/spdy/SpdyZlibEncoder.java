@@ -30,13 +30,13 @@
  */
 package io.netty.handler.codec.spdy;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
-
 import java.util.zip.Deflater;
 
 import io.netty.buffer.ChannelBuffer;
 
-class SpdyZlibEncoder {
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+
+class SpdyZlibEncoder extends SpdyHeaderBlockCompressor {
 
     private final byte[] out = new byte[8192];
     private final Deflater compressor;
@@ -50,12 +50,14 @@ class SpdyZlibEncoder {
         compressor.setDictionary(SPDY_DICT);
     }
 
+    @Override
     public void setInput(ChannelBuffer decompressed) {
         byte[] in = new byte[decompressed.readableBytes()];
         decompressed.readBytes(in);
         compressor.setInput(in);
     }
 
+    @Override
     public void encode(ChannelBuffer compressed) {
         while (!compressor.needsInput()) {
             int numBytes = compressor.deflate(out, 0, out.length, Deflater.SYNC_FLUSH);
@@ -63,6 +65,7 @@ class SpdyZlibEncoder {
         }
     }
 
+    @Override
     public void end() {
         compressor.end();
     }

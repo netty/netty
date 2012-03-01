@@ -34,7 +34,8 @@ public class SpdyFrameDecoder extends FrameDecoder {
     private final int maxFrameSize;
     private final int maxHeaderSize;
 
-    private final SpdyZlibDecoder headerBlockDecompressor = new SpdyZlibDecoder();
+    private final SpdyHeaderBlockDecompressor headerBlockDecompressor =
+            SpdyHeaderBlockDecompressor.newInstance();
 
     /**
      * Creates a new instance with the default {@code maxChunkSize (8192)},
