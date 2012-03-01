@@ -29,7 +29,6 @@ import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
@@ -42,7 +41,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 
-class NioServerSocketPipelineSink extends AbstractChannelSink {
+class NioServerSocketPipelineSink extends AbstractNioChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioServerSocketPipelineSink.class);
@@ -55,7 +54,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
     NioServerSocketPipelineSink(Executor workerExecutor, int workerCount) {
         workers = new NioWorker[workerCount];
         for (int i = 0; i < workers.length; i ++) {
-            workers[i] = new NioWorker(id, i + 1, workerExecutor);
+            workers[i] = new NioWorker(workerExecutor);
         }
     }
 
@@ -124,7 +123,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
         } else if (e instanceof MessageEvent) {
             MessageEvent event = (MessageEvent) e;
             NioSocketChannel channel = (NioSocketChannel) event.getChannel();
-            boolean offered = channel.writeBuffer.offer(event);
+            boolean offered = channel.writeBufferQueue.offer(event);
             assert offered;
             channel.worker.writeFromUserCode(channel);
         }

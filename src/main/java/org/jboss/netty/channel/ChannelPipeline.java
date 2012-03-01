@@ -456,6 +456,12 @@ public interface ChannelPipeline {
     void sendDownstream(ChannelEvent e);
 
     /**
+     * Schedules the specified task to be executed in the I/O thread associated
+     * with this pipeline's {@link Channel}.
+     */
+    ChannelFuture execute(Runnable task);
+    
+    /**
      * Returns the {@link Channel} that this pipeline is attached to.
      *
      * @return the channel. {@code null} if this pipeline is not attached yet.

@@ -97,7 +97,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         }
 
         try {
-            flush(ctx);
+            flush(ctx, false);
         } catch (Exception e) {
             if (logger.isWarnEnabled()) {
                 logger.warn("Unexpected exception while sending chunks.", e);
@@ -118,10 +118,10 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         final Channel channel = ctx.getChannel();
         if (channel.isWritable()) {
             this.ctx = ctx;
-            flush(ctx);
+            flush(ctx, false);
         } else if (!channel.isConnected()) {
             this.ctx = ctx;
-            discard(ctx);
+            discard(ctx, false);
         }
     }
 
@@ -132,12 +132,12 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
             switch (cse.getState()) {
             case INTEREST_OPS:
                 // Continue writing when the channel becomes writable.
-                flush(ctx);
+                flush(ctx, true);
                 break;
             case OPEN:
                 if (!Boolean.TRUE.equals(cse.getValue())) {
                     // Fail all pending writes
-                    discard(ctx);
+                    flush(ctx, true);
                 }
                 break;
             }
@@ -145,7 +145,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         ctx.sendUpstream(e);
     }
 
-    private void discard(ChannelHandlerContext ctx) {
+    private void discard(ChannelHandlerContext ctx, boolean fireNow) {
         ClosedChannelException cause = null;
         boolean fireExceptionCaught = false;
            
@@ -184,10 +184,10 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         }
     }
 
-    private synchronized void flush(ChannelHandlerContext ctx) throws Exception {
+    private synchronized void flush(ChannelHandlerContext ctx, boolean fireNow) throws Exception {
         final Channel channel = ctx.getChannel();
         if (!channel.isConnected()) {
-            discard(ctx);
+            discard(ctx, fireNow);
         }
 
         while (channel.isWritable()) {
@@ -225,7 +225,11 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                         this.currentEvent = null;
 
                         currentEvent.getFuture().setFailure(t);
-                        fireExceptionCaught(ctx, t);
+                        if (fireNow) {  
+                            fireExceptionCaught(ctx, t);
+                        } else {
+                            fireExceptionCaughtLater(ctx, t);
+                        }
 
                         closeInput(chunks);
                         break;
@@ -266,7 +270,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
             }
 
             if (!channel.isConnected()) {
-                discard(ctx);
+                discard(ctx, fireNow);
                 break;
             }
         }

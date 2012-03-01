@@ -300,6 +300,22 @@ public final class Channels {
     /**
      * Sends a {@code "writeComplete"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
+     * the specified {@link Channel} in the next io-thread.
+     */
+    public static ChannelFuture fireWriteCompleteLater(final Channel channel, final long amount) {
+        return channel.getPipeline().execute(new Runnable() {
+            
+            public void run() {
+                fireWriteComplete(channel, amount);
+            }
+        });
+        
+    }
+
+    
+    /**
+     * Sends a {@code "writeComplete"} event to the first
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
      */
     public static void fireWriteComplete(Channel channel, long amount) {
@@ -320,6 +336,22 @@ public final class Channels {
     public static void fireWriteComplete(ChannelHandlerContext ctx, long amount) {
         ctx.sendUpstream(new DefaultWriteCompletionEvent(ctx.getChannel(), amount));
     }
+    
+    /**
+     * Sends a {@code "channelInterestChanged"} event to the first
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
+     * the specified {@link Channel} once the io-thread runs again.
+     */
+    public static ChannelFuture fireChannelInterestChangedLater(final Channel channel) {
+        return channel.getPipeline().execute(new Runnable() {
+            
+            public void run() {
+                fireChannelInterestChanged(channel);
+                
+            }
+        });
+    }
+    
     /**
      * Sends a {@code "channelInterestChanged"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
@@ -348,6 +380,19 @@ public final class Channels {
     /**
      * Sends a {@code "channelDisconnected"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
+     * the specified {@link Channel} once the io-thread runs again.
+     */
+    public static ChannelFuture fireChannelDisconnectedLater(final Channel channel) {
+        return channel.getPipeline().execute(new Runnable() {
+            
+            public void run() {
+                fireChannelDisconnected(channel);
+            }
+        });
+    }
+    /**
+     * Sends a {@code "channelDisconnected"} event to the first
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
      */
     public static void fireChannelDisconnected(Channel channel) {
@@ -370,6 +415,21 @@ public final class Channels {
     /**
      * Sends a {@code "channelUnbound"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
+     * the specified {@link Channel} once the io-thread runs again.
+     */
+    public static ChannelFuture fireChannelUnboundLater(final Channel channel) {
+        return channel.getPipeline().execute(new Runnable() {
+            
+            public void run() {
+                fireChannelUnbound(channel);
+            }
+        });
+    }
+    
+    
+    /**
+     * Sends a {@code "channelUnbound"} event to the first
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
      * the specified {@link Channel}.
      */
     public static void fireChannelUnbound(Channel channel) {
@@ -389,6 +449,24 @@ public final class Channels {
                 ctx.getChannel(), ChannelState.BOUND, null));
     }
 
+    
+    
+    /**
+     * Sends a {@code "channelClosed"} event to the first
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
+     * the specified {@link Channel} once the io-thread runs again.
+     */
+    public static ChannelFuture fireChannelClosedLater(final Channel channel) {
+        return channel.getPipeline().execute(new Runnable() {
+            
+            public void run() {
+                fireChannelClosed(channel);
+            }
+        });
+      
+    }
+    
+    
     /**
      * Sends a {@code "channelClosed"} event to the first
      * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
@@ -415,6 +493,35 @@ public final class Channels {
         ctx.sendUpstream(
                 new UpstreamChannelStateEvent(
                         ctx.getChannel(), ChannelState.OPEN, Boolean.FALSE));
+    }
+
+    /**
+     * Sends a {@code "exceptionCaught"} event to the first
+     * {@link ChannelUpstreamHandler} in the {@link ChannelPipeline} of
+     * the specified {@link Channel} once the io-thread runs again.
+     */
+    public static ChannelFuture fireExceptionCaughtLater(final Channel channel, final Throwable cause) {
+        return channel.getPipeline().execute(new Runnable() {
+            
+            public void run() {
+                fireExceptionCaught(channel, cause);
+            }
+        });
+    }
+
+    /**
+     * Sends a {@code "exceptionCaught"} event to the
+     * {@link ChannelUpstreamHandler} which is placed in the closest upstream
+     * from the handler associated with the specified
+     * {@link ChannelHandlerContext} once the io-thread runs again.
+     */
+    public static ChannelFuture fireExceptionCaughtLater(final ChannelHandlerContext ctx, final Throwable cause) {
+        return ctx.getPipeline().execute(new Runnable() {
+
+            public void run() {
+                fireExceptionCaught(ctx, cause);
+            }
+        });
     }
 
     /**

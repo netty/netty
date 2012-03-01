@@ -23,7 +23,6 @@ import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.Executor;
 
-import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
@@ -36,7 +35,7 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 
-class OioServerSocketPipelineSink extends AbstractChannelSink {
+class OioServerSocketPipelineSink extends AbstractOioChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(OioServerSocketPipelineSink.class);

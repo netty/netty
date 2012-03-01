@@ -25,12 +25,14 @@ import java.util.Queue;
 import org.jboss.netty.buffer.ChannelBufferFactory;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineException;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DefaultChannelPipeline;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -214,6 +216,15 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
             }
 
             throw new CodecEmbedderException(actualCause);
+        }
+        
+        public ChannelFuture execute(ChannelPipeline pipeline, Runnable task) {
+            try {
+                task.run();
+                return Channels.succeededFuture(pipeline.getChannel());
+            } catch (Throwable t) {
+                return Channels.failedFuture(pipeline.getChannel(), t);
+            }
         }
     }
 

@@ -96,6 +96,10 @@ public class StaticChannelPipeline implements ChannelPipeline {
         }
     }
 
+    public ChannelFuture execute(Runnable task) {
+        return getSink().execute(this, task);
+    }
+    
     public Channel getChannel() {
         return channel;
     }

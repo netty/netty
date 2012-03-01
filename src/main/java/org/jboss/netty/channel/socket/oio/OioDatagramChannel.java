@@ -22,28 +22,21 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
-import java.net.SocketAddress;
 import java.net.SocketException;
 
-import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.socket.DatagramChannel;
 import org.jboss.netty.channel.socket.DatagramChannelConfig;
 import org.jboss.netty.channel.socket.DefaultDatagramChannelConfig;
 
-final class OioDatagramChannel extends AbstractChannel
+final class OioDatagramChannel extends AbstractOioChannel
                                 implements DatagramChannel {
 
     final MulticastSocket socket;
-    final Object interestOpsLock = new Object();
     private final DatagramChannelConfig config;
-    volatile Thread workerThread;
-    private volatile InetSocketAddress localAddress;
-    volatile InetSocketAddress remoteAddress;
 
     OioDatagramChannel(
             ChannelFactory factory,
@@ -66,67 +59,13 @@ final class OioDatagramChannel extends AbstractChannel
                     "Failed to configure the datagram socket timeout.", e);
         }
         config = new DefaultDatagramChannelConfig(socket);
-
+        
         fireChannelOpen(this);
+
     }
 
     public DatagramChannelConfig getConfig() {
         return config;
-    }
-
-    public InetSocketAddress getLocalAddress() {
-        InetSocketAddress localAddress = this.localAddress;
-        if (localAddress == null) {
-            try {
-                this.localAddress = localAddress =
-                    (InetSocketAddress) socket.getLocalSocketAddress();
-            } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
-                return null;
-            }
-        }
-        return localAddress;
-    }
-
-    public InetSocketAddress getRemoteAddress() {
-        InetSocketAddress remoteAddress = this.remoteAddress;
-        if (remoteAddress == null) {
-            try {
-                this.remoteAddress = remoteAddress =
-                    (InetSocketAddress) socket.getRemoteSocketAddress();
-            } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
-                return null;
-            }
-        }
-        return remoteAddress;
-    }
-
-    public boolean isBound() {
-        return isOpen() && socket.isBound();
-    }
-
-    public boolean isConnected() {
-        return isOpen() && socket.isConnected();
-    }
-
-    @Override
-    protected boolean setClosed() {
-        return super.setClosed();
-    }
-
-    @Override
-    protected void setInterestOpsNow(int interestOps) {
-        super.setInterestOpsNow(interestOps);
-    }
-
-    @Override
-    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
-        if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
-            return super.write(message, null);
-        } else {
-            return super.write(message, remoteAddress);
-        }
     }
 
     public void joinGroup(InetAddress multicastAddress) {
@@ -172,4 +111,36 @@ final class OioDatagramChannel extends AbstractChannel
             throw new ChannelException(e);
         }
     }
+
+    @Override
+    boolean isSocketBound() {
+        return socket.isBound();
+    }
+
+    @Override
+    boolean isSocketConnected() {
+        return socket.isConnected();
+    }
+
+    @Override
+    InetSocketAddress getLocalSocketAddress() throws Exception {
+        return (InetSocketAddress) socket.getLocalSocketAddress();
+    }
+
+    @Override
+    InetSocketAddress getRemoteSocketAddress() throws Exception {
+        return (InetSocketAddress) socket.getRemoteSocketAddress();
+    }
+
+    @Override
+    void closeSocket() throws IOException {
+        socket.close();
+    }
+
+    @Override
+    boolean isSocketClosed() {
+        return socket.isClosed();
+    }
+    
+    
 }

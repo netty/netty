@@ -31,7 +31,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
@@ -46,7 +45,7 @@ import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.QueueFactory;
 
-class NioClientSocketPipelineSink extends AbstractChannelSink {
+class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioClientSocketPipelineSink.class);
@@ -73,7 +72,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         
         workers = new NioWorker[workerCount];
         for (int i = 0; i < workers.length; i ++) {
-            workers[i] = new NioWorker(id, i + 1, workerExecutor);
+            workers[i] = new NioWorker(workerExecutor);
         }
     }
 
@@ -114,7 +113,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         } else if (e instanceof MessageEvent) {
             MessageEvent event = (MessageEvent) e;
             NioSocketChannel channel = (NioSocketChannel) event.getChannel();
-            boolean offered = channel.writeBuffer.offer(event);
+            boolean offered = channel.writeBufferQueue.offer(event);
             assert offered;
             channel.worker.writeFromUserCode(channel);
         }
@@ -124,7 +123,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             NioClientSocketChannel channel, ChannelFuture future,
             SocketAddress localAddress) {
         try {
-            channel.socket.socket().bind(localAddress);
+            channel.channel.socket().bind(localAddress);
             channel.boundManually = true;
             channel.setBound();
             future.setSuccess();
@@ -139,7 +138,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             final NioClientSocketChannel channel, final ChannelFuture cf,
             SocketAddress remoteAddress) {
         try {
-            if (channel.socket.connect(remoteAddress)) {
+            if (channel.channel.connect(remoteAddress)) {
                 channel.worker.register(channel, cf);
             } else {
                 channel.getCloseFuture().addListener(new ChannelFutureListener() {
@@ -405,7 +404,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         private void connect(SelectionKey k) {
             NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
             try {
-                if (ch.socket.finishConnect()) {
+                if (ch.channel.finishConnect()) {
                     k.cancel();
                     ch.worker.register(ch, ch.connectFuture);
                 }
@@ -434,7 +433,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
 
         public void run() {
             try {
-                channel.socket.register(
+                channel.channel.register(
                         boss.selector, SelectionKey.OP_CONNECT, channel);
             } catch (ClosedChannelException e) {
                 channel.worker.close(channel, succeededFuture(channel));
