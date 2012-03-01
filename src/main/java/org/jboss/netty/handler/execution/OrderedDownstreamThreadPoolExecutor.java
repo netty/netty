@@ -17,6 +17,8 @@ package org.jboss.netty.handler.execution;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.util.ObjectSizeEstimator;
 
 import java.util.concurrent.Executor;
@@ -137,5 +139,30 @@ public final class OrderedDownstreamThreadPoolExecutor extends OrderedMemoryAwar
         }
         doExecute(command);
     }
+    
+    @Override
+    protected Executor getChildExecutor(ChannelEvent e) {
+        final Object key = getChildExecutorKey(e);
+        Executor executor = childExecutors.get(key);
+        if (executor == null) {
+            executor = new ChildExecutor();
+            Executor oldExecutor = childExecutors.putIfAbsent(key, executor);
+            if (oldExecutor != null) {
+                executor = oldExecutor;
+            } else {
+                
+                // register a listener so that the ChildExecutor will get removed once the channel was closed
+                e.getChannel().getCloseFuture().addListener(new ChannelFutureListener() {
+                    
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        removeChildExecutor(key);
+                    }
+                });
+            }
+        }
+
+        return executor;
+    }
+
     
 }
