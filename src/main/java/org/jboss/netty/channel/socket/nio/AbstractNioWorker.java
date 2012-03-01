@@ -60,8 +60,8 @@ abstract class AbstractNioWorker implements Worker {
 
     
     /**
-     * Executor used to execute {@link Runnable}s such as
-     * {@link ChannelRegistionTask}.
+     * Executor used to execute {@link Runnable}s such as channel registration
+     * task.
      */
     private final Executor executor;
 
@@ -100,7 +100,7 @@ abstract class AbstractNioWorker implements Worker {
     private final Object startStopLock = new Object();
 
     /**
-     * Queue of {@link ChannelRegistionTask}s
+     * Queue of channel registration tasks.
      */
     private final Queue<Runnable> registerTaskQueue = QueueFactory.createQueue(Runnable.class);
 
@@ -286,14 +286,16 @@ abstract class AbstractNioWorker implements Worker {
            
            if (added) {
                // wake up the selector to speed things
-               selector.wakeup();
+               // wake up the selector to speed things
+               Selector selector = this.selector;
+               if (selector != null) {
+                   selector.wakeup();
+               }
            } else {
                channelRunnable.setFailure(new RejectedExecutionException("Unable to queue task " + task));
            }
            return channelRunnable;
        }
-       
-       
     }
     
     private void processRegisterTaskQueue() throws IOException {
@@ -765,7 +767,7 @@ abstract class AbstractNioWorker implements Worker {
      * was something to be read. The channel would previously have registered its interest
      * in read operations.
      *
-     * @param key The selection key which contains the Selector registration information.
+     * @param k The selection key which contains the Selector registration information.
      */
     protected abstract boolean read(SelectionKey k);
 
