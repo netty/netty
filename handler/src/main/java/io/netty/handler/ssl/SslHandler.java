@@ -574,15 +574,15 @@ public class SslHandler extends FrameDecoder
         if (tls) {
             // SSLv3 or TLS - Check ProtocolVersion
             int majorVersion = buffer.getUnsignedByte(buffer.readerIndex() + 1);
-            if (majorVersion >= 3 && majorVersion < 10) {
+            if (majorVersion == 3) {
                 // SSLv3 or TLS
                 packetLength = (getShort(buffer, buffer.readerIndex() + 3) & 0xFFFF) + 5;
                 if (packetLength <= 5) {
-                    // Neither SSLv2 or TLSv1 (i.e. SSLv2 or bad data)
+                    // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                     tls = false;
                 }
             } else {
-                // Neither SSLv2 or TLSv1 (i.e. SSLv2 or bad data)
+                // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                 tls = false;
             }
         }
