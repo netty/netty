@@ -110,7 +110,7 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
 
     private final Executor executor;
     private final boolean handleDownstream;
-	private final boolean handleUpstream;
+    private final boolean handleUpstream;
 
     /**
      * Creates a new instance with the specified {@link Executor} which only handles upstream events.
