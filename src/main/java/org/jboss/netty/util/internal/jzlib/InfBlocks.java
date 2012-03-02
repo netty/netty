@@ -61,7 +61,7 @@ final class InfBlocks {
 
     private static final int TYPE = 0; // get type bits (3, including end bit)
     private static final int LENS = 1; // get lengths for stored
-    private static final int STORED = 2;// processing stored block
+    private static final int STORED = 2; // processing stored block
     private static final int TABLE = 3; // get table lengths
     private static final int BTREE = 4; // get bit lengths tree for a dynamic block
     private static final int DTREE = 5; // get length, distance trees for a dynamic block

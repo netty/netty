@@ -76,7 +76,7 @@ final class Inflate {
     private static final int GZIP_FNAME = 21;
     private static final int GZIP_FCOMMENT = 22;
     private static final int GZIP_FHCRC = 23;
-    private static final int GZIP_CRC32= 24;
+    private static final int GZIP_CRC32 = 24;
     private static final int GZIP_ISIZE = 25;
 
     private int mode; // current inflate mode
@@ -305,7 +305,7 @@ final class Inflate {
                     break;
                 } else if (z.istate.wrapperType == WrapperType.ZLIB) {
                     z.istate.mode = CHECK4;
-                } else if (z.istate.wrapperType == WrapperType.GZIP){
+                } else if (z.istate.wrapperType == WrapperType.GZIP) {
                     gzipCRC32 = 0;
                     gzipISize = 0;
                     gzipBytesToRead = 4;
