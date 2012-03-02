@@ -96,7 +96,7 @@ final class Deflate {
             "data error", // Z_DATA_ERROR    (-3)
             "insufficient memory", // Z_MEM_ERROR     (-4)
             "buffer error", // Z_BUF_ERROR     (-5)
-            "incompatible version",// Z_VERSION_ERROR (-6)
+            "incompatible version", // Z_VERSION_ERROR (-6)
             "" };
 
     // block not completed, need more input or more output
@@ -342,7 +342,7 @@ final class Deflate {
 
     // Scan a literal or distance tree to determine the frequencies of the codes
     // in the bit length tree.
-    private void scan_tree(short[] tree,// the tree to be scanned
+    private void scan_tree(short[] tree, // the tree to be scanned
             int max_code // and its largest code of non zero frequency
     ) {
         int n; // iterates over all tree elements
@@ -437,7 +437,7 @@ final class Deflate {
 
     // Send a literal or distance tree in compressed form, using the codes in
     // bl_tree.
-    private void send_tree(short[] tree,// the tree to be sent
+    private void send_tree(short[] tree, // the tree to be sent
             int max_code // and its largest code of non zero frequency
     ) {
         int n; // iterates over all tree elements
@@ -514,7 +514,7 @@ final class Deflate {
 
     private void send_code(int c, short[] tree) {
         int c2 = c * 2;
-        send_bits((tree[c2] & 0xffff), (tree[c2 + 1] & 0xffff));
+        send_bits(tree[c2] & 0xffff, tree[c2 + 1] & 0xffff);
     }
 
     private void send_bits(int value, int length) {
@@ -804,7 +804,7 @@ final class Deflate {
             int stored_len, // length of input block
             boolean eof // true if this is the last block for a file
     ) {
-        int opt_lenb, static_lenb;// opt_len and static_len in bytes
+        int opt_lenb, static_lenb; // opt_len and static_len in bytes
         int max_blindex = 0; // index of last bit length code of non zero freq
 
         // Build the Huffman trees unless a stored block is forced
