@@ -110,25 +110,40 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
 
     private final Executor executor;
     private final boolean handleDownstream;
+	private final boolean handleUpstream;
+
+    /**
+     * Creates a new instance with the specified {@link Executor} which only handles upstream events.
+     * Specify an {@link OrderedMemoryAwareThreadPoolExecutor} if unsure.
+     */
+    public ExecutionHandler(Executor executor) {
+        this(executor, false, true);
+    }
+    
+    /**
+     * Use {@link #ExecutionHandler(Executor, boolean, boolean)}
+     * 
+     * {@link Deprecated}
+     */
+    @Deprecated
+    public ExecutionHandler(Executor executor, boolean handleDownstream) {
+        this(executor, handleDownstream, true);
+    }
 
     /**
      * Creates a new instance with the specified {@link Executor}.
      * Specify an {@link OrderedMemoryAwareThreadPoolExecutor} if unsure.
      */
-    public ExecutionHandler(Executor executor) {
-        this(executor, false);
-    }
-    
-    /**
-     * Creates a new instance with the specified {@link Executor}.
-     * Specify an {@link OrderedMemoryAwareThreadPoolExecutor} if unsure.
-     */
-    public ExecutionHandler(Executor executor, boolean handleDownstream) {
+    public ExecutionHandler(Executor executor, boolean handleDownstream, boolean handleUpstream) {
         if (executor == null) {
             throw new NullPointerException("executor");
         }
+        if (!handleDownstream && !handleUpstream) {
+            throw new IllegalArgumentException("You must handle at least handle one event type");
+        }
         this.executor = executor;
         this.handleDownstream = handleDownstream;
+        this.handleUpstream = handleUpstream;
     }
 
     /**
@@ -154,7 +169,11 @@ public class ExecutionHandler implements ChannelUpstreamHandler, ChannelDownstre
     @Override
     public void handleUpstream(
             ChannelHandlerContext context, ChannelEvent e) throws Exception {
-        executor.execute(new ChannelUpstreamEventRunnable(context, e));
+        if (handleUpstream) {
+            executor.execute(new ChannelUpstreamEventRunnable(context, e));
+        } else {
+            context.sendUpstream(e);
+        }
     }
 
     @Override
