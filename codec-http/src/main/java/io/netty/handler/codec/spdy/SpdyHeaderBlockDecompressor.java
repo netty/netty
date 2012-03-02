@@ -20,7 +20,7 @@ import io.netty.buffer.ChannelBuffer;
 abstract class SpdyHeaderBlockDecompressor {
 
     static SpdyHeaderBlockDecompressor newInstance() {
-        return new SpdyJZlibDecoder();
+        return new SpdyHeaderBlockJZlibDecompressor();
     }
 
     abstract void setInput(ChannelBuffer compressed);

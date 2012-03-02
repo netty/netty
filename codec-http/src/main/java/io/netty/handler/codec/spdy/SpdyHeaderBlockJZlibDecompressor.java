@@ -22,12 +22,12 @@ import io.netty.util.internal.jzlib.ZStream;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
-class SpdyJZlibDecoder extends SpdyHeaderBlockDecompressor {
+class SpdyHeaderBlockJZlibDecompressor extends SpdyHeaderBlockDecompressor {
 
     private final byte[] out = new byte[8192];
     private final ZStream z = new ZStream();
 
-    public SpdyJZlibDecoder() {
+    public SpdyHeaderBlockJZlibDecompressor() {
         int resultCode;
         resultCode = z.inflateInit(JZlib.W_ZLIB);
         if (resultCode != JZlib.Z_OK) {

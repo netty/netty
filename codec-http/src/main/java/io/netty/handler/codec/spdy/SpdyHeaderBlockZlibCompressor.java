@@ -21,12 +21,12 @@ import io.netty.buffer.ChannelBuffer;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
-class SpdyZlibEncoder extends SpdyHeaderBlockCompressor {
+class SpdyHeaderBlockZlibCompressor extends SpdyHeaderBlockCompressor {
 
     private final byte[] out = new byte[8192];
     private final Deflater compressor;
 
-    public SpdyZlibEncoder(int compressionLevel) {
+    public SpdyHeaderBlockZlibCompressor(int compressionLevel) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");

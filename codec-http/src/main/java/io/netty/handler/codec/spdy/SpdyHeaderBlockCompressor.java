@@ -37,11 +37,14 @@ abstract class SpdyHeaderBlockCompressor {
         USE_ZLIB = java7;
     }
 
-    static SpdyHeaderBlockCompressor newInstance(int compressionLevel, int windowBits, int memLevel) {
+    static SpdyHeaderBlockCompressor newInstance(
+            int compressionLevel, int windowBits, int memLevel) {
+
         if (USE_ZLIB) {
-            return new SpdyZlibEncoder(compressionLevel);
+            return new SpdyHeaderBlockZlibCompressor(compressionLevel);
         } else {
-            return new SpdyJZlibEncoder(compressionLevel, windowBits, memLevel);
+            return new SpdyHeaderBlockJZlibCompressor(
+                    compressionLevel, windowBits, memLevel);
         }
     }
 
