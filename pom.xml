@@ -286,7 +286,7 @@
           <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>netty-build</artifactId>
-            <version>6</version>
+            <version>7</version>
           </dependency>
         </dependencies>
       </plugin>
