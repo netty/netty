@@ -22,11 +22,11 @@ import org.jboss.netty.handler.codec.compression.CompressionException;
 import org.jboss.netty.util.internal.jzlib.JZlib;
 import org.jboss.netty.util.internal.jzlib.ZStream;
 
-class SpdyJZlibEncoder extends SpdyHeaderBlockCompressor {
+class SpdyHeaderBlockJZlibCompressor extends SpdyHeaderBlockCompressor {
 
     private final ZStream z = new ZStream();
 
-    public SpdyJZlibEncoder(int compressionLevel, int windowBits, int memLevel) {
+    public SpdyHeaderBlockJZlibCompressor(int compressionLevel, int windowBits, int memLevel) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
