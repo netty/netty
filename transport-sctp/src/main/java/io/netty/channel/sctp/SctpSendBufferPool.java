@@ -199,8 +199,7 @@ final class SctpSendBufferPool {
             final MessageInfo messageInfo = MessageInfo.createOutgoing(ch.association(), null, streamNo);
             messageInfo.payloadProtocolID(protocolId);
             messageInfo.streamNumber(streamNo);
-            ch.send(buffer, messageInfo);
-            return writtenBytes();
+            return ch.send(buffer, messageInfo);
         }
 
         @Override
@@ -245,8 +244,7 @@ final class SctpSendBufferPool {
             final MessageInfo messageInfo = MessageInfo.createOutgoing(ch.association(), null, streamNo);
             messageInfo.payloadProtocolID(protocolId);
             messageInfo.streamNumber(streamNo);
-            ch.send(buffer, messageInfo);
-            return writtenBytes();
+            return ch.send(buffer, messageInfo);
         }
 
         @Override
