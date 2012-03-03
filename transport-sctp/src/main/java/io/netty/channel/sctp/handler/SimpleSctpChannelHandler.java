@@ -19,18 +19,12 @@ import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelHandler;
 import io.netty.channel.sctp.SctpNotificationEvent;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
 
 /**
  * SCTP Channel Handler (upstream + downstream) with SCTP notification handling
  */
 
 public class SimpleSctpChannelHandler extends SimpleChannelHandler {
-
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(SimpleSctpUpstreamHandler.class.getName());
-
 
     @Override
     public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent event) throws Exception {
