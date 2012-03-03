@@ -22,8 +22,6 @@ import io.netty.channel.ChannelPipelineFactory;
 import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
-import io.netty.handler.logging.LoggingHandler;
-import io.netty.logging.InternalLogLevel;
 
 public class HttpSnoopServerPipelineFactory implements ChannelPipelineFactory {
     @Override
