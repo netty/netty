@@ -419,10 +419,18 @@ public class MemoryAwareThreadPoolExecutor extends ThreadPoolExecutor {
                     //System.out.println("READABLE");
                     ChannelHandlerContext ctx = eventTask.getContext();
                     if (ctx.getHandler() instanceof ExecutionHandler) {
-                        // readSuspended = false;
-                        ctx.setAttachment(null);
+                        // check if the attachment was set as this means that we suspend the channel from reads. This only works when 
+                        // this pool is used with ExecutionHandler but I guess thats good enough for us.
+                        //
+                        // See #215
+                        if (ctx.getAttachment() != null) {
+                            // readSuspended = false;
+                            ctx.setAttachment(null);
+                            channel.setReadable(true);
+                        }
+                    } else {
+                        channel.setReadable(true);
                     }
-                    channel.setReadable(true);
                 }
             }
         }
