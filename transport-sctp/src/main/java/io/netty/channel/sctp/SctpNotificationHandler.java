@@ -59,7 +59,7 @@ class SctpNotificationHandler extends AbstractNotificationHandler {
 
     @Override
     public HandlerResult handleNotification(ShutdownNotification notification, Object o) {
-        Channels.fireChannelDisconnected(sctpChannel);
+        sctpChannel.worker.close(sctpChannel, Channels.succeededFuture(sctpChannel));
         return HandlerResult.RETURN;
     }
 
