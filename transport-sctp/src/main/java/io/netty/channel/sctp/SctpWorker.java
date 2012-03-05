@@ -31,6 +31,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -45,6 +46,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.ReceiveBufferSizePredictor;
 import io.netty.channel.sctp.SctpSendBufferPool.SendBuffer;
+import io.netty.channel.socket.ChannelRunnableWrapper;
+import io.netty.channel.socket.Worker;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.DeadLockProofWorker;
@@ -53,7 +56,7 @@ import io.netty.util.internal.QueueFactory;
 /**
  */
 @SuppressWarnings("unchecked")
-class SctpWorker implements Runnable {
+class SctpWorker implements Worker {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SctpWorker.class);
@@ -64,13 +67,15 @@ class SctpWorker implements Runnable {
 
     private final Executor executor;
     private boolean started;
-    private volatile Thread thread;
+    volatile Thread thread;
     volatile Selector selector;
     private final AtomicBoolean wakenUp = new AtomicBoolean();
     private final ReadWriteLock selectorGuard = new ReentrantReadWriteLock();
     private final Object startStopLock = new Object();
     private final Queue<Runnable> registerTaskQueue = QueueFactory.createQueue(Runnable.class);
     private final Queue<Runnable> writeTaskQueue = QueueFactory.createQueue(Runnable.class);
+    private final Queue<Runnable> eventQueue = QueueFactory.createQueue(Runnable.class);
+
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
     private final SctpReceiveBufferPool recvBufferPool = new SctpReceiveBufferPool();
@@ -188,6 +193,7 @@ class SctpWorker implements Runnable {
 
                 cancelledKeys = 0;
                 processRegisterTaskQueue();
+                processEventQueue();
                 processWriteTaskQueue();
                 processSelectedKeys(selector.selectedKeys());
 
@@ -240,7 +246,35 @@ class SctpWorker implements Runnable {
             }
         }
     }
+    
+    @Override
+    public ChannelFuture executeInIoThread(Channel channel, Runnable task) {
+        if (channel instanceof SctpChannelImpl && isIoThread((SctpChannelImpl) channel)) {
+            try {
+                task.run();
+                return succeededFuture(channel);
+            } catch (Throwable t) {
+                return failedFuture(channel, t);
+            }
+        } else {
+            ChannelRunnableWrapper channelRunnable = new ChannelRunnableWrapper(channel, task);
+            boolean added = eventQueue.offer(channelRunnable);
+            
+            if (added) {
+                // wake up the selector to speed things
+                selector.wakeup();
+            } else {
+                channelRunnable.setFailure(new RejectedExecutionException("Unable to queue task " + task));
+            }
+            return channelRunnable;
+        }
 
+    }
+    
+    static boolean isIoThread(SctpChannelImpl channel) {
+        return Thread.currentThread() == channel.worker.thread;
+    }
+    
     private void processRegisterTaskQueue() throws IOException {
         for (; ;) {
             final Runnable task = registerTaskQueue.poll();
@@ -264,7 +298,18 @@ class SctpWorker implements Runnable {
             cleanUpCancelledKeys();
         }
     }
-
+    
+    private void processEventQueue() throws IOException {
+        for (;;) {
+            final Runnable task = eventQueue.poll();
+            if (task == null) {
+                break;
+            }
+            task.run();
+            cleanUpCancelledKeys();
+        }
+    }
+    
     private void processSelectedKeys(final Set<SelectionKey> selectedKeys) throws IOException {
         for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
             SelectionKey k = i.next();

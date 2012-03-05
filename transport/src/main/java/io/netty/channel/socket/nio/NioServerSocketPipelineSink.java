@@ -29,7 +29,6 @@ import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import io.netty.channel.AbstractChannelSink;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelFuture;
@@ -41,7 +40,7 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.DeadLockProofWorker;
 
-class NioServerSocketPipelineSink extends AbstractChannelSink {
+class NioServerSocketPipelineSink extends AbstractNioChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioServerSocketPipelineSink.class);
@@ -122,7 +121,7 @@ class NioServerSocketPipelineSink extends AbstractChannelSink {
         } else if (e instanceof MessageEvent) {
             MessageEvent event = (MessageEvent) e;
             NioSocketChannel channel = (NioSocketChannel) event.getChannel();
-            boolean offered = channel.writeBuffer.offer(event);
+            boolean offered = channel.writeBufferQueue.offer(event);
             assert offered;
             channel.worker.writeFromUserCode(channel);
         }

@@ -17,7 +17,6 @@ package io.netty.channel.sctp;
 
 import io.netty.channel.ReceiveBufferSizePredictor;
 import io.netty.channel.ReceiveBufferSizePredictorFactory;
-import io.netty.channel.socket.SocketChannelConfig;
 
 /**
  * A {@link io.netty.channel.sctp.SctpChannelConfig} for a NIO SCTP/IP {@link io.netty.channel.sctp.SctpChannel}.

@@ -31,7 +31,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import io.netty.channel.AbstractChannelSink;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -45,7 +44,7 @@ import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.DeadLockProofWorker;
 import io.netty.util.internal.QueueFactory;
 
-class NioClientSocketPipelineSink extends AbstractChannelSink {
+class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioClientSocketPipelineSink.class);
@@ -113,7 +112,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         } else if (e instanceof MessageEvent) {
             MessageEvent event = (MessageEvent) e;
             NioSocketChannel channel = (NioSocketChannel) event.getChannel();
-            boolean offered = channel.writeBuffer.offer(event);
+            boolean offered = channel.writeBufferQueue.offer(event);
             assert offered;
             channel.worker.writeFromUserCode(channel);
         }
@@ -123,7 +122,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             NioClientSocketChannel channel, ChannelFuture future,
             SocketAddress localAddress) {
         try {
-            channel.socket.socket().bind(localAddress);
+            channel.channel.socket().bind(localAddress);
             channel.boundManually = true;
             channel.setBound();
             future.setSuccess();
@@ -138,7 +137,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
             final NioClientSocketChannel channel, final ChannelFuture cf,
             SocketAddress remoteAddress) {
         try {
-            if (channel.socket.connect(remoteAddress)) {
+            if (channel.channel.connect(remoteAddress)) {
                 channel.worker.register(channel, cf);
             } else {
                 channel.getCloseFuture().addListener(new ChannelFutureListener() {
@@ -242,7 +241,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                 wakenUp.set(false);
 
                 try {
-                    int selectedKeyCount = selector.select(500);
+                    int selectedKeyCount = selector.select(10);
 
                     // 'wakenUp.compareAndSet(false, true)' is always evaluated
                     // before calling 'selector.wakeup()' to reduce the wake-up
@@ -282,9 +281,9 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
                         processSelectedKeys(selector.selectedKeys());
                     }
 
-                    // Handle connection timeout every 0.5 seconds approximately.
+                    // Handle connection timeout every 10 milliseconds approximately.
                     long currentTimeNanos = System.nanoTime();
-                    if (currentTimeNanos - lastConnectTimeoutCheckTimeNanos >= 500 * 1000000L) {
+                    if (currentTimeNanos - lastConnectTimeoutCheckTimeNanos >= 10 * 1000000L) {
                         lastConnectTimeoutCheckTimeNanos = currentTimeNanos;
                         processConnectTimeout(selector.keys(), currentTimeNanos);
                     }
@@ -400,7 +399,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         private void connect(SelectionKey k) {
             NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
             try {
-                if (ch.socket.finishConnect()) {
+                if (ch.channel.finishConnect()) {
                     k.cancel();
                     ch.worker.register(ch, ch.connectFuture);
                 }
@@ -430,7 +429,7 @@ class NioClientSocketPipelineSink extends AbstractChannelSink {
         @Override
         public void run() {
             try {
-                channel.socket.register(
+                channel.channel.register(
                         boss.selector, SelectionKey.OP_CONNECT, channel);
             } catch (ClosedChannelException e) {
                 channel.worker.close(channel, succeededFuture(channel));

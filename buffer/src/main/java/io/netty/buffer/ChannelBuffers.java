@@ -822,6 +822,81 @@ public final class ChannelBuffers {
     }
 
     /**
+     * Create a {@link ChannelBuffer} that holds all the given values as int's
+     * 
+     */
+    public static ChannelBuffer wrapInt(int... values) {
+        if (values == null || values.length == 0) {
+            return EMPTY_BUFFER;
+        }
+        ChannelBuffer buffer = buffer(values.length * 4);
+        for (int v: values) {
+            buffer.writeInt(v);
+        }
+        return buffer;
+    }
+    
+    /**
+     * Create a {@link ChannelBuffer} that holds all the given values as short's
+     * 
+     */
+    public static ChannelBuffer wrapShort(int... values) {
+        if (values == null || values.length == 0) {
+            return EMPTY_BUFFER;
+        }
+        ChannelBuffer buffer = buffer(values.length * 2);
+        for (int v: values) {
+            buffer.writeShort(v);
+        }
+        return buffer;
+    }
+    
+    /**
+     * Create a {@link ChannelBuffer} that holds all the given values as medium's
+     * 
+     */
+    public static ChannelBuffer wrapMedium(int... values) {
+        if (values == null || values.length == 0) {
+            return EMPTY_BUFFER;
+        }
+        ChannelBuffer buffer = buffer(values.length * 3);
+        for (int v: values) {
+            buffer.writeMedium(v);
+        }
+        return buffer;
+    }
+    
+    /**
+     * Create a {@link ChannelBuffer} that holds all the given values as long's
+     * 
+     */
+    public static ChannelBuffer wrapLong(long... values) {
+        if (values == null || values.length == 0) {
+            return EMPTY_BUFFER;
+        }
+        ChannelBuffer buffer = buffer(values.length * 8);
+        for (long v: values) {
+            buffer.writeLong(v);
+        }
+        return buffer;
+    }
+    
+    /**
+     * Create a {@link ChannelBuffer} that holds all the given values as boolean's
+     * 
+     */
+    public static ChannelBuffer wrapBoolean(boolean... values) {
+        if (values == null || values.length == 0) {
+            return EMPTY_BUFFER;
+        }
+        ChannelBuffer buffer = buffer(values.length);
+        for (boolean v: values) {
+            buffer.writeBoolean(v);
+        }
+        return buffer;
+    }    
+    
+    /**
      * Returns a <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a>
      * of the specified buffer's readable bytes.
      */

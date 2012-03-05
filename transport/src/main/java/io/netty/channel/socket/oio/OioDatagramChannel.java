@@ -22,28 +22,22 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
-import java.net.SocketAddress;
 import java.net.SocketException;
 
-import io.netty.channel.AbstractChannel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
 
-final class OioDatagramChannel extends AbstractChannel
+final class OioDatagramChannel extends AbstractOioChannel
                                 implements DatagramChannel {
 
     final MulticastSocket socket;
-    final Object interestOpsLock = new Object();
     private final DatagramChannelConfig config;
-    volatile Thread workerThread;
-    private volatile InetSocketAddress localAddress;
-    volatile InetSocketAddress remoteAddress;
+
 
     static OioDatagramChannel create(ChannelFactory factory,
             ChannelPipeline pipeline, ChannelSink sink) {
@@ -79,65 +73,6 @@ final class OioDatagramChannel extends AbstractChannel
     @Override
     public DatagramChannelConfig getConfig() {
         return config;
-    }
-
-    @Override
-    public InetSocketAddress getLocalAddress() {
-        InetSocketAddress localAddress = this.localAddress;
-        if (localAddress == null) {
-            try {
-                this.localAddress = localAddress =
-                    (InetSocketAddress) socket.getLocalSocketAddress();
-            } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
-                return null;
-            }
-        }
-        return localAddress;
-    }
-
-    @Override
-    public InetSocketAddress getRemoteAddress() {
-        InetSocketAddress remoteAddress = this.remoteAddress;
-        if (remoteAddress == null) {
-            try {
-                this.remoteAddress = remoteAddress =
-                    (InetSocketAddress) socket.getRemoteSocketAddress();
-            } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
-                return null;
-            }
-        }
-        return remoteAddress;
-    }
-
-    @Override
-    public boolean isBound() {
-        return isOpen() && socket.isBound();
-    }
-
-    @Override
-    public boolean isConnected() {
-        return isOpen() && socket.isConnected();
-    }
-
-    @Override
-    protected boolean setClosed() {
-        return super.setClosed();
-    }
-
-    @Override
-    protected void setInterestOpsNow(int interestOps) {
-        super.setInterestOpsNow(interestOps);
-    }
-
-    @Override
-    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
-        if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
-            return super.write(message, null);
-        } else {
-            return super.write(message, remoteAddress);
-        }
     }
 
     @Override
@@ -187,4 +122,36 @@ final class OioDatagramChannel extends AbstractChannel
             throw new ChannelException(e);
         }
     }
+
+    @Override
+    boolean isSocketBound() {
+        return socket.isBound();
+    }
+
+    @Override
+    boolean isSocketConnected() {
+        return socket.isConnected();
+    }
+
+    @Override
+    InetSocketAddress getLocalSocketAddress() throws Exception {
+        return (InetSocketAddress) socket.getLocalSocketAddress();
+    }
+
+    @Override
+    InetSocketAddress getRemoteSocketAddress() throws Exception {
+        return (InetSocketAddress) socket.getRemoteSocketAddress();
+    }
+
+    @Override
+    void closeSocket() throws IOException {
+        socket.close();
+    }
+
+    @Override
+    boolean isSocketClosed() {
+        return socket.isClosed();
+    }
+    
+    
 }

@@ -87,7 +87,6 @@ public class SctpClient {
         // Parse options.
         final String host = args[0];
         final int port = Integer.parseInt(args[1]);
-        final int firstMessageSize;
 
         new SctpClient(host, port).run();
     }

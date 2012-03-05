@@ -43,7 +43,28 @@ public abstract class AbstractChannelSink implements ChannelSink {
         if (actualCause == null) {
             actualCause = cause;
         }
+        if (isFireExceptionCaughtLater(event, actualCause)) {
+            fireExceptionCaughtLater(event.getChannel(), actualCause);
+        } else {
+            fireExceptionCaught(event.getChannel(), actualCause);
+        }
+    }
+    
+    protected boolean isFireExceptionCaughtLater(ChannelEvent event, Throwable actualCause) {
+        return false;
+    }
 
-        fireExceptionCaught(event.getChannel(), actualCause);
+    /**
+     * This implementation just directly call {@link Runnable#run()}. Sub-classes should override this if they can handle it
+     * in a better way
+     */
+    @Override
+    public ChannelFuture execute(ChannelPipeline pipeline, Runnable task) {
+        try {
+            task.run();
+            return Channels.succeededFuture(pipeline.getChannel());
+        } catch (Throwable t) {
+            return Channels.failedFuture(pipeline.getChannel(), t);
+        }
     }
 }

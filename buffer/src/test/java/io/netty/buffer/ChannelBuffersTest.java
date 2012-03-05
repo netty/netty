@@ -425,4 +425,70 @@ public class ChannelBuffersTest {
             // Expected
         }
     }
+    
+    @Test
+    public void testWrapInt() {
+        ChannelBuffer buffer = ChannelBuffers.wrapInt(1,4);
+        assertEquals(8, buffer.capacity());
+        assertEquals(1, buffer.readInt());
+        assertEquals(4, buffer.readInt());
+        assertFalse(buffer.readable());
+        
+        assertEquals(0, ChannelBuffers.wrapInt(null).capacity());
+        assertEquals(0, ChannelBuffers.wrapInt(new int[0]).capacity());
+
+    }
+    
+    @Test
+    public void testWrapShort() {
+        ChannelBuffer buffer = ChannelBuffers.wrapShort(1,4);
+        assertEquals(4, buffer.capacity());
+        assertEquals(1, buffer.readShort());
+        assertEquals(4, buffer.readShort());
+        assertFalse(buffer.readable());
+        
+        assertEquals(0, ChannelBuffers.wrapShort(null).capacity());
+        assertEquals(0, ChannelBuffers.wrapShort(new int[0]).capacity());
+
+    }
+    
+    @Test
+    public void testWrapMedium() {
+        ChannelBuffer buffer = ChannelBuffers.wrapMedium(1,4);
+        assertEquals(6, buffer.capacity());
+        assertEquals(1, buffer.readMedium());
+        assertEquals(4, buffer.readMedium());
+        assertFalse(buffer.readable());
+        
+        assertEquals(0, ChannelBuffers.wrapMedium(null).capacity());
+        assertEquals(0, ChannelBuffers.wrapMedium(new int[0]).capacity());
+
+    }
+    
+    
+    @Test
+    public void testWrapLong() {
+        ChannelBuffer buffer = ChannelBuffers.wrapLong(1,4);
+        assertEquals(16, buffer.capacity());
+        assertEquals(1, buffer.readLong());
+        assertEquals(4, buffer.readLong());
+        assertFalse(buffer.readable());
+        
+        assertEquals(0, ChannelBuffers.wrapLong(null).capacity());
+        assertEquals(0, ChannelBuffers.wrapLong(new long[0]).capacity());
+
+    }
+    
+    @Test
+    public void testWrapBoolean() {
+        ChannelBuffer buffer = ChannelBuffers.wrapBoolean(true, false);
+        assertEquals(2, buffer.capacity());
+        assertEquals(true, buffer.readBoolean());
+        assertEquals(false, buffer.readBoolean());
+        assertFalse(buffer.readable());
+        
+        assertEquals(0, ChannelBuffers.wrapBoolean(null).capacity());
+        assertEquals(0, ChannelBuffers.wrapBoolean(new boolean[0]).capacity());
+
+    }
 }

@@ -257,8 +257,6 @@ class SctpChannelImpl extends AbstractChannel implements SctpChannel {
 
     private final class WriteRequestQueue extends AbstractWriteRequestQueue {
 
-        private static final long serialVersionUID = -246694024103520626L;
-
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
         WriteRequestQueue() {

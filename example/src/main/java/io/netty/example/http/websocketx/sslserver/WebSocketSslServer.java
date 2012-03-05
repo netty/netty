@@ -17,23 +17,20 @@ package io.netty.example.http.websocketx.sslserver;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 /**
  * A HTTP server which serves Web Socket requests at:
- * 
+ *
  * https://localhost:8081/websocket
- * 
+ *
  * Open your browser at https://localhost:8081/, then the demo page will be loaded and a Web Socket connection will be
  * made automatically.
- * 
+ *
  * This server illustrates support for the different web socket specification versions and will work with:
- * 
+ *
  * <ul>
  * <li>Safari 5+ (draft-ietf-hybi-thewebsocketprotocol-00)
  * <li>Chrome 6-13 (draft-ietf-hybi-thewebsocketprotocol-00)

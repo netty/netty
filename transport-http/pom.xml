@@ -35,6 +35,14 @@
       <artifactId>netty-codec-http</artifactId>
       <version>${project.version}</version>
     </dependency>
+
+    <!-- Servlet API - completely optional -->
+    <!-- Used for HTTP tunneling transport -->
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>servlet-api</artifactId>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 </project>
 

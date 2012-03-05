@@ -18,6 +18,7 @@ package io.netty.handler.codec.frame;
 import java.net.SocketAddress;
 
 import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBufferFactory;
 import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -206,23 +207,20 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
             callDecode(ctx, e.getChannel(), input, e.getRemoteAddress());
             if (input.readable()) {
                 // seems like there is something readable left in the input buffer. So create the cumulation buffer and copy the input into it
-                ChannelBuffer cumulation = cumulation(ctx);
-                cumulation.writeBytes(input);
+                (this.cumulation = newCumulationBuffer(ctx, input.readableBytes())).writeBytes(input);
             }
         } else {
-            ChannelBuffer cumulation = cumulation(ctx);
-            if (cumulation.readable()) {
+            ChannelBuffer cumulation = this.cumulation;
+            assert cumulation.readable();
+            if (cumulation.writableBytes() < input.readableBytes()) {
                 cumulation.discardReadBytes();
-                cumulation.writeBytes(input);
-                callDecode(ctx, e.getChannel(), cumulation, e.getRemoteAddress());
-            } else {
-                callDecode(ctx, e.getChannel(), input, e.getRemoteAddress());
-                if (input.readable()) {
-                    cumulation.writeBytes(input);
-                }
+            }
+            cumulation.writeBytes(input);
+            callDecode(ctx, e.getChannel(), cumulation, e.getRemoteAddress());
+            if (!cumulation.readable()) {
+                this.cumulation = null;
             }
         }
-        
     }
 
     @Override
@@ -303,10 +301,6 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
 
             unfoldAndFireMessageReceived(context, remoteAddress, frame);
         }
-
-        if (!cumulation.readable()) {
-          this.cumulation = null;
-        }
     }
 
     private void unfoldAndFireMessageReceived(ChannelHandlerContext context, SocketAddress remoteAddress, Object result) {
@@ -333,9 +327,9 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
             ChannelBuffer cumulation = this.cumulation;
             if (cumulation == null) {
                 return;
-            } else {
-                this.cumulation = null;
             }
+
+            this.cumulation = null;
 
             if (cumulation.readable()) {
                 // Make sure all frames are read before notifying a closed channel.
@@ -355,28 +349,18 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
     }
 
     /**
-     * Get the currently used {@link ChannelBuffer} for cumulation or create one in a lazy fashion if none exist yet
-     * 
-     * @param ctx the {@link ChannelHandlerContext} for this handler
-     * @return buffer the {@link ChannelBuffer} which is used for cumulation
-     */
-    private ChannelBuffer cumulation(ChannelHandlerContext ctx) {
-        ChannelBuffer c = cumulation;
-        if (c == null) {
-            c = createCumulationDynamicBuffer(ctx);
-            cumulation = c;
-        }
-        return c;
-    }
-    
-    /**
-     * Create a new {@link ChannelBuffer} which is used for the cumulation. Be aware that this MUST be a dynamic buffer. Sub-classes may override this to provide a 
-     * dynamic {@link ChannelBuffer} which has some prelocated size that better fit their need.
-     * 
+     * Create a new {@link ChannelBuffer} which is used for the cumulation.
+     * Be aware that this MUST be a dynamic buffer. Sub-classes may override
+     * this to provide a dynamic {@link ChannelBuffer} which has some
+     * pre-allocated size that better fit their need.
+     *
      * @param ctx {@link ChannelHandlerContext} for this handler
      * @return buffer the {@link ChannelBuffer} which is used for cumulation
      */
-    protected ChannelBuffer createCumulationDynamicBuffer(ChannelHandlerContext ctx) {
-        return ChannelBuffers.dynamicBuffer(ctx.getChannel().getConfig().getBufferFactory());
+    protected ChannelBuffer newCumulationBuffer(
+            ChannelHandlerContext ctx, int minimumCapacity) {
+        ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
+        return ChannelBuffers.dynamicBuffer(
+                factory.getDefaultOrder(), Math.max(minimumCapacity, 256), factory);
     }
 }

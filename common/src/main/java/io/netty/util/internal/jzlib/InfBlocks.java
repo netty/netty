@@ -61,7 +61,7 @@ final class InfBlocks {
 
     private static final int TYPE = 0; // get type bits (3, including end bit)
     private static final int LENS = 1; // get lengths for stored
-    private static final int STORED = 2;// processing stored block
+    private static final int STORED = 2; // processing stored block
     private static final int TABLE = 3; // get table lengths
     private static final int BTREE = 4; // get bit lengths tree for a dynamic block
     private static final int DTREE = 5; // get length, distance trees for a dynamic block
@@ -124,16 +124,15 @@ final class InfBlocks {
         int m; // bytes to end of window or read pointer
 
         // copy input/output information to locals (UPDATE macro restores)
-        {
-            p = z.next_in_index;
-            n = z.avail_in;
-            b = bitb;
-            k = bitk;
-        }
-        {
-            q = write;
-            m = q < read? read - q - 1 : end - q;
-        }
+
+        p = z.next_in_index;
+        n = z.avail_in;
+        b = bitb;
+        k = bitk;
+
+        q = write;
+        m = q < read? read - q - 1 : end - q;
+        
 
         // process input based on current state
         while (true) {
@@ -161,20 +160,17 @@ final class InfBlocks {
 
                 switch (t >>> 1) {
                 case 0: // stored
-                {
+
                     b >>>= 3;
                     k -= 3;
-                }
+
                     t = k & 7; // go to byte boundary
 
-                    {
-                        b >>>= t;
-                        k -= t;
-                    }
+                    b >>>= t;
+                    k -= t;
                     mode = LENS; // get length of stored block
                     break;
                 case 1: // fixed
-                {
                     int[] bl = new int[1];
                     int[] bd = new int[1];
                     int[][] tl = new int[1][];
@@ -182,30 +178,24 @@ final class InfBlocks {
 
                     InfTree.inflate_trees_fixed(bl, bd, tl, td);
                     codes.init(bl[0], bd[0], tl[0], 0, td[0], 0);
-                }
 
-                    {
-                        b >>>= 3;
-                        k -= 3;
-                    }
+                    b >>>= 3;
+                    k -= 3;
 
                     mode = CODES;
                     break;
                 case 2: // dynamic
 
-                {
                     b >>>= 3;
                     k -= 3;
-                }
 
                     mode = TABLE;
                     break;
                 case 3: // illegal
 
-                {
                     b >>>= 3;
                     k -= 3;
-                }
+                    
                     mode = BAD;
                     z.msg = "invalid block type";
                     r = JZlib.Z_DATA_ERROR;
@@ -352,10 +342,9 @@ final class InfBlocks {
                     }
                 }
 
-                {
-                    b >>>= 14;
-                    k -= 14;
-                }
+
+                b >>>= 14;
+                k -= 14;
 
                 index = 0;
                 mode = BTREE;
@@ -380,10 +369,9 @@ final class InfBlocks {
 
                     blens[border[index ++]] = b & 7;
 
-                    {
-                        b >>>= 3;
-                        k -= 3;
-                    }
+                    b >>>= 3;
+                    k -= 3;
+
                 }
 
                 while (index < 19) {
@@ -505,36 +493,36 @@ final class InfBlocks {
                 }
 
                 tb[0] = -1;
-                {
-                    int[] bl = new int[1];
-                    int[] bd = new int[1];
-                    int[] tl = new int[1];
-                    int[] td = new int[1];
-                    bl[0] = 9; // must be <= 9 for lookahead assumptions
-                    bd[0] = 6; // must be <= 9 for lookahead assumptions
 
-                    t = table;
-                    t = inftree.inflate_trees_dynamic(257 + (t & 0x1f),
-                            1 + (t >> 5 & 0x1f), blens, bl, bd, tl, td, hufts,
-                            z);
+                int[] bl = new int[1];
+                int[] bd = new int[1];
+                int[] tl = new int[1];
+                int[] td = new int[1];
+                bl[0] = 9; // must be <= 9 for lookahead assumptions
+                bd[0] = 6; // must be <= 9 for lookahead assumptions
 
-                    if (t != JZlib.Z_OK) {
-                        if (t == JZlib.Z_DATA_ERROR) {
-                            blens = null;
-                            mode = BAD;
-                        }
-                        r = t;
+                t = table;
+                t = inftree.inflate_trees_dynamic(257 + (t & 0x1f),
+                        1 + (t >> 5 & 0x1f), blens, bl, bd, tl, td, hufts,
+                        z);
 
-                        bitb = b;
-                        bitk = k;
-                        z.avail_in = n;
-                        z.total_in += p - z.next_in_index;
-                        z.next_in_index = p;
-                        write = q;
-                        return inflate_flush(z, r);
+                if (t != JZlib.Z_OK) {
+                    if (t == JZlib.Z_DATA_ERROR) {
+                        blens = null;
+                        mode = BAD;
                     }
-                    codes.init(bl[0], bd[0], hufts, tl[0], hufts, td[0]);
+                    r = t;
+
+                    bitb = b;
+                    bitk = k;
+                    z.avail_in = n;
+                    z.total_in += p - z.next_in_index;
+                    z.next_in_index = p;
+                    write = q;
+                    return inflate_flush(z, r);
                 }
+                codes.init(bl[0], bd[0], hufts, tl[0], hufts, td[0]);
+
                 mode = CODES;
             case CODES:
                 bitb = b;

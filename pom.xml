@@ -212,12 +212,12 @@
             <configuration>
               <rules>
                 <requireJavaVersion>
-                  <!-- Enforce java 1.6 as minimum for compiling -->
-                  <!-- This is needed because of the Unsafe detection code -->
-                  <version>[1.6.0,)</version>
+                  <!-- Enforce java 1.7 as minimum for compiling -->
+                  <!-- This is needed because of java.util.zip.Deflater -->
+                  <version>[1.7.0,)</version>
                 </requireJavaVersion>
                 <requireMavenVersion>
-                  <version>[3.0.3,)</version>
+                  <version>[3.0.2,)</version>
                 </requireMavenVersion>
               </rules>
             </configuration>
@@ -236,6 +236,32 @@
           <showDeprecation>true</showDeprecation>
           <showWarnings>true</showWarnings>
         </configuration>
+      </plugin>
+      <plugin>
+        <!-- ensure that only methods available in java 1.6 can
+             be used even when compiling with java 1.7+ -->
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>animal-sniffer-maven-plugin</artifactId>
+        <version>1.7</version>
+        <configuration>
+          <signature>
+            <groupId>org.codehaus.mojo.signature</groupId>
+            <artifactId>java16</artifactId>
+            <version>1.0</version>
+          </signature>
+          <ignores>
+            <ignore>sun.misc.Unsafe</ignore>
+            <ignore>java.util.zip.Deflater</ignore>
+          </ignores>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <artifactId>maven-checkstyle-plugin</artifactId>
@@ -260,9 +286,21 @@
           <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>netty-build</artifactId>
-            <version>6</version>
+            <version>7</version>
           </dependency>
         </dependencies>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.12</version>
+        <configuration>
+          <forkMode>once</forkMode>
+          <excludes>
+            <exclude>**/Abstract*</exclude>
+            <exclude>**/TestUtil*</exclude>
+          </excludes>
+          <runOrder>random</runOrder>
+        </configuration>
       </plugin>
     </plugins>
 

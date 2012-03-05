@@ -22,15 +22,12 @@ import io.netty.channel.ChannelPipelineFactory;
 import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
-import io.netty.handler.logging.LoggingHandler;
-import io.netty.logging.InternalLogLevel;
 
 public class HttpSnoopServerPipelineFactory implements ChannelPipelineFactory {
     @Override
     public ChannelPipeline getPipeline() throws Exception {
         // Create a default pipeline implementation.
         ChannelPipeline pipeline = pipeline();
-        pipeline.addLast("log", new LoggingHandler(InternalLogLevel.INFO));
 
         // Uncomment the following line if you want HTTPS
         //SSLEngine engine = SecureChatSslContextFactory.getServerContext().createSSLEngine();
