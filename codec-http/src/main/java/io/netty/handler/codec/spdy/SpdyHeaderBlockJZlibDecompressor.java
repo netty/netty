@@ -86,4 +86,11 @@ class SpdyHeaderBlockJZlibDecompressor extends SpdyHeaderBlockDecompressor {
             decompressed.writeBytes(out, 0, z.next_out_index);
         }
     }
+
+    @Override
+    public void end() {
+        z.inflateEnd();
+        z.next_in = null;
+        z.next_out = null;
+    }
 }
