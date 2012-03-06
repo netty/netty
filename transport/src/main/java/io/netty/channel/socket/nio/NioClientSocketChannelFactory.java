@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.ClientSocketChannelFactory;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.ExternalResourceReleasable;
 import io.netty.util.internal.ExecutorUtil;
 
 /**
@@ -82,7 +83,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     private static final int DEFAULT_BOSS_COUNT = 1;
 
     private final Executor bossExecutor;
-    private final Executor workerExecutor;
+    private final WorkerPool<NioWorker> workerPool;
     private final NioClientSocketPipelineSink sink;
 
     /**
@@ -136,29 +137,32 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
             Executor bossExecutor, Executor workerExecutor,
             int bossCount, int workerCount) {
 
+        this(bossExecutor, bossCount, new NioWorkerPool(workerExecutor, workerCount, true));
+    }
+
+    public NioClientSocketChannelFactory(
+            Executor bossExecutor, int bossCount, 
+            WorkerPool<NioWorker> workerPool) {
+
         if (bossExecutor == null) {
             throw new NullPointerException("bossExecutor");
         }
-        if (workerExecutor == null) {
-            throw new NullPointerException("workerExecutor");
+        if (workerPool == null) {
+            throw new NullPointerException("workerPool");
         }
         if (bossCount <= 0) {
             throw new IllegalArgumentException(
                     "bossCount (" + bossCount + ") " +
                     "must be a positive integer.");
         }
-        if (workerCount <= 0) {
-            throw new IllegalArgumentException(
-                    "workerCount (" + workerCount + ") " +
-                    "must be a positive integer.");
-        }
+        
 
         this.bossExecutor = bossExecutor;
-        this.workerExecutor = workerExecutor;
+        this.workerPool = workerPool;
         sink = new NioClientSocketPipelineSink(
-                bossExecutor, workerExecutor, bossCount, workerCount);
+                bossExecutor, bossCount, workerPool);
     }
-
+    
 
     @Override
     public SocketChannel newChannel(ChannelPipeline pipeline) {
@@ -167,6 +171,9 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
 
     @Override
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(bossExecutor, workerExecutor);
+        ExecutorUtil.terminate(bossExecutor);
+        if (workerPool instanceof ExternalResourceReleasable) {
+            ((ExternalResourceReleasable) workerPool).releaseExternalResources();
+        }
     }
 }

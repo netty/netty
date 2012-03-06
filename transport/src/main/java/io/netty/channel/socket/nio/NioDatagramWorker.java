@@ -38,7 +38,7 @@ import java.util.concurrent.Executor;
  * A class responsible for registering channels with {@link Selector}.
  * It also implements the {@link Selector} loop.
  */
-class NioDatagramWorker extends AbstractNioWorker {
+public class NioDatagramWorker extends AbstractNioWorker {
 
     /**
      * Sole constructor.
@@ -50,6 +50,9 @@ class NioDatagramWorker extends AbstractNioWorker {
         super(executor);
     }
 
+    NioDatagramWorker(final Executor executor, boolean allowShutdownOnIdle) {
+        super(executor, allowShutdownOnIdle);
+    }
     @Override
     protected boolean read(final SelectionKey key) {
         final NioDatagramChannel channel = (NioDatagramChannel) key.attachment();

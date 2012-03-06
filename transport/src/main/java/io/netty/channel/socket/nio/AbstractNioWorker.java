@@ -115,8 +115,15 @@ abstract class AbstractNioWorker implements Worker {
 
     private final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
 
+    private final boolean allowShutdownOnIdle;
+
     AbstractNioWorker(Executor executor) {
+        this(executor, true);
+    }
+
+    public AbstractNioWorker(Executor executor, boolean allowShutdownOnIdle) {
         this.executor = executor;
+        this.allowShutdownOnIdle = allowShutdownOnIdle;
     }
 
     void register(AbstractNioChannel<?> channel, ChannelFuture future) {
@@ -251,8 +258,10 @@ abstract class AbstractNioWorker implements Worker {
                             }
                         }
                     } else {
-                        // Give one more second.
-                        shutdown = true;
+                        if (allowShutdownOnIdle) {
+                            // Give one more second.
+                            shutdown = true;
+                        }
                     }
                 } else {
                     shutdown = false;

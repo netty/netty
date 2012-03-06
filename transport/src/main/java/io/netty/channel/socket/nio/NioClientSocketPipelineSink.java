@@ -51,15 +51,13 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
     final Executor bossExecutor;
 
-    private final Boss[] bosses;
-    private final NioWorker[] workers;
-    
+    private final Boss[] bosses;    
     private final AtomicInteger bossIndex = new AtomicInteger();
-    private final AtomicInteger workerIndex = new AtomicInteger();
+
+    private final WorkerPool<NioWorker> workerPool;
 
     NioClientSocketPipelineSink(
-            Executor bossExecutor, Executor workerExecutor,
-            int bossCount, int workerCount) {
+            Executor bossExecutor, int bossCount, WorkerPool<NioWorker> workerPool) {
 
         this.bossExecutor = bossExecutor;
 
@@ -68,10 +66,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             bosses[i] = new Boss();
         }
 
-        workers = new NioWorker[workerCount];
-        for (int i = 0; i < workers.length; i ++) {
-            workers[i] = new NioWorker(workerExecutor);
-        }
+        this.workerPool = workerPool;
     }
 
     @Override
@@ -162,8 +157,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
     }
 
     NioWorker nextWorker() {
-        return workers[Math.abs(
-                workerIndex.getAndIncrement() % workers.length)];
+        return workerPool.nextWorker();
     }
     
     Boss nextBoss() {

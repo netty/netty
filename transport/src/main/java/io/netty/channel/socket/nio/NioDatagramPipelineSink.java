@@ -20,7 +20,6 @@ import static io.netty.channel.Channels.*;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelFuture;
@@ -36,8 +35,7 @@ import io.netty.channel.MessageEvent;
  */
 class NioDatagramPipelineSink extends AbstractNioChannelSink {
 
-    private final NioDatagramWorker[] workers;
-    private final AtomicInteger workerIndex = new AtomicInteger();
+    private final WorkerPool<NioDatagramWorker> workerPool;
 
     /**
      * Creates a new {@link NioDatagramPipelineSink} with a the number of {@link NioDatagramWorker}s specified in workerCount.
@@ -49,11 +47,8 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
      * @param workerCount
      *        the number of {@link NioDatagramWorker}s for this sink
      */
-    NioDatagramPipelineSink(final Executor workerExecutor, final int workerCount) {
-        workers = new NioDatagramWorker[workerCount];
-        for (int i = 0; i < workers.length; i ++) {
-            workers[i] = new NioDatagramWorker(workerExecutor);
-        }
+    NioDatagramPipelineSink(final WorkerPool<NioDatagramWorker> workerPool) {
+        this.workerPool = workerPool;
     }
 
     /**
@@ -191,7 +186,7 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
     }
 
     NioDatagramWorker nextWorker() {
-        return workers[Math.abs(workerIndex.getAndIncrement() % workers.length)];
+        return workerPool.nextWorker();
     }
 
 }

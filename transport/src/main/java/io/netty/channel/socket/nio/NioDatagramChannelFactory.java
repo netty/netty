@@ -24,8 +24,9 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelFactory;
+import io.netty.channel.socket.Worker;
 import io.netty.channel.socket.oio.OioDatagramChannelFactory;
-import io.netty.util.internal.ExecutorUtil;
+import io.netty.util.ExternalResourceReleasable;
 
 /**
  * A {@link DatagramChannelFactory} that creates a NIO-based connectionless
@@ -75,8 +76,8 @@ import io.netty.util.internal.ExecutorUtil;
  */
 public class NioDatagramChannelFactory implements DatagramChannelFactory {
 
-    private final Executor workerExecutor;
     private final NioDatagramPipelineSink sink;
+    private final WorkerPool<NioDatagramWorker> workerPool;
 
     /**
      * Creates a new instance.  Calling this constructor is same with calling
@@ -101,21 +102,20 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      */
     public NioDatagramChannelFactory(final Executor workerExecutor,
             final int workerCount) {
-        if (workerCount <= 0) {
-            throw new IllegalArgumentException(String
-                    .format("workerCount (%s) must be a positive integer.",
-                            workerCount));
-        }
-
-        if (workerExecutor == null) {
-            throw new NullPointerException(
-                    "workerExecutor argument must not be null");
-        }
-        this.workerExecutor = workerExecutor;
-
-        sink = new NioDatagramPipelineSink(workerExecutor, workerCount);
+        this(new NioDatagramWorkerPool(workerExecutor, workerCount, true));
     }
 
+    /**
+     * Creates a new instance.
+     * 
+     * @param workerPool
+     *        the {@link WorkerPool} which will be used to obtain the {@link Worker} that execute the I/O worker threads
+     */
+    public NioDatagramChannelFactory(WorkerPool<NioDatagramWorker> workerPool) {
+        this.workerPool = workerPool;
+        sink = new NioDatagramPipelineSink(workerPool);
+    }
+    
     @Override
     public DatagramChannel newChannel(final ChannelPipeline pipeline) {
         return NioDatagramChannel.create(this, pipeline, sink, sink.nextWorker());
@@ -123,6 +123,9 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
 
     @Override
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(workerExecutor);
+        if (workerPool instanceof ExternalResourceReleasable) {
+            ((ExternalResourceReleasable) workerPool).releaseExternalResources();
+        }
+        
     }
 }

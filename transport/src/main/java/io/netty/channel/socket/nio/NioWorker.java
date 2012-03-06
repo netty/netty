@@ -35,13 +35,18 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executor;
 
-class NioWorker extends AbstractNioWorker {
+public class NioWorker extends AbstractNioWorker {
 
     private final SocketReceiveBufferPool recvBufferPool = new SocketReceiveBufferPool();
 
     NioWorker(Executor executor) {
         super(executor);
     }
+    
+    NioWorker(Executor executor, boolean allowShutdownOnIdle) {
+        super(executor, allowShutdownOnIdle);
+    }
+
 
     @Override
     protected boolean read(SelectionKey k) {
