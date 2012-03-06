@@ -24,7 +24,7 @@ import io.netty.util.ExternalResourceReleasable;
  * 
  * 
  */
-public final class ShareableWorkerPool<E extends Worker> implements WorkerPool<E>{
+public final class ShareableWorkerPool<E extends Worker> implements WorkerPool<E> {
 
     private final WorkerPool<E> wrapped;
 

@@ -23,7 +23,7 @@ import java.util.concurrent.Executor;
  * 
  *
  */
-public class NioDatagramWorkerPool extends AbstractWorkerPool<NioDatagramWorker>{
+public class NioDatagramWorkerPool extends AbstractNioWorkerPool<NioDatagramWorker> {
 
     protected NioDatagramWorkerPool(Executor executor, int workerCount, boolean allowShutdownOnIdle) {
         super(executor, workerCount, allowShutdownOnIdle);
