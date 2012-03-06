@@ -115,6 +115,16 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
         this.channel = ch;
     }
 
+    /**
+     * Return the {@link AbstractNioWorker} that handle the IO of the {@link AbstractNioChannel}
+     * 
+     * @return worker
+     */
+    public AbstractNioWorker getWorker() {
+        return worker;
+    }
+    
+    
     @Override
     public InetSocketAddress getLocalAddress() {
         InetSocketAddress localAddress = this.localAddress;

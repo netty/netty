@@ -67,6 +67,11 @@ final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel>
 
 
     @Override
+    public NioDatagramWorker getWorker() {
+        return (NioDatagramWorker) super.getWorker();
+    }
+
+    @Override
     public boolean isBound() {
         return isOpen() && channel.socket().isBound();
     }

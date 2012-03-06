@@ -44,6 +44,11 @@ class NioSocketChannel extends AbstractNioChannel<SocketChannel>
     }
 
     @Override
+    public NioWorker getWorker() {
+        return (NioWorker) super.getWorker();
+    }
+
+    @Override
     public NioSocketChannelConfig getConfig() {
         return config;
     }
