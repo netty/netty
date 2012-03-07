@@ -25,7 +25,7 @@ import java.util.concurrent.Executor;
  */
 public class NioWorkerPool extends AbstractNioWorkerPool<NioWorker> {
 
-    NioWorkerPool(Executor executor, int workerCount, boolean allowShutdownOnIdle) {
+    public NioWorkerPool(Executor executor, int workerCount, boolean allowShutdownOnIdle) {
         super(executor, workerCount, allowShutdownOnIdle);
     }
 
