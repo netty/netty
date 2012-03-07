@@ -27,9 +27,6 @@ class SpdyHeaderBlockZlibDecompressor extends SpdyHeaderBlockDecompressor {
     private final byte[] out = new byte[8192];
     private final Inflater decompressor = new Inflater();
 
-    public SpdyHeaderBlockZlibDecompressor() {
-    }
-
     @Override
     public void setInput(ChannelBuffer compressed) {
         byte[] in = new byte[compressed.readableBytes()];
@@ -48,7 +45,7 @@ class SpdyHeaderBlockZlibDecompressor extends SpdyHeaderBlockDecompressor {
             decompressed.writeBytes(out, 0, numBytes);
         } catch (DataFormatException e) {
             throw new SpdyProtocolException(
-                    "Received invalid header block");
+                    "Received invalid header block", e);
         }
     }
 
