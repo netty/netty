@@ -30,7 +30,7 @@ public abstract class AbstractSctpChannelSink extends AbstractChannelSink {
         if (ch instanceof SctpChannelImpl) {
             SctpChannelImpl channel = (SctpChannelImpl) ch;
             ChannelRunnableWrapper wrapper = new ChannelRunnableWrapper(channel, task);
-            channel.worker.executeInIoThread(task);
+            channel.worker.executeInIoThread(wrapper);
             return wrapper;
              
         } else {
