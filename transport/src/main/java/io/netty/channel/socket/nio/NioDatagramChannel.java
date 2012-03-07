@@ -31,7 +31,7 @@ import java.nio.channels.DatagramChannel;
 /**
  * Provides an NIO based {@link io.netty.channel.socket.DatagramChannel}.
  */
-final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel>
+public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel>
                                 implements io.netty.channel.socket.DatagramChannel {
 
     /**

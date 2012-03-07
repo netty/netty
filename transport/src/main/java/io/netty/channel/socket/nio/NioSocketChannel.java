@@ -23,7 +23,7 @@ import io.netty.channel.ChannelSink;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 
-class NioSocketChannel extends AbstractNioChannel<SocketChannel>
+public class NioSocketChannel extends AbstractNioChannel<SocketChannel>
                                 implements io.netty.channel.socket.SocketChannel {
 
     private static final int ST_OPEN = 0;

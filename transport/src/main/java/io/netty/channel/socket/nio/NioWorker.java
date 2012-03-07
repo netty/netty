@@ -39,11 +39,11 @@ public class NioWorker extends AbstractNioWorker {
 
     private final SocketReceiveBufferPool recvBufferPool = new SocketReceiveBufferPool();
 
-    NioWorker(Executor executor) {
+    public NioWorker(Executor executor) {
         super(executor);
     }
     
-    NioWorker(Executor executor, boolean allowShutdownOnIdle) {
+    public NioWorker(Executor executor, boolean allowShutdownOnIdle) {
         super(executor, allowShutdownOnIdle);
     }
 
