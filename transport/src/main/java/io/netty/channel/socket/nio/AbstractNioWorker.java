@@ -290,6 +290,13 @@ abstract class AbstractNioWorker implements Worker {
         executeInIoThread(task, false);
     }
     
+    /**
+     * Execute the {@link Runnable} in a IO-Thread
+     * 
+     * @param task the {@link Runnable} to execute
+     * @param alwaysAsync <code>true</code> if the {@link Runnable} should be executed in an async
+     *                    fashion even if the current Thread == IO Thread
+     */
     public void executeInIoThread(Runnable task, boolean alwaysAsync) {
         if (!alwaysAsync && Thread.currentThread() == thread) {
             task.run();
