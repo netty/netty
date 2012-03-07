@@ -13,52 +13,65 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util;
+package io.netty.util.internal;
 
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.Deflater;
 
 
 /**
- * Utility which checks if {@value #UNSAFE} class can be found in the classpath
- * and that it can be accessed using "theUnsafe" field which is not true for all platforms, i.e Android
- * where it is called "THE_ONE".
+ * Utility that detects various properties specific to the current runtime
+ * environment, such as Java version and the availability of the
+ * {@code sun.misc.Unsafe} object.
  */
-public final class UnsafeDetectUtil {
+public final class DetectionUtil {
 
-    private static final String THE_UNSAFE = "theUnsafe";
-    private static final String UNSAFE = "sun.misc.Unsafe";
-    private static final boolean UNSAFE_FOUND = isUnsafeFound(AtomicInteger.class.getClassLoader());
+    private static final int JAVA_VERSION = javaVersion0();
+    private static final boolean HAS_UNSAFE = hasUnsafe(AtomicInteger.class.getClassLoader());
 
-    public static boolean isUnsafeFound(ClassLoader loader) {
-        try {
-            Class<?> unsafeClazz = Class.forName(UNSAFE, true, loader);
-            return hasUnsafeField(unsafeClazz);
-        } catch (ClassNotFoundException e) {
-            return false;
-        } catch (SecurityException e) {
-            return false;
-        } catch (PrivilegedActionException e) {
-            return false;
-        }
+    public static boolean hasUnsafe() {
+        return HAS_UNSAFE;
     }
-    
+
+    public static int javaVersion() {
+        return JAVA_VERSION;
+    }
+
+    private static boolean hasUnsafe(ClassLoader loader) {
+        try {
+            Class<?> unsafeClazz = Class.forName("sun.misc.Unsafe", true, loader);
+            return hasUnsafeField(unsafeClazz);
+        } catch (Exception e) {
+            // Ignore
+        }
+        return false;
+    }
+
     private static boolean hasUnsafeField(final Class<?> unsafeClass) throws PrivilegedActionException {
         return AccessController.doPrivileged(new PrivilegedExceptionAction<Boolean>() {
+            @Override
             public Boolean run() throws Exception {
-                unsafeClass.getDeclaredField(THE_UNSAFE);
+                unsafeClass.getDeclaredField("theUnsafe");
                 return true;
             }
         });
     }
-    
-    public static boolean isUnsafeFound() {
-        return UNSAFE_FOUND;
-    }
 
-    private UnsafeDetectUtil() {
+    private static int javaVersion0() {
+        try {
+            Deflater.class.getDeclaredField("SYNC_FLUSH");
+            return 7;
+        } catch (Exception e) {
+            // Ignore
+        }
+
+        return 6;
+    }
+    
+    private DetectionUtil() {
         // only static method supported
     }
 }
