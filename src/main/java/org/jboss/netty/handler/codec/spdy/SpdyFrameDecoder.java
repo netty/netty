@@ -70,9 +70,11 @@ public class SpdyFrameDecoder extends FrameDecoder {
     protected Object decodeLast(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer)
             throws Exception {
-        Object frame = decode(ctx, channel, buffer);
-        headerBlockDecompressor.end();
-        return frame;
+        try {
+            return decode(ctx, channel, buffer);
+        } finally {
+            headerBlockDecompressor.end();
+        }
     }
 
 
