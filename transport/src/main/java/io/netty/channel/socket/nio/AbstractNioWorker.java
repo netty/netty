@@ -287,10 +287,14 @@ abstract class AbstractNioWorker implements Worker {
     
     @Override
     public void executeInIoThread(Runnable task) {
-        start();
-        if (Thread.currentThread() == thread) {
+        executeInIoThread(task, false);
+    }
+    
+    public void executeInIoThread(Runnable task, boolean alwaysAsync) {
+        if (!alwaysAsync && Thread.currentThread() == thread) {
             task.run();
         } else {
+            start();
             boolean added = eventQueue.offer(task);
 
             assert added;
