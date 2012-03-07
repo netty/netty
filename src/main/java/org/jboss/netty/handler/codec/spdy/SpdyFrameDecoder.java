@@ -67,6 +67,16 @@ public class SpdyFrameDecoder extends FrameDecoder {
     }
 
     @Override
+    protected Object decodeLast(
+            ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer)
+            throws Exception {
+        Object frame = decode(ctx, channel, buffer);
+        headerBlockDecompressor.end();
+        return frame;
+    }
+
+
+    @Override
     protected Object decode(
             ChannelHandlerContext ctx, Channel channel, ChannelBuffer buffer)
             throws Exception {
