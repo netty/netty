@@ -15,12 +15,12 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
+import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.compression.CompressionException;
 import org.jboss.netty.util.internal.jzlib.JZlib;
 import org.jboss.netty.util.internal.jzlib.ZStream;
-
-import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 class SpdyHeaderBlockJZlibDecompressor extends SpdyHeaderBlockDecompressor {
 
@@ -50,14 +50,36 @@ class SpdyHeaderBlockJZlibDecompressor extends SpdyHeaderBlockDecompressor {
         z.next_out_index = 0;
         z.avail_out = out.length;
 
-        int resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);
-
-        if (resultCode == JZlib.Z_NEED_DICT) {
-            resultCode = z.inflateSetDictionary(SPDY_DICT, SPDY_DICT.length);
-            if (resultCode != JZlib.Z_OK) {
-                throw new CompressionException("ZStream dictionary failure");
+        loop: for (;;) {
+            // Decompress 'in' into 'out'
+            int resultCode = z.inflate(JZlib.Z_SYNC_FLUSH);
+            if (z.next_out_index > 0) {
+                decompressed.writeBytes(out, 0, z.next_out_index);
+                z.avail_out = out.length;
             }
-            z.inflate(JZlib.Z_SYNC_FLUSH);
+            z.next_out_index = 0;
+
+            switch (resultCode) {
+            case JZlib.Z_NEED_DICT:
+                resultCode = z.inflateSetDictionary(SPDY_DICT, SPDY_DICT.length);
+                if (resultCode != JZlib.Z_OK) {
+                    throw new CompressionException("failed to set the dictionary: " + resultCode);
+                }
+                break;
+            case JZlib.Z_STREAM_END:
+                // Do not decode anymore.
+                z.inflateEnd();
+                break loop;
+            case JZlib.Z_OK:
+                break;
+            case JZlib.Z_BUF_ERROR:
+                if (z.avail_in <= 0) {
+                    break loop;
+                }
+                break;
+            default:
+                throw new CompressionException("decompression failure: " + resultCode);
+            }
         }
 
         if (z.next_out_index > 0) {

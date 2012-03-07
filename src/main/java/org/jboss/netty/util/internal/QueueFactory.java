@@ -18,15 +18,13 @@ package org.jboss.netty.util.internal;
 import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 
-import org.jboss.netty.util.UnsafeDetectUtil;
-
 /**
  * This factory should be used to create the "optimal" {@link BlockingQueue}
  * instance for the running JVM.
  */
 public final class QueueFactory {
     
-    private static final boolean useUnsafe = UnsafeDetectUtil.isUnsafeFound(QueueFactory.class.getClassLoader());
+    private static final boolean useUnsafe = DetectionUtil.hasUnsafe();
     
     private QueueFactory() {
         // only use static methods!

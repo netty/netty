@@ -15,32 +15,15 @@
  */
 package org.jboss.netty.handler.codec.spdy;
 
-import java.util.zip.Deflater;
-
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.util.internal.DetectionUtil;
 
 abstract class SpdyHeaderBlockCompressor {
-
-    private static final boolean USE_ZLIB;
-
-    static {
-        boolean java7 = false;
-        try {
-            Deflater.class.getDeclaredMethod(
-                    "deflate",
-                    new Class<?>[] { byte[].class, int.class, int.class, int.class });
-            java7 = true;
-        } catch (Exception e) {
-            // Ignore
-        }
-
-        USE_ZLIB = java7;
-    }
 
     static SpdyHeaderBlockCompressor newInstance(
             int compressionLevel, int windowBits, int memLevel) {
 
-        if (USE_ZLIB) {
+        if (DetectionUtil.javaVersion() >= 7) {
             return new SpdyHeaderBlockZlibCompressor(compressionLevel);
         } else {
             return new SpdyHeaderBlockJZlibCompressor(
