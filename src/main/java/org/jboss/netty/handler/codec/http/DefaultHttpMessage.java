@@ -20,19 +20,27 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.util.internal.StringUtil;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import static org.jboss.netty.handler.codec.http.HttpMessageDecoder.*;
+import static org.jboss.netty.handler.codec.http.HttpMessageDecoder.INT_SIZE;
+import static org.jboss.netty.handler.codec.http.HttpMessageDecoder.NAME_END;
+import static org.jboss.netty.handler.codec.http.HttpMessageDecoder.POSITIONS;
+import static org.jboss.netty.handler.codec.http.HttpMessageDecoder.VALUE_END;
+import static org.jboss.netty.handler.codec.http.HttpMessageDecoder.VALUE_START;
 
 /**
  * The default {@link HttpMessage} implementation.
  */
 public class DefaultHttpMessage implements HttpMessage {
 
-    private static final List<Map.Entry<String,String>> EMPTY_HEADERS_LIST =
-            Collections.unmodifiableList(new ArrayList<Map.Entry<String, String>>(0));
-    private static final Set<String> EMPTY_SET = Collections.unmodifiableSet(new HashSet<String>(0));
-    private static final List<String> EMPTY_LIST = Collections.unmodifiableList(new ArrayList<String>(0));
+    private static final List<Map.Entry<String, String>> EMPTY_HEADERS_LIST = Collections.emptyList();
+    private static final Set<String> EMPTY_SET = Collections.emptySet();
+    private static final List<String> EMPTY_LIST = Collections.emptyList();
     private HttpHeaders headers;
     private HttpVersion version;
     private ChannelBuffer content = ChannelBuffers.EMPTY_BUFFER;
