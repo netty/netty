@@ -21,7 +21,6 @@ import java.io.PushbackInputStream;
 import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 
-import org.jboss.netty.channel.AbstractChannelSink;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -32,7 +31,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 
-class OioClientSocketPipelineSink extends AbstractChannelSink {
+class OioClientSocketPipelineSink extends AbstractOioChannelSink {
 
     private final Executor workerExecutor;
 

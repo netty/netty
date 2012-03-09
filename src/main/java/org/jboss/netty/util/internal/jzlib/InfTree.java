@@ -180,8 +180,8 @@ final class InfTree {
             int[] e, // list of extra bits for non-simple codes
             int[] t, // result: starting table
             int[] m, // maximum lookup bits, returns actual
-            int[] hp,// space for trees
-            int[] hn,// hufts used in space
+            int[] hp, // space for trees
+            int[] hn, // hufts used in space
             int[] v // working area: values in order of bit length
     ) {
         // Given a list of code lengths and a maximum table size, make a set of
@@ -437,7 +437,7 @@ final class InfTree {
 
     static int inflate_trees_fixed(int[] bl, //literal desired/actual bit depth
             int[] bd, //distance desired/actual bit depth
-            int[][] tl,//literal/length tree result
+            int[][] tl, //literal/length tree result
             int[][] td //distance tree result
     ) {
         bl[0] = fixed_bl;

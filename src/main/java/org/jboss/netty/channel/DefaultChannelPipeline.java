@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.RejectedExecutionException;
 
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -630,7 +631,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         return realCtx;
     }
-
+    
+    public ChannelFuture execute(Runnable task) {
+        return getSink().execute(this, task);
+    }
+    
     protected void notifyHandlerException(ChannelEvent e, Throwable t) {
         if (e instanceof ExceptionEvent) {
             if (logger.isWarnEnabled()) {
@@ -804,6 +809,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         public void exceptionCaught(ChannelPipeline pipeline,
                 ChannelEvent e, ChannelPipelineException cause) throws Exception {
             throw cause;
+        }
+        
+        
+        public ChannelFuture execute(ChannelPipeline pipeline, Runnable task) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("Not attached yet; rejecting: " + task);
+            }
+            return Channels.failedFuture(pipeline.getChannel(), new RejectedExecutionException("Not attached yet"));
         }
     }
 }

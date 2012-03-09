@@ -137,7 +137,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
     // TODO Make OMATPE focus on the case where Channel is the key.
     //      Add a new less-efficient TPE that allows custom key.
 
-    private final ConcurrentMap<Object, Executor> childExecutors = newChildExecutorMap();
+    protected final ConcurrentMap<Object, Executor> childExecutors = newChildExecutorMap();
 
     /**
      * Creates a new instance.
@@ -243,7 +243,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
         }
     }
 
-    private Executor getChildExecutor(ChannelEvent e) {
+    protected Executor getChildExecutor(ChannelEvent e) {
         Object key = getChildExecutorKey(e);
         Executor executor = childExecutors.get(key);
         if (executor == null) {
@@ -279,7 +279,7 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
         afterExecute(r, t);
     }
 
-    private final class ChildExecutor implements Executor, Runnable {
+    protected final class ChildExecutor implements Executor, Runnable {
         private final Queue<Runnable> tasks = QueueFactory.createQueue(Runnable.class);
         private final AtomicBoolean isRunning = new AtomicBoolean();
         

@@ -13,21 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-/*
- * Copyright 2012 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License. You may obtain
- * a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.jboss.netty.handler.codec.spdy;
 
 import java.nio.ByteOrder;
@@ -36,9 +21,9 @@ import java.util.Set;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.compression.ZlibEncoder;
-import org.jboss.netty.handler.codec.embedder.EncoderEmbedder;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 
 import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
@@ -48,7 +33,8 @@ import static org.jboss.netty.handler.codec.spdy.SpdyCodecUtil.*;
  */
 public class SpdyFrameEncoder extends OneToOneEncoder {
 
-    private final EncoderEmbedder<ChannelBuffer> headerBlockCompressor;
+    private volatile boolean finished;
+    private final SpdyHeaderBlockCompressor headerBlockCompressor;
 
     /**
      * Creates a new instance with the default {@code compressionLevel (6)},
@@ -63,8 +49,27 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
      */
     public SpdyFrameEncoder(int compressionLevel, int windowBits, int memLevel) {
         super();
-        headerBlockCompressor = new EncoderEmbedder<ChannelBuffer>(
-                new ZlibEncoder(compressionLevel, windowBits, memLevel, SPDY_DICT));
+        headerBlockCompressor = SpdyHeaderBlockCompressor.newInstance(compressionLevel, windowBits, memLevel);
+    }
+
+    @Override
+    public void handleDownstream(
+            ChannelHandlerContext ctx, ChannelEvent evt) throws Exception {
+        if (evt instanceof ChannelStateEvent) {
+            ChannelStateEvent e = (ChannelStateEvent) evt;
+            switch (e.getState()) {
+            case OPEN:
+            case CONNECTED:
+            case BOUND:
+                if (Boolean.FALSE.equals(e.getValue()) || e.getValue() == null) {
+                    synchronized (headerBlockCompressor) {
+                        finished = true;
+                        headerBlockCompressor.end();
+                    }
+                }
+            }
+        }
+        super.handleDownstream(ctx, evt);
     }
 
     @Override
@@ -278,7 +283,13 @@ public class SpdyFrameEncoder extends OneToOneEncoder {
         if (uncompressed.readableBytes() == 0) {
             return ChannelBuffers.EMPTY_BUFFER;
         }
-        headerBlockCompressor.offer(uncompressed);
-        return headerBlockCompressor.poll();
+        ChannelBuffer compressed = ChannelBuffers.dynamicBuffer();
+        synchronized (headerBlockCompressor) {
+            if (!finished) {
+                headerBlockCompressor.setInput(uncompressed);
+                headerBlockCompressor.encode(compressed);
+            }
+        }
+        return compressed;
     }
 }

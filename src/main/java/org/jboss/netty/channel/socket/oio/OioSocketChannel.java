@@ -15,31 +15,25 @@
  */
 package org.jboss.netty.channel.socket.oio;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PushbackInputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketAddress;
 
-import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.socket.DefaultSocketChannelConfig;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.SocketChannelConfig;
 
-abstract class OioSocketChannel extends AbstractChannel
+abstract class OioSocketChannel extends AbstractOioChannel
                                 implements SocketChannel {
 
     final Socket socket;
-    final Object interestOpsLock = new Object();
     private final SocketChannelConfig config;
-    volatile Thread workerThread;
-    private volatile InetSocketAddress localAddress;
-    private volatile InetSocketAddress remoteAddress;
 
     OioSocketChannel(
             Channel parent,
@@ -58,61 +52,36 @@ abstract class OioSocketChannel extends AbstractChannel
         return config;
     }
 
-    public InetSocketAddress getLocalAddress() {
-        InetSocketAddress localAddress = this.localAddress;
-        if (localAddress == null) {
-            try {
-                this.localAddress = localAddress =
-                    (InetSocketAddress) socket.getLocalSocketAddress();
-            } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
-                return null;
-            }
-        }
-        return localAddress;
-    }
-
-    public InetSocketAddress getRemoteAddress() {
-        InetSocketAddress remoteAddress = this.remoteAddress;
-        if (remoteAddress == null) {
-            try {
-                this.remoteAddress = remoteAddress =
-                    (InetSocketAddress) socket.getRemoteSocketAddress();
-            } catch (Throwable t) {
-                // Sometimes fails on a closed socket in Windows.
-                return null;
-            }
-        }
-        return remoteAddress;
-    }
-
-    public boolean isBound() {
-        return isOpen() && socket.isBound();
-    }
-
-    public boolean isConnected() {
-        return isOpen() && socket.isConnected();
-    }
-
-    @Override
-    protected boolean setClosed() {
-        return super.setClosed();
-    }
-
-    @Override
-    protected void setInterestOpsNow(int interestOps) {
-        super.setInterestOpsNow(interestOps);
-    }
-
     abstract PushbackInputStream getInputStream();
     abstract OutputStream getOutputStream();
 
     @Override
-    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
-        if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
-            return super.write(message, null);
-        } else {
-            return getUnsupportedOperationFuture();
-        }
+    boolean isSocketBound() {
+        return socket.isBound();
+    }
+
+    @Override
+    boolean isSocketConnected() {
+        return socket.isConnected();
+    }
+
+    @Override
+    InetSocketAddress getLocalSocketAddress() throws Exception {
+        return (InetSocketAddress) socket.getLocalSocketAddress();
+    }
+
+    @Override
+    InetSocketAddress getRemoteSocketAddress() throws Exception {
+        return (InetSocketAddress) socket.getRemoteSocketAddress();
+    }
+
+    @Override
+    void closeSocket() throws IOException {
+        socket.close();
+    }
+
+    @Override
+    boolean isSocketClosed() {
+        return socket.isClosed();
     }
 }
