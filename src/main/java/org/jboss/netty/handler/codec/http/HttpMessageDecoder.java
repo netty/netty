@@ -368,12 +368,17 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         if (msg instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) msg;
             int code = res.getStatus().getCode();
-            // also check for code of 101 as 101 == Response to a websockets upgrade in earlier websocket versions.
-            //
-            // See https://github.com/netty/netty/issues/222
-            if (code < 200 && code != 101) {
+            if (code < 200) {
+                // Old Web Socket upgrade response had 16-byte fixed length content.
+                // See https://github.com/netty/netty/issues/222
+                if (code == 101 &&
+                    res.containsHeader(HttpHeaders.Names.SEC_WEBSOCKET_ORIGIN) &&
+                    res.containsHeader(HttpHeaders.Names.SEC_WEBSOCKET_LOCATION)) {
+                    return false;
+                }
                 return true;
             }
+
             switch (code) {
             case 204: case 205: case 304:
                 return true;
