@@ -13,22 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
+/**
+ * Encoder and decoder which transform a
+ * <a href="http://http://redis.io/topics/protocol">Redis protocol commands and replies</a>
+ * into a {@link org.jboss.netty.buffer.ChannelBuffer}
+ * and vice versa.
+ *
+ */
 package org.jboss.netty.handler.codec.redis;
-
-import org.jboss.netty.buffer.ChannelBuffer;
-
-import java.io.IOException;
-
-public class IntegerReply extends Reply {
-    public static final char MARKER = ':';
-    public final long integer;
-
-    public IntegerReply(long integer) {
-        this.integer = integer;
-    }
-
-    public void write(ChannelBuffer os) throws IOException {
-        os.writeByte(MARKER);
-        os.writeBytes(Command.numAndCRLF(integer));
-    }
-}

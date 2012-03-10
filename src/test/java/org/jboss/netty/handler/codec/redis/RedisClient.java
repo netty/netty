@@ -14,7 +14,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class RedisClient {
-    private static final byte[] VALUE = "value".getBytes(Reply.UTF_8);
+    private static final byte[] VALUE = "value".getBytes();
 
     public static void main(String[] args) throws Exception {
         ExecutorService executor = Executors.newCachedThreadPool();
