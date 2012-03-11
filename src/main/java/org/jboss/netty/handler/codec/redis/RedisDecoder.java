@@ -126,7 +126,7 @@ public class RedisDecoder extends ReplayingDecoder<State> {
         return receive(channelBuffer);
     }
 
-    public MultiBulkReply decodeMultiBulkReply(ChannelBuffer is) throws IOException {
+    private MultiBulkReply decodeMultiBulkReply(ChannelBuffer is) throws IOException {
         if (reply == null) {
             reply = new MultiBulkReply();
         }
