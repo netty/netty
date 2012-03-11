@@ -21,13 +21,6 @@ import org.jboss.netty.util.CharsetUtil;
 
 import java.io.IOException;
 
-/**
- * Replies.
- * User: sam
- * Date: 7/27/11
- * Time: 3:04 PM
- * To change this template use File | Settings | File Templates.
- */
 public abstract class Reply {
 
     public abstract void write(ChannelBuffer os) throws IOException;
