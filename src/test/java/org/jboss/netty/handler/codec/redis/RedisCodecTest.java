@@ -43,12 +43,12 @@ public class RedisCodecTest {
         {
             Object receive = decode("+OK\r\n".getBytes());
             assertTrue(receive instanceof StatusReply);
-            assertEquals("OK", ((StatusReply) receive).status);
+            assertEquals("OK", ((StatusReply) receive).status.toString(CharsetUtil.UTF_8));
         }
         {
             Object receive = decode("-ERROR\r\n".getBytes());
             assertTrue(receive instanceof ErrorReply);
-            assertEquals("ERROR", ((ErrorReply) receive).error);
+            assertEquals("ERROR", ((ErrorReply) receive).error.toString(CharsetUtil.UTF_8));
         }
         {
             Object receive = decode(":123\r\n".getBytes());
