@@ -83,6 +83,12 @@ public class RedisDecoder extends ReplayingDecoder<State> {
     }
 
     public Reply receive(final ChannelBuffer is) throws IOException {
+        if (reply != null) {
+            reply.read(this, is);
+            Reply ret = reply;
+            reply = null;
+            return ret;
+        }
         int code = is.readByte();
         switch (code) {
             case StatusReply.MARKER: {
