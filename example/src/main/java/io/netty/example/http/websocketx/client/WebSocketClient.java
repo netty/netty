@@ -84,7 +84,7 @@ public class WebSocketClient {
             HashMap<String, String> customHeaders = new HashMap<String, String>();
             customHeaders.put("MyHeader", "MyValue");
     
-            // Connect with V13 (RFC 6455). You can change it to V08 or V00.
+            // Connect with V13 (RFC 6455 aka HyBi-17). You can change it to V08 or V00.
             // If you change it to V00, ping is not supported and remember to change
             // HttpResponseDecoder to WebSocketHttpResponseDecoder in the pipeline.
             final WebSocketClientHandshaker handshaker =
@@ -94,12 +94,7 @@ public class WebSocketClient {
             bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
                 public ChannelPipeline getPipeline() throws Exception {
                     ChannelPipeline pipeline = Channels.pipeline();
-    
-                    // If you wish to support HyBi V00, you need to use
-                    // WebSocketHttpResponseDecoder instead for
-                    // HttpResponseDecoder.
                     pipeline.addLast("decoder", new HttpResponseDecoder());
-    
                     pipeline.addLast("encoder", new HttpRequestEncoder());
                     pipeline.addLast("ws-handler", new WebSocketClientHandler(handshaker));
                     return pipeline;
