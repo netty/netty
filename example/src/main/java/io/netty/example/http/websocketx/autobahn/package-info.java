@@ -26,13 +26,14 @@
  * 
  * <p>03. Intall Python Setup Tools: <tt>sudo apt-get install python-setuptools</tt>
  * 
- * <p>04. Install AutoBahn: <tt>sudo easy_install Autobahn</tt>
+ * <p>04. Install AutoBahn: <tt>sudo easy_install Autobahn</tt>. If you already have Autobahn installed, you may need
+ * to upgrade it: <tt>sudo easy_install --upgrade Autobahn</tt>. Make suer v0.4.10 is installed.
  * 
- * <p>05. Get AutoBahn testsuite source code: <tt>git clone git@github.com:oberstet/Autobahn.git</tt>
+ * <p>05. Get AutoBahn testsuite source code: <tt>git clone git@github.com:tavendo/AutobahnPython.git</tt>
  * 
- * <p>06. Go to AutoBahn directory: <tt>cd Autobahn</tt>
+ * <p>06. Go to AutoBahn directory: <tt>cd AutobahnPython</tt>
  * 
- * <p>07. Checkout stable version: <tt>git checkout v0.4.3</tt>
+ * <p>07. Checkout stable version: <tt>git checkout v0.4.10</tt>
  * 
  * <p>08. Go to test suite directory: <tt>cd testsuite/websockets</tt>
  * 
@@ -47,11 +48,12 @@
  *    }
  * </code>
  * 
- * <p>10. Run <tt>AutobahnServer</tt> in this package
+ * <p>10. Run our <tt>AutobahnServer</tt> located in this package. If you are in Eclipse IDE, right click on 
+ * <tt>AutobahnServer.java</tt> and select Run As > Java Application.
  * 
- * <p>11. Run the test <tt>python fuzzing_client.py</tt>. Note that the actual test case python code is 
- * located in <tt>/usr/local/lib/python2.6/dist-packages/autobahn-0.4.3-py2.6.egg/autobahn/cases</tt> 
- * and not in the checked out git repository.
+ * <p>11. Run the Autobahn test <tt>python fuzzing_client.py</tt>. Note that the actual test case python code is 
+ * located with the easy_install package (e.g. in <tt>/usr/local/lib/python2.7/dist-packages/
+ * autobahn-0.4.10-py2.7.egg/autobahn/cases</tt>) and not in the checked out git repository.
  *   
  * <p>12. See the results in <tt>reports/servers/index.html</tt>
  */
