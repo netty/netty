@@ -22,16 +22,16 @@ import java.io.IOException;
 public class ErrorReply extends Reply {
     public static final char MARKER = '-';
     private static final byte[] ERR = "ERR ".getBytes();
-    public final String error;
+    public final ChannelBuffer error;
 
-    public ErrorReply(String error) {
+    public ErrorReply(ChannelBuffer error) {
         this.error = error;
     }
 
     public void write(ChannelBuffer os) throws IOException {
         os.writeByte(MARKER);
         os.writeBytes(ERR);
-        os.writeBytes(error.getBytes("UTF-8"));
+        os.writeBytes(error);
         os.writeBytes(Command.CRLF);
     }
 }

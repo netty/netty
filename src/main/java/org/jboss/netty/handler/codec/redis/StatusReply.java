@@ -21,15 +21,15 @@ import java.io.IOException;
 
 public class StatusReply extends Reply {
     public static final char MARKER = '+';
-    public final String status;
+    public final ChannelBuffer status;
 
-    public StatusReply(String status) {
+    public StatusReply(ChannelBuffer status) {
         this.status = status;
     }
 
     public void write(ChannelBuffer os) throws IOException {
         os.writeByte(MARKER);
-        os.writeBytes(status.getBytes("UTF-8"));
+        os.writeBytes(status);
         os.writeBytes(Command.CRLF);
     }
 }

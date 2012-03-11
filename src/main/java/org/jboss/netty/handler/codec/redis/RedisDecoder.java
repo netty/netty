@@ -92,12 +92,12 @@ public class RedisDecoder extends ReplayingDecoder<State> {
         int code = is.readByte();
         switch (code) {
             case StatusReply.MARKER: {
-              String status = is.readBytes(is.bytesBefore(ChannelBufferIndexFinder.CRLF)).toString(UTF_8);
+              ChannelBuffer status = is.readBytes(is.bytesBefore(ChannelBufferIndexFinder.CRLF));
               is.skipBytes(2);
               return new StatusReply(status);
             }
             case ErrorReply.MARKER: {
-              String error = is.readBytes(is.bytesBefore(ChannelBufferIndexFinder.CRLF)).toString(UTF_8);
+              ChannelBuffer error = is.readBytes(is.bytesBefore(ChannelBufferIndexFinder.CRLF));
               is.skipBytes(2);
               return new ErrorReply(error);
             }
