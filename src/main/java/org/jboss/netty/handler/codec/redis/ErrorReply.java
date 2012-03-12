@@ -37,7 +37,7 @@ public class ErrorReply extends Reply {
     public void write(ChannelBuffer os) throws IOException {
         os.writeByte(MARKER);
         os.writeBytes(ERR);
-        os.writeBytes(error);
+        os.writeBytes(error, 0, error.readableBytes());
         os.writeBytes(Command.CRLF);
     }
 }

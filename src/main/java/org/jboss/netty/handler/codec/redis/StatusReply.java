@@ -34,7 +34,7 @@ public class StatusReply extends Reply {
     @Override
     public void write(ChannelBuffer os) throws IOException {
         os.writeByte(MARKER);
-        os.writeBytes(status);
+        os.writeBytes(status, 0, status.readableBytes());
         os.writeBytes(Command.CRLF);
     }
 }
