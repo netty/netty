@@ -16,6 +16,7 @@
 package io.netty.handler.codec.redis;
 
 import io.netty.buffer.ChannelBuffer;
+import io.netty.util.CharsetUtil;
 
 import java.io.IOException;
 
@@ -68,7 +69,7 @@ public class Command {
             } else if (object instanceof byte[]) {
                 arguments[i] = (byte[]) object;
             } else {
-                arguments[i] = object.toString().getBytes("UTF-8");
+                arguments[i] = object.toString().getBytes(CharsetUtil.UTF_8);
             }
         }
         writeDirect(os, arguments);
