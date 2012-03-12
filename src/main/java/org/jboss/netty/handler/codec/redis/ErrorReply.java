@@ -19,6 +19,11 @@ import org.jboss.netty.buffer.ChannelBuffer;
 
 import java.io.IOException;
 
+/**
+ * {@link Reply} which will be returned if an error was detected
+ * 
+ *
+ */
 public class ErrorReply extends Reply {
     public static final char MARKER = '-';
     private static final byte[] ERR = "ERR ".getBytes();

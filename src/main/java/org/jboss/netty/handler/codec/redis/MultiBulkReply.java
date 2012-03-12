@@ -19,6 +19,11 @@ import org.jboss.netty.buffer.ChannelBuffer;
 
 import java.io.IOException;
 
+/**
+ * {@link Reply} which contains a bulk of {@link Reply}'s
+ * 
+ *
+ */
 public class MultiBulkReply extends Reply {
     public static final char MARKER = '*';
 
@@ -55,7 +60,7 @@ public class MultiBulkReply extends Reply {
         for (int i = num; i < size; i++) {
             int read = is.readByte();
             if (read == BulkReply.MARKER) {
-                byteArrays[i] = rd.readBytes(is);
+                byteArrays[i] = RedisDecoder.readBytes(is);
             } else if (read == IntegerReply.MARKER) {
                 byteArrays[i] = RedisDecoder.readInteger(is);
             } else {

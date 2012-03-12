@@ -22,29 +22,35 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 
+/**
+ * {@link ReplayingDecoder} which handles Redis protocol
+ * 
+ *
+ */
 public class RedisDecoder extends ReplayingDecoder<State> {
 
     private static final char CR = '\r';
     private static final char LF = '\n';
     private static final char ZERO = '0';
-    public static final Charset UTF_8 = Charset.forName("UTF-8");
-
+    
     // We track the current multibulk reply in the case
     // where we do not get a complete reply in a single
     // decode invocation.
     private MultiBulkReply reply;
 
-    public byte[] readBytes(ChannelBuffer is) throws IOException {
+    /**
+     * Return a byte array which contains only the content of the request. The size of the content is read from the given {@link ChannelBuffer}
+     * via the {@link #readInteger(ChannelBuffer)} method
+     * 
+     * @param is the {@link ChannelBuffer} to read from
+     * @return content 
+     * @throws IOException is thrown if the line-ending is not CRLF
+     */
+    public static byte[] readBytes(ChannelBuffer is) throws IOException {
         int size = readInteger(is);
         if (size == -1) {
             return null;
-        }
-        if (super.actualReadableBytes() < size + 2) {
-            // Trigger error
-            is.skipBytes(size + 2);
-            throw new AssertionError("Trustin says this isn't possible");
         }
         byte[] bytes = new byte[size];
         is.readBytes(bytes, 0, size);
@@ -56,6 +62,13 @@ public class RedisDecoder extends ReplayingDecoder<State> {
         return bytes;
     }
 
+    /**
+     * Read an {@link Integer} from the {@link ChannelBuffer}
+     * 
+     * @param is
+     * @return integer
+     * @throws IOException
+     */
     public static int readInteger(ChannelBuffer is) throws IOException {
         int size = 0;
         int sign = 1;

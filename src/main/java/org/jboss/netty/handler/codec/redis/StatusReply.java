@@ -19,6 +19,10 @@ import org.jboss.netty.buffer.ChannelBuffer;
 
 import java.io.IOException;
 
+/**
+ * {@link Reply} which contains the status 
+ *
+ */
 public class StatusReply extends Reply {
     public static final char MARKER = '+';
     public final ChannelBuffer status;

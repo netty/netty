@@ -33,5 +33,6 @@ public class SubscribeReply extends Reply {
 
     @Override
     public void write(ChannelBuffer os) throws IOException {
+        // Do nothing
     }
 }

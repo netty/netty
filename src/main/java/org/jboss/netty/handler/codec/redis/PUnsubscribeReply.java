@@ -27,6 +27,6 @@ public class PUnsubscribeReply extends UnsubscribeReply {
 
     @Override
     public void write(ChannelBuffer os) throws IOException {
-
+        // Do nothing
     }
 }

@@ -21,8 +21,15 @@ import org.jboss.netty.util.CharsetUtil;
 
 import java.io.IOException;
 
+/**
+ * {@link Reply} which was sent as a Response to the written {@link Command}
+ *  *
+ */
 public abstract class Reply {
 
+    /**
+     * Write the content of the {@link Reply} to the given {@link ChannelBuffer}
+     */
     public abstract void write(ChannelBuffer os) throws IOException;
 
     @Override
