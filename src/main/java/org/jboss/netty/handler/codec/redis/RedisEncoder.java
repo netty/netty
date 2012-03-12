@@ -28,6 +28,11 @@ import org.jboss.netty.channel.ChannelHandler.Sharable;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+/**
+ * {@link SimpleChannelDownstreamHandler} which encodes {@link Command}'s to {@link ChannelBuffer}'s
+ * 
+ *
+ */
 @Sharable
 public class RedisEncoder extends SimpleChannelDownstreamHandler {
 

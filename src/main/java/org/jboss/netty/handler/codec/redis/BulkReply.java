@@ -27,6 +27,7 @@ public class BulkReply extends Reply {
         this.bytes = bytes;
     }
 
+    @Override
     public void write(ChannelBuffer os) throws IOException {
         os.writeByte(MARKER);
         if (bytes == null) {

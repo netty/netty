@@ -21,10 +21,6 @@ import java.io.IOException;
 
 /**
  * Command serialization.
- * User: sam
- * Date: 7/27/11
- * Time: 3:04 PM
- * To change this template use File | Settings | File Templates.
  */
 public class Command {
     public static final byte[] ARGS_PREFIX = "*".getBytes();

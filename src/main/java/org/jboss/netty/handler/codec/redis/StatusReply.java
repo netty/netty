@@ -26,7 +26,8 @@ public class StatusReply extends Reply {
     public StatusReply(ChannelBuffer status) {
         this.status = status;
     }
-
+    
+    @Override
     public void write(ChannelBuffer os) throws IOException {
         os.writeByte(MARKER);
         os.writeBytes(status);

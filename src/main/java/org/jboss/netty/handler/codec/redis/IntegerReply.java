@@ -27,6 +27,7 @@ public class IntegerReply extends Reply {
         this.integer = integer;
     }
 
+    @Override
     public void write(ChannelBuffer os) throws IOException {
         os.writeByte(MARKER);
         os.writeBytes(Command.numAndCRLF(integer));

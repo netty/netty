@@ -28,6 +28,7 @@ public class ErrorReply extends Reply {
         this.error = error;
     }
 
+    @Override
     public void write(ChannelBuffer os) throws IOException {
         os.writeByte(MARKER);
         os.writeBytes(ERR);

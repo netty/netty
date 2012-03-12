@@ -30,6 +30,10 @@ public class MultiBulkReply extends Reply {
     public MultiBulkReply() {
     }
 
+    public MultiBulkReply(Object... values) {
+        this.byteArrays = values;
+    }
+    
     public void read(RedisDecoder rd, ChannelBuffer is) throws IOException {
         // If we attempted to read the size before, skip the '*' and reread it
         if (size == -1) {
@@ -62,10 +66,7 @@ public class MultiBulkReply extends Reply {
         }
     }
 
-    public MultiBulkReply(Object... values) {
-        this.byteArrays = values;
-    }
-
+    @Override
     public void write(ChannelBuffer os) throws IOException {
         os.writeByte(MARKER);
         if (byteArrays == null) {

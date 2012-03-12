@@ -25,6 +25,7 @@ public abstract class Reply {
 
     public abstract void write(ChannelBuffer os) throws IOException;
 
+    @Override
     public String toString() {
         ChannelBuffer channelBuffer = ChannelBuffers.dynamicBuffer();
         try {
