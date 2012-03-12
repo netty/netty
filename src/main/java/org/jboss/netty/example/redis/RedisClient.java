@@ -32,7 +32,7 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class RedisClient {
+public final class RedisClient {
     private static final byte[] VALUE = "value".getBytes();
 
     public static void main(String[] args) throws Exception {
@@ -69,5 +69,9 @@ public class RedisClient {
 
         channel.close();
         cb.releaseExternalResources();
+    }
+
+    private RedisClient() {
+        
     }
 }
