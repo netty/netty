@@ -82,40 +82,6 @@ public class RedisDecoder extends ReplayingDecoder<State> {
         return size * sign;
     }
 
-    public Reply receive(final ChannelBuffer is) throws IOException {
-        if (reply != null) {
-            reply.read(this, is);
-            Reply ret = reply;
-            reply = null;
-            return ret;
-        }
-        int code = is.readByte();
-        switch (code) {
-            case StatusReply.MARKER: {
-              ChannelBuffer status = is.readBytes(is.bytesBefore(ChannelBufferIndexFinder.CRLF));
-              is.skipBytes(2);
-              return new StatusReply(status);
-            }
-            case ErrorReply.MARKER: {
-              ChannelBuffer error = is.readBytes(is.bytesBefore(ChannelBufferIndexFinder.CRLF));
-              is.skipBytes(2);
-              return new ErrorReply(error);
-            }
-            case IntegerReply.MARKER: {
-                return new IntegerReply(readInteger(is));
-            }
-            case BulkReply.MARKER: {
-                return new BulkReply(readBytes(is));
-            }
-            case MultiBulkReply.MARKER: {
-                return decodeMultiBulkReply(is);
-            }
-            default: {
-                throw new IOException("Unexpected character in stream: " + code);
-            }
-        }
-    }
-
     @Override
     public void checkpoint() {
         super.checkpoint();
@@ -123,7 +89,37 @@ public class RedisDecoder extends ReplayingDecoder<State> {
 
     @Override
     protected Object decode(ChannelHandlerContext channelHandlerContext, Channel channel, ChannelBuffer channelBuffer, State anEnum) throws Exception {
-        return receive(channelBuffer);
+        if (reply != null) {
+            reply.read(this, channelBuffer);
+            Reply ret = reply;
+            reply = null;
+            return ret;
+        }
+        int code = channelBuffer.readByte();
+        switch (code) {
+            case StatusReply.MARKER: {
+              ChannelBuffer status = channelBuffer.readBytes(channelBuffer.bytesBefore(ChannelBufferIndexFinder.CRLF));
+              channelBuffer.skipBytes(2);
+              return new StatusReply(status);
+            }
+            case ErrorReply.MARKER: {
+              ChannelBuffer error = channelBuffer.readBytes(channelBuffer.bytesBefore(ChannelBufferIndexFinder.CRLF));
+              channelBuffer.skipBytes(2);
+              return new ErrorReply(error);
+            }
+            case IntegerReply.MARKER: {
+                return new IntegerReply(readInteger(channelBuffer));
+            }
+            case BulkReply.MARKER: {
+                return new BulkReply(readBytes(channelBuffer));
+            }
+            case MultiBulkReply.MARKER: {
+                return decodeMultiBulkReply(channelBuffer);
+            }
+            default: {
+                throw new IOException("Unexpected character in stream: " + code);
+            }
+        }
     }
 
     private MultiBulkReply decodeMultiBulkReply(ChannelBuffer is) throws IOException {
