@@ -295,9 +295,12 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
 
         @Override
         public void run() {
+            boolean acquired = false;
+            
             // check if its already running by using CAS. If so just return here. So in the worst case the thread
             // is executed and do nothing
             if (isRunning.compareAndSet(false, true)) {
+                acquired = true;
                 try {
                     Thread thread = Thread.currentThread();
                     for (;;) {
@@ -323,6 +326,10 @@ public class OrderedMemoryAwareThreadPoolExecutor extends
                 } finally {
                     // set it back to not running
                     isRunning.set(false);
+                }
+                
+                if (acquired && !isRunning.get() && tasks.peek() != null) {
+                    doUnorderedExecute(this);
                 }
             }
         }
