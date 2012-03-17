@@ -67,6 +67,13 @@
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>biz.massive-dynamics</groupId>
+      <artifactId>Modger</artifactId>
+      <scope>compile</scope>
+      <version>1.0.0.0-BETA</version>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <build>
