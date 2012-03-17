@@ -195,4 +195,14 @@ public class ModgerLogger extends AbstractInternalLogger {
         this.logger.submitError(msg, cause);
     }
     
+    /**
+     * Gets a string-based representation of this logger
+     * 
+     * @return The logger's name
+     */
+    @Override
+    public String toString() {
+        return this.logger.getName();
+    }
+    
 }
