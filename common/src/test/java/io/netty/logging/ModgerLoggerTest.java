@@ -98,6 +98,30 @@ public class ModgerLoggerTest {
     }
     
     @Test
+    public void testDebugWithException() {
+        Logger mock = createStrictMock(Logger.class);
+
+        mock.submitDebug("a", e);
+        replay(mock);
+
+        InternalLogger logger = new ModgerLogger(mock);
+        logger.debug("a", e);
+        verify(mock);
+    }
+    
+    @Test
+    public void testInfoWithException() {
+        Logger mock = createStrictMock(Logger.class);
+
+        mock.submitInformation("a", e);
+        replay(mock);
+
+        InternalLogger logger = new ModgerLogger(mock);
+        logger.info("a", e);
+        verify(mock);
+    }
+    
+    @Test
     public void testWarnWithException() {
         Logger mock = createStrictMock(Logger.class);
 

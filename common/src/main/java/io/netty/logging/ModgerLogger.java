@@ -114,15 +114,7 @@ public class ModgerLogger extends AbstractInternalLogger {
      */
     @Override
     public void debug(String msg, Throwable cause) {
-        //Currently have to manually set the message, since Modger's API needs to be enhanced
-        //First, format the throwable
-        String formattedThrowable = (String) this.logger.getThrowableFormatter().format(cause);
-        
-        //Then make a message
-        msg = msg + Modger.getLineSeparator() + formattedThrowable;
-        
-        this.logger.submitDebug(msg);
-        
+        this.logger.submitDebug(msg, cause);
     }
 
     /**
@@ -143,14 +135,7 @@ public class ModgerLogger extends AbstractInternalLogger {
      */
     @Override
     public void info(String msg, Throwable cause) {
-        //Currently have to manually set the message, since Modger's API needs to be enhanced
-        //First, format the throwable
-        String formattedThrowable = (String) this.logger.getThrowableFormatter().format(cause);
-        
-        //Then make a message
-        msg = msg + Modger.getLineSeparator() + formattedThrowable;
-        
-        this.logger.submitInformation(msg);
+        this.logger.submitInformation(msg, cause);
     }
 
     /**
