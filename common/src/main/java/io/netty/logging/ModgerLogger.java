@@ -16,7 +16,6 @@
 package io.netty.logging;
 
 import biz.massivedynamics.modger.Logger;
-import biz.massivedynamics.modger.Modger;
 import biz.massivedynamics.modger.message.MessageType;
 
 /**
