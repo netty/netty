@@ -374,7 +374,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
             // See: 
             //     - http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
             //     - https://github.com/netty/netty/issues/222
-            if (!isDecodingRequest() && code >= 100 && code < 200) {
+            if (code >= 100 && code < 200) {
                 return true;
             }
 
