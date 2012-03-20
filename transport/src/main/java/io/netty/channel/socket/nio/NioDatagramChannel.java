@@ -18,6 +18,7 @@ package io.netty.channel.socket.nio;
 import static io.netty.channel.Channels.fireChannelOpen;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 import io.netty.channel.socket.DatagramChannelConfig;
@@ -26,6 +27,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.SocketAddress;
 import java.nio.channels.DatagramChannel;
 
 /**
@@ -120,5 +122,15 @@ final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel>
     @Override
     InetSocketAddress getRemoteSocketAddress() throws Exception {
         return (InetSocketAddress) channel.socket().getRemoteSocketAddress();
+    }
+
+    @Override
+    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
+        if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
+            return super.write(message, null);
+        } else {
+            return super.write(message, remoteAddress);
+        }
+
     }
 }
