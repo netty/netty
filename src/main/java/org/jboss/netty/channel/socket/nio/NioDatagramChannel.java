@@ -33,7 +33,7 @@ import java.nio.channels.DatagramChannel;
 /**
  * Provides an NIO based {@link io.netty.channel.socket.DatagramChannel}.
  */
-final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel>
+public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel>
                                 implements org.jboss.netty.channel.socket.DatagramChannel {
 
     /**
@@ -61,7 +61,11 @@ final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel>
         }
     }
 
-
+    @Override
+    public NioDatagramWorker getWorker() {
+        return (NioDatagramWorker) super.getWorker();
+    }
+    
     public boolean isBound() {
         return isOpen() && channel.socket().isBound();
     }

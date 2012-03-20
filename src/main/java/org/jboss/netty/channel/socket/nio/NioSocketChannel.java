@@ -43,6 +43,10 @@ class NioSocketChannel extends AbstractNioChannel<SocketChannel>
         config = new DefaultNioSocketChannelConfig(socket.socket());
     }
 
+    @Override
+    public NioWorker getWorker() {
+        return (NioWorker) super.getWorker();
+    }
 
     public NioSocketChannelConfig getConfig() {
         return config;
