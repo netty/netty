@@ -41,7 +41,6 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.QueueFactory;
 
@@ -49,33 +48,27 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioClientSocketPipelineSink.class);
-    private static final AtomicInteger nextId = new AtomicInteger();
 
-    final int id = nextId.incrementAndGet();
     final Executor bossExecutor;
 
     private final Boss[] bosses;
-    private final NioWorker[] workers;
 
     private final AtomicInteger bossIndex = new AtomicInteger();
-    private final AtomicInteger workerIndex = new AtomicInteger();
+
+    private final WorkerPool<NioWorker> workerPool;
 
     NioClientSocketPipelineSink(
-            Executor bossExecutor, Executor workerExecutor,
-            int bossCount, int workerCount) {
+            Executor bossExecutor, int bossCount, WorkerPool<NioWorker> workerPool) {
+
         this.bossExecutor = bossExecutor;
-        
+
         bosses = new Boss[bossCount];
         for (int i = 0; i < bosses.length; i ++) {
-            bosses[i] = new Boss(i + 1);
+            bosses[i] = new Boss();
         }
-        
-        workers = new NioWorker[workerCount];
-        for (int i = 0; i < workers.length; i ++) {
-            workers[i] = new NioWorker(workerExecutor);
-        }
-    }
 
+        this.workerPool = workerPool;
+    }
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
@@ -167,21 +160,18 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
     }
 
     NioWorker nextWorker() {
-        return workers[Math.abs(
-                workerIndex.getAndIncrement() % workers.length)];
+        return workerPool.nextWorker();
     }
 
     private final class Boss implements Runnable {
 
         volatile Selector selector;
         private boolean started;
-        private final int subId;
         private final AtomicBoolean wakenUp = new AtomicBoolean();
         private final Object startStopLock = new Object();
         private final Queue<Runnable> registerTaskQueue = QueueFactory.createQueue(Runnable.class);;
 
-        Boss(int subId) {
-            this.subId = subId;
+        Boss() {
         }
 
         void register(NioClientSocketChannel channel) {
@@ -202,9 +192,8 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                     boolean success = false;
                     try {
                         DeadLockProofWorker.start(
-                                bossExecutor,
-                                new ThreadRenamingRunnable(
-                                        this, "New I/O client boss #" + id + '-' + subId));
+                                bossExecutor, this);
+                                
                         success = true;
                     } finally {
                         if (!success) {

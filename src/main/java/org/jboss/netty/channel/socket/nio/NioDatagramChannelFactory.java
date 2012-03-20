@@ -25,7 +25,7 @@ import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.socket.DatagramChannel;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
 import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
-import org.jboss.netty.util.internal.ExecutorUtil;
+import org.jboss.netty.util.ExternalResourceReleasable;
 
 /**
  * A {@link DatagramChannelFactory} that creates a NIO-based connectionless
@@ -76,8 +76,8 @@ import org.jboss.netty.util.internal.ExecutorUtil;
  */
 public class NioDatagramChannelFactory implements DatagramChannelFactory {
 
-    private final Executor workerExecutor;
     private final NioDatagramPipelineSink sink;
+    private final WorkerPool<NioDatagramWorker> workerPool;
 
     /**
      * Creates a new instance.  Calling this constructor is same with calling
@@ -94,34 +94,34 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
 
     /**
      * Creates a new instance.
-     *
+     * 
      * @param workerExecutor
-     *        the {@link Executor} which will execute the I/O worker threads
+     *            the {@link Executor} which will execute the I/O worker threads
      * @param workerCount
-     *        the maximum number of I/O worker threads
+     *            the maximum number of I/O worker threads
      */
-    public NioDatagramChannelFactory(final Executor workerExecutor,
-            final int workerCount) {
-        if (workerCount <= 0) {
-            throw new IllegalArgumentException(String
-                    .format("workerCount (%s) must be a positive integer.",
-                            workerCount));
-        }
-
-        if (workerExecutor == null) {
-            throw new NullPointerException(
-                    "workerExecutor argument must not be null");
-        }
-        this.workerExecutor = workerExecutor;
-
-        sink = new NioDatagramPipelineSink(workerExecutor, workerCount);
+    public NioDatagramChannelFactory(final Executor workerExecutor, final int workerCount) {
+        this(new NioDatagramWorkerPool(workerExecutor, workerCount, true));
     }
+
+    /**
+    * Creates a new instance.
+    *
+    * @param workerPool
+    * the {@link WorkerPool} which will be used to obtain the {@link Worker} that execute the I/O worker threads
+    */
+        public NioDatagramChannelFactory(WorkerPool<NioDatagramWorker> workerPool) {
+            this.workerPool = workerPool;
+            sink = new NioDatagramPipelineSink(workerPool);
+        }
 
     public DatagramChannel newChannel(final ChannelPipeline pipeline) {
         return new NioDatagramChannel(this, pipeline, sink, sink.nextWorker());
     }
 
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(workerExecutor);
+        if (workerPool instanceof ExternalResourceReleasable) {
+            ((ExternalResourceReleasable) workerPool).releaseExternalResources();
+        }
     }
 }

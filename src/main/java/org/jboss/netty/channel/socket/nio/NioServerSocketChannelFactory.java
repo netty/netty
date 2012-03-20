@@ -26,6 +26,7 @@ import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.ServerSocketChannelFactory;
+import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.internal.ExecutorUtil;
 
 /**
@@ -85,7 +86,7 @@ import org.jboss.netty.util.internal.ExecutorUtil;
 public class NioServerSocketChannelFactory implements ServerSocketChannelFactory {
 
     final Executor bossExecutor;
-    private final Executor workerExecutor;
+    private final WorkerPool<NioWorker> workerPool;
     private final ChannelSink sink;
 
     /**
@@ -117,20 +118,29 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
     public NioServerSocketChannelFactory(
             Executor bossExecutor, Executor workerExecutor,
             int workerCount) {
+        this(bossExecutor, new NioWorkerPool(workerExecutor, workerCount, true));
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param bossExecutor
+     *        the {@link Executor} which will execute the boss threads
+     * @param workerPool
+     *        the {@link WorkerPool} which will be used to obtain the {@link Worker} that execute the I/O worker threads
+     */
+    public NioServerSocketChannelFactory(
+            Executor bossExecutor, WorkerPool<NioWorker> workerPool) {
         if (bossExecutor == null) {
             throw new NullPointerException("bossExecutor");
         }
-        if (workerExecutor == null) {
-            throw new NullPointerException("workerExecutor");
+        if (workerPool == null) {
+            throw new NullPointerException("workerPool");
         }
-        if (workerCount <= 0) {
-            throw new IllegalArgumentException(
-                    "workerCount (" + workerCount + ") " +
-                    "must be a positive integer.");
-        }
+       
         this.bossExecutor = bossExecutor;
-        this.workerExecutor = workerExecutor;
-        sink = new NioServerSocketPipelineSink(workerExecutor, workerCount);
+        this.workerPool = workerPool;
+        sink = new NioServerSocketPipelineSink(workerPool);
     }
 
     public ServerSocketChannel newChannel(ChannelPipeline pipeline) {
@@ -138,6 +148,9 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
     }
 
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(bossExecutor, workerExecutor);
+        ExecutorUtil.terminate(bossExecutor);
+        if (workerPool instanceof ExternalResourceReleasable) {
+            ((ExternalResourceReleasable) workerPool).releaseExternalResources();
+        }
     }
 }

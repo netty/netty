@@ -21,6 +21,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.socket.ChannelRunnableWrapper;
 import org.jboss.netty.channel.socket.Worker;
 
 public abstract class AbstractOioChannelSink extends AbstractChannelSink {
@@ -32,7 +33,9 @@ public abstract class AbstractOioChannelSink extends AbstractChannelSink {
             AbstractOioChannel channel = (AbstractOioChannel) ch;
             Worker worker = channel.worker;
             if (worker != null) {
-                return channel.worker.executeInIoThread(ch, task);
+                ChannelRunnableWrapper wrapper = new ChannelRunnableWrapper(pipeline.getChannel(), task);
+                channel.worker.executeInIoThread(wrapper);
+                return wrapper;
             }
         } 
             

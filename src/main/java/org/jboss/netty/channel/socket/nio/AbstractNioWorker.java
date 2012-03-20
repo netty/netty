@@ -21,7 +21,6 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.socket.ChannelRunnableWrapper;
 import org.jboss.netty.channel.socket.Worker;
 import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.logging.InternalLogger;
@@ -42,7 +41,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -116,20 +114,42 @@ abstract class AbstractNioWorker implements Worker {
 
     private final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
 
+    private final boolean allowShutdownOnIdle;
+
     AbstractNioWorker(Executor executor) {
+        this(executor, true);
+    }
+
+    public AbstractNioWorker(Executor executor, boolean allowShutdownOnIdle) {
         this.executor = executor;
+        this.allowShutdownOnIdle = allowShutdownOnIdle;
     }
 
     void register(AbstractNioChannel<?> channel, ChannelFuture future) {
 
         Runnable registerTask = createRegisterTask(channel, future);
-        Selector selector;
+        Selector selector = start();
 
+        
+        boolean offered = registerTaskQueue.offer(registerTask);
+        assert offered;
+        
+        if (wakenUp.compareAndSet(false, true)) {
+            selector.wakeup();
+        }
+    }
+
+    /**
+     * Start the {@link AbstractNioWorker} and return the {@link Selector} that will be used for the {@link AbstractNioChannel}'s when they get registered
+     * 
+     * @return selector
+     */
+    private Selector start() {
         synchronized (startStopLock) {
             if (!started) {
                 // Open a selector if this worker didn't start yet.
                 try {
-                    this.selector = selector = Selector.open();
+                    this.selector = Selector.open();
                 } catch (Throwable t) {
                     throw new ChannelException("Failed to create a selector.", t);
                 }
@@ -147,25 +167,17 @@ abstract class AbstractNioWorker implements Worker {
                         } catch (Throwable t) {
                             logger.warn("Failed to close a selector.", t);
                         }
-                        this.selector = selector = null;
+                        this.selector = null;
                         // The method will return to the caller at this point.
                     }
                 }
-            } else {
-                // Use the existing selector if this worker has been started.
-                selector = this.selector;
             }
 
             assert selector != null && selector.isOpen();
 
             started = true;
-            boolean offered = registerTaskQueue.offer(registerTask);
-            assert offered;
         }
-
-        if (wakenUp.compareAndSet(false, true)) {
-            selector.wakeup();
-        }
+        return selector;
     }
 
 
@@ -251,8 +263,10 @@ abstract class AbstractNioWorker implements Worker {
                             }
                         }
                     } else {
-                        // Give one more second.
-                        shutdown = true;
+                        if (allowShutdownOnIdle) {
+                            // Give one more second.
+                            shutdown = true;
+                        }
                     }
                 } else {
                     shutdown = false;
@@ -271,32 +285,39 @@ abstract class AbstractNioWorker implements Worker {
             }
         }
     }
-    
-    public ChannelFuture executeInIoThread(Channel channel, Runnable task) {
-       if (channel instanceof AbstractNioChannel<?> && isIoThread((AbstractNioChannel<?>) channel)) {
-           try {
-               task.run();
-               return succeededFuture(channel);
-           } catch (Throwable t) {
-               return failedFuture(channel, t);
-           }
-       } else {
-           ChannelRunnableWrapper channelRunnable = new ChannelRunnableWrapper(channel, task);
-           boolean added = eventQueue.offer(channelRunnable);
-           
-           if (added) {
-               // wake up the selector to speed things
-               // wake up the selector to speed things
-               Selector selector = this.selector;
-               if (selector != null) {
-                   selector.wakeup();
-               }
-           } else {
-               channelRunnable.setFailure(new RejectedExecutionException("Unable to queue task " + task));
-           }
-           return channelRunnable;
-       }
+
+    public void executeInIoThread(Runnable task) {
+        executeInIoThread(task, false);
     }
+    
+    /**
+     * Execute the {@link Runnable} in a IO-Thread
+     * 
+     * @param task
+     *            the {@link Runnable} to execute
+     * @param alwaysAsync
+     *            <code>true</code> if the {@link Runnable} should be executed
+     *            in an async fashion even if the current Thread == IO Thread
+     */
+    public void executeInIoThread(Runnable task, boolean alwaysAsync) {
+        if (!alwaysAsync && Thread.currentThread() == thread) {
+            task.run();
+        } else {
+            start();
+            boolean added = eventQueue.offer(task);
+
+            assert added;
+            if (added) {
+                // wake up the selector to speed things
+                Selector selector = this.selector;
+                if (selector != null) {
+                    selector.wakeup();
+                }
+            }
+        }
+
+    }
+    
     
     private void processRegisterTaskQueue() throws IOException {
         for (;;) {

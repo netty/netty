@@ -14,20 +14,22 @@
  * under the License.
  */
 
-package org.jboss.netty.channel.socket;
+package org.jboss.netty.channel.socket.nio;
+
+import org.jboss.netty.channel.socket.Worker;
 
 /**
- * A {@link Worker} is responsible to dispatch IO operations
- * 
+ * The {@link WorkerPool} is responsible to hand of {@link Worker}'s on demand
+ *
  */
-public interface Worker extends Runnable {
+public interface WorkerPool<E extends Worker> {
 
     /**
-     * Execute the given {@link Runnable} in the IO-Thread. This may be now or
-     * later once the IO-Thread do some other work.
+     * Return the next {@link Worker} to use
      * 
-     * @param task
-     *            the {@link Runnable} to execute
+     * @return worker
      */
-     void executeInIoThread(Runnable task);
+    E nextWorker();
+    
+
 }

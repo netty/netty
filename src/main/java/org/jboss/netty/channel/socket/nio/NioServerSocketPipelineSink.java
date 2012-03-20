@@ -27,7 +27,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
@@ -38,25 +37,18 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
-import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 class NioServerSocketPipelineSink extends AbstractNioChannelSink {
 
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioServerSocketPipelineSink.class);
-    private static final AtomicInteger nextId = new AtomicInteger();
+    private final WorkerPool<NioWorker> workerPool;
 
-    private final int id = nextId.incrementAndGet();
-    private final NioWorker[] workers;
-    private final AtomicInteger workerIndex = new AtomicInteger();
-
-    NioServerSocketPipelineSink(Executor workerExecutor, int workerCount) {
-        workers = new NioWorker[workerCount];
-        for (int i = 0; i < workers.length; i ++) {
-            workers[i] = new NioWorker(workerExecutor);
-        }
+    NioServerSocketPipelineSink(WorkerPool<NioWorker> workerPool) {
+        this.workerPool = workerPool;
     }
+
 
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
@@ -145,10 +137,7 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
             Executor bossExecutor =
                 ((NioServerSocketChannelFactory) channel.getFactory()).bossExecutor;
             DeadLockProofWorker.start(
-                    bossExecutor,
-                    new ThreadRenamingRunnable(
-                            new Boss(channel),
-                            "New I/O server boss #" + id + " (" + channel + ')'));
+                    bossExecutor, new Boss(channel));
             bossStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
@@ -195,8 +184,7 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
     }
 
     NioWorker nextWorker() {
-        return workers[Math.abs(
-                workerIndex.getAndIncrement() % workers.length)];
+        return workerPool.nextWorker();
     }
 
     private final class Boss implements Runnable {
