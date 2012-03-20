@@ -20,6 +20,7 @@ import io.netty.channel.AbstractChannelSink;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.ChannelRunnableWrapper;
 
 public abstract class AbstractSctpChannelSink extends AbstractChannelSink {
 
@@ -28,7 +29,9 @@ public abstract class AbstractSctpChannelSink extends AbstractChannelSink {
         Channel ch = pipeline.getChannel();
         if (ch instanceof SctpChannelImpl) {
             SctpChannelImpl channel = (SctpChannelImpl) ch;
-            return channel.worker.executeInIoThread(channel, task);
+            ChannelRunnableWrapper wrapper = new ChannelRunnableWrapper(channel, task);
+            channel.worker.executeInIoThread(wrapper);
+            return wrapper;
              
         } else {
             return super.execute(pipeline, task);

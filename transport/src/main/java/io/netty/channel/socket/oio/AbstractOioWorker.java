@@ -19,13 +19,11 @@ import static io.netty.channel.Channels.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.Channels;
-import io.netty.channel.socket.ChannelRunnableWrapper;
 import io.netty.channel.socket.Worker;
 import io.netty.util.internal.QueueFactory;
 
 import java.io.IOException;
 import java.util.Queue;
-import java.util.concurrent.RejectedExecutionException;
 
 /**
  * Abstract base class for Oio-Worker implementations
@@ -34,10 +32,16 @@ import java.util.concurrent.RejectedExecutionException;
  */
 abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker {
 
-    private final Queue<ChannelRunnableWrapper> eventQueue = QueueFactory.createQueue(ChannelRunnableWrapper.class);
+    private final Queue<Runnable> eventQueue = QueueFactory.createQueue(Runnable.class);
     
     protected final C channel;
 
+    /**
+     * If this worker has been started thread will be a reference to the thread
+     * used when starting. i.e. the current thread when the run method is executed.
+     */
+    protected volatile Thread thread;
+    
     public AbstractOioWorker(C channel) {
         this.channel = channel;
         channel.worker = this;
@@ -45,7 +49,7 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
 
     @Override
     public void run() {
-        channel.workerThread = Thread.currentThread();
+        thread = channel.workerThread = Thread.currentThread();
 
         while (channel.isOpen()) {
             synchronized (channel.interestOpsLock) {
@@ -91,31 +95,21 @@ abstract class AbstractOioWorker<C extends AbstractOioChannel> implements Worker
     }
     
     @Override
-    public ChannelFuture executeInIoThread(Channel channel, Runnable task) {
-        if (channel instanceof AbstractOioChannel && isIoThread((AbstractOioChannel) channel)) {
-            try {
-                task.run();
-                return succeededFuture(channel);
-            } catch (Throwable t) {
-                return failedFuture(channel, t);
-            }
+    public void executeInIoThread(Runnable task) {
+        if (Thread.currentThread() == thread) {
+            task.run();
         } else {
-            ChannelRunnableWrapper channelRunnable = new ChannelRunnableWrapper(channel, task);
-            boolean added = eventQueue.offer(channelRunnable);
+            boolean added = eventQueue.offer(task);
             
             if (added) {
                 // as we set the SO_TIMEOUT to 1 second this task will get picked up in 1 second at latest
-
-            } else {
-                channelRunnable.setFailure(new RejectedExecutionException("Unable to queue task " + task));
-            }
-            return channelRunnable;
+            } 
         }
     }
     
     private void processEventQueue() throws IOException {
         for (;;) {
-            final ChannelRunnableWrapper task = eventQueue.poll();
+            final Runnable task = eventQueue.poll();
             if (task == null) {
                 break;
             }

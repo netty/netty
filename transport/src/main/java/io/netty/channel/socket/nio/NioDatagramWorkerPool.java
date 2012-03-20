@@ -13,19 +13,25 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.channel.socket.nio;
 
-package io.netty.channel.socket;
+import java.util.concurrent.Executor;
+
 
 /**
- * A {@link Worker} is responsible to dispatch IO operations
+ * Default implementation which hands of {@link NioDatagramWorker}'s
+ * 
  *
  */
-public interface Worker extends Runnable {
+public class NioDatagramWorkerPool extends AbstractNioWorkerPool<NioDatagramWorker> {
 
-    /**
-     * Execute the given {@link Runnable} in the IO-Thread. This may be now or later once the IO-Thread do some other work.
-     * 
-     * @param task the {@link Runnable} to execute 
-     */
-    void executeInIoThread(Runnable task);
+    public NioDatagramWorkerPool(Executor executor, int workerCount, boolean allowShutdownOnIdle) {
+        super(executor, workerCount, allowShutdownOnIdle);
+    }
+
+    @Override
+    protected NioDatagramWorker createWorker(Executor executor, boolean allowShutdownOnIdle) {
+        return new NioDatagramWorker(executor, allowShutdownOnIdle);
+    }
+
 }

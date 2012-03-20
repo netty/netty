@@ -27,7 +27,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelEvent;
@@ -45,14 +44,10 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioServerSocketPipelineSink.class);
 
-    private final NioWorker[] workers;
-    private final AtomicInteger workerIndex = new AtomicInteger();
+    private final WorkerPool<NioWorker> workerPool;
 
-    NioServerSocketPipelineSink(Executor workerExecutor, int workerCount) {
-        workers = new NioWorker[workerCount];
-        for (int i = 0; i < workers.length; i ++) {
-            workers[i] = new NioWorker(workerExecutor);
-        }
+    NioServerSocketPipelineSink(WorkerPool<NioWorker> workerPool) {
+        this.workerPool = workerPool;
     }
 
     @Override
@@ -189,8 +184,7 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
     }
 
     NioWorker nextWorker() {
-        return workers[Math.abs(
-                workerIndex.getAndIncrement() % workers.length)];
+        return workerPool.nextWorker();
     }
 
     private final class Boss implements Runnable {
