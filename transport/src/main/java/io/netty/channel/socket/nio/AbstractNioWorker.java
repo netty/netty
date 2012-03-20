@@ -702,17 +702,31 @@ abstract class AbstractNioWorker implements Worker {
                 Selector selector = this.selector;
                 SelectionKey key = channel.channel.keyFor(selector);
 
-                if (key == null || selector == null) {
-                    // Not registered to the worker yet.
-                    // Set the rawInterestOps immediately; RegisterTask will pick it up.
-                    channel.setRawInterestOpsNow(interestOps);
-                    return;
-                }
-
                 // Override OP_WRITE flag - a user cannot change this flag.
                 interestOps &= ~Channel.OP_WRITE;
                 interestOps |= channel.getRawInterestOps() & Channel.OP_WRITE;
-
+                
+                if (key == null || selector == null) {
+                    if (channel.getRawInterestOps() != interestOps) {
+                        changed = true;
+                    }
+                    
+                    // Not registered to the worker yet.
+                    // Set the rawInterestOps immediately; RegisterTask will pick it up.
+                    channel.setRawInterestOpsNow(interestOps);
+                    
+                    future.setSuccess();
+                    if (changed) {
+                        if (iothread) {
+                            fireChannelInterestChanged(channel);
+                        } else {
+                            fireChannelInterestChangedLater(channel);
+                        }
+                    }
+                    
+                    return;
+                }
+                
                 switch (CONSTRAINT_LEVEL) {
                 case 0:
                     if (channel.getRawInterestOps() != interestOps) {
