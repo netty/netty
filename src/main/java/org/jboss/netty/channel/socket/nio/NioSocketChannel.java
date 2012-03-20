@@ -23,7 +23,7 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 
-class NioSocketChannel extends AbstractNioChannel<SocketChannel>
+public class NioSocketChannel extends AbstractNioChannel<SocketChannel>
                                 implements org.jboss.netty.channel.socket.SocketChannel {
 
     private static final int ST_OPEN = 0;
