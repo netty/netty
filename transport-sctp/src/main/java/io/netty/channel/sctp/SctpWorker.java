@@ -15,7 +15,29 @@
  */
 package io.netty.channel.sctp;
 
-import static io.netty.channel.Channels.*;
+import static io.netty.channel.Channels.fireChannelBound;
+import static io.netty.channel.Channels.fireChannelClosed;
+import static io.netty.channel.Channels.fireChannelConnected;
+import static io.netty.channel.Channels.fireChannelDisconnected;
+import static io.netty.channel.Channels.fireChannelInterestChanged;
+import static io.netty.channel.Channels.fireChannelUnbound;
+import static io.netty.channel.Channels.fireExceptionCaught;
+import static io.netty.channel.Channels.fireMessageReceived;
+import static io.netty.channel.Channels.fireWriteComplete;
+import static io.netty.channel.Channels.succeededFuture;
+import io.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ChannelBufferFactory;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.ReceiveBufferSizePredictor;
+import io.netty.channel.sctp.SctpSendBufferPool.SendBuffer;
+import io.netty.channel.socket.Worker;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.DeadLockProofWorker;
+import io.netty.util.internal.QueueFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -31,27 +53,11 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.sun.nio.sctp.MessageInfo;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.buffer.ChannelBufferFactory;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.MessageEvent;
-import io.netty.channel.ReceiveBufferSizePredictor;
-import io.netty.channel.sctp.SctpSendBufferPool.SendBuffer;
-import io.netty.channel.socket.ChannelRunnableWrapper;
-import io.netty.channel.socket.Worker;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.DeadLockProofWorker;
-import io.netty.util.internal.QueueFactory;
 
 /**
  */
@@ -248,25 +254,17 @@ class SctpWorker implements Worker {
     }
     
     @Override
-    public ChannelFuture executeInIoThread(Channel channel, Runnable task) {
-        if (channel instanceof SctpChannelImpl && isIoThread((SctpChannelImpl) channel)) {
-            try {
-                task.run();
-                return succeededFuture(channel);
-            } catch (Throwable t) {
-                return failedFuture(channel, t);
-            }
+    public void executeInIoThread(Runnable task) {
+        if (Thread.currentThread() == thread) {
+            task.run();
         } else {
-            ChannelRunnableWrapper channelRunnable = new ChannelRunnableWrapper(channel, task);
-            boolean added = eventQueue.offer(channelRunnable);
-            
+            boolean added = eventQueue.offer(task);
+
             if (added) {
                 // wake up the selector to speed things
                 selector.wakeup();
-            } else {
-                channelRunnable.setFailure(new RejectedExecutionException("Unable to queue task " + task));
             }
-            return channelRunnable;
+            
         }
 
     }
