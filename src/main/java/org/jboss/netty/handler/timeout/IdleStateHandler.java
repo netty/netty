@@ -222,15 +222,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     }
 
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        if (ctx.getPipeline().isAttached()) {
-            // channelOpen event has been fired already, which means
-            // this.channelOpen() will not be invoked.
-            // We have to initialize here instead.
-            initialize(ctx);
-        } else {
-            // channelOpen event has not been fired yet.
-            // this.channelOpen() will be invoked and initialization will occur there.
-        }
+        initialize(ctx);
     }
 
     public void afterAdd(ChannelHandlerContext ctx) throws Exception {
@@ -243,16 +235,6 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
 
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         // NOOP
-    }
-
-    @Override
-    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
-            throws Exception {
-        // This method will be invoked only if this handler was added
-        // before channelOpen event is fired.  If a user adds this handler
-        // after the channelOpen event, initialize() will be called by beforeAdd().
-        initialize(ctx);
-        ctx.sendUpstream(e);
     }
 
     @Override
@@ -281,8 +263,13 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     }
 
     private void initialize(ChannelHandlerContext ctx) {
-        State state = new State();
-        ctx.setAttachment(state);
+        State state = state(ctx);
+
+        // Avoid the case where destroy() is called before scheduling timeouts.
+        // See: https://github.com/netty/netty/issues/143
+        if (state.destroyed) {
+            return;
+        }
 
         state.lastReadTime = state.lastWriteTime = System.currentTimeMillis();
         if (readerIdleTimeMillis > 0) {
@@ -303,27 +290,39 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     }
 
     private void destroy(ChannelHandlerContext ctx) {
-        State state = (State) ctx.getAttachment();
+        State state;
         
-        // Check if the state was set before, it may not if the destroy method was called before the 
-        // channelOpen(...) method. 
-        //
-        // See #143
-        if (state != null) {
-            if (state.readerIdleTimeout != null) {
-                state.readerIdleTimeout.cancel();
-                state.readerIdleTimeout = null;
-            }
-            if (state.writerIdleTimeout != null) {
-                state.writerIdleTimeout.cancel();
-                state.writerIdleTimeout = null;
-            }
-            if (state.allIdleTimeout != null) {
-                state.allIdleTimeout.cancel();
-                state.allIdleTimeout = null;
-            }
+        synchronized (ctx) {
+            state = state(ctx);
+            state.destroyed = true;
         }
-      
+
+        if (state.readerIdleTimeout != null) {
+            state.readerIdleTimeout.cancel();
+            state.readerIdleTimeout = null;
+        }
+        if (state.writerIdleTimeout != null) {
+            state.writerIdleTimeout.cancel();
+            state.writerIdleTimeout = null;
+        }
+        if (state.allIdleTimeout != null) {
+            state.allIdleTimeout.cancel();
+            state.allIdleTimeout = null;
+        }
+    }
+    
+    private State state(ChannelHandlerContext ctx) {
+        State state;
+        synchronized (ctx) {
+            // FIXME: It could have been better if there is setAttachmentIfAbsent().
+            state = (State) ctx.getAttachment();
+            if (state != null) {
+                return state;
+            }
+            state = new State();
+            ctx.setAttachment(state);
+        }
+        return state;
     }
 
     protected void channelIdle(
@@ -448,5 +447,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
         volatile long lastWriteTime;
 
         volatile Timeout allIdleTimeout;
+
+        volatile boolean destroyed;
     }
 }
