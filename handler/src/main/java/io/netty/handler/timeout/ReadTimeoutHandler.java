@@ -190,19 +190,44 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
     }
 
     private void initialize(ChannelHandlerContext ctx) {
-        State state = new State();
-        ctx.setAttachment(state);
+        State state = state(ctx);
+
+        // Avoid the case where destroy() is called before scheduling timeouts.
+        // See: https://github.com/netty/netty/issues/143
+        if (state.destroyed) {
+            return;
+        }
+
         if (timeoutMillis > 0) {
             state.timeout = timer.newTimeout(new ReadTimeoutTask(ctx), timeoutMillis, TimeUnit.MILLISECONDS);
         }
     }
 
     private void destroy(ChannelHandlerContext ctx) {
-        State state = (State) ctx.getAttachment();
+        State state;
+        synchronized (ctx) {
+            state = state(ctx);
+            state.destroyed = true;
+        }
+
         if (state.timeout != null) {
             state.timeout.cancel();
             state.timeout = null;
         }
+    }
+
+    private State state(ChannelHandlerContext ctx) {
+        State state;
+        synchronized (ctx) {
+            // FIXME: It could have been better if there is setAttachmentIfAbsent().
+            state = (State) ctx.getAttachment();
+            if (state != null) {
+                return state;
+            }
+            state = new State();
+            ctx.setAttachment(state);
+        }
+        return state;
     }
 
     protected void readTimedOut(ChannelHandlerContext ctx) throws Exception {
@@ -252,6 +277,7 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
     private static final class State {
         volatile Timeout timeout;
         volatile long lastReadTime = System.currentTimeMillis();
+        volatile boolean destroyed;
 
         State() {
         }

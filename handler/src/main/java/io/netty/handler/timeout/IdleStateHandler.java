@@ -224,7 +224,15 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
 
     @Override
     public void beforeAdd(ChannelHandlerContext ctx) throws Exception {
-        initialize(ctx);
+        if (ctx.getPipeline().isAttached()) {
+            // channelOpen event has been fired already, which means
+            // this.channelOpen() will not be invoked.
+            // We have to initialize here instead.
+            initialize(ctx);
+        } else {
+            // channelOpen event has not been fired yet.
+            // this.channelOpen() will be invoked and initialization will occur there.
+        }
     }
 
     @Override
@@ -240,6 +248,16 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
     @Override
     public void afterRemove(ChannelHandlerContext ctx) throws Exception {
         // NOOP
+    }
+
+    @Override
+    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
+            throws Exception {
+        // This method will be invoked only if this handler was added
+        // before channelOpen event is fired.  If a user adds this handler
+        // after the channelOpen event, initialize() will be called by beforeAdd().
+        initialize(ctx);
+        ctx.sendUpstream(e);
     }
 
     @Override
