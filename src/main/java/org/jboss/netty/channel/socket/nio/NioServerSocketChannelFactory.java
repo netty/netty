@@ -127,7 +127,7 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
      * @param bossExecutor
      *        the {@link Executor} which will execute the boss threads
      * @param workerPool
-     *        the {@link WorkerPool} which will be used to obtain the {@link Worker} that execute the I/O worker threads
+     *        the {@link WorkerPool} which will be used to obtain the {@link NioWorker} that execute the I/O worker threads
      */
     public NioServerSocketChannelFactory(
             Executor bossExecutor, WorkerPool<NioWorker> workerPool) {

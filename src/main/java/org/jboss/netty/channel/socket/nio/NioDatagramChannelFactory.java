@@ -108,7 +108,7 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
     * Creates a new instance.
     *
     * @param workerPool
-    * the {@link WorkerPool} which will be used to obtain the {@link Worker} that execute the I/O worker threads
+    * the {@link WorkerPool} which will be used to obtain the {@link NioDatagramWorker} that execute the I/O worker threads
     */
         public NioDatagramChannelFactory(WorkerPool<NioDatagramWorker> workerPool) {
             this.workerPool = workerPool;
