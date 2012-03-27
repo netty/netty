@@ -90,6 +90,17 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
     private final ChannelSink sink;
 
     /**
+     * Create a new {@link NioServerSocketChannelFactory} using
+     * {@link Executors#newCachedThreadPool()} for the boss and worker.
+     * 
+     * See {@link #NioServerSocketChannelFactory(Executor, Executor)}
+     */
+    public NioServerSocketChannelFactory() {
+        this(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+    }
+    
+    
+    /**
      * Creates a new instance.  Calling this constructor is same with calling
      * {@link #NioServerSocketChannelFactory(Executor, Executor, int)} with 2 *
      * the number of available processors in the machine.  The number of

@@ -16,6 +16,7 @@
 package io.netty.channel.socket.oio;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 import io.netty.channel.Channel;
@@ -75,6 +76,15 @@ public class OioClientSocketChannelFactory implements ClientSocketChannelFactory
     private final Executor workerExecutor;
     final OioClientSocketPipelineSink sink;
 
+    /**
+     * Creates a new instance with a {@link Executors#newCachedThreadPool()} as worker executor.
+     *
+     * See {@link #OioClientSocketChannelFactory(Executor)}
+     */
+    public OioClientSocketChannelFactory() {
+        this(Executors.newCachedThreadPool());
+    }
+    
     /**
      * Creates a new instance.
      *

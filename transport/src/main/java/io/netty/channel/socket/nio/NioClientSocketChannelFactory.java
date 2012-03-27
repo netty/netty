@@ -87,6 +87,15 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
     private final NioClientSocketPipelineSink sink;
 
     /**
+     * Creates a new {@link NioClientSocketChannelFactory} which uses {@link Executors#newCachedThreadPool()} for the worker and boss executors.
+     *
+     * See {@link #NioClientSocketChannelFactory(Executor, Executor)}
+     */
+    public NioClientSocketChannelFactory() {
+        this(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+    }
+    
+    /**
      * Creates a new instance.  Calling this constructor is same with calling
      * {@link #NioClientSocketChannelFactory(Executor, Executor, int, int)} with
      * 1 and (2 * the number of available processors in the machine) for

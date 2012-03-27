@@ -79,6 +79,17 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
     private final NioDatagramPipelineSink sink;
     private final WorkerPool<NioDatagramWorker> workerPool;
 
+
+    /**
+     * Create a new {@link NioDatagramChannelFactory} with a {@link Executors#newCachedThreadPool()}.
+     *
+     * See {@link #NioDatagramChannelFactory(Executor)}
+     */
+    public NioDatagramChannelFactory() {
+        this(Executors.newCachedThreadPool());
+    }
+    
+    
     /**
      * Creates a new instance.  Calling this constructor is same with calling
      * {@link #NioDatagramChannelFactory(Executor, int)} with 2 * the number of
