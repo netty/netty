@@ -63,20 +63,21 @@ public final class RedisClient {
         int CALLS = 1000000;
         int PIPELINE = 50;
         requestResponse(blockingReadHandler, channel, CALLS);
-        pipelinedIndividualRequests(blockingReadHandler, channel, CALLS, PIPELINE);
-        pipelinedListOfRequests(blockingReadHandler, channel, CALLS, PIPELINE);
+        pipelinedIndividualRequests(blockingReadHandler, channel, CALLS * 10, PIPELINE);
+        pipelinedListOfRequests(blockingReadHandler, channel, CALLS * 10, PIPELINE);
 
         channel.close();
         cb.releaseExternalResources();
     }
 
-    private static void pipelinedListOfRequests(BlockingReadHandler<Reply> blockingReadHandler, Channel channel, int CALLS, int PIPELINE) throws IOException, InterruptedException {
+    private static void pipelinedListOfRequests(BlockingReadHandler<Reply> blockingReadHandler, Channel channel, long CALLS, int PIPELINE) throws IOException, InterruptedException {
         long start = System.currentTimeMillis();
         byte[] SET_BYTES = "SET".getBytes();
         for (int i = 0; i < CALLS / PIPELINE; i++) {
             List<Command> list = new ArrayList<Command>();
             for (int j = 0; j < PIPELINE; j++) {
-                list.add(new Command(SET_BYTES, String.valueOf(i).getBytes(), VALUE));
+                int base = i * PIPELINE;
+                list.add(new Command(SET_BYTES, String.valueOf(base + j).getBytes(), VALUE));
             }
             channel.write(list);
             for (int j = 0; j < PIPELINE; j++) {
@@ -87,12 +88,13 @@ public final class RedisClient {
         System.out.println(CALLS * 1000 / (end - start) + " calls per second");
     }
 
-    private static void pipelinedIndividualRequests(BlockingReadHandler<Reply> blockingReadHandler, Channel channel, int CALLS, int PIPELINE) throws IOException, InterruptedException {
+    private static void pipelinedIndividualRequests(BlockingReadHandler<Reply> blockingReadHandler, Channel channel, long CALLS, int PIPELINE) throws IOException, InterruptedException {
         long start = System.currentTimeMillis();
         byte[] SET_BYTES = "SET".getBytes();
         for (int i = 0; i < CALLS / PIPELINE; i++) {
+            int base = i * PIPELINE;
             for (int j = 0; j < PIPELINE; j++) {
-                channel.write(new Command(SET_BYTES, String.valueOf(i).getBytes(), VALUE));
+                channel.write(new Command(SET_BYTES, String.valueOf(base + j).getBytes(), VALUE));
             }
             for (int j = 0; j < PIPELINE; j++) {
                 blockingReadHandler.read();
