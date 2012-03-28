@@ -43,7 +43,6 @@ public class TelnetClient {
         // Configure the client.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
         // Configure the pipeline factory.

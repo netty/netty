@@ -97,7 +97,7 @@ public class HttpTunnelSoakTester {
         scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
         executor = Executors.newCachedThreadPool();
         ServerSocketChannelFactory serverChannelFactory =
-                new NioServerSocketChannelFactory(executor, executor);
+                new NioServerSocketChannelFactory(executor);
         HttpTunnelServerChannelFactory serverTunnelFactory =
                 new HttpTunnelServerChannelFactory(serverChannelFactory);
 
@@ -105,7 +105,7 @@ public class HttpTunnelSoakTester {
         serverBootstrap.setPipelineFactory(createServerPipelineFactory());
 
         ClientSocketChannelFactory clientChannelFactory =
-                new NioClientSocketChannelFactory(executor, executor);
+                new NioClientSocketChannelFactory(executor);
         HttpTunnelClientChannelFactory clientTunnelFactory =
                 new HttpTunnelClientChannelFactory(clientChannelFactory);
 

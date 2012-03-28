@@ -39,7 +39,6 @@ public class EchoServer {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new NioServerSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
         // Set up the pipeline factory.

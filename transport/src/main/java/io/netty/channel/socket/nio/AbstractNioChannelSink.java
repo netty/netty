@@ -31,7 +31,7 @@ public abstract class AbstractNioChannelSink extends AbstractChannelSink {
         if (ch instanceof AbstractNioChannel<?>) {
             AbstractNioChannel<?> channel = (AbstractNioChannel<?>) ch;
             ChannelRunnableWrapper wrapper = new ChannelRunnableWrapper(pipeline.getChannel(), task);
-            channel.worker.executeInIoThread(wrapper);
+            channel.getWorker().executeInIoThread(wrapper);
             return wrapper;
         }
         return super.execute(pipeline, task);
@@ -44,7 +44,7 @@ public abstract class AbstractNioChannelSink extends AbstractChannelSink {
         Channel channel = event.getChannel();
         boolean fireLater = false;
         if (channel instanceof AbstractNioChannel<?>) {
-            fireLater =  !AbstractNioWorker.isIoThread((AbstractNioChannel<?>) channel);
+            fireLater = !((AbstractNioChannel<?>) channel).getWorker().isIoThread();
         }
         return fireLater;
     }

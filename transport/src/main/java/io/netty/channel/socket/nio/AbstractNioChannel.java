@@ -40,12 +40,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChannel> extends AbstractChannel {
+abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChannel> extends AbstractChannel implements NioChannel {
 
     /**
      * The {@link AbstractNioWorker}.
      */
-    final AbstractNioWorker worker;
+    private final AbstractNioWorker worker;
 
     /**
      * Monitor object to synchronize access to InterestedOps.

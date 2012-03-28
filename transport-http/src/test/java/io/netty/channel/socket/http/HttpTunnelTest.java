@@ -88,12 +88,10 @@ public class HttpTunnelTest {
         clientFactory =
                 new HttpTunnelClientChannelFactory(
                         new NioClientSocketChannelFactory(
-                                Executors.newCachedThreadPool(),
                                 Executors.newCachedThreadPool()));
         serverFactory =
                 new HttpTunnelServerChannelFactory(
                         new NioServerSocketChannelFactory(
-                                Executors.newCachedThreadPool(),
                                 Executors.newCachedThreadPool()));
 
         clientBootstrap = new ClientBootstrap(clientFactory);

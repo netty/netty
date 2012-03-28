@@ -64,7 +64,6 @@ public class HttpSnoopClient {
         // Configure the client.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
         // Set up the event pipeline factory.

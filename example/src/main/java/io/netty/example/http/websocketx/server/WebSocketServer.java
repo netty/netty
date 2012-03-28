@@ -50,8 +50,7 @@ public class WebSocketServer {
 
     public void run() {
         // Configure the server.
-        ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
-                Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
+        ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(Executors.newCachedThreadPool()));
 
         // Set up the event pipeline factory.
         bootstrap.setPipelineFactory(new WebSocketServerPipelineFactory());

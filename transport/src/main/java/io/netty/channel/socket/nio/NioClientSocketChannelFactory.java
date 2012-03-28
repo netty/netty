@@ -26,7 +26,6 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.ClientSocketChannelFactory;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.ExternalResourceReleasable;
-import io.netty.util.internal.ExecutorUtil;
 
 /**
  * A {@link ClientSocketChannelFactory} which creates a client-side NIO-based
@@ -80,19 +79,17 @@ import io.netty.util.internal.ExecutorUtil;
  */
 public class NioClientSocketChannelFactory implements ClientSocketChannelFactory {
 
-    private static final int DEFAULT_BOSS_COUNT = 1;
 
-    private final Executor bossExecutor;
     private final WorkerPool<NioWorker> workerPool;
     private final NioClientSocketPipelineSink sink;
 
     /**
-     * Creates a new {@link NioClientSocketChannelFactory} which uses {@link Executors#newCachedThreadPool()} for the worker and boss executors.
+     * Creates a new {@link NioClientSocketChannelFactory} which uses {@link Executors#newCachedThreadPool()} for the worker executor.
      *
      * See {@link #NioClientSocketChannelFactory(Executor, Executor)}
      */
     public NioClientSocketChannelFactory() {
-        this(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+        this(Executors.newCachedThreadPool());
     }
     
     /**
@@ -102,74 +99,37 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
      * <tt>bossCount</tt> and <tt>workerCount</tt> respectively.  The number of
      * available processors is obtained by {@link Runtime#availableProcessors()}.
      *
-     * @param bossExecutor
-     *        the {@link Executor} which will execute the boss thread
      * @param workerExecutor
      *        the {@link Executor} which will execute the worker threads
      */
-    public NioClientSocketChannelFactory(
-            Executor bossExecutor, Executor workerExecutor) {
-        this(bossExecutor, workerExecutor, DEFAULT_BOSS_COUNT, SelectorUtil.DEFAULT_IO_THREADS);
+    public NioClientSocketChannelFactory(Executor workerExecutor) {
+        this(workerExecutor, SelectorUtil.DEFAULT_IO_THREADS);
     }
 
     /**
      * Creates a new instance.  Calling this constructor is same with calling
-     * {@link #NioClientSocketChannelFactory(Executor, Executor, int, int)} with
+     * {@link #NioClientSocketChannelFactory(Executor, int, int)} with
      * 1 as <tt>bossCount</tt>.
      *
-     * @param bossExecutor
-     *        the {@link Executor} which will execute the boss thread
      * @param workerExecutor
      *        the {@link Executor} which will execute the worker threads
      * @param workerCount
      *        the maximum number of worker threads
      */
-    public NioClientSocketChannelFactory(
-            Executor bossExecutor, Executor workerExecutor,
+    public NioClientSocketChannelFactory(Executor workerExecutor,
             int workerCount) {
-        this(bossExecutor, workerExecutor, DEFAULT_BOSS_COUNT, workerCount);
-    }
-    
-    /**
-     * Creates a new instance.
-     *
-     * @param bossExecutor
-     *        the {@link Executor} which will execute the boss thread
-     * @param workerExecutor
-     *        the {@link Executor} which will execute the I/O worker threads
-     * @param bossCount
-     *        the maximum number of boss threads
-     * @param workerCount
-     *        the maximum number of worker threads
-     */
-    public NioClientSocketChannelFactory(
-            Executor bossExecutor, Executor workerExecutor,
-            int bossCount, int workerCount) {
-
-        this(bossExecutor, bossCount, new NioWorkerPool(workerExecutor, workerCount, true));
+        this(new NioWorkerPool(workerExecutor, workerCount, true));
     }
 
-    public NioClientSocketChannelFactory(
-            Executor bossExecutor, int bossCount, 
-            WorkerPool<NioWorker> workerPool) {
+    public NioClientSocketChannelFactory(WorkerPool<NioWorker> workerPool) {
 
-        if (bossExecutor == null) {
-            throw new NullPointerException("bossExecutor");
-        }
         if (workerPool == null) {
             throw new NullPointerException("workerPool");
         }
-        if (bossCount <= 0) {
-            throw new IllegalArgumentException(
-                    "bossCount (" + bossCount + ") " +
-                    "must be a positive integer.");
-        }
         
 
-        this.bossExecutor = bossExecutor;
         this.workerPool = workerPool;
-        sink = new NioClientSocketPipelineSink(
-                bossExecutor, bossCount, workerPool);
+        sink = new NioClientSocketPipelineSink(workerPool);
     }
     
 
@@ -180,7 +140,6 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
 
     @Override
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(bossExecutor);
         if (workerPool instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) workerPool).releaseExternalResources();
         }
