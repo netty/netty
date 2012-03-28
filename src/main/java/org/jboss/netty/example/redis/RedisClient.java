@@ -16,11 +16,7 @@
 package org.jboss.netty.example.redis;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.redis.Command;
 import org.jboss.netty.handler.codec.redis.RedisDecoder;
@@ -29,6 +25,8 @@ import org.jboss.netty.handler.codec.redis.Reply;
 import org.jboss.netty.handler.queue.BlockingReadHandler;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -58,20 +56,53 @@ public final class RedisClient {
         System.out.print(blockingReadHandler.read());
 
         int CALLS = 1000000;
-        long start = System.currentTimeMillis();
-        byte[] SET_BYTES = "SET".getBytes();
-        for (int i = 0; i < CALLS; i++) {
-            channel.write(new Command(SET_BYTES, String.valueOf(i).getBytes(), VALUE));
-            blockingReadHandler.read();
+        int PIPELINE = 50;
+        {
+            long start = System.currentTimeMillis();
+            byte[] SET_BYTES = "SET".getBytes();
+            for (int i = 0; i < CALLS; i++) {
+                channel.write(new Command(SET_BYTES, String.valueOf(i).getBytes(), VALUE));
+                blockingReadHandler.read();
+            }
+            long end = System.currentTimeMillis();
+            System.out.println(CALLS * 1000 / (end - start) + " calls per second");
         }
-        long end = System.currentTimeMillis();
-        System.out.println(CALLS * 1000 / (end - start) + " calls per second");
+        {
+            long start = System.currentTimeMillis();
+            byte[] SET_BYTES = "SET".getBytes();
+            for (int i = 0; i < CALLS / PIPELINE; i++) {
+                for (int j = 0; j < PIPELINE; j++) {
+                    channel.write(new Command(SET_BYTES, String.valueOf(i).getBytes(), VALUE));
+                }
+                for (int j = 0; j < PIPELINE; j++) {
+                    blockingReadHandler.read();
+                }
+            }
+            long end = System.currentTimeMillis();
+            System.out.println(CALLS * 1000 / (end - start) + " calls per second");
+        }
+        {
+            long start = System.currentTimeMillis();
+            byte[] SET_BYTES = "SET".getBytes();
+            for (int i = 0; i < CALLS / PIPELINE; i++) {
+                List<Command> list = new ArrayList<Command>();
+                for (int j = 0; j < PIPELINE; j++) {
+                    list.add(new Command(SET_BYTES, String.valueOf(i).getBytes(), VALUE));
+                }
+                channel.write(list);
+                for (int j = 0; j < PIPELINE; j++) {
+                    blockingReadHandler.read();
+                }
+            }
+            long end = System.currentTimeMillis();
+            System.out.println(CALLS * 1000 / (end - start) + " calls per second");
+        }
 
         channel.close();
         cb.releaseExternalResources();
     }
 
     private RedisClient() {
-        
+
     }
 }
