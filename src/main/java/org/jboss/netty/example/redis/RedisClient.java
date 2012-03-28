@@ -16,7 +16,11 @@
 package org.jboss.netty.example.redis;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.redis.Command;
 import org.jboss.netty.handler.codec.redis.RedisDecoder;
@@ -24,6 +28,7 @@ import org.jboss.netty.handler.codec.redis.RedisEncoder;
 import org.jboss.netty.handler.codec.redis.Reply;
 import org.jboss.netty.handler.queue.BlockingReadHandler;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,49 +62,55 @@ public final class RedisClient {
 
         int CALLS = 1000000;
         int PIPELINE = 50;
-        {
-            long start = System.currentTimeMillis();
-            byte[] SET_BYTES = "SET".getBytes();
-            for (int i = 0; i < CALLS; i++) {
-                channel.write(new Command(SET_BYTES, String.valueOf(i).getBytes(), VALUE));
-                blockingReadHandler.read();
-            }
-            long end = System.currentTimeMillis();
-            System.out.println(CALLS * 1000 / (end - start) + " calls per second");
-        }
-        {
-            long start = System.currentTimeMillis();
-            byte[] SET_BYTES = "SET".getBytes();
-            for (int i = 0; i < CALLS / PIPELINE; i++) {
-                for (int j = 0; j < PIPELINE; j++) {
-                    channel.write(new Command(SET_BYTES, String.valueOf(i).getBytes(), VALUE));
-                }
-                for (int j = 0; j < PIPELINE; j++) {
-                    blockingReadHandler.read();
-                }
-            }
-            long end = System.currentTimeMillis();
-            System.out.println(CALLS * 1000 / (end - start) + " calls per second");
-        }
-        {
-            long start = System.currentTimeMillis();
-            byte[] SET_BYTES = "SET".getBytes();
-            for (int i = 0; i < CALLS / PIPELINE; i++) {
-                List<Command> list = new ArrayList<Command>();
-                for (int j = 0; j < PIPELINE; j++) {
-                    list.add(new Command(SET_BYTES, String.valueOf(i).getBytes(), VALUE));
-                }
-                channel.write(list);
-                for (int j = 0; j < PIPELINE; j++) {
-                    blockingReadHandler.read();
-                }
-            }
-            long end = System.currentTimeMillis();
-            System.out.println(CALLS * 1000 / (end - start) + " calls per second");
-        }
+        requestResponse(blockingReadHandler, channel, CALLS);
+        pipelinedIndividualRequests(blockingReadHandler, channel, CALLS, PIPELINE);
+        pipelinedListOfRequests(blockingReadHandler, channel, CALLS, PIPELINE);
 
         channel.close();
         cb.releaseExternalResources();
+    }
+
+    private static void pipelinedListOfRequests(BlockingReadHandler<Reply> blockingReadHandler, Channel channel, int CALLS, int PIPELINE) throws IOException, InterruptedException {
+        long start = System.currentTimeMillis();
+        byte[] SET_BYTES = "SET".getBytes();
+        for (int i = 0; i < CALLS / PIPELINE; i++) {
+            List<Command> list = new ArrayList<Command>();
+            for (int j = 0; j < PIPELINE; j++) {
+                list.add(new Command(SET_BYTES, String.valueOf(i).getBytes(), VALUE));
+            }
+            channel.write(list);
+            for (int j = 0; j < PIPELINE; j++) {
+                blockingReadHandler.read();
+            }
+        }
+        long end = System.currentTimeMillis();
+        System.out.println(CALLS * 1000 / (end - start) + " calls per second");
+    }
+
+    private static void pipelinedIndividualRequests(BlockingReadHandler<Reply> blockingReadHandler, Channel channel, int CALLS, int PIPELINE) throws IOException, InterruptedException {
+        long start = System.currentTimeMillis();
+        byte[] SET_BYTES = "SET".getBytes();
+        for (int i = 0; i < CALLS / PIPELINE; i++) {
+            for (int j = 0; j < PIPELINE; j++) {
+                channel.write(new Command(SET_BYTES, String.valueOf(i).getBytes(), VALUE));
+            }
+            for (int j = 0; j < PIPELINE; j++) {
+                blockingReadHandler.read();
+            }
+        }
+        long end = System.currentTimeMillis();
+        System.out.println(CALLS * 1000 / (end - start) + " calls per second");
+    }
+
+    private static void requestResponse(BlockingReadHandler<Reply> blockingReadHandler, Channel channel, int CALLS) throws IOException, InterruptedException {
+        long start = System.currentTimeMillis();
+        byte[] SET_BYTES = "SET".getBytes();
+        for (int i = 0; i < CALLS; i++) {
+            channel.write(new Command(SET_BYTES, String.valueOf(i).getBytes(), VALUE));
+            blockingReadHandler.read();
+        }
+        long end = System.currentTimeMillis();
+        System.out.println(CALLS * 1000 / (end - start) + " calls per second");
     }
 
     private RedisClient() {
