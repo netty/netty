@@ -25,11 +25,6 @@ import io.netty.testsuite.transport.socket.AbstractSocketSslEchoTest;
 public class NioOioSocketSslEchoTest extends AbstractSocketSslEchoTest {
 
     @Override
-	public void testSslEcho() throws Throwable {
-
-	}
-
-	@Override
     protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
         return new NioClientSocketChannelFactory(executor);
     }
