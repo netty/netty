@@ -166,6 +166,7 @@ public class NioWorker extends AbstractNioWorker {
                 }
                 
             } else {
+                // TODO: Is this needed ?
                 setInterestOps(channel, future, channel.getRawInterestOps());
             }
             if (future != null) {
