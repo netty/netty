@@ -87,8 +87,6 @@ class SctpWorker implements Worker {
     private final SctpReceiveBufferPool recvBufferPool = new SctpReceiveBufferPool();
     private final SctpSendBufferPool sendBufferPool = new SctpSendBufferPool();
 
-    private SctpNotificationHandler notificationHandler;
-
     SctpWorker(Executor executor) {
         this.executor = executor;
     }
@@ -97,7 +95,6 @@ class SctpWorker implements Worker {
 
         boolean server = !(channel instanceof SctpClientChannel);
         Runnable registerTask = new RegisterTask(channel, future, server);
-        notificationHandler = new SctpNotificationHandler(channel);
         Selector selector;
 
         synchronized (startStopLock) {
@@ -354,7 +351,7 @@ class SctpWorker implements Worker {
 
         ByteBuffer bb = recvBufferPool.acquire(predictedRecvBufSize);
         try {
-            messageInfo = channel.channel.receive(bb, null, notificationHandler);
+            messageInfo = channel.channel.receive(bb, null, channel.notificationHandler);
             messageReceived = messageInfo != null;
         } catch (ClosedChannelException e) {
             // Can happen, and does not need a user attention.

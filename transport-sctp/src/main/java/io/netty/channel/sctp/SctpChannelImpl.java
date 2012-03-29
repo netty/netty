@@ -72,6 +72,8 @@ class SctpChannelImpl extends AbstractChannel implements SctpChannel {
     MessageEvent currentWriteEvent;
     SendBuffer currentWriteBuffer;
 
+    final SctpNotificationHandler notificationHandler = new SctpNotificationHandler(this);
+    
     public SctpChannelImpl(Channel parent, ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink,
                            com.sun.nio.sctp.SctpChannel channel, SctpWorker worker) {
         super(parent, factory, pipeline, sink);
