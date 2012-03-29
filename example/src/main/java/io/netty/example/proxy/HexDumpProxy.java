@@ -44,11 +44,11 @@ public class HexDumpProxy {
         // Configure the bootstrap.
         Executor executor = Executors.newCachedThreadPool();
         ServerBootstrap sb = new ServerBootstrap(
-                new NioServerSocketChannelFactory(executor, executor));
+                new NioServerSocketChannelFactory(executor));
 
         // Set up the event pipeline factory.
         ClientSocketChannelFactory cf =
-                new NioClientSocketChannelFactory(executor, executor);
+                new NioClientSocketChannelFactory(executor);
 
         sb.setPipelineFactory(
                 new HexDumpProxyPipelineFactory(cf, remoteHost, remotePort));

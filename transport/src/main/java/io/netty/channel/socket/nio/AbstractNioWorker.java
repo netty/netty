@@ -20,6 +20,7 @@ import static io.netty.channel.Channels.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.socket.Worker;
 import io.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
@@ -29,12 +30,16 @@ import io.netty.util.internal.DeadLockProofWorker;
 import io.netty.util.internal.QueueFactory;
 
 import java.io.IOException;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.Iterator;
 import java.util.Queue;
@@ -76,7 +81,7 @@ abstract class AbstractNioWorker implements Worker {
     /**
      * The NIO {@link Selector}.
      */
-    volatile Selector selector;
+    protected volatile Selector selector;
 
     /**
      * Boolean that controls determines if a blocked Selector.select should
@@ -122,22 +127,77 @@ abstract class AbstractNioWorker implements Worker {
     public AbstractNioWorker(Executor executor, boolean allowShutdownOnIdle) {
         this.executor = executor;
         this.allowShutdownOnIdle = allowShutdownOnIdle;
+        
     }
 
-    void register(AbstractNioChannel<?> channel, ChannelFuture future) {
+    public final void registerWithWorker(final Channel channel, final ChannelFuture future) {
+        final Selector selector = start();
 
-        Runnable registerTask = createRegisterTask(channel, future);
-        Selector selector = start();
-
-        
-        boolean offered = registerTaskQueue.offer(registerTask);
-        assert offered;
-        
-        if (wakenUp.compareAndSet(false, true)) {
-            selector.wakeup();
+        try {
+            if (channel instanceof NioServerSocketChannel) {
+                final NioServerSocketChannel ch = (NioServerSocketChannel) channel;
+                registerTaskQueue.add(new Runnable() {
+                    
+                    @Override
+                    public void run() {
+                        try {
+                            ch.socket.register(selector, SelectionKey.OP_ACCEPT, ch);
+                        } catch (Throwable t) {
+                            future.setFailure(t);
+                            fireExceptionCaught(channel, t);
+                        }
+                    }
+                });
+            } else if (channel instanceof NioClientSocketChannel) {
+                final NioClientSocketChannel clientChannel = (NioClientSocketChannel) channel;
+                
+                registerTaskQueue.add(new Runnable() {
+                    
+                    @Override
+                    public void run() {
+                        try {
+                            try {
+                                clientChannel.channel.register(selector, clientChannel.getRawInterestOps() | SelectionKey.OP_CONNECT, clientChannel);
+                            } catch (ClosedChannelException e) {
+                                clientChannel.getWorker().close(clientChannel, succeededFuture(channel));
+                            }
+                            int connectTimeout = channel.getConfig().getConnectTimeoutMillis();
+                            if (connectTimeout > 0) {
+                                clientChannel.connectDeadlineNanos = System.nanoTime() + connectTimeout * 1000000L;
+                            }
+                        } catch (Throwable t) {
+                            future.setFailure(t);
+                            fireExceptionCaught(channel, t);
+                        }
+                    }
+                });
+            } else if (channel instanceof AbstractNioChannel<?>) {
+                registerTaskQueue.add(new Runnable() {
+                    
+                    @Override
+                    public void run() {
+                        try {
+                            registerTask((AbstractNioChannel<?>) channel, future);
+                        } catch (Throwable t) {
+                            future.setFailure(t);
+                            fireExceptionCaught(channel, t);
+                        }
+                        
+                    }
+                });
+            } else {
+                throw new UnsupportedOperationException("Unable to handle channel " + channel);
+            }
+            if (wakenUp.compareAndSet(false, true)) {
+                selector.wakeup();
+            }
+        } catch (Throwable t) {
+            future.setFailure(t);
+            fireExceptionCaught(channel, t);
         }
-    }
 
+    }
+    
     /**
      * Start the {@link AbstractNioWorker} and return the {@link Selector} that will be used for the {@link AbstractNioChannel}'s when they get registered
      * 
@@ -145,7 +205,7 @@ abstract class AbstractNioWorker implements Worker {
      */
     private Selector start() {
         synchronized (startStopLock) {
-            if (!started) {
+            if (!started && selector == null) {
                 // Open a selector if this worker didn't start yet.
                 try {
                     this.selector = Selector.open();
@@ -182,10 +242,12 @@ abstract class AbstractNioWorker implements Worker {
     @Override
     public void run() {
         thread = Thread.currentThread();
+        long lastConnectTimeoutCheckTimeNanos = System.nanoTime();
 
         boolean shutdown = false;
         Selector selector = this.selector;
         for (;;) {
+
             wakenUp.set(false);
 
             if (CONSTRAINT_LEVEL != 0) {
@@ -229,12 +291,19 @@ abstract class AbstractNioWorker implements Worker {
                 if (wakenUp.get()) {
                     selector.wakeup();
                 }
-
+                
                 cancelledKeys = 0;
                 processRegisterTaskQueue();
                 processEventQueue();
                 processWriteTaskQueue();
                 processSelectedKeys(selector.selectedKeys());
+
+                // Handle connection timeout every 10 milliseconds approximately.
+                long currentTimeNanos = System.nanoTime();
+                if (currentTimeNanos - lastConnectTimeoutCheckTimeNanos >= 10 * 1000000L) {
+                    lastConnectTimeoutCheckTimeNanos = currentTimeNanos;
+                    processConnectTimeout(selector.keys(), currentTimeNanos);
+                }
 
                 // Exit the loop when there's nothing to handle.
                 // The shutdown flag is used to delay the shutdown of this
@@ -298,7 +367,7 @@ abstract class AbstractNioWorker implements Worker {
      *                    fashion even if the current Thread == IO Thread
      */
     public void executeInIoThread(Runnable task, boolean alwaysAsync) {
-        if (!alwaysAsync && Thread.currentThread() == thread) {
+        if (!alwaysAsync && isIoThread()) {
             task.run();
         } else {
             start();
@@ -329,6 +398,7 @@ abstract class AbstractNioWorker implements Worker {
     }
 
     private void processWriteTaskQueue() throws IOException {
+
         for (;;) {
             final Runnable task = writeTaskQueue.poll();
             if (task == null) {
@@ -354,8 +424,9 @@ abstract class AbstractNioWorker implements Worker {
     private void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException {
         for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
             SelectionKey k = i.next();
-            i.remove();
+            boolean removeKey = true;
             try {
+
                 int readyOps = k.readyOps();
                 if ((readyOps & SelectionKey.OP_READ) != 0 || readyOps == 0) {
                     if (!read(k)) {
@@ -366,9 +437,23 @@ abstract class AbstractNioWorker implements Worker {
                 if ((readyOps & SelectionKey.OP_WRITE) != 0) {
                     writeFromSelectorLoop(k);
                 }
+                
+                if ((readyOps & SelectionKey.OP_ACCEPT) != 0) {
+                    removeKey = accept(k);
+                }
+                if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
+                    connect(k);
+                }
+
             } catch (CancelledKeyException e) {
                 close(k);
+            } finally {
+                if (removeKey) {
+                    i.remove();
+                }
             }
+            
+
 
             if (cleanUpCancelledKeys()) {
                 break; // break the loop to avoid ConcurrentModificationException
@@ -376,6 +461,92 @@ abstract class AbstractNioWorker implements Worker {
         }
     }
 
+    private boolean accept(SelectionKey key) {
+        NioServerSocketChannel channel = (NioServerSocketChannel) key.attachment();
+        try {
+            SocketChannel acceptedSocket = channel.socket.accept();
+            if (acceptedSocket != null) {
+                
+                // TODO: Remove the casting stuff
+                ChannelPipeline pipeline =
+                        channel.getConfig().getPipelineFactory().getPipeline();
+                registerTask(NioAcceptedSocketChannel.create(channel.getFactory(), pipeline, channel,
+                        channel.getPipeline().getSink(), acceptedSocket, (NioWorker) this), null);
+                return true;
+            }
+            return false;
+        } catch (SocketTimeoutException e) {
+            // Thrown every second to get ClosedChannelException
+            // raised.
+        } catch (CancelledKeyException e) {
+            // Raised by accept() when the server socket was closed.
+        } catch (ClosedSelectorException e) {
+            // Raised by accept() when the server socket was closed.
+        } catch (ClosedChannelException e) {
+            // Closed as requested.
+        } catch (Throwable e) {
+            if (logger.isWarnEnabled()) {
+                logger.warn(
+                        "Failed to accept a connection.", e);
+            }
+        }
+        return true;
+    }
+    
+    
+    private void processConnectTimeout(Set<SelectionKey> keys, long currentTimeNanos) {
+        ConnectException cause = null;
+        for (SelectionKey k: keys) {
+            if (!k.isValid()) {
+                // Comment the close call again as it gave us major problems with ClosedChannelExceptions.
+                //
+                // See:
+                // * https://github.com/netty/netty/issues/142
+                // * https://github.com/netty/netty/issues/138
+                //
+                //close(k);
+                continue;
+            }
+            
+            // Something is ready so skip it
+            if (k.readyOps() != 0) {
+                continue;
+            }
+            // check if the channel is in
+            Object attachment = k.attachment();
+            if (attachment instanceof NioClientSocketChannel) {
+                NioClientSocketChannel ch = (NioClientSocketChannel) attachment;
+                if (!ch.isConnected() && ch.connectDeadlineNanos > 0 && currentTimeNanos >= ch.connectDeadlineNanos) {
+
+                    if (cause == null) {
+                        cause = new ConnectException("connection timed out");
+                    }
+
+                    ch.connectFuture.setFailure(cause);
+                    fireExceptionCaught(ch, cause);
+                    ch.getWorker().close(ch, succeededFuture(ch));
+                }
+            }
+            
+            
+            
+        }
+    }
+
+    private void connect(SelectionKey k) {
+        final NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
+        try {
+            if (ch.channel.finishConnect()) {
+                registerTask(ch, ch.connectFuture);                        
+            }
+        } catch (Throwable t) {
+            ch.connectFuture.setFailure(t);
+            fireExceptionCaught(ch, t);
+            k.cancel(); // Some JDK implementations run into an infinite loop without this.
+            ch.getWorker().close(ch, succeededFuture(ch));
+        }
+    }
+    
     private boolean cleanUpCancelledKeys() throws IOException {
         if (cancelledKeys >= CLEANUP_INTERVAL) {
             cancelledKeys = 0;
@@ -388,19 +559,27 @@ abstract class AbstractNioWorker implements Worker {
 
     
     private void close(SelectionKey k) {
-        AbstractNioChannel<?> ch = (AbstractNioChannel<?>) k.attachment();
-        close(ch, succeededFuture(ch));
+        Object attachment = k.attachment();
+        if (attachment instanceof AbstractNioChannel<?>) {
+            AbstractNioChannel<?> ch = (AbstractNioChannel<?>) attachment;
+            close(ch, succeededFuture(ch));
+        } else if (attachment instanceof NioServerSocketChannel) {
+            NioServerSocketChannel ch = (NioServerSocketChannel) attachment;
+            close(ch, succeededFuture(ch));
+        } else {
+            // TODO: What todo ?
+        }
     }
 
     void writeFromUserCode(final AbstractNioChannel<?> channel) {
+
         if (!channel.isConnected()) {
             cleanUpWriteBuffer(channel);
             return;
         }
-
         if (scheduleWriteIfNecessary(channel)) {
             return;
-        }
+        }       
 
         // From here, we are sure Thread.currentThread() == workerThread.
 
@@ -434,7 +613,7 @@ abstract class AbstractNioWorker implements Worker {
         boolean open = true;
         boolean addOpWrite = false;
         boolean removeOpWrite = false;
-        boolean iothread = isIoThread(channel);
+        boolean iothread = isIoThread();
 
         long writtenBytes = 0;
 
@@ -539,8 +718,12 @@ abstract class AbstractNioWorker implements Worker {
         }
     }
 
-    static boolean isIoThread(AbstractNioChannel<?> channel) {
-        return Thread.currentThread() == channel.worker.thread;
+    /**
+     * Return <code>true</code> if the current executing thread is the same as the one that runs the {@link #run()} method
+     * 
+     */
+    boolean isIoThread() {
+        return Thread.currentThread() == thread; 
     }
     
     private void setOpWrite(AbstractNioChannel<?> channel) {
@@ -590,10 +773,59 @@ abstract class AbstractNioWorker implements Worker {
     }
     
 
+    void close(NioServerSocketChannel channel, ChannelFuture future) {
+        boolean isIoThread = isIoThread();
+        
+        boolean bound = channel.isBound();
+        try {
+            if (channel.socket.isOpen()) {
+                channel.socket.close();
+                Selector selector = channel.selector;
+                if (selector != null) {
+                    selector.wakeup();
+                }
+            }
+
+            // Make sure the boss thread is not running so that that the future
+            // is notified after a new connection cannot be accepted anymore.
+            // See NETTY-256 for more information.
+            channel.shutdownLock.lock();
+            try {
+                if (channel.setClosed()) {
+                    future.setSuccess();
+                    if (bound) {
+                        if (isIoThread) {
+                            fireChannelUnbound(channel);
+                        } else {
+                            fireChannelUnboundLater(channel);
+                        }
+                    }
+                    if (isIoThread) {
+                        fireChannelClosed(channel);
+                    } else {
+                        fireChannelClosedLater(channel);
+                    }
+                } else {
+                    future.setSuccess();
+                }
+            } finally {
+                channel.shutdownLock.unlock();
+            }
+        } catch (Throwable t) {
+            future.setFailure(t);
+            if (isIoThread) {
+                fireExceptionCaught(channel, t);
+            } else {
+                fireExceptionCaughtLater(channel, t);
+                
+            }
+        }
+    }
+    
     void close(AbstractNioChannel<?> channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean bound = channel.isBound();
-        boolean iothread = isIoThread(channel);
+        boolean iothread = isIoThread();
         
         try {
             channel.channel.close();
@@ -630,6 +862,7 @@ abstract class AbstractNioWorker implements Worker {
             if (iothread) {
                 fireExceptionCaught(channel, t);
             } else {
+                System.out.println(thread + "==" + channel.getWorker().thread);
                 fireExceptionCaughtLater(channel, t);
             }
         }
@@ -684,7 +917,7 @@ abstract class AbstractNioWorker implements Worker {
         }
 
         if (fireExceptionCaught) {
-            if (isIoThread(channel)) {
+            if (isIoThread()) {
                 fireExceptionCaught(channel, cause);
             } else {
                 fireExceptionCaughtLater(channel, cause);
@@ -694,7 +927,7 @@ abstract class AbstractNioWorker implements Worker {
 
     void setInterestOps(AbstractNioChannel<?> channel, ChannelFuture future, int interestOps) {
         boolean changed = false;
-        boolean iothread = isIoThread(channel);
+        boolean iothread = isIoThread();
         try {
             // interestOps can change at any time and at any thread.
             // Acquire a lock to avoid possible race condition.
@@ -731,7 +964,7 @@ abstract class AbstractNioWorker implements Worker {
                 case 0:
                     if (channel.getRawInterestOps() != interestOps) {
                         key.interestOps(interestOps);
-                        if (Thread.currentThread() != thread &&
+                        if (!iothread &&
                             wakenUp.compareAndSet(false, true)) {
                             selector.wakeup();
                         }
@@ -741,7 +974,7 @@ abstract class AbstractNioWorker implements Worker {
                 case 1:
                 case 2:
                     if (channel.getRawInterestOps() != interestOps) {
-                        if (Thread.currentThread() == thread) {
+                        if (iothread) {
                             key.interestOps(interestOps);
                             changed = true;
                         } else {
@@ -803,13 +1036,6 @@ abstract class AbstractNioWorker implements Worker {
      */
     protected abstract boolean read(SelectionKey k);
 
-    /**
-     * Create a new {@link Runnable} which will register the {@link AbstractNioWorker} with the {@link Channel}
-     * 
-     * @param channel
-     * @param future
-     * @return task
-     */
-    protected abstract Runnable createRegisterTask(AbstractNioChannel<?> channel, ChannelFuture future);
+    protected abstract void registerTask(AbstractNioChannel<?> channel, ChannelFuture future);
     
 }

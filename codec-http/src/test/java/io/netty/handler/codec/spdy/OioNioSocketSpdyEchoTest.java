@@ -30,7 +30,7 @@ public class OioNioSocketSpdyEchoTest extends AbstractSocketSpdyEchoTest {
 
     @Override
     protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new NioServerSocketChannelFactory(executor, executor);
+        return new NioServerSocketChannelFactory(executor);
     }
 
 }
