@@ -105,35 +105,12 @@ public class NioDatagramWorker extends AbstractNioWorker {
 
         return true;
     }
-    
-
-    @Override
-    protected boolean scheduleWriteIfNecessary(final AbstractNioChannel<?> channel) {
-        if (!isIoThread()) {
-            if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
-                // "add" the channels writeTask to the writeTaskQueue.
-                boolean offered = writeTaskQueue.offer(channel.writeTask);
-                assert offered;
-            }
-
-            final Selector selector = this.selector;
-            if (selector != null) {
-                if (wakenUp.compareAndSet(false, true)) {
-                    selector.wakeup();
-                }
-            }
-            return true;
-        }
-
-        return false;
-    }
-
 
     void disconnect(NioDatagramChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
         boolean iothread = isIoThread();
         try {
-            channel.getDatagramChannel().disconnect();
+            channel.getJdkChannel().disconnectSocket();
             future.setSuccess();
             if (connected) {
                 if (iothread) {
@@ -154,7 +131,7 @@ public class NioDatagramWorker extends AbstractNioWorker {
 
 
     @Override
-    protected void registerTask(AbstractNioChannel<?> channel, ChannelFuture future) {
+    protected void registerTask(AbstractNioChannel channel, ChannelFuture future) {
         final SocketAddress localAddress = channel.getLocalAddress();
         if (localAddress == null) {
             if (future != null) {
@@ -166,7 +143,7 @@ public class NioDatagramWorker extends AbstractNioWorker {
 
         try {
             synchronized (channel.interestOpsLock) {
-                ((NioDatagramChannel) channel).getDatagramChannel().register(
+                channel.getJdkChannel().register(
                         selector, channel.getRawInterestOps(), channel);
             }
             if (future != null) {

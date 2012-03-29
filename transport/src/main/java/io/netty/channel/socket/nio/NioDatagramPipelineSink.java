@@ -84,7 +84,7 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
 
     private void close(NioDatagramChannel channel, ChannelFuture future) {
         try {
-            channel.getDatagramChannel().socket().close();
+            channel.getJdkChannel().closeSocket();
             if (channel.setClosed()) {
                 future.setSuccess();
                 if (channel.isBound()) {
@@ -110,7 +110,7 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
         boolean started = false;
         try {
             // First bind the DatagramSocket the specified port.
-            channel.getDatagramChannel().socket().bind(address);
+            channel.getJdkChannel().bind(address);
             bound = true;
 
             future.setSuccess();
@@ -143,7 +143,7 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
         channel.remoteAddress = null;
 
         try {
-            channel.getDatagramChannel().connect(remoteAddress);
+            channel.getJdkChannel().connect(remoteAddress);
             connected = true;
 
             // Fire events.

@@ -33,8 +33,7 @@ import java.nio.channels.DatagramChannel;
 /**
  * Provides an NIO based {@link io.netty.channel.socket.DatagramChannel}.
  */
-public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel>
-                                implements io.netty.channel.socket.DatagramChannel {
+public final class NioDatagramChannel extends AbstractNioChannel implements io.netty.channel.socket.DatagramChannel {
 
     /**
      * The {@link DatagramChannelConfig}.
@@ -53,8 +52,8 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
     private NioDatagramChannel(final ChannelFactory factory,
             final ChannelPipeline pipeline, final ChannelSink sink,
             final NioDatagramWorker worker) {
-        super(null, factory, pipeline, sink, worker, openNonBlockingChannel());
-        config = new DefaultNioDatagramChannelConfig(channel.socket());
+        super(null, factory, pipeline, sink, worker, new NioDatagramJdkChannel(openNonBlockingChannel()));
+        config = new DefaultNioDatagramChannelConfig(getJdkChannel().getChannel().socket());
     }
 
     private static DatagramChannel openNonBlockingChannel() {
@@ -69,18 +68,23 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
 
 
     @Override
+    protected NioDatagramJdkChannel getJdkChannel() {
+        return (NioDatagramJdkChannel) super.getJdkChannel();
+    }
+
+    @Override
     public NioDatagramWorker getWorker() {
         return (NioDatagramWorker) super.getWorker();
     }
 
     @Override
     public boolean isBound() {
-        return isOpen() && channel.socket().isBound();
+        return isOpen() && getJdkChannel().isSocketBound();
     }
 
     @Override
     public boolean isConnected() {
-        return channel.isConnected();
+        return getJdkChannel().isConnected();
     }
 
     @Override
@@ -91,10 +95,6 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
     @Override
     public NioDatagramChannelConfig getConfig() {
         return config;
-    }
-
-    DatagramChannel getDatagramChannel() {
-        return channel;
     }
 
     @Override
@@ -119,15 +119,7 @@ public final class NioDatagramChannel extends AbstractNioChannel<DatagramChannel
         throw new UnsupportedOperationException();
     }
 
-    @Override
-    InetSocketAddress getLocalSocketAddress() throws Exception {
-        return (InetSocketAddress) channel.socket().getLocalSocketAddress();
-    }
 
-    @Override
-    InetSocketAddress getRemoteSocketAddress() throws Exception {
-        return (InetSocketAddress) channel.socket().getRemoteSocketAddress();
-    }
 
     @Override
     public ChannelFuture write(Object message, SocketAddress remoteAddress) {

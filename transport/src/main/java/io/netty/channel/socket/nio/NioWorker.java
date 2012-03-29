@@ -31,7 +31,6 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executor;
 
@@ -107,40 +106,7 @@ public class NioWorker extends AbstractNioWorker {
 
 
     @Override
-    protected boolean scheduleWriteIfNecessary(final AbstractNioChannel<?> channel) {
-        if (!isIoThread()) {
-            if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
-                boolean offered = writeTaskQueue.offer(channel.writeTask);
-                assert offered;
-            }
-
-            if (!(channel instanceof NioAcceptedSocketChannel)) {
-                final Selector workerSelector = selector;
-                if (workerSelector != null) {
-                    if (wakenUp.compareAndSet(false, true)) {
-                        workerSelector.wakeup();
-                    }
-                }
-            } else {
-                // A write request can be made from an acceptor thread (boss)
-                // when a user attempted to write something in:
-                //
-                //   * channelOpen()
-                //   * channelBound()
-                //   * channelConnected().
-                //
-                // In this case, there's no need to wake up the selector because
-                // the channel is not even registered yet at this moment.
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-    
-    @Override
-    protected void registerTask(AbstractNioChannel<?> channel, ChannelFuture future) {
+    protected void registerTask(AbstractNioChannel channel, ChannelFuture future) {
         boolean server = !(channel instanceof NioClientSocketChannel);
         SocketAddress localAddress = channel.getLocalAddress();
         SocketAddress remoteAddress = channel.getRemoteAddress();
@@ -155,13 +121,13 @@ public class NioWorker extends AbstractNioWorker {
 
         try {
             if (server) {
-                channel.channel.configureBlocking(false);
+                channel.getJdkChannel().configureBlocking(false);
             }
 
-            boolean registered = channel.channel.isRegistered();
+            boolean registered = channel.getJdkChannel().isRegistered();
             if (!registered) {
                 synchronized (channel.interestOpsLock) {
-                    channel.channel.register(
+                    channel.getJdkChannel().register(
                             selector, channel.getRawInterestOps(), channel);
                 }
                 

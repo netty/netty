@@ -20,11 +20,9 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 
-import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 
-public abstract class NioSocketChannel extends AbstractNioChannel<SocketChannel>
-                                implements io.netty.channel.socket.SocketChannel {
+public abstract class NioSocketChannel extends AbstractNioChannel implements io.netty.channel.socket.SocketChannel {
 
     private static final int ST_OPEN = 0;
     private static final int ST_BOUND = 1;
@@ -38,7 +36,7 @@ public abstract class NioSocketChannel extends AbstractNioChannel<SocketChannel>
             Channel parent, ChannelFactory factory,
             ChannelPipeline pipeline, ChannelSink sink,
             SocketChannel socket, NioWorker worker) {
-        super(parent, factory, pipeline, sink, worker, socket);
+        super(parent, factory, pipeline, sink, worker, new NioSocketJdkChannel(socket));
 
         config = new DefaultNioSocketChannelConfig(socket.socket());
     }
@@ -83,16 +81,5 @@ public abstract class NioSocketChannel extends AbstractNioChannel<SocketChannel>
     protected boolean setClosed() {
         state = ST_CLOSED;
         return super.setClosed();
-    }
-
-
-    @Override
-    InetSocketAddress getLocalSocketAddress() throws Exception {
-        return (InetSocketAddress) channel.socket().getLocalSocketAddress();
-    }
-
-    @Override
-    InetSocketAddress getRemoteSocketAddress() throws Exception {
-        return (InetSocketAddress) channel.socket().getRemoteSocketAddress();
     }
 }

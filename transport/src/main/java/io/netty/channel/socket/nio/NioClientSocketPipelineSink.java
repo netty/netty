@@ -84,7 +84,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             NioClientSocketChannel channel, ChannelFuture future,
             SocketAddress localAddress) {
         try {
-            channel.channel.socket().bind(localAddress);
+            channel.getJdkChannel().bind(localAddress);
             channel.boundManually = true;
             channel.setBound();
             future.setSuccess();
@@ -99,7 +99,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             final NioClientSocketChannel channel, final ChannelFuture cf,
             SocketAddress remoteAddress) {
         try {
-            channel.channel.connect(remoteAddress);
+            channel.getJdkChannel().connect(remoteAddress);
             channel.getCloseFuture().addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture f)
