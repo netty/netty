@@ -18,71 +18,45 @@ package org.jboss.netty.handler.codec.redis;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandler.Sharable;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelDownstreamHandler;
-import org.jboss.netty.channel.ChannelHandler.Sharable;
-
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * {@link SimpleChannelDownstreamHandler} which encodes {@link Command}'s to {@link ChannelBuffer}'s
- * 
- *
  */
 @Sharable
 public class RedisEncoder extends SimpleChannelDownstreamHandler {
 
-    private final Queue<ChannelBuffer> pool;
-
-    /**
-     * Calls {@link #RedisEncoder(boolean)} with <code>false</code>
-     */
     public RedisEncoder() {
-        this(false);
     }
-    
-    /**
-     * Create a new {@link RedisEncoder} instance 
-     * 
-     * @param poolBuffers <code>true</code> if the {@link ChannelBuffer}'s should be pooled. This should be used with caution as this 
-     *                    can lead to unnecessary big memory consummation if one of the written values is very big and the rest is very small.
-     */
-    public RedisEncoder(boolean poolBuffers) {
-        if (poolBuffers) {
-            pool = new ConcurrentLinkedQueue<ChannelBuffer>();
-        } else {
-            pool = null;
-        }
-    }
-    
-    
+
     @Override
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         Object o = e.getMessage();
         if (o instanceof Command) {
-            Command command = (Command) o;
-            ChannelBuffer cb = null;
-            if (pool != null) {
-                cb = pool.poll();
-            }
-            if (cb == null) {
-                cb = ChannelBuffers.dynamicBuffer();
-            }
-            command.write(cb);
+            ChannelBuffer cb = ChannelBuffers.dynamicBuffer();
             ChannelFuture future = e.getFuture();
 
-            if (pool != null) {
-                final ChannelBuffer finalCb = cb;
-                future.addListener(new ChannelFutureListener() {
-                    public void operationComplete(ChannelFuture channelFuture) throws Exception {
-                        finalCb.clear();
-                        pool.add(finalCb);
-                    }
-                });
+            Command command = (Command) o;
+            command.write(cb);
+            Channels.write(ctx, future, cb);
+
+        } else if (o instanceof Iterable) {
+            ChannelBuffer cb = ChannelBuffers.dynamicBuffer();
+            ChannelFuture future = e.getFuture();
+
+            // Useful for transactions and database select
+            for (Object i : (Iterable) o) {
+                if (i instanceof Command) {
+                    Command command = (Command) i;
+                    command.write(cb);
+                } else {
+                    super.writeRequested(ctx, e);
+                    return;
+                }
             }
             Channels.write(ctx, future, cb);
         } else {
