@@ -57,7 +57,6 @@ public class UptimeClient {
         // Configure the client.
         final ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
         // Configure the pipeline factory.

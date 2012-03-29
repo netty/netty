@@ -100,7 +100,11 @@ public abstract class AbstractSocketStringEchoTest {
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
 
         ChannelFuture ccf = cb.connect(new InetSocketAddress(SocketAddresses.LOCALHOST, port));
-        assertTrue(ccf.awaitUninterruptibly().isSuccess());
+        boolean success = ccf.awaitUninterruptibly().isSuccess();
+        if (!success) {
+            ccf.getCause().printStackTrace();
+        }
+        assertTrue(success);
 
         Channel cc = ccf.getChannel();
         for (String element : data) {
@@ -137,7 +141,6 @@ public abstract class AbstractSocketStringEchoTest {
                 // Ignore.
             }
         }
-
         sh.channel.close().awaitUninterruptibly();
         ch.channel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
@@ -173,7 +176,6 @@ public abstract class AbstractSocketStringEchoTest {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
                 throws Exception {
-
             String m = (String) e.getMessage();
             assertEquals(data[counter], m);
 

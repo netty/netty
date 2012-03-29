@@ -109,8 +109,7 @@ public class NioDatagramWorker extends AbstractNioWorker {
 
     @Override
     protected boolean scheduleWriteIfNecessary(final AbstractNioChannel<?> channel) {
-        final Thread workerThread = thread;
-        if (workerThread == null || Thread.currentThread() != workerThread) {
+        if (!isIoThread()) {
             if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
                 // "add" the channels writeTask to the writeTaskQueue.
                 boolean offered = writeTaskQueue.offer(channel.writeTask);
@@ -130,9 +129,9 @@ public class NioDatagramWorker extends AbstractNioWorker {
     }
 
 
-    static void disconnect(NioDatagramChannel channel, ChannelFuture future) {
+    void disconnect(NioDatagramChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
-        boolean iothread = isIoThread(channel);
+        boolean iothread = isIoThread();
         try {
             channel.getDatagramChannel().disconnect();
             future.setSuccess();
@@ -155,57 +154,33 @@ public class NioDatagramWorker extends AbstractNioWorker {
 
 
     @Override
-    protected Runnable createRegisterTask(AbstractNioChannel<?> channel, ChannelFuture future) {
-        return new ChannelRegistionTask((NioDatagramChannel) channel, future);
-    }
-    
-    /**
-     * RegisterTask is a task responsible for registering a channel with a
-     * selector.
-     */
-    private final class ChannelRegistionTask implements Runnable {
-        private final NioDatagramChannel channel;
-
-        private final ChannelFuture future;
-
-        ChannelRegistionTask(final NioDatagramChannel channel,
-                final ChannelFuture future) {
-            this.channel = channel;
-            this.future = future;
+    protected void registerTask(AbstractNioChannel<?> channel, ChannelFuture future) {
+        final SocketAddress localAddress = channel.getLocalAddress();
+        if (localAddress == null) {
+            if (future != null) {
+                future.setFailure(new ClosedChannelException());
+            }
+            close(channel, succeededFuture(channel));
+            return;
         }
 
-        /**
-         * This runnable's task. Does the actual registering by calling the
-         * underlying DatagramChannels peer DatagramSocket register method.
-         */
-        @Override
-        public void run() {
-            final SocketAddress localAddress = channel.getLocalAddress();
-            if (localAddress == null) {
-                if (future != null) {
-                    future.setFailure(new ClosedChannelException());
-                }
-                close(channel, succeededFuture(channel));
-                return;
+        try {
+            synchronized (channel.interestOpsLock) {
+                ((NioDatagramChannel) channel).getDatagramChannel().register(
+                        selector, channel.getRawInterestOps(), channel);
             }
-
-            try {
-                synchronized (channel.interestOpsLock) {
-                    channel.getDatagramChannel().register(
-                            selector, channel.getRawInterestOps(), channel);
-                }
-                if (future != null) {
-                    future.setSuccess();
-                }
-            } catch (final ClosedChannelException e) {
-                if (future != null) {
-                    future.setFailure(e);
-                }
-                close(channel, succeededFuture(channel));
-                throw new ChannelException(
-                        "Failed to register a socket to the selector.", e);
+            if (future != null) {
+                future.setSuccess();
             }
+        } catch (final ClosedChannelException e) {
+            if (future != null) {
+                future.setFailure(e);
+            }
+            close(channel, succeededFuture(channel));
+            throw new ChannelException(
+                    "Failed to register a socket to the selector.", e);
         }
     }
+
 
 }

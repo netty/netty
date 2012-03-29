@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelFactory;
@@ -76,7 +77,7 @@ import io.netty.util.ExternalResourceReleasable;
  */
 public class NioDatagramChannelFactory implements DatagramChannelFactory {
 
-    private final NioDatagramPipelineSink sink;
+    private final ChannelSink sink;
     private final WorkerPool<NioDatagramWorker> workerPool;
 
 
@@ -124,12 +125,12 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      */
     public NioDatagramChannelFactory(WorkerPool<NioDatagramWorker> workerPool) {
         this.workerPool = workerPool;
-        sink = new NioDatagramPipelineSink(workerPool);
+        sink = new NioDatagramPipelineSink();
     }
     
     @Override
     public DatagramChannel newChannel(final ChannelPipeline pipeline) {
-        return NioDatagramChannel.create(this, pipeline, sink, sink.nextWorker());
+        return NioDatagramChannel.create(this, pipeline, sink, workerPool.nextWorker());
     }
 
     @Override

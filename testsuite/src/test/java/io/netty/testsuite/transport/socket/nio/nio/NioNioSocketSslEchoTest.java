@@ -24,14 +24,15 @@ import io.netty.testsuite.transport.socket.AbstractSocketSslEchoTest;
 
 public class NioNioSocketSslEchoTest extends AbstractSocketSslEchoTest {
 
+
     @Override
     protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
-        return new NioClientSocketChannelFactory(executor, executor);
+        return new NioClientSocketChannelFactory(executor);
     }
 
     @Override
     protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new NioServerSocketChannelFactory(executor, executor);
+        return new NioServerSocketChannelFactory(executor);
     }
 
 }

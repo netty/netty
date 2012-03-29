@@ -70,7 +70,6 @@ public class WebSocketClient {
         ClientBootstrap bootstrap =
                 new ClientBootstrap(
                         new NioClientSocketChannelFactory(
-                                Executors.newCachedThreadPool(),
                                 Executors.newCachedThreadPool()));
 
         Channel ch = null;

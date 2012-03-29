@@ -28,7 +28,6 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.ServerSocketChannelFactory;
 import io.netty.channel.socket.Worker;
 import io.netty.util.ExternalResourceReleasable;
-import io.netty.util.internal.ExecutorUtil;
 
 /**
  * A {@link ServerSocketChannelFactory} which creates a server-side NIO-based
@@ -85,18 +84,17 @@ import io.netty.util.internal.ExecutorUtil;
  */
 public class NioServerSocketChannelFactory implements ServerSocketChannelFactory {
 
-    final Executor bossExecutor;
     private final WorkerPool<NioWorker> workerPool;
     private final ChannelSink sink;
 
     /**
      * Create a new {@link NioServerSocketChannelFactory} using
-     * {@link Executors#newCachedThreadPool()} for the boss and worker.
+     * {@link Executors#newCachedThreadPool()} for the worker.
      * 
      * See {@link #NioServerSocketChannelFactory(Executor, Executor)}
      */
     public NioServerSocketChannelFactory() {
-        this(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+        this(Executors.newCachedThreadPool());
     }
     
     
@@ -106,50 +104,38 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
      * the number of available processors in the machine.  The number of
      * available processors is obtained by {@link Runtime#availableProcessors()}.
      *
-     * @param bossExecutor
-     *        the {@link Executor} which will execute the boss threads
+
      * @param workerExecutor
      *        the {@link Executor} which will execute the I/O worker threads
      */
-    public NioServerSocketChannelFactory(
-            Executor bossExecutor, Executor workerExecutor) {
-        this(bossExecutor, workerExecutor, SelectorUtil.DEFAULT_IO_THREADS);
+    public NioServerSocketChannelFactory(Executor workerExecutor) {
+        this(workerExecutor, SelectorUtil.DEFAULT_IO_THREADS);
     }
 
     /**
      * Creates a new instance.
      *
-     * @param bossExecutor
-     *        the {@link Executor} which will execute the boss threads
      * @param workerExecutor
      *        the {@link Executor} which will execute the I/O worker threads
      * @param workerCount
      *        the maximum number of I/O worker threads
      */
-    public NioServerSocketChannelFactory(
-            Executor bossExecutor, Executor workerExecutor,
+    public NioServerSocketChannelFactory(Executor workerExecutor,
             int workerCount) {
-        this(bossExecutor, new NioWorkerPool(workerExecutor, workerCount, true));
+        this(new NioWorkerPool(workerExecutor, workerCount, true));
     }
 
     /**
      * Creates a new instance.
      *
-     * @param bossExecutor
-     *        the {@link Executor} which will execute the boss threads
      * @param workerPool
      *        the {@link WorkerPool} which will be used to obtain the {@link Worker} that execute the I/O worker threads
      */
-    public NioServerSocketChannelFactory(
-            Executor bossExecutor, WorkerPool<NioWorker> workerPool) {
-        if (bossExecutor == null) {
-            throw new NullPointerException("bossExecutor");
-        }
+    public NioServerSocketChannelFactory(WorkerPool<NioWorker> workerPool) {
         if (workerPool == null) {
             throw new NullPointerException("workerPool");
         }
        
-        this.bossExecutor = bossExecutor;
         this.workerPool = workerPool;
         sink = new NioServerSocketPipelineSink(workerPool);
     }
@@ -157,12 +143,11 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
     
     @Override
     public ServerSocketChannel newChannel(ChannelPipeline pipeline) {
-        return NioServerSocketChannel.create(this, pipeline, sink);
+        return NioServerSocketChannel.create(this, pipeline, sink, workerPool.nextWorker());
     }
 
     @Override
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(bossExecutor);
         if (workerPool instanceof ExternalResourceReleasable) {
             ((ExternalResourceReleasable) workerPool).releaseExternalResources();
         }

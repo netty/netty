@@ -35,7 +35,7 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 final class NioServerSocketChannel extends AbstractServerChannel
-                             implements io.netty.channel.socket.ServerSocketChannel {
+                             implements io.netty.channel.socket.ServerSocketChannel, NioChannel {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
@@ -43,12 +43,15 @@ final class NioServerSocketChannel extends AbstractServerChannel
     final ServerSocketChannel socket;
     final Lock shutdownLock = new ReentrantLock();
     volatile Selector selector;
+    final NioWorker worker;
+    
+    
     private final ServerSocketChannelConfig config;
 
     static NioServerSocketChannel create(ChannelFactory factory,
-            ChannelPipeline pipeline, ChannelSink sink) {
+            ChannelPipeline pipeline, ChannelSink sink, NioWorker worker) {
         NioServerSocketChannel instance =
-                new NioServerSocketChannel(factory, pipeline, sink);
+                new NioServerSocketChannel(factory, pipeline, sink, worker);
         fireChannelOpen(instance);
         return instance;
     }
@@ -56,10 +59,10 @@ final class NioServerSocketChannel extends AbstractServerChannel
     private NioServerSocketChannel(
             ChannelFactory factory,
             ChannelPipeline pipeline,
-            ChannelSink sink) {
+            ChannelSink sink, NioWorker worker) {
 
         super(factory, pipeline, sink);
-
+        this.worker = worker;
         try {
             socket = ServerSocketChannel.open();
         } catch (IOException e) {
@@ -109,5 +112,10 @@ final class NioServerSocketChannel extends AbstractServerChannel
     @Override
     protected boolean setClosed() {
         return super.setClosed();
+    }
+
+    @Override
+    public NioWorker getWorker() {
+        return worker;
     }
 }
