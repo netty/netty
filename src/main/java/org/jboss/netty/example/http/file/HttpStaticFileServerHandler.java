@@ -26,6 +26,14 @@ import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.Locale;
+import java.util.TimeZone;
+
+import javax.activation.MimetypesFileTypeMap;
 
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -40,6 +48,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.frame.TooLongFrameException;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -95,6 +104,10 @@ import org.jboss.netty.util.CharsetUtil;
  */
 public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
 
+    public static final String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
+    public static final String HTTP_DATE_GMT_TIMEZONE = "GMT";
+    public static final int HTTP_CACHE_SECONDS = 60;
+
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         HttpRequest request = (HttpRequest) e.getMessage();
@@ -119,6 +132,21 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
             return;
         }
 
+        // Cache Validation
+        String ifModifiedSince = request.getHeader(HttpHeaders.Names.IF_MODIFIED_SINCE);
+        if (ifModifiedSince != null && !ifModifiedSince.equals("")) {
+            SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
+            Date ifModifiedSinceDate = dateFormatter.parse(ifModifiedSince);
+
+            // Only compare up to the second because the datetime format we send to the client does not have milliseconds 
+            long ifModifiedSinceDateSeconds = ifModifiedSinceDate.getTime() / 1000;
+            long fileLastModifiedSeconds = file.lastModified() / 1000;
+            if (ifModifiedSinceDateSeconds == fileLastModifiedSeconds) {
+                sendNotModified(ctx);
+                return;
+            }
+        }
+        
         RandomAccessFile raf;
         try {
             raf = new RandomAccessFile(file, "r");
@@ -130,7 +158,9 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
 
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
         setContentLength(response, fileLength);
-
+        setContentTypeHeader(response, file);
+        setDateAndCacheHeaders(response, file);
+        
         Channel ch = e.getChannel();
 
         // Write the initial line and the header.
@@ -147,10 +177,12 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
                 new DefaultFileRegion(raf.getChannel(), 0, fileLength);
             writeFuture = ch.write(region);
             writeFuture.addListener(new ChannelFutureProgressListener() {
+                @Override
                 public void operationComplete(ChannelFuture future) {
                     region.releaseExternalResources();
                 }
 
+                @Override
                 public void operationProgressed(
                         ChannelFuture future, long amount, long current, long total) {
                     System.out.printf("%s: %d / %d (+%d)%n", path, current, total, amount);
@@ -218,4 +250,69 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         // Close the connection as soon as the error message is sent.
         ctx.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);
     }
+    
+    /**
+     * When file timestamp is the same as what the browser is sending up, send a "304 Not Modified"
+     * 
+     * @param ctx
+     *            Context
+     */
+    private void sendNotModified(ChannelHandlerContext ctx) {
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.NOT_MODIFIED);
+        setDateHeader(response);
+
+        // Close the connection as soon as the error message is sent.
+        ctx.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);
+    }
+    
+    /**
+     * Sets the Date header for the HTTP response
+     * 
+     * @param response
+     *            HTTP response
+     */
+    private void setDateHeader(HttpResponse response) {
+        SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
+        dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
+
+        Calendar time = new GregorianCalendar();
+        response.setHeader(HttpHeaders.Names.DATE, dateFormatter.format(time.getTime()));
+    }
+    
+    /**
+     * Sets the Date and Cache headers for the HTTP Response
+     * 
+     * @param response
+     *            HTTP response
+     * @param fileToCache
+     *            file to extract content type
+     */
+    private void setDateAndCacheHeaders(HttpResponse response, File fileToCache) {
+        SimpleDateFormat dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
+        dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
+
+        // Date header
+        Calendar time = new GregorianCalendar();
+        response.setHeader(HttpHeaders.Names.DATE, dateFormatter.format(time.getTime()));
+
+        // Add cache headers
+        time.add(Calendar.SECOND, HTTP_CACHE_SECONDS);
+        response.setHeader(HttpHeaders.Names.EXPIRES, dateFormatter.format(time.getTime()));
+        response.setHeader(HttpHeaders.Names.CACHE_CONTROL, "private, max-age=" + HTTP_CACHE_SECONDS);
+        response.setHeader(HttpHeaders.Names.LAST_MODIFIED, dateFormatter.format(new Date(fileToCache.lastModified())));
+    }
+
+    /**
+     * Sets the content type header for the HTTP Response
+     * 
+     * @param response
+     *            HTTP response
+     * @param file
+     *            file to extract content type
+     */
+    private void setContentTypeHeader(HttpResponse response, File file) {
+        MimetypesFileTypeMap mimeTypesMap = new MimetypesFileTypeMap();
+        response.setHeader(HttpHeaders.Names.CONTENT_TYPE, mimeTypesMap.getContentType(file.getPath()));
+    }
+
 }
