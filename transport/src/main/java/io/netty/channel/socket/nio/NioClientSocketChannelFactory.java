@@ -22,6 +22,7 @@ import java.util.concurrent.RejectedExecutionException;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.ClientSocketChannelFactory;
 import io.netty.channel.socket.SocketChannel;
@@ -81,7 +82,7 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
 
 
     private final WorkerPool<NioWorker> workerPool;
-    private final NioClientSocketPipelineSink sink;
+    private final ChannelSink sink;
 
     /**
      * Creates a new {@link NioClientSocketChannelFactory} which uses {@link Executors#newCachedThreadPool()} for the worker executor.
@@ -129,13 +130,13 @@ public class NioClientSocketChannelFactory implements ClientSocketChannelFactory
         
 
         this.workerPool = workerPool;
-        sink = new NioClientSocketPipelineSink(workerPool);
+        sink = new NioClientSocketPipelineSink();
     }
     
 
     @Override
     public SocketChannel newChannel(ChannelPipeline pipeline) {
-        return NioClientSocketChannel.create(this, pipeline, sink, sink.nextWorker());
+        return NioClientSocketChannel.create(this, pipeline, sink, workerPool.nextWorker());
     }
 
     @Override

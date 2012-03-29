@@ -19,7 +19,6 @@ import static io.netty.channel.Channels.*;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.concurrent.Executor;
 
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelFuture;
@@ -34,22 +33,6 @@ import io.netty.channel.MessageEvent;
  * an array of I/O workers.
  */
 class NioDatagramPipelineSink extends AbstractNioChannelSink {
-
-    private final WorkerPool<NioDatagramWorker> workerPool;
-
-    /**
-     * Creates a new {@link NioDatagramPipelineSink} with a the number of {@link NioDatagramWorker}s specified in workerCount.
-     * The {@link NioDatagramWorker}s take care of reading and writing for the {@link NioDatagramChannel}.
-     *
-     * @param workerExecutor
-     *        the {@link Executor} that will run the {@link NioDatagramWorker}s
-     *        for this sink
-     * @param workerCount
-     *        the number of {@link NioDatagramWorker}s for this sink
-     */
-    NioDatagramPipelineSink(final WorkerPool<NioDatagramWorker> workerPool) {
-        this.workerPool = workerPool;
-    }
 
     /**
      * Handle downstream event.
@@ -183,9 +166,4 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
             }
         }
     }
-
-    NioDatagramWorker nextWorker() {
-        return workerPool.nextWorker();
-    }
-
 }

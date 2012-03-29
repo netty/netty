@@ -19,5 +19,9 @@ import io.netty.channel.Channel;
 
 public interface NioChannel extends Channel {
 
+    /**
+     * Returns the {@link AbstractNioWorker} which handles the IO of the {@link Channel}
+     * 
+     */
     AbstractNioWorker getWorker();
 }

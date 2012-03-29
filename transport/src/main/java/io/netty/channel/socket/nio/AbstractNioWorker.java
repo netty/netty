@@ -127,10 +127,10 @@ abstract class AbstractNioWorker implements Worker {
     public AbstractNioWorker(Executor executor, boolean allowShutdownOnIdle) {
         this.executor = executor;
         this.allowShutdownOnIdle = allowShutdownOnIdle;
+        
     }
 
     public final void registerWithWorker(final Channel channel, final ChannelFuture future) {
-
         final Selector selector = start();
 
         try {
@@ -141,7 +141,7 @@ abstract class AbstractNioWorker implements Worker {
                     @Override
                     public void run() {
                         try {
-                            ch.socket.register(selector, SelectionKey.OP_ACCEPT, channel);
+                            ch.socket.register(selector, SelectionKey.OP_ACCEPT, ch);
                         } catch (Throwable t) {
                             future.setFailure(t);
                             fireExceptionCaught(channel, t);
@@ -157,7 +157,7 @@ abstract class AbstractNioWorker implements Worker {
                     public void run() {
                         try {
                             try {
-                                clientChannel.channel.register(selector, clientChannel.getRawInterestOps() | SelectionKey.OP_CONNECT | SelectionKey.OP_WRITE, channel);
+                                clientChannel.channel.register(selector, clientChannel.getRawInterestOps() | SelectionKey.OP_CONNECT, clientChannel);
                             } catch (ClosedChannelException e) {
                                 clientChannel.getWorker().close(clientChannel, succeededFuture(channel));
                             }
@@ -195,7 +195,6 @@ abstract class AbstractNioWorker implements Worker {
             future.setFailure(t);
             fireExceptionCaught(channel, t);
         }
-
 
     }
     
@@ -248,6 +247,7 @@ abstract class AbstractNioWorker implements Worker {
         boolean shutdown = false;
         Selector selector = this.selector;
         for (;;) {
+
             wakenUp.set(false);
 
             if (CONSTRAINT_LEVEL != 0) {
@@ -291,7 +291,7 @@ abstract class AbstractNioWorker implements Worker {
                 if (wakenUp.get()) {
                     selector.wakeup();
                 }
-
+                
                 cancelledKeys = 0;
                 processRegisterTaskQueue();
                 processEventQueue();
@@ -398,11 +398,13 @@ abstract class AbstractNioWorker implements Worker {
     }
 
     private void processWriteTaskQueue() throws IOException {
+
         for (;;) {
             final Runnable task = writeTaskQueue.poll();
             if (task == null) {
                 break;
             }
+
             task.run();
             cleanUpCancelledKeys();
         }
@@ -532,10 +534,10 @@ abstract class AbstractNioWorker implements Worker {
     }
 
     private void connect(SelectionKey k) {
-        NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
+        final NioClientSocketChannel ch = (NioClientSocketChannel) k.attachment();
         try {
-            if (ch.channel.isConnectionPending() && ch.channel.finishConnect()) {
-                registerTask(ch, ch.connectFuture);
+            if (ch.channel.finishConnect()) {
+                registerTask(ch, ch.connectFuture);                        
             }
         } catch (Throwable t) {
             ch.connectFuture.setFailure(t);
@@ -570,6 +572,7 @@ abstract class AbstractNioWorker implements Worker {
     }
 
     void writeFromUserCode(final AbstractNioChannel<?> channel) {
+
         if (!channel.isConnected()) {
             cleanUpWriteBuffer(channel);
             return;

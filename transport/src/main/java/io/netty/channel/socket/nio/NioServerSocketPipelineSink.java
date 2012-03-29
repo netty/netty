@@ -67,14 +67,14 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
         switch (state) {
         case OPEN:
             if (Boolean.FALSE.equals(value)) {
-                channel.worker.close(channel, future);
+                channel.getWorker().close(channel, future);
             }
             break;
         case BOUND:
             if (value != null) {
                 bind(channel, future, (SocketAddress) value);
             } else {
-                channel.worker.close(channel, future);
+                channel.getWorker().close(channel, future);
             }
             break;
         }
@@ -116,7 +116,6 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
     private void bind(
             NioServerSocketChannel channel, ChannelFuture future,
             SocketAddress localAddress) {
-
         boolean bound = false;
         try {
             channel.socket.socket().bind(localAddress, channel.getConfig().getBacklog());
@@ -125,21 +124,15 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
             future.setSuccess();
             fireChannelBound(channel, channel.getLocalAddress());
 
-            nextWorker().registerWithWorker(channel, future);
+            workerPool.nextWorker().registerWithWorker(channel, future);
             
         } catch (Throwable t) {
             future.setFailure(t);
             fireExceptionCaught(channel, t);
         } finally {
             if (!bound) {
-                channel.worker.close(channel, future);
+                channel.getWorker().close(channel, future);
             }
         }
     }
-
-
-    NioWorker nextWorker() {
-        return workerPool.nextWorker();
-    }
-
 }
