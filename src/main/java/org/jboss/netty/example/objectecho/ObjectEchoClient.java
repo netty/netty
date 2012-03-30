@@ -24,6 +24,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.example.echo.EchoClient;
+import org.jboss.netty.handler.codec.serialization.ClassResolvers;
 import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 
@@ -35,7 +36,7 @@ public class ObjectEchoClient {
     private final String host;
     private final int port;
     private final int firstMessageSize;
-    
+
     public ObjectEchoClient(String host, int port, int firstMessageSize) {
         this.host = host;
         this.port = port;
@@ -54,7 +55,8 @@ public class ObjectEchoClient {
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(
                         new ObjectEncoder(),
-                        new ObjectDecoder(),
+                        new ObjectDecoder(
+                                ClassResolvers.cacheDisabled(getClass().getClassLoader())),
                         new ObjectEchoClientHandler(firstMessageSize));
             }
         });

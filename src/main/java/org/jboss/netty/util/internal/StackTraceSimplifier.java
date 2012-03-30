@@ -19,9 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import org.jboss.netty.channel.DefaultChannelPipeline;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.channel.StaticChannelPipeline;
 import org.jboss.netty.util.DebugUtil;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 
@@ -42,8 +41,8 @@ public final class StackTraceSimplifier {
     /**
      * Removes unnecessary {@link StackTraceElement}s from the specified
      * exception. {@link ThreadRenamingRunnable}, {@link SimpleChannelHandler},
-     * {@link DefaultChannelPipeline}, and {@link StaticChannelPipeline}
-     * will be dropped from the trace.
+     * and {@link ChannelPipeline} implementations will be dropped from the
+     * trace.
      */
     public static void simplify(Throwable e) {
         if (!SIMPLIFY_STACK_TRACE) {

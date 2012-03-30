@@ -32,7 +32,7 @@ import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
  * Modification of {@link EchoServer} which utilizes Java object serialization.
  */
 public class ObjectEchoServer {
-    
+
     private final int port;
 
     public ObjectEchoServer(int port) {
@@ -51,7 +51,8 @@ public class ObjectEchoServer {
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(
                         new ObjectEncoder(),
-                        new ObjectDecoder(),
+                        new ObjectDecoder(
+                                ClassResolvers.cacheDisabled(getClass().getClassLoader())),
                         new ObjectEchoServerHandler());
             }
         });

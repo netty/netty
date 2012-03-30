@@ -49,7 +49,7 @@ public class RedisEncoder extends SimpleChannelDownstreamHandler {
             ChannelFuture future = e.getFuture();
 
             // Useful for transactions and database select
-            for (Object i : (Iterable) o) {
+            for (Object i : (Iterable<?>) o) {
                 if (i instanceof Command) {
                     Command command = (Command) i;
                     command.write(cb);

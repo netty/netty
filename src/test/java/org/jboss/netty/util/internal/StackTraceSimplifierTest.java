@@ -16,7 +16,6 @@
 package org.jboss.netty.util.internal;
 
 import static org.easymock.EasyMock.*;
-import static org.easymock.classextension.EasyMock.*;
 import static org.junit.Assert.*;
 
 import org.jboss.netty.buffer.ChannelBuffer;

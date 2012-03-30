@@ -81,11 +81,13 @@ public abstract class AbstractSocketObjectStreamEchoTest {
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        sb.getPipeline().addLast("decoder", new ObjectDecoder());
+        sb.getPipeline().addLast("decoder", new ObjectDecoder(
+                ClassResolvers.cacheDisabled(String.class.getClassLoader())));
         sb.getPipeline().addLast("encoder", new ObjectEncoder());
         sb.getPipeline().addLast("handler", sh);
 
-        cb.getPipeline().addLast("decoder", new ObjectDecoder());
+        cb.getPipeline().addLast("decoder", new ObjectDecoder(
+                ClassResolvers.cacheDisabled(String.class.getClassLoader())));
         cb.getPipeline().addLast("encoder", new ObjectEncoder());
         cb.getPipeline().addLast("handler", ch);
 

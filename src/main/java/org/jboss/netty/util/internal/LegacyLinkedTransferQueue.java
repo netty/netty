@@ -40,7 +40,7 @@ import java.util.concurrent.locks.LockSupport;
  * </strong>
  * <br>
  * <br>
- * 
+ *
  * An unbounded {@link BlockingQueue} based on linked nodes.
  * This queue orders elements FIFO (first-in-first-out) with respect
  * to any given producer.  The <em>head</em> of the queue is that
@@ -655,7 +655,7 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
                         }
                         LockSupport.unpark(p.waiter);
                         // Explicit cast, see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6302954
-                        return (E) LegacyLinkedTransferQueue.cast(item);
+                        return LegacyLinkedTransferQueue.cast(item);
                     }
                 }
                 Node n = p.next;
@@ -671,7 +671,7 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
                     continue retry;           // lost race vs opposite mode
                 }
                 if (how != ASYNC) {
-                    return awaitMatch(s, pred, e, (how == TIMED), nanos);
+                    return awaitMatch(s, pred, e, how == TIMED, nanos);
                 }
             }
             return e; // not waiting
@@ -739,8 +739,7 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
             if (item != e) {                  // matched
                 // assert item != s;
                 s.forgetContents();           // avoid garbage
-                // Explicit cast, see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6302954
-                return (E) LegacyLinkedTransferQueue.cast(item);
+                return LegacyLinkedTransferQueue.cast(item);
             }
             if ((w.isInterrupted() || timed && nanos <= 0) &&
                     s.casItem(e, s)) {        // cancel
@@ -828,8 +827,7 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
             Object item = p.item;
             if (p.isData) {
                 if (item != null && item != p) {
-                    // Explicit cast, see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6302954
-                    return (E) LegacyLinkedTransferQueue.cast(item);
+                    return LegacyLinkedTransferQueue.cast(item);
                 }
             }
             else if (item == null) {
@@ -882,8 +880,7 @@ public class LegacyLinkedTransferQueue<E> extends AbstractQueue<E>
                 Object item = p.item;
                 if (p.isData) {
                     if (item != null && item != p) {
-                        // Explicit cast, see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6302954
-                        nextItem = (E) LegacyLinkedTransferQueue.cast(item);
+                        nextItem = LegacyLinkedTransferQueue.cast(item);
                         nextNode = p;
                         return;
                     }
