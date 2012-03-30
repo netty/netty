@@ -35,13 +35,14 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
+import io.netty.channel.socket.nio.NioChannel;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 /**
  */
 class SctpServerChannelImpl extends AbstractServerChannel
-                             implements SctpServerChannel {
+                             implements SctpServerChannel, NioChannel {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SctpServerChannelImpl.class);
@@ -53,13 +54,15 @@ class SctpServerChannelImpl extends AbstractServerChannel
 
     private volatile boolean bound;
 
+    private SctpWorker worker;
+
     SctpServerChannelImpl(
             ChannelFactory factory,
             ChannelPipeline pipeline,
-            ChannelSink sink) {
+            ChannelSink sink, SctpWorker worker) {
 
         super(factory, pipeline, sink);
-
+        this.worker = worker;
         try {
             serverChannel = com.sun.nio.sctp.SctpServerChannel.open();
         } catch (IOException e) {
@@ -152,5 +155,10 @@ class SctpServerChannelImpl extends AbstractServerChannel
     @Override
     protected boolean setClosed() {
         return super.setClosed();
+    }
+
+    @Override
+    public SctpWorker getWorker() {
+        return worker;
     }
 }

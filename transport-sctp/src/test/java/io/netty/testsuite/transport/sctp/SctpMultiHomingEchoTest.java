@@ -72,11 +72,11 @@ public class SctpMultiHomingEchoTest {
     }
 
     protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new SctpServerSocketChannelFactory(executor, executor);
+        return new SctpServerSocketChannelFactory(executor);
     }
 
     protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
-        return new SctpClientSocketChannelFactory(executor, executor);
+        return new SctpClientSocketChannelFactory(executor);
     }
 
     @Test(timeout = 15000)

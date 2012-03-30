@@ -24,7 +24,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 import io.netty.channel.MessageEvent;
-import io.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
+import io.netty.channel.socket.nio.SendBufferPool.SendBuffer;
 import io.netty.util.internal.QueueFactory;
 import io.netty.util.internal.ThreadLocalBoolean;
 
@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-abstract class AbstractNioChannel extends AbstractChannel implements NioChannel {
+public abstract class AbstractNioChannel extends AbstractChannel implements NioChannel {
 
     /**
      * The {@link AbstractNioWorker}.
@@ -48,12 +48,12 @@ abstract class AbstractNioChannel extends AbstractChannel implements NioChannel 
     /**
      * Monitor object to synchronize access to InterestedOps.
      */
-    final Object interestOpsLock = new Object();
+    protected final Object interestOpsLock = new Object();
 
     /**
      * Monitor object for synchronizing access to the {@link WriteRequestQueue}.
      */
-    final Object writeLock = new Object();
+    protected final Object writeLock = new Object();
 
     /**
      * WriteTask that performs write operations.
@@ -68,7 +68,7 @@ abstract class AbstractNioChannel extends AbstractChannel implements NioChannel 
     /**
      * Queue of write {@link MessageEvent}s.
      */
-    final Queue<MessageEvent> writeBufferQueue = new WriteRequestQueue();
+    protected final Queue<MessageEvent> writeBufferQueue = createRequestQueue();
 
     /**
      * Keeps track of the number of bytes that the {@link WriteRequestQueue} currently
@@ -84,14 +84,14 @@ abstract class AbstractNioChannel extends AbstractChannel implements NioChannel 
     /**
      * The current write {@link MessageEvent}
      */
-    MessageEvent currentWriteEvent;
-    SendBuffer currentWriteBuffer;
+    protected MessageEvent currentWriteEvent;
+    protected SendBuffer currentWriteBuffer;
 
     /**
      * Boolean that indicates that write operation is in progress.
      */
-    boolean inWriteNowLoop;
-    boolean writeSuspended;
+    protected boolean inWriteNowLoop;
+    protected boolean writeSuspended;
     
 
     private volatile InetSocketAddress localAddress;
@@ -213,7 +213,11 @@ abstract class AbstractNioChannel extends AbstractChannel implements NioChannel 
         return super.setClosed();
     }
     
-    private final class WriteRequestQueue implements BlockingQueue<MessageEvent> {
+    protected WriteRequestQueue createRequestQueue() {
+        return new WriteRequestQueue();
+    }
+    
+    public class WriteRequestQueue implements BlockingQueue<MessageEvent> {
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
         private final BlockingQueue<MessageEvent> queue;
@@ -381,7 +385,7 @@ abstract class AbstractNioChannel extends AbstractChannel implements NioChannel 
             return e;
         }
 
-        private int getMessageSize(MessageEvent e) {
+        protected int getMessageSize(MessageEvent e) {
             Object m = e.getMessage();
             if (m instanceof ChannelBuffer) {
                 return ((ChannelBuffer) m).readableBytes();

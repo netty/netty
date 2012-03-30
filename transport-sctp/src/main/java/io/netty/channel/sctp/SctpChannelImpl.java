@@ -15,22 +15,7 @@
  */
 package io.netty.channel.sctp;
 
-import static io.netty.channel.Channels.*;
-
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Queue;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import com.sun.nio.sctp.Association;
-
-import io.netty.channel.AbstractChannel;
+import static io.netty.channel.Channels.future;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
@@ -38,12 +23,22 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 import io.netty.channel.MessageEvent;
-import io.netty.channel.sctp.SctpSendBufferPool.SendBuffer;
-import io.netty.util.internal.ThreadLocalBoolean;
+import io.netty.channel.sctp.SctpSendBufferPool.SctpSendBuffer;
+import io.netty.channel.socket.nio.AbstractNioChannel;
+
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Queue;
+import java.util.Set;
+
+import com.sun.nio.sctp.Association;
 
 /**
  */
-class SctpChannelImpl extends AbstractChannel implements SctpChannel {
+class SctpChannelImpl extends AbstractNioChannel implements SctpChannel {
 
     private static final int ST_OPEN = 0;
     private static final int ST_BOUND = 1;
@@ -51,35 +46,14 @@ class SctpChannelImpl extends AbstractChannel implements SctpChannel {
     private static final int ST_CLOSED = -1;
     volatile int state = ST_OPEN;
 
-    final com.sun.nio.sctp.SctpChannel channel;
-    final SctpWorker worker;
     private final NioSctpChannelConfig config;
-    private volatile InetSocketAddress localAddress;
-    private volatile InetSocketAddress remoteAddress;
-
-    final Object interestOpsLock = new Object();
-    final Object writeLock = new Object();
-
-    final Runnable writeTask = new WriteTask();
-    final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
-
-    final Queue<MessageEvent> writeBuffer = new WriteRequestQueue();
-    final AtomicInteger writeBufferSize = new AtomicInteger();
-    final AtomicInteger highWaterMarkCounter = new AtomicInteger();
-    boolean inWriteNowLoop;
-    boolean writeSuspended;
-
-    MessageEvent currentWriteEvent;
-    SendBuffer currentWriteBuffer;
 
     final SctpNotificationHandler notificationHandler = new SctpNotificationHandler(this);
     
     public SctpChannelImpl(Channel parent, ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink,
                            com.sun.nio.sctp.SctpChannel channel, SctpWorker worker) {
-        super(parent, factory, pipeline, sink);
+        super(parent, factory, pipeline, sink, worker, new SctpJdkChannel(channel));
 
-        this.channel = channel;
-        this.worker = worker;
         config = new DefaultNioSctpChannelConfig(channel);
 
         getCloseFuture().addListener(new ChannelFutureListener() {
@@ -90,31 +64,76 @@ class SctpChannelImpl extends AbstractChannel implements SctpChannel {
         });
     }
 
+    Queue<MessageEvent> getWriteBufferQueue() {
+        return writeBufferQueue;
+    }
+    
+    Object getWriteLock() {
+        return writeLock;
+    }
+    
+    Object getInterestedOpsLock() {
+        return interestOpsLock;
+    }
+    
+    
+    void setWriteSuspended(boolean writeSuspended) {
+        this.writeSuspended = writeSuspended;
+    }
+    
+    boolean getWriteSuspended() {
+        return writeSuspended;
+    }
+    
+    void setInWriteNowLoop(boolean inWriteNowLoop) {
+        this.inWriteNowLoop = inWriteNowLoop;
+    }
+    
+    MessageEvent getCurrentWriteEvent() {
+        return currentWriteEvent;
+    }
+    
+    void setCurrentWriteEvent(MessageEvent currentWriteEvent) {
+        this.currentWriteEvent = currentWriteEvent;
+    }
+    
+    int getRawInterestOps() {
+        return super.getInterestOps();
+    }
+
+    void setRawInterestOpsNow(int interestOps) {
+        super.setInterestOpsNow(interestOps);
+    }
+    
+    SctpSendBuffer getCurrentWriteBuffer() {
+        return (SctpSendBuffer) currentWriteBuffer;
+    }
+    
+    void setCurrentWriteBuffer(SctpSendBuffer currentWriteBuffer) {
+        this.currentWriteBuffer = currentWriteBuffer;
+    }
+    
+    @Override
+    public SctpWorker getWorker() {
+        return (SctpWorker) super.getWorker();
+    }
+    
+    
     @Override
     public NioSctpChannelConfig getConfig() {
         return config;
     }
 
     @Override
-    public InetSocketAddress getLocalAddress() {
-        InetSocketAddress localAddress = this.localAddress;
-        if (localAddress == null) {
-            try {
-                final Iterator<SocketAddress> iterator = channel.getAllLocalAddresses().iterator();
-                if (iterator.hasNext()) {
-                    this.localAddress = localAddress = (InetSocketAddress) iterator.next();
-                }
-            } catch (Throwable t) {
-                return null;
-            }
-        }
-        return localAddress;
+    public SctpJdkChannel getJdkChannel() {
+        return (SctpJdkChannel) super.getJdkChannel();
     }
+    
 
     @Override
     public Set<InetSocketAddress> getAllLocalAddresses() {
             try {
-                final Set<SocketAddress> allLocalAddresses = channel.getAllLocalAddresses();
+                final Set<SocketAddress> allLocalAddresses = getJdkChannel().getChannel().getAllLocalAddresses();
                 final Set<InetSocketAddress> addresses = new HashSet<InetSocketAddress>(allLocalAddresses.size());
                 for (SocketAddress socketAddress: allLocalAddresses) {
                     addresses.add((InetSocketAddress) socketAddress);
@@ -126,25 +145,9 @@ class SctpChannelImpl extends AbstractChannel implements SctpChannel {
     }
 
     @Override
-    public InetSocketAddress getRemoteAddress() {
-        InetSocketAddress remoteAddress = this.remoteAddress;
-        if (remoteAddress == null) {
-            try {
-                final Iterator<SocketAddress> iterator = channel.getRemoteAddresses().iterator();
-                if (iterator.hasNext()) {
-                    this.remoteAddress = remoteAddress = (InetSocketAddress) iterator.next();
-                }
-            } catch (Throwable t) {
-                return null;
-            }
-        }
-        return remoteAddress;
-    }
-
-    @Override
     public Set<InetSocketAddress> getAllRemoteAddresses() {
             try {
-                final Set<SocketAddress> allLocalAddresses = channel.getRemoteAddresses();
+                final Set<SocketAddress> allLocalAddresses = getJdkChannel().getChannel().getRemoteAddresses();
                 final Set<InetSocketAddress> addresses = new HashSet<InetSocketAddress>(allLocalAddresses.size());
                 for (SocketAddress socketAddress: allLocalAddresses) {
                     addresses.add((InetSocketAddress) socketAddress);
@@ -172,7 +175,7 @@ class SctpChannelImpl extends AbstractChannel implements SctpChannel {
     @Override
     public Association association() {
         try {
-            return channel.association();
+            return getJdkChannel().getChannel().association();
         } catch (Throwable e) {
             return null;
         }
@@ -198,7 +201,7 @@ class SctpChannelImpl extends AbstractChannel implements SctpChannel {
         state = ST_BOUND;
     }
 
-    final void setConnected() {
+    protected final void setConnected() {
         if (state != ST_CLOSED) {
             state = ST_CONNECTED;
         }
@@ -208,126 +211,20 @@ class SctpChannelImpl extends AbstractChannel implements SctpChannel {
     protected boolean setClosed() {
         return super.setClosed();
     }
-
+    
     @Override
-    public int getInterestOps() {
-        if (!isOpen()) {
-            return Channel.OP_WRITE;
-        }
-
-        int interestOps = getRawInterestOps();
-        int writeBufferSize = this.writeBufferSize.get();
-        if (writeBufferSize != 0) {
-            if (highWaterMarkCounter.get() > 0) {
-                int lowWaterMark = getConfig().getWriteBufferLowWaterMark();
-                if (writeBufferSize >= lowWaterMark) {
-                    interestOps |= Channel.OP_WRITE;
-                } else {
-                    interestOps &= ~Channel.OP_WRITE;
+    protected WriteRequestQueue createRequestQueue() {
+        return new WriteRequestQueue() {
+            
+            @Override
+            protected int getMessageSize(MessageEvent e) {
+                Object m = e.getMessage();
+                if (m instanceof SctpFrame) {
+                    return ((SctpFrame) m).getPayloadBuffer().readableBytes();
                 }
-            } else {
-                int highWaterMark = getConfig().getWriteBufferHighWaterMark();
-                if (writeBufferSize >= highWaterMark) {
-                    interestOps |= Channel.OP_WRITE;
-                } else {
-                    interestOps &= ~Channel.OP_WRITE;
-                }
+                return 0;
             }
-        } else {
-            interestOps &= ~Channel.OP_WRITE;
-        }
-
-        return interestOps;
+        };
     }
 
-    int getRawInterestOps() {
-        return super.getInterestOps();
-    }
-
-    void setRawInterestOpsNow(int interestOps) {
-        super.setInterestOpsNow(interestOps);
-    }
-
-    @Override
-    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
-        if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
-            return super.write(message, null);
-        } else {
-            return getUnsupportedOperationFuture();
-        }
-    }
-
-    private final class WriteRequestQueue extends AbstractWriteRequestQueue {
-
-        private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
-
-        WriteRequestQueue() {
-            super();
-        }
-
-        @Override
-        public boolean offer(MessageEvent e) {
-            boolean success = queue.offer(e);
-            assert success;
-
-            int messageSize = getMessageSize(e);
-            int newWriteBufferSize = writeBufferSize.addAndGet(messageSize);
-            int highWaterMark = getConfig().getWriteBufferHighWaterMark();
-
-            if (newWriteBufferSize >= highWaterMark) {
-                if (newWriteBufferSize - messageSize < highWaterMark) {
-                    highWaterMarkCounter.incrementAndGet();
-                    if (!notifying.get()) {
-                        notifying.set(Boolean.TRUE);
-                        fireChannelInterestChanged(SctpChannelImpl.this);
-                        notifying.set(Boolean.FALSE);
-                    }
-                }
-            }
-            return true;
-        }
-
-        @Override
-        public MessageEvent poll() {
-            MessageEvent e = queue.poll();
-            if (e != null) {
-                int messageSize = getMessageSize(e);
-                int newWriteBufferSize = writeBufferSize.addAndGet(-messageSize);
-                int lowWaterMark = getConfig().getWriteBufferLowWaterMark();
-
-                if (newWriteBufferSize == 0 || newWriteBufferSize < lowWaterMark) {
-                    if (newWriteBufferSize + messageSize >= lowWaterMark) {
-                        highWaterMarkCounter.decrementAndGet();
-                        if (isConnected() && !notifying.get()) {
-                            notifying.set(Boolean.TRUE);
-                            fireChannelInterestChanged(SctpChannelImpl.this);
-                            notifying.set(Boolean.FALSE);
-                        }
-                    }
-                }
-            }
-            return e;
-        }
-
-        private int getMessageSize(MessageEvent e) {
-            Object m = e.getMessage();
-            if (m instanceof SctpFrame) {
-                return ((SctpFrame) m).getPayloadBuffer().readableBytes();
-            }
-            return 0;
-        }
-    }
-
-    private final class WriteTask implements Runnable {
-
-        WriteTask() {
-            super();
-        }
-
-        @Override
-        public void run() {
-            writeTaskInTaskQueue.set(false);
-            worker.writeFromTaskLoop(SctpChannelImpl.this);
-        }
-    }
 }

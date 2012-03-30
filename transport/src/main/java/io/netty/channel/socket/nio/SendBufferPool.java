@@ -25,21 +25,22 @@ import java.nio.channels.WritableByteChannel;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.FileRegion;
 
-final class SocketSendBufferPool {
+public class SendBufferPool {
 
     private static final SendBuffer EMPTY_BUFFER = new EmptySendBuffer();
 
-    private static final int DEFAULT_PREALLOCATION_SIZE = 65536;
-    private static final int ALIGN_SHIFT = 4;
-    private static final int ALIGN_MASK = 15;
+    public static final int DEFAULT_PREALLOCATION_SIZE = 65536;
+    public static final int ALIGN_SHIFT = 4;
+    public static final int ALIGN_MASK = 15;
 
-    PreallocationRef poolHead;
-    Preallocation current = new Preallocation(DEFAULT_PREALLOCATION_SIZE);
+    protected PreallocationRef poolHead;
+    protected Preallocation current = new Preallocation(DEFAULT_PREALLOCATION_SIZE);
 
-    SocketSendBufferPool() {
+    public SendBufferPool() {
     }
 
-    SendBuffer acquire(Object message) {
+    
+    public SendBuffer acquire(Object message) {
         if (message instanceof ChannelBuffer) {
             return acquire((ChannelBuffer) message);
         } else if (message instanceof FileRegion) {
@@ -50,7 +51,7 @@ final class SocketSendBufferPool {
                 "unsupported message type: " + message.getClass());
     }
 
-    private SendBuffer acquire(FileRegion src) {
+    protected SendBuffer acquire(FileRegion src) {
         if (src.getCount() == 0) {
             return EMPTY_BUFFER;
         }
@@ -103,7 +104,7 @@ final class SocketSendBufferPool {
         return dst;
     }
 
-    private Preallocation getPreallocation() {
+    protected Preallocation getPreallocation() {
         Preallocation current = this.current;
         if (current.refCnt == 0) {
             current.buffer.clear();
@@ -112,8 +113,8 @@ final class SocketSendBufferPool {
 
         return getPreallocation0();
     }
-
-    private Preallocation getPreallocation0() {
+    
+    protected Preallocation getPreallocation0() {
         PreallocationRef ref = poolHead;
         if (ref != null) {
             do {
@@ -132,7 +133,7 @@ final class SocketSendBufferPool {
         return new Preallocation(DEFAULT_PREALLOCATION_SIZE);
     }
 
-    private static int align(int pos) {
+    protected static int align(int pos) {
         int q = pos >>> ALIGN_SHIFT;
         int r = pos & ALIGN_MASK;
         if (r != 0) {
@@ -141,25 +142,25 @@ final class SocketSendBufferPool {
         return q << ALIGN_SHIFT;
     }
 
-    private static final class Preallocation {
-        final ByteBuffer buffer;
-        int refCnt;
+    public static final class Preallocation {
+        public final ByteBuffer buffer;
+        public int refCnt;
 
-        Preallocation(int capacity) {
+        public Preallocation(int capacity) {
             buffer = ByteBuffer.allocateDirect(capacity);
         }
     }
 
-    private final class PreallocationRef extends SoftReference<Preallocation> {
+    public final class PreallocationRef extends SoftReference<Preallocation> {
         final PreallocationRef next;
 
-        PreallocationRef(Preallocation prealloation, PreallocationRef next) {
+        public PreallocationRef(Preallocation prealloation, PreallocationRef next) {
             super(prealloation);
             this.next = next;
         }
     }
 
-    interface SendBuffer {
+   public interface SendBuffer {
         boolean finished();
         long writtenBytes();
         long totalBytes();
@@ -170,12 +171,12 @@ final class SocketSendBufferPool {
         void release();
     }
 
-    static class UnpooledSendBuffer implements SendBuffer {
+    public class UnpooledSendBuffer implements SendBuffer {
 
-        final ByteBuffer buffer;
+        protected final ByteBuffer buffer;
         final int initialPos;
 
-        UnpooledSendBuffer(ByteBuffer buffer) {
+        public UnpooledSendBuffer(ByteBuffer buffer) {
             this.buffer = buffer;
             initialPos = buffer.position();
         }
@@ -211,13 +212,13 @@ final class SocketSendBufferPool {
         }
     }
 
-    final class PooledSendBuffer implements SendBuffer {
+    public class PooledSendBuffer implements SendBuffer {
 
-        private final Preallocation parent;
-        final ByteBuffer buffer;
+        protected final Preallocation parent;
+        public final ByteBuffer buffer;
         final int initialPos;
 
-        PooledSendBuffer(Preallocation parent, ByteBuffer buffer) {
+        public PooledSendBuffer(Preallocation parent, ByteBuffer buffer) {
             this.parent = parent;
             this.buffer = buffer;
             initialPos = buffer.position();
@@ -260,7 +261,7 @@ final class SocketSendBufferPool {
         }
     }
 
-    static final class FileSendBuffer implements SendBuffer {
+    final class FileSendBuffer implements SendBuffer {
 
         private final FileRegion file;
         private long writtenBytes;

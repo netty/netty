@@ -17,6 +17,7 @@ package io.netty.channel.sctp;
 
 import io.netty.channel.ReceiveBufferSizePredictor;
 import io.netty.channel.ReceiveBufferSizePredictorFactory;
+import io.netty.channel.socket.nio.NioChannelConfig;
 
 /**
  * A {@link io.netty.channel.sctp.SctpChannelConfig} for a NIO SCTP/IP {@link io.netty.channel.sctp.SctpChannel}.
@@ -43,48 +44,7 @@ import io.netty.channel.ReceiveBufferSizePredictorFactory;
  * </tr>
  * </table>
  */
-public interface NioSctpChannelConfig extends SctpChannelConfig {
-
-    /**
-     * Returns the high water mark of the write buffer.  If the number of bytes
-     * queued in the write buffer exceeds this value, {@link io.netty.channel.Channel#isWritable()}
-     * will start to return {@code false}.
-     */
-    int getWriteBufferHighWaterMark();
-
-    /**
-     * Sets the high water mark of the write buffer.  If the number of bytes
-     * queued in the write buffer exceeds this value, {@link io.netty.channel.Channel#isWritable()}
-     * will start to return {@code false}.
-     */
-    void setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
-
-    /**
-     * Returns the low water mark of the write buffer.  Once the number of bytes
-     * queued in the write buffer exceeded the
-     * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link io.netty.channel.Channel#isWritable()} will return
-     * {@code true} again.
-     */
-    int getWriteBufferLowWaterMark();
-
-    /**
-     * Sets the low water mark of the write buffer.  Once the number of bytes
-     * queued in the write buffer exceeded the
-     * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link io.netty.channel.Channel#isWritable()} will return
-     * {@code true} again.
-     */
-    void setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
-
-    /**
-     * Returns the maximum loop count for a write operation until
-     * {@link java.nio.channels.WritableByteChannel#write(java.nio.ByteBuffer)} returns a non-zero value.
-     * It is similar to what a spin lock is used for in concurrency programming.
-     * It improves memory utilization and write throughput depending on
-     * the platform that JVM runs on.  The default value is {@code 16}.
-     */
-    int getWriteSpinCount();
+public interface NioSctpChannelConfig extends SctpChannelConfig, NioChannelConfig {
 
     /**
      * Sets the maximum loop count for a write operation until
