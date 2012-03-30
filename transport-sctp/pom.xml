@@ -60,6 +60,16 @@
          </execution>
        </executions>
       </plugin>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <!-- Exclude the com.sun.nio stuff as this is included in the jdk if its supported by the running os -->
+            <exclude>**/com/**</exclude>
+          </excludes>
+          
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>
