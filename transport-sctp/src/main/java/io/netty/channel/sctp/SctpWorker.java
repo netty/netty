@@ -15,16 +15,7 @@
  */
 package io.netty.channel.sctp;
 
-import static io.netty.channel.Channels.fireChannelBound;
-import static io.netty.channel.Channels.fireChannelClosed;
-import static io.netty.channel.Channels.fireChannelConnected;
-import static io.netty.channel.Channels.fireChannelDisconnected;
-import static io.netty.channel.Channels.fireChannelInterestChanged;
-import static io.netty.channel.Channels.fireChannelUnbound;
-import static io.netty.channel.Channels.fireExceptionCaught;
-import static io.netty.channel.Channels.fireMessageReceived;
-import static io.netty.channel.Channels.fireWriteComplete;
-import static io.netty.channel.Channels.succeededFuture;
+import static io.netty.channel.Channels.*;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferFactory;
 import io.netty.channel.Channel;
@@ -61,7 +52,6 @@ import com.sun.nio.sctp.MessageInfo;
 
 /**
  */
-@SuppressWarnings("unchecked")
 class SctpWorker implements Worker {
 
     private static final InternalLogger logger =
@@ -249,7 +239,7 @@ class SctpWorker implements Worker {
             }
         }
     }
-    
+
     @Override
     public void executeInIoThread(Runnable task) {
         if (Thread.currentThread() == thread) {
@@ -261,15 +251,15 @@ class SctpWorker implements Worker {
                 // wake up the selector to speed things
                 selector.wakeup();
             }
-            
+
         }
 
     }
-    
+
     static boolean isIoThread(SctpChannelImpl channel) {
         return Thread.currentThread() == channel.worker.thread;
     }
-    
+
     private void processRegisterTaskQueue() throws IOException {
         for (; ;) {
             final Runnable task = registerTaskQueue.poll();
@@ -293,7 +283,7 @@ class SctpWorker implements Worker {
             cleanUpCancelledKeys();
         }
     }
-    
+
     private void processEventQueue() throws IOException {
         for (;;) {
             final Runnable task = eventQueue.poll();
@@ -304,7 +294,7 @@ class SctpWorker implements Worker {
             cleanUpCancelledKeys();
         }
     }
-    
+
     private void processSelectedKeys(final Set<SelectionKey> selectedKeys) throws IOException {
         for (Iterator<SelectionKey> i = selectedKeys.iterator(); i.hasNext();) {
             SelectionKey k = i.next();

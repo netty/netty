@@ -16,15 +16,6 @@
 package io.netty.testsuite.transport.socket;
 
 import static org.junit.Assert.*;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.Random;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
-
 import io.netty.bootstrap.ClientBootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -35,10 +26,20 @@ import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.ExceptionEvent;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
 import io.netty.util.SocketAddresses;
 import io.netty.util.internal.ExecutorUtil;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Random;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -83,11 +84,13 @@ public abstract class AbstractSocketObjectStreamEchoTest {
         EchoHandler sh = new EchoHandler();
         EchoHandler ch = new EchoHandler();
 
-        sb.getPipeline().addLast("decoder", new ObjectDecoder());
+        sb.getPipeline().addLast("decoder", new ObjectDecoder(
+                ClassResolvers.cacheDisabled(getClass().getClassLoader())));
         sb.getPipeline().addLast("encoder", new ObjectEncoder());
         sb.getPipeline().addLast("handler", sh);
 
-        cb.getPipeline().addLast("decoder", new ObjectDecoder());
+        cb.getPipeline().addLast("decoder", new ObjectDecoder(
+                ClassResolvers.cacheDisabled(getClass().getClassLoader())));
         cb.getPipeline().addLast("encoder", new ObjectEncoder());
         cb.getPipeline().addLast("handler", ch);
 

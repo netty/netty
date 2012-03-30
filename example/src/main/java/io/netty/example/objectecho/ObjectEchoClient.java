@@ -15,17 +15,18 @@
  */
 package io.netty.example.objectecho;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
 import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPipelineFactory;
 import io.netty.channel.Channels;
 import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import io.netty.example.echo.EchoClient;
+import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
 
 /**
  * Modification of {@link EchoClient} which utilizes Java object serialization.
@@ -50,10 +51,12 @@ public class ObjectEchoClient {
 
         // Set up the pipeline factory.
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+            @Override
             public ChannelPipeline getPipeline() throws Exception {
                 return Channels.pipeline(
                         new ObjectEncoder(),
-                        new ObjectDecoder(),
+                        new ObjectDecoder(
+                                ClassResolvers.cacheDisabled(getClass().getClassLoader())),
                         new ObjectEchoClientHandler(firstMessageSize));
             }
         });

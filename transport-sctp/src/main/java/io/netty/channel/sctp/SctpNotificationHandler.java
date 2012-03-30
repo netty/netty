@@ -15,6 +15,9 @@
  */
 package io.netty.channel.sctp;
 
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.Channels;
+
 import com.sun.nio.sctp.AbstractNotificationHandler;
 import com.sun.nio.sctp.AssociationChangeNotification;
 import com.sun.nio.sctp.HandlerResult;
@@ -23,20 +26,17 @@ import com.sun.nio.sctp.PeerAddressChangeNotification;
 import com.sun.nio.sctp.SendFailedNotification;
 import com.sun.nio.sctp.ShutdownNotification;
 
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.Channels;
-
 /**
  */
 
-class SctpNotificationHandler extends AbstractNotificationHandler {
+class SctpNotificationHandler extends AbstractNotificationHandler<Object> {
 
     private final SctpChannelImpl sctpChannel;
     private final ChannelPipeline pipeline;
 
     SctpNotificationHandler(SctpChannelImpl sctpChannel) {
         this.sctpChannel = sctpChannel;
-        this.pipeline = sctpChannel.getPipeline();
+        pipeline = sctpChannel.getPipeline();
     }
 
     @Override

@@ -15,20 +15,28 @@
  */
 package io.netty.testsuite.transport.sctp;
 
+import static org.junit.Assert.*;
 import io.netty.bootstrap.ClientBootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.channel.*;
-import io.netty.channel.sctp.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.ExceptionEvent;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.sctp.SctpChannel;
+import io.netty.channel.sctp.SctpClientSocketChannelFactory;
+import io.netty.channel.sctp.SctpNotificationEvent;
+import io.netty.channel.sctp.SctpServerChannel;
+import io.netty.channel.sctp.SctpServerSocketChannelFactory;
 import io.netty.channel.sctp.codec.SctpFrameDecoder;
 import io.netty.channel.sctp.codec.SctpFrameEncoder;
 import io.netty.channel.sctp.handler.SimpleSctpChannelHandler;
 import io.netty.testsuite.util.SctpSocketAddresses;
 import io.netty.util.internal.ExecutorUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -39,8 +47,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class SctpMultiHomingEchoTest {
     private static final Random random = new Random();
@@ -152,7 +161,7 @@ public class SctpMultiHomingEchoTest {
         assertTrue(multiHomingUnbindFuture.awaitUninterruptibly().isSuccess());
 
         ChannelFuture multiHomingServerUnbindFuture = serverChannel.unbindAddress(InetAddress.getByName(SctpSocketAddresses.LOOP_BACK2));
-        assertTrue(multiHomingUnbindFuture.awaitUninterruptibly().isSuccess());
+        assertTrue(multiHomingServerUnbindFuture.awaitUninterruptibly().isSuccess());
 
 
         sh.channel.close().awaitUninterruptibly();
