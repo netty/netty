@@ -55,7 +55,8 @@ public class RedisReplyDecoder extends ReplayingDecoder<VoidEnum> {
         }
 
         ChannelBuffer bytes = ChannelBuffers.buffer(size);
-        is.readBytes(bytes);
+        is.readBytes(bytes, 0, size);
+        bytes.writerIndex(size);
         int cr = is.readByte();
         int lf = is.readByte();
         if (cr != CR || lf != LF) {
