@@ -340,7 +340,10 @@ public class SctpWorker extends NioWorker {
         }
 
         try {
-
+            if (server) {
+                channel.getJdkChannel().configureBlocking(false);
+            }
+            
             boolean registered = channel.getJdkChannel().isRegistered();
             if (!registered) {
                 synchronized (channel.getInterestedOpsLock()) {
