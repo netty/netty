@@ -123,7 +123,7 @@ public class NioWorker extends AbstractNioWorker {
             if (server) {
                 channel.getJdkChannel().configureBlocking(false);
             }
-
+            
             boolean registered = channel.getJdkChannel().isRegistered();
             if (!registered) {
                 synchronized (channel.interestOpsLock) {
@@ -131,11 +131,9 @@ public class NioWorker extends AbstractNioWorker {
                             selector, channel.getRawInterestOps(), channel);
                 }
                 
-            } else {
-                // TODO: Is this needed ?
-                setInterestOps(channel, future, channel.getRawInterestOps());
             }
             if (future != null) {
+
                 ((NioSocketChannel) channel).setConnected();
                 future.setSuccess();
             }
