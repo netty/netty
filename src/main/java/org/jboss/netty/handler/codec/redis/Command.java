@@ -16,6 +16,7 @@
 package org.jboss.netty.handler.codec.redis;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.util.CharsetUtil;
 
 import java.io.IOException;
 
@@ -23,11 +24,11 @@ import java.io.IOException;
  * Command serialization.
  */
 public class Command {
-    public static final byte[] ARGS_PREFIX = "*".getBytes();
-    public static final byte[] CRLF = "\r\n".getBytes();
-    public static final byte[] BYTES_PREFIX = "$".getBytes();
-    public static final byte[] EMPTY_BYTES = new byte[0];
-    public static final byte[] NEG_ONE_AND_CRLF = convertWithCRLF(-1);
+    static final byte[] ARGS_PREFIX = "*".getBytes();
+    static final byte[] CRLF = "\r\n".getBytes();
+    static final byte[] BYTES_PREFIX = "$".getBytes();
+    static final byte[] EMPTY_BYTES = new byte[0];
+    static final byte[] NEG_ONE_AND_CRLF = convertWithCRLF(-1);
 
     private byte[][] arguments;
     private Object[] objects;
@@ -68,7 +69,7 @@ public class Command {
             } else if (object instanceof byte[]) {
                 arguments[i] = (byte[]) object;
             } else {
-                arguments[i] = object.toString().getBytes("UTF-8");
+                arguments[i] = object.toString().getBytes(CharsetUtil.UTF_8);
             }
         }
         writeDirect(os, arguments);

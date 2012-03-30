@@ -30,9 +30,6 @@ import org.jboss.netty.channel.SimpleChannelDownstreamHandler;
 @Sharable
 public class RedisEncoder extends SimpleChannelDownstreamHandler {
 
-    public RedisEncoder() {
-    }
-
     @Override
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         Object o = e.getMessage();
