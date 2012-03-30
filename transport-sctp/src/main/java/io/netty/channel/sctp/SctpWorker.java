@@ -45,6 +45,7 @@ import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -68,6 +69,8 @@ public class SctpWorker extends NioWorker {
 
     @Override
     public void registerWithWorker(final Channel channel, final ChannelFuture future) {
+        final Selector selector = start();
+
         try {
             if (channel instanceof SctpServerChannelImpl) {
                 final SctpServerChannelImpl ch = (SctpServerChannelImpl) channel;
