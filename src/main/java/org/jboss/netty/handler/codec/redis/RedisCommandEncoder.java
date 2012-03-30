@@ -28,7 +28,7 @@ import org.jboss.netty.channel.SimpleChannelDownstreamHandler;
  * {@link SimpleChannelDownstreamHandler} which encodes {@link Command}'s to {@link ChannelBuffer}'s
  */
 @Sharable
-public class RedisEncoder extends SimpleChannelDownstreamHandler {
+public class RedisCommandEncoder extends SimpleChannelDownstreamHandler {
 
     @Override
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {

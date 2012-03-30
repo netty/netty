@@ -16,23 +16,33 @@
 package org.jboss.netty.handler.codec.redis;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-
-import java.io.IOException;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 public class SubscribeReply extends Reply {
 
-    private final byte[][] patterns;
+    private final ChannelBuffer[] patterns;
 
     public SubscribeReply(byte[][] patterns) {
+        this.patterns = new ChannelBuffer[patterns.length];
+        for (int i = 0; i < patterns.length; i ++) {
+            byte[] p = patterns[i];
+            if (p == null) {
+                continue;
+            }
+            this.patterns[i] = ChannelBuffers.wrappedBuffer(p);
+        }
+    }
+
+    public SubscribeReply(ChannelBuffer[] patterns) {
         this.patterns = patterns;
     }
 
-    public byte[][] getPatterns() {
+    public ChannelBuffer[] patterns() {
         return patterns;
     }
 
     @Override
-    public void write(ChannelBuffer os) throws IOException {
+    void write(ChannelBuffer out) {
         // Do nothing
     }
 }

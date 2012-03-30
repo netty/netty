@@ -35,7 +35,7 @@ public class RedisCodecTest {
 
     @Before
     public void setUp() {
-        embedder = new DecoderEmbedder<ChannelBuffer>(new RedisDecoder());
+        embedder = new DecoderEmbedder<ChannelBuffer>(new RedisReplyDecoder());
     }
 
     @Test
@@ -43,28 +43,28 @@ public class RedisCodecTest {
         {
             Object receive = decode("+OK\r\n".getBytes());
             assertTrue(receive instanceof StatusReply);
-            assertEquals("OK", ((StatusReply) receive).status.toString(CharsetUtil.UTF_8));
+            assertEquals("OK", ((StatusReply) receive).data().toString(CharsetUtil.UTF_8));
         }
         {
             Object receive = decode("-ERROR\r\n".getBytes());
             assertTrue(receive instanceof ErrorReply);
-            assertEquals("ERROR", ((ErrorReply) receive).error.toString(CharsetUtil.UTF_8));
+            assertEquals("ERROR", ((ErrorReply) receive).data().toString(CharsetUtil.UTF_8));
         }
         {
             Object receive = decode(":123\r\n".getBytes());
             assertTrue(receive instanceof IntegerReply);
-            assertEquals(123, ((IntegerReply) receive).integer);
+            assertEquals(123, ((IntegerReply) receive).value());
         }
         {
             Object receive = decode("$5\r\nnetty\r\n".getBytes());
             assertTrue(receive instanceof BulkReply);
-            assertEquals("netty", new String(((BulkReply) receive).bytes));
+            assertEquals("netty", ((BulkReply) receive).data().toString(CharsetUtil.UTF_8));
         }
         {
             Object receive = decode("*2\r\n$5\r\nnetty\r\n$5\r\nrules\r\n".getBytes());
             assertTrue(receive instanceof MultiBulkReply);
-            assertEquals("netty", new String((byte[]) ((MultiBulkReply) receive).byteArrays[0]));
-            assertEquals("rules", new String((byte[]) ((MultiBulkReply) receive).byteArrays[1]));
+            assertEquals("netty", ((ChannelBuffer) ((MultiBulkReply) receive).values()[0]).toString(CharsetUtil.UTF_8));
+            assertEquals("rules", ((ChannelBuffer) ((MultiBulkReply) receive).values()[1]).toString(CharsetUtil.UTF_8));
         }
     }
 
@@ -97,8 +97,8 @@ public class RedisCodecTest {
             embedder.offer(wrappedBuffer("$5\r\nrules\r\n".getBytes()));
             receive = embedder.poll();
             assertTrue(receive instanceof MultiBulkReply);
-            assertEquals("netty", new String((byte[]) ((MultiBulkReply) receive).byteArrays[0]));
-            assertEquals("rules", new String((byte[]) ((MultiBulkReply) receive).byteArrays[1]));
+            assertEquals("netty", ((ChannelBuffer) ((MultiBulkReply) receive).values()[0]).toString(CharsetUtil.UTF_8));
+            assertEquals("rules", ((ChannelBuffer) ((MultiBulkReply) receive).values()[1]).toString(CharsetUtil.UTF_8));
         }
         {
             embedder.offer(wrappedBuffer("*2\r\n$5\r\nnetty\r\n$5\r\nr".getBytes()));
@@ -107,8 +107,8 @@ public class RedisCodecTest {
             embedder.offer(wrappedBuffer("ules\r\n".getBytes()));
             receive = embedder.poll();
             assertTrue(receive instanceof MultiBulkReply);
-            assertEquals("netty", new String((byte[]) ((MultiBulkReply) receive).byteArrays[0]));
-            assertEquals("rules", new String((byte[]) ((MultiBulkReply) receive).byteArrays[1]));
+            assertEquals("netty", ((ChannelBuffer) ((MultiBulkReply) receive).values()[0]).toString(CharsetUtil.UTF_8));
+            assertEquals("rules", ((ChannelBuffer) ((MultiBulkReply) receive).values()[1]).toString(CharsetUtil.UTF_8));
         }
         {
             embedder.offer(wrappedBuffer("*2".getBytes()));
@@ -117,8 +117,8 @@ public class RedisCodecTest {
             embedder.offer(wrappedBuffer("\r\n$5\r\nnetty\r\n$5\r\nrules\r\n".getBytes()));
             receive = embedder.poll();
             assertTrue(receive instanceof MultiBulkReply);
-            assertEquals("netty", new String((byte[]) ((MultiBulkReply) receive).byteArrays[0]));
-            assertEquals("rules", new String((byte[]) ((MultiBulkReply) receive).byteArrays[1]));
+            assertEquals("netty", ((ChannelBuffer) ((MultiBulkReply) receive).values()[0]).toString(CharsetUtil.UTF_8));
+            assertEquals("rules", ((ChannelBuffer) ((MultiBulkReply) receive).values()[1]).toString(CharsetUtil.UTF_8));
         }
         {
             embedder.offer(wrappedBuffer("*2\r\n$5\r\nnetty\r\n$5\r\nrules\r".getBytes()));
@@ -127,8 +127,8 @@ public class RedisCodecTest {
             embedder.offer(wrappedBuffer("\n".getBytes()));
             receive = embedder.poll();
             assertTrue(receive instanceof MultiBulkReply);
-            assertEquals("netty", new String((byte[]) ((MultiBulkReply) receive).byteArrays[0]));
-            assertEquals("rules", new String((byte[]) ((MultiBulkReply) receive).byteArrays[1]));
+            assertEquals("netty", ((ChannelBuffer) ((MultiBulkReply) receive).values()[0]).toString(CharsetUtil.UTF_8));
+            assertEquals("rules", ((ChannelBuffer) ((MultiBulkReply) receive).values()[1]).toString(CharsetUtil.UTF_8));
         }
     }
 }

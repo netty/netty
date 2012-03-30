@@ -16,25 +16,32 @@
 package org.jboss.netty.handler.codec.redis;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-
-import java.io.IOException;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
  * {@link Reply} which contains the status 
  *
  */
 public class StatusReply extends Reply {
-    public static final char MARKER = '+';
-    public final ChannelBuffer status;
+    static final char MARKER = '+';
+    private final ChannelBuffer data;
 
-    public StatusReply(ChannelBuffer status) {
-        this.status = status;
+    public StatusReply(byte[] data) {
+        this(data == null? null : ChannelBuffers.wrappedBuffer(data));
+    }
+
+    public StatusReply(ChannelBuffer data) {
+        this.data = data;
+    }
+
+    public ChannelBuffer data() {
+        return data;
     }
     
     @Override
-    public void write(ChannelBuffer os) throws IOException {
-        os.writeByte(MARKER);
-        os.writeBytes(status, 0, status.readableBytes());
-        os.writeBytes(Command.CRLF);
+    void write(ChannelBuffer out) {
+        out.writeByte(MARKER);
+        out.writeBytes(data, data.readerIndex(), data.readableBytes());
+        out.writeBytes(Command.CRLF);
     }
 }

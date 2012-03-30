@@ -16,9 +16,8 @@
 package org.jboss.netty.handler.codec.redis;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.util.CharsetUtil;
-
-import java.io.IOException;
 
 /**
  * Command serialization.
@@ -30,23 +29,27 @@ public class Command {
     static final byte[] EMPTY_BYTES = new byte[0];
     static final byte[] NEG_ONE_AND_CRLF = convertWithCRLF(-1);
 
-    private byte[][] arguments;
-    private Object[] objects;
+    private ChannelBuffer[] arguments;
+    private final Object[] objects;
 
-    public String getName() {
+    public Command(byte[]... arguments) {
         if (arguments == null) {
-            Object o = objects[0];
-            if (o instanceof byte[]) {
-                return new String((byte[]) o);
-            } else {
-                return o.toString();
-            }
+            this.arguments = null;
+            objects = null;
         } else {
-            return new String(arguments[0]);
+            this.arguments = new ChannelBuffer[arguments.length];
+            for (int i = 0; i < arguments.length; i ++) {
+                byte[] a = arguments[i];
+                if (a == null) {
+                    continue;
+                }
+                this.arguments[i] = ChannelBuffers.wrappedBuffer(a);
+            }
+            objects = this.arguments;
         }
     }
 
-    public Command(byte[]... arguments) {
+    public Command(ChannelBuffer[] arguments) {
         this.arguments = arguments;
         objects = arguments;
     }
@@ -55,79 +58,97 @@ public class Command {
         this.objects = objects;
     }
 
-    public void write(ChannelBuffer os) throws IOException {
-        writeDirect(os, objects);
+    public String name() {
+        if (arguments == null) {
+            Object o = objects[0];
+            if (o instanceof ChannelBuffer) {
+                return ((ChannelBuffer) o).toString(CharsetUtil.UTF_8);
+            }
+            if (o == null) {
+                return null;
+            }
+            return o.toString();
+        }
+
+        ChannelBuffer name = arguments[0];
+        if (name == null) {
+            return null;
+        }
+        return name.toString(CharsetUtil.UTF_8);
     }
 
-    public static void writeDirect(ChannelBuffer os, Object... objects) throws IOException {
+    void write(ChannelBuffer out) {
+        writeDirect(out, objects);
+    }
+
+    private static void writeDirect(ChannelBuffer out, Object... objects) {
         int length = objects.length;
-        byte[][] arguments = new byte[length][];
+        ChannelBuffer[] arguments = new ChannelBuffer[length];
         for (int i = 0; i < length; i++) {
             Object object = objects[i];
             if (object == null) {
-                arguments[i] = EMPTY_BYTES;
-            } else if (object instanceof byte[]) {
-                arguments[i] = (byte[]) object;
+                arguments[i] = ChannelBuffers.EMPTY_BUFFER;
+            } else if (object instanceof ChannelBuffer) {
+                arguments[i] = (ChannelBuffer) object;
             } else {
-                arguments[i] = object.toString().getBytes(CharsetUtil.UTF_8);
+                arguments[i] = ChannelBuffers.copiedBuffer(object.toString(), CharsetUtil.UTF_8);
             }
         }
-        writeDirect(os, arguments);
+        writeDirect(out, arguments);
     }
 
-    private static void writeDirect(ChannelBuffer os, byte[][] arguments) throws IOException {
-        os.writeBytes(ARGS_PREFIX);
-        os.writeBytes(numAndCRLF(arguments.length));
-        for (byte[] argument : arguments) {
-            os.writeBytes(BYTES_PREFIX);
-            os.writeBytes(numAndCRLF(argument.length));
-            os.writeBytes(argument);
-            os.writeBytes(CRLF);
+    private static void writeDirect(ChannelBuffer out, ChannelBuffer[] arguments) {
+        out.writeBytes(ARGS_PREFIX);
+        out.writeBytes(numAndCRLF(arguments.length));
+        for (ChannelBuffer argument : arguments) {
+            out.writeBytes(BYTES_PREFIX);
+            out.writeBytes(numAndCRLF(argument.readableBytes()));
+            out.writeBytes(argument, argument.readerIndex(), argument.readableBytes());
+            out.writeBytes(CRLF);
         }
     }
 
     private static final int NUM_MAP_LENGTH = 256;
-    private static byte[][] numAndCRLFMap = new byte[NUM_MAP_LENGTH][];
+    private static final byte[][] numAndCRLFMap = new byte[NUM_MAP_LENGTH][];
     static {
-      for (int i = 0; i < NUM_MAP_LENGTH; i++) {
-        numAndCRLFMap[i] = convertWithCRLF(i);
-      }
+        for (int i = 0; i < NUM_MAP_LENGTH; i++) {
+            numAndCRLFMap[i] = convertWithCRLF(i);
+        }
     }
 
     // Optimized for the direct to ASCII bytes case
     // Could be even more optimized but it is already
     // about twice as fast as using Long.toString().getBytes()
-    public static byte[] numAndCRLF(long value) {
-      if (value >= 0 && value < NUM_MAP_LENGTH) {
-        return numAndCRLFMap[(int) value];
-      } else if (value == -1) {
-        return NEG_ONE_AND_CRLF;
-      }
-      return convertWithCRLF(value);
+    static byte[] numAndCRLF(long value) {
+        if (value >= 0 && value < NUM_MAP_LENGTH) {
+            return numAndCRLFMap[(int) value];
+        } else if (value == -1) {
+            return NEG_ONE_AND_CRLF;
+        }
+        return convertWithCRLF(value);
     }
 
     private static byte[] convertWithCRLF(long value) {
-      boolean negative = value < 0;
-      int index = negative ? 2 : 1;
-      long current = negative ? -value : value;
-      while ((current /= 10) > 0) {
-        index++;
-      }
-      byte[] bytes = new byte[index + 2];
-      if (negative) {
-        bytes[0] = '-';
-      }
-      current = negative ? -value : value;
-      long tmp = current;
-      while ((tmp /= 10) > 0) {
-        bytes[--index] = (byte) ('0' + (current % 10));
-        current = tmp;
-      }
-      bytes[--index] = (byte) ('0' + current);
-      // add CRLF
-      bytes[bytes.length - 2] = '\r';
-      bytes[bytes.length - 1] = '\n';
-      return bytes;
+        boolean negative = value < 0;
+        int index = negative ? 2 : 1;
+        long current = negative ? -value : value;
+        while ((current /= 10) > 0) {
+            index++;
+        }
+        byte[] bytes = new byte[index + 2];
+        if (negative) {
+            bytes[0] = '-';
+        }
+        current = negative ? -value : value;
+        long tmp = current;
+        while ((tmp /= 10) > 0) {
+            bytes[--index] = (byte) ('0' + current % 10);
+            current = tmp;
+        }
+        bytes[--index] = (byte) ('0' + current);
+        // add CRLF
+        bytes[bytes.length - 2] = '\r';
+        bytes[bytes.length - 1] = '\n';
+        return bytes;
     }
-
 }

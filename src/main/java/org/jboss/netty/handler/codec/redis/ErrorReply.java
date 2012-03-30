@@ -16,8 +16,7 @@
 package org.jboss.netty.handler.codec.redis;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-
-import java.io.IOException;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 /**
  * {@link Reply} which will be returned if an error was detected
@@ -25,19 +24,28 @@ import java.io.IOException;
  *
  */
 public class ErrorReply extends Reply {
-    public static final char MARKER = '-';
+    static final char MARKER = '-';
     private static final byte[] ERR = "ERR ".getBytes();
-    public final ChannelBuffer error;
 
-    public ErrorReply(ChannelBuffer error) {
-        this.error = error;
+    private final ChannelBuffer data;
+
+    public ErrorReply(byte[] data) {
+        this(data == null? null : ChannelBuffers.wrappedBuffer(data));
+    }
+
+    public ErrorReply(ChannelBuffer data) {
+        this.data = data;
+    }
+
+    public ChannelBuffer data() {
+        return data;
     }
 
     @Override
-    public void write(ChannelBuffer os) throws IOException {
-        os.writeByte(MARKER);
-        os.writeBytes(ERR);
-        os.writeBytes(error, 0, error.readableBytes());
-        os.writeBytes(Command.CRLF);
+    public void write(ChannelBuffer out) {
+        out.writeByte(MARKER);
+        out.writeBytes(ERR);
+        out.writeBytes(data, 0, data.readableBytes());
+        out.writeBytes(Command.CRLF);
     }
 }

@@ -19,8 +19,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.util.CharsetUtil;
 
-import java.io.IOException;
-
 /**
  * {@link Reply} which was sent as a Response to the written {@link Command}
  *  *
@@ -30,17 +28,12 @@ public abstract class Reply {
     /**
      * Write the content of the {@link Reply} to the given {@link ChannelBuffer}
      */
-    public abstract void write(ChannelBuffer os) throws IOException;
+    abstract void write(ChannelBuffer out);
 
     @Override
     public String toString() {
         ChannelBuffer channelBuffer = ChannelBuffers.dynamicBuffer();
-        try {
-            write(channelBuffer);
-        } catch (IOException e) {
-            throw new AssertionError("Trustin says this won't happen either");
-        }
+        write(channelBuffer);
         return channelBuffer.toString(CharsetUtil.UTF_8);
     }
-
 }

@@ -15,10 +15,15 @@
  */
 package org.jboss.netty.handler.codec.redis;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+
 public class PSubscribeReply extends SubscribeReply {
 
     public PSubscribeReply(byte[][] patterns) {
         super(patterns);
     }
 
+    public PSubscribeReply(ChannelBuffer[] patterns) {
+        super(patterns);
+    }
 }

@@ -16,82 +16,107 @@
 package org.jboss.netty.handler.codec.redis;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-
-import java.io.IOException;
+import org.jboss.netty.handler.codec.frame.CorruptedFrameException;
 
 /**
  * {@link Reply} which contains a bulk of {@link Reply}'s
- * 
- *
  */
 public class MultiBulkReply extends Reply {
-    public static final char MARKER = '*';
+    static final char MARKER = '*';
 
     // State
-    public Object[] byteArrays;
+    private Object[] values;
     private int size;
     private int num;
 
+    /**
+     * Creates a new instance with empty values.
+     */
     public MultiBulkReply() {
     }
 
+    /**
+     * Creates a new instance with the specified values.
+     *
+     * @param values an array whose elements are either {@link ChannelBuffer} or {@link Number}.
+     */
     public MultiBulkReply(Object... values) {
-        this.byteArrays = values;
+        if (values != null) {
+            for (Object v: values) {
+                if (v == null) {
+                    continue;
+                }
+                if (!(v instanceof ChannelBuffer || v instanceof Number)) {
+                    throw new IllegalArgumentException(
+                            "values contains an element whose type is neither " +
+                            ChannelBuffer.class.getSimpleName() + " nor " + Number.class.getSimpleName() + ": " +
+                            v.getClass().getName());
+                }
+            }
+            this.values = values;
+        }
+    }
+
+    /**
+     * Returns an array whose elements are either {@link ChannelBuffer} or {@link Number}.
+     */
+    public Object[] values() {
+        return values;
     }
     
-    public void read(RedisDecoder rd, ChannelBuffer is) throws IOException {
+    void read(RedisReplyDecoder decoder, ChannelBuffer in) throws Exception {
         // If we attempted to read the size before, skip the '*' and reread it
         if (size == -1) {
-            byte star = is.readByte();
+            byte star = in.readByte();
             if (star == MARKER) {
                 size = 0;
             } else {
-                throw new AssertionError("Unexpected character in stream: " + star);
+                throw new CorruptedFrameException("Unexpected character in stream: " + star);
             }
         }
         if (size == 0) {
             // If the read fails, we need to skip the star
             size = -1;
             // Read the size, if this is successful we won't read the star again
-            size = RedisDecoder.readInteger(is);
-            byteArrays = new Object[size];
-            rd.checkpoint();
+            size = RedisReplyDecoder.readInteger(in);
+            values = new Object[size];
+            decoder.checkpoint();
         }
         for (int i = num; i < size; i++) {
-            int read = is.readByte();
+            int read = in.readByte();
             if (read == BulkReply.MARKER) {
-                byteArrays[i] = RedisDecoder.readBytes(is);
+                values[i] = RedisReplyDecoder.readBytes(in);
             } else if (read == IntegerReply.MARKER) {
-                byteArrays[i] = RedisDecoder.readInteger(is);
+                values[i] = RedisReplyDecoder.readInteger(in);
             } else {
-                throw new IOException("Unexpected character in stream: " + read);
+                throw new CorruptedFrameException("Unexpected character in stream: " + read);
             }
             num = i + 1;
-            rd.checkpoint();
+            decoder.checkpoint();
         }
     }
 
     @Override
-    public void write(ChannelBuffer os) throws IOException {
-        os.writeByte(MARKER);
-        if (byteArrays == null) {
-            os.writeBytes(Command.NEG_ONE_AND_CRLF);
+    void write(ChannelBuffer out) {
+        out.writeByte(MARKER);
+        if (values == null) {
+            out.writeBytes(Command.NEG_ONE_AND_CRLF);
         } else {
-            os.writeBytes(Command.numAndCRLF(byteArrays.length));
-            for (Object value : byteArrays) {
+            out.writeBytes(Command.numAndCRLF(values.length));
+            for (Object value : values) {
                 if (value == null) {
-                    os.writeByte(BulkReply.MARKER);
-                    os.writeBytes(Command.NEG_ONE_AND_CRLF);
-                } else if (value instanceof byte[]) {
-                    byte[] bytes = (byte[]) value;
-                    os.writeByte(BulkReply.MARKER);
-                    int length = bytes.length;
-                    os.writeBytes(Command.numAndCRLF(length));
-                    os.writeBytes(bytes);
-                    os.writeBytes(Command.CRLF);
+                    out.writeByte(BulkReply.MARKER);
+                    out.writeBytes(Command.NEG_ONE_AND_CRLF);
+                } else if (value instanceof ChannelBuffer) {
+                    ChannelBuffer bytes = (ChannelBuffer) value;
+                    out.writeByte(BulkReply.MARKER);
+                    int length = bytes.readableBytes();
+                    out.writeBytes(Command.numAndCRLF(length));
+                    out.writeBytes(bytes, bytes.readerIndex(), length);
+                    out.writeBytes(Command.CRLF);
                 } else if (value instanceof Number) {
-                    os.writeByte(IntegerReply.MARKER);
-                    os.writeBytes(Command.numAndCRLF(((Number) value).longValue()));
+                    out.writeByte(IntegerReply.MARKER);
+                    out.writeBytes(Command.numAndCRLF(((Number) value).longValue()));
                 }
             }
         }

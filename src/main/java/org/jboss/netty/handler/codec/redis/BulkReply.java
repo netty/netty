@@ -16,26 +16,34 @@
 package org.jboss.netty.handler.codec.redis;
 
 import org.jboss.netty.buffer.ChannelBuffer;
-
-import java.io.IOException;
+import org.jboss.netty.buffer.ChannelBuffers;
 
 public class BulkReply extends Reply {
-    public static final char MARKER = '$';
-    public final byte[] bytes;
+    static final char MARKER = '$';
 
-    public BulkReply(byte[] bytes) {
-        this.bytes = bytes;
+    private final ChannelBuffer data;
+
+    public BulkReply(byte[] data) {
+        this(data == null? null : ChannelBuffers.wrappedBuffer(data));
+    }
+
+    public BulkReply(ChannelBuffer data) {
+        this.data = data;
+    }
+
+    public ChannelBuffer data() {
+        return data;
     }
 
     @Override
-    public void write(ChannelBuffer os) throws IOException {
-        os.writeByte(MARKER);
-        if (bytes == null) {
-            os.writeBytes(Command.NEG_ONE_AND_CRLF);
+    void write(ChannelBuffer out) {
+        out.writeByte(MARKER);
+        if (data == null) {
+            out.writeBytes(Command.NEG_ONE_AND_CRLF);
         } else {
-            os.writeBytes(Command.numAndCRLF(bytes.length));
-            os.writeBytes(bytes);
-            os.writeBytes(Command.CRLF);
+            out.writeBytes(Command.numAndCRLF(data.readableBytes()));
+            out.writeBytes(data, data.readerIndex(), data.readableBytes());
+            out.writeBytes(Command.CRLF);
         }
     }
 }

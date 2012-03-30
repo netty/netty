@@ -23,8 +23,8 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.redis.Command;
-import org.jboss.netty.handler.codec.redis.RedisDecoder;
-import org.jboss.netty.handler.codec.redis.RedisEncoder;
+import org.jboss.netty.handler.codec.redis.RedisCommandEncoder;
+import org.jboss.netty.handler.codec.redis.RedisReplyDecoder;
 import org.jboss.netty.handler.codec.redis.Reply;
 import org.jboss.netty.handler.queue.BlockingReadHandler;
 
@@ -45,8 +45,8 @@ public final class RedisClient {
         cb.setPipelineFactory(new ChannelPipelineFactory() {
             public ChannelPipeline getPipeline() throws Exception {
                 ChannelPipeline pipeline = Channels.pipeline();
-                pipeline.addLast("redisEncoder", new RedisEncoder());
-                pipeline.addLast("redisDecoder", new RedisDecoder());
+                pipeline.addLast("redisEncoder", new RedisCommandEncoder());
+                pipeline.addLast("redisDecoder", new RedisReplyDecoder());
                 pipeline.addLast("result", blockingReadHandler);
                 return pipeline;
             }

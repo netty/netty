@@ -17,18 +17,19 @@ package org.jboss.netty.handler.codec.redis;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferIndexFinder;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.handler.codec.frame.CorruptedFrameException;
 import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
+import org.jboss.netty.handler.codec.replay.VoidEnum;
 
 import java.io.IOException;
 
 /**
  * {@link ReplayingDecoder} which handles Redis protocol
- * 
- *
  */
-public class RedisDecoder extends ReplayingDecoder<State> {
+public class RedisReplyDecoder extends ReplayingDecoder<VoidEnum> {
 
     private static final char CR = '\r';
     private static final char LF = '\n';
@@ -45,41 +46,38 @@ public class RedisDecoder extends ReplayingDecoder<State> {
      * 
      * @param is the {@link ChannelBuffer} to read from
      * @return content 
-     * @throws IOException is thrown if the line-ending is not CRLF
+     * @throws CorruptedFrameException if the line-ending is not CRLF
      */
-    public static byte[] readBytes(ChannelBuffer is) throws IOException {
+    static ChannelBuffer readBytes(ChannelBuffer is) throws Exception {
         int size = readInteger(is);
         if (size == -1) {
             return null;
         }
-        byte[] bytes = new byte[size];
-        is.readBytes(bytes, 0, size);
+
+        ChannelBuffer bytes = ChannelBuffers.buffer(size);
+        is.readBytes(bytes);
         int cr = is.readByte();
         int lf = is.readByte();
         if (cr != CR || lf != LF) {
-            throw new IOException("Improper line ending: " + cr + ", " + lf);
+            throw new CorruptedFrameException("Improper line ending: " + cr + ", " + lf);
         }
         return bytes;
     }
 
     /**
      * Read an {@link Integer} from the {@link ChannelBuffer}
-     * 
-     * @param is
-     * @return integer
-     * @throws IOException
      */
-    public static int readInteger(ChannelBuffer is) throws IOException {
+    static int readInteger(ChannelBuffer in) throws Exception {
         int size = 0;
         int sign = 1;
-        int read = is.readByte();
+        int read = in.readByte();
         if (read == '-') {
-            read = is.readByte();
+            read = in.readByte();
             sign = -1;
         }
         do {
             if (read == CR) {
-                if (is.readByte() == LF) {
+                if (in.readByte() == LF) {
                     break;
                 }
             }
@@ -88,20 +86,20 @@ public class RedisDecoder extends ReplayingDecoder<State> {
                 size *= 10;
                 size += value;
             } else {
-                throw new IOException("Invalid character in integer");
+                throw new CorruptedFrameException("Invalid character in integer");
             }
-            read = is.readByte();
+            read = in.readByte();
         } while (true);
         return size * sign;
     }
 
     @Override
-    public void checkpoint() {
+    protected void checkpoint() {
         super.checkpoint();
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext channelHandlerContext, Channel channel, ChannelBuffer channelBuffer, State anEnum) throws Exception {
+    protected Object decode(ChannelHandlerContext channelHandlerContext, Channel channel, ChannelBuffer channelBuffer, VoidEnum anEnum) throws Exception {
         if (reply != null) {
             reply.read(this, channelBuffer);
             Reply ret = reply;
@@ -135,15 +133,11 @@ public class RedisDecoder extends ReplayingDecoder<State> {
         }
     }
 
-    private MultiBulkReply decodeMultiBulkReply(ChannelBuffer is) throws IOException {
+    private MultiBulkReply decodeMultiBulkReply(ChannelBuffer is) throws Exception {
         if (reply == null) {
             reply = new MultiBulkReply();
         }
         reply.read(this, is);
         return reply;
     }
-}
-
-enum State {
-
 }
