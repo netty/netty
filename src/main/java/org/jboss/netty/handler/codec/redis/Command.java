@@ -28,29 +28,50 @@ public class Command {
     static final byte[] BYTES_PREFIX = "$".getBytes();
     static final byte[] NEG_ONE_AND_CRLF = convertWithCRLF(-1);
 
-    private final ChannelBuffer command;
+    private final ChannelBuffer command = ChannelBuffers.dynamicBuffer();
 
-    public Command(ChannelBuffer bytesName, Object... objects) {
+    public Command(Object name, Object object1) {
+        writeHeader(name, 1);
+        writeObject(object1);
+    }
+
+    public Command(Object name, Object object1, Object object2) {
+        writeHeader(name, 2);
+        writeObject(object1);
+        writeObject(object2);
+    }
+
+    public Command(Object name, Object object1, Object object2, Object object3) {
+        writeHeader(name, 3);
+        writeObject(object1);
+        writeObject(object2);
+        writeObject(object3);
+    }
+
+    public Command(Object name, Object[] objects) {
         int length = objects.length;
-        command = ChannelBuffers.dynamicBuffer();
-        command.writeBytes(ARGS_PREFIX);
-        command.writeBytes(numAndCRLF(length + 1));
-        writeArgument(command, bytesName);
+        writeHeader(name, length);
         for (Object object : objects) {
-            if (object == null) {
-                writeArgument(command, ChannelBuffers.EMPTY_BUFFER);
-            } else if (object instanceof byte[]) {
-                writeArgument(command, (byte[]) object);
-            } else if (object instanceof ChannelBuffer) {
-                writeArgument(command, (ChannelBuffer) object);
-            } else {
-                writeArgument(command, ChannelBuffers.copiedBuffer(object.toString(), CharsetUtil.UTF_8));
-            }
+            writeObject(object);
         }
     }
 
-    public Command(String name, Object... objects) {
-        this(ChannelBuffers.copiedBuffer(name, CharsetUtil.US_ASCII), objects);
+    private void writeHeader(Object name, int length) {
+        command.writeBytes(ARGS_PREFIX);
+        command.writeBytes(numAndCRLF(length + 1));
+        writeObject(name);
+    }
+
+    private void writeObject(Object object) {
+        if (object == null) {
+            writeArgument(command, ChannelBuffers.EMPTY_BUFFER);
+        } else if (object instanceof byte[]) {
+            writeArgument(command, (byte[]) object);
+        } else if (object instanceof ChannelBuffer) {
+            writeArgument(command, (ChannelBuffer) object);
+        } else {
+            writeArgument(command, ChannelBuffers.copiedBuffer(object.toString(), CharsetUtil.UTF_8));
+        }
     }
 
     void write(ChannelBuffer out) {
