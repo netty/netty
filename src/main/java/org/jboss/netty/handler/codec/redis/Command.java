@@ -30,6 +30,10 @@ public class Command {
 
     private final ChannelBuffer command = ChannelBuffers.dynamicBuffer();
 
+    public Command(Object name) {
+        writeHeader(name, 0);
+    }
+
     public Command(Object name, Object object1) {
         writeHeader(name, 1);
         writeObject(object1);
