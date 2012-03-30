@@ -800,7 +800,6 @@ abstract class AbstractNioWorker implements Worker {
         try {
             if (channel.socket.isOpen()) {
                 channel.socket.close();
-                Selector selector = channel.selector;
                 if (selector != null) {
                     selector.wakeup();
                 }

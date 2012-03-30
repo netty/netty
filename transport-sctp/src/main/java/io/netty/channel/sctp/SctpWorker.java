@@ -45,7 +45,6 @@ import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -430,7 +429,6 @@ public class SctpWorker extends NioWorker {
         try {
             if (channel.serverChannel.isOpen()) {
                 channel.serverChannel.close();
-                Selector selector = channel.selector;
                 if (selector != null) {
                     selector.wakeup();
                 }

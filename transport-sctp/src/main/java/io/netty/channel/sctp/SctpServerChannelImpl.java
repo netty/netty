@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.Selector;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -49,7 +48,6 @@ class SctpServerChannelImpl extends AbstractServerChannel
 
     final com.sun.nio.sctp.SctpServerChannel serverChannel;
     final Lock shutdownLock = new ReentrantLock();
-    volatile Selector selector;
     private final SctpServerChannelConfig config;
 
     private volatile boolean bound;
