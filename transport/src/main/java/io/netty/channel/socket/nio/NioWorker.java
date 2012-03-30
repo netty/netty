@@ -131,6 +131,8 @@ public class NioWorker extends AbstractNioWorker {
                             selector, channel.getRawInterestOps(), channel);
                 }
                 
+            } else {
+                setInterestOps(channel, succeededFuture(channel), channel.getRawInterestOps());
             }
             if (future != null) {
                 if (channel instanceof NioSocketChannel) {
