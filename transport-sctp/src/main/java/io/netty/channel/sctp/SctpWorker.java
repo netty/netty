@@ -345,6 +345,8 @@ public class SctpWorker extends NioWorker {
                             selector, channel.getRawInterestOps(), channel);
                 }
                 
+            } else {
+                setInterestOps(channel, succeededFuture(channel), channel.getRawInterestOps());
             }
             if (future != null) {
                 ((SctpChannelImpl) channel).setConnected();
