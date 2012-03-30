@@ -55,11 +55,7 @@
          <execution>
            <id>default-test</id>
            <configuration>
-               <!--
-                 Ignore SCTP Test cases by default
-                 Note: Java SCTP only available for Linux and Solaris
-               -->
-               <skipTests>true</skipTests>
+               <skipTests>${sctp.test.skip}}</skipTests>
            </configuration>
          </execution>
        </executions>
