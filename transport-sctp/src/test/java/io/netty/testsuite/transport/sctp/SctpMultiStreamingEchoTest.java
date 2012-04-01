@@ -105,7 +105,6 @@ public class SctpMultiStreamingEchoTest {
              cc.write(sctpFrame);
         }
 
-
         while (sh.counter < sctpFrames.length) {
             Thread.sleep(5);
         }
@@ -116,10 +115,10 @@ public class SctpMultiStreamingEchoTest {
         assertEquals(sctpFrames.length, sh.counter);
         assertEquals(sctpFrames.length, ch.counter);
 
+
         sh.channel.close().awaitUninterruptibly();
         ch.channel.close().awaitUninterruptibly();
-
-
+        sc.close().awaitUninterruptibly();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();
