@@ -23,10 +23,11 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.sctp.SctpChannelConfig;
 import io.netty.testsuite.util.DummyHandler;
-import io.netty.testsuite.util.SctpSocketAddresses;
+import io.netty.testsuite.util.SctpTestUtil;
 import io.netty.util.internal.ExecutorUtil;
 import org.easymock.EasyMock;
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -87,8 +88,10 @@ public abstract class AbstractSocketServerBootstrapTest {
 
     @Test(timeout = 30000, expected = ChannelException.class)
     public void testFailedBindAttempt() throws Exception {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         SctpServerChannel serverChannel = SctpServerChannel.open();
-        serverChannel.bind(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, 0));
+        serverChannel.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
 
         try {
             final Iterator<SocketAddress> serverAddresses = serverChannel.getAllLocalAddresses().iterator();
@@ -96,7 +99,7 @@ public abstract class AbstractSocketServerBootstrapTest {
             final int boundPort = serverAddress.getPort();
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.setFactory(newServerSocketChannelFactory(executor));
-            bootstrap.setOption("localAddress", new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, boundPort));
+            bootstrap.setOption("localAddress", new InetSocketAddress(SctpTestUtil.LOOP_BACK, boundPort));
             bootstrap.bind().close().awaitUninterruptibly();
         } finally {
             serverChannel.close();
@@ -105,11 +108,13 @@ public abstract class AbstractSocketServerBootstrapTest {
 
     @Test(timeout = 30000)
     public void testSuccessfulBindAttempt() throws Exception {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         ServerBootstrap bootstrap = new ServerBootstrap(
                 newServerSocketChannelFactory(executor));
 
         bootstrap.setParentHandler(new ParentChannelHandler());
-        bootstrap.setOption("localAddress", new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, 0));
+        bootstrap.setOption("localAddress", new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
         bootstrap.setOption("child.receiveBufferSize", 9753);
         bootstrap.setOption("child.sendBufferSize", 8642);
 
@@ -123,7 +128,7 @@ public abstract class AbstractSocketServerBootstrapTest {
         try {
             sctpChannel.connect(
                     new InetSocketAddress(
-                            SctpSocketAddresses.LOOP_BACK,
+                            SctpTestUtil.LOOP_BACK,
                             ((InetSocketAddress) channel.getLocalAddress()).getPort()));
 
             // Wait until the connection is open in the server side.
@@ -172,6 +177,8 @@ public abstract class AbstractSocketServerBootstrapTest {
 
     @Test(expected = ChannelPipelineException.class)
     public void testFailedPipelineInitialization() throws Exception {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         ClientBootstrap bootstrap = new ClientBootstrap(EasyMock.createMock(ChannelFactory.class));
         ChannelPipelineFactory pipelineFactory = EasyMock.createMock(ChannelPipelineFactory.class);
         bootstrap.setPipelineFactory(pipelineFactory);
@@ -179,17 +186,21 @@ public abstract class AbstractSocketServerBootstrapTest {
         EasyMock.expect(pipelineFactory.getPipeline()).andThrow(new ChannelPipelineException());
         EasyMock.replay(pipelineFactory);
 
-        bootstrap.connect(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, 1));
+        bootstrap.connect(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 1));
     }
 
     @Test(expected = IllegalStateException.class)
     public void shouldHaveLocalAddressOption() {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         new ServerBootstrap(EasyMock.createMock(ServerChannelFactory.class)).bind();
     }
 
 
     @Test(expected = NullPointerException.class)
     public void shouldDisallowNullLocalAddressParameter() {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         new ServerBootstrap(EasyMock.createMock(ServerChannelFactory.class)).bind(null);
     }
 

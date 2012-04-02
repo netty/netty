@@ -24,10 +24,11 @@ import io.netty.channel.ChannelPipelineFactory;
 import io.netty.channel.sctp.codec.SctpFrameDecoder;
 import io.netty.channel.sctp.codec.SctpFrameEncoder;
 import io.netty.testsuite.util.DummyHandler;
-import io.netty.testsuite.util.SctpSocketAddresses;
+import io.netty.testsuite.util.SctpTestUtil;
 import io.netty.util.internal.ExecutorUtil;
 import org.easymock.EasyMock;
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -64,6 +65,8 @@ public abstract class AbstractSocketClientBootstrapTest {
 
     @Test(timeout = 10000)
     public void testFailedConnectionAttempt() throws Exception {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+        
         ClientBootstrap bootstrap = new ClientBootstrap();
         bootstrap.setFactory(newClientSocketChannelFactory(executor));
         bootstrap.getPipeline().addLast("sctp-decoder", new SctpFrameDecoder());
@@ -78,8 +81,10 @@ public abstract class AbstractSocketClientBootstrapTest {
 
     @Test(timeout = 10000)
     public void testSuccessfulConnectionAttempt() throws Throwable {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         SctpServerChannel serverChannel = SctpServerChannel.open();
-        serverChannel.bind(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, 0));
+        serverChannel.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
 
         try {
             serverChannel.configureBlocking(false);
@@ -97,7 +102,7 @@ public abstract class AbstractSocketClientBootstrapTest {
             bootstrap.setOption(
                     "remoteAddress",
                     new InetSocketAddress(
-                            SctpSocketAddresses.LOOP_BACK,
+                            SctpTestUtil.LOOP_BACK,
                             serverPort));
 
             ChannelFuture future = bootstrap.connect();
@@ -121,11 +126,13 @@ public abstract class AbstractSocketClientBootstrapTest {
 
     @Test(timeout = 10000)
     public void testSuccessfulConnectionAttemptWithLocalAddress() throws Throwable {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         SctpServerChannel serverChannel = SctpServerChannel.open();
 
         try {
             serverChannel.configureBlocking(false);
-            serverChannel = serverChannel.bind(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, 0));
+            serverChannel = serverChannel.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
 
             final Iterator<SocketAddress> serverAddresses = serverChannel.getAllLocalAddresses().iterator();
             InetSocketAddress serverAddress = (InetSocketAddress) serverAddresses.next();
@@ -137,9 +144,9 @@ public abstract class AbstractSocketClientBootstrapTest {
             bootstrap.setOption(
                     "remoteAddress",
                     new InetSocketAddress(
-                            SctpSocketAddresses.LOOP_BACK,
+                            SctpTestUtil.LOOP_BACK,
                             serverPort));
-            bootstrap.setOption("localAddress", new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, 0));
+            bootstrap.setOption("localAddress", new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
 
             ChannelFuture future = bootstrap.connect();
             serverChannel.accept();
@@ -162,6 +169,8 @@ public abstract class AbstractSocketClientBootstrapTest {
 
     @Test(expected = ChannelPipelineException.class)
     public void testFailedPipelineInitialization() throws Exception {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         ClientBootstrap bootstrap = new ClientBootstrap(EasyMock.createMock(ChannelFactory.class));
         ChannelPipelineFactory pipelineFactory = EasyMock.createMock(ChannelPipelineFactory.class);
         bootstrap.setPipelineFactory(pipelineFactory);
@@ -169,22 +178,28 @@ public abstract class AbstractSocketClientBootstrapTest {
         EasyMock.expect(pipelineFactory.getPipeline()).andThrow(new ChannelPipelineException());
         EasyMock.replay(pipelineFactory);
 
-        bootstrap.connect(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, 1));
+        bootstrap.connect(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 1));
     }
 
     @Test(expected = IllegalStateException.class)
     public void shouldHaveRemoteAddressOption() {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         new ClientBootstrap(EasyMock.createMock(ChannelFactory.class)).connect();
     }
 
 
     @Test(expected = NullPointerException.class)
     public void shouldDisallowNullRemoteAddressParameter1() {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         new ClientBootstrap(EasyMock.createMock(ChannelFactory.class)).connect(null);
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldDisallowNullRemoteAddressParameter2() {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         new ClientBootstrap(EasyMock.createMock(ChannelFactory.class)).connect(null, null);
     }
 }
