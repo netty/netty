@@ -136,7 +136,13 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
             }
             
             try {
-                MembershipKey key = getJdkChannel().getChannel().join(multicastAddress, networkInterface);
+                MembershipKey key;
+                if (source == null) {
+                    key = getJdkChannel().getChannel().join(multicastAddress, networkInterface);
+                } else {
+                    key = getJdkChannel().getChannel().join(multicastAddress, networkInterface, source);
+                }
+
                 synchronized (this) {
                     if (memberships == null) {
                         memberships = new HashMap<InetAddress, List<MembershipKey>>();
@@ -147,7 +153,7 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
                         keys = new ArrayList<MembershipKey>();
                         memberships.put(multicastAddress, keys);
                     }
-                   
+                    System.out.println(key);
                     keys.add(key);
                 }
             } catch (Throwable e) {
