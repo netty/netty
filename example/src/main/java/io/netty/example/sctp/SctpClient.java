@@ -44,7 +44,6 @@ public class SctpClient {
         // Configure the client.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new SctpClientSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
         final ExecutionHandler executionHandler = new ExecutionHandler(

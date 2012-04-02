@@ -24,6 +24,6 @@ import java.util.concurrent.Executor;
 public class SctpServerBootstrapTest extends AbstractSocketServerBootstrapTest {
     @Override
     protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new SctpServerSocketChannelFactory(executor, executor);
+        return new SctpServerSocketChannelFactory(executor);
     }
 }

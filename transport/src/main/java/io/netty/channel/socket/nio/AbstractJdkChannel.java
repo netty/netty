@@ -25,7 +25,7 @@ public abstract class AbstractJdkChannel implements JdkChannel {
 
     final AbstractSelectableChannel channel;
 
-    AbstractJdkChannel(AbstractSelectableChannel channel) {
+    protected AbstractJdkChannel(AbstractSelectableChannel channel) {
         this.channel = channel;
     }
     

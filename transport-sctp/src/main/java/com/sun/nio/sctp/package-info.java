@@ -14,10 +14,9 @@
  * under the License.
  */
 
-package io.netty.testsuite.util;
-
-public class SctpSocketAddresses {
-    //io.netty.util.SocketAddresses.LOCALHOST interface has MTU SIZE issues with SCTP, we have  to use local loop back interface for testing
-    public final static String LOOP_BACK = "127.0.0.1";
-    public final static String LOOP_BACK2 = "127.0.0.2";
-}
+/**
+ * This package is only included to let SCTP also compile on non-unix operation systems.
+ * 
+ * <strong>This will not get included in the generated jar!</strong>
+ */
+package com.sun.nio.sctp;

@@ -13,23 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.sctp;
+package io.netty.channel.socket.nio;
 
 import java.lang.ref.SoftReference;
 import java.nio.ByteBuffer;
 
-final class SctpReceiveBufferPool {
+public final class ReceiveBufferPool {
 
     private static final int POOL_SIZE = 8;
 
     @SuppressWarnings("unchecked")
     private final SoftReference<ByteBuffer>[] pool = new SoftReference[POOL_SIZE];
 
-    SctpReceiveBufferPool() {
-        super();
-    }
-
-    ByteBuffer acquire(int size) {
+    public ByteBuffer acquire(int size) {
         final SoftReference<ByteBuffer>[] pool = this.pool;
         for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];
@@ -54,11 +50,10 @@ final class SctpReceiveBufferPool {
         }
 
         ByteBuffer buf = ByteBuffer.allocateDirect(normalizeCapacity(size));
-        buf.clear();
         return buf;
     }
 
-    void release(ByteBuffer buffer) {
+    public void release(ByteBuffer buffer) {
         final SoftReference<ByteBuffer>[] pool = this.pool;
         for (int i = 0; i < POOL_SIZE; i ++) {
             SoftReference<ByteBuffer> ref = pool[i];

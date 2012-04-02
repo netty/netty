@@ -73,11 +73,11 @@ public class SctpMultiStreamingEchoTest {
     }
 
     protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new SctpServerSocketChannelFactory(executor, executor);
+        return new SctpServerSocketChannelFactory(executor);
     }
 
     protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
-        return new SctpClientSocketChannelFactory(executor, executor);
+        return new SctpClientSocketChannelFactory(executor);
     }
 
     @Test(timeout = 10000)
@@ -108,7 +108,6 @@ public class SctpMultiStreamingEchoTest {
              cc.write(sctpFrame);
         }
 
-
         while (sh.counter < sctpFrames.length) {
             Thread.sleep(5);
         }
@@ -119,10 +118,10 @@ public class SctpMultiStreamingEchoTest {
         assertEquals(sctpFrames.length, sh.counter);
         assertEquals(sctpFrames.length, ch.counter);
 
+
         sh.channel.close().awaitUninterruptibly();
         ch.channel.close().awaitUninterruptibly();
-
-
+        sc.close().awaitUninterruptibly();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();

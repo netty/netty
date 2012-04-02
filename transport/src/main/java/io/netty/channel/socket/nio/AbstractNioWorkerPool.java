@@ -42,7 +42,7 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker> impleme
      * @param allowShutdownOnIdle allow the {@link Worker}'s to shutdown when there is not {@link Channel} is registered with it
      * @param workerCount the count of {@link Worker}'s to create
      */
-    AbstractNioWorkerPool(Executor workerExecutor, int workerCount, boolean allowShutDownOnIdle) {
+    protected AbstractNioWorkerPool(Executor workerExecutor, int workerCount, boolean allowShutDownOnIdle) {
         if (workerExecutor == null) {
             throw new NullPointerException("workerExecutor");
         }

@@ -36,7 +36,7 @@ import java.util.concurrent.Executor;
 
 public class NioWorker extends AbstractNioWorker {
 
-    private final SocketReceiveBufferPool recvBufferPool = new SocketReceiveBufferPool();
+    protected final ReceiveBufferPool recvBufferPool = new ReceiveBufferPool();
 
     public NioWorker(Executor executor) {
         super(executor);
@@ -135,8 +135,9 @@ public class NioWorker extends AbstractNioWorker {
                 setInterestOps(channel, succeededFuture(channel), channel.getRawInterestOps());
             }
             if (future != null) {
-
-                ((NioSocketChannel) channel).setConnected();
+                if (channel instanceof NioSocketChannel) {
+                    ((NioSocketChannel) channel).setConnected();
+                }
                 future.setSuccess();
             }
             

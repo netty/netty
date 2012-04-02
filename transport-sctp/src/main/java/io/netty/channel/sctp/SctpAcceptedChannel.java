@@ -27,16 +27,12 @@ import static io.netty.channel.Channels.*;
  */
 final class SctpAcceptedChannel extends SctpChannelImpl {
 
-    final Thread bossThread;
-
     SctpAcceptedChannel(
             ChannelFactory factory, ChannelPipeline pipeline,
             Channel parent, ChannelSink sink,
-            SctpChannel socket, SctpWorker worker, Thread bossThread) {
+            SctpChannel socket, SctpWorker worker) {
 
         super(parent, factory, pipeline, sink, socket, worker);
-
-        this.bossThread = bossThread;
 
         setConnected();
         fireChannelOpen(this);
