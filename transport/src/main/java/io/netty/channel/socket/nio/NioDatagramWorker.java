@@ -159,5 +159,35 @@ public class NioDatagramWorker extends AbstractNioWorker {
         }
     }
 
+    @Override
+    public void writeFromUserCode(final AbstractNioChannel channel) {
+        /*
+         * Note that we are not checking if the channel is connected. Connected
+         * has a different meaning in UDP and means that the channels socket is
+         * configured to only send and receive from a given remote peer.
+         */
+        if (!channel.isBound()) {
+            cleanUpWriteBuffer(channel);
+            return;
+        }
+
+        if (scheduleWriteIfNecessary(channel)) {
+            return;
+        }
+
+        // From here, we are sure Thread.currentThread() == workerThread.
+
+        if (channel.writeSuspended) {
+            return;
+        }
+
+        if (channel.inWriteNowLoop) {
+            return;
+        }
+
+        write0(channel);
+    }
+
+
 
 }

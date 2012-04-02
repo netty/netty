@@ -887,7 +887,7 @@ abstract class AbstractNioWorker implements Worker {
         }
     }
 
-    private void cleanUpWriteBuffer(AbstractNioChannel channel) {
+    protected void cleanUpWriteBuffer(AbstractNioChannel channel) {
         Exception cause = null;
         boolean fireExceptionCaught = false;
 
