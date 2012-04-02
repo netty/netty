@@ -213,7 +213,7 @@
               <rules>
                 <requireJavaVersion>
                   <!-- Enforce java 1.7 as minimum for compiling -->
-                  <!-- This is needed because of java.util.zip.Deflater -->
+                  <!-- This is needed because of java.util.zip.Deflater and NIO UDP multicast-->
                   <version>[1.7.0,)</version>
                 </requireJavaVersion>
                 <requireMavenVersion>
@@ -252,6 +252,10 @@
           <ignores>
             <ignore>sun.misc.Unsafe</ignore>
             <ignore>java.util.zip.Deflater</ignore>
+            <!-- Used for NIO UDP multicast -->
+            <ignore>java.nio.channels.DatagramChannel</ignore>
+            <ignore>java.nio.channels.MembershipKey</ignore>
+            <ignore>java.net.StandardSocketOptions</ignore>
           </ignores>
         </configuration>
         <executions>

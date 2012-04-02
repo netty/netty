@@ -21,6 +21,7 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
+import io.netty.channel.Channels;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.util.internal.DetectionUtil;
 
@@ -61,7 +62,7 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
             final ChannelPipeline pipeline, final ChannelSink sink,
             final NioDatagramWorker worker) {
         super(null, factory, pipeline, sink, worker, new NioDatagramJdkChannel(openNonBlockingChannel()));
-        config = new DefaultNioDatagramChannelConfig(getJdkChannel().getChannel().socket());
+        config = new DefaultNioDatagramChannelConfig(getJdkChannel().getChannel());
     }
 
     private static DatagramChannel openNonBlockingChannel() {
@@ -106,23 +107,23 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
     }
 
     @Override
-    public void joinGroup(InetAddress multicastAddress) {
+    public ChannelFuture joinGroup(InetAddress multicastAddress) {
        try {
-            joinGroup(multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), null);
+            return joinGroup(multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), null);
         } catch (SocketException e) {
-            throw new ChannelException(e);
+            return Channels.failedFuture(this, e);
         }
     }
 
     @Override
-    public void joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        joinGroup(multicastAddress.getAddress(), networkInterface, null);
+    public ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
+        return joinGroup(multicastAddress.getAddress(), networkInterface, null);
     }
 
     /**
      * Joins the specified multicast group at the specified interface using the specified source.
      */
-    public void joinGroup(InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
+    public ChannelFuture joinGroup(InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
         if (DetectionUtil.javaVersion() < 7) {
             throw new UnsupportedOperationException();
         } else {
@@ -149,32 +150,33 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
                    
                     keys.add(key);
                 }
-            } catch (IOException e) {
-                throw new ChannelException(e);
+            } catch (Throwable e) {
+                return Channels.failedFuture(this, e);
             }
         }
+        return Channels.succeededFuture(this);
     }
     
     @Override
-    public void leaveGroup(InetAddress multicastAddress) {
+    public ChannelFuture leaveGroup(InetAddress multicastAddress) {
         try {
-            leaveGroup(multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), null);
+            return leaveGroup(multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), null);
         } catch (SocketException e) {
-            throw new ChannelException(e);
+            return Channels.failedFuture(this, e);
         }
         
     }
 
     @Override
-    public void leaveGroup(InetSocketAddress multicastAddress,
+    public ChannelFuture leaveGroup(InetSocketAddress multicastAddress,
             NetworkInterface networkInterface) {
-        leaveGroup(multicastAddress.getAddress(), networkInterface, null);
+        return leaveGroup(multicastAddress.getAddress(), networkInterface, null);
     }
 
     /**
      * Leave the specified multicast group at the specified interface using the specified source.
      */
-    public void leaveGroup(InetAddress multicastAddress,
+    public ChannelFuture leaveGroup(InetAddress multicastAddress,
             NetworkInterface networkInterface, InetAddress source) {
         if (DetectionUtil.javaVersion() < 7) {
             throw new UnsupportedOperationException();
@@ -193,7 +195,7 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
                     if (keys != null) {
                         Iterator<MembershipKey> keyIt = keys.iterator();
                         
-                        while(keyIt.hasNext()) {
+                        while (keyIt.hasNext()) {
                             MembershipKey key = keyIt.next();
                             if (networkInterface.equals(key.networkInterface())) {
                                if (source == null && key.sourceAddress() == null || (source != null && source.equals(key.sourceAddress()))) {
@@ -209,8 +211,7 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
                     }
                 }
             }
-            
-            
+            return Channels.succeededFuture(this);
         }
     }
     
@@ -218,7 +219,7 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
      * Block the given sourceToBlock address for the given multicastAddress on the given networkInterface
      * 
      */
-    public void block(InetAddress multicastAddress,
+    public ChannelFuture block(InetAddress multicastAddress,
             NetworkInterface networkInterface, InetAddress sourceToBlock) {
         if (DetectionUtil.javaVersion() < 7) {
             throw new UnsupportedOperationException();
@@ -241,26 +242,30 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
                             try {
                                 key.block(sourceToBlock);
                             } catch (IOException e) {
-                                throw new ChannelException(e);
+                                return Channels.failedFuture(this, e);
                             }
                         }
                     }
                 }
             }
+            return Channels.succeededFuture(this);
             
             
         }
     }
+    
     /**
      * Block the given sourceToBlock address for the given multicastAddress
      * 
      */
-    public void block(InetAddress multicastAddress, InetAddress sourceToBlock) {
+    public ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock) {
         try {
             block(multicastAddress, NetworkInterface.getByInetAddress(getLocalAddress().getAddress()), sourceToBlock);
         } catch (SocketException e) {
-            throw new ChannelException(e);
+            return Channels.failedFuture(this, e);
         }
+        return Channels.succeededFuture(this);
+
     }
     
     @Override
