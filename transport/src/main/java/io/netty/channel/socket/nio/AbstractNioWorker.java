@@ -116,7 +116,7 @@ abstract class AbstractNioWorker implements Worker {
     
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
-    private final SendBufferPool sendBufferPool = new SendBufferPool();
+    protected final SendBufferPool sendBufferPool = new SendBufferPool();
 
     private final boolean allowShutdownOnIdle;
 

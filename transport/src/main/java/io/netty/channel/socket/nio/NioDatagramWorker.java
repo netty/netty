@@ -24,14 +24,19 @@ import static io.netty.channel.Channels.succeededFuture;
 import io.netty.buffer.ChannelBufferFactory;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channels;
+import io.netty.channel.MessageEvent;
 import io.netty.channel.ReceiveBufferSizePredictor;
+import io.netty.channel.socket.nio.SendBufferPool.SendBuffer;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.util.Queue;
 import java.util.concurrent.Executor;
 
 /**
@@ -186,6 +191,111 @@ public class NioDatagramWorker extends AbstractNioWorker {
         }
 
         write0(channel);
+    }
+    
+    @Override
+    protected void write0(final AbstractNioChannel channel) {
+
+        boolean addOpWrite = false;
+        boolean removeOpWrite = false;
+
+        long writtenBytes = 0;
+
+        final SendBufferPool sendBufferPool = this.sendBufferPool;
+        final DatagramChannel ch = ((NioDatagramChannel) channel).getJdkChannel().getChannel();
+        final Queue<MessageEvent> writeBuffer = channel.writeBufferQueue;
+        final int writeSpinCount = channel.getConfig().getWriteSpinCount();
+        synchronized (channel.writeLock) {
+            // inform the channel that write is in-progress
+            channel.inWriteNowLoop = true;
+
+            // loop forever...
+            for (;;) { 
+                MessageEvent evt = channel.currentWriteEvent;
+                SendBuffer buf;
+                if (evt == null) {
+                    if ((channel.currentWriteEvent = evt = writeBuffer.poll()) == null) {
+                        removeOpWrite = true;
+                        channel.writeSuspended = false;
+                        break;
+                    }
+
+                    channel.currentWriteBuffer = buf = sendBufferPool.acquire(evt.getMessage());
+                } else {
+                    buf = channel.currentWriteBuffer;
+                }
+
+                try {
+                    long localWrittenBytes = 0;
+                    SocketAddress raddr = evt.getRemoteAddress();
+                    if (raddr == null) {
+                        for (int i = writeSpinCount; i > 0; i --) {
+                            localWrittenBytes = buf.transferTo(ch);
+                            if (localWrittenBytes != 0) {
+                                writtenBytes += localWrittenBytes;
+                                break;
+                            }
+                            if (buf.finished()) {
+                                break;
+                            }
+                        }
+                    } else {
+                        for (int i = writeSpinCount; i > 0; i --) {
+                            localWrittenBytes = buf.transferTo(ch, raddr);
+                            if (localWrittenBytes != 0) {
+                                writtenBytes += localWrittenBytes;
+                                break;
+                            }
+                            if (buf.finished()) {
+                                break;
+                            }
+                        }
+                    }
+
+                    if (localWrittenBytes > 0 || buf.finished()) {
+                        // Successful write - proceed to the next message.
+                        buf.release();
+                        ChannelFuture future = evt.getFuture();
+                        channel.currentWriteEvent = null;
+                        channel.currentWriteBuffer = null;
+                        evt = null;
+                        buf = null;
+                        future.setSuccess();
+                    } else {
+                        // Not written at all - perhaps the kernel buffer is full.
+                        addOpWrite = true;
+                        channel.writeSuspended = true;
+                        break;
+                    }
+                } catch (final AsynchronousCloseException e) {
+                    // Doesn't need a user attention - ignore.
+                } catch (final Throwable t) {
+                    buf.release();
+                    ChannelFuture future = evt.getFuture();
+                    channel.currentWriteEvent = null;
+                    channel.currentWriteBuffer = null;
+                    buf = null;
+                    evt = null;
+                    future.setFailure(t);
+                    fireExceptionCaught(channel, t);
+                }
+            }
+            channel.inWriteNowLoop = false;
+
+            // Initially, the following block was executed after releasing
+            // the writeLock, but there was a race condition, and it has to be
+            // executed before releasing the writeLock:
+            //
+            // https://issues.jboss.org/browse/NETTY-410
+            //
+            if (addOpWrite) {
+                setOpWrite(channel);
+            } else if (removeOpWrite) {
+                clearOpWrite(channel);
+            }
+        }
+
+        Channels.fireWriteComplete(channel, writtenBytes);
     }
 
 
