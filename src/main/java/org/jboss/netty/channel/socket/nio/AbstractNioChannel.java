@@ -20,7 +20,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.AbstractChannel;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 import org.jboss.netty.channel.MessageEvent;
@@ -29,7 +28,6 @@ import org.jboss.netty.util.internal.QueueFactory;
 import org.jboss.netty.util.internal.ThreadLocalBoolean;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.Collection;
