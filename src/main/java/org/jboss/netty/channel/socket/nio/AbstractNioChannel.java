@@ -163,14 +163,6 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
         super.setInterestOpsNow(interestOps);
     }
 
-    @Override
-    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
-        if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
-            return super.write(message, null);
-        } else {
-            return getUnsupportedOperationFuture();
-        }
-    }
     
     @Override
     public int getInterestOps() {

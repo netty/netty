@@ -16,10 +16,12 @@
 package org.jboss.netty.channel.socket.nio;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
 
@@ -90,5 +92,15 @@ public class NioSocketChannel extends AbstractNioChannel<SocketChannel>
     @Override
     InetSocketAddress getRemoteSocketAddress() throws Exception {
         return (InetSocketAddress) channel.socket().getRemoteSocketAddress();
+    }
+    
+    
+    @Override
+    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
+        if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
+            return super.write(message, null);
+        } else {
+            return getUnsupportedOperationFuture();
+        }
     }
 }
