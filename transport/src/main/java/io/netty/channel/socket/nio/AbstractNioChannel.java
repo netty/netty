@@ -20,7 +20,6 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 import io.netty.channel.MessageEvent;
@@ -29,7 +28,6 @@ import io.netty.util.internal.QueueFactory;
 import io.netty.util.internal.ThreadLocalBoolean;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Queue;
@@ -168,15 +166,6 @@ public abstract class AbstractNioChannel extends AbstractChannel implements NioC
         super.setInterestOpsNow(interestOps);
     }
 
-    @Override
-    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
-        if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
-            return super.write(message, null);
-        } else {
-            return getUnsupportedOperationFuture();
-        }
-    }
-    
     @Override
     public int getInterestOps() {
         if (!isOpen()) {

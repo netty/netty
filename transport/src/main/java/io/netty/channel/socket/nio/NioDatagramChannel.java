@@ -273,7 +273,7 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
         if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
             return super.write(message, null);
         } else {
-            return super.write(message, remoteAddress);
+            return Channels.write(this, message, remoteAddress);
         }
 
     }

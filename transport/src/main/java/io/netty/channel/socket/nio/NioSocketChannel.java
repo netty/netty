@@ -17,9 +17,11 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 
+import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
 
 public abstract class NioSocketChannel extends AbstractNioChannel implements io.netty.channel.socket.SocketChannel {
@@ -82,4 +84,15 @@ public abstract class NioSocketChannel extends AbstractNioChannel implements io.
         state = ST_CLOSED;
         return super.setClosed();
     }
+    
+
+    @Override
+    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
+        if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
+            return super.write(message, null);
+        } else {
+            return getUnsupportedOperationFuture();
+        }
+    }
+    
 }
