@@ -48,18 +48,6 @@
 
   <build>
     <plugins>
-       <plugin>
-       <artifactId>maven-surefire-plugin</artifactId>
-       <version>2.7.2</version>
-       <executions>
-         <execution>
-           <id>default-test</id>
-           <configuration>
-               <skipTests>${sctp.test.skip}}</skipTests>
-           </configuration>
-         </execution>
-       </executions>
-      </plugin>
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <configuration>

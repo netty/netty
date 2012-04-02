@@ -35,7 +35,7 @@ import io.netty.channel.sctp.SctpServerSocketChannelFactory;
 import io.netty.channel.sctp.codec.SctpFrameDecoder;
 import io.netty.channel.sctp.codec.SctpFrameEncoder;
 import io.netty.channel.sctp.handler.SimpleSctpChannelHandler;
-import io.netty.testsuite.util.SctpSocketAddresses;
+import io.netty.testsuite.util.SctpTestUtil;
 import io.netty.util.internal.ExecutorUtil;
 
 import java.io.IOException;
@@ -48,6 +48,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -81,6 +82,8 @@ public class SctpMultiHomingEchoTest {
 
     @Test(timeout = 15000)
     public void testSimpleEcho() throws Throwable {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
 
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
@@ -97,22 +100,22 @@ public class SctpMultiHomingEchoTest {
         cb.getPipeline().addLast("sctp-encoder", new SctpFrameEncoder());
         cb.getPipeline().addLast("handler", ch);
 
-        SctpServerChannel serverChannel = (SctpServerChannel) sb.bind(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, 0));
+        SctpServerChannel serverChannel = (SctpServerChannel) sb.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
         int port = serverChannel.getLocalAddress().getPort();
 
-        ChannelFuture multiHomingServerBindFuture = serverChannel.bindAddress(InetAddress.getByName(SctpSocketAddresses.LOOP_BACK2));
+        ChannelFuture multiHomingServerBindFuture = serverChannel.bindAddress(InetAddress.getByName(SctpTestUtil.LOOP_BACK2));
         assertTrue(multiHomingServerBindFuture.awaitUninterruptibly().isSuccess());
 
-        ChannelFuture bindFuture = cb.bind(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, 0));
+        ChannelFuture bindFuture = cb.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
         assertTrue(bindFuture.awaitUninterruptibly().isSuccess());
 
         SctpChannel clientChannel = (SctpChannel) bindFuture.getChannel();
 
         //adding a muti-homing address to client channel
-        ChannelFuture multiHomingBindFuture = clientChannel.bindAddress(InetAddress.getByName(SctpSocketAddresses.LOOP_BACK2));
+        ChannelFuture multiHomingBindFuture = clientChannel.bindAddress(InetAddress.getByName(SctpTestUtil.LOOP_BACK2));
         assertTrue(multiHomingBindFuture.awaitUninterruptibly().isSuccess());
 
-        ChannelFuture connectFuture = clientChannel.connect(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, port));
+        ChannelFuture connectFuture = clientChannel.connect(new InetSocketAddress(SctpTestUtil.LOOP_BACK, port));
         assertTrue(connectFuture.awaitUninterruptibly().isSuccess());
 
         assertEquals("Client local addresses count should be 2", 2, clientChannel.getAllLocalAddresses().size());
@@ -157,10 +160,10 @@ public class SctpMultiHomingEchoTest {
         }
 
         //removing already added muti-homing address from client channel
-        ChannelFuture multiHomingUnbindFuture = clientChannel.unbindAddress(InetAddress.getByName(SctpSocketAddresses.LOOP_BACK2));
+        ChannelFuture multiHomingUnbindFuture = clientChannel.unbindAddress(InetAddress.getByName(SctpTestUtil.LOOP_BACK2));
         assertTrue(multiHomingUnbindFuture.awaitUninterruptibly().isSuccess());
 
-        ChannelFuture multiHomingServerUnbindFuture = serverChannel.unbindAddress(InetAddress.getByName(SctpSocketAddresses.LOOP_BACK2));
+        ChannelFuture multiHomingServerUnbindFuture = serverChannel.unbindAddress(InetAddress.getByName(SctpTestUtil.LOOP_BACK2));
         assertTrue(multiHomingServerUnbindFuture.awaitUninterruptibly().isSuccess());
 
 

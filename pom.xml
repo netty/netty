@@ -335,32 +335,5 @@
       </plugins>
     </pluginManagement>
   </build>
-  
-  <profiles>
-    <profile>
-      <id>unix</id>
-      <activation>
-        <os>
-          <family>unix</family>
-        </os>
-      </activation>
-      <properties>
-        <!--
-          Note: Java SCTP only available for Linux and Solaris
-        -->
-        <sctp.test.skip>false</sctp.test.skip>
-      </properties>
-    </profile>
-    
-    <profile>
-      <id>default</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
-      <properties>
-        <sctp.test.skip>true</sctp.test.skip>
-      </properties>
-    </profile>
-  </profiles>
 </project>
 

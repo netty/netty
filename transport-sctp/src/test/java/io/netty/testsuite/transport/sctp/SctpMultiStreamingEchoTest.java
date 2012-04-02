@@ -23,9 +23,10 @@ import io.netty.channel.*;
 import io.netty.channel.sctp.SctpClientSocketChannelFactory;
 import io.netty.channel.sctp.SctpFrame;
 import io.netty.channel.sctp.SctpServerSocketChannelFactory;
-import io.netty.testsuite.util.SctpSocketAddresses;
+import io.netty.testsuite.util.SctpTestUtil;
 import io.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -81,6 +82,8 @@ public class SctpMultiStreamingEchoTest {
 
     @Test(timeout = 10000)
     public void testMultiStreamingEcho() throws Throwable {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
 
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
@@ -93,10 +96,10 @@ public class SctpMultiStreamingEchoTest {
 
         cb.getPipeline().addLast("handler", ch);
 
-        Channel sc = sb.bind(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, 0));
+        Channel sc = sb.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, port));
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpTestUtil.LOOP_BACK, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
         Channel cc = ccf.getChannel();
