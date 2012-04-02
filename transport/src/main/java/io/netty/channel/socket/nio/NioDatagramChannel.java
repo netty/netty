@@ -153,7 +153,6 @@ public final class NioDatagramChannel extends AbstractNioChannel implements io.n
                         keys = new ArrayList<MembershipKey>();
                         memberships.put(multicastAddress, keys);
                     }
-                    System.out.println(key);
                     keys.add(key);
                 }
             } catch (Throwable e) {
