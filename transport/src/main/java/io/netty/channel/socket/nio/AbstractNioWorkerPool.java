@@ -29,9 +29,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@link #nextWorker()}
  *
  */
-public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker> implements WorkerPool<E> , ExternalResourceReleasable {
+public abstract class AbstractNioWorkerPool<E extends SelectorEventLoop> implements WorkerPool<E> , ExternalResourceReleasable {
 
-    private final AbstractNioWorker[] workers;
+    private final SelectorEventLoop[] workers;
     private final AtomicInteger workerIndex = new AtomicInteger();
     private final Executor workerExecutor;
     
@@ -51,7 +51,7 @@ public abstract class AbstractNioWorkerPool<E extends AbstractNioWorker> impleme
                     "workerCount (" + workerCount + ") " +
                     "must be a positive integer.");
         }        
-        workers = new AbstractNioWorker[workerCount];
+        workers = new SelectorEventLoop[workerCount];
 
         for (int i = 0; i < workers.length; i++) {
             workers[i] = createWorker(workerExecutor, allowShutDownOnIdle);

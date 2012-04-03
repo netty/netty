@@ -47,12 +47,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static io.netty.channel.Channels.*;
 
-abstract class AbstractNioWorker extends SingleThreadEventLoop {
+abstract class SelectorEventLoop extends SingleThreadEventLoop {
     /**
      * Internal Netty logger.
      */
     protected static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(AbstractNioWorker.class);
+            .getInstance(SelectorEventLoop.class);
 
     private static final int CONSTRAINT_LEVEL = NioProviderMetadata.CONSTRAINT_LEVEL;
 
@@ -86,11 +86,11 @@ abstract class AbstractNioWorker extends SingleThreadEventLoop {
 
     protected final SendBufferPool sendBufferPool = new SendBufferPool();
 
-    protected AbstractNioWorker() {
+    protected SelectorEventLoop() {
         selector = openSelector();
     }
 
-    protected AbstractNioWorker(ThreadFactory threadFactory) {
+    protected SelectorEventLoop(ThreadFactory threadFactory) {
         super(threadFactory);
         selector = openSelector();
     }

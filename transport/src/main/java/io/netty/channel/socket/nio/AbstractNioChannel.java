@@ -39,9 +39,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class AbstractNioChannel extends AbstractChannel implements NioChannel {
 
     /**
-     * The {@link AbstractNioWorker}.
+     * The {@link SelectorEventLoop}.
      */
-    private final AbstractNioWorker worker;
+    private final SelectorEventLoop worker;
 
     /**
      * Monitor object to synchronize access to InterestedOps.
@@ -97,7 +97,7 @@ public abstract class AbstractNioChannel extends AbstractChannel implements NioC
     
     private final JdkChannel channel;
     
-    protected AbstractNioChannel(Integer id, Channel parent, ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, AbstractNioWorker worker, JdkChannel ch) {
+    protected AbstractNioChannel(Integer id, Channel parent, ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, SelectorEventLoop worker, JdkChannel ch) {
         super(id, parent, factory, pipeline, sink);
         this.worker = worker;
         this.channel = ch;
@@ -105,7 +105,7 @@ public abstract class AbstractNioChannel extends AbstractChannel implements NioC
     
     protected AbstractNioChannel(
             Channel parent, ChannelFactory factory,
-            ChannelPipeline pipeline, ChannelSink sink, AbstractNioWorker worker, JdkChannel ch)  {
+            ChannelPipeline pipeline, ChannelSink sink, SelectorEventLoop worker, JdkChannel ch)  {
         super(parent, factory, pipeline, sink);
         this.worker = worker;
         this.channel = ch;
@@ -116,11 +116,11 @@ public abstract class AbstractNioChannel extends AbstractChannel implements NioC
     }
     
     /**
-     * Return the {@link AbstractNioWorker} that handle the IO of the {@link AbstractNioChannel}
+     * Return the {@link SelectorEventLoop} that handle the IO of the {@link AbstractNioChannel}
      * 
      * @return worker
      */
-    public AbstractNioWorker getWorker() {
+    public SelectorEventLoop getWorker() {
         return worker;
     }
     

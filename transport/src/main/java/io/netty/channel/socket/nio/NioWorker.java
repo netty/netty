@@ -34,7 +34,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executor;
 
-public class NioWorker extends AbstractNioWorker {
+public class NioWorker extends SelectorEventLoop {
 
     protected final ReceiveBufferPool recvBufferPool = new ReceiveBufferPool();
 
