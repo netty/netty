@@ -18,6 +18,7 @@ package io.netty.testsuite.transport.socket.oio.nio;
 import java.util.concurrent.Executor;
 
 import io.netty.channel.socket.DatagramChannelFactory;
+import io.netty.channel.socket.nio.NioDatagramChannelFactory;
 import io.netty.channel.socket.oio.OioDatagramChannelFactory;
 import io.netty.testsuite.transport.socket.AbstractDatagramTest;
 
@@ -25,7 +26,7 @@ public class OioNioDatagramTest extends AbstractDatagramTest{
 
     @Override
     protected DatagramChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new OioDatagramChannelFactory(executor);
+        return new NioDatagramChannelFactory(executor);
     }
 
     @Override
