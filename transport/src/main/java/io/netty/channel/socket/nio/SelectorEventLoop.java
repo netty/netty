@@ -37,9 +37,11 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.channels.spi.SelectorProvider;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -87,17 +89,28 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
     protected final SendBufferPool sendBufferPool = new SendBufferPool();
 
     protected SelectorEventLoop() {
-        selector = openSelector();
+        this(Executors.defaultThreadFactory());
     }
 
     protected SelectorEventLoop(ThreadFactory threadFactory) {
-        super(threadFactory);
-        selector = openSelector();
+        this(threadFactory, SelectorProvider.provider());
     }
 
-    private static Selector openSelector() {
+    protected SelectorEventLoop(SelectorProvider selectorProvider) {
+        this(Executors.defaultThreadFactory(), selectorProvider);
+    }
+
+    protected SelectorEventLoop(ThreadFactory threadFactory, SelectorProvider selectorProvider) {
+        super(threadFactory);
+        if (selectorProvider == null) {
+            throw new NullPointerException("selectorProvider");
+        }
+        selector = openSelector(selectorProvider);
+    }
+
+    private static Selector openSelector(SelectorProvider provider) {
         try {
-            return Selector.open();
+            return provider.openSelector();
         } catch (IOException e) {
             throw new ChannelException("failed to open a new selector", e);
         }
