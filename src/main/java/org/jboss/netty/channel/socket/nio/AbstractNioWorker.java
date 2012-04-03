@@ -112,7 +112,7 @@ abstract class AbstractNioWorker implements Worker {
     
     private volatile int cancelledKeys; // should use AtomicInteger but we just need approximation
 
-    private final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
+    protected final SocketSendBufferPool sendBufferPool = new SocketSendBufferPool();
 
     private final boolean allowShutdownOnIdle;
 
@@ -545,7 +545,7 @@ abstract class AbstractNioWorker implements Worker {
         return Thread.currentThread() == channel.worker.thread;
     }
     
-    private void setOpWrite(AbstractNioChannel<?> channel) {
+    protected void setOpWrite(AbstractNioChannel<?> channel) {
         Selector selector = this.selector;
         SelectionKey key = channel.channel.keyFor(selector);
         if (key == null) {
@@ -568,7 +568,7 @@ abstract class AbstractNioWorker implements Worker {
         }
     }
 
-    private void clearOpWrite(AbstractNioChannel<?> channel) {
+    protected void clearOpWrite(AbstractNioChannel<?> channel) {
         Selector selector = this.selector;
         SelectionKey key = channel.channel.keyFor(selector);
         if (key == null) {
