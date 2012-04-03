@@ -373,8 +373,11 @@ public interface Channel extends Comparable<Channel> {
 
     /**
      * Attaches an object to this {@link Channel} to store a stateful information
- */
+     */
     void setAttachment(Object attachment);
+
+    ChannelFuture deregister();
+    void deregister(ChannelFuture future);
 
     Unsafe unsafe();
 
