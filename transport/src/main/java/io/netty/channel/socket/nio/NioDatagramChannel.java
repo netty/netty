@@ -45,29 +45,57 @@ import java.util.Map;
 public final class NioDatagramChannel extends AbstractNioChannel implements io.netty.channel.socket.DatagramChannel {
 
     /**
+     * The supported ProtocolFamily by UDP
+     *
+     */
+    public enum ProtocolFamily {
+        INET,
+        INET6
+    }
+    /**
      * The {@link DatagramChannelConfig}.
      */
     private final NioDatagramChannelConfig config;
     private Map<InetAddress, List<MembershipKey>> memberships;
    
     static NioDatagramChannel create(ChannelFactory factory,
-            ChannelPipeline pipeline, ChannelSink sink, NioDatagramWorker worker) {
+            ChannelPipeline pipeline, ChannelSink sink, NioDatagramWorker worker, ProtocolFamily family) {
         NioDatagramChannel instance =
-                new NioDatagramChannel(factory, pipeline, sink, worker);
+                new NioDatagramChannel(factory, pipeline, sink, worker, family);
         fireChannelOpen(instance);
         return instance;
     }
 
     private NioDatagramChannel(final ChannelFactory factory,
             final ChannelPipeline pipeline, final ChannelSink sink,
-            final NioDatagramWorker worker) {
-        super(null, factory, pipeline, sink, worker, new NioDatagramJdkChannel(openNonBlockingChannel()));
+            final NioDatagramWorker worker, ProtocolFamily family) {
+        super(null, factory, pipeline, sink, worker, new NioDatagramJdkChannel(openNonBlockingChannel(family)));
         config = new DefaultNioDatagramChannelConfig(getJdkChannel().getChannel());
     }
 
-    private static DatagramChannel openNonBlockingChannel() {
+    private static DatagramChannel openNonBlockingChannel(ProtocolFamily family) {
         try {
-            final DatagramChannel channel = DatagramChannel.open();
+            final DatagramChannel channel;
+            
+            // check if we are on java 7 or if the family was not specified
+            if (DetectionUtil.javaVersion() < 7 || family == null) {
+                channel = DatagramChannel.open();
+            } else {
+                // This block only works on java7++, but we checked before if we have it
+                switch (family) {
+                case INET:
+                    channel = DatagramChannel.open(java.net.StandardProtocolFamily.INET);
+                    break;
+
+                case INET6:
+                    channel = DatagramChannel.open(java.net.StandardProtocolFamily.INET6);
+                    break;
+
+                default:
+                    throw new IllegalArgumentException();
+                }
+            }
+            
             channel.configureBlocking(false);
             return channel;
         } catch (final IOException e) {

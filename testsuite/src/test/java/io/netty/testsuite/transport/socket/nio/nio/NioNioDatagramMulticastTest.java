@@ -17,27 +17,21 @@ package io.netty.testsuite.transport.socket.nio.nio;
 
 import java.util.concurrent.Executor;
 
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import io.netty.testsuite.transport.socket.AbstractSocketSslEchoTest;
+import io.netty.channel.socket.DatagramChannelFactory;
+import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.channel.socket.nio.NioDatagramChannelFactory;
+import io.netty.testsuite.transport.socket.AbstractDatagramMulticastTest;
 
-public class NioNioSocketSslEchoTest extends AbstractSocketSslEchoTest {
-
+public class NioNioDatagramMulticastTest extends AbstractDatagramMulticastTest {
 
     @Override
-    public void testSslEcho() throws Throwable {
-        //
+    protected DatagramChannelFactory newServerSocketChannelFactory(Executor executor) {
+        return new NioDatagramChannelFactory(executor, NioDatagramChannel.ProtocolFamily.INET);
     }
 
     @Override
-    protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
-        return new NioClientSocketChannelFactory(executor);
-    }
-
-    @Override
-    protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new NioServerSocketChannelFactory(executor);
+    protected DatagramChannelFactory newClientSocketChannelFactory(Executor executor) {
+        return new NioDatagramChannelFactory(executor, NioDatagramChannel.ProtocolFamily.INET);
     }
 
 }

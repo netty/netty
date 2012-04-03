@@ -13,25 +13,26 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testsuite.transport.socket.nio.nio;
+package io.netty.testsuite.transport.socket.oio.nio;
 
 import java.util.concurrent.Executor;
 
 import io.netty.channel.socket.DatagramChannelFactory;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannelFactory;
-import io.netty.testsuite.transport.socket.AbstractDatagramTest;
+import io.netty.channel.socket.oio.OioDatagramChannelFactory;
+import io.netty.testsuite.transport.socket.AbstractDatagramMulticastTest;
 
-public class NioNioDatagramTest extends AbstractDatagramTest{
-
+public class OioNioDatagramMulticastTest extends AbstractDatagramMulticastTest{
 
     @Override
     protected DatagramChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new NioDatagramChannelFactory(executor);
+        return new NioDatagramChannelFactory(executor, NioDatagramChannel.ProtocolFamily.INET);
     }
 
     @Override
     protected DatagramChannelFactory newClientSocketChannelFactory(Executor executor) {
-        return new NioDatagramChannelFactory(executor);
+        return new OioDatagramChannelFactory(executor);
     }
 
 }

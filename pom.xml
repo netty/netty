@@ -256,6 +256,7 @@
             <ignore>java.nio.channels.DatagramChannel</ignore>
             <ignore>java.nio.channels.MembershipKey</ignore>
             <ignore>java.net.StandardSocketOptions</ignore>
+            <ignore>java.net.StandardProtocolFamily</ignore>
           </ignores>
         </configuration>
         <executions>

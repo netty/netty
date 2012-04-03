@@ -26,6 +26,7 @@ import io.netty.channel.SimpleChannelUpstreamHandler;
 import io.netty.channel.socket.DatagramChannelFactory;
 import io.netty.util.internal.ExecutorUtil;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -60,7 +61,7 @@ public abstract class AbstractDatagramTest {
     public void testSimpleSend() throws Throwable {
         ConnectionlessBootstrap sb = new ConnectionlessBootstrap(newServerSocketChannelFactory(executor));
         ConnectionlessBootstrap cb = new ConnectionlessBootstrap(newClientSocketChannelFactory(executor));
-        
+
         final CountDownLatch latch = new CountDownLatch(1);
         sb.getPipeline().addFirst("handler", new SimpleChannelUpstreamHandler() {
 
@@ -75,14 +76,16 @@ public abstract class AbstractDatagramTest {
         });
         cb.getPipeline().addFirst("handler", new SimpleChannelUpstreamHandler());
 
-        Channel sc = sb.bind(new InetSocketAddress(0));
+        Channel sc = sb.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0));
 
-        Channel cc = cb.bind(new InetSocketAddress(0));
-        cc.write(ChannelBuffers.wrapInt(1), sc.getLocalAddress());
+        Channel cc = cb.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0));
+        assertTrue(cc.write(ChannelBuffers.wrapInt(1), sc.getLocalAddress()).awaitUninterruptibly().isSuccess());
 
         assertTrue(latch.await(10, TimeUnit.SECONDS));
         sc.close().awaitUninterruptibly();
         cc.close().awaitUninterruptibly();
+        sb.releaseExternalResources();
+        cb.releaseExternalResources();
       
     }
 }
