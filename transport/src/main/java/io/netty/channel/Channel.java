@@ -15,15 +15,16 @@
  */
 package io.netty.channel;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.nio.channels.NotYetConnectedException;
-import java.nio.channels.SelectionKey;
-
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannelConfig;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.channels.NotYetConnectedException;
+import java.nio.channels.SelectionKey;
 
 
 /**
@@ -135,6 +136,8 @@ public interface Channel extends Comparable<Channel> {
      * Returns the unique integer ID of this channel.
      */
     Integer getId();
+
+    EventLoop eventLoop();
 
     /**
      * Returns the {@link ChannelFactory} which created this channel.
@@ -372,4 +375,21 @@ public interface Channel extends Comparable<Channel> {
      * Attaches an object to this {@link Channel} to store a stateful information
  */
     void setAttachment(Object attachment);
+
+    Unsafe unsafe();
+
+    public interface Unsafe {
+        void setEventLoop(EventLoop eventLoop);
+        void clearEventLoop();
+        java.nio.channels.Channel ch();
+
+        void bind(SocketAddress local) throws IOException;
+        void connect(SocketAddress remote) throws IOException;
+        boolean finishConnect() throws IOException;
+        boolean read() throws IOException;
+        boolean write() throws IOException;
+        void unbind() throws IOException;
+        void disconnect() throws IOException;
+        void close() throws IOException;
+    }
 }
