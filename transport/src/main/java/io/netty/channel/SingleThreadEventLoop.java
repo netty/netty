@@ -46,9 +46,9 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
         });
     }
 
-    public ChannelFuture attach(Channel channel) {
+    public ChannelFuture register(Channel channel) {
         ChannelFuture future = new DefaultChannelFuture(channel, false);
-        attach(channel, future);
+        register(channel, future);
         return future;
     }
 

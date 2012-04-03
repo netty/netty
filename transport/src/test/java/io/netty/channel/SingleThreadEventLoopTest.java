@@ -155,7 +155,7 @@ public class SingleThreadEventLoopTest {
         }
 
         @Override
-        public void attach(Channel channel, ChannelFuture future) {
+        public void register(Channel channel, ChannelFuture future) {
             // Untested
         }
     }

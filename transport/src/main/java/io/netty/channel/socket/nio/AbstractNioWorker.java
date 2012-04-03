@@ -104,7 +104,7 @@ abstract class AbstractNioWorker extends SingleThreadEventLoop {
     }
 
     @Override
-    public void attach(final Channel channel, final ChannelFuture future) {
+    public void register(final Channel channel, final ChannelFuture future) {
         try {
             if (channel instanceof NioServerSocketChannel) {
                 final NioServerSocketChannel ch = (NioServerSocketChannel) channel;
