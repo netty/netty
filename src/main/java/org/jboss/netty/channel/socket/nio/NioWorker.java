@@ -186,6 +186,11 @@ public class NioWorker extends AbstractNioWorker {
                     channel.setConnected();
                     future.setSuccess();
                 }
+                
+                if (server || !((NioClientSocketChannel) channel).boundManually) {
+                    fireChannelBound(channel, localAddress);
+                }
+                fireChannelConnected(channel, remoteAddress);
             } catch (IOException e) {
                 if (future != null) {
                     future.setFailure(e);
@@ -197,10 +202,6 @@ public class NioWorker extends AbstractNioWorker {
                 }
             }
 
-            if (server || !((NioClientSocketChannel) channel).boundManually) {
-                fireChannelBound(channel, localAddress);
-            }
-            fireChannelConnected(channel, remoteAddress);
         }
     }
 
