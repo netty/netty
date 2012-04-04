@@ -75,9 +75,9 @@ public abstract class AbstractDatagramTest {
         });
         cb.getPipeline().addFirst("handler", new SimpleChannelUpstreamHandler());
 
-        Channel sc = sb.bind(new InetSocketAddress(0));
+        Channel sc = sb.bind(new InetSocketAddress("127.0.0.1",0));
 
-        Channel cc = cb.bind(new InetSocketAddress(0));
+        Channel cc = cb.bind(new InetSocketAddress("127.0.0.1", 0));
         ChannelBuffer buf = ChannelBuffers.dynamicBuffer();
         buf.writeInt(1);
         cc.write(buf, sc.getLocalAddress());
