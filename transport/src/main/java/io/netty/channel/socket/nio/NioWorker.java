@@ -140,6 +140,10 @@ public class NioWorker extends SelectorEventLoop {
                 }
                 future.setSuccess();
             }
+            if (server || !((NioClientSocketChannel) channel).boundManually) {
+                fireChannelBound(channel, localAddress);
+            }
+            fireChannelConnected(channel, remoteAddress);
             
         } catch (IOException e) {
             if (future != null) {
@@ -151,11 +155,6 @@ public class NioWorker extends SelectorEventLoop {
                         "Failed to register a socket to the selector.", e);
             }
         }
-
-        if (server || !((NioClientSocketChannel) channel).boundManually) {
-            fireChannelBound(channel, localAddress);
-        }
-        fireChannelConnected(channel, remoteAddress);
     }
 
 }

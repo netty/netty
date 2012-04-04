@@ -215,7 +215,6 @@ public class SctpWorker extends NioWorker {
     protected void connect(SelectionKey k) {
         final SctpClientChannel ch = (SctpClientChannel) k.attachment();
         try {
-            // TODO: Remove cast
             if (ch.getJdkChannel().finishConnect()) {
                 registerTask(ch, ch.connectFuture);
             }
@@ -358,7 +357,13 @@ public class SctpWorker extends NioWorker {
                 ((SctpChannelImpl) channel).setConnected();
                 future.setSuccess();
             }
-            
+
+            if (!server) {
+                if (!((SctpClientChannel) channel).boundManually) {
+                    fireChannelBound(channel, localAddress);
+                }
+                fireChannelConnected(channel, remoteAddress);
+            }
         } catch (IOException e) {
             if (future != null) {
                 future.setFailure(e);
@@ -368,13 +373,6 @@ public class SctpWorker extends NioWorker {
                 throw new ChannelException(
                         "Failed to register a socket to the selector.", e);
             }
-        }
-
-        if (!server) {
-            if (!((SctpClientChannel) channel).boundManually) {
-                fireChannelBound(channel, localAddress);
-            }
-            fireChannelConnected(channel, remoteAddress);
         }
     }
 
