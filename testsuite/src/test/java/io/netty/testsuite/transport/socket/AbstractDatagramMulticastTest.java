@@ -73,7 +73,7 @@ public abstract class AbstractDatagramMulticastTest {
 
         int port = TestUtils.getFreePort();
         
-        NetworkInterface iface = NetworkInterface.getByInetAddress(InetAddress.getLoopbackAddress());
+        NetworkInterface iface = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
         sb.setOption("networkInterface", iface);
         sb.setOption("reuseAddress", true);
         
@@ -88,7 +88,6 @@ public abstract class AbstractDatagramMulticastTest {
 
         DatagramChannel cc = (DatagramChannel) cb.bind(new InetSocketAddress(port));
         
-
         assertTrue(cc.joinGroup(groupAddress, iface).awaitUninterruptibly().isSuccess());
  
         assertTrue(sc.write(ChannelBuffers.wrapInt(1), groupAddress).awaitUninterruptibly().isSuccess());
