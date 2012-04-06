@@ -56,7 +56,7 @@ public abstract class AbstractSocketServerBootstrapTest {
         try {
             s = SctpChannel.open();
             bufSizeModifiable = s.supportedOptions().contains(SctpStandardSocketOptions.SO_RCVBUF);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             bufSizeModifiable = false;
             System.err.println(
                     "SCTP SO_RCVBUF does not work: " + e);
