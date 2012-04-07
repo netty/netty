@@ -110,13 +110,13 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
                     a.getBytes(a.readerIndex(), out, length);
                 }
             }
-
+            
+            future.setSuccess();
             if (iothread) {
                 fireWriteComplete(channel, length);
             } else {
                 fireWriteCompleteLater(channel, length);
             }
-            future.setSuccess();
  
         } catch (Throwable t) {
             // Convert 'SocketException: Socket closed' to
