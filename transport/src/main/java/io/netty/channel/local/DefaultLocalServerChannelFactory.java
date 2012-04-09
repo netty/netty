@@ -42,6 +42,6 @@ public class DefaultLocalServerChannelFactory implements LocalServerChannelFacto
      */
     @Override
     public void releaseExternalResources() {
-        group.close();
+        group.close().awaitUninterruptibly();
     }
 }
