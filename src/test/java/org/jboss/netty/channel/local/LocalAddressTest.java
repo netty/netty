@@ -20,7 +20,6 @@ import org.junit.Test;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
@@ -67,7 +66,7 @@ public class LocalAddressTest {
         LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
 
         // Start server
-        Channel channel = sb.bind(addr);
+        sb.bind(addr);
         
         // Connect to the server
         ChannelFuture connectFuture = cb.connect(addr);
@@ -81,10 +80,7 @@ public class LocalAddressTest {
 
         // Wait until the connection is closed, or the connection attempt fails
         connectFuture.getChannel().getCloseFuture().awaitUninterruptibly();
-        
-        // close the server channel
-        channel.close().awaitUninterruptibly();
-        
+                
         sb.releaseExternalResources();
         cb.releaseExternalResources();
 
@@ -123,7 +119,7 @@ public class LocalAddressTest {
         LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
 
         // Start server
-        Channel channel = sb.bind(addr);
+        sb.bind(addr);
 
         // Connect to the server
         ChannelFuture connectFuture = cb.connect(addr);
@@ -138,9 +134,6 @@ public class LocalAddressTest {
         // Wait until the connection is closed, or the connection attempt fails
         connectFuture.getChannel().getCloseFuture().awaitUninterruptibly();
 
-        // close the server channel
-        channel.close().awaitUninterruptibly();
-        
         sb.releaseExternalResources();
         cb.releaseExternalResources();
 
