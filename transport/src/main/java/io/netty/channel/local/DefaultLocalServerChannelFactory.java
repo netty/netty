@@ -37,8 +37,8 @@ public class DefaultLocalServerChannelFactory implements LocalServerChannelFacto
     }
 
     /**
-     * Does nothing because this implementation does not require any external
-     * resources.
+     * Release all the previous created channels. This takes care of calling {@link LocalChannelRegistry#unregister(LocalAddress)}
+     * for each if them.
      */
     @Override
     public void releaseExternalResources() {
