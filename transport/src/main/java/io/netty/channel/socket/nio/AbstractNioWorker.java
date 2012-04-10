@@ -464,17 +464,22 @@ abstract class AbstractNioWorker implements Worker {
     protected boolean accept(SelectionKey key) {
         NioServerSocketChannel channel = (NioServerSocketChannel) key.attachment();
         try {
-            SocketChannel acceptedSocket = channel.socket.accept();
-            if (acceptedSocket != null) {
-                
+            boolean handled = false;
+            
+            // accept all sockets that are waiting atm
+            for (;;) {
+                SocketChannel acceptedSocket = channel.socket.accept();
+                if (acceptedSocket == null) {
+                    break;
+                }
                 // TODO: Remove the casting stuff
                 ChannelPipeline pipeline =
                         channel.getConfig().getPipelineFactory().getPipeline();
                 registerTask(NioAcceptedSocketChannel.create(channel.getFactory(), pipeline, channel,
                         channel.getPipeline().getSink(), acceptedSocket, (NioWorker) this), null);
-                return true;
+                handled = true;
             }
-            return false;
+            return handled;
         } catch (SocketTimeoutException e) {
             // Thrown every second to get ClosedChannelException
             // raised.
