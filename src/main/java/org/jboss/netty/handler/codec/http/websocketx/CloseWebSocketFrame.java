@@ -15,6 +15,8 @@
  */
 package org.jboss.netty.handler.codec.http.websocketx;
 
+import java.io.UnsupportedEncodingException;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.util.CharsetUtil;
@@ -74,7 +76,12 @@ public class CloseWebSocketFrame extends WebSocketFrame {
 
         byte[] reasonBytes = new byte[0];
         if (reasonText != null) {
-            reasonBytes = reasonText.getBytes(CharsetUtil.UTF_8);
+            try {
+                reasonBytes = reasonText.getBytes("UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                // This should never happen, anyway provide a fallback here
+                reasonBytes = reasonText.getBytes();
+            }
         }
 
         ChannelBuffer binaryData = ChannelBuffers.buffer(2 + reasonBytes.length);
