@@ -28,7 +28,6 @@ import io.netty.channel.socket.DatagramChannelFactory;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.util.internal.ExecutorUtil;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.util.concurrent.CountDownLatch;
@@ -73,7 +72,7 @@ public abstract class AbstractDatagramMulticastTest {
 
         int port = TestUtils.getFreePort();
         
-        NetworkInterface iface = NetworkInterface.getByInetAddress(InetAddress.getLoopbackAddress());
+        NetworkInterface iface = NetworkInterface.getNetworkInterfaces().nextElement();
         sb.setOption("networkInterface", iface);
         sb.setOption("reuseAddress", true);
         
