@@ -78,7 +78,8 @@ public abstract class AbstractDatagramMulticastTest {
         // check if the NetworkInterface is null, this is the case on my ubuntu dev machine but not on osx and windows.
         // if so fail back the the first interface
         if (iface == null) {
-            iface = NetworkInterface.getByIndex(0);
+            // use nextElement() as NetWorkInterface.getByIndex(0) returns null
+            iface = NetworkInterface.getNetworkInterfaces().nextElement();
         }
         sb.setOption("networkInterface", iface);
         sb.setOption("reuseAddress", true);
