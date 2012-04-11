@@ -28,6 +28,9 @@ public final class SelectorUtil {
 
     public static final int DEFAULT_IO_THREADS = Runtime.getRuntime().availableProcessors() * 2;
 
+    public static final int DEFAULT_IO_ACCEPTING_THREADS = 1;
+
+    
     // Workaround for JDK NIO bug.
     //
     // See: 
