@@ -42,14 +42,15 @@ final class NioServerSocketChannel extends AbstractServerChannel
     final ServerSocketChannel socket;
     final Lock shutdownLock = new ReentrantLock();
     final NioWorker worker;
+    final WorkerPool<NioWorker> workers;
     
     
     private final ServerSocketChannelConfig config;
 
     static NioServerSocketChannel create(ChannelFactory factory,
-            ChannelPipeline pipeline, ChannelSink sink, NioWorker worker) {
+            ChannelPipeline pipeline, ChannelSink sink, NioWorker worker, WorkerPool<NioWorker> workers) {
         NioServerSocketChannel instance =
-                new NioServerSocketChannel(factory, pipeline, sink, worker);
+                new NioServerSocketChannel(factory, pipeline, sink, worker, workers);
         fireChannelOpen(instance);
         return instance;
     }
@@ -57,10 +58,11 @@ final class NioServerSocketChannel extends AbstractServerChannel
     private NioServerSocketChannel(
             ChannelFactory factory,
             ChannelPipeline pipeline,
-            ChannelSink sink, NioWorker worker) {
+            ChannelSink sink, NioWorker worker, WorkerPool<NioWorker> workers) {
 
         super(factory, pipeline, sink);
         this.worker = worker;
+        this.workers = workers;
         try {
             socket = ServerSocketChannel.open();
         } catch (IOException e) {

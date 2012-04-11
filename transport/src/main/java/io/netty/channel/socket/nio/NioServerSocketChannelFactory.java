@@ -137,13 +137,13 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
         }
        
         this.workerPool = workerPool;
-        sink = new NioServerSocketPipelineSink(workerPool);
+        sink = new NioServerSocketPipelineSink();
     }
 
     
     @Override
     public ServerSocketChannel newChannel(ChannelPipeline pipeline) {
-        return NioServerSocketChannel.create(this, pipeline, sink, workerPool.nextWorker());
+        return NioServerSocketChannel.create(this, pipeline, sink, workerPool.nextWorker(), workerPool);
     }
 
     @Override
