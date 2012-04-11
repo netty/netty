@@ -86,7 +86,7 @@ public class NioServerSocketChannelFactory implements ServerSocketChannelFactory
 
     private final WorkerPool<NioWorker> workerPool;
     private final ChannelSink sink;
-    private WorkerPool<NioWorker> bossWorkerPool;
+    private final WorkerPool<NioWorker> bossWorkerPool;
 
     /**
      * Create a new {@link NioServerSocketChannelFactory} using
