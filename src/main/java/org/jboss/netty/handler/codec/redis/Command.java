@@ -26,86 +26,75 @@ public class Command {
     static final byte[] ARGS_PREFIX = "*".getBytes();
     static final byte[] CRLF = "\r\n".getBytes();
     static final byte[] BYTES_PREFIX = "$".getBytes();
-    static final byte[] EMPTY_BYTES = new byte[0];
     static final byte[] NEG_ONE_AND_CRLF = convertWithCRLF(-1);
 
-    private ChannelBuffer[] arguments;
-    private final Object[] objects;
+    private final ChannelBuffer command = ChannelBuffers.dynamicBuffer();
 
-    public Command(byte[]... arguments) {
-        if (arguments == null) {
-            this.arguments = null;
-            objects = null;
+    public Command(Object name) {
+        writeHeader(name, 0);
+    }
+
+    public Command(Object name, Object object1) {
+        writeHeader(name, 1);
+        writeObject(object1);
+    }
+
+    public Command(Object name, Object object1, Object object2) {
+        writeHeader(name, 2);
+        writeObject(object1);
+        writeObject(object2);
+    }
+
+    public Command(Object name, Object object1, Object object2, Object object3) {
+        writeHeader(name, 3);
+        writeObject(object1);
+        writeObject(object2);
+        writeObject(object3);
+    }
+
+    public Command(Object name, Object[] objects) {
+        int length = objects.length;
+        writeHeader(name, length);
+        for (Object object : objects) {
+            writeObject(object);
+        }
+    }
+
+    private void writeHeader(Object name, int length) {
+        command.writeBytes(ARGS_PREFIX);
+        command.writeBytes(numAndCRLF(length + 1));
+        writeObject(name);
+    }
+
+    private void writeObject(Object object) {
+        if (object == null) {
+            writeArgument(command, ChannelBuffers.EMPTY_BUFFER);
+        } else if (object instanceof byte[]) {
+            writeArgument(command, (byte[]) object);
+        } else if (object instanceof ChannelBuffer) {
+            writeArgument(command, (ChannelBuffer) object);
         } else {
-            this.arguments = new ChannelBuffer[arguments.length];
-            for (int i = 0; i < arguments.length; i ++) {
-                byte[] a = arguments[i];
-                if (a == null) {
-                    continue;
-                }
-                this.arguments[i] = ChannelBuffers.wrappedBuffer(a);
-            }
-            objects = this.arguments;
+            writeArgument(command, ChannelBuffers.copiedBuffer(object.toString(), CharsetUtil.UTF_8));
         }
-    }
-
-    public Command(ChannelBuffer[] arguments) {
-        this.arguments = arguments;
-        objects = arguments;
-    }
-
-    public Command(Object... objects) {
-        this.objects = objects;
-    }
-
-    public String name() {
-        if (arguments == null) {
-            Object o = objects[0];
-            if (o instanceof ChannelBuffer) {
-                return ((ChannelBuffer) o).toString(CharsetUtil.UTF_8);
-            }
-            if (o == null) {
-                return null;
-            }
-            return o.toString();
-        }
-
-        ChannelBuffer name = arguments[0];
-        if (name == null) {
-            return null;
-        }
-        return name.toString(CharsetUtil.UTF_8);
     }
 
     void write(ChannelBuffer out) {
-        writeDirect(out, objects);
+        command.resetReaderIndex();
+        out.writeBytes(command);
     }
 
-    private static void writeDirect(ChannelBuffer out, Object... objects) {
-        int length = objects.length;
-        ChannelBuffer[] arguments = new ChannelBuffer[length];
-        for (int i = 0; i < length; i++) {
-            Object object = objects[i];
-            if (object == null) {
-                arguments[i] = ChannelBuffers.EMPTY_BUFFER;
-            } else if (object instanceof ChannelBuffer) {
-                arguments[i] = (ChannelBuffer) object;
-            } else {
-                arguments[i] = ChannelBuffers.copiedBuffer(object.toString(), CharsetUtil.UTF_8);
-            }
-        }
-        writeDirect(out, arguments);
+    private static void writeArgument(ChannelBuffer out, ChannelBuffer argument) {
+        out.writeBytes(BYTES_PREFIX);
+        out.writeBytes(numAndCRLF(argument.readableBytes()));
+        out.writeBytes(argument, argument.readerIndex(), argument.readableBytes());
+        out.writeBytes(CRLF);
     }
 
-    private static void writeDirect(ChannelBuffer out, ChannelBuffer[] arguments) {
-        out.writeBytes(ARGS_PREFIX);
-        out.writeBytes(numAndCRLF(arguments.length));
-        for (ChannelBuffer argument : arguments) {
-            out.writeBytes(BYTES_PREFIX);
-            out.writeBytes(numAndCRLF(argument.readableBytes()));
-            out.writeBytes(argument, argument.readerIndex(), argument.readableBytes());
-            out.writeBytes(CRLF);
-        }
+    private static void writeArgument(ChannelBuffer out, byte[] argument) {
+        out.writeBytes(BYTES_PREFIX);
+        out.writeBytes(numAndCRLF(argument.length));
+        out.writeBytes(argument);
+        out.writeBytes(CRLF);
     }
 
     private static final int NUM_MAP_LENGTH = 256;

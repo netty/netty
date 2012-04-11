@@ -82,8 +82,12 @@ public class RedisCodecTest {
                 "mykey\r\n" +
                 "$7\r\n" +
                 "myvalue\r\n";
-        Command command = new Command("SET", "mykey", "myvalue");
+        Command command = new Command("SET", new Object[] { "mykey", "myvalue" } );
         ChannelBuffer cb = ChannelBuffers.dynamicBuffer();
+        command.write(cb);
+        assertEquals(setCommand, cb.toString(CharsetUtil.US_ASCII));
+        command = new Command("SET", "mykey", "myvalue");
+        cb = ChannelBuffers.dynamicBuffer();
         command.write(cb);
         assertEquals(setCommand, cb.toString(CharsetUtil.US_ASCII));
     }

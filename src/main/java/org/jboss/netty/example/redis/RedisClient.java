@@ -16,6 +16,8 @@
 package org.jboss.netty.example.redis;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -27,6 +29,7 @@ import org.jboss.netty.handler.codec.redis.RedisCommandEncoder;
 import org.jboss.netty.handler.codec.redis.RedisReplyDecoder;
 import org.jboss.netty.handler.codec.redis.Reply;
 import org.jboss.netty.handler.queue.BlockingReadHandler;
+import org.jboss.netty.util.CharsetUtil;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -72,7 +75,7 @@ public final class RedisClient {
 
     private static void pipelinedListOfRequests(BlockingReadHandler<Reply> blockingReadHandler, Channel channel, long CALLS, int PIPELINE) throws IOException, InterruptedException {
         long start = System.currentTimeMillis();
-        byte[] SET_BYTES = "SET".getBytes();
+        ChannelBuffer SET_BYTES = ChannelBuffers.copiedBuffer("SET", CharsetUtil.US_ASCII);
         for (int i = 0; i < CALLS / PIPELINE; i++) {
             List<Command> list = new ArrayList<Command>();
             for (int j = 0; j < PIPELINE; j++) {
@@ -90,7 +93,7 @@ public final class RedisClient {
 
     private static void pipelinedIndividualRequests(BlockingReadHandler<Reply> blockingReadHandler, Channel channel, long CALLS, int PIPELINE) throws IOException, InterruptedException {
         long start = System.currentTimeMillis();
-        byte[] SET_BYTES = "SET".getBytes();
+        ChannelBuffer SET_BYTES = ChannelBuffers.copiedBuffer("SET", CharsetUtil.US_ASCII);
         for (int i = 0; i < CALLS / PIPELINE; i++) {
             int base = i * PIPELINE;
             for (int j = 0; j < PIPELINE; j++) {
@@ -106,7 +109,7 @@ public final class RedisClient {
 
     private static void requestResponse(BlockingReadHandler<Reply> blockingReadHandler, Channel channel, int CALLS) throws IOException, InterruptedException {
         long start = System.currentTimeMillis();
-        byte[] SET_BYTES = "SET".getBytes();
+        ChannelBuffer SET_BYTES = ChannelBuffers.copiedBuffer("SET", CharsetUtil.US_ASCII);
         for (int i = 0; i < CALLS; i++) {
             channel.write(new Command(SET_BYTES, String.valueOf(i).getBytes(), VALUE));
             blockingReadHandler.read();
