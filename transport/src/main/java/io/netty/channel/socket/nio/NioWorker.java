@@ -127,8 +127,7 @@ public class NioWorker extends SelectorEventLoop {
             boolean registered = channel.getJdkChannel().isRegistered();
             if (!registered) {
                 synchronized (channel.interestOpsLock) {
-                    channel.getJdkChannel().register(
-                            selector, channel.getRawInterestOps(), channel);
+                    channel.getJdkChannel().register(selector, channel.getRawInterestOps(), channel);
                 }
                 
             } else {

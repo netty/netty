@@ -35,12 +35,6 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioServerSocketPipelineSink.class);
 
-    private final WorkerPool<NioWorker> workerPool;
-
-    NioServerSocketPipelineSink(WorkerPool<NioWorker> workerPool) {
-        this.workerPool = workerPool;
-    }
-
     @Override
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
@@ -124,7 +118,7 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
             future.setSuccess();
             fireChannelBound(channel, channel.getLocalAddress());
 
-            workerPool.nextWorker().registerWithWorker(channel, future);
+            channel.getWorker().registerWithWorker(channel, future);
             
         } catch (Throwable t) {
             future.setFailure(t);

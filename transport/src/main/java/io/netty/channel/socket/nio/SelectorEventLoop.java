@@ -346,8 +346,10 @@ abstract class SelectorEventLoop extends SingleThreadEventLoop {
                 // TODO: Remove the casting stuff
                 ChannelPipeline pipeline =
                         channel.getConfig().getPipelineFactory().getPipeline();
-                registerTask(NioAcceptedSocketChannel.create(channel.getFactory(), pipeline, channel,
-                        channel.getPipeline().getSink(), acceptedSocket, (NioWorker) this), null);
+                NioWorker worker = channel.workers.nextWorker();
+                
+                worker.registerWithWorker(NioAcceptedSocketChannel.create(channel.getFactory(), pipeline, channel,
+                        channel.getPipeline().getSink(), acceptedSocket, worker), null);
                 handled = true;
             }
             return handled;
