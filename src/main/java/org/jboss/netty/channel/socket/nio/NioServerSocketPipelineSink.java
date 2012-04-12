@@ -216,15 +216,11 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
             try {
                 for (;;) {
                     try {
-                        if (selector.select(1000) <= 0) {
-                            
-                            // just continue if there was nothing selected
-                            continue;
+                        if (selector.select(1000) > 0) {
+                            // There was something selected if we reach this point, so clear 
+                            // the selected keys
+                            selector.selectedKeys().clear();
                         }
-
-                        // There was something selected if we reach this point, so clear 
-                        // the selected keys
-                        selector.selectedKeys().clear();
 
                         // accept connections in a for loop until no new connection is ready
                         for (;;) {
