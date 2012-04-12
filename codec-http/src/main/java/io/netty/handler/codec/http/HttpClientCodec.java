@@ -99,13 +99,15 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
                 if (!done) {
                     queue.offer(((HttpRequest) msg).getMethod());
                 }
-                requestResponseCounter.incrementAndGet();
-            } else if (msg instanceof HttpChunk) {
                 
-                // increment only if its the last chunk 
-                if (((HttpChunk) msg).isLast()) {
+                // check if the request is chunked if so do not increment
+                if (!((HttpRequest) msg).isChunked()) {
                     requestResponseCounter.incrementAndGet();
                 }
+            } else if (msg instanceof HttpChunk && ((HttpChunk) msg).isLast()) {
+                // increment as its the last chunk
+                requestResponseCounter.incrementAndGet();
+                
             }
             return super.encode(ctx, channel, msg);
         }
@@ -126,7 +128,8 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
                 Object msg = super.decode(ctx, channel, buffer, state);
                 
                 if (msg != null) {
-                    if (msg instanceof HttpMessage) {
+                    // check if its a HttpMessage and its not chunked
+                    if (msg instanceof HttpMessage && !((HttpMessage) msg).isChunked()) {
                         requestResponseCounter.decrementAndGet();
                     } else if (msg instanceof HttpChunk && ((HttpChunk) msg).isLast()) {
                         requestResponseCounter.decrementAndGet();
