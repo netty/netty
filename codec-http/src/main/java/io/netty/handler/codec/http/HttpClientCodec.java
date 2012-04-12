@@ -95,21 +95,22 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
         @Override
         protected Object encode(ChannelHandlerContext ctx, Channel channel,
                 Object msg) throws Exception {
-            if (msg instanceof HttpRequest) {
-                if (!done) {
-                    queue.offer(((HttpRequest) msg).getMethod());
-                }
-                
-                // check if the request is chunked if so do not increment
-                if (!((HttpRequest) msg).isChunked()) {
-                    requestResponseCounter.incrementAndGet();
-                }
+            if (msg instanceof HttpRequest && !done) {
+                queue.offer(((HttpRequest) msg).getMethod());
+            }
+
+            Object obj =  super.encode(ctx, channel, msg);
+            
+            // check if the request is chunked if so do not increment
+            if (msg instanceof HttpRequest && !((HttpRequest) msg).isChunked()) {
+                requestResponseCounter.incrementAndGet();
             } else if (msg instanceof HttpChunk && ((HttpChunk) msg).isLast()) {
                 // increment as its the last chunk
                 requestResponseCounter.incrementAndGet();
-                
             }
-            return super.encode(ctx, channel, msg);
+            
+            return obj;
+        
         }
     }
 
