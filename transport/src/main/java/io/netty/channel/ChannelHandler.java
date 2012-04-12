@@ -15,15 +15,15 @@
  */
 package io.netty.channel;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.group.ChannelGroup;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.group.ChannelGroup;
 
 /**
  * Handles or intercepts a {@link ChannelEvent}, and sends a
@@ -206,6 +206,11 @@ import io.netty.channel.group.ChannelGroup;
  * @apiviz.exclude ^io\.netty\.handler\..*$
  */
 public interface ChannelHandler {
+
+    void beforeAdd(ChannelHandlerContext ctx) throws Exception;
+    void afterAdd(ChannelHandlerContext ctx) throws Exception;
+    void beforeRemove(ChannelHandlerContext ctx) throws Exception;
+    void afterRemove(ChannelHandlerContext ctx) throws Exception;
 
     /**
      * Indicates that the same instance of the annotated {@link ChannelHandler}
