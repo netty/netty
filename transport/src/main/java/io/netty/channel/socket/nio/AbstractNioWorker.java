@@ -430,7 +430,7 @@ abstract class AbstractNioWorker implements Worker {
                 int readyOps = k.readyOps();
                 if ((readyOps & SelectionKey.OP_READ) != 0 || readyOps == 0) {
                     if (!read(k)) {
-                        // Connection already closed - no need to handle write.
+                        // Connection already closed - no need to handle write / accept / connect.
                         continue;
                     }
                 }
@@ -472,7 +472,6 @@ abstract class AbstractNioWorker implements Worker {
                 if (acceptedSocket == null) {
                     break;
                 }
-                // TODO: Remove the casting stuff
                 ChannelPipeline pipeline =
                         channel.getConfig().getPipelineFactory().getPipeline();
                 NioWorker worker = channel.workers.nextWorker();
