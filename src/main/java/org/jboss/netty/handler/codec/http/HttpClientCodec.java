@@ -16,13 +16,16 @@
 package org.jboss.netty.handler.codec.http;
 
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.PrematureChannelClosureException;
 import org.jboss.netty.util.internal.QueueFactory;
 
 /**
@@ -33,6 +36,10 @@ import org.jboss.netty.util.internal.QueueFactory;
  * {@link HttpResponseDecoder} to learn what additional state management needs
  * to be done for <tt>HEAD</tt> and <tt>CONNECT</tt> and why
  * {@link HttpResponseDecoder} can not handle it by itself.
+ * 
+ * If the {@link Channel} gets closed and there are requests missing for a response
+ * a {@link PrematureChannelClosureException} is thrown.
+ * 
  * @see HttpServerCodec
  *
  * @apiviz.has org.jboss.netty.handler.codec.http.HttpResponseDecoder
@@ -49,6 +56,7 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
 
     private final HttpRequestEncoder encoder = new Encoder();
     private final HttpResponseDecoder decoder;
+    private final AtomicLong requestResponseCounter = new AtomicLong(0);
 
     /**
      * Creates a new instance with the default decoder options
@@ -89,7 +97,18 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
             if (msg instanceof HttpRequest && !done) {
                 queue.offer(((HttpRequest) msg).getMethod());
             }
-            return super.encode(ctx, channel, msg);
+            
+            Object obj =  super.encode(ctx, channel, msg);
+            
+            // check if the request is chunked if so do not increment
+            if (msg instanceof HttpRequest && !((HttpRequest) msg).isChunked()) {
+                requestResponseCounter.incrementAndGet();
+            } else if (msg instanceof HttpChunk && ((HttpChunk) msg).isLast()) {
+                // increment as its the last chunk
+                requestResponseCounter.incrementAndGet();
+            }
+            
+            return obj;
         }
     }
 
@@ -105,7 +124,18 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
             if (done) {
                 return buffer.readBytes(actualReadableBytes());
             } else {
-                return super.decode(ctx, channel, buffer, state);
+                Object msg = super.decode(ctx, channel, buffer, state);
+                
+                if (msg != null) {
+                    // check if its a HttpMessage and its not chunked
+                    if (msg instanceof HttpMessage && !((HttpMessage) msg).isChunked()) {
+                        requestResponseCounter.decrementAndGet();
+                    } else if (msg instanceof HttpChunk && ((HttpChunk) msg).isLast()) {
+                        requestResponseCounter.decrementAndGet();
+                    }
+                }
+               
+                return msg;
             }
         }
 
@@ -159,6 +189,16 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
             }
 
             return super.isContentAlwaysEmpty(msg);
+        }
+        
+        @Override
+        public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+            super.channelClosed(ctx, e);
+            
+            long missingResponses = requestResponseCounter.get();
+            if (missingResponses > 0) {
+                throw new PrematureChannelClosureException("Channel closed but still missing " + missingResponses + " response(s)");
+            }
         }
     }
 }
