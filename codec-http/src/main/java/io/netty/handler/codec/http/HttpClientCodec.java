@@ -16,13 +16,16 @@
 package io.netty.handler.codec.http;
 
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicLong;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDownstreamHandler;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.ChannelUpstreamHandler;
+import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.internal.QueueFactory;
 
 /**
@@ -33,6 +36,10 @@ import io.netty.util.internal.QueueFactory;
  * {@link HttpResponseDecoder} to learn what additional state management needs
  * to be done for <tt>HEAD</tt> and <tt>CONNECT</tt> and why
  * {@link HttpResponseDecoder} can not handle it by itself.
+ * 
+ * If the {@link Channel} gets closed and there are requests missing for a response
+ * a {@link PrematureChannelClosureException} is thrown.
+ * 
  * @see HttpServerCodec
  *
  * @apiviz.has io.netty.handler.codec.http.HttpResponseDecoder
@@ -49,7 +56,8 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
 
     private final HttpRequestEncoder encoder = new Encoder();
     private final HttpResponseDecoder decoder;
-
+    private final AtomicLong requestResponseCounter = new AtomicLong(0);
+    
     /**
      * Creates a new instance with the default decoder options
      * ({@code maxInitialLineLength (4096}}, {@code maxHeaderSize (8192)}, and
@@ -87,8 +95,17 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
         @Override
         protected Object encode(ChannelHandlerContext ctx, Channel channel,
                 Object msg) throws Exception {
-            if (msg instanceof HttpRequest && !done) {
-                queue.offer(((HttpRequest) msg).getMethod());
+            if (msg instanceof HttpRequest) {
+                if (!done) {
+                    queue.offer(((HttpRequest) msg).getMethod());
+                }
+                requestResponseCounter.incrementAndGet();
+            } else if (msg instanceof HttpChunk) {
+                
+                // increment only if its the last chunk 
+                if (((HttpChunk) msg).isLast()) {
+                    requestResponseCounter.incrementAndGet();
+                }
             }
             return super.encode(ctx, channel, msg);
         }
@@ -106,7 +123,17 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
             if (done) {
                 return buffer.readBytes(actualReadableBytes());
             } else {
-                return super.decode(ctx, channel, buffer, state);
+                Object msg = super.decode(ctx, channel, buffer, state);
+                
+                if (msg != null) {
+                    if (msg instanceof HttpMessage) {
+                        requestResponseCounter.decrementAndGet();
+                    } else if (msg instanceof HttpChunk && ((HttpChunk) msg).isLast()) {
+                        requestResponseCounter.decrementAndGet();
+                    }
+                }
+               
+                return msg;
             }
         }
 
@@ -161,5 +188,17 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
 
             return super.isContentAlwaysEmpty(msg);
         }
+
+        @Override
+        public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+            super.channelClosed(ctx, e);
+            
+            long missingResponses = requestResponseCounter.get();
+            if (missingResponses > 0) {
+                throw new PrematureChannelClosureException("Channel closed but still missing " + missingResponses + " response(s)");
+            }
+        }
+        
+        
     }
 }
