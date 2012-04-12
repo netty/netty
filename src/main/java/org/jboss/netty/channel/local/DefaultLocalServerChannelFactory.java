@@ -17,6 +17,7 @@ package org.jboss.netty.channel.local;
 
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.group.DefaultChannelGroup;
 
 /**
  * The default {@link LocalServerChannelFactory} implementation.
@@ -24,6 +25,7 @@ import org.jboss.netty.channel.ChannelSink;
  */
 public class DefaultLocalServerChannelFactory implements LocalServerChannelFactory {
 
+    private final DefaultChannelGroup group = new DefaultChannelGroup();
     private final ChannelSink sink = new LocalServerChannelSink();
 
     /**
@@ -34,14 +36,17 @@ public class DefaultLocalServerChannelFactory implements LocalServerChannelFacto
     }
 
     public LocalServerChannel newChannel(ChannelPipeline pipeline) {
-        return new DefaultLocalServerChannel(this, pipeline, sink);
+        LocalServerChannel channel = new DefaultLocalServerChannel(this, pipeline, sink);
+        group.add(channel);
+        return channel;
     }
 
+
     /**
-     * Does nothing because this implementation does not require any external
-     * resources.
+     * Release all the previous created channels. This takes care of calling {@link LocalChannelRegistry#unregister(LocalAddress)}
+     * for each if them.
      */
     public void releaseExternalResources() {
-        // Unused
+        group.close().awaitUninterruptibly();
     }
 }
