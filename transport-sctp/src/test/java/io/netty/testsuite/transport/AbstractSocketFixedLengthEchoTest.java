@@ -23,9 +23,10 @@ import io.netty.channel.*;
 import io.netty.channel.sctp.codec.SctpFrameDecoder;
 import io.netty.channel.sctp.codec.SctpFrameEncoder;
 import io.netty.handler.codec.frame.FixedLengthFrameDecoder;
-import io.netty.testsuite.util.SctpSocketAddresses;
+import io.netty.testsuite.util.SctpTestUtil;
 import io.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -66,6 +67,8 @@ public abstract class AbstractSocketFixedLengthEchoTest {
 
     @Test
     public void testFixedLengthEcho() throws Throwable {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
 
@@ -86,7 +89,7 @@ public abstract class AbstractSocketFixedLengthEchoTest {
         Channel sc = sb.bind(new InetSocketAddress(0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, port));
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpTestUtil.LOOP_BACK, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
         Channel cc = ccf.getChannel();

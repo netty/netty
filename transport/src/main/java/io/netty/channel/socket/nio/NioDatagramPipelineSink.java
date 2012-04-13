@@ -19,8 +19,6 @@ import static io.netty.channel.Channels.*;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelFuture;
@@ -35,26 +33,6 @@ import io.netty.channel.MessageEvent;
  * an array of I/O workers.
  */
 class NioDatagramPipelineSink extends AbstractNioChannelSink {
-
-    private final NioDatagramWorker[] workers;
-    private final AtomicInteger workerIndex = new AtomicInteger();
-
-    /**
-     * Creates a new {@link NioDatagramPipelineSink} with a the number of {@link NioDatagramWorker}s specified in workerCount.
-     * The {@link NioDatagramWorker}s take care of reading and writing for the {@link NioDatagramChannel}.
-     *
-     * @param workerExecutor
-     *        the {@link Executor} that will run the {@link NioDatagramWorker}s
-     *        for this sink
-     * @param workerCount
-     *        the number of {@link NioDatagramWorker}s for this sink
-     */
-    NioDatagramPipelineSink(final Executor workerExecutor, final int workerCount) {
-        workers = new NioDatagramWorker[workerCount];
-        for (int i = 0; i < workers.length; i ++) {
-            workers[i] = new NioDatagramWorker(workerExecutor);
-        }
-    }
 
     /**
      * Handle downstream event.
@@ -75,38 +53,38 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
             switch (state) {
             case OPEN:
                 if (Boolean.FALSE.equals(value)) {
-                    channel.worker.close(channel, future);
+                    channel.getWorker().close(channel, future);
                 }
                 break;
             case BOUND:
                 if (value != null) {
                     bind(channel, future, (InetSocketAddress) value);
                 } else {
-                    channel.worker.close(channel, future);
+                    channel.getWorker().close(channel, future);
                 }
                 break;
             case CONNECTED:
                 if (value != null) {
                     connect(channel, future, (InetSocketAddress) value);
                 } else {
-                    NioDatagramWorker.disconnect(channel, future);
+                    channel.getWorker().disconnect(channel, future);
                 }
                 break;
             case INTEREST_OPS:
-                channel.worker.setInterestOps(channel, future, ((Integer) value).intValue());
+                channel.getWorker().setInterestOps(channel, future, ((Integer) value).intValue());
                 break;
             }
         } else if (e instanceof MessageEvent) {
             final MessageEvent event = (MessageEvent) e;
             final boolean offered = channel.writeBufferQueue.offer(event);
             assert offered;
-            channel.worker.writeFromUserCode(channel);
+            channel.getWorker().writeFromUserCode(channel);
         }
     }
 
     private void close(NioDatagramChannel channel, ChannelFuture future) {
         try {
-            channel.getDatagramChannel().socket().close();
+            channel.getJdkChannel().closeSocket();
             if (channel.setClosed()) {
                 future.setSuccess();
                 if (channel.isBound()) {
@@ -132,13 +110,13 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
         boolean started = false;
         try {
             // First bind the DatagramSocket the specified port.
-            channel.getDatagramChannel().socket().bind(address);
+            channel.getJdkChannel().bind(address);
             bound = true;
 
             future.setSuccess();
             fireChannelBound(channel, address);
 
-            channel.worker.register(channel, null);
+            channel.getWorker().registerWithWorker(channel, null);
             started = true;
         } catch (final Throwable t) {
             future.setFailure(t);
@@ -165,7 +143,7 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
         channel.remoteAddress = null;
 
         try {
-            channel.getDatagramChannel().connect(remoteAddress);
+            channel.getJdkChannel().connect(remoteAddress);
             connected = true;
 
             // Fire events.
@@ -176,22 +154,16 @@ class NioDatagramPipelineSink extends AbstractNioChannelSink {
             fireChannelConnected(channel, channel.getRemoteAddress());
 
             if (!bound) {
-                channel.worker.register(channel, future);
+                channel.getWorker().registerWithWorker(channel, future);
             }
 
-            workerStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
             fireExceptionCaught(channel, t);
         } finally {
             if (connected && !workerStarted) {
-                channel.worker.close(channel, future);
+                channel.getWorker().close(channel, future);
             }
         }
     }
-
-    NioDatagramWorker nextWorker() {
-        return workers[Math.abs(workerIndex.getAndIncrement() % workers.length)];
-    }
-
 }

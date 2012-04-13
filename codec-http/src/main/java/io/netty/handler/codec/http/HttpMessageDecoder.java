@@ -368,14 +368,17 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<HttpMessageDec
         if (msg instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) msg;
             int code = res.getStatus().getCode();
-            if (code < 200) {
-                // Old Web Socket upgrade response had 16-byte fixed length content.
-                // See https://github.com/netty/netty/issues/222
-                if (code == 101 &&
-                    res.containsHeader(HttpHeaders.Names.SEC_WEBSOCKET_ORIGIN) &&
-                    res.containsHeader(HttpHeaders.Names.SEC_WEBSOCKET_LOCATION)) {
+            
+            // Correctly handle return codes of 1xx.
+            // 
+            // See: 
+            //     - http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
+            //     - https://github.com/netty/netty/issues/222
+            if (code >= 100 && code < 200) {
+                if (code == 101 && !res.containsHeader(HttpHeaders.Names.SEC_WEBSOCKET_ACCEPT)) {
+                    // It's Hixie 76 websocket handshake response
                     return false;
-                }
+                 }
                 return true;
             }
 

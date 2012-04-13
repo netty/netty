@@ -17,14 +17,14 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
 
-class NioSocketChannel extends AbstractNioChannel<SocketChannel>
-                                implements io.netty.channel.socket.SocketChannel {
+public abstract class NioSocketChannel extends AbstractNioChannel implements io.netty.channel.socket.SocketChannel {
 
     private static final int ST_OPEN = 0;
     private static final int ST_BOUND = 1;
@@ -38,9 +38,14 @@ class NioSocketChannel extends AbstractNioChannel<SocketChannel>
             Channel parent, ChannelFactory factory,
             ChannelPipeline pipeline, ChannelSink sink,
             SocketChannel socket, NioWorker worker) {
-        super(parent, factory, pipeline, sink, worker, socket);
+        super(parent, factory, pipeline, sink, worker, new NioSocketJdkChannel(socket));
 
         config = new DefaultNioSocketChannelConfig(socket.socket());
+    }
+
+    @Override
+    public NioWorker getWorker() {
+        return (NioWorker) super.getWorker();
     }
 
     @Override
@@ -79,15 +84,15 @@ class NioSocketChannel extends AbstractNioChannel<SocketChannel>
         state = ST_CLOSED;
         return super.setClosed();
     }
-
-
-    @Override
-    InetSocketAddress getLocalSocketAddress() throws Exception {
-        return (InetSocketAddress) channel.socket().getLocalSocketAddress();
-    }
+    
 
     @Override
-    InetSocketAddress getRemoteSocketAddress() throws Exception {
-        return (InetSocketAddress) channel.socket().getRemoteSocketAddress();
+    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
+        if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
+            return super.write(message, null);
+        } else {
+            return getUnsupportedOperationFuture();
+        }
     }
+    
 }

@@ -27,9 +27,10 @@ import io.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
-import io.netty.testsuite.util.SctpSocketAddresses;
+import io.netty.testsuite.util.SctpTestUtil;
 import io.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -87,6 +88,8 @@ public abstract class AbstractSocketSslEchoTest {
 
     @Test
     public void testSslEcho() throws Throwable {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
 
@@ -114,10 +117,10 @@ public abstract class AbstractSocketSslEchoTest {
             cb.getPipeline().addFirst("executor", new ExecutionHandler(eventExecutor));
         }
 
-        Channel sc = sb.bind(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, 0));
+        Channel sc = sb.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, port));
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpTestUtil.LOOP_BACK, port));
         ccf.awaitUninterruptibly();
         if (!ccf.isSuccess()) {
             logger.error("Connection attempt failed", ccf.getCause());

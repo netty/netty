@@ -160,6 +160,9 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         setContentLength(response, fileLength);
         setContentTypeHeader(response, file);
         setDateAndCacheHeaders(response, file);
+        if (isKeepAlive(request)) {
+            response.setHeader(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+        }
         
         Channel ch = e.getChannel();
 

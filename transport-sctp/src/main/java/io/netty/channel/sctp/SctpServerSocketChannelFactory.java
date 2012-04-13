@@ -18,7 +18,9 @@ package io.netty.channel.sctp;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 import io.netty.channel.ServerChannelFactory;
-import io.netty.util.internal.ExecutorUtil;
+import io.netty.channel.socket.nio.SelectorUtil;
+import io.netty.channel.socket.nio.WorkerPool;
+import io.netty.util.ExternalResourceReleasable;
 
 import java.util.concurrent.Executor;
 
@@ -77,9 +79,8 @@ import java.util.concurrent.Executor;
  */
 public class SctpServerSocketChannelFactory implements ServerChannelFactory {
 
-    final Executor bossExecutor;
-    private final Executor workerExecutor;
     private final ChannelSink sink;
+    private final WorkerPool<SctpWorker> workerPool;
 
     /**
      * Creates a new instance.  Calling this constructor is same with calling
@@ -87,52 +88,45 @@ public class SctpServerSocketChannelFactory implements ServerChannelFactory {
      * the number of available processors in the machine.  The number of
      * available processors is obtained by {@link Runtime#availableProcessors()}.
      *
-     * @param bossExecutor
-     *        the {@link java.util.concurrent.Executor} which will execute the boss threads
      * @param workerExecutor
      *        the {@link java.util.concurrent.Executor} which will execute the I/O worker threads
      */
-    public SctpServerSocketChannelFactory(
-            Executor bossExecutor, Executor workerExecutor) {
-        this(bossExecutor, workerExecutor, SelectorUtil.DEFAULT_IO_THREADS);
+    public SctpServerSocketChannelFactory(Executor workerExecutor) {
+        this(workerExecutor, SelectorUtil.DEFAULT_IO_THREADS);
     }
 
     /**
      * Creates a new instance.
      *
-     * @param bossExecutor
-     *        the {@link java.util.concurrent.Executor} which will execute the boss threads
      * @param workerExecutor
      *        the {@link java.util.concurrent.Executor} which will execute the I/O worker threads
      * @param workerCount
      *        the maximum number of I/O worker threads
      */
-    public SctpServerSocketChannelFactory(
-            Executor bossExecutor, Executor workerExecutor,
+    public SctpServerSocketChannelFactory(Executor workerExecutor,
             int workerCount) {
-        if (bossExecutor == null) {
-            throw new NullPointerException("bossExecutor");
-        }
-        if (workerExecutor == null) {
-            throw new NullPointerException("workerExecutor");
-        }
-        if (workerCount <= 0) {
-            throw new IllegalArgumentException(
-                    "workerCount (" + workerCount + ") " +
-                    "must be a positive integer.");
-        }
-        this.bossExecutor = bossExecutor;
-        this.workerExecutor = workerExecutor;
-        sink = new SctpServerPipelineSink(workerExecutor, workerCount);
+        this(new SctpWorkerPool(workerExecutor, workerCount, true));
     }
 
+    public SctpServerSocketChannelFactory(WorkerPool<SctpWorker> workerPool) {
+        if (workerPool == null) {
+            throw new NullPointerException("workerPool");
+        }
+        this.workerPool = workerPool;
+        sink = new SctpServerPipelineSink(workerPool);
+    }
+    
     @Override
     public SctpServerChannel newChannel(ChannelPipeline pipeline) {
-        return new SctpServerChannelImpl(this, pipeline, sink);
+        return new SctpServerChannelImpl(this, pipeline, sink, workerPool.nextWorker());
     }
+
 
     @Override
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(bossExecutor, workerExecutor);
+        if (workerPool instanceof ExternalResourceReleasable) {
+            ((ExternalResourceReleasable) workerPool).releaseExternalResources();
+        }
+        
     }
 }

@@ -44,7 +44,6 @@ public class RedisDecoder extends ReplayingDecoder<State> {
      * via the {@link #readInteger(ChannelBuffer)} method
      * 
      * @param is the {@link ChannelBuffer} to read from
-     * @return content 
      * @throws IOException is thrown if the line-ending is not CRLF
      */
     public static byte[] readBytes(ChannelBuffer is) throws IOException {
@@ -64,10 +63,6 @@ public class RedisDecoder extends ReplayingDecoder<State> {
 
     /**
      * Read an {@link Integer} from the {@link ChannelBuffer}
-     * 
-     * @param is
-     * @return integer
-     * @throws IOException
      */
     public static int readInteger(ChannelBuffer is) throws IOException {
         int size = 0;

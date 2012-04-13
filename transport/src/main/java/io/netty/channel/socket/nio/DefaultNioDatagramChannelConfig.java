@@ -15,13 +15,18 @@
  */
 package io.netty.channel.socket.nio;
 
-import java.net.DatagramSocket;
-import java.util.Map;
-
+import io.netty.channel.ChannelException;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.internal.ConversionUtil;
+import io.netty.util.internal.DetectionUtil;
+
+import java.io.IOException;
+import java.net.NetworkInterface;
+import java.net.StandardSocketOptions;
+import java.nio.channels.DatagramChannel;
+import java.util.Map;
 
 /**
  * The default {@link NioSocketChannelConfig} implementation.
@@ -37,8 +42,11 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
     private volatile int writeBufferLowWaterMark = 32 * 1024;
     private volatile int writeSpinCount = 16;
 
-    DefaultNioDatagramChannelConfig(DatagramSocket socket) {
-        super(socket);
+    private final DatagramChannel channel;
+
+    DefaultNioDatagramChannelConfig(DatagramChannel channel) {
+        super(channel.socket());
+        this.channel = channel;
     }
 
     @Override
@@ -138,4 +146,31 @@ class DefaultNioDatagramChannelConfig extends DefaultDatagramChannelConfig
         }
         this.writeSpinCount = writeSpinCount;
     }
+    
+    @Override
+    public void setNetworkInterface(NetworkInterface networkInterface) {
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        } else {
+            try {
+                channel.setOption(StandardSocketOptions.IP_MULTICAST_IF, networkInterface);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+    }
+
+    @Override
+    public NetworkInterface getNetworkInterface() {
+        if (DetectionUtil.javaVersion() < 7) {
+            throw new UnsupportedOperationException();
+        } else {
+            try {
+                return (NetworkInterface) channel.getOption(StandardSocketOptions.IP_MULTICAST_IF);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+    }
+
 }

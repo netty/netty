@@ -28,13 +28,13 @@ import io.netty.handler.codec.http.HttpVersion;
 /**
  * Provides the constants for the standard SPDY HTTP header names and commonly
  * used utility methods that access an {@link SpdyHeaderBlock}.
- * @apiviz.sterotype static
+ * @apiviz.stereotype static
  */
 public class SpdyHeaders {
 
     /**
      * SPDY HTTP header names
-     * @apiviz.sterotype static
+     * @apiviz.stereotype static
      */
     public static final class HttpNames {
         /**

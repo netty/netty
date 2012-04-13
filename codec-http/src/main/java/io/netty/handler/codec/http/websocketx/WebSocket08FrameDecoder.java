@@ -284,8 +284,9 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
             } else if (frameOpcode == OPCODE_PONG) {
                 return new PongWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
             } else if (frameOpcode == OPCODE_CLOSE) {
+                checkCloseFrameBody(channel, framePayload);
                 receivedClosingHandshake = true;
-                return new CloseWebSocketFrame(frameFinalFlag, frameRsv);
+                return new CloseWebSocketFrame(frameFinalFlag, frameRsv, framePayload);
             }
 
             // Processing for possible fragmented messages for text and binary
@@ -390,5 +391,39 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
         } catch (UTF8Exception ex) {
             protocolViolation(channel, "invalid UTF-8 bytes");
         }
+    }
+
+    protected void checkCloseFrameBody(Channel channel, ChannelBuffer buffer) throws CorruptedFrameException {
+        if (buffer == null || buffer.capacity() == 0) {
+            return;
+        }
+        if (buffer.capacity() == 1) {
+            protocolViolation(channel, "Invalid close frame body");
+        }
+
+        // Save reader index
+        int idx = buffer.readerIndex();
+        buffer.readerIndex(0);
+
+        // Must have 2 byte integer within the valid range
+        int statusCode = buffer.readShort();
+        if ((statusCode >= 0 && statusCode <= 999) || (statusCode >= 1004 && statusCode <= 1006)
+                || (statusCode >= 1012 && statusCode <= 2999)) {
+            protocolViolation(channel, "Invalid close frame status code: " + statusCode);
+        }
+
+        // May have UTF-8 message
+        if (buffer.readableBytes() > 0) {
+            byte[] b = new byte[buffer.readableBytes()];
+            buffer.readBytes(b);
+            try {
+                new UTF8Output(b);
+            } catch (UTF8Exception ex) {
+                protocolViolation(channel, "Invalid close frame reason text. Invalid UTF-8 bytes");
+            }
+        }
+        
+        // Restore reader index
+        buffer.readerIndex(idx);
     }
 }

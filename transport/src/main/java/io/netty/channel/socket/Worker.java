@@ -16,9 +16,6 @@
 
 package io.netty.channel.socket;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-
 /**
  * A {@link Worker} is responsible to dispatch IO operations
  *
@@ -30,5 +27,5 @@ public interface Worker extends Runnable {
      * 
      * @param task the {@link Runnable} to execute 
      */
-    ChannelFuture executeInIoThread(Channel channel, Runnable task);
+    void executeInIoThread(Runnable task);
 }

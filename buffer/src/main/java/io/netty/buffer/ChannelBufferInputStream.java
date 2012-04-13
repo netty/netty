@@ -26,7 +26,10 @@ import java.io.InputStream;
  * <p>
  * A read operation against this stream will occur at the {@code readerIndex}
  * of its underlying buffer and the {@code readerIndex} will increase during
- * the read operation.
+ * the read operation.  Please note that it only reads up to the number of
+ * readable bytes determined at the moment of construction.  Therefore,
+ * updating {@link ChannelBuffer#writerIndex()} will not affect the return
+ * value of {@link #available()}.
  * <p>
  * This stream implements {@link DataInput} for your convenience.
  * The endianness of the stream is not always big endian but depends on

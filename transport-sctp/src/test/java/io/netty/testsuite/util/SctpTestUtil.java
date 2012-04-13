@@ -13,11 +13,25 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.testsuite.util;
 
-public class SctpSocketAddresses {
+import java.util.Locale;
+
+public class SctpTestUtil {
     //io.netty.util.SocketAddresses.LOCALHOST interface has MTU SIZE issues with SCTP, we have  to use local loop back interface for testing
     public final static String LOOP_BACK = "127.0.0.1";
     public final static String LOOP_BACK2 = "127.0.0.2";
+    
+    /**
+     * Return <code>true</code> if SCTP is supported by the running os.
+     * 
+     */
+    public static boolean isSctpSupported() {
+        String os = System.getProperty("os.name").toLowerCase(Locale.UK);
+        if (os.equals("unix") || os.equals("linux") || os.equals("sun") || os.equals("solaris")) {
+            return true;
+        }
+        return false;
+    }
+
 }

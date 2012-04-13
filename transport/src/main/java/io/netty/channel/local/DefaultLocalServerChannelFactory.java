@@ -17,6 +17,7 @@ package io.netty.channel.local;
 
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
+import io.netty.channel.group.DefaultChannelGroup;
 
 /**
  * The default {@link LocalServerChannelFactory} implementation.
@@ -24,19 +25,23 @@ import io.netty.channel.ChannelSink;
  */
 public class DefaultLocalServerChannelFactory implements LocalServerChannelFactory {
 
+    private final DefaultChannelGroup group = new DefaultChannelGroup();
+    
     private final ChannelSink sink = new LocalServerChannelSink();
 
     @Override
     public LocalServerChannel newChannel(ChannelPipeline pipeline) {
-        return DefaultLocalServerChannel.create(this, pipeline, sink);
+        LocalServerChannel channel = DefaultLocalServerChannel.create(this, pipeline, sink);
+        group.add(channel);
+        return channel;
     }
 
     /**
-     * Does nothing because this implementation does not require any external
-     * resources.
+     * Release all the previous created channels. This takes care of calling {@link LocalChannelRegistry#unregister(LocalAddress)}
+     * for each if them.
      */
     @Override
     public void releaseExternalResources() {
-        // Unused
+        group.close().awaitUninterruptibly();
     }
 }

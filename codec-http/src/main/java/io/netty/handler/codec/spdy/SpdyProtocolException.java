@@ -22,6 +22,8 @@ package io.netty.handler.codec.spdy;
  */
 public class SpdyProtocolException extends Exception {
 
+    private static final long serialVersionUID = -1097979786367505658L;
+
     /**
      * Creates a new instance.
      */

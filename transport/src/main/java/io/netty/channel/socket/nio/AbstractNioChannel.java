@@ -20,18 +20,14 @@ import io.netty.buffer.ChannelBuffer;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
 import io.netty.channel.MessageEvent;
-import io.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
+import io.netty.channel.socket.nio.SendBufferPool.SendBuffer;
 import io.netty.util.internal.QueueFactory;
 import io.netty.util.internal.ThreadLocalBoolean;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.nio.channels.SelectableChannel;
-import java.nio.channels.WritableByteChannel;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Queue;
@@ -40,22 +36,22 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChannel> extends AbstractChannel {
+public abstract class AbstractNioChannel extends AbstractChannel implements NioChannel {
 
     /**
      * The {@link AbstractNioWorker}.
      */
-    final AbstractNioWorker worker;
+    private final AbstractNioWorker worker;
 
     /**
      * Monitor object to synchronize access to InterestedOps.
      */
-    final Object interestOpsLock = new Object();
+    protected final Object interestOpsLock = new Object();
 
     /**
      * Monitor object for synchronizing access to the {@link WriteRequestQueue}.
      */
-    final Object writeLock = new Object();
+    protected final Object writeLock = new Object();
 
     /**
      * WriteTask that performs write operations.
@@ -70,7 +66,7 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
     /**
      * Queue of write {@link MessageEvent}s.
      */
-    final Queue<MessageEvent> writeBufferQueue = new WriteRequestQueue();
+    protected final Queue<MessageEvent> writeBufferQueue = createRequestQueue();
 
     /**
      * Keeps track of the number of bytes that the {@link WriteRequestQueue} currently
@@ -86,22 +82,22 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
     /**
      * The current write {@link MessageEvent}
      */
-    MessageEvent currentWriteEvent;
-    SendBuffer currentWriteBuffer;
+    protected MessageEvent currentWriteEvent;
+    protected SendBuffer currentWriteBuffer;
 
     /**
      * Boolean that indicates that write operation is in progress.
      */
-    boolean inWriteNowLoop;
-    boolean writeSuspended;
+    protected boolean inWriteNowLoop;
+    protected boolean writeSuspended;
     
 
     private volatile InetSocketAddress localAddress;
     volatile InetSocketAddress remoteAddress;
     
-    final C channel;
+    private final JdkChannel channel;
     
-    protected AbstractNioChannel(Integer id, Channel parent, ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, AbstractNioWorker worker, C ch) {
+    protected AbstractNioChannel(Integer id, Channel parent, ChannelFactory factory, ChannelPipeline pipeline, ChannelSink sink, AbstractNioWorker worker, JdkChannel ch) {
         super(id, parent, factory, pipeline, sink);
         this.worker = worker;
         this.channel = ch;
@@ -109,19 +105,33 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
     
     protected AbstractNioChannel(
             Channel parent, ChannelFactory factory,
-            ChannelPipeline pipeline, ChannelSink sink, AbstractNioWorker worker, C ch)  {
+            ChannelPipeline pipeline, ChannelSink sink, AbstractNioWorker worker, JdkChannel ch)  {
         super(parent, factory, pipeline, sink);
         this.worker = worker;
         this.channel = ch;
     }
 
+    protected JdkChannel getJdkChannel() {
+        return channel;
+    }
+    
+    /**
+     * Return the {@link AbstractNioWorker} that handle the IO of the {@link AbstractNioChannel}
+     * 
+     * @return worker
+     */
+    public AbstractNioWorker getWorker() {
+        return worker;
+    }
+    
+    
     @Override
     public InetSocketAddress getLocalAddress() {
         InetSocketAddress localAddress = this.localAddress;
         if (localAddress == null) {
             try {
                 this.localAddress = localAddress =
-                    (InetSocketAddress) getLocalSocketAddress();
+                    (InetSocketAddress) channel.getLocalSocketAddress();
             } catch (Throwable t) {
                 // Sometimes fails on a closed socket in Windows.
                 return null;
@@ -136,7 +146,7 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
         if (remoteAddress == null) {
             try {
                 this.remoteAddress = remoteAddress =
-                    (InetSocketAddress) getRemoteSocketAddress();
+                    (InetSocketAddress) channel.getRemoteSocketAddress();
             } catch (Throwable t) {
                 // Sometimes fails on a closed socket in Windows.
                 return null;
@@ -156,15 +166,6 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
         super.setInterestOpsNow(interestOps);
     }
 
-    @Override
-    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
-        if (remoteAddress == null || remoteAddress.equals(getRemoteAddress())) {
-            return super.write(message, null);
-        } else {
-            return getUnsupportedOperationFuture();
-        }
-    }
-    
     @Override
     public int getInterestOps() {
         if (!isOpen()) {
@@ -201,11 +202,11 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
         return super.setClosed();
     }
     
-    abstract InetSocketAddress getLocalSocketAddress() throws Exception;
+    protected WriteRequestQueue createRequestQueue() {
+        return new WriteRequestQueue();
+    }
     
-    abstract InetSocketAddress getRemoteSocketAddress() throws Exception;
-    
-    private final class WriteRequestQueue implements BlockingQueue<MessageEvent> {
+    public class WriteRequestQueue implements BlockingQueue<MessageEvent> {
         private final ThreadLocalBoolean notifying = new ThreadLocalBoolean();
 
         private final BlockingQueue<MessageEvent> queue;
@@ -373,7 +374,7 @@ abstract class AbstractNioChannel<C extends SelectableChannel & WritableByteChan
             return e;
         }
 
-        private int getMessageSize(MessageEvent e) {
+        protected int getMessageSize(MessageEvent e) {
             Object m = e.getMessage();
             if (m instanceof ChannelBuffer) {
                 return ((ChannelBuffer) m).readableBytes();

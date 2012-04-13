@@ -24,21 +24,26 @@ import static io.netty.channel.Channels.succeededFuture;
 import io.netty.buffer.ChannelBufferFactory;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channels;
+import io.netty.channel.MessageEvent;
 import io.netty.channel.ReceiveBufferSizePredictor;
+import io.netty.channel.socket.nio.SendBufferPool.SendBuffer;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.util.Queue;
 import java.util.concurrent.Executor;
 
 /**
  * A class responsible for registering channels with {@link Selector}.
  * It also implements the {@link Selector} loop.
  */
-class NioDatagramWorker extends AbstractNioWorker {
+public class NioDatagramWorker extends AbstractNioWorker {
 
     /**
      * Sole constructor.
@@ -50,6 +55,10 @@ class NioDatagramWorker extends AbstractNioWorker {
         super(executor);
     }
 
+    NioDatagramWorker(final Executor executor, boolean allowShutdownOnIdle) {
+        super(executor, allowShutdownOnIdle);
+    }
+    
     @Override
     protected boolean read(final SelectionKey key) {
         final NioDatagramChannel channel = (NioDatagramChannel) key.attachment();
@@ -101,36 +110,12 @@ class NioDatagramWorker extends AbstractNioWorker {
 
         return true;
     }
-    
 
-    @Override
-    protected boolean scheduleWriteIfNecessary(final AbstractNioChannel<?> channel) {
-        final Thread workerThread = thread;
-        if (workerThread == null || Thread.currentThread() != workerThread) {
-            if (channel.writeTaskInTaskQueue.compareAndSet(false, true)) {
-                // "add" the channels writeTask to the writeTaskQueue.
-                boolean offered = writeTaskQueue.offer(channel.writeTask);
-                assert offered;
-            }
-
-            final Selector selector = this.selector;
-            if (selector != null) {
-                if (wakenUp.compareAndSet(false, true)) {
-                    selector.wakeup();
-                }
-            }
-            return true;
-        }
-
-        return false;
-    }
-
-
-    static void disconnect(NioDatagramChannel channel, ChannelFuture future) {
+    void disconnect(NioDatagramChannel channel, ChannelFuture future) {
         boolean connected = channel.isConnected();
-        boolean iothread = isIoThread(channel);
+        boolean iothread = isIoThread();
         try {
-            channel.getDatagramChannel().disconnect();
+            channel.getJdkChannel().disconnectSocket();
             future.setSuccess();
             if (connected) {
                 if (iothread) {
@@ -151,57 +136,168 @@ class NioDatagramWorker extends AbstractNioWorker {
 
 
     @Override
-    protected Runnable createRegisterTask(AbstractNioChannel<?> channel, ChannelFuture future) {
-        return new ChannelRegistionTask((NioDatagramChannel) channel, future);
+    protected void registerTask(AbstractNioChannel channel, ChannelFuture future) {
+        final SocketAddress localAddress = channel.getLocalAddress();
+        if (localAddress == null) {
+            if (future != null) {
+                future.setFailure(new ClosedChannelException());
+            }
+            close(channel, succeededFuture(channel));
+            return;
+        }
+
+        try {
+            synchronized (channel.interestOpsLock) {
+                channel.getJdkChannel().register(
+                        selector, channel.getRawInterestOps(), channel);
+            }
+            if (future != null) {
+                future.setSuccess();
+            }
+        } catch (final ClosedChannelException e) {
+            if (future != null) {
+                future.setFailure(e);
+            }
+            close(channel, succeededFuture(channel));
+            throw new ChannelException(
+                    "Failed to register a socket to the selector.", e);
+        }
+    }
+
+    @Override
+    public void writeFromUserCode(final AbstractNioChannel channel) {
+        /*
+         * Note that we are not checking if the channel is connected. Connected
+         * has a different meaning in UDP and means that the channels socket is
+         * configured to only send and receive from a given remote peer.
+         */
+        if (!channel.isBound()) {
+            cleanUpWriteBuffer(channel);
+            return;
+        }
+
+        if (scheduleWriteIfNecessary(channel)) {
+            return;
+        }
+
+        // From here, we are sure Thread.currentThread() == workerThread.
+
+        if (channel.writeSuspended) {
+            return;
+        }
+
+        if (channel.inWriteNowLoop) {
+            return;
+        }
+
+        write0(channel);
     }
     
-    /**
-     * RegisterTask is a task responsible for registering a channel with a
-     * selector.
-     */
-    private final class ChannelRegistionTask implements Runnable {
-        private final NioDatagramChannel channel;
+    @Override
+    protected void write0(final AbstractNioChannel channel) {
 
-        private final ChannelFuture future;
+        boolean addOpWrite = false;
+        boolean removeOpWrite = false;
 
-        ChannelRegistionTask(final NioDatagramChannel channel,
-                final ChannelFuture future) {
-            this.channel = channel;
-            this.future = future;
+        long writtenBytes = 0;
+
+        final SendBufferPool sendBufferPool = this.sendBufferPool;
+        final DatagramChannel ch = ((NioDatagramChannel) channel).getJdkChannel().getChannel();
+        final Queue<MessageEvent> writeBuffer = channel.writeBufferQueue;
+        final int writeSpinCount = channel.getConfig().getWriteSpinCount();
+        synchronized (channel.writeLock) {
+            // inform the channel that write is in-progress
+            channel.inWriteNowLoop = true;
+
+            // loop forever...
+            for (;;) { 
+                MessageEvent evt = channel.currentWriteEvent;
+                SendBuffer buf;
+                if (evt == null) {
+                    if ((channel.currentWriteEvent = evt = writeBuffer.poll()) == null) {
+                        removeOpWrite = true;
+                        channel.writeSuspended = false;
+                        break;
+                    }
+
+                    channel.currentWriteBuffer = buf = sendBufferPool.acquire(evt.getMessage());
+                } else {
+                    buf = channel.currentWriteBuffer;
+                }
+
+                try {
+                    long localWrittenBytes = 0;
+                    SocketAddress raddr = evt.getRemoteAddress();
+                    if (raddr == null) {
+                        for (int i = writeSpinCount; i > 0; i --) {
+                            localWrittenBytes = buf.transferTo(ch);
+                            if (localWrittenBytes != 0) {
+                                writtenBytes += localWrittenBytes;
+                                break;
+                            }
+                            if (buf.finished()) {
+                                break;
+                            }
+                        }
+                    } else {
+                        for (int i = writeSpinCount; i > 0; i --) {
+                            localWrittenBytes = buf.transferTo(ch, raddr);
+                            if (localWrittenBytes != 0) {
+                                writtenBytes += localWrittenBytes;
+                                break;
+                            }
+                            if (buf.finished()) {
+                                break;
+                            }
+                        }
+                    }
+
+                    if (localWrittenBytes > 0 || buf.finished()) {
+                        // Successful write - proceed to the next message.
+                        buf.release();
+                        ChannelFuture future = evt.getFuture();
+                        channel.currentWriteEvent = null;
+                        channel.currentWriteBuffer = null;
+                        evt = null;
+                        buf = null;
+                        future.setSuccess();
+                    } else {
+                        // Not written at all - perhaps the kernel buffer is full.
+                        addOpWrite = true;
+                        channel.writeSuspended = true;
+                        break;
+                    }
+                } catch (final AsynchronousCloseException e) {
+                    // Doesn't need a user attention - ignore.
+                } catch (final Throwable t) {
+                    buf.release();
+                    ChannelFuture future = evt.getFuture();
+                    channel.currentWriteEvent = null;
+                    channel.currentWriteBuffer = null;
+                    buf = null;
+                    evt = null;
+                    future.setFailure(t);
+                    fireExceptionCaught(channel, t);
+                }
+            }
+            channel.inWriteNowLoop = false;
+
+            // Initially, the following block was executed after releasing
+            // the writeLock, but there was a race condition, and it has to be
+            // executed before releasing the writeLock:
+            //
+            // https://issues.jboss.org/browse/NETTY-410
+            //
+            if (addOpWrite) {
+                setOpWrite(channel);
+            } else if (removeOpWrite) {
+                clearOpWrite(channel);
+            }
         }
 
-        /**
-         * This runnable's task. Does the actual registering by calling the
-         * underlying DatagramChannels peer DatagramSocket register method.
-         */
-        @Override
-        public void run() {
-            final SocketAddress localAddress = channel.getLocalAddress();
-            if (localAddress == null) {
-                if (future != null) {
-                    future.setFailure(new ClosedChannelException());
-                }
-                close(channel, succeededFuture(channel));
-                return;
-            }
-
-            try {
-                synchronized (channel.interestOpsLock) {
-                    channel.getDatagramChannel().register(
-                            selector, channel.getRawInterestOps(), channel);
-                }
-                if (future != null) {
-                    future.setSuccess();
-                }
-            } catch (final ClosedChannelException e) {
-                if (future != null) {
-                    future.setFailure(e);
-                }
-                close(channel, succeededFuture(channel));
-                throw new ChannelException(
-                        "Failed to register a socket to the selector.", e);
-            }
-        }
+        Channels.fireWriteComplete(channel, writtenBytes);
     }
+
+
 
 }

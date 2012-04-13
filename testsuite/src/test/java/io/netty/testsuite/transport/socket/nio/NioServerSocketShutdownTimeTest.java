@@ -36,9 +36,7 @@ public class NioServerSocketShutdownTimeTest {
     @Test(timeout = 10000)
     public void testSuccessfulBindAttempt() throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap(
-                new NioServerSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
-                        Executors.newCachedThreadPool()));
+                new NioServerSocketChannelFactory(Executors.newCachedThreadPool()));
 
         bootstrap.setOption("localAddress", new InetSocketAddress(0));
         bootstrap.setOption("child.receiveBufferSize", 9753);

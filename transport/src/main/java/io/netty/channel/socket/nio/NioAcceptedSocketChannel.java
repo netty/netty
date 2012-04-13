@@ -26,13 +26,12 @@ import io.netty.channel.ChannelSink;
 
 final class NioAcceptedSocketChannel extends NioSocketChannel {
 
-    final Thread bossThread;
 
     static NioAcceptedSocketChannel create(ChannelFactory factory,
             ChannelPipeline pipeline, Channel parent, ChannelSink sink,
-            SocketChannel socket, NioWorker worker, Thread bossThread) {
+            SocketChannel socket, NioWorker worker) {
         NioAcceptedSocketChannel instance = new NioAcceptedSocketChannel(
-                factory, pipeline, parent, sink, socket, worker, bossThread);
+                factory, pipeline, parent, sink, socket, worker);
         instance.setConnected();
         fireChannelOpen(instance);
         return instance;
@@ -41,10 +40,8 @@ final class NioAcceptedSocketChannel extends NioSocketChannel {
     private NioAcceptedSocketChannel(
             ChannelFactory factory, ChannelPipeline pipeline,
             Channel parent, ChannelSink sink,
-            SocketChannel socket, NioWorker worker, Thread bossThread) {
+            SocketChannel socket, NioWorker worker) {
 
         super(parent, factory, pipeline, sink, socket, worker);
-
-        this.bossThread = bossThread;
     }
 }

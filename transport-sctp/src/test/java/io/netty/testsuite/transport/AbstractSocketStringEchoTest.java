@@ -24,10 +24,11 @@ import io.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.frame.Delimiters;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
-import io.netty.testsuite.util.SctpSocketAddresses;
+import io.netty.testsuite.util.SctpTestUtil;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -76,6 +77,8 @@ public abstract class AbstractSocketStringEchoTest {
 
     @Test
     public void testStringEcho() throws Throwable {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
 
@@ -96,10 +99,10 @@ public abstract class AbstractSocketStringEchoTest {
         cb.getPipeline().addLast("encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
         cb.getPipeline().addLast("handler", ch);
 
-        Channel sc = sb.bind(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, 0));
+        Channel sc = sb.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, port));
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpTestUtil.LOOP_BACK, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
         Channel cc = ccf.getChannel();

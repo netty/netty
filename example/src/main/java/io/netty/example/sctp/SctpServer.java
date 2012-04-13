@@ -41,7 +41,6 @@ public class SctpServer {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(
                 new SctpServerSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
         final ExecutionHandler executionHandler = new ExecutionHandler(

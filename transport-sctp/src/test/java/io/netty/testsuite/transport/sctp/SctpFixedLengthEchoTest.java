@@ -25,11 +25,12 @@ import java.util.concurrent.Executor;
 public class SctpFixedLengthEchoTest extends AbstractSocketFixedLengthEchoTest {
     @Override
     protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new SctpServerSocketChannelFactory(executor, executor);
+        return new SctpServerSocketChannelFactory(executor);
     }
 
     @Override
     protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
-        return new SctpClientSocketChannelFactory(executor, executor);
+        return new SctpClientSocketChannelFactory(executor);
     }
+    
 }

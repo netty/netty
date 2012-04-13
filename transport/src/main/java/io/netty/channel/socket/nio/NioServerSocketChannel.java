@@ -19,7 +19,6 @@ import static io.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -35,20 +34,23 @@ import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
 final class NioServerSocketChannel extends AbstractServerChannel
-                             implements io.netty.channel.socket.ServerSocketChannel {
+                             implements io.netty.channel.socket.ServerSocketChannel, NioChannel {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
     final ServerSocketChannel socket;
     final Lock shutdownLock = new ReentrantLock();
-    volatile Selector selector;
+    final NioWorker worker;
+    final WorkerPool<NioWorker> workers;
+    
+    
     private final ServerSocketChannelConfig config;
 
     static NioServerSocketChannel create(ChannelFactory factory,
-            ChannelPipeline pipeline, ChannelSink sink) {
+            ChannelPipeline pipeline, ChannelSink sink, NioWorker worker, WorkerPool<NioWorker> workers) {
         NioServerSocketChannel instance =
-                new NioServerSocketChannel(factory, pipeline, sink);
+                new NioServerSocketChannel(factory, pipeline, sink, worker, workers);
         fireChannelOpen(instance);
         return instance;
     }
@@ -56,10 +58,11 @@ final class NioServerSocketChannel extends AbstractServerChannel
     private NioServerSocketChannel(
             ChannelFactory factory,
             ChannelPipeline pipeline,
-            ChannelSink sink) {
+            ChannelSink sink, NioWorker worker, WorkerPool<NioWorker> workers) {
 
         super(factory, pipeline, sink);
-
+        this.worker = worker;
+        this.workers = workers;
         try {
             socket = ServerSocketChannel.open();
         } catch (IOException e) {
@@ -109,5 +112,10 @@ final class NioServerSocketChannel extends AbstractServerChannel
     @Override
     protected boolean setClosed() {
         return super.setClosed();
+    }
+
+    @Override
+    public NioWorker getWorker() {
+        return worker;
     }
 }

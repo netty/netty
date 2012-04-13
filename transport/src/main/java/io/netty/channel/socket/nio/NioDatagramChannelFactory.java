@@ -21,11 +21,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelSink;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelFactory;
+import io.netty.channel.socket.Worker;
+import io.netty.channel.socket.nio.NioDatagramChannel.ProtocolFamily;
 import io.netty.channel.socket.oio.OioDatagramChannelFactory;
-import io.netty.util.internal.ExecutorUtil;
+import io.netty.util.ExternalResourceReleasable;
 
 /**
  * A {@link DatagramChannelFactory} that creates a NIO-based connectionless
@@ -75,9 +78,20 @@ import io.netty.util.internal.ExecutorUtil;
  */
 public class NioDatagramChannelFactory implements DatagramChannelFactory {
 
-    private final Executor workerExecutor;
-    private final NioDatagramPipelineSink sink;
+    private final ChannelSink sink;
+    private final WorkerPool<NioDatagramWorker> workerPool;
+    private final NioDatagramChannel.ProtocolFamily family;
 
+    /**
+     * Create a new {@link NioDatagramChannelFactory} with a {@link Executors#newCachedThreadPool()}.
+     *
+     * See {@link #NioDatagramChannelFactory(Executor)}
+     */
+    public NioDatagramChannelFactory() {
+        this(Executors.newCachedThreadPool());
+    }
+    
+    
     /**
      * Creates a new instance.  Calling this constructor is same with calling
      * {@link #NioDatagramChannelFactory(Executor, int)} with 2 * the number of
@@ -101,28 +115,80 @@ public class NioDatagramChannelFactory implements DatagramChannelFactory {
      */
     public NioDatagramChannelFactory(final Executor workerExecutor,
             final int workerCount) {
-        if (workerCount <= 0) {
-            throw new IllegalArgumentException(String
-                    .format("workerCount (%s) must be a positive integer.",
-                            workerCount));
-        }
-
-        if (workerExecutor == null) {
-            throw new NullPointerException(
-                    "workerExecutor argument must not be null");
-        }
-        this.workerExecutor = workerExecutor;
-
-        sink = new NioDatagramPipelineSink(workerExecutor, workerCount);
+        this(new NioDatagramWorkerPool(workerExecutor, workerCount, true));
     }
 
+    /**
+     * Creates a new instance.
+     * 
+     * @param workerPool
+     *        the {@link WorkerPool} which will be used to obtain the {@link Worker} that execute the I/O worker threads
+     */
+    public NioDatagramChannelFactory(WorkerPool<NioDatagramWorker> workerPool) {
+        this(workerPool, null);
+    }
+
+    
+    
+    /**
+     * Creates a new instance.  Calling this constructor is same with calling
+     * {@link #NioDatagramChannelFactory(Executor, int)} with 2 * the number of
+     * available processors in the machine.  The number of available processors
+     * is obtained by {@link Runtime#availableProcessors()}.
+     *
+     * @param workerExecutor
+     *        the {@link Executor} which will execute the I/O worker threads
+     * @param family 
+     *        the {@link ProtocolFamily} to use. This should be used for UDP multicast. 
+     *        <strong>Be aware that this option is only considered when running on java7+</strong>
+     */
+    public NioDatagramChannelFactory(final Executor workerExecutor, ProtocolFamily family) {
+        this(workerExecutor, SelectorUtil.DEFAULT_IO_THREADS, family);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param workerExecutor
+     *        the {@link Executor} which will execute the I/O worker threads
+     * @param workerCount
+     *        the maximum number of I/O worker threads
+     * @param family 
+     *        the {@link ProtocolFamily} to use. This should be used for UDP multicast.
+     *        <strong>Be aware that this option is only considered when running on java7+</strong>
+     */
+    public NioDatagramChannelFactory(final Executor workerExecutor,
+            final int workerCount, ProtocolFamily family) {
+        this(new NioDatagramWorkerPool(workerExecutor, workerCount, true), family);
+    }
+
+    /**
+     * Creates a new instance.
+     * 
+     * @param workerPool
+     *        the {@link WorkerPool} which will be used to obtain the {@link Worker} that execute the I/O worker threads
+     * @param family 
+     *        the {@link ProtocolFamily} to use. This should be used for UDP multicast.
+     *        <strong>Be aware that this option is only considered when running on java7+</strong>
+     */
+    public NioDatagramChannelFactory(WorkerPool<NioDatagramWorker> workerPool, ProtocolFamily family) {
+        this.workerPool = workerPool;
+        this.family = family;
+        sink = new NioDatagramPipelineSink();
+    }
+
+    
+    
     @Override
     public DatagramChannel newChannel(final ChannelPipeline pipeline) {
-        return NioDatagramChannel.create(this, pipeline, sink, sink.nextWorker());
+        return NioDatagramChannel.create(this, pipeline, sink, workerPool.nextWorker(), family);
     }
 
     @Override
     public void releaseExternalResources() {
-        ExecutorUtil.terminate(workerExecutor);
+        if (workerPool instanceof ExternalResourceReleasable) {
+            ((ExternalResourceReleasable) workerPool).releaseExternalResources();
+        }
+        
     }
 }

@@ -16,6 +16,7 @@
 package io.netty.channel.socket.oio;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 import io.netty.channel.Channel;
@@ -74,6 +75,16 @@ public class OioDatagramChannelFactory implements DatagramChannelFactory {
     private final Executor workerExecutor;
     final OioDatagramPipelineSink sink;
 
+
+    /**
+     * Creates a new instance with a {@link Executors#newCachedThreadPool()} as worker executor.
+     *
+     * See {@link #OioDatagramChannelFactory(Executor)}
+     */
+    public OioDatagramChannelFactory() {
+        this(Executors.newCachedThreadPool());
+    }
+    
     /**
      * Creates a new instance.
      *

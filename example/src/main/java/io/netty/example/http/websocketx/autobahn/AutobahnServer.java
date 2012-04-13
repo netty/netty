@@ -35,8 +35,7 @@ public class AutobahnServer {
 
     public void run() {
         // Configure the server.
-        ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
-                Executors.newCachedThreadPool(), Executors.newCachedThreadPool()));
+        ServerBootstrap bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(Executors.newCachedThreadPool()));
 
         // bootstrap.setOption("child.tcpNoDelay", true);
 

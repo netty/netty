@@ -22,12 +22,15 @@ import java.nio.channels.Selector;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
-final class SelectorUtil {
+public final class SelectorUtil {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(SelectorUtil.class);
 
-    static final int DEFAULT_IO_THREADS = Runtime.getRuntime().availableProcessors() * 2;
+    public static final int DEFAULT_IO_THREADS = Runtime.getRuntime().availableProcessors() * 2;
 
+    public static final int DEFAULT_IO_ACCEPTING_THREADS = 1;
+
+    
     // Workaround for JDK NIO bug.
     //
     // See: 

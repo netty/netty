@@ -13,26 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.channel.socket.nio;
 
-package io.netty.channel.sctp;
-
-import io.netty.channel.AbstractChannelSink;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPipeline;
 
-public abstract class AbstractSctpChannelSink extends AbstractChannelSink {
+public interface NioChannel extends Channel {
 
-    @Override
-    public ChannelFuture execute(ChannelPipeline pipeline, final Runnable task) {
-        Channel ch = pipeline.getChannel();
-        if (ch instanceof SctpChannelImpl) {
-            SctpChannelImpl channel = (SctpChannelImpl) ch;
-            return channel.worker.executeInIoThread(channel, task);
-             
-        } else {
-            return super.execute(pipeline, task);
-        }
-
-    }
+    /**
+     * Returns the {@link AbstractNioWorker} which handles the IO of the {@link Channel}
+     * 
+     */
+    AbstractNioWorker getWorker();
 }

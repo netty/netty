@@ -23,9 +23,10 @@ import io.netty.channel.*;
 import io.netty.channel.sctp.SctpClientSocketChannelFactory;
 import io.netty.channel.sctp.SctpFrame;
 import io.netty.channel.sctp.SctpServerSocketChannelFactory;
-import io.netty.testsuite.util.SctpSocketAddresses;
+import io.netty.testsuite.util.SctpTestUtil;
 import io.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -72,15 +73,17 @@ public class SctpMultiStreamingEchoTest {
     }
 
     protected ChannelFactory newServerSocketChannelFactory(Executor executor) {
-        return new SctpServerSocketChannelFactory(executor, executor);
+        return new SctpServerSocketChannelFactory(executor);
     }
 
     protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
-        return new SctpClientSocketChannelFactory(executor, executor);
+        return new SctpClientSocketChannelFactory(executor);
     }
 
     @Test(timeout = 10000)
     public void testMultiStreamingEcho() throws Throwable {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
 
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
@@ -93,10 +96,10 @@ public class SctpMultiStreamingEchoTest {
 
         cb.getPipeline().addLast("handler", ch);
 
-        Channel sc = sb.bind(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, 0));
+        Channel sc = sb.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, port));
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpTestUtil.LOOP_BACK, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
         Channel cc = ccf.getChannel();
@@ -104,7 +107,6 @@ public class SctpMultiStreamingEchoTest {
         for(SctpFrame sctpFrame: sctpFrames) {
              cc.write(sctpFrame);
         }
-
 
         while (sh.counter < sctpFrames.length) {
             Thread.sleep(5);
@@ -116,10 +118,10 @@ public class SctpMultiStreamingEchoTest {
         assertEquals(sctpFrames.length, sh.counter);
         assertEquals(sctpFrames.length, ch.counter);
 
+
         sh.channel.close().awaitUninterruptibly();
         ch.channel.close().awaitUninterruptibly();
-
-
+        sc.close().awaitUninterruptibly();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();

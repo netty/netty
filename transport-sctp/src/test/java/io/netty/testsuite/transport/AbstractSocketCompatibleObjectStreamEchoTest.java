@@ -22,9 +22,10 @@ import io.netty.channel.sctp.codec.SctpFrameDecoder;
 import io.netty.channel.sctp.codec.SctpFrameEncoder;
 import io.netty.handler.codec.serialization.CompatibleObjectDecoder;
 import io.netty.handler.codec.serialization.CompatibleObjectEncoder;
-import io.netty.testsuite.util.SctpSocketAddresses;
+import io.netty.testsuite.util.SctpTestUtil;
 import io.netty.util.internal.ExecutorUtil;
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -74,6 +75,8 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
     @Test
     @SuppressWarnings("deprecation")
     public void testCompatibleObjectEcho() throws Throwable {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
 
@@ -92,10 +95,10 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
         cb.getPipeline().addLast("encoder", new CompatibleObjectEncoder());
         cb.getPipeline().addLast("handler", ch);
 
-        Channel sc = sb.bind(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, 0));
+        Channel sc = sb.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, port));
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpTestUtil.LOOP_BACK, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
         Channel cc = ccf.getChannel();

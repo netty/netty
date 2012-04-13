@@ -23,7 +23,6 @@
     <version>4.0.0.Alpha1-SNAPSHOT</version>
   </parent>
 
-  <groupId>io.netty</groupId>
   <artifactId>netty-transport-sctp</artifactId>
   <packaging>jar</packaging>
 
@@ -49,21 +48,15 @@
 
   <build>
     <plugins>
-       <plugin>
-       <artifactId>maven-surefire-plugin</artifactId>
-       <version>2.7.2</version>
-       <executions>
-         <execution>
-           <id>default-test</id>
-           <configuration>
-               <!--
-                 Ignore SCTP Test cases by default
-                 Note: Java SCTP only available for Linux and Solaris
-               -->
-               <skipTests>true</skipTests>
-           </configuration>
-         </execution>
-       </executions>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <!-- Exclude the com.sun.nio stuff as this is included in the jdk if its supported by the running os -->
+            <exclude>**/com/**</exclude>
+          </excludes>
+          
+        </configuration>
       </plugin>
     </plugins>
   </build>

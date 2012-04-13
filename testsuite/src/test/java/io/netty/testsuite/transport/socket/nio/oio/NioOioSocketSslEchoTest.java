@@ -26,7 +26,7 @@ public class NioOioSocketSslEchoTest extends AbstractSocketSslEchoTest {
 
     @Override
     protected ChannelFactory newClientSocketChannelFactory(Executor executor) {
-        return new NioClientSocketChannelFactory(executor, executor);
+        return new NioClientSocketChannelFactory(executor);
     }
 
     @Override

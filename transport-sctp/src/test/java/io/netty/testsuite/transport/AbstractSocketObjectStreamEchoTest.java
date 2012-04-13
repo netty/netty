@@ -15,18 +15,24 @@
  */
 package io.netty.testsuite.transport;
 
+import static org.junit.Assert.*;
 import io.netty.bootstrap.ClientBootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelStateEvent;
+import io.netty.channel.ExceptionEvent;
+import io.netty.channel.MessageEvent;
+import io.netty.channel.SimpleChannelUpstreamHandler;
 import io.netty.channel.sctp.codec.SctpFrameDecoder;
 import io.netty.channel.sctp.codec.SctpFrameEncoder;
+import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
-import io.netty.testsuite.util.SctpSocketAddresses;
+import io.netty.testsuite.util.SctpTestUtil;
 import io.netty.util.internal.ExecutorUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -36,8 +42,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.AfterClass;
+import org.junit.Assume;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public abstract class AbstractSocketObjectStreamEchoTest {
 
@@ -73,6 +81,8 @@ public abstract class AbstractSocketObjectStreamEchoTest {
 
     @Test
     public void testObjectEcho() throws Throwable {
+        Assume.assumeTrue(SctpTestUtil.isSctpSupported());
+
         ServerBootstrap sb = new ServerBootstrap(newServerSocketChannelFactory(executor));
         ClientBootstrap cb = new ClientBootstrap(newClientSocketChannelFactory(executor));
 
@@ -81,20 +91,22 @@ public abstract class AbstractSocketObjectStreamEchoTest {
 
         sb.getPipeline().addLast("sctp-decoder", new SctpFrameDecoder());
         sb.getPipeline().addLast("sctp-encoder", new SctpFrameEncoder());
-        sb.getPipeline().addLast("decoder", new ObjectDecoder());
+        sb.getPipeline().addLast("decoder", new ObjectDecoder(
+                ClassResolvers.cacheDisabled(getClass().getClassLoader())));
         sb.getPipeline().addLast("encoder", new ObjectEncoder());
         sb.getPipeline().addLast("handler", sh);
 
         cb.getPipeline().addLast("sctp-decoder", new SctpFrameDecoder());
         cb.getPipeline().addLast("sctp-encoder", new SctpFrameEncoder());
-        cb.getPipeline().addLast("decoder", new ObjectDecoder());
+        cb.getPipeline().addLast("decoder", new ObjectDecoder(
+                ClassResolvers.cacheDisabled(getClass().getClassLoader())));
         cb.getPipeline().addLast("encoder", new ObjectEncoder());
         cb.getPipeline().addLast("handler", ch);
 
-        Channel sc = sb.bind(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, 0));
+        Channel sc = sb.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
         int port = ((InetSocketAddress) sc.getLocalAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpSocketAddresses.LOOP_BACK, port));
+        ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpTestUtil.LOOP_BACK, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
         Channel cc = ccf.getChannel();

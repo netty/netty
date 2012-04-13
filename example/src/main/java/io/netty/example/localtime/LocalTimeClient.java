@@ -48,7 +48,6 @@ public class LocalTimeClient {
         // Set up.
         ClientBootstrap bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
                         Executors.newCachedThreadPool()));
 
         // Configure the event pipeline factory.

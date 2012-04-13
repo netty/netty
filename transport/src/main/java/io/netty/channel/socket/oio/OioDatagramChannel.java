@@ -26,8 +26,10 @@ import java.net.SocketException;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelSink;
+import io.netty.channel.Channels;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
@@ -76,23 +78,26 @@ final class OioDatagramChannel extends AbstractOioChannel
     }
 
     @Override
-    public void joinGroup(InetAddress multicastAddress) {
+    public ChannelFuture joinGroup(InetAddress multicastAddress) {
         ensureBound();
         try {
             socket.joinGroup(multicastAddress);
+            return Channels.succeededFuture(this);
         } catch (IOException e) {
-            throw new ChannelException(e);
+            return Channels.failedFuture(this, e);
         }
     }
 
     @Override
-    public void joinGroup(
+    public ChannelFuture joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
         ensureBound();
         try {
             socket.joinGroup(multicastAddress, networkInterface);
+            return Channels.succeededFuture(this);
+
         } catch (IOException e) {
-            throw new ChannelException(e);
+            return Channels.failedFuture(this, e);
         }
     }
 
@@ -105,21 +110,25 @@ final class OioDatagramChannel extends AbstractOioChannel
     }
 
     @Override
-    public void leaveGroup(InetAddress multicastAddress) {
+    public ChannelFuture leaveGroup(InetAddress multicastAddress) {
         try {
             socket.leaveGroup(multicastAddress);
+            return Channels.succeededFuture(this);
+
         } catch (IOException e) {
-            throw new ChannelException(e);
+            return Channels.failedFuture(this, e);
         }
     }
 
     @Override
-    public void leaveGroup(
+    public ChannelFuture leaveGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
         try {
             socket.leaveGroup(multicastAddress, networkInterface);
+            return Channels.succeededFuture(this);
+
         } catch (IOException e) {
-            throw new ChannelException(e);
+            return Channels.failedFuture(this, e);
         }
     }
 

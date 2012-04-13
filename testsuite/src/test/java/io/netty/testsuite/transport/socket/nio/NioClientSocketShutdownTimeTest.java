@@ -38,9 +38,7 @@ public class NioClientSocketShutdownTimeTest {
         serverSocket.socket().bind(new InetSocketAddress(0));
 
         ClientBootstrap b = new ClientBootstrap(
-                new NioClientSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
-                        Executors.newCachedThreadPool()));
+                new NioClientSocketChannelFactory(Executors.newCachedThreadPool()));
         b.getPipeline().addLast("handler", new DummyHandler());
 
         long startTime;
