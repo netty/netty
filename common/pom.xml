@@ -71,7 +71,7 @@
       <groupId>biz.massive-dynamics</groupId>
       <artifactId>Modger</artifactId>
       <scope>compile</scope>
-      <version>1.0.0.0</version>
+      <version>1.1.0.0</version>
       <optional>true</optional>
     </dependency>
   </dependencies>
