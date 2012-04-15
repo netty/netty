@@ -28,8 +28,13 @@ import io.netty.channel.MessageEvent;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.execution.ExecutionHandler;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 public class LocalServerPipelineFactory implements ChannelPipelineFactory {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(LocalServerPipelineFactory.class);
 
     private final ExecutionHandler executionHandler;
 
@@ -71,7 +76,7 @@ public class LocalServerPipelineFactory implements ChannelPipelineFactory {
                     Channels.close(e.getChannel());
                     return;
                 }
-                System.err.println("SERVER:" + msg);
+                logger.error("SERVER:" + msg);
                 // Write back
                 Channels.write(e.getChannel(), msg);
             }

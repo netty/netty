@@ -24,11 +24,16 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPipelineFactory;
 import io.netty.channel.Channels;
 import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * Keeps sending random data to the specified address.
  */
 public class DiscardClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(DiscardClient.class);
 
     private final String host;
     private final int port;
@@ -67,7 +72,7 @@ public class DiscardClient {
     public static void main(String[] args) throws Exception {
         // Print usage if no argument is specified.
         if (args.length < 2 || args.length > 3) {
-            System.err.println(
+            logger.error(
                     "Usage: " + DiscardClient.class.getSimpleName() +
                     " <host> <port> [<first message size>]");
             return;

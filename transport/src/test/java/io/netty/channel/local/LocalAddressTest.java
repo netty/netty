@@ -31,8 +31,14 @@ import io.netty.channel.SimpleChannelUpstreamHandler;
 import io.netty.channel.local.DefaultLocalClientChannelFactory;
 import io.netty.channel.local.DefaultLocalServerChannelFactory;
 import io.netty.channel.local.LocalAddress;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 public class LocalAddressTest {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(LocalAddressTest.class);
+    
     private static String LOCAL_ADDR_ID = "test.id";
 
     @Test
@@ -157,7 +163,7 @@ public class LocalAddressTest {
                                                      ChannelEvent e)
             throws Exception {
 
-            System.err.println(String.format("Received upstream event '%s'", e));
+            logger.info(String.format("Received upstream event '%s'", e));
         }
     }
 }

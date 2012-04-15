@@ -26,12 +26,17 @@ import io.netty.bootstrap.ClientBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * Sends a list of continent/city pairs to a {@link LocalTimeServer} to
  * get the local times of the specified cities.
  */
 public class LocalTimeClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(LocalTimeClient.class);
 
     private final String host;
     private final int port;
@@ -99,10 +104,10 @@ public class LocalTimeClient {
     }
 
     private static void printUsage() {
-        System.err.println(
+        logger.error(
                 "Usage: " + LocalTimeClient.class.getSimpleName() +
                 " <host> <port> <continent/city_name> ...");
-        System.err.println(
+        logger.error(
                 "Example: " + LocalTimeClient.class.getSimpleName() +
                 " localhost 8080 America/New_York Asia/Seoul");
     }
@@ -111,7 +116,7 @@ public class LocalTimeClient {
         List<String> cities = new ArrayList<String>();
         for (int i = offset; i < args.length; i ++) {
             if (!args[i].matches("^[_A-Za-z]+/[_A-Za-z]+$")) {
-                System.err.println("Syntax error: '" + args[i] + "'");
+                logger.error("Syntax error: '" + args[i] + "'");
                 printUsage();
                 return null;
             }

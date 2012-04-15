@@ -15,23 +15,23 @@
  */
 package io.netty.example.telnet;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelEvent;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelStateEvent;
 import io.netty.channel.ExceptionEvent;
 import io.netty.channel.MessageEvent;
 import io.netty.channel.SimpleChannelUpstreamHandler;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * Handles a client-side channel.
  */
 public class TelnetClientHandler extends SimpleChannelUpstreamHandler {
 
-    private static final Logger logger = Logger.getLogger(
-            TelnetClientHandler.class.getName());
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(TelnetClientHandler.class);
 
     @Override
     public void handleUpstream(
@@ -46,14 +46,13 @@ public class TelnetClientHandler extends SimpleChannelUpstreamHandler {
     public void messageReceived(
             ChannelHandlerContext ctx, MessageEvent e) {
         // Print out the line received from the server.
-        System.err.println(e.getMessage());
+        logger.info((String) e.getMessage());
     }
 
     @Override
     public void exceptionCaught(
             ChannelHandlerContext ctx, ExceptionEvent e) {
-        logger.log(
-                Level.WARNING,
+        logger.warn(
                 "Unexpected exception from downstream.",
                 e.getCause());
         e.getChannel().close();
