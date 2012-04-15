@@ -887,7 +887,7 @@ abstract class AbstractNioWorker implements Worker {
             if (iothread) {
                 fireExceptionCaught(channel, t);
             } else {
-                System.out.println(thread + "==" + channel.getWorker().thread);
+                logger.debug(thread + "==" + channel.getWorker().thread);
                 fireExceptionCaughtLater(channel, t);
             }
         }
