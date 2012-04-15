@@ -31,8 +31,13 @@ import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.logging.InternalLogLevel;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 public class LocalExampleMultithreaded {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(LocalExampleMultithreaded.class);
 
     private final String port;
 
@@ -69,12 +74,11 @@ public class LocalExampleMultithreaded {
         // Read commands from array
         String[] commands = { "First", "Second", "Third", "quit" };
         for (int j = 0; j < 5 ; j++) {
-            System.err.println("Start " + j);
+            logger.info("Start " + j);
             ChannelFuture channelFuture = cb.connect(socketAddress);
             channelFuture.awaitUninterruptibly();
             if (! channelFuture.isSuccess()) {
-                System.err.println("CANNOT CONNECT");
-                channelFuture.getCause().printStackTrace();
+                logger.error("CANNOT CONNECT", channelFuture.getCause());
                 break;
             }
             ChannelFuture lastWriteFuture = null;
@@ -90,7 +94,7 @@ public class LocalExampleMultithreaded {
             channelFuture.getChannel().close();
             // Wait until the connection is closed or the connection attempt fails.
             channelFuture.getChannel().getCloseFuture().awaitUninterruptibly();
-            System.err.println("End " + j);
+            logger.info("End " + j);
         }
 
         // Release all resources

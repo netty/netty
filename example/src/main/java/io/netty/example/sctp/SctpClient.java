@@ -23,6 +23,8 @@ import io.netty.channel.Channels;
 import io.netty.channel.sctp.SctpClientSocketChannelFactory;
 import io.netty.handler.execution.ExecutionHandler;
 import io.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
@@ -31,6 +33,9 @@ import java.util.concurrent.Executors;
  * Simple SCTP Echo Client
  */
 public class SctpClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(SctpClient.class);
 
     private final String host;
     private final int port;
@@ -77,7 +82,7 @@ public class SctpClient {
     public static void main(String[] args) throws Exception {
         // Print usage if no argument is specified.
         if (args.length != 2) {
-            System.err.println(
+            logger.error(
                     "Usage: " + SctpClient.class.getSimpleName() +
                     " <host> <port>");
             return;

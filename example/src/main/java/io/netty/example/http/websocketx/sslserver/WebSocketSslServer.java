@@ -20,6 +20,8 @@ import java.util.concurrent.Executors;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * A HTTP server which serves Web Socket requests at:
@@ -40,6 +42,9 @@ import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
  * </ul>
  */
 public class WebSocketSslServer {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(WebSocketSslServer.class);
 
     private final int port;
 
@@ -57,8 +62,8 @@ public class WebSocketSslServer {
         // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress(port));
 
-        System.out.println("Web socket server started at port " + port + '.');
-        System.out.println("Open your browser and navigate to https://localhost:" + port + '/');
+        logger.info("Web socket server started at port " + port + '.');
+        logger.info("Open your browser and navigate to https://localhost:" + port + '/');
     }
 
     public static void main(String[] args) {
@@ -71,13 +76,13 @@ public class WebSocketSslServer {
 
         String keyStoreFilePath = System.getProperty("keystore.file.path");
         if (keyStoreFilePath == null || keyStoreFilePath.isEmpty()) {
-            System.out.println("ERROR: System property keystore.file.path not set. Exiting now!");
+            logger.error("ERROR: System property keystore.file.path not set. Exiting now!");
             System.exit(1);
         }
 
         String keyStoreFilePassword = System.getProperty("keystore.file.password");
         if (keyStoreFilePassword == null || keyStoreFilePassword.isEmpty()) {
-            System.out.println("ERROR: System property keystore.file.password not set. Exiting now!");
+            logger.error("ERROR: System property keystore.file.password not set. Exiting now!");
             System.exit(1);
         }
 
