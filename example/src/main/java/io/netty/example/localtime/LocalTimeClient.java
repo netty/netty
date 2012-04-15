@@ -81,7 +81,7 @@ public class LocalTimeClient {
         Iterator<String> i1 = cities.iterator();
         Iterator<String> i2 = response.iterator();
         while (i1.hasNext()) {
-            System.out.format("%28s: %s%n", i1.next(), i2.next());
+            logger.info(String.format("%28s: %s%n", i1.next(), i2.next()));
         }
     }
 
