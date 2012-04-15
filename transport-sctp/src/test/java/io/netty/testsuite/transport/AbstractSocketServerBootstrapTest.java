@@ -22,6 +22,8 @@ import io.netty.bootstrap.ClientBootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.sctp.SctpChannelConfig;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import io.netty.testsuite.util.DummyHandler;
 import io.netty.testsuite.util.SctpTestUtil;
 import io.netty.util.internal.ExecutorUtil;
@@ -46,6 +48,9 @@ import static org.junit.Assert.assertEquals;
  * An abstract test class to test server socket bootstraps
  */
 public abstract class AbstractSocketServerBootstrapTest {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(AbstractSocketServerBootstrapTest.class);
 
     private static final boolean BUFSIZE_MODIFIABLE;
 
@@ -58,8 +63,7 @@ public abstract class AbstractSocketServerBootstrapTest {
             bufSizeModifiable = s.supportedOptions().contains(SctpStandardSocketOptions.SO_RCVBUF);
         } catch (Throwable e) {
             bufSizeModifiable = false;
-            System.err.println(
-                    "SCTP SO_RCVBUF does not work: " + e);
+            logger.error("SCTP SO_RCVBUF does not work: " + e);
         } finally {
             BUFSIZE_MODIFIABLE = bufSizeModifiable;
             try {

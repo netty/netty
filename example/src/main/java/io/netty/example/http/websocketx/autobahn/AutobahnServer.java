@@ -20,12 +20,17 @@ import java.util.concurrent.Executors;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * A Web Socket echo server for running the <a href="http://www.tavendo.de/autobahn/testsuite.html">autobahn</a> test
  * suite
  */
 public class AutobahnServer {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(AutobahnServer.class);
 
     private final int port;
 
@@ -45,7 +50,7 @@ public class AutobahnServer {
         // Bind and start to accept incoming connections.
         bootstrap.bind(new InetSocketAddress(port));
 
-        System.out.println("Web Socket Server started at port " + port);
+        logger.info("Web Socket Server started at port " + port);
     }
 
     public static void main(String[] args) {
