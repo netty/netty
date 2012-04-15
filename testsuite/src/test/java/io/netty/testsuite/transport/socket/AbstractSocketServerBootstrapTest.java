@@ -37,6 +37,8 @@ import io.netty.channel.ChildChannelStateEvent;
 import io.netty.channel.ServerChannelFactory;
 import io.netty.channel.SimpleChannelUpstreamHandler;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import io.netty.testsuite.util.DummyHandler;
 import io.netty.util.SocketAddresses;
 import io.netty.util.internal.ExecutorUtil;
@@ -51,6 +53,9 @@ import org.junit.Test;
  * An abstract test class to test server socket bootstraps
  */
 public abstract class AbstractSocketServerBootstrapTest {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(AbstractSocketServerBootstrapTest.class);
 
     private static final boolean BUFSIZE_MODIFIABLE;
 
@@ -66,13 +71,11 @@ public abstract class AbstractSocketServerBootstrapTest {
                 }
             } catch (Exception e) {
                 bufSizeModifiable = false;
-                System.err.println(
-                        "Socket.getReceiveBufferSize() does not work: " + e);
+                logger.error("Socket.getReceiveBufferSize() does not work: " + e);
             }
         } catch (Exception e) {
             bufSizeModifiable = false;
-            System.err.println(
-                    "Socket.setReceiveBufferSize() does not work: " + e);
+            logger.error("Socket.setReceiveBufferSize() does not work: " + e);
         } finally {
             BUFSIZE_MODIFIABLE = bufSizeModifiable;
             try {
