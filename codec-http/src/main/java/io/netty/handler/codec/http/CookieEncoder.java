@@ -83,7 +83,7 @@ public class CookieEncoder {
      * so far into an HTTP header value.  If no {@link Cookie}s were added,
      * an empty string is returned.
      * 
-     * <strong>Be aware that calling this method will clear the contends of the {@link CookieEncoder}</strong>
+     * <strong>Be aware that calling this method will clear the content of the {@link CookieEncoder}</strong>
      */
     public String encode() {
         String answer;
