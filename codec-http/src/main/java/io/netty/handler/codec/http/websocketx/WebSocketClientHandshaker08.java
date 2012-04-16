@@ -122,7 +122,15 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         request.addHeader(Names.CONNECTION, Values.UPGRADE);
         request.addHeader(Names.SEC_WEBSOCKET_KEY, key);
         request.addHeader(Names.HOST, wsURL.getHost());
-        request.addHeader(Names.ORIGIN, "http://" + wsURL.getHost());
+        
+        int wsPort = wsURL.getPort();
+        String originValue = "http://" + wsURL.getHost();
+        if (wsPort != 80 && wsPort != 443) {
+            // if the port is not standard (80/443) its needed to add the port to the header. 
+            // See http://tools.ietf.org/html/rfc6454#section-6.2
+            originValue = originValue + ":" + wsPort;
+        }
+        
         if (protocol != null && !protocol.equals("")) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, protocol);
         }
