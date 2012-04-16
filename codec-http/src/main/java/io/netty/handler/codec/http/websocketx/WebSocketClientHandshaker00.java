@@ -146,6 +146,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
             // See http://tools.ietf.org/html/rfc6454#section-6.2
             originValue = originValue + ":" + wsPort;
         }
+        request.addHeader(Names.ORIGIN, originValue);
+
         
         request.addHeader(Names.SEC_WEBSOCKET_KEY1, key1);
         request.addHeader(Names.SEC_WEBSOCKET_KEY2, key2);
