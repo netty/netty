@@ -24,6 +24,8 @@ import io.netty.example.echo.EchoClient;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
@@ -32,6 +34,9 @@ import java.util.concurrent.Executors;
  * Modification of {@link EchoClient} which utilizes Java object serialization.
  */
 public class ObjectEchoClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(ObjectEchoClient.class);
 
     private final String host;
     private final int port;
@@ -68,7 +73,7 @@ public class ObjectEchoClient {
     public static void main(String[] args) throws Exception {
         // Print usage if no argument is specified.
         if (args.length < 2 || args.length > 3) {
-            System.err.println(
+            logger.error(
                     "Usage: " + ObjectEchoClient.class.getSimpleName() +
                     " <host> <port> [<first message size>]");
             return;

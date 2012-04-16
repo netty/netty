@@ -29,12 +29,17 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * A simple HTTP client that prints out the content of the HTTP response to
  * {@link System#out} to test {@link HttpSnoopServer}.
  */
 public class HttpSnoopClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(HttpSnoopClient.class);
 
     private final URI uri;
 
@@ -55,7 +60,7 @@ public class HttpSnoopClient {
         }
 
         if (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https")) {
-            System.err.println("Only HTTP(S) is supported.");
+            logger.error("Only HTTP(S) is supported.");
             return;
         }
 
@@ -105,7 +110,7 @@ public class HttpSnoopClient {
 
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
-            System.err.println(
+            logger.error(
                     "Usage: " + HttpSnoopClient.class.getSimpleName() +
                     " <URL>");
             return;

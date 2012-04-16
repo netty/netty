@@ -23,8 +23,13 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.ClientSocketChannelFactory;
 import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 public class HexDumpProxy {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(HexDumpProxy.class);
 
     private final int localPort;
     private final String remoteHost;
@@ -37,7 +42,7 @@ public class HexDumpProxy {
     }
 
     public void run() {
-        System.err.println(
+        logger.info(
                 "Proxying *:" + localPort + " to " +
                 remoteHost + ':' + remotePort + " ...");
 
@@ -60,7 +65,7 @@ public class HexDumpProxy {
     public static void main(String[] args) throws Exception {
         // Validate command line options.
         if (args.length != 3) {
-            System.err.println(
+            logger.error(
                     "Usage: " + HexDumpProxy.class.getSimpleName() +
                     " <local port> <remote host> <remote port>");
             return;

@@ -28,8 +28,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import io.netty.bootstrap.ClientBootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -51,6 +49,8 @@ import io.netty.channel.socket.ServerSocketChannelFactory;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import io.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * Tests HTTP tunnel soaking
@@ -59,8 +59,8 @@ public class HttpTunnelSoakTester {
 
     private static final int SERVER_PORT = 20100;
 
-    static final Logger LOG = Logger.getLogger(HttpTunnelSoakTester.class
-            .getName());
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(HttpTunnelSoakTester.class);
 
     private static final long BYTES_TO_SEND = 1024 * 1024 * 1024;
 
@@ -127,15 +127,14 @@ public class HttpTunnelSoakTester {
                 clientBootstrap.setOption(
                         HttpTunnelClientChannelConfig.PROXY_ADDRESS_OPTION,
                         proxyAddress);
-                System.out.println("Using " + proxyAddress +
+                logger.info("Using " + proxyAddress +
                         " as a proxy for this test run");
             } else {
-                System.err.println("Failed to resolve proxy address " +
+                logger.error("Failed to resolve proxy address " +
                         proxyAddress);
             }
         } else {
-            System.out
-                    .println("No proxy specified, will connect to server directly");
+            logger.info("No proxy specified, will connect to server directly");
         }
     }
 
@@ -197,16 +196,16 @@ public class HttpTunnelSoakTester {
     }
 
     public void run() throws InterruptedException {
-        LOG.info("binding server channel");
+        logger.info("binding server channel");
         Channel serverChannel =
                 serverBootstrap.bind(new InetSocketAddress(SERVER_PORT));
         channels.add(serverChannel);
-        LOG.log(Level.INFO, "server channel bound to {0}",
-                serverChannel.getLocalAddress());
+        logger.info(String.format("server channel bound to {0}",
+                serverChannel.getLocalAddress()));
 
         SocketChannel clientChannel = createClientChannel();
         if (clientChannel == null) {
-            LOG.severe("no client channel - bailing out");
+            logger.error("no client channel - bailing out");
             return;
         }
 
@@ -216,37 +215,37 @@ public class HttpTunnelSoakTester {
         executor.execute(c2sDataSender);
 
         if (!c2sDataSender.waitForFinish(5, TimeUnit.MINUTES)) {
-            LOG.severe("Data send from client to server failed");
+            logger.error("Data send from client to server failed");
         }
 
         if (!s2cDataSender.waitForFinish(5, TimeUnit.MINUTES)) {
-            LOG.severe("Data send from server to client failed");
+            logger.error("Data send from server to client failed");
         }
 
-        LOG.log(Level.INFO, "Waiting for verification to complete");
+        logger.info("Waiting for verification to complete");
         if (!c2sVerifier.waitForCompletion(30L, TimeUnit.SECONDS)) {
-            LOG.warning("Timed out waiting for verification of client-to-server stream");
+            logger.warn("Timed out waiting for verification of client-to-server stream");
         }
 
         if (!s2cVerifier.waitForCompletion(30L, TimeUnit.SECONDS)) {
-            LOG.warning("Timed out waiting for verification of server-to-client stream");
+            logger.warn("Timed out waiting for verification of server-to-client stream");
         }
 
-        LOG.info("closing client channel");
+        logger.info("closing client channel");
         closeChannel(clientChannel);
-        LOG.info("server channel status: " +
+        logger.info("server channel status: " +
                 (serverChannel.isOpen()? "open" : "closed"));
-        LOG.info("closing server channel");
+        logger.info("closing server channel");
         closeChannel(serverChannel);
     }
 
     private void closeChannel(Channel channel) {
         try {
             if (!channel.close().await(5L, TimeUnit.SECONDS)) {
-                LOG.warning("Failed to close connection within reasonable amount of time");
+                logger.warn("Failed to close connection within reasonable amount of time");
             }
         } catch (InterruptedException e) {
-            LOG.severe("Interrupted while closing connection");
+            logger.error("Interrupted while closing connection");
         }
 
     }
@@ -258,16 +257,16 @@ public class HttpTunnelSoakTester {
                 clientBootstrap.connect(serverAddress);
         try {
             if (!clientChannelFuture.await(1000, TimeUnit.MILLISECONDS)) {
-                LOG.severe("did not connect within acceptable time period");
+                logger.error("did not connect within acceptable time period");
                 return null;
             }
         } catch (InterruptedException e) {
-            LOG.severe("Interrupted while waiting for client connect to be established");
+            logger.error("Interrupted while waiting for client connect to be established");
             return null;
         }
 
         if (!clientChannelFuture.isSuccess()) {
-            LOG.log(Level.SEVERE, "did not connect successfully",
+            logger.error("did not connect successfully",
                     clientChannelFuture.getCause());
             return null;
         }
@@ -331,9 +330,9 @@ public class HttpTunnelSoakTester {
             while (bytesToVerify.readable()) {
                 byte readByte = bytesToVerify.readByte();
                 if (readByte != expectedNext) {
-                    LOG.log(Level.SEVERE,
+                    logger.error(String.format(
                             "{0}: received a byte out of sequence. Expected {1}, got {2}",
-                            new Object[] { name, expectedNext, readByte });
+                            new Object[] { name, expectedNext, readByte }));
                     System.exit(-1);
                     return;
                 }
@@ -416,20 +415,20 @@ public class HttpTunnelSoakTester {
         @Override
         public void run() {
             if (!running.compareAndSet(false, true)) {
-                LOG.log(Level.WARNING,
-                        "{0}: Attempt made to run duplicate sender!", name);
+                logger.warn(String.format(
+                        "{0}: Attempt made to run duplicate sender!", name));
                 return;
             }
 
             if (finishLatch.getCount() == 0) {
-                LOG.log(Level.SEVERE,
-                        "{0}: Attempt made to run after completion!", name);
+                logger.error(String.format(
+                        "{0}: Attempt made to run after completion!", name));
             }
 
             if (firstRun) {
                 firstRun = false;
                 runStartTime = System.currentTimeMillis();
-                LOG.log(Level.INFO, "{0}: sending data", name);
+                logger.info(String.format("{0}: sending data", name));
             }
 
             while (totalBytesSent < BYTES_TO_SEND) {
@@ -447,22 +446,22 @@ public class HttpTunnelSoakTester {
 
                 numWrites ++;
                 if (numWrites % 100 == 0) {
-                    LOG.log(Level.INFO,
+                    logger.info(String.format(
                             "{0}: {1} writes dispatched, totalling {2} bytes",
-                            new Object[] { name, numWrites, totalBytesSent });
+                            new Object[] { name, numWrites, totalBytesSent }));
                 }
             }
 
-            LOG.log(Level.INFO, "{0}: completed send cycle", name);
+            logger.info(String.format("{0}: completed send cycle", name));
 
             long runEndTime = System.currentTimeMillis();
             long totalTime = runEndTime - runStartTime;
             long totalKB = totalBytesSent / 1024;
             double rate = totalKB / (totalTime / 1000.0);
-            LOG.log(Level.INFO, "{0}: Sent {1} bytes", new Object[] { name,
-                    totalBytesSent });
-            LOG.log(Level.INFO, "{0}: Average throughput: {1} KB/s",
-                    new Object[] { name, rate });
+            logger.info(String.format("{0}: Sent {1} bytes", new Object[] { name,
+                    totalBytesSent }));
+            logger.info(String.format("{0}: Average throughput: {1} KB/s",
+                    new Object[] { name, rate }));
 
             finishLatch.countDown();
             running.set(false);

@@ -41,10 +41,13 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.InterfaceHttpData;
 import io.netty.handler.codec.http.QueryStringEncoder;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
-/**
- */
 public class HttpUploadClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(HttpUploadClient.class);
     
     private final String baseUri;
     private final String filePath;
@@ -69,7 +72,7 @@ public class HttpUploadClient {
         try {
             uriSimple = new URI(postSimple);
         } catch (URISyntaxException e) {
-            System.err.println("Error: " + e.getMessage());
+            logger.error("Invalid URI syntax" + e.getCause());
             return;
         }
         String scheme = uriSimple.getScheme() == null? "http" : uriSimple.getScheme();
@@ -84,7 +87,7 @@ public class HttpUploadClient {
         }
 
         if (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https")) {
-            System.err.println("Only HTTP(S) is supported.");
+            logger.error("Only HTTP(S) is supported.");
             return;
         }
 
@@ -94,12 +97,12 @@ public class HttpUploadClient {
         try {
             uriFile = new URI(postFile);
         } catch (URISyntaxException e) {
-            System.err.println("Error: " + e.getMessage());
+            logger.error("Error: " + e.getMessage());
             return;
         }
         File file = new File(filePath);
         if (! file.canRead()) {
-            System.err.println("A correct path is needed");
+            logger.error("A correct path is needed");
             return;
         }
 
@@ -176,7 +179,7 @@ public class HttpUploadClient {
         try {
             uriGet = new URI(encoder.toString());
         } catch (URISyntaxException e) {
-            System.err.println("Error: " + e.getMessage());
+            logger.error("Error: " + e.getMessage());
             bootstrap.releaseExternalResources();
             return null;
         }
@@ -377,7 +380,7 @@ public class HttpUploadClient {
 
     public static void main(String[] args) {
         if (args.length != 2) {
-            System.err.println(
+            logger.error(
                     "Usage: " + HttpUploadClient.class.getSimpleName() +
                     " baseURI filePath");
             return;
