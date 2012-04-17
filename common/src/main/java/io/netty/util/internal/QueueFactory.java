@@ -18,8 +18,8 @@ package io.netty.util.internal;
 import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 
-import org.jboss.netty.logging.InternalLogger;
-import org.jboss.netty.logging.InternalLoggerFactory;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * This factory should be used to create the "optimal" {@link BlockingQueue}
