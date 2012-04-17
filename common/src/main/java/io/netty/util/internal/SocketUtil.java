@@ -35,7 +35,7 @@ public final class SocketUtil {
      * 
      */
     public static InetSocketAddress stripZoneId(InetSocketAddress socketAddress) throws UnknownHostException {
-        return new InetSocketAddress(socketAddress.getAddress(), socketAddress.getPort());
+        return new InetSocketAddress(stripZoneId(socketAddress.getAddress()), socketAddress.getPort());
     }
     
     /**
