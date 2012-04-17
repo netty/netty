@@ -38,7 +38,7 @@ public class HttpClientCodecTest {
 
     @Test
     public void testFailsNotOnRequestResponse() {
-        HttpClientCodec codec = new HttpClientCodec();
+        HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         DecoderEmbedder<ChannelBuffer> decoder = new DecoderEmbedder<ChannelBuffer>(codec);
         EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
         
@@ -52,7 +52,7 @@ public class HttpClientCodecTest {
     
     @Test
     public void testFailsNotOnRequestResponseChunked() {
-        HttpClientCodec codec = new HttpClientCodec();
+        HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         DecoderEmbedder<ChannelBuffer> decoder = new DecoderEmbedder<ChannelBuffer>(codec);
         EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
         
@@ -66,7 +66,7 @@ public class HttpClientCodecTest {
     
     @Test
     public void testFailsOnMissingResponse() {
-        HttpClientCodec codec = new HttpClientCodec();
+        HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
         
         encoder.offer(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/"));
@@ -82,7 +82,7 @@ public class HttpClientCodecTest {
     
     @Test
     public void testFailsOnIncompleteChunkedResponse() {
-        HttpClientCodec codec = new HttpClientCodec();
+        HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
         DecoderEmbedder<ChannelBuffer> decoder = new DecoderEmbedder<ChannelBuffer>(codec);
 
         EncoderEmbedder<ChannelBuffer> encoder = new EncoderEmbedder<ChannelBuffer>(codec);
