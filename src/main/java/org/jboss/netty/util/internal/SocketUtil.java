@@ -35,7 +35,13 @@ public final class SocketUtil {
      * 
      */
     public static InetSocketAddress stripZoneId(InetSocketAddress socketAddress) throws UnknownHostException {
-        return new InetSocketAddress(socketAddress.getAddress(), socketAddress.getPort());
+        // If we have a java version which is >= 7 we can just return the given
+        // InetSocketAddress as this bug only seems
+        // to exist in java 6 (and maybe also versions before)
+        if (DetectionUtil.javaVersion() >= 7) {
+            return socketAddress;
+        }
+        return new InetSocketAddress(stripZoneId(socketAddress.getAddress()), socketAddress.getPort());
     }
     
     /**
