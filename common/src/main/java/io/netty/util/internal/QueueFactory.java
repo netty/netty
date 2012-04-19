@@ -51,7 +51,9 @@ public final class QueueFactory {
             //
             // This mostly happens because of a custom classloader or security policy that did not allow us to access the
             // com.sun.Unmisc class. So just log it and fallback to the old LegacyLinkedTransferQueue that works in all cases
-            LOGGER.debug("Unable to instance LinkedTransferQueue, fallback to LegacyLinkedTransferQueue", t);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Unable to instance LinkedTransferQueue, fallback to LegacyLinkedTransferQueue", t);
+            }
         }
         
         return new LegacyLinkedTransferQueue<T>();
@@ -75,7 +77,9 @@ public final class QueueFactory {
             //
             // This mostly happens because of a custom classloader or security policy that did not allow us to access the
             // com.sun.Unmisc class. So just log it and fallback to the old LegacyLinkedTransferQueue that works in all cases
-            LOGGER.debug("Unable to instance LinkedTransferQueue, fallback to LegacyLinkedTransferQueue", t);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Unable to instance LinkedTransferQueue, fallback to LegacyLinkedTransferQueue", t);
+            }
         }
          
         return new LegacyLinkedTransferQueue<T>(collection);
