@@ -42,6 +42,12 @@ public final class QueueFactory {
      * @return queue     the {@link BlockingQueue} implementation
      */
     public static <T> BlockingQueue<T> createQueue(Class<T> itemClass) {
+        // if we run in java >=7 its the best to just use the LinkedTransferQueue which
+        // comes with java bundled. See #273
+        if (DetectionUtil.javaVersion() >= 7)  {
+            return new java.util.concurrent.LinkedTransferQueue<T>();
+        }
+        
         try {
             if (useUnsafe) {
                 return new LinkedTransferQueue<T>();
@@ -68,6 +74,12 @@ public final class QueueFactory {
      * @return queue      the {@link BlockingQueue} implementation
      */
     public static <T> BlockingQueue<T> createQueue(Collection<? extends T> collection, Class<T> itemClass) {
+        // if we run in java >=7 its the best to just use the LinkedTransferQueue which
+        // comes with java bundled. See #273
+        if (DetectionUtil.javaVersion() >= 7)  {
+            return new java.util.concurrent.LinkedTransferQueue<T>();
+        }
+        
         try {
             if (useUnsafe) {
                 return new LinkedTransferQueue<T>(collection);
