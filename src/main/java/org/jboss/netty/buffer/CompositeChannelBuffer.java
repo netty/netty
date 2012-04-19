@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.jboss.netty.util.internal.DetectionUtil;
+
 
 /**
  * A virtual buffer which shows multiple buffers as a single merged buffer.  It
@@ -275,6 +277,9 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
+        if (DetectionUtil.javaVersion() >= 7) {
+            return (int) out.write(toByteBuffers(index, length));
+        }
         // XXX Gathering write is not supported because of a known issue.
         //     See http://bugs.sun.com/view_bug.do?bug_id=6210541
         //     This issue appeared in 2004 and is still unresolved!?
