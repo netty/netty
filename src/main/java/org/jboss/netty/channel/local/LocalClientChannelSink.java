@@ -128,7 +128,10 @@ final class LocalClientChannelSink extends AbstractChannelSink {
                 serverChannel, serverChannel.getFactory(), pipeline, this, channel);
         channel.pairedChannel = acceptedChannel;
 
-        bind(channel, succeededFuture(channel), new LocalAddress(LocalAddress.EPHEMERAL));
+        // check if the channel was bound before. See #276
+        if (!channel.isBound()) {
+            bind(channel, succeededFuture(channel), new LocalAddress(LocalAddress.EPHEMERAL));
+        }
         channel.remoteAddress = serverChannel.getLocalAddress();
         channel.setConnected();
         fireChannelConnected(channel, serverChannel.getLocalAddress());
