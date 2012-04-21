@@ -100,7 +100,9 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
         // the incoming traffic from the outboundChannel.
         synchronized (trafficLock) {
             if (e.getChannel().isWritable()) {
-                outboundChannel.setReadable(true);
+                if (outboundChannel != null) {
+                    outboundChannel.setReadable(true);
+                }
             }
         }
     }
