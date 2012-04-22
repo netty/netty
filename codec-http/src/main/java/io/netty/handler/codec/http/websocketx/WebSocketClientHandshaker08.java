@@ -181,17 +181,21 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
         }
 
         String upgrade = response.getHeader(Names.UPGRADE);
-        if (upgrade == null || !upgrade.equals(Values.WEBSOCKET.toLowerCase())) {
+        // Upgrade header should be matched case-insensitive.
+        // See https://github.com/netty/netty/issues/278
+        if (upgrade == null || !upgrade.toLowerCase().equals(Values.WEBSOCKET.toLowerCase())) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
                     + response.getHeader(Names.UPGRADE));
         }
 
+        // Connection header should be matched case-insensitive.
+        // See https://github.com/netty/netty/issues/278
         String connection = response.getHeader(Names.CONNECTION);
-        if (connection == null || !connection.equals(Values.UPGRADE)) {
+        if (connection == null || !connection.toLowerCase().equals(Values.UPGRADE.toLowerCase())) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
                     + response.getHeader(Names.CONNECTION));
         }
-
+        
         String accept = response.getHeader(Names.SEC_WEBSOCKET_ACCEPT);
         if (accept == null || !accept.equals(expectedChallengeResponseString)) {
             throw new WebSocketHandshakeException(String.format("Invalid challenge. Actual: %s. Expected: %s", accept,
