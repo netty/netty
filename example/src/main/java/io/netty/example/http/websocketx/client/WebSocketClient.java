@@ -74,8 +74,7 @@ public class WebSocketClient {
     public void run() throws Exception {
         ClientBootstrap bootstrap =
                 new ClientBootstrap(
-                        new NioClientSocketChannelFactory(
-                                Executors.newCachedThreadPool()));
+                        new NioClientSocketChannelFactory());
 
         Channel ch = null;
         
