@@ -30,7 +30,6 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
 
 /**
  * Decodes the received {@link ChannelBuffer}s into a meaningful frame object.
@@ -211,15 +210,45 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
                 (this.cumulation = newCumulationBuffer(ctx, input.readableBytes())).writeBytes(input);
             }
         } else {
-            ChannelBuffer cumulation = this.cumulation;
             assert cumulation.readable();
-            if (cumulation.writableBytes() < input.readableBytes()) {
-                cumulation.discardReadBytes();
+            boolean fit = false;
+            
+            int readable = input.readableBytes();
+            int writable = cumulation.writableBytes();
+            int w = readable - writable;
+            if (w < 0) {
+                int readerIndex = cumulation.readerIndex();
+                if (w + readerIndex >= 0) {
+                    // the input will fit if we discard all read bytes, so do it
+                    cumulation.discardReadBytes();
+                    fit = true;
+                }
+            } else {
+                // ok the input fit into the cumulation buffer
+                fit = true;
             }
-            cumulation.writeBytes(input);
-            callDecode(ctx, e.getChannel(), cumulation, e.getRemoteAddress());
-            if (!cumulation.readable()) {
+            
+            ChannelBuffer buf;
+            if (fit) {
+                // the input fit in the cumulation buffer so copy it over
+                buf = this.cumulation;
+                buf.writeBytes(input);
+            } else {
+                // wrap the cumulation and input 
+                buf = ChannelBuffers.wrappedBuffer(cumulation, input);
+                this.cumulation = buf;
+            }
+
+
+            callDecode(ctx, e.getChannel(), buf, e.getRemoteAddress());
+            if (!buf.readable()) {
+                // nothing readable left so reset the state
                 this.cumulation = null;
+            } else {
+                // create a new buffer and copy the readable buffer into it
+                this.cumulation = newCumulationBuffer(ctx, buf.readableBytes());
+                this.cumulation.writeBytes(buf);
+
             }
         }
     }

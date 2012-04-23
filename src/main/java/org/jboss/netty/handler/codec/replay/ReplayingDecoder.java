@@ -474,16 +474,48 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                 replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
             }
         } else {
-            ChannelBuffer cumulation = this.cumulation;
             assert cumulation.readable();
-            if (cumulation.writableBytes() < input.readableBytes()) {
-                cumulation.discardReadBytes();
+            boolean fit = false;
+            
+            int readable = input.readableBytes();
+            int writable = cumulation.writableBytes();
+            int w = readable - writable;
+            if (w < 0) {
+                int readerIndex = cumulation.readerIndex();
+                if (w + readerIndex >= 0) {
+                    // the input will fit if we discard all read bytes, so do it
+                    cumulation.discardReadBytes();
+                    fit = true;
+                }
+            } else {
+                // ok the input fit into the cumulation buffer
+                fit = true;
             }
-            cumulation.writeBytes(input);
-            callDecode(ctx, e.getChannel(), cumulation, replayable, e.getRemoteAddress());
-            if (!cumulation.readable()) {
+            
+            ChannelBuffer buf;
+            if (fit) {
+                // the input fit in the cumulation buffer so copy it over
+                buf = this.cumulation;
+                buf.writeBytes(input);
+            } else {
+                // wrap the cumulation and input 
+                buf = ChannelBuffers.wrappedBuffer(cumulation, input);
+                this.cumulation = buf;
+                replayable = new ReplayingDecoderBuffer(cumulation);
+            }
+
+
+            callDecode(ctx, e.getChannel(), buf, replayable, e.getRemoteAddress());
+            if (!buf.readable()) {
+                // nothing readable left so reset the state
                 this.cumulation = null;
                 replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
+            } else {
+                // create a new buffer and copy the readable buffer into it
+                this.cumulation = newCumulationBuffer(ctx, buf.readableBytes());
+                this.cumulation.writeBytes(buf);
+                replayable = new ReplayingDecoderBuffer(this.cumulation);
+
             }
         }
     }
