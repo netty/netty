@@ -215,7 +215,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
             
             int readable = input.readableBytes();
             int writable = cumulation.writableBytes();
-            int w = readable - writable;
+            int w = writable - readable;
             if (w < 0) {
                 int readerIndex = cumulation.readerIndex();
                 if (w + readerIndex >= 0) {
@@ -224,9 +224,11 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
                     fit = true;
                 }
             } else {
+
                 // ok the input fit into the cumulation buffer
                 fit = true;
             }
+            
             
             ChannelBuffer buf;
             if (fit) {
@@ -380,17 +382,15 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
 
     /**
      * Create a new {@link ChannelBuffer} which is used for the cumulation.
-     * Be aware that this MUST be a dynamic buffer. Sub-classes may override
-     * this to provide a dynamic {@link ChannelBuffer} which has some
-     * pre-allocated size that better fit their need.
-     * 
+     * Sub-classes may override this.
+     *
      * @param ctx {@link ChannelHandlerContext} for this handler
      * @return buffer the {@link ChannelBuffer} which is used for cumulation
      */
     protected ChannelBuffer newCumulationBuffer(
             ChannelHandlerContext ctx, int minimumCapacity) {
         ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
-        return ChannelBuffers.dynamicBuffer(
-                factory.getDefaultOrder(), Math.max(minimumCapacity, 256), factory);
+        return ChannelBuffers.buffer(
+                factory.getDefaultOrder(), Math.max(minimumCapacity, 256));
     }
 }
