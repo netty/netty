@@ -122,7 +122,16 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         request.addHeader(Names.CONNECTION, Values.UPGRADE);
         request.addHeader(Names.SEC_WEBSOCKET_KEY, key);
         request.addHeader(Names.HOST, wsURL.getHost());
-        request.addHeader(Names.ORIGIN, "http://" + wsURL.getHost());
+        
+        int wsPort = wsURL.getPort();
+        String originValue = "http://" + wsURL.getHost();
+        if (wsPort != 80 && wsPort != 443) {
+            // if the port is not standard (80/443) its needed to add the port to the header. 
+            // See http://tools.ietf.org/html/rfc6454#section-6.2
+            originValue = originValue + ":" + wsPort;
+        }
+        request.addHeader(Names.ORIGIN, originValue);
+        
         if (protocol != null && !protocol.equals("")) {
             request.addHeader(Names.SEC_WEBSOCKET_PROTOCOL, protocol);
         }
@@ -169,13 +178,17 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         }
 
         String upgrade = response.getHeader(Names.UPGRADE);
-        if (upgrade == null || !upgrade.equals(Values.WEBSOCKET.toLowerCase())) {
+        // Upgrade header should be matched case-insensitive.
+        // See https://github.com/netty/netty/issues/278
+        if (upgrade == null || !upgrade.toLowerCase().equals(Values.WEBSOCKET.toLowerCase())) {
             throw new WebSocketHandshakeException("Invalid handshake response upgrade: "
                     + response.getHeader(Names.UPGRADE));
         }
 
+        // Connection header should be matched case-insensitive.
+        // See https://github.com/netty/netty/issues/278
         String connection = response.getHeader(Names.CONNECTION);
-        if (connection == null || !connection.equals(Values.UPGRADE)) {
+        if (connection == null || !connection.toLowerCase().equals(Values.UPGRADE.toLowerCase())) {
             throw new WebSocketHandshakeException("Invalid handshake response connection: "
                     + response.getHeader(Names.CONNECTION));
         }

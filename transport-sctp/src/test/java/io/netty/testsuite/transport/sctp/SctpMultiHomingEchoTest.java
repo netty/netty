@@ -35,6 +35,8 @@ import io.netty.channel.sctp.SctpServerSocketChannelFactory;
 import io.netty.channel.sctp.codec.SctpFrameDecoder;
 import io.netty.channel.sctp.codec.SctpFrameEncoder;
 import io.netty.channel.sctp.handler.SimpleSctpChannelHandler;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import io.netty.testsuite.util.SctpTestUtil;
 import io.netty.util.internal.ExecutorUtil;
 
@@ -53,6 +55,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class SctpMultiHomingEchoTest {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(SctpMultiHomingEchoTest.class);
+    
     private static final Random random = new Random();
     static final byte[] data = new byte[4096];//could not test ultra jumbo frames
 
@@ -228,7 +234,7 @@ public class SctpMultiHomingEchoTest {
 
         @Override
         public void sctpNotificationReceived(ChannelHandlerContext ctx, SctpNotificationEvent event) {
-            System.out.println("SCTP notification event received :" + event);
+            logger.info("SCTP notification event received :" + event);
         }
     }
 }

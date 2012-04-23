@@ -15,6 +15,8 @@
  */
 package io.netty.example.securechat;
 
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -31,6 +33,9 @@ import javax.net.ssl.X509TrustManager;
  * even if it is invalid.
  */
 public class SecureChatTrustManagerFactory extends TrustManagerFactorySpi {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(SecureChatTrustManagerFactory.class);
 
     private static final TrustManager DUMMY_TRUST_MANAGER = new X509TrustManager() {
         @Override
@@ -45,7 +50,7 @@ public class SecureChatTrustManagerFactory extends TrustManagerFactorySpi {
             // You should do something in the real world.
             // You will reach here only if you enabled client certificate auth,
             // as described in SecureChatSslContextFactory.
-            System.err.println(
+            logger.error(
                     "UNKNOWN CLIENT CERTIFICATE: " + chain[0].getSubjectDN());
         }
 
@@ -54,7 +59,7 @@ public class SecureChatTrustManagerFactory extends TrustManagerFactorySpi {
                 X509Certificate[] chain, String authType) throws CertificateException {
             // Always trust - it is an example.
             // You should do something in the real world.
-            System.err.println(
+            logger.error(
                     "UNKNOWN SERVER CERTIFICATE: " + chain[0].getSubjectDN());
         }
     };

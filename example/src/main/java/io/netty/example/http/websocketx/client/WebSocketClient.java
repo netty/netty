@@ -57,8 +57,13 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 public class WebSocketClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(WebSocketClient.class);
 
     private final URI uri;
     
@@ -101,7 +106,7 @@ public class WebSocketClient {
             });
     
             // Connect
-            System.out.println("WebSocket Client connecting");
+            logger.info("WebSocket Client connecting");
             ChannelFuture future =
                     bootstrap.connect(
                             new InetSocketAddress(uri.getHost(), uri.getPort()));
@@ -111,17 +116,17 @@ public class WebSocketClient {
             handshaker.handshake(ch).awaitUninterruptibly().rethrowIfFailed();
             
             // Send 10 messages and wait for responses
-            System.out.println("WebSocket Client sending message");
+            logger.info("WebSocket Client sending message");
             for (int i = 0; i < 10; i++) {
                 ch.write(new TextWebSocketFrame("Message #" + i));
             }
     
             // Ping
-            System.out.println("WebSocket Client sending ping");
+            logger.info("WebSocket Client sending ping");
             ch.write(new PingWebSocketFrame(ChannelBuffers.copiedBuffer(new byte[]{1, 2, 3, 4, 5, 6})));
     
             // Close
-            System.out.println("WebSocket Client sending close");
+            logger.info("WebSocket Client sending close");
             ch.write(new CloseWebSocketFrame());
     
             // WebSocketClientHandler will close the connection when the server

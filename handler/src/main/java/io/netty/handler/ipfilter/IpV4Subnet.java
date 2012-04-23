@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ipfilter;
 
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.StringTokenizer;
@@ -40,6 +42,10 @@ import java.util.Vector;
  * where inetAddress is 192.168.1.0 and inetAddress2 is 192.168.1.123<BR>
  */
 public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(IpV4Subnet.class);
+    
     private static final int SUBNET_MASK = 0x80000000;
 
     private static final int BYTE_ADDRESS_MASK = 0xFF;
@@ -263,7 +269,7 @@ public class IpV4Subnet implements IpSet, Comparable<IpV4Subnet> {
                 return;
             }
             if (args.length > 1) {
-                System.out.println("Is IN: " + args[1] + " " + ipV4Subnet.contains(args[1]));
+                logger.debug("Is IN: " + args[1] + " " + ipV4Subnet.contains(args[1]));
             }
         }
     }

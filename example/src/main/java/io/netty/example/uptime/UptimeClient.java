@@ -25,6 +25,8 @@ import io.netty.channel.ChannelPipelineFactory;
 import io.netty.channel.Channels;
 import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timer;
 
@@ -35,6 +37,9 @@ import io.netty.util.Timer;
  * mechanism in Netty.
  */
 public class UptimeClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(UptimeClient.class);
 
     // Sleep 5 seconds before a reconnection attempt.
     static final int RECONNECT_DELAY = 5;
@@ -84,7 +89,7 @@ public class UptimeClient {
     public static void main(String[] args) throws Exception {
         // Print usage if no argument is specified.
         if (args.length != 2) {
-            System.err.println(
+            logger.error(
                     "Usage: " + UptimeClient.class.getSimpleName() +
                     " <host> <port>");
             return;

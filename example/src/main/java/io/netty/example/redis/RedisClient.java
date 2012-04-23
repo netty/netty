@@ -27,6 +27,8 @@ import io.netty.handler.codec.redis.RedisDecoder;
 import io.netty.handler.codec.redis.RedisEncoder;
 import io.netty.handler.codec.redis.Reply;
 import io.netty.handler.queue.BlockingReadHandler;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -36,6 +38,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class RedisClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(RedisClient.class);
+    
     private static final byte[] VALUE = "value".getBytes();
 
     public static void main(String[] args) throws Exception {
@@ -56,9 +62,9 @@ public final class RedisClient {
         Channel channel = redis.getChannel();
 
         channel.write(new Command("set", "1", "value"));
-        System.out.print(blockingReadHandler.read());
+        logger.info(blockingReadHandler.read().toString());
         channel.write(new Command("get", "1"));
-        System.out.print(blockingReadHandler.read());
+        logger.info(blockingReadHandler.read().toString());
 
         int CALLS = 1000000;
         int PIPELINE = 50;
@@ -85,7 +91,7 @@ public final class RedisClient {
             }
         }
         long end = System.currentTimeMillis();
-        System.out.println(CALLS * 1000 / (end - start) + " calls per second");
+        logger.info(CALLS * 1000 / (end - start) + " calls per second");
     }
 
     private static void pipelinedIndividualRequests(BlockingReadHandler<Reply> blockingReadHandler, Channel channel, long CALLS, int PIPELINE) throws IOException, InterruptedException {
@@ -101,7 +107,7 @@ public final class RedisClient {
             }
         }
         long end = System.currentTimeMillis();
-        System.out.println(CALLS * 1000 / (end - start) + " calls per second");
+        logger.info(CALLS * 1000 / (end - start) + " calls per second");
     }
 
     private static void requestResponse(BlockingReadHandler<Reply> blockingReadHandler, Channel channel, int CALLS) throws IOException, InterruptedException {
@@ -112,7 +118,7 @@ public final class RedisClient {
             blockingReadHandler.read();
         }
         long end = System.currentTimeMillis();
-        System.out.println(CALLS * 1000 / (end - start) + " calls per second");
+        logger.info(CALLS * 1000 / (end - start) + " calls per second");
     }
 
     private RedisClient() {

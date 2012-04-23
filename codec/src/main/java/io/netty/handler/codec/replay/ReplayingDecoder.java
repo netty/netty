@@ -293,6 +293,8 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
     private ReplayingDecoderBuffer replayable;
     private T state;
     private int checkpoint;
+    private boolean needsCleanup;
+    
 
     /**
      * Creates a new instance with no initial state (i.e: {@code null}).
@@ -429,6 +431,8 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             return;
         }
 
+        needsCleanup = true;
+        
         if (cumulation == null) {
             // the cumulation buffer is not created yet so just pass the input
             // to callDecode(...) method
@@ -570,8 +574,10 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             throws Exception {
         try {
             ChannelBuffer cumulation = this.cumulation;
-            if (cumulation == null) {
+            if (!needsCleanup) {
                 return;
+            } else {
+                needsCleanup = false;
             }
 
             this.cumulation = null;

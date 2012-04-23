@@ -432,11 +432,10 @@ final class NioProviderMetadata {
 
     public static void main(String[] args) throws Exception {
         for (Entry<Object, Object> e: System.getProperties().entrySet()) {
-            System.out.println(e.getKey() + ": " + e.getValue());
+            logger.debug(e.getKey() + ": " + e.getValue());
         }
-        System.out.println();
-        System.out.println("Hard-coded Constraint Level: " + CONSTRAINT_LEVEL);
-        System.out.println(
+        logger.debug("Hard-coded Constraint Level: " + CONSTRAINT_LEVEL);
+        logger.debug(
                 "Auto-detected Constraint Level: " +
                 new ConstraintLevelAutodetector().autodetect());
     }

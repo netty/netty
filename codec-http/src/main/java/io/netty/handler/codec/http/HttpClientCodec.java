@@ -57,14 +57,16 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
     private final HttpRequestEncoder encoder = new Encoder();
     private final HttpResponseDecoder decoder;
     private final AtomicLong requestResponseCounter = new AtomicLong(0);
+    private final boolean failOnMissingResponse;
     
     /**
      * Creates a new instance with the default decoder options
      * ({@code maxInitialLineLength (4096}}, {@code maxHeaderSize (8192)}, and
      * {@code maxChunkSize (8192)}).
+     *
      */
     public HttpClientCodec() {
-        this(4096, 8192, 8192);
+        this(4096, 8192, 8192, false);
     }
 
     /**
@@ -72,7 +74,16 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
      */
     public HttpClientCodec(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
+        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, false);
+    }
+
+    /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public HttpClientCodec(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse) {
         decoder = new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize);
+        this.failOnMissingResponse = failOnMissingResponse;
     }
 
     @Override
@@ -101,12 +112,14 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
 
             Object obj =  super.encode(ctx, channel, msg);
             
-            // check if the request is chunked if so do not increment
-            if (msg instanceof HttpRequest && !((HttpRequest) msg).isChunked()) {
-                requestResponseCounter.incrementAndGet();
-            } else if (msg instanceof HttpChunk && ((HttpChunk) msg).isLast()) {
-                // increment as its the last chunk
-                requestResponseCounter.incrementAndGet();
+            if (failOnMissingResponse) {
+                // check if the request is chunked if so do not increment
+                if (msg instanceof HttpRequest && !((HttpRequest) msg).isChunked()) {
+                    requestResponseCounter.incrementAndGet();
+                } else if (msg instanceof HttpChunk && ((HttpChunk) msg).isLast()) {
+                    // increment as its the last chunk
+                    requestResponseCounter.incrementAndGet();
+                }
             }
             
             return obj;
@@ -127,20 +140,29 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
                 return buffer.readBytes(actualReadableBytes());
             } else {
                 Object msg = super.decode(ctx, channel, buffer, state);
-                
-                if (msg != null) {
-                    // check if its a HttpMessage and its not chunked
-                    if (msg instanceof HttpMessage && !((HttpMessage) msg).isChunked()) {
-                        requestResponseCounter.decrementAndGet();
-                    } else if (msg instanceof HttpChunk && ((HttpChunk) msg).isLast()) {
-                        requestResponseCounter.decrementAndGet();
-                    }
+                if (failOnMissingResponse) {
+                    decrement(msg);
                 }
-               
                 return msg;
             }
         }
 
+        private void decrement(Object msg) {
+            if (msg == null) {
+                return;
+            }
+        
+            // check if its a HttpMessage and its not chunked
+            if (msg instanceof HttpMessage && !((HttpMessage) msg).isChunked()) {
+                requestResponseCounter.decrementAndGet();
+            } else if (msg instanceof HttpChunk && ((HttpChunk) msg).isLast()) {
+                requestResponseCounter.decrementAndGet();
+            } else if (msg instanceof Object[]) {
+                // we just decrement it here as we only use this if the end of the chunk is reached
+                // It would be more safe to check all the objects in the array but would also be slower
+                requestResponseCounter.decrementAndGet();
+            }
+        }
         @Override
         protected boolean isContentAlwaysEmpty(HttpMessage msg) {
             final int statusCode = ((HttpResponse) msg).getStatus().getCode();
@@ -197,9 +219,11 @@ public class HttpClientCodec implements ChannelUpstreamHandler,
         public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
             super.channelClosed(ctx, e);
             
-            long missingResponses = requestResponseCounter.get();
-            if (missingResponses > 0) {
-                throw new PrematureChannelClosureException("Channel closed but still missing " + missingResponses + " response(s)");
+            if (failOnMissingResponse) {
+                long missingResponses = requestResponseCounter.get();
+                if (missingResponses > 0) {
+                    throw new PrematureChannelClosureException("Channel closed but still missing " + missingResponses + " response(s)");
+                }
             }
         }
         

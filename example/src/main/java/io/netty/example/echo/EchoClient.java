@@ -24,6 +24,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPipelineFactory;
 import io.netty.channel.Channels;
 import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
 
 /**
  * Sends one message when a connection is open and echoes back any received
@@ -32,6 +34,9 @@ import io.netty.channel.socket.nio.NioClientSocketChannelFactory;
  * the server.
  */
 public class EchoClient {
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(EchoClient.class);
 
     private final String host;
     private final int port;
@@ -70,7 +75,7 @@ public class EchoClient {
     public static void main(String[] args) throws Exception {
         // Print usage if no argument is specified.
         if (args.length < 2 || args.length > 3) {
-            System.err.println(
+           logger.error(
                     "Usage: " + EchoClient.class.getSimpleName() +
                     " <host> <port> [<first message size>]");
             return;
