@@ -210,15 +210,47 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
                 (this.cumulation = newCumulationBuffer(ctx, input.readableBytes())).writeBytes(input);
             }
         } else {
-            ChannelBuffer cumulation = this.cumulation;
             assert cumulation.readable();
-            if (cumulation.writableBytes() < input.readableBytes()) {
-                cumulation.discardReadBytes();
+            boolean fit = false;
+            
+            int readable = input.readableBytes();
+            int writable = cumulation.writableBytes();
+            int w = writable - readable;
+            if (w < 0) {
+                int readerIndex = cumulation.readerIndex();
+                if (w + readerIndex >= 0) {
+                    // the input will fit if we discard all read bytes, so do it
+                    cumulation.discardReadBytes();
+                    fit = true;
+                }
+            } else {
+
+                // ok the input fit into the cumulation buffer
+                fit = true;
             }
-            cumulation.writeBytes(input);
-            callDecode(ctx, e.getChannel(), cumulation, e.getRemoteAddress());
-            if (!cumulation.readable()) {
+            
+            
+            ChannelBuffer buf;
+            if (fit) {
+                // the input fit in the cumulation buffer so copy it over
+                buf = this.cumulation;
+                buf.writeBytes(input);
+            } else {
+                // wrap the cumulation and input 
+                buf = ChannelBuffers.wrappedBuffer(cumulation, input);
+                this.cumulation = buf;
+            }
+
+
+            callDecode(ctx, e.getChannel(), buf, e.getRemoteAddress());
+            if (!buf.readable()) {
+                // nothing readable left so reset the state
                 this.cumulation = null;
+            } else {
+                // create a new buffer and copy the readable buffer into it
+                this.cumulation = newCumulationBuffer(ctx, buf.readableBytes());
+                this.cumulation.writeBytes(buf);
+
             }
         }
     }
@@ -350,9 +382,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
 
     /**
      * Create a new {@link ChannelBuffer} which is used for the cumulation.
-     * Be aware that this MUST be a dynamic buffer. Sub-classes may override
-     * this to provide a dynamic {@link ChannelBuffer} which has some
-     * pre-allocated size that better fit their need.
+     * Sub-classes may override this.
      *
      * @param ctx {@link ChannelHandlerContext} for this handler
      * @return buffer the {@link ChannelBuffer} which is used for cumulation
@@ -360,7 +390,6 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
     protected ChannelBuffer newCumulationBuffer(
             ChannelHandlerContext ctx, int minimumCapacity) {
         ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
-        return ChannelBuffers.dynamicBuffer(
-                factory.getDefaultOrder(), Math.max(minimumCapacity, 256), factory);
+        return factory.getBuffer(Math.max(minimumCapacity, 256));
     }
 }

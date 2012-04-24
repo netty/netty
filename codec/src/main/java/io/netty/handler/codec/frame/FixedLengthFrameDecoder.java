@@ -17,7 +17,6 @@ package io.netty.handler.codec.frame;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferFactory;
-import io.netty.buffer.ChannelBuffers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -78,8 +77,7 @@ public class FixedLengthFrameDecoder extends FrameDecoder {
     protected ChannelBuffer newCumulationBuffer(ChannelHandlerContext ctx, int minimumCapacity) {
         ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
         if (allocateFullBuffer) {
-            return ChannelBuffers.dynamicBuffer(
-                    factory.getDefaultOrder(), frameLength, ctx.getChannel().getConfig().getBufferFactory());
+            return factory.getBuffer(frameLength);
         }
         return super.newCumulationBuffer(ctx, minimumCapacity);
     }
