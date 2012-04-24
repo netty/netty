@@ -17,7 +17,6 @@ package org.jboss.netty.handler.codec.frame;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
@@ -78,8 +77,8 @@ public class FixedLengthFrameDecoder extends FrameDecoder {
     protected ChannelBuffer newCumulationBuffer(ChannelHandlerContext ctx, int minimumCapacity) {
         ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
         if (allocateFullBuffer) {
-            return ChannelBuffers.dynamicBuffer(
-                    factory.getDefaultOrder(), frameLength, ctx.getChannel().getConfig().getBufferFactory());
+            return factory.getBuffer(frameLength);
+
         }
         return super.newCumulationBuffer(ctx, minimumCapacity);
     }
