@@ -390,7 +390,6 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
     protected ChannelBuffer newCumulationBuffer(
             ChannelHandlerContext ctx, int minimumCapacity) {
         ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
-        return ChannelBuffers.buffer(
-                factory.getDefaultOrder(), Math.max(minimumCapacity, 256));
+        return factory.getBuffer(Math.max(minimumCapacity, 256));
     }
 }
