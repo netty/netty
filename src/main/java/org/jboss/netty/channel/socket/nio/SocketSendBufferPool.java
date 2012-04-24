@@ -20,11 +20,14 @@ import java.lang.ref.SoftReference;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
+import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.CompositeChannelBuffer;
 import org.jboss.netty.channel.DefaultFileRegion;
 import org.jboss.netty.channel.FileRegion;
+import org.jboss.netty.util.internal.DetectionUtil;
 
 final class SocketSendBufferPool {
 
@@ -65,6 +68,9 @@ final class SocketSendBufferPool {
             return EMPTY_BUFFER;
         }
 
+        if (src instanceof CompositeChannelBuffer && DetectionUtil.javaVersion() >= 7) {
+            return new GatheringSendBuffer(src.toByteBuffers());
+        }
         if (src.isDirect()) {
             return new UnpooledSendBuffer(src.toByteBuffer());
         }
@@ -248,6 +254,80 @@ final class SocketSendBufferPool {
                 }
             }
         }
+    }
+    
+    class GatheringSendBuffer implements SendBuffer {
+
+        private final ByteBuffer[] buffers;
+        private final int last;
+        private long written;
+        private final int total;
+
+        GatheringSendBuffer(ByteBuffer[] buffers) {
+            this.buffers = buffers;
+            this.last = buffers.length - 1;
+            int total = 0;
+            for (ByteBuffer buf: buffers) {
+                total += buf.remaining();
+            }
+            this.total = total;
+        }
+        
+        public boolean finished() {
+            return !buffers[last].hasRemaining();
+        }
+
+        public long writtenBytes() {
+            return written;
+        }
+
+        public long totalBytes() {
+            return total;
+        }
+
+        public long transferTo(WritableByteChannel ch) throws IOException {
+            if (ch instanceof GatheringByteChannel) {
+                 long w = ((GatheringByteChannel) ch).write(buffers);
+                 written += w;
+                 return w;
+            } else {
+                int send = 0;
+                for (ByteBuffer buf: buffers) {
+                    if (buf.hasRemaining()) {
+                        int w = ch.write(buf);
+                        if (w == 0) {
+                            break;
+                        } else {
+                            send += w;
+                        }
+                    }
+                }
+                written += send;
+                return send;
+            }
+        }
+
+        public long transferTo(DatagramChannel ch, SocketAddress raddr) throws IOException {
+            int send = 0;
+            for (ByteBuffer buf: buffers) {
+                if (buf.hasRemaining()) {
+                    int w = ch.send(buf, raddr);
+                    if (w == 0) {
+                        break;
+                    } else {
+                        send += w;
+                    }
+                }
+            }
+            written += send;
+
+            return send;
+        }
+
+        public void release() {
+            // nothing todo
+        }
+        
     }
 
     final class FileSendBuffer implements SendBuffer {
