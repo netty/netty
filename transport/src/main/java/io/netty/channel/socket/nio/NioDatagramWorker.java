@@ -29,6 +29,7 @@ import io.netty.channel.MessageEvent;
 import io.netty.channel.ReceiveBufferSizePredictor;
 import io.netty.channel.socket.nio.SendBufferPool.SendBuffer;
 
+import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousCloseException;
@@ -154,13 +155,15 @@ public class NioDatagramWorker extends AbstractNioWorker {
             if (future != null) {
                 future.setSuccess();
             }
-        } catch (final ClosedChannelException e) {
+        } catch (final IOException e) {
             if (future != null) {
                 future.setFailure(e);
             }
             close(channel, succeededFuture(channel));
-            throw new ChannelException(
-                    "Failed to register a socket to the selector.", e);
+            if (!(e instanceof ClosedChannelException)) {
+                throw new ChannelException(
+                        "Failed to register a socket to the selector.", e);
+            }
         }
     }
 
