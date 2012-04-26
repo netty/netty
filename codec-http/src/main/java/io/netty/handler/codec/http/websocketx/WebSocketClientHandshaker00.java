@@ -60,11 +60,12 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      *            Sub protocol request sent to the server.
      * @param customHeaders
      *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
      */
     public WebSocketClientHandshaker00(URI webSocketURL, WebSocketVersion version, String subprotocol,
-            Map<String, String> customHeaders) {
-        super(webSocketURL, version, subprotocol, customHeaders);
-
+            Map<String, String> customHeaders, long maxFramePayloadLength) {
+        super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
     }
 
     /**
@@ -138,17 +139,16 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         request.addHeader(Names.UPGRADE, Values.WEBSOCKET);
         request.addHeader(Names.CONNECTION, Values.UPGRADE);
         request.addHeader(Names.HOST, wsURL.getHost());
-        
+
         int wsPort = wsURL.getPort();
         String originValue = "http://" + wsURL.getHost();
         if (wsPort != 80 && wsPort != 443) {
-            // if the port is not standard (80/443) its needed to add the port to the header. 
+            // if the port is not standard (80/443) its needed to add the port to the header.
             // See http://tools.ietf.org/html/rfc6454#section-6.2
             originValue = originValue + ":" + wsPort;
         }
         request.addHeader(Names.ORIGIN, originValue);
 
-        
         request.addHeader(Names.SEC_WEBSOCKET_KEY1, key1);
         request.addHeader(Names.SEC_WEBSOCKET_KEY2, key2);
         if (getExpectedSubprotocol() != null && !getExpectedSubprotocol().equals("")) {
@@ -220,7 +220,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         String protocol = response.getHeader(Names.SEC_WEBSOCKET_PROTOCOL);
         setActualSubprotocol(protocol);
 
-        channel.getPipeline().replace(HttpResponseDecoder.class, "ws-decoder", new WebSocket00FrameDecoder());
+        channel.getPipeline().replace(HttpResponseDecoder.class, "ws-decoder",
+                new WebSocket00FrameDecoder(this.getMaxFramePayloadLength()));
 
         setHandshakeComplete();
     }

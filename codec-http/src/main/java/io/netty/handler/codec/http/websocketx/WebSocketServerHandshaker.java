@@ -33,9 +33,11 @@ public abstract class WebSocketServerHandshaker {
 
     private final WebSocketVersion version;
 
+    private final long maxFramePayloadLength;
+
     /**
      * Constructor specifying the destination web socket location
-     *
+     * 
      * @param version
      *            the protocol version
      * @param webSocketUrl
@@ -43,9 +45,11 @@ public abstract class WebSocketServerHandshaker {
      *            sent to this URL.
      * @param subprotocols
      *            CSV of supported protocols. Null if sub protocols not supported.
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
      */
-    protected WebSocketServerHandshaker(
-            WebSocketVersion version, String webSocketUrl, String subprotocols) {
+    protected WebSocketServerHandshaker(WebSocketVersion version, String webSocketUrl, String subprotocols,
+            long maxFramePayloadLength) {
         this.version = version;
         this.webSocketUrl = webSocketUrl;
         if (subprotocols != null) {
@@ -57,6 +61,7 @@ public abstract class WebSocketServerHandshaker {
         } else {
             this.subprotocols = new String[0];
         }
+        this.maxFramePayloadLength = maxFramePayloadLength;
     }
 
     /**
@@ -71,7 +76,7 @@ public abstract class WebSocketServerHandshaker {
      */
     public Set<String> getSubprotocols() {
         Set<String> ret = new LinkedHashSet<String>();
-        for (String p: this.subprotocols) {
+        for (String p : this.subprotocols) {
             ret.add(p);
         }
         return ret;
@@ -85,8 +90,15 @@ public abstract class WebSocketServerHandshaker {
     }
 
     /**
+     * Returns the max length for any frame's payload 
+     */
+    public long getMaxFramePayloadLength() {
+        return maxFramePayloadLength;
+    }
+
+    /**
      * Performs the opening handshake
-     *
+     * 
      * @param channel
      *            Channel
      * @param req
@@ -96,7 +108,7 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * Performs the closing handshake
-     *
+     * 
      * @param channel
      *            Channel
      * @param frame
@@ -106,7 +118,7 @@ public abstract class WebSocketServerHandshaker {
 
     /**
      * Selects the first matching supported sub protocol
-     *
+     * 
      * @param requestedSubprotocols
      *            CSV of protocols to be supported. e.g. "chat, superchat"
      * @return First matching supported sub protocol. Null if not found.
@@ -117,10 +129,10 @@ public abstract class WebSocketServerHandshaker {
         }
 
         String[] requesteSubprotocolArray = requestedSubprotocols.split(",");
-        for (String p: requesteSubprotocolArray) {
+        for (String p : requesteSubprotocolArray) {
             String requestedSubprotocol = p.trim();
 
-            for (String supportedSubprotocol: subprotocols) {
+            for (String supportedSubprotocol : subprotocols) {
                 if (requestedSubprotocol.equals(supportedSubprotocol)) {
                     return requestedSubprotocol;
                 }

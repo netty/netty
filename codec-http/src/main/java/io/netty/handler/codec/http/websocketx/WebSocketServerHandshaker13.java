@@ -60,9 +60,13 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      *            CSV of supported protocols
      * @param allowExtensions
      *            Allow extensions to be used in the reserved bits of the web socket frame
+     * @param maxFramePayloadLength
+     *            Maximum allowable frame payload length. Setting this value to your application's requirement may
+     *            reduce denial of service attacks using long data frames.
      */
-    public WebSocketServerHandshaker13(String webSocketURL, String subprotocols, boolean allowExtensions) {
-        super(WebSocketVersion.V13, webSocketURL, subprotocols);
+    public WebSocketServerHandshaker13(String webSocketURL, String subprotocols, boolean allowExtensions,
+            long maxFramePayloadLength) {
+        super(WebSocketVersion.V13, webSocketURL, subprotocols, maxFramePayloadLength);
         this.allowExtensions = allowExtensions;
     }
 
@@ -143,7 +147,8 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
             p.remove(HttpChunkAggregator.class);
         }
 
-        p.replace(HttpRequestDecoder.class, "wsdecoder", new WebSocket13FrameDecoder(true, allowExtensions));
+        p.replace(HttpRequestDecoder.class, "wsdecoder",
+                new WebSocket13FrameDecoder(true, allowExtensions, this.getMaxFramePayloadLength()));
         p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket13FrameEncoder(false));
 
         return future;

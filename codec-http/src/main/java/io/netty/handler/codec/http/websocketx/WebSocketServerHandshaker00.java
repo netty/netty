@@ -58,9 +58,12 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            sent to this URL.
      * @param subprotocols
      *            CSV of supported protocols
+     * @param maxFramePayloadLength
+     *            Maximum allowable frame payload length. Setting this value to your application's requirement may
+     *            reduce denial of service attacks using long data frames.
      */
-    public WebSocketServerHandshaker00(String webSocketURL, String subprotocols) {
-        super(WebSocketVersion.V00, webSocketURL, subprotocols);
+    public WebSocketServerHandshaker00(String webSocketURL, String subprotocols, long maxFramePayloadLength) {
+        super(WebSocketVersion.V00, webSocketURL, subprotocols, maxFramePayloadLength);
     }
 
     /**
@@ -167,7 +170,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         if (p.get(HttpChunkAggregator.class) != null) {
             p.remove(HttpChunkAggregator.class);
         }
-        p.replace(HttpRequestDecoder.class, "wsdecoder", new WebSocket00FrameDecoder());
+        p.replace(HttpRequestDecoder.class, "wsdecoder",
+                new WebSocket00FrameDecoder(this.getMaxFramePayloadLength()));
 
         ChannelFuture future = channel.write(res);
 

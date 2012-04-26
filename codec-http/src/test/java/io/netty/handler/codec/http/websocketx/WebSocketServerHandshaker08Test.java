@@ -68,7 +68,7 @@ public class WebSocketServerHandshaker08Test {
         req.setHeader(Names.SEC_WEBSOCKET_PROTOCOL, "chat, superchat");
         req.setHeader(Names.SEC_WEBSOCKET_VERSION, "8");
         
-        WebSocketServerHandshaker08 handsaker = new WebSocketServerHandshaker08("ws://example.com/chat", "chat", false);
+        WebSocketServerHandshaker08 handsaker = new WebSocketServerHandshaker08("ws://example.com/chat", "chat", false, Long.MAX_VALUE);
         handsaker.handshake(channelMock, req);
         
         Assert.assertEquals("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", res.getValue().getHeader(Names.SEC_WEBSOCKET_ACCEPT));
