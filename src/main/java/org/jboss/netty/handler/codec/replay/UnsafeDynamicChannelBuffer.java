@@ -21,7 +21,7 @@ import org.jboss.netty.buffer.DynamicChannelBuffer;
 /**
  * This class is not used by {@link ReplayingDecoder} anymore but is still here to not break API.
  * 
- * This will get removed in the future.
+ * This class will get removed in the future.
  * 
  * @deprecated
  *
@@ -43,3 +43,4 @@ class UnsafeDynamicChannelBuffer extends DynamicChannelBuffer {
         // Do not check here - ReplayingDecoderBuffer will check.
     }
 }
+
