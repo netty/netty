@@ -41,6 +41,18 @@ class OioWorker extends AbstractOioWorker<OioSocketChannel> {
     }
 
     @Override
+    public void run() {
+        boolean fireConnected = channel instanceof OioAcceptedSocketChannel;
+        if (fireConnected && channel.isOpen()) {
+             // Fire the channelConnected event for OioAcceptedSocketChannel.
+            // See #287
+            fireChannelConnected(channel, channel.getRemoteAddress());
+            
+        }
+        super.run();
+    }
+
+    @Override
     boolean process() throws IOException {
         byte[] buf;
         int readBytes;
