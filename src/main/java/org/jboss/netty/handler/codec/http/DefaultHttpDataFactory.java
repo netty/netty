@@ -21,8 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.jboss.netty.handler.codec.http.HttpRequest;
-
 /**
  * Default factory giving Attribute and FileUpload according to constructor
  *

@@ -30,15 +30,17 @@ public class HttpUploadServerPipelineFactory implements ChannelPipelineFactory {
         ChannelPipeline pipeline = pipeline();
 
         // Uncomment the following line if you want HTTPS
-        //SSLEngine engine = SecureChatSslContextFactory.getServerContext().createSSLEngine();
-        //engine.setUseClientMode(false);
-        //pipeline.addLast("ssl", new SslHandler(engine));
+        // SSLEngine engine =
+        // SecureChatSslContextFactory.getServerContext().createSSLEngine();
+        // engine.setUseClientMode(false);
+        // pipeline.addLast("ssl", new SslHandler(engine));
 
         pipeline.addLast("decoder", new HttpRequestDecoder());
 
         pipeline.addLast("encoder", new HttpResponseEncoder());
 
-        // Remove the following line if you don't want automatic content compression.
+        // Remove the following line if you don't want automatic content
+        // compression.
         pipeline.addLast("deflater", new HttpContentCompressor());
 
         pipeline.addLast("handler", new HttpUploadServerHandler());

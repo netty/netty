@@ -17,8 +17,6 @@ package org.jboss.netty.handler.codec.http;
 
 import java.nio.charset.Charset;
 
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-
 /**
  * Default FileUpload implementation that stores file into memory.<br><br>
  *

@@ -18,8 +18,6 @@ package org.jboss.netty.handler.codec.http;
 import java.io.File;
 import java.nio.charset.Charset;
 
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-
 /**
  * Disk FileUpload implementation that stores file into real files
  */
