@@ -41,8 +41,8 @@ public class HttpUploadClientPipelineFactory implements ChannelPipelineFactory {
 
         // Enable HTTPS if necessary.
         if (ssl) {
-            SSLEngine engine = SecureChatSslContextFactory.getClientContext()
-                    .createSSLEngine();
+            SSLEngine engine =
+                SecureChatSslContextFactory.getClientContext().createSSLEngine();
             engine.setUseClientMode(true);
 
             pipeline.addLast("ssl", new SslHandler(engine));
@@ -50,13 +50,12 @@ public class HttpUploadClientPipelineFactory implements ChannelPipelineFactory {
 
         pipeline.addLast("codec", new HttpClientCodec());
 
-        // Remove the following line if you don't want automatic content
-        // decompression.
+        // Remove the following line if you don't want automatic content decompression.
         pipeline.addLast("inflater", new HttpContentDecompressor());
 
         // to be used since huge file transfer
         pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());
-
+        
         pipeline.addLast("handler", new HttpUploadClientHandler());
         return pipeline;
     }

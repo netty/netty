@@ -63,9 +63,9 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.CharsetUtil;
 
 public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
-
-    private static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(HttpUploadServerHandler.class);
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(HttpUploadServerHandler.class);
 
     private volatile HttpRequest request;
 
@@ -96,8 +96,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
-            throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (!readingChunks) {
             // clean previous FileUpload if Any
             if (decoder != null) {
@@ -116,18 +115,18 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
             responseContent.append("WELCOME TO THE WILD WILD WEB SERVER\r\n");
             responseContent.append("===================================\r\n");
 
-            responseContent.append("VERSION: "
-                    + request.getProtocolVersion().getText() + "\r\n");
+            responseContent.append("VERSION: " +
+                    request.getProtocolVersion().getText() + "\r\n");
 
-            responseContent.append("REQUEST_URI: " + request.getUri()
-                    + "\r\n\r\n");
+            responseContent.append("REQUEST_URI: " + request.getUri() +
+                    "\r\n\r\n");
             responseContent.append("\r\n\r\n");
 
             // new method
             List<Entry<String, String>> headers = request.getHeaders();
-            for (Entry<String, String> entry : headers) {
-                responseContent.append("HEADER: " + entry.getKey() + "="
-                        + entry.getValue() + "\r\n");
+            for (Entry<String, String> entry: headers) {
+                responseContent.append("HEADER: " + entry.getKey() + "=" +
+                        entry.getValue() + "\r\n");
             }
             responseContent.append("\r\n\r\n");
 
@@ -140,19 +139,19 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
                 CookieDecoder decoder = new CookieDecoder();
                 cookies = decoder.decode(value);
             }
-            for (Cookie cookie : cookies) {
+            for (Cookie cookie: cookies) {
                 responseContent.append("COOKIE: " + cookie.toString() + "\r\n");
             }
             responseContent.append("\r\n\r\n");
 
-            QueryStringDecoder decoderQuery = new QueryStringDecoder(
-                    request.getUri());
+            QueryStringDecoder decoderQuery = new QueryStringDecoder(request
+                    .getUri());
             Map<String, List<String>> uriAttributes = decoderQuery
                     .getParameters();
-            for (String key : uriAttributes.keySet()) {
-                for (String valuen : uriAttributes.get(key)) {
-                    responseContent.append("URI: " + key + "=" + valuen
-                            + "\r\n");
+            for (String key: uriAttributes.keySet()) {
+                for (String valuen: uriAttributes.get(key)) {
+                    responseContent.append("URI: " + key + "=" + valuen +
+                            "\r\n");
                 }
             }
             responseContent.append("\r\n\r\n");
@@ -175,10 +174,10 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
                 return;
             }
 
-            responseContent.append("Is Chunked: " + request.isChunked()
-                    + "\r\n");
-            responseContent.append("IsMultipart: " + decoder.isMultipart()
-                    + "\r\n");
+            responseContent.append("Is Chunked: " + request.isChunked() +
+                    "\r\n");
+            responseContent.append("IsMultipart: " + decoder.isMultipart() +
+                    "\r\n");
             if (request.isChunked()) {
                 // Chunk version
                 responseContent.append("Chunks: ");
@@ -203,8 +202,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
                 return;
             }
             responseContent.append("o");
-            // example of reading chunk by chunk (minimize memory usage due to
-            // Factory)
+            // example of reading chunk by chunk (minimize memory usage due to Factory)
             readHttpDataChunkByChunk(e.getChannel());
             // example of reading only if at the end
             if (chunk.isLast()) {
@@ -217,7 +215,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
 
     /**
      * Example of reading all InterfaceHttpData from finished transfer
-     * 
+     *
      * @param channel
      */
     private void readHttpDataAllReceive(Channel channel) {
@@ -232,7 +230,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
             Channels.close(channel);
             return;
         }
-        for (InterfaceHttpData data : datas) {
+        for (InterfaceHttpData data: datas) {
             writeHttpData(data);
         }
         responseContent.append("\r\n\r\nEND OF CONTENT AT FINAL END\r\n");
@@ -241,7 +239,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
     /**
      * Example of reading request by chunk and getting values from chunk to
      * chunk
-     * 
+     *
      * @param channel
      */
     private void readHttpDataChunkByChunk(Channel channel) {
@@ -269,25 +267,25 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
             } catch (IOException e1) {
                 // Error while reading data from File, only print name and error
                 e1.printStackTrace();
-                responseContent.append("\r\nBODY Attribute: "
-                        + attribute.getHttpDataType().name() + ": "
-                        + attribute.getName() + " Error while reading value: "
-                        + e1.getMessage() + "\r\n");
+                responseContent.append("\r\nBODY Attribute: " +
+                        attribute.getHttpDataType().name() + ": " +
+                        attribute.getName() + " Error while reading value: " +
+                        e1.getMessage() + "\r\n");
                 return;
             }
             if (value.length() > 100) {
-                responseContent.append("\r\nBODY Attribute: "
-                        + attribute.getHttpDataType().name() + ": "
-                        + attribute.getName() + " data too long\r\n");
+                responseContent.append("\r\nBODY Attribute: " +
+                        attribute.getHttpDataType().name() + ": " +
+                        attribute.getName() + " data too long\r\n");
             } else {
-                responseContent.append("\r\nBODY Attribute: "
-                        + attribute.getHttpDataType().name() + ": "
-                        + attribute.toString() + "\r\n");
+                responseContent.append("\r\nBODY Attribute: " +
+                        attribute.getHttpDataType().name() + ": " +
+                        attribute.toString() + "\r\n");
             }
         } else {
-            responseContent.append("\r\nBODY FileUpload: "
-                    + data.getHttpDataType().name() + ": " + data.toString()
-                    + "\r\n");
+            responseContent.append("\r\nBODY FileUpload: " +
+                    data.getHttpDataType().name() + ": " + data.toString() +
+                    "\r\n");
             if (data.getHttpDataType() == HttpDataType.FileUpload) {
                 FileUpload fileUpload = (FileUpload) data;
                 if (fileUpload.isCompleted()) {
@@ -305,8 +303,8 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
                         responseContent.append("\r\n");
                     } else {
                         responseContent
-                                .append("\tFile too long to be printed out:"
-                                        + fileUpload.length() + "\r\n");
+                                .append("\tFile too long to be printed out:" +
+                                        fileUpload.length() + "\r\n");
                     }
                     // fileUpload.isInMemory();// tells if the file is in Memory
                     // or on File
@@ -324,15 +322,15 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
 
     private void writeResponse(Channel channel) {
         // Convert the response content to a ChannelBuffer.
-        ChannelBuffer buf = ChannelBuffers.copiedBuffer(
-                responseContent.toString(), CharsetUtil.UTF_8);
+        ChannelBuffer buf = ChannelBuffers.copiedBuffer(responseContent
+                .toString(), CharsetUtil.UTF_8);
         responseContent.setLength(0);
 
         // Decide whether to close the connection or not.
         boolean close = HttpHeaders.Values.CLOSE.equalsIgnoreCase(request
-                .getHeader(HttpHeaders.Names.CONNECTION))
-                || request.getProtocolVersion().equals(HttpVersion.HTTP_1_0)
-                && !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(request
+                .getHeader(HttpHeaders.Names.CONNECTION)) ||
+                request.getProtocolVersion().equals(HttpVersion.HTTP_1_0) &&
+                !HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase(request
                         .getHeader(HttpHeaders.Names.CONNECTION));
 
         // Build the response object.
@@ -345,8 +343,8 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
         if (!close) {
             // There's no need to add 'Content-Length' header
             // if this is the last response.
-            response.setHeader(HttpHeaders.Names.CONTENT_LENGTH,
-                    String.valueOf(buf.readableBytes()));
+            response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String
+                    .valueOf(buf.readableBytes()));
         }
 
         Set<Cookie> cookies;
@@ -360,11 +358,11 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
         if (!cookies.isEmpty()) {
             // Reset the cookies if necessary.
             CookieEncoder cookieEncoder = new CookieEncoder(true);
-            for (Cookie cookie : cookies) {
+            for (Cookie cookie: cookies) {
                 cookieEncoder.addCookie(cookie);
             }
-            response.addHeader(HttpHeaders.Names.SET_COOKIE,
-                    cookieEncoder.encode());
+            response.addHeader(HttpHeaders.Names.SET_COOKIE, cookieEncoder
+                    .encode());
         }
         // Write the response.
         ChannelFuture future = channel.write(response);
@@ -470,16 +468,16 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
         responseContent.append("</body>");
         responseContent.append("</html>");
 
-        ChannelBuffer buf = ChannelBuffers.copiedBuffer(
-                responseContent.toString(), CharsetUtil.UTF_8);
+        ChannelBuffer buf = ChannelBuffers.copiedBuffer(responseContent
+                .toString(), CharsetUtil.UTF_8);
         // Build the response object.
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
                 HttpResponseStatus.OK);
         response.setContent(buf);
         response.setHeader(HttpHeaders.Names.CONTENT_TYPE,
                 "text/html; charset=UTF-8");
-        response.setHeader(HttpHeaders.Names.CONTENT_LENGTH,
-                String.valueOf(buf.readableBytes()));
+        response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf
+                .readableBytes()));
         // Write the response.
         e.getChannel().write(response);
     }

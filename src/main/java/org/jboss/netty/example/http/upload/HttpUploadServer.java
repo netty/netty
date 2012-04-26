@@ -22,13 +22,13 @@ import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 public class HttpUploadServer {
-
+    
     private final int port;
-
+    
     public HttpUploadServer(int port) {
         this.port = port;
     }
-
+    
     public void run() {
         // Configure the server.
         ServerBootstrap bootstrap = new ServerBootstrap(

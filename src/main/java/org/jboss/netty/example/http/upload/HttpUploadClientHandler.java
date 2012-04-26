@@ -27,15 +27,14 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.CharsetUtil;
 
 public class HttpUploadClientHandler extends SimpleChannelUpstreamHandler {
-
-    private static final InternalLogger logger = InternalLoggerFactory
-            .getInstance(HttpUploadClientHandler.class);
+    
+    private static final InternalLogger logger =
+        InternalLoggerFactory.getInstance(HttpUploadClientHandler.class);
 
     private volatile boolean readingChunks;
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
-            throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (!readingChunks) {
             HttpResponse response = (HttpResponse) e.getMessage();
 
@@ -43,8 +42,8 @@ public class HttpUploadClientHandler extends SimpleChannelUpstreamHandler {
             logger.info("VERSION: " + response.getProtocolVersion());
 
             if (!response.getHeaderNames().isEmpty()) {
-                for (String name : response.getHeaderNames()) {
-                    for (String value : response.getHeaders(name)) {
+                for (String name: response.getHeaderNames()) {
+                    for (String value: response.getHeaders(name)) {
                         logger.info("HEADER: " + name + " = " + value);
                     }
                 }
