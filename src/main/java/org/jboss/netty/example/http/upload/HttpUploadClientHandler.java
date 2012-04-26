@@ -33,7 +33,6 @@ public class HttpUploadClientHandler extends SimpleChannelUpstreamHandler {
 
     private volatile boolean readingChunks;
 
-    @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (!readingChunks) {
             HttpResponse response = (HttpResponse) e.getMessage();
@@ -71,7 +70,6 @@ public class HttpUploadClientHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
-    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
             throws Exception {
         e.getCause().printStackTrace();
