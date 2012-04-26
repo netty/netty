@@ -21,10 +21,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+
 /**
  * Provides the constants for the standard HTTP header names and values and
  * commonly used utility methods that accesses an {@link HttpMessage}.
- * 
  * @apiviz.landmark
  * @apiviz.stereotype static
  */
@@ -32,7 +32,6 @@ public class HttpHeaders {
 
     /**
      * Standard HTTP header names.
-     * 
      * @apiviz.stereotype static
      */
     public static final class Names {
@@ -304,7 +303,6 @@ public class HttpHeaders {
 
     /**
      * Standard HTTP header values.
-     * 
      * @apiviz.stereotype static
      */
     public static final class Values {
@@ -323,7 +321,7 @@ public class HttpHeaders {
         /**
          * {@code "boundary"}
          */
-        static final String BOUNDARY = "boundary";
+        static final String BOUNDARY = "boundary";        
         /**
          * {@code "bytes"}
          */
@@ -347,7 +345,7 @@ public class HttpHeaders {
         /**
          * {@code "100-continue"}
          */
-        public static final String CONTINUE = "100-continue";
+        public static final String CONTINUE =  "100-continue";
         /**
          * {@code "deflate"}
          */
@@ -379,7 +377,7 @@ public class HttpHeaders {
         /**
          * {@code "multipart/form-data"}
          */
-        static final String MULTIPART_FORM_DATA = "multipart/form-data";
+        static final String MULTIPART_FORM_DATA = "multipart/form-data";        
         /**
          * {@code "must-revalidate"}
          */
@@ -442,9 +440,10 @@ public class HttpHeaders {
         }
     }
 
+
     /**
      * Returns {@code true} if and only if the connection can remain open and
-     * thus 'kept alive'. This methods respects the value of the
+     * thus 'kept alive'.  This methods respects the value of the
      * {@code "Connection"} header first and then the return value of
      * {@link HttpVersion#isKeepAliveDefault()}.
      */
@@ -463,23 +462,21 @@ public class HttpHeaders {
 
     /**
      * Sets the value of the {@code "Connection"} header depending on the
-     * protocol version of the specified message. This method sets or removes
+     * protocol version of the specified message.  This method sets or removes
      * the {@code "Connection"} header depending on what the default keep alive
      * mode of the message's protocol version is, as specified by
      * {@link HttpVersion#isKeepAliveDefault()}.
      * <ul>
      * <li>If the connection is kept alive by default:
-     * <ul>
-     * <li>set to {@code "close"} if {@code keepAlive} is {@code false}.</li>
-     * <li>remove otherwise.</li>
-     * </ul>
-     * </li>
+     *     <ul>
+     *     <li>set to {@code "close"} if {@code keepAlive} is {@code false}.</li>
+     *     <li>remove otherwise.</li>
+     *     </ul></li>
      * <li>If the connection is closed by default:
-     * <ul>
-     * <li>set to {@code "keep-alive"} if {@code keepAlive} is {@code true}.</li>
-     * <li>remove otherwise.</li>
-     * </ul>
-     * </li>
+     *     <ul>
+     *     <li>set to {@code "keep-alive"} if {@code keepAlive} is {@code true}.</li>
+     *     <li>remove otherwise.</li>
+     *     </ul></li>
      * </ul>
      */
     public static void setKeepAlive(HttpMessage message, boolean keepAlive) {
@@ -499,10 +496,10 @@ public class HttpHeaders {
     }
 
     /**
-     * Returns the header value with the specified header name. If there are
-     * more than one header value for the specified header name, the first value
-     * is returned.
-     * 
+     * Returns the header value with the specified header name.  If there are
+     * more than one header value for the specified header name, the first
+     * value is returned.
+     *
      * @return the header value or {@code null} if there is no such header
      */
     public static String getHeader(HttpMessage message, String name) {
@@ -510,15 +507,14 @@ public class HttpHeaders {
     }
 
     /**
-     * Returns the header value with the specified header name. If there are
-     * more than one header value for the specified header name, the first value
-     * is returned.
-     * 
+     * Returns the header value with the specified header name.  If there are
+     * more than one header value for the specified header name, the first
+     * value is returned.
+     *
      * @return the header value or the {@code defaultValue} if there is no such
      *         header
      */
-    public static String getHeader(HttpMessage message, String name,
-            String defaultValue) {
+    public static String getHeader(HttpMessage message, String name, String defaultValue) {
         String value = message.getHeader(name);
         if (value == null) {
             return defaultValue;
@@ -527,7 +523,7 @@ public class HttpHeaders {
     }
 
     /**
-     * Sets a new header with the specified name and value. If there is an
+     * Sets a new header with the specified name and value.  If there is an
      * existing header with the same name, the existing header is removed.
      */
     public static void setHeader(HttpMessage message, String name, Object value) {
@@ -535,11 +531,10 @@ public class HttpHeaders {
     }
 
     /**
-     * Sets a new header with the specified name and values. If there is an
+     * Sets a new header with the specified name and values.  If there is an
      * existing header with the same name, the existing header is removed.
      */
-    public static void setHeader(HttpMessage message, String name,
-            Iterable<?> values) {
+    public static void setHeader(HttpMessage message, String name, Iterable<?> values) {
         message.setHeader(name, values);
     }
 
@@ -551,14 +546,13 @@ public class HttpHeaders {
     }
 
     /**
-     * Returns the integer header value with the specified header name. If there
-     * are more than one header value for the specified header name, the first
-     * value is returned.
-     * 
+     * Returns the integer header value with the specified header name.  If
+     * there are more than one header value for the specified header name, the
+     * first value is returned.
+     *
      * @return the header value
      * @throws NumberFormatException
-     *             if there is no such header or the header value is not a
-     *             number
+     *         if there is no such header or the header value is not a number
      */
     public static int getIntHeader(HttpMessage message, String name) {
         String value = getHeader(message, name);
@@ -569,15 +563,14 @@ public class HttpHeaders {
     }
 
     /**
-     * Returns the integer header value with the specified header name. If there
-     * are more than one header value for the specified header name, the first
-     * value is returned.
-     * 
+     * Returns the integer header value with the specified header name.  If
+     * there are more than one header value for the specified header name, the
+     * first value is returned.
+     *
      * @return the header value or the {@code defaultValue} if there is no such
      *         header or the header value is not a number
      */
-    public static int getIntHeader(HttpMessage message, String name,
-            int defaultValue) {
+    public static int getIntHeader(HttpMessage message, String name, int defaultValue) {
         String value = getHeader(message, name);
         if (value == null) {
             return defaultValue;
@@ -591,19 +584,18 @@ public class HttpHeaders {
     }
 
     /**
-     * Sets a new integer header with the specified name and value. If there is
-     * an existing header with the same name, the existing header is removed.
+     * Sets a new integer header with the specified name and value.  If there
+     * is an existing header with the same name, the existing header is removed.
      */
     public static void setIntHeader(HttpMessage message, String name, int value) {
         message.setHeader(name, value);
     }
 
     /**
-     * Sets a new integer header with the specified name and values. If there is
-     * an existing header with the same name, the existing header is removed.
+     * Sets a new integer header with the specified name and values.  If there
+     * is an existing header with the same name, the existing header is removed.
      */
-    public static void setIntHeader(HttpMessage message, String name,
-            Iterable<Integer> values) {
+    public static void setIntHeader(HttpMessage message, String name, Iterable<Integer> values) {
         message.setHeader(name, values);
     }
 
@@ -615,24 +607,24 @@ public class HttpHeaders {
     }
 
     /**
-     * Returns the length of the content. Please note that this value is not
-     * retrieved from {@link HttpMessage#getContent()} but from the
+     * Returns the length of the content.  Please note that this value is
+     * not retrieved from {@link HttpMessage#getContent()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
      * other.
-     * 
-     * @return the content length or {@code 0} if this message does not have the
-     *         {@code "Content-Length"} header
+     *
+     * @return the content length or {@code 0} if this message does not have
+     *         the {@code "Content-Length"} header
      */
     public static long getContentLength(HttpMessage message) {
         return getContentLength(message, 0L);
     }
 
     /**
-     * Returns the length of the content. Please note that this value is not
-     * retrieved from {@link HttpMessage#getContent()} but from the
+     * Returns the length of the content.  Please note that this value is
+     * not retrieved from {@link HttpMessage#getContent()} but from the
      * {@code "Content-Length"} header, and thus they are independent from each
      * other.
-     * 
+     *
      * @return the content length or {@code defaultValue} if this message does
      *         not have the {@code "Content-Length"} header
      */
@@ -645,16 +637,16 @@ public class HttpHeaders {
         // WebSockset messages have constant content-lengths.
         if (message instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) message;
-            if (HttpMethod.GET.equals(req.getMethod())
-                    && req.containsHeader(Names.SEC_WEBSOCKET_KEY1)
-                    && req.containsHeader(Names.SEC_WEBSOCKET_KEY2)) {
+            if (HttpMethod.GET.equals(req.getMethod()) &&
+                req.containsHeader(Names.SEC_WEBSOCKET_KEY1) &&
+                req.containsHeader(Names.SEC_WEBSOCKET_KEY2)) {
                 return 8;
             }
         } else if (message instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) message;
-            if (res.getStatus().getCode() == 101
-                    && res.containsHeader(Names.SEC_WEBSOCKET_ORIGIN)
-                    && res.containsHeader(Names.SEC_WEBSOCKET_LOCATION)) {
+            if (res.getStatus().getCode() == 101 &&
+                res.containsHeader(Names.SEC_WEBSOCKET_ORIGIN) &&
+                res.containsHeader(Names.SEC_WEBSOCKET_LOCATION)) {
                 return 16;
             }
         }
@@ -677,7 +669,7 @@ public class HttpHeaders {
     }
 
     /**
-     * Returns the value of the {@code "Host"} header. If there is no such
+     * Returns the value of the {@code "Host"} header.  If there is no such
      * header, the {@code defaultValue} is returned.
      */
     public static String getHost(HttpMessage message, String defaultValue) {
@@ -715,8 +707,8 @@ public class HttpHeaders {
             return true;
         }
 
-        // Multiple 'Expect' headers. Search through them.
-        for (String v : message.getHeaders(Names.EXPECT)) {
+        // Multiple 'Expect' headers.  Search through them.
+        for (String v: message.getHeaders(Names.EXPECT)) {
             if (Values.CONTINUE.equalsIgnoreCase(v)) {
                 return true;
             }
@@ -735,9 +727,9 @@ public class HttpHeaders {
 
     /**
      * Sets or removes the {@code "Expect: 100-continue"} header to / from the
-     * specified message. If the specified {@code value} is {@code true}, the
-     * {@code "Expect: 100-continue"} header is set and all other previous
-     * {@code "Expect"} headers are removed. Otherwise, all {@code "Expect"}
+     * specified message.  If the specified {@code value} is {@code true},
+     * the {@code "Expect: 100-continue"} header is set and all other previous
+     * {@code "Expect"} headers are removed.  Otherwise, all {@code "Expect"}
      * headers are removed completely.
      */
     public static void set100ContinueExpected(HttpMessage message, boolean set) {
@@ -752,7 +744,7 @@ public class HttpHeaders {
 
     private static int hash(String name) {
         int h = 0;
-        for (int i = name.length() - 1; i >= 0; i--) {
+        for (int i = name.length() - 1; i >= 0; i --) {
             char c = name.charAt(i);
             if (c >= 'A' && c <= 'Z') {
                 c += 32;
@@ -775,7 +767,7 @@ public class HttpHeaders {
             return false;
         }
 
-        for (int i = nameLen - 1; i >= 0; i--) {
+        for (int i = nameLen - 1; i >= 0; i --) {
             char c1 = name1.charAt(i);
             char c2 = name2.charAt(i);
             if (c1 != c2) {
@@ -894,7 +886,7 @@ public class HttpHeaders {
         int i = index(h);
 
         removeHeader0(h, i, name);
-        for (Object v : values) {
+        for (Object v: values) {
             if (v == null) {
                 break;
             }
@@ -905,7 +897,7 @@ public class HttpHeaders {
     }
 
     void clearHeaders() {
-        for (int i = 0; i < entries.length; i++) {
+        for (int i = 0; i < entries.length; i ++) {
             entries[i] = null;
         }
         head.before = head.after = head;
@@ -949,7 +941,8 @@ public class HttpHeaders {
     }
 
     List<Map.Entry<String, String>> getHeaders() {
-        List<Map.Entry<String, String>> all = new LinkedList<Map.Entry<String, String>>();
+        List<Map.Entry<String, String>> all =
+            new LinkedList<Map.Entry<String, String>>();
 
         Entry e = head.after;
         while (e != head) {
@@ -964,7 +957,8 @@ public class HttpHeaders {
     }
 
     Set<String> getHeaderNames() {
-        Set<String> names = new TreeSet<String>(CaseIgnoringComparator.INSTANCE);
+        Set<String> names =
+            new TreeSet<String>(CaseIgnoringComparator.INSTANCE);
 
         Entry e = head.after;
         while (e != head) {
@@ -1000,7 +994,7 @@ public class HttpHeaders {
         }
 
         void addBefore(Entry e) {
-            after = e;
+            after  = e;
             before = e.before;
             before.after = this;
             after.before = this;
