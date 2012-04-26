@@ -71,11 +71,11 @@ public final class DetectionUtil {
 
     private static int javaVersion0() {
         try {
-            // Check if its android, if so handle it the same way as java5.
+            // Check if its android, if so handle it the same way as java6.
             //
             // See https://github.com/netty/netty/issues/282
             Class.forName("android.app.Application");
-            return 5;
+            return 6;
         } catch (ClassNotFoundException e) {
             //Ignore
         }
