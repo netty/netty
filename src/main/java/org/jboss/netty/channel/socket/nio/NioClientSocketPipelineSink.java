@@ -42,17 +42,21 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.QueueFactory;
 import org.jboss.netty.util.internal.SocketUtil;
 
 class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
+    private static final AtomicInteger nextId = new AtomicInteger();
+
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioClientSocketPipelineSink.class);
 
     final Executor bossExecutor;
 
+    final int id = nextId.incrementAndGet();
     private final Boss[] bosses;
 
     private final AtomicInteger bossIndex = new AtomicInteger();
@@ -66,11 +70,12 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
         bosses = new Boss[bossCount];
         for (int i = 0; i < bosses.length; i ++) {
-            bosses[i] = new Boss();
+            bosses[i] = new Boss(i);
         }
 
         this.workerPool = workerPool;
     }
+    
     public void eventSunk(
             ChannelPipeline pipeline, ChannelEvent e) throws Exception {
         if (e instanceof ChannelStateEvent) {
@@ -172,9 +177,11 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
         private boolean started;
         private final AtomicBoolean wakenUp = new AtomicBoolean();
         private final Object startStopLock = new Object();
-        private final Queue<Runnable> registerTaskQueue = QueueFactory.createQueue(Runnable.class);;
+        private final Queue<Runnable> registerTaskQueue = QueueFactory.createQueue(Runnable.class);
+        private final int subId;;
 
-        Boss() {
+        Boss(int subId) {
+            this.subId = subId; 
         }
 
         void register(NioClientSocketChannel channel) {
@@ -194,9 +201,10 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
                     // Start the worker thread with the new Selector.
                     boolean success = false;
                     try {
-                        DeadLockProofWorker.start(
-                                bossExecutor, this);
-                                
+                        DeadLockProofWorker.start(bossExecutor,
+                                new ThreadRenamingRunnable(this, 
+                                        "New I/O client boss #" + id + '-' + subId));
+
                         success = true;
                     } finally {
                         if (!success) {

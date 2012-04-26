@@ -25,6 +25,7 @@ import org.jboss.netty.channel.socket.Worker;
 import org.jboss.netty.channel.socket.nio.SocketSendBufferPool.SendBuffer;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.QueueFactory;
 
@@ -42,10 +43,17 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 abstract class AbstractNioWorker implements Worker {
+    
+
+    private static final AtomicInteger nextId = new AtomicInteger();
+
+    final int id = nextId.incrementAndGet();
+
     /**
      * Internal Netty logger.
      */
@@ -124,7 +132,7 @@ abstract class AbstractNioWorker implements Worker {
         this.executor = executor;
         this.allowShutdownOnIdle = allowShutdownOnIdle;
     }
-
+    
     void register(AbstractNioChannel<?> channel, ChannelFuture future) {
 
         Runnable registerTask = createRegisterTask(channel, future);
@@ -157,7 +165,7 @@ abstract class AbstractNioWorker implements Worker {
                 // Start the worker thread with the new Selector.
                 boolean success = false;
                 try {
-                    DeadLockProofWorker.start(executor, this);
+                    DeadLockProofWorker.start(executor, new ThreadRenamingRunnable(this, "New I/O  worker #" + id));
                     success = true;
                 } finally {
                     if (!success) {

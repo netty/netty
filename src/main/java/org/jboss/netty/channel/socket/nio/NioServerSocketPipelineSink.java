@@ -27,6 +27,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
@@ -37,12 +38,18 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.logging.InternalLogger;
 import org.jboss.netty.logging.InternalLoggerFactory;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 
 class NioServerSocketPipelineSink extends AbstractNioChannelSink {
 
+    private static final AtomicInteger nextId = new AtomicInteger();
+
     static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioServerSocketPipelineSink.class);
+    
+    final int id = nextId.incrementAndGet();
+
     private final WorkerPool<NioWorker> workerPool;
 
     NioServerSocketPipelineSink(WorkerPool<NioWorker> workerPool) {
@@ -136,8 +143,9 @@ class NioServerSocketPipelineSink extends AbstractNioChannelSink {
 
             Executor bossExecutor =
                 ((NioServerSocketChannelFactory) channel.getFactory()).bossExecutor;
-            DeadLockProofWorker.start(
-                    bossExecutor, new Boss(channel));
+            DeadLockProofWorker.start(bossExecutor, 
+                    new ThreadRenamingRunnable(new Boss(channel), 
+                            "New I/O server boss #" + id + " (" + channel + ')'));
             bossStarted = true;
         } catch (Throwable t) {
             future.setFailure(t);
