@@ -69,7 +69,7 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
 
     private HttpRequest request;
 
-    private volatile boolean readingChunks;
+    private boolean readingChunks;
 
     private final StringBuilder responseContent = new StringBuilder();
 
