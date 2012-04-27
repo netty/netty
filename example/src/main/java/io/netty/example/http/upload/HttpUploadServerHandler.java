@@ -67,9 +67,9 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(HttpUploadServerHandler.class);
 
-    private volatile HttpRequest request;
+    private HttpRequest request;
 
-    private volatile boolean readingChunks;
+    private boolean readingChunks;
 
     private final StringBuilder responseContent = new StringBuilder();
 
