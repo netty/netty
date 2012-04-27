@@ -48,7 +48,9 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<VoidEnum> {
      * 
      * @param maxFrameSize
      *            the maximum frame size to decode
+     * @deprecated
      */
+    @Deprecated
     public WebSocket00FrameDecoder(int maxFrameSize) {
         this.maxFrameSize = maxFrameSize;
     }
