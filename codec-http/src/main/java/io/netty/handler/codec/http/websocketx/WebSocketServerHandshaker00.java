@@ -51,7 +51,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker00.class);
 
     /**
-     * Constructor specifying the destination web socket location
+     * Constructor with default values
      * 
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
@@ -60,7 +60,23 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            CSV of supported protocols
      */
     public WebSocketServerHandshaker00(String webSocketURL, String subprotocols) {
-        super(WebSocketVersion.V00, webSocketURL, subprotocols);
+        this(webSocketURL, subprotocols, Long.MAX_VALUE);
+    }
+    
+    /**
+     * Constructor specifying the destination web socket location
+     * 
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param subprotocols
+     *            CSV of supported protocols
+     * @param maxFramePayloadLength
+     *            Maximum allowable frame payload length. Setting this value to your application's requirement may
+     *            reduce denial of service attacks using long data frames.
+     */
+    public WebSocketServerHandshaker00(String webSocketURL, String subprotocols, long maxFramePayloadLength) {
+        super(WebSocketVersion.V00, webSocketURL, subprotocols, maxFramePayloadLength);
     }
 
     /**
@@ -167,7 +183,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         if (p.get(HttpChunkAggregator.class) != null) {
             p.remove(HttpChunkAggregator.class);
         }
-        p.replace(HttpRequestDecoder.class, "wsdecoder", new WebSocket00FrameDecoder());
+        p.replace(HttpRequestDecoder.class, "wsdecoder",
+                new WebSocket00FrameDecoder(this.getMaxFramePayloadLength()));
 
         ChannelFuture future = channel.write(res);
 

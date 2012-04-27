@@ -41,17 +41,40 @@ public class WebSocketClientHandshakerFactory {
      */
     public WebSocketClientHandshaker newHandshaker(URI webSocketURL, WebSocketVersion version, String subprotocol,
             boolean allowExtensions, Map<String, String> customHeaders) throws WebSocketHandshakeException {
+        return newHandshaker(webSocketURL, version, subprotocol, allowExtensions, customHeaders, Long.MAX_VALUE);
+    }
+    
+    /**
+     * Instances a new handshaker
+     * 
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server. Null if no sub-protocol support is required.
+     * @param allowExtensions
+     *            Allow extensions to be used in the reserved bits of the web socket frame
+     * @param customHeaders
+     *            Custom HTTP headers to send during the handshake
+     * @param maxFramePayloadLength
+     *            Maximum allowable frame payload length. Setting this value to your application's requirement may
+     *            reduce denial of service attacks using long data frames.
+     * @throws WebSocketHandshakeException
+     */
+    public WebSocketClientHandshaker newHandshaker(URI webSocketURL, WebSocketVersion version, String subprotocol,
+            boolean allowExtensions, Map<String, String> customHeaders, long maxFramePayloadLength) throws WebSocketHandshakeException {
         if (version == WebSocketVersion.V13) {
-            return new WebSocketClientHandshaker13(webSocketURL, version, subprotocol, allowExtensions, customHeaders);
+            return new WebSocketClientHandshaker13(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength);
         }
         if (version == WebSocketVersion.V08) {
-            return new WebSocketClientHandshaker08(webSocketURL, version, subprotocol, allowExtensions, customHeaders);
+            return new WebSocketClientHandshaker08(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength);
         }
         if (version == WebSocketVersion.V00) {
-            return new WebSocketClientHandshaker00(webSocketURL, version, subprotocol, customHeaders);
+            return new WebSocketClientHandshaker00(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
         }
 
         throw new WebSocketHandshakeException("Protocol version " + version.toString() + " not supported.");
-
     }
 }

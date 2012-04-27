@@ -39,8 +39,10 @@ public abstract class WebSocketClientHandshaker {
 
     protected final Map<String, String> customHeaders;
 
+    private final long maxFramePayloadLength;
+    
     /**
-     * Base constructor
+     * Base constructor with default values
      *
      * @param webSocketUrl
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
@@ -54,10 +56,31 @@ public abstract class WebSocketClientHandshaker {
      */
     public WebSocketClientHandshaker(URI webSocketUrl, WebSocketVersion version, String subprotocol,
             Map<String, String> customHeaders) {
+        this(webSocketUrl, version, subprotocol, customHeaders, Long.MAX_VALUE);
+    }
+    
+    /**
+     * Base constructor
+     *
+     * @param webSocketUrl
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     */
+    public WebSocketClientHandshaker(URI webSocketUrl, WebSocketVersion version, String subprotocol,
+            Map<String, String> customHeaders, long maxFramePayloadLength) {
         this.webSocketUrl = webSocketUrl;
         this.version = version;
         expectedSubprotocol = subprotocol;
         this.customHeaders = customHeaders;
+        this.maxFramePayloadLength = maxFramePayloadLength;
     }
 
     /**
@@ -74,6 +97,13 @@ public abstract class WebSocketClientHandshaker {
         return version;
     }
 
+    /**
+     * Returns the max length for any frame's payload 
+     */
+    public long getMaxFramePayloadLength() {
+        return maxFramePayloadLength;
+    }
+    
     /**
      * Flag to indicate if the opening handshake is complete
      */
