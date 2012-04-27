@@ -64,8 +64,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
      *            Allow extensions to be used in the reserved bits of the web socket frame
      */
     public WebSocketServerHandshaker08(String webSocketURL, String subprotocols, boolean allowExtensions) {
-        super(WebSocketVersion.V08, webSocketURL, subprotocols, Long.MAX_VALUE);
-        this.allowExtensions = allowExtensions;
+        this(webSocketURL, subprotocols, allowExtensions, Long.MAX_VALUE);
     }
     
     /**
