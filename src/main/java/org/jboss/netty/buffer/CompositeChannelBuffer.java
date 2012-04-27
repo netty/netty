@@ -277,11 +277,10 @@ public class CompositeChannelBuffer extends AbstractChannelBuffer {
 
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
-        // Disable till 3.5.0.Final
-        /*
+
         if (DetectionUtil.javaVersion() >= 7) {
             return (int) out.write(toByteBuffers(index, length));
-        }*/
+        }
         
         // XXX Gathering write is not supported because of a known issue.
         //     See http://bugs.sun.com/view_bug.do?bug_id=6210541
