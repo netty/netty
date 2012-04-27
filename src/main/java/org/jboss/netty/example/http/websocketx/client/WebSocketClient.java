@@ -114,7 +114,7 @@ public class WebSocketClient {
             
             // Send 10 messages and wait for responses
             System.out.println("WebSocket Client sending message");
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < 1000; i++) {
                 ch.write(new TextWebSocketFrame("Message #" + i));
             }
     

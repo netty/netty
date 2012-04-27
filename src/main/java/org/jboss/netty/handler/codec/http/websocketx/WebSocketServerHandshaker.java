@@ -35,9 +35,11 @@ public abstract class WebSocketServerHandshaker {
 
     private final WebSocketVersion version;
 
+    private final long maxFramePayloadLength;
+    
     /**
      * {@link ChannelFutureListener} which will call {@link Channels#fireExceptionCaught(org.jboss.netty.channel.ChannelHandlerContext, Throwable)} 
-     * if the {@link ChannelFuture} was not sucessful.
+     * if the {@link ChannelFuture} was not successful.
      */
     public static final ChannelFutureListener HANDSHAKE_LISTENER = new ChannelFutureListener() {
         public void operationComplete(ChannelFuture future) throws Exception {
@@ -46,6 +48,21 @@ public abstract class WebSocketServerHandshaker {
             }
         }
     };
+    
+    /**
+     * Constructor using default values
+     * 
+     * @param version
+     *            the protocol version
+     * @param webSocketUrl
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param subprotocols
+     *            CSV of supported protocols. Null if sub protocols not supported.
+     */
+    protected WebSocketServerHandshaker(WebSocketVersion version, String webSocketUrl, String subprotocols) {
+        this(version, webSocketUrl, subprotocols, Long.MAX_VALUE);
+    }
     
     /**
      * Constructor specifying the destination web socket location
@@ -57,9 +74,11 @@ public abstract class WebSocketServerHandshaker {
      *            sent to this URL.
      * @param subprotocols
      *            CSV of supported protocols. Null if sub protocols not supported.
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
      */
-    protected WebSocketServerHandshaker(
-            WebSocketVersion version, String webSocketUrl, String subprotocols) {
+    protected WebSocketServerHandshaker(WebSocketVersion version, String webSocketUrl, String subprotocols,
+            long maxFramePayloadLength) {
         this.version = version;
         this.webSocketUrl = webSocketUrl;
         if (subprotocols != null) {
@@ -71,7 +90,9 @@ public abstract class WebSocketServerHandshaker {
         } else {
             this.subprotocols = new String[0];
         }
+        this.maxFramePayloadLength = maxFramePayloadLength;
     }
+
 
     /**
      * Returns the URL of the web socket
@@ -98,6 +119,13 @@ public abstract class WebSocketServerHandshaker {
         return version;
     }
 
+    /**
+     * Returns the max length for any frame's payload 
+     */
+    public long getMaxFramePayloadLength() {
+        return maxFramePayloadLength;
+    }
+    
     /**
      * Performs the opening handshake
      * 
