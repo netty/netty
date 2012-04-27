@@ -36,6 +36,21 @@ public abstract class WebSocketServerHandshaker {
     private final long maxFramePayloadLength;
 
     /**
+     * Constructor using default values
+     * 
+     * @param version
+     *            the protocol version
+     * @param webSocketUrl
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param subprotocols
+     *            CSV of supported protocols. Null if sub protocols not supported.
+     */
+    protected WebSocketServerHandshaker(WebSocketVersion version, String webSocketUrl, String subprotocols) {
+        this(version, webSocketUrl, subprotocols, Long.MAX_VALUE);
+    }
+    
+    /**
      * Constructor specifying the destination web socket location
      * 
      * @param version

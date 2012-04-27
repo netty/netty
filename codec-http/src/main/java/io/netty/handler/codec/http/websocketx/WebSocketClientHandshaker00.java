@@ -49,6 +49,24 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
     private byte[] expectedChallengeResponseBytes;
 
     /**
+     * Constructor with default values
+     * 
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     */
+    public WebSocketClientHandshaker00(URI webSocketURL, WebSocketVersion version, String subprotocol,
+            Map<String, String> customHeaders) {
+        this(webSocketURL, version, subprotocol, customHeaders, Long.MAX_VALUE);
+    }
+    
+    /**
      * Constructor specifying the destination web socket location and version to initiate
      * 
      * @param webSocketURL

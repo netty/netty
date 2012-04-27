@@ -51,6 +51,21 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
     private final boolean allowExtensions;
 
     /**
+     * Constructor using defaults
+     * 
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param subprotocols
+     *            CSV of supported protocols
+     * @param allowExtensions
+     *            Allow extensions to be used in the reserved bits of the web socket frame
+     */
+    public WebSocketServerHandshaker13(String webSocketURL, String subprotocols, boolean allowExtensions) {
+        this(webSocketURL, subprotocols, allowExtensions, Long.MAX_VALUE);
+    }
+    
+    /**
      * Constructor specifying the destination web socket location
      * 
      * @param webSocketURL

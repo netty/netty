@@ -51,6 +51,19 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker00.class);
 
     /**
+     * Constructor with default values
+     * 
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param subprotocols
+     *            CSV of supported protocols
+     */
+    public WebSocketServerHandshaker00(String webSocketURL, String subprotocols) {
+        this(webSocketURL, subprotocols, Long.MAX_VALUE);
+    }
+    
+    /**
      * Constructor specifying the destination web socket location
      * 
      * @param webSocketURL

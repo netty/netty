@@ -59,6 +59,19 @@ package io.netty.handler.codec.http.websocketx;
 public class WebSocket13FrameDecoder extends WebSocket08FrameDecoder {
 
     /**
+     * Constructor with default values
+     * 
+     * @param maskedPayload
+     *            Web socket servers must set this to true processed incoming masked payload. Client implementations
+     *            must set this to false.
+     * @param allowExtensions
+     *            Flag to allow reserved extension bits to be used or not
+     */
+    public WebSocket13FrameDecoder(boolean maskedPayload, boolean allowExtensions) {
+        this(maskedPayload, allowExtensions, Long.MAX_VALUE);
+    }
+    
+    /**
      * Constructor
      * 
      * @param maskedPayload

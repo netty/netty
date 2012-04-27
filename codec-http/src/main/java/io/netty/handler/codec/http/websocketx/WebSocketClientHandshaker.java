@@ -42,6 +42,24 @@ public abstract class WebSocketClientHandshaker {
     private final long maxFramePayloadLength;
     
     /**
+     * Base constructor with default values
+     *
+     * @param webSocketUrl
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     */
+    public WebSocketClientHandshaker(URI webSocketUrl, WebSocketVersion version, String subprotocol,
+            Map<String, String> customHeaders) {
+        this(webSocketUrl, version, subprotocol, customHeaders, Long.MAX_VALUE);
+    }
+    
+    /**
      * Base constructor
      *
      * @param webSocketUrl
