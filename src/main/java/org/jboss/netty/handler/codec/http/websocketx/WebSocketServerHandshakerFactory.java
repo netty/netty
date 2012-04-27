@@ -63,7 +63,7 @@ public class WebSocketServerHandshakerFactory {
      *            reduce denial of service attacks using long data frames.
      */
     public WebSocketServerHandshakerFactory(String webSocketURL, String subprotocols, boolean allowExtensions, 
-    		long maxFramePayloadLength) {
+            long maxFramePayloadLength) {
         this.webSocketURL = webSocketURL;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;

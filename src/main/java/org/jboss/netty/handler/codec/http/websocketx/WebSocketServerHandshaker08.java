@@ -170,7 +170,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
         }
 
         p.replace(HttpRequestDecoder.class, "wsdecoder", 
-        		new WebSocket08FrameDecoder(true, allowExtensions, this.getMaxFramePayloadLength()));
+                new WebSocket08FrameDecoder(true, allowExtensions, this.getMaxFramePayloadLength()));
         p.replace(HttpResponseEncoder.class, "wsencoder", new WebSocket08FrameEncoder(false));
 
         return future;

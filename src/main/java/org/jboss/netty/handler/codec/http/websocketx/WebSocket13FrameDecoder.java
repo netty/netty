@@ -73,20 +73,19 @@ public class WebSocket13FrameDecoder extends WebSocket08FrameDecoder {
     }
 
     /**
-	 * Constructor
-	 * 
-	 * @param maskedPayload
-	 *            Web socket servers must set this to true processed incoming
-	 *            masked payload. Client implementations must set this to false.
-	 * @param allowExtensions
-	 *            Flag to allow reserved extension bits to be used or not
-	 * @param maxFramePayloadLength
-	 *            Maximum length of a frame's payload. Setting this to an
-	 *            appropriate value for you application helps check for denial
-	 *            of services attacks.
-	 */
-	public WebSocket13FrameDecoder(boolean maskedPayload,
-			boolean allowExtensions, long maxFramePayloadLength) {
-		super(maskedPayload, allowExtensions, maxFramePayloadLength);
-	}
+     * Constructor
+     * 
+     * @param maskedPayload
+     *            Web socket servers must set this to true processed incoming
+     *            masked payload. Client implementations must set this to false.
+     * @param allowExtensions
+     *            Flag to allow reserved extension bits to be used or not
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload. Setting this to an
+     *            appropriate value for you application helps check for denial
+     *            of services attacks.
+     */
+    public WebSocket13FrameDecoder(boolean maskedPayload, boolean allowExtensions, long maxFramePayloadLength) {
+        super(maskedPayload, allowExtensions, maxFramePayloadLength);
+    }
 }
