@@ -82,6 +82,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     private UTF8Output fragmentedFramesText;
     private int fragmentedFramesCount;
 
+    private long maxFramePayloadLength;
     private boolean frameFinalFlag;
     private int frameRsv;
     private int frameOpcode;
@@ -99,7 +100,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
     }
 
     /**
-     * Constructor
+     * Constructor with default values
      * 
      * @param maskedPayload
      *            Web socket servers must set this to true processed incoming masked payload. Client implementations
@@ -108,9 +109,26 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
      *            Flag to allow reserved extension bits to be used or not
      */
     public WebSocket08FrameDecoder(boolean maskedPayload, boolean allowExtensions) {
+        this(maskedPayload, allowExtensions, Long.MAX_VALUE);
+    }
+    
+    /**
+     * Constructor
+     * 
+     * @param maskedPayload
+     *            Web socket servers must set this to true processed incoming masked payload. Client implementations
+     *            must set this to false.
+     * @param allowExtensions
+     *            Flag to allow reserved extension bits to be used or not
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload. Setting this to an appropriate value for you application
+     *            helps check for denial of services attacks.
+     */
+    public WebSocket08FrameDecoder(boolean maskedPayload, boolean allowExtensions, long maxFramePayloadLength) {
         super(State.FRAME_START);
         this.maskedPayload = maskedPayload;
         this.allowExtensions = allowExtensions;
+        this.maxFramePayloadLength = maxFramePayloadLength;
     }
 
     @Override
@@ -220,6 +238,10 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                 framePayloadLength = framePayloadLen1;
             }
 
+            if (framePayloadLength > this.maxFramePayloadLength) {
+                protocolViolation(channel, "Max frame length of " + this.maxFramePayloadLength + " has been exceeded.");
+                return null;
+            }
             if (logger.isDebugEnabled()) {
                 logger.debug("Decoding WebSocket Frame length=" + framePayloadLength);
             }
@@ -236,10 +258,12 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
             int rbytes = actualReadableBytes();
             ChannelBuffer payloadBuffer = null;
 
-            int willHaveReadByteCount = framePayloadBytesRead + rbytes;
+            long willHaveReadByteCount = framePayloadBytesRead + rbytes;
+
             // logger.debug("Frame rbytes=" + rbytes + " willHaveReadByteCount="
             // + willHaveReadByteCount + " framePayloadLength=" +
             // framePayloadLength);
+            
             if (willHaveReadByteCount == framePayloadLength) {
                 // We have all our content so proceed to process
                 payloadBuffer = buffer.readBytes(rbytes);
@@ -422,7 +446,7 @@ public class WebSocket08FrameDecoder extends ReplayingDecoder<WebSocket08FrameDe
                 protocolViolation(channel, "Invalid close frame reason text. Invalid UTF-8 bytes");
             }
         }
-        
+
         // Restore reader index
         buffer.readerIndex(idx);
     }
