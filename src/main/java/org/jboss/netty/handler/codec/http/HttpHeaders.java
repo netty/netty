@@ -307,6 +307,10 @@ public class HttpHeaders {
      */
     public static final class Values {
         /**
+         * {@code "application/x-www-form-urlencoded"}
+         */
+        public static final String APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
+        /**
          * {@code "base64"}
          */
         public static final String BASE64 = "base64";
@@ -314,6 +318,10 @@ public class HttpHeaders {
          * {@code "binary"}
          */
         public static final String BINARY = "binary";
+        /**
+         * {@code "boundary"}
+         */
+        static final String BOUNDARY = "boundary";        
         /**
          * {@code "bytes"}
          */
@@ -366,6 +374,10 @@ public class HttpHeaders {
          * {@code "min-fresh"}
          */
         public static final String MIN_FRESH = "min-fresh";
+        /**
+         * {@code "multipart/form-data"}
+         */
+        static final String MULTIPART_FORM_DATA = "multipart/form-data";        
         /**
          * {@code "must-revalidate"}
          */
