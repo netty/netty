@@ -671,7 +671,11 @@ abstract class AbstractNioWorker implements Worker {
             }
 
             Queue<MessageEvent> writeBuffer = channel.writeBufferQueue;
-            if (!writeBuffer.isEmpty()) {
+            for (;;) {
+                evt = writeBuffer.poll();
+                if (evt == null) {
+                    break;
+                }
                 // Create the exception only once to avoid the excessive overhead
                 // caused by fillStackTrace.
                 if (cause == null) {
@@ -680,16 +684,10 @@ abstract class AbstractNioWorker implements Worker {
                     } else {
                         cause = new ClosedChannelException();
                     }
-                }
-
-                for (;;) {
-                    evt = writeBuffer.poll();
-                    if (evt == null) {
-                        break;
-                    }
                     evt.getFuture().setFailure(cause);
                     fireExceptionCaught = true;
                 }
+               
             }
         }
 
