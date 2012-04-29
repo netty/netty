@@ -47,4 +47,13 @@ public final class ChannelBufferHolder<E> {
         }
         return byteBuf;
     }
+
+    @Override
+    public String toString() {
+        if (hasMessageBuffer()) {
+            return messageBuffer().toString();
+        } else {
+            return byteBuffer().toString();
+        }
+    }
 }
