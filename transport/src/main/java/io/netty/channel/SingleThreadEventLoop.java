@@ -46,6 +46,7 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
         });
     }
 
+    @Override
     public ChannelFuture register(Channel channel) {
         ChannelFuture future = new DefaultChannelFuture(channel, false);
         register(channel, future);
