@@ -19,7 +19,6 @@ package io.netty.channel;
 import io.netty.util.AttributeMap;
 
 import java.net.SocketAddress;
-import java.util.Queue;
 
 /**
  * Enables a {@link ChannelHandler} to interact with its {@link ChannelPipeline}
@@ -127,7 +126,7 @@ public interface ChannelHandlerContext extends AttributeMap {
 
     String name();
     Channel channel();
-    ChannelReader handler();
+    ChannelHandler handler();
     NextHandler next();
 
     // XXX: What happens if inbound queue is bounded (limited capacity) and it's full?
@@ -142,15 +141,17 @@ public interface ChannelHandlerContext extends AttributeMap {
         void channelInactive();
         void exceptionCaught(Throwable cause);
         void userEventTriggered(Object event);
-        Queue<?> in();
+        ChannelBufferHolder<Object> in();
 
         // For writers
         void bind(SocketAddress localAddress, ChannelFuture future);
         void connect(SocketAddress remoteAddress, ChannelFuture future);
         void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future);
         void disconnect(ChannelFuture future);
+        void closeInbound(ChannelFuture future);
+        void closeOutbound(ChannelFuture future);
         void close(ChannelFuture future);
         void deregister(ChannelFuture future);
-        Queue<?> out();
+        ChannelBufferHolder<Object> out();
     }
 }
