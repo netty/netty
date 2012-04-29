@@ -148,8 +148,6 @@ public interface ChannelHandlerContext extends AttributeMap {
         void connect(SocketAddress remoteAddress, ChannelFuture future);
         void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future);
         void disconnect(ChannelFuture future);
-        void closeInbound(ChannelFuture future);
-        void closeOutbound(ChannelFuture future);
         void close(ChannelFuture future);
         void deregister(ChannelFuture future);
         ChannelBufferHolder<Object> out();
