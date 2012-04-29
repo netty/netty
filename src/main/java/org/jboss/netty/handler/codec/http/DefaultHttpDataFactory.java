@@ -90,7 +90,6 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         return list;
     }
     
-    @Override
     public Attribute createAttribute(HttpRequest request, String name) {
         if (useDisk) {
             Attribute attribute = new DiskAttribute(name);
@@ -106,7 +105,6 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         return new MemoryAttribute(name);
     }
 
-    @Override
     public Attribute createAttribute(HttpRequest request, String name, String value) {
         if (useDisk) {
             Attribute attribute;
@@ -132,7 +130,6 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         }
     }
 
-    @Override
     public FileUpload createFileUpload(HttpRequest request, String name, String filename,
             String contentType, String contentTransferEncoding, Charset charset,
             long size) {
@@ -153,7 +150,6 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
                 contentTransferEncoding, charset, size);
     }
 
-    @Override
     public void removeHttpDataFromClean(HttpRequest request, InterfaceHttpData data) {
         if (data instanceof HttpData) {
             List<HttpData> fileToDelete = getList(request);
@@ -161,7 +157,6 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         }
     }
 
-    @Override
     public void cleanRequestHttpDatas(HttpRequest request) {
         List<HttpData> fileToDelete = requestFileDeleteMap.remove(request);
         if (fileToDelete != null) {
@@ -172,7 +167,6 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
         }
     }
 
-    @Override
     public void cleanAllHttpDatas() {
         for (HttpRequest request : requestFileDeleteMap.keySet()) {
             List<HttpData> fileToDelete = requestFileDeleteMap.get(request);

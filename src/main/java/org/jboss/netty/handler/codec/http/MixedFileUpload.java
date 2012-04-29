@@ -46,7 +46,6 @@ public class MixedFileUpload implements FileUpload {
         definedSize = size;
     }
 
-    @Override
     public void addContent(ChannelBuffer buffer, boolean last)
             throws IOException {
         if (fileUpload instanceof MemoryFileUpload) {
@@ -66,77 +65,62 @@ public class MixedFileUpload implements FileUpload {
         fileUpload.addContent(buffer, last);
     }
 
-    @Override
     public void delete() {
         fileUpload.delete();
     }
 
-    @Override
     public byte[] get() throws IOException {
         return fileUpload.get();
     }
 
-    @Override
     public ChannelBuffer getChannelBuffer() throws IOException {
         return fileUpload.getChannelBuffer();
     }
 
-    @Override
     public Charset getCharset() {
         return fileUpload.getCharset();
     }
 
-    @Override
     public String getContentType() {
         return fileUpload.getContentType();
     }
 
-    @Override
     public String getContentTransferEncoding() {
         return fileUpload.getContentTransferEncoding();
     }
 
-    @Override
     public String getFilename() {
         return fileUpload.getFilename();
     }
 
-    @Override
     public String getString() throws IOException {
         return fileUpload.getString();
     }
 
-    @Override
     public String getString(Charset encoding) throws IOException {
         return fileUpload.getString(encoding);
     }
 
-    @Override
     public boolean isCompleted() {
         return fileUpload.isCompleted();
     }
 
-    @Override
     public boolean isInMemory() {
         return fileUpload.isInMemory();
     }
 
-    @Override
     public long length() {
         return fileUpload.length();
     }
 
-    @Override
     public boolean renameTo(File dest) throws IOException {
         return fileUpload.renameTo(dest);
     }
 
-    @Override
     public void setCharset(Charset charset) {
         fileUpload.setCharset(charset);
     }
 
-    @Override
     public void setContent(ChannelBuffer buffer) throws IOException {
         if (buffer.readableBytes() > limitSize) {
             if (fileUpload instanceof MemoryFileUpload) {
@@ -151,7 +135,6 @@ public class MixedFileUpload implements FileUpload {
         fileUpload.setContent(buffer);
     }
 
-    @Override
     public void setContent(File file) throws IOException {
         if (file.length() > limitSize) {
             if (fileUpload instanceof MemoryFileUpload) {
@@ -166,7 +149,6 @@ public class MixedFileUpload implements FileUpload {
         fileUpload.setContent(file);
     }
 
-    @Override
     public void setContent(InputStream inputStream) throws IOException {
         if (fileUpload instanceof MemoryFileUpload) {
             // change to Disk
@@ -179,32 +161,26 @@ public class MixedFileUpload implements FileUpload {
         fileUpload.setContent(inputStream);
     }
 
-    @Override
     public void setContentType(String contentType) {
         fileUpload.setContentType(contentType);
     }
 
-    @Override
     public void setContentTransferEncoding(String contentTransferEncoding) {
         fileUpload.setContentTransferEncoding(contentTransferEncoding);
     }
 
-    @Override
     public void setFilename(String filename) {
         fileUpload.setFilename(filename);
     }
 
-    @Override
     public HttpDataType getHttpDataType() {
         return fileUpload.getHttpDataType();
     }
 
-    @Override
     public String getName() {
         return fileUpload.getName();
     }
 
-    @Override
     public int compareTo(InterfaceHttpData o) {
         return fileUpload.compareTo(o);
     }
@@ -214,12 +190,10 @@ public class MixedFileUpload implements FileUpload {
         return "Mixed: " + fileUpload.toString();
     }
 
-    @Override
     public ChannelBuffer getChunk(int length) throws IOException {
         return fileUpload.getChunk(length);
     }
 
-    @Override
     public File getFile() throws IOException {
         return fileUpload.getFile();
     }

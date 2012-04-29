@@ -855,7 +855,6 @@ public class HttpPostRequestEncoder implements ChunkedInput {
         return new DefaultHttpChunk(buffer);
     }
 
-    @Override
     public void close() throws Exception {
         //NO since the user can want to reuse (broadcast for instance) cleanFiles();
     }
@@ -867,7 +866,6 @@ public class HttpPostRequestEncoder implements ChunkedInput {
      * @return the next available HttpChunk
      * @throws ErrorDataEncoderException if the encoding is in error
      */
-    @Override
     public HttpChunk nextChunk() throws ErrorDataEncoderException {
         if (isLastChunk) {
             isLastChunkSent = true;
@@ -937,7 +935,6 @@ public class HttpPostRequestEncoder implements ChunkedInput {
         return new DefaultHttpChunk(buffer);
     }
 
-    @Override
     public boolean isEndOfInput() throws Exception {
         return isLastChunkSent;
     }

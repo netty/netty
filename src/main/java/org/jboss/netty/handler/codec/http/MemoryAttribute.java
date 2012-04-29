@@ -41,22 +41,19 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
         setValue(value);
     }
 
-    @Override
     public HttpDataType getHttpDataType() {
         return HttpDataType.Attribute;
     }
 
-    @Override
     public String getValue() {
         return getChannelBuffer().toString(charset);
     }
 
-    @Override
     public void setValue(String value) throws IOException {
         if (value == null) {
             throw new NullPointerException("value");
         }
-        byte [] bytes = value.getBytes(charset);
+        byte [] bytes = value.getBytes(charset.name());
         ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(bytes);
         if (definedSize > 0) {
             definedSize = buffer.readableBytes();
@@ -87,7 +84,6 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
         return getName().equalsIgnoreCase(attribute.getName());
     }
 
-    @Override
     public int compareTo(InterfaceHttpData arg0) {
         if (!(arg0 instanceof Attribute)) {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +

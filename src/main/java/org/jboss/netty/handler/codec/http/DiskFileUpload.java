@@ -44,17 +44,14 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
         setContentTransferEncoding(contentTransferEncoding);
     }
 
-    @Override
     public HttpDataType getHttpDataType() {
         return HttpDataType.FileUpload;
     }
 
-    @Override
     public String getFilename() {
         return filename;
     }
 
-    @Override
     public void setFilename(String filename) {
         if (filename == null) {
             throw new NullPointerException("filename");
@@ -76,7 +73,6 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
         return getName().equalsIgnoreCase(attribute.getName());
     }
 
-    @Override
     public int compareTo(InterfaceHttpData arg0) {
         if (!(arg0 instanceof FileUpload)) {
             throw new ClassCastException("Cannot compare " + getHttpDataType() +
@@ -95,7 +91,6 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
         return v;
     }
 
-    @Override
     public void setContentType(String contentType) {
         if (contentType == null) {
             throw new NullPointerException("contentType");
@@ -103,17 +98,14 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
         this.contentType = contentType;
     }
 
-    @Override
     public String getContentType() {
         return contentType;
     }
 
-    @Override
     public String getContentTransferEncoding() {
         return contentTransferEncoding;
     }
 
-    @Override
     public void setContentTransferEncoding(String contentTransferEncoding) {
         this.contentTransferEncoding = contentTransferEncoding;
     }

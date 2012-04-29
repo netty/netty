@@ -57,7 +57,6 @@ public class MixedAttribute implements Attribute {
         }
     }
 
-    @Override
     public void addContent(ChannelBuffer buffer, boolean last) throws IOException {
         if (attribute instanceof MemoryAttribute) {
             if (attribute.length() + buffer.readableBytes() > limitSize) {
@@ -73,62 +72,50 @@ public class MixedAttribute implements Attribute {
         attribute.addContent(buffer, last);
     }
 
-    @Override
     public void delete() {
         attribute.delete();
     }
 
-    @Override
     public byte[] get() throws IOException {
         return attribute.get();
     }
 
-    @Override
     public ChannelBuffer getChannelBuffer() throws IOException {
         return attribute.getChannelBuffer();
     }
 
-    @Override
     public Charset getCharset() {
         return attribute.getCharset();
     }
 
-    @Override
     public String getString() throws IOException {
         return attribute.getString();
     }
 
-    @Override
     public String getString(Charset encoding) throws IOException {
         return attribute.getString(encoding);
     }
 
-    @Override
     public boolean isCompleted() {
         return attribute.isCompleted();
     }
 
-    @Override
     public boolean isInMemory() {
         return attribute.isInMemory();
     }
 
-    @Override
     public long length() {
         return attribute.length();
     }
 
-    @Override
     public boolean renameTo(File dest) throws IOException {
         return attribute.renameTo(dest);
     }
 
-    @Override
     public void setCharset(Charset charset) {
         attribute.setCharset(charset);
     }
 
-    @Override
     public void setContent(ChannelBuffer buffer) throws IOException {
         if (buffer.readableBytes() > limitSize) {
             if (attribute instanceof MemoryAttribute) {
@@ -139,7 +126,6 @@ public class MixedAttribute implements Attribute {
         attribute.setContent(buffer);
     }
 
-    @Override
     public void setContent(File file) throws IOException {
         if (file.length() > limitSize) {
             if (attribute instanceof MemoryAttribute) {
@@ -150,7 +136,6 @@ public class MixedAttribute implements Attribute {
         attribute.setContent(file);
     }
 
-    @Override
     public void setContent(InputStream inputStream) throws IOException {
         if (attribute instanceof MemoryAttribute) {
             // change to Disk even if we don't know the size
@@ -159,17 +144,14 @@ public class MixedAttribute implements Attribute {
         attribute.setContent(inputStream);
     }
 
-    @Override
     public HttpDataType getHttpDataType() {
         return attribute.getHttpDataType();
     }
 
-    @Override
     public String getName() {
         return attribute.getName();
     }
 
-    @Override
     public int compareTo(InterfaceHttpData o) {
         return attribute.compareTo(o);
     }
@@ -179,22 +161,18 @@ public class MixedAttribute implements Attribute {
         return "Mixed: " + attribute.toString();
     }
 
-    @Override
     public String getValue() throws IOException {
         return attribute.getValue();
     }
 
-    @Override
     public void setValue(String value) throws IOException {
         attribute.setValue(value);
     }
 
-    @Override
     public ChannelBuffer getChunk(int length) throws IOException {
         return attribute.getChunk(length);
     }
 
-    @Override
     public File getFile() throws IOException {
         return attribute.getFile();
     }

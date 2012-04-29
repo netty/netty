@@ -67,22 +67,18 @@ public abstract class AbstractHttpData implements HttpData {
         definedSize = size;
     }
 
-    @Override
     public String getName() {
         return name;
     }
 
-    @Override
     public boolean isCompleted() {
         return completed;
     }
 
-    @Override
     public Charset getCharset() {
         return charset;
     }
 
-    @Override
     public void setCharset(Charset charset) {
         if (charset == null) {
             throw new NullPointerException("charset");
@@ -90,7 +86,6 @@ public abstract class AbstractHttpData implements HttpData {
         this.charset = charset;
     }
 
-    @Override
     public long length() {
         return size;
     }

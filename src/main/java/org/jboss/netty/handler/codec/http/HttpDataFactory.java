@@ -17,8 +17,6 @@ package org.jboss.netty.handler.codec.http;
 
 import java.nio.charset.Charset;
 
-import org.jboss.netty.handler.codec.http.HttpRequest;
-
 /**
  * Interface to enable creation of InterfaceHttpData objects
  */
