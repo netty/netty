@@ -14,6 +14,8 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class SingleThreadEventLoop extends AbstractExecutorService implements EventLoop {
 
+    static final ThreadLocal<SingleThreadEventLoop> CURRENT_EVENT_LOOP = new ThreadLocal<SingleThreadEventLoop>();
+
     private final BlockingQueue<Runnable> taskQueue = QueueFactory.createQueue(Runnable.class);
     private final Thread thread;
     private final Object stateLock = new Object();
@@ -29,6 +31,7 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
         thread = threadFactory.newThread(new Runnable() {
             @Override
             public void run() {
+                CURRENT_EVENT_LOOP.set(SingleThreadEventLoop.this);
                 try {
                     SingleThreadEventLoop.this.run();
                 } finally {
@@ -51,6 +54,12 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
         ChannelFuture future = new DefaultChannelFuture(channel, false);
         register(channel, future);
         return future;
+    }
+
+    @Override
+    public EventLoop register(Channel channel, ChannelFuture future) {
+        execute(newRegistrationTask(channel, future));
+        return this;
     }
 
     protected void interruptThread() {
@@ -101,6 +110,8 @@ public abstract class SingleThreadEventLoop extends AbstractExecutorService impl
     }
 
     protected abstract void wakeup(boolean inEventLoop);
+
+    protected abstract Runnable newRegistrationTask(Channel channel, ChannelFuture future);
 
     @Override
     public boolean inEventLoop() {

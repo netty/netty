@@ -4,6 +4,6 @@ import java.util.concurrent.ExecutorService;
 
 public interface EventLoop extends ExecutorService {
     ChannelFuture register(Channel channel);
-    void register(Channel channel, ChannelFuture future);
+    EventLoop register(Channel channel, ChannelFuture future);
     boolean inEventLoop();
 }
