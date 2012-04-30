@@ -26,7 +26,7 @@ import java.util.TreeMap;
 
 import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBuffers;
-import io.netty.handler.codec.http.HttpPostBodyUtil.SeekAheadNoBackArray;
+import io.netty.handler.codec.http.HttpPostBodyUtil.SeekAheadNoBackArrayException;
 import io.netty.handler.codec.http.HttpPostBodyUtil.SeekAheadOptimize;
 import io.netty.handler.codec.http.HttpPostBodyUtil.TransferEncodingMechanism;
 
@@ -551,7 +551,7 @@ public class HttpPostRequestDecoder {
         SeekAheadOptimize sao = null;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
-        } catch (SeekAheadNoBackArray e1) {
+        } catch (SeekAheadNoBackArrayException e1) {
             parseBodyAttributesStandard();
             return;
         }
@@ -845,7 +845,7 @@ public class HttpPostRequestDecoder {
         SeekAheadOptimize sao = null;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
-        } catch (SeekAheadNoBackArray e) {
+        } catch (SeekAheadNoBackArrayException e) {
             skipControlCharactersStandard(undecodedChunk);
             return;
         }
@@ -1242,7 +1242,7 @@ public class HttpPostRequestDecoder {
         SeekAheadOptimize sao = null;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
-        } catch (SeekAheadNoBackArray e1) {
+        } catch (SeekAheadNoBackArrayException e1) {
             return readLineStandard();
         }
         int readerIndex = undecodedChunk.readerIndex();
@@ -1382,7 +1382,7 @@ public class HttpPostRequestDecoder {
         SeekAheadOptimize sao = null;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
-        } catch (SeekAheadNoBackArray e1) {
+        } catch (SeekAheadNoBackArrayException e1) {
             readFileUploadByteMultipartStandard(delimiter);
             return;
         }
@@ -1590,7 +1590,7 @@ public class HttpPostRequestDecoder {
         SeekAheadOptimize sao = null;
         try {
             sao = new SeekAheadOptimize(undecodedChunk);
-        } catch (SeekAheadNoBackArray e1) {
+        } catch (SeekAheadNoBackArrayException e1) {
             loadFieldMultipartStandard(delimiter);
             return;
         }
