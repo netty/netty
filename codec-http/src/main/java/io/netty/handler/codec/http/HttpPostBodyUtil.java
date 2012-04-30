@@ -119,7 +119,7 @@ final class HttpPostBodyUtil {
     /**
      * Exception when NO Backend Array is found
      */ 
-    static class SeekAheadNoBackArray extends Exception {
+    static class SeekAheadNoBackArrayException extends Exception {
         private static final long serialVersionUID = -630418804938699495L;
     }
 
@@ -142,9 +142,9 @@ final class HttpPostBodyUtil {
          * @param buffer
          */
         SeekAheadOptimize(ChannelBuffer buffer)
-                throws SeekAheadNoBackArray {
+                throws SeekAheadNoBackArrayException {
             if (! buffer.hasArray()) {
-                throw new SeekAheadNoBackArray();
+                throw new SeekAheadNoBackArrayException();
             }
             this.buffer = buffer;
             this.bytes = buffer.array();
