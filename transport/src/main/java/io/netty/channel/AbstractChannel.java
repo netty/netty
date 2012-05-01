@@ -432,12 +432,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public void deregister(final ChannelFuture future) {
             if (eventLoop().inEventLoop()) {
-                doDeregister(future);
+                try {
+                    doDeregister(future);
+                } finally {
+                    eventLoop = null;
+                }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
-                        doDeregister(future);
+                        try {
+                            doDeregister(future);
+                        } finally {
+                            eventLoop = null;
+                        }
                     }
                 });
             }
