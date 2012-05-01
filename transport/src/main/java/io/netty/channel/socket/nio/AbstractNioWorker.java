@@ -892,7 +892,7 @@ abstract class AbstractNioWorker implements Worker {
             }
         }
     }
-
+    
     protected void cleanUpWriteBuffer(AbstractNioChannel channel) {
         Exception cause = null;
         boolean fireExceptionCaught = false;
@@ -932,9 +932,10 @@ abstract class AbstractNioWorker implements Worker {
                     } else {
                         cause = new ClosedChannelException();
                     }
-                    evt.getFuture().setFailure(cause);
                     fireExceptionCaught = true;
                 }
+                evt.getFuture().setFailure(cause);
+
                
             }
         }
