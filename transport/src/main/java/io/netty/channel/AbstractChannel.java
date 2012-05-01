@@ -350,17 +350,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private class DefaultUnsafe implements Unsafe {
 
         @Override
-        public void setEventLoop(EventLoop eventLoop) {
-            if (eventLoop == null) {
-                throw new NullPointerException("eventLoop");
-            }
-            if (AbstractChannel.this.eventLoop != null) {
-                throw new IllegalStateException("attached to an event loop already");
-            }
-            AbstractChannel.this.eventLoop = eventLoop;
-        }
-
-        @Override
         public java.nio.channels.Channel ch() {
             return javaChannel();
         }
@@ -368,6 +357,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public ChannelBufferHolder<Object> out() {
             return firstOut();
+        }
+
+        @Override
+        public void register(EventLoop eventLoop, ChannelFuture future) {
+            if (eventLoop == null) {
+                throw new NullPointerException("eventLoop");
+            }
+            if (AbstractChannel.this.eventLoop != null) {
+                throw new IllegalStateException("registered to an event loop already");
+            }
+            AbstractChannel.this.eventLoop = eventLoop;
+
+            assert eventLoop().inEventLoop();
+            doRegister(future);
         }
 
         @Override
@@ -465,6 +468,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract java.nio.channels.Channel javaChannel();
     protected abstract ChannelBufferHolder<Object> firstOut();
 
+    protected abstract void doRegister(ChannelFuture future);
     protected abstract void doBind(SocketAddress localAddress, ChannelFuture future);
     protected abstract void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future);
     protected abstract void doDisconnect(ChannelFuture future);

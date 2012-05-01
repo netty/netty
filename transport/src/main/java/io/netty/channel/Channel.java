@@ -181,10 +181,10 @@ public interface Channel extends AttributeMap, ChannelFutureFactory, Comparable<
     Unsafe unsafe();
 
     public interface Unsafe {
-        void setEventLoop(EventLoop eventLoop);
         java.nio.channels.Channel ch();
         ChannelBufferHolder<Object> out();
 
+        void register(EventLoop eventLoop, ChannelFuture future);
         void bind(SocketAddress localAddress, ChannelFuture future);
         void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future);
         void disconnect(ChannelFuture future);
