@@ -16,15 +16,15 @@
 package io.netty.channel;
 
 import static java.util.concurrent.TimeUnit.*;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.DeadLockProofWorker;
 
+import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.DeadLockProofWorker;
 
 /**
  * The default {@link ChannelFuture} implementation.  It is recommended to
@@ -119,7 +119,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     }
 
     @Override
-    public void addListener(ChannelFutureListener listener) {
+    public void addListener(final ChannelFutureListener listener) {
         if (listener == null) {
             throw new NullPointerException("listener");
         }
@@ -148,7 +148,17 @@ public class DefaultChannelFuture implements ChannelFuture {
         }
 
         if (notifyNow) {
-            notifyListener(listener);
+            if (channel().eventLoop().inEventLoop()) {
+                notifyListener(listener);
+            } else {
+                channel().eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyListener(listener);
+
+                    }
+                });
+            }
         }
     }
 
@@ -182,7 +192,7 @@ public class DefaultChannelFuture implements ChannelFuture {
         if (!isDone()) {
             return this;
         }
-        
+
         Throwable cause = cause();
         if (cause == null) {
             return this;
@@ -398,7 +408,12 @@ public class DefaultChannelFuture implements ChannelFuture {
         //    Hence any listener list modification happens-before this method.
         // 2) This method is called only when 'done' is true.  Once 'done'
         //    becomes true, the listener list is never modified - see add/removeListener()
-        if (firstListener != null) {
+
+        if (firstListener == null) {
+            return;
+        }
+
+        if (channel().eventLoop().inEventLoop()) {
             notifyListener(firstListener);
             firstListener = null;
 
@@ -408,6 +423,22 @@ public class DefaultChannelFuture implements ChannelFuture {
                 }
                 otherListeners = null;
             }
+        } else {
+            final ChannelFutureListener firstListener = this.firstListener;
+            final List<ChannelFutureListener> otherListeners = this.otherListeners;
+            this.firstListener = null;
+            this.otherListeners = null;
+            channel().eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    notifyListener(firstListener);
+                    if (otherListeners != null) {
+                        for (ChannelFutureListener l: otherListeners) {
+                            notifyListener(l);
+                        }
+                    }
+                }
+            });
         }
     }
 

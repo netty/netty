@@ -15,10 +15,10 @@
  */
 package io.netty.channel;
 
-import java.util.concurrent.TimeUnit;
-
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * A skeletal {@link ChannelFuture} implementation which represents a
@@ -44,7 +44,20 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
     }
 
     @Override
-    public void addListener(ChannelFutureListener listener) {
+    public void addListener(final ChannelFutureListener listener) {
+        if (channel().eventLoop().inEventLoop()) {
+            notifyListener(listener);
+        } else {
+            channel().eventLoop().execute(new Runnable() {
+                @Override
+                public void run() {
+                    notifyListener(listener);
+                }
+            });
+        }
+    }
+
+    private void notifyListener(ChannelFutureListener listener) {
         try {
             listener.operationComplete(this);
         } catch (Throwable t) {
