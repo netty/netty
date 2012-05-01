@@ -18,8 +18,6 @@ package io.netty.channel;
 
 import io.netty.util.AttributeMap;
 
-import java.net.SocketAddress;
-
 /**
  * Enables a {@link ChannelHandler} to interact with its {@link ChannelPipeline}
  * and other handlers.  A handler can send a {@link ChannelEvent} upstream or
@@ -122,34 +120,17 @@ import java.net.SocketAddress;
  * pipeline,  and how to handle the event in your application.
  * @apiviz.owns io.netty.channel.ChannelHandler
  */
-public interface ChannelHandlerContext extends AttributeMap {
+public interface ChannelHandlerContext extends AttributeMap, ChannelHandlerInvoker {
+    Channel channel();
+    ChannelPipeline pipeline();
 
     String name();
-    Channel channel();
     ChannelHandler handler();
-    NextHandler next();
 
-    // XXX: What happens if inbound queue is bounded (limited capacity) and it's full?
-    //      1) EventLoop removes OP_READ
-    //      2) Once the first inbound buffer is drained to some level, EventLoop adds OP_READ again.
-    //         * To achieve this, EventLoop has to specify a wrapped Queue when calling inboundBufferUpdated.
-    interface NextHandler {
-        // For readers
-        void channelRegistered();
-        void channelUnregistered();
-        void channelActive();
-        void channelInactive();
-        void exceptionCaught(Throwable cause);
-        void userEventTriggered(Object event);
-        ChannelBufferHolder<Object> in();
+    boolean canHandleInbound();
+    boolean canHandleOutbound();
 
-        // For writers
-        void bind(SocketAddress localAddress, ChannelFuture future);
-        void connect(SocketAddress remoteAddress, ChannelFuture future);
-        void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future);
-        void disconnect(ChannelFuture future);
-        void close(ChannelFuture future);
-        void deregister(ChannelFuture future);
-        ChannelBufferHolder<Object> out();
-    }
+    ChannelFuture newFuture();
+    ChannelFuture newSucceededFuture();
+    ChannelFuture newFailedFuture(Throwable cause);
 }

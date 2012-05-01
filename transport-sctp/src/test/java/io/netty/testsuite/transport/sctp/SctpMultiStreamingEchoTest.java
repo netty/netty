@@ -102,7 +102,7 @@ public class SctpMultiStreamingEchoTest {
         ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpTestUtil.LOOP_BACK, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
-        Channel cc = ccf.getChannel();
+        Channel cc = ccf.channel();
 
         for(SctpFrame sctpFrame: sctpFrames) {
              cc.write(sctpFrame);
@@ -148,7 +148,7 @@ public class SctpMultiStreamingEchoTest {
         @Override
         public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
                 throws Exception {
-            channel = e.getChannel();
+            channel = e.channel();
         }
 
         @Override
@@ -168,8 +168,8 @@ public class SctpMultiStreamingEchoTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
-            if (exception.compareAndSet(null, e.getCause())) {
-                e.getChannel().close();
+            if (exception.compareAndSet(null, e.cause())) {
+                e.channel().close();
             }
         }
     }

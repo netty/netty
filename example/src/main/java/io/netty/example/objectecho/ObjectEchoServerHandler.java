@@ -57,7 +57,7 @@ public class ObjectEchoServerHandler extends SimpleChannelUpstreamHandler {
             ChannelHandlerContext ctx, MessageEvent e) {
         // Echo back the received object to the client.
         transferredMessages.incrementAndGet();
-        e.getChannel().write(e.getMessage());
+        e.channel().write(e.getMessage());
     }
 
     @Override
@@ -66,7 +66,7 @@ public class ObjectEchoServerHandler extends SimpleChannelUpstreamHandler {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.",
-                e.getCause());
-        e.getChannel().close();
+                e.cause());
+        e.channel().close();
     }
 }

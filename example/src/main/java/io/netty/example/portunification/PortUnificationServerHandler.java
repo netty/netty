@@ -75,7 +75,7 @@ public class PortUnificationServerHandler extends FrameDecoder {
         } else {
             // Unknown protocol; discard everything and close the connection.
             buffer.skipBytes(buffer.readableBytes());
-            ctx.getChannel().close();
+            ctx.channel().close();
             return null;
         }
 

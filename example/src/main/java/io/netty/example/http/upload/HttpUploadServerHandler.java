@@ -157,15 +157,15 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
             } catch (ErrorDataDecoderException e1) {
                 e1.printStackTrace();
                 responseContent.append(e1.getMessage());
-                writeResponse(e.getChannel());
-                Channels.close(e.getChannel());
+                writeResponse(e.channel());
+                Channels.close(e.channel());
                 return;
             } catch (IncompatibleDataDecoderException e1) {
                 // GET Method: should not try to create a HttpPostRequestDecoder
                 // So OK but stop here
                 responseContent.append(e1.getMessage());
                 responseContent.append("\r\n\r\nEND OF GET CONTENT\r\n");
-                writeResponse(e.getChannel());
+                writeResponse(e.channel());
                 return;
             }
 
@@ -179,10 +179,10 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
                 readingChunks = true;
             } else {
                 // Not chunk version
-                readHttpDataAllReceive(e.getChannel());
+                readHttpDataAllReceive(e.channel());
                 responseContent
                         .append("\r\n\r\nEND OF NOT CHUNKED CONTENT\r\n");
-                writeResponse(e.getChannel());
+                writeResponse(e.channel());
             }
         } else {
             // New chunk is received
@@ -192,17 +192,17 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
             } catch (ErrorDataDecoderException e1) {
                 e1.printStackTrace();
                 responseContent.append(e1.getMessage());
-                writeResponse(e.getChannel());
-                Channels.close(e.getChannel());
+                writeResponse(e.channel());
+                Channels.close(e.channel());
                 return;
             }
             responseContent.append("o");
             // example of reading chunk by chunk (minimize memory usage due to Factory)
-            readHttpDataChunkByChunk(e.getChannel());
+            readHttpDataChunkByChunk(e.channel());
             // example of reading only if at the end
             if (chunk.isLast()) {
-                readHttpDataAllReceive(e.getChannel());
-                writeResponse(e.getChannel());
+                readHttpDataAllReceive(e.channel());
+                writeResponse(e.channel());
                 readingChunks = false;
             }
         }
@@ -474,14 +474,14 @@ public class HttpUploadServerHandler extends SimpleChannelUpstreamHandler {
         response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buf
                 .readableBytes()));
         // Write the response.
-        e.getChannel().write(response);
+        e.channel().write(response);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
             throws Exception {
-        e.getCause().printStackTrace();
+        e.cause().printStackTrace();
         System.err.println(responseContent.toString());
-        e.getChannel().close();
+        e.channel().close();
     }
 }

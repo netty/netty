@@ -209,7 +209,7 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
                 boolean offered = productQueue.offer(((MessageEvent) e).getMessage());
                 assert offered;
             } else if (e instanceof ExceptionEvent) {
-                throw new CodecEmbedderException(((ExceptionEvent) e).getCause());
+                throw new CodecEmbedderException(((ExceptionEvent) e).cause());
             }
 
             // Swallow otherwise.
@@ -231,9 +231,9 @@ abstract class AbstractCodecEmbedder<E> implements CodecEmbedder<E> {
         public ChannelFuture execute(ChannelPipeline pipeline, Runnable task) {
             try {
                 task.run();
-                return Channels.succeededFuture(pipeline.getChannel());
+                return Channels.succeededFuture(pipeline.channel());
             } catch (Throwable t) {
-                return Channels.failedFuture(pipeline.getChannel(), t);
+                return Channels.failedFuture(pipeline.channel(), t);
             }
         }
     }

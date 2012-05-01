@@ -62,7 +62,7 @@ public class DiscardServerHandler extends SimpleChannelUpstreamHandler {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.",
-                e.getCause());
-        e.getChannel().close();
+                e.cause());
+        e.channel().close();
     }
 }

@@ -73,7 +73,7 @@ public class LocalTimeServerHandler extends SimpleChannelUpstreamHandler {
                     setSecond(calendar.get(SECOND)).build());
         }
 
-        e.getChannel().write(builder.build());
+        e.channel().write(builder.build());
     }
 
     @Override
@@ -82,8 +82,8 @@ public class LocalTimeServerHandler extends SimpleChannelUpstreamHandler {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.",
-                e.getCause());
-        e.getChannel().close();
+                e.cause());
+        e.channel().close();
     }
 
     private static String toString(Continent c) {

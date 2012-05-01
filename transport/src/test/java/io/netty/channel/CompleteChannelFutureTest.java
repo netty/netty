@@ -72,7 +72,7 @@ public class CompleteChannelFutureTest {
 
     @Test
     public void testConstantProperties() throws InterruptedException {
-        assertSame(channel, future.getChannel());
+        assertSame(channel, future.channel());
         assertTrue(future.isDone());
         assertFalse(future.cancel());
         assertFalse(future.isCancelled());
@@ -91,7 +91,7 @@ public class CompleteChannelFutureTest {
         }
 
         @Override
-        public Throwable getCause() {
+        public Throwable cause() {
             throw new Error();
         }
 

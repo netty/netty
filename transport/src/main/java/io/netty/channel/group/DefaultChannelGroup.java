@@ -15,6 +15,13 @@
  */
 package io.netty.channel.group;
 
+import io.netty.buffer.ChannelBuffer;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ServerChannel;
+import io.netty.util.internal.ConcurrentHashMap;
+
 import java.net.SocketAddress;
 import java.util.AbstractSet;
 import java.util.ArrayList;
@@ -24,13 +31,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import io.netty.buffer.ChannelBuffer;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ServerChannel;
-import io.netty.util.internal.ConcurrentHashMap;
 
 /**
  * The default {@link ChannelGroup} implementation.
@@ -46,7 +46,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     private final ChannelFutureListener remover = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
-            remove(future.getChannel());
+            remove(future.channel());
         }
     };
 
@@ -70,7 +70,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     }
 
     @Override
-    public String getName() {
+    public String name() {
         return name;
     }
 
@@ -101,9 +101,9 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         } else if (o instanceof Channel) {
             Channel c = (Channel) o;
             if (o instanceof ServerChannel) {
-                return serverChannels.containsKey(c.getId());
+                return serverChannels.containsKey(c.id());
             } else {
-                return nonServerChannels.containsKey(c.getId());
+                return nonServerChannels.containsKey(c.id());
             }
         } else {
             return false;
@@ -115,7 +115,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         ConcurrentMap<Integer, Channel> map =
             channel instanceof ServerChannel? serverChannels : nonServerChannels;
 
-        boolean added = map.putIfAbsent(channel.getId(), channel) == null;
+        boolean added = map.putIfAbsent(channel.id(), channel) == null;
         if (added) {
             channel.getCloseFuture().addListener(remover);
         }
@@ -297,7 +297,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public int compareTo(ChannelGroup o) {
-        int v = getName().compareTo(o.getName());
+        int v = name().compareTo(o.name());
         if (v != 0) {
             return v;
         }
@@ -308,6 +308,6 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     @Override
     public String toString() {
         return getClass().getSimpleName() +
-               "(name: " + getName() + ", size: " + size() + ')';
+               "(name: " + name() + ", size: " + size() + ')';
     }
 }

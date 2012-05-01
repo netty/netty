@@ -47,7 +47,7 @@ final class LocalClientChannelSink extends AbstractChannelSink {
             ChannelStateEvent event = (ChannelStateEvent) e;
 
             DefaultLocalChannel channel =
-                  (DefaultLocalChannel) event.getChannel();
+                  (DefaultLocalChannel) event.channel();
             ChannelFuture future = event.getFuture();
             ChannelState state = event.getState();
             Object value = event.getValue();
@@ -78,7 +78,7 @@ final class LocalClientChannelSink extends AbstractChannelSink {
             }
         } else if (e instanceof MessageEvent) {
             MessageEvent event = (MessageEvent) e;
-            DefaultLocalChannel channel = (DefaultLocalChannel) event.getChannel();
+            DefaultLocalChannel channel = (DefaultLocalChannel) event.channel();
             boolean offered = channel.writeBuffer.offer(event);
             assert offered;
             channel.flushWriteBuffer();

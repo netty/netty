@@ -47,14 +47,14 @@ public class QuoteOfTheMomentServerHandler extends SimpleChannelUpstreamHandler 
             throws Exception {
         String msg = (String) e.getMessage();
         if (msg.equals("QOTM?")) {
-            e.getChannel().write("QOTM: " + nextQuote(), e.getRemoteAddress());
+            e.channel().write("QOTM: " + nextQuote(), e.getRemoteAddress());
         }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
             throws Exception {
-        e.getCause().printStackTrace();
+        e.cause().printStackTrace();
         // We don't close the channel because we can keep serving requests.
     }
 }

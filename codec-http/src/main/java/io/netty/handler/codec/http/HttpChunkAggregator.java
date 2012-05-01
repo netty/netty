@@ -91,7 +91,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
             //       No need to notify the upstream handlers - just log.
             //       If decoding a response, just throw an exception.
             if (is100ContinueExpected(m)) {
-                write(ctx, succeededFuture(ctx.getChannel()), CONTINUE.duplicate());
+                write(ctx, succeededFuture(ctx.channel()), CONTINUE.duplicate());
             }
 
             if (m.isChunked()) {
@@ -103,7 +103,7 @@ public class HttpChunkAggregator extends SimpleChannelUpstreamHandler {
                     m.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
                 }
                 m.setChunked(false);
-                m.setContent(ChannelBuffers.dynamicBuffer(e.getChannel().getConfig().getBufferFactory()));
+                m.setContent(ChannelBuffers.dynamicBuffer(e.channel().getConfig().getBufferFactory()));
                 this.currentMessage = m;
             } else {
                 // Not a chunked message - pass through.

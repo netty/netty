@@ -252,7 +252,7 @@ final class HttpTunnelClientChannel extends AbstractChannel implements
                         if (future.isSuccess()) {
                             originalFuture.setSuccess();
                         } else {
-                            originalFuture.setFailure(future.getCause());
+                            originalFuture.setFailure(future.cause());
                         }
                         updateSaturationStatus(-messageSize);
                     }
@@ -312,7 +312,7 @@ final class HttpTunnelClientChannel extends AbstractChannel implements
         }
 
         protected void futureFailed(ChannelFuture future) {
-            completionFuture.setFailure(future.getCause());
+            completionFuture.setFailure(future.cause());
         }
     }
 

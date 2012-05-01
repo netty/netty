@@ -223,7 +223,7 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
         }
         for (ChannelBuffer fragment: fragments) {
             ChannelFuture fragmentFuture =
-                    Channels.future(writeFuture.getChannel());
+                    Channels.future(writeFuture.channel());
             aggregator.addFuture(fragmentFuture);
             tunnel.queuedResponses.offer(new QueuedResponse(fragment,
                     fragmentFuture));
@@ -248,7 +248,7 @@ class ServerMessageSwitch implements ServerMessageSwitchUpstreamInterface,
             if (future.isSuccess()) {
                 originalFuture.setSuccess();
             } else {
-                originalFuture.setFailure(future.getCause());
+                originalFuture.setFailure(future.cause());
             }
         }
     }

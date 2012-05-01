@@ -169,7 +169,7 @@ public abstract class AbstractSocketSpdyEchoTest {
         ChannelFuture ccf = cb.connect(new InetSocketAddress(InetAddress.getLocalHost(), port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
-        Channel cc = ccf.getChannel();
+        Channel cc = ccf.channel();
         cc.write(frames);
 
         while (ch.counter < frames.writerIndex() - ignoredBytes) {
@@ -219,7 +219,7 @@ public abstract class AbstractSocketSpdyEchoTest {
         @Override
         public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
                 throws Exception {
-            channel = e.getChannel();
+            channel = e.channel();
         }
 
         @Override
@@ -244,8 +244,8 @@ public abstract class AbstractSocketSpdyEchoTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
-            if (exception.compareAndSet(null, e.getCause())) {
-                e.getChannel().close();
+            if (exception.compareAndSet(null, e.cause())) {
+                e.channel().close();
             }
         }
     }

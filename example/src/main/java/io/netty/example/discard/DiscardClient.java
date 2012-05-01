@@ -58,7 +58,7 @@ public class DiscardClient {
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
 
         // Wait until the connection is closed or the connection attempt fails.
-        future.getChannel().getCloseFuture().awaitUninterruptibly();
+        future.channel().getCloseFuture().awaitUninterruptibly();
 
         // Shut down thread pools to exit.
         bootstrap.releaseExternalResources();

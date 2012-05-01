@@ -73,7 +73,7 @@ public class ObjectEncoder extends OneToOneEncoder {
     protected Object encode(ChannelHandlerContext ctx, Channel channel, Object msg) throws Exception {
         ChannelBufferOutputStream bout =
             new ChannelBufferOutputStream(dynamicBuffer(
-                    estimatedLength, ctx.getChannel().getConfig().getBufferFactory()));
+                    estimatedLength, ctx.channel().getConfig().getBufferFactory()));
         bout.write(LENGTH_PLACEHOLDER);
         ObjectOutputStream oout = new CompactObjectOutputStream(bout);
         oout.writeObject(msg);

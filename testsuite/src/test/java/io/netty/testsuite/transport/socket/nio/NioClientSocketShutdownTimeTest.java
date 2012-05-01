@@ -54,14 +54,14 @@ public class NioClientSocketShutdownTimeTest {
             serverSocket.accept();
             f.awaitUninterruptibly();
 
-            if (f.getCause() != null) {
-                throw f.getCause();
+            if (f.cause() != null) {
+                throw f.cause();
             }
             assertTrue(f.isSuccess());
 
             startTime = System.currentTimeMillis();
 
-            f.getChannel().close().awaitUninterruptibly();
+            f.channel().close().awaitUninterruptibly();
         } finally {
             b.getFactory().releaseExternalResources();
 

@@ -199,8 +199,8 @@ public class ConnectionlessBootstrap extends Bootstrap {
         // Wait for the future.
         future.awaitUninterruptibly();
         if (!future.isSuccess()) {
-            future.getChannel().close().awaitUninterruptibly();
-            throw new ChannelException("Failed to bind to: " + localAddress, future.getCause());
+            future.channel().close().awaitUninterruptibly();
+            throw new ChannelException("Failed to bind to: " + localAddress, future.cause());
         }
 
         return ch;

@@ -15,13 +15,13 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.ChannelBuffer;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-
-import io.netty.buffer.ChannelBuffer;
 
 
 /**
@@ -202,7 +202,7 @@ import io.netty.buffer.ChannelBuffer;
  * @apiviz.owns       io.netty.channel.ChannelHandler
  * @apiviz.uses       io.netty.channel.ChannelSink - - sends events downstream
  */
-public interface ChannelPipeline {
+public interface ChannelPipeline extends ChannelHandlerInvoker {
 
     /**
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.
@@ -378,14 +378,14 @@ public interface ChannelPipeline {
      *
      * @return the first handler.  {@code null} if this pipeline is empty.
      */
-    ChannelHandler getFirst();
+    ChannelHandler first();
 
     /**
      * Returns the last {@link ChannelHandler} in this pipeline.
      *
      * @return the last handler.  {@code null} if this pipeline is empty.
      */
-    ChannelHandler getLast();
+    ChannelHandler last();
 
     /**
      * Returns the {@link ChannelHandler} with the specified name in this
@@ -412,7 +412,7 @@ public interface ChannelPipeline {
      * @return the context object of the specified handler.
      *         {@code null} if there's no such handler in this pipeline.
      */
-    ChannelHandlerContext getContext(ChannelHandler handler);
+    ChannelHandlerContext context(ChannelHandler handler);
 
     /**
      * Returns the context object of the {@link ChannelHandler} with the
@@ -421,7 +421,7 @@ public interface ChannelPipeline {
      * @return the context object of the handler with the specified name.
      *         {@code null} if there's no such handler in this pipeline.
      */
-    ChannelHandlerContext getContext(String name);
+    ChannelHandlerContext context(String name);
 
     /**
      * Returns the context object of the {@link ChannelHandler} of the
@@ -430,65 +430,19 @@ public interface ChannelPipeline {
      * @return the context object of the handler of the specified type.
      *         {@code null} if there's no such handler in this pipeline.
      */
-    ChannelHandlerContext getContext(Class<? extends ChannelHandler> handlerType);
-
-    /**
-     * Sends the specified {@link ChannelEvent} to the first
-     * {@link ChannelUpstreamHandler} in this pipeline.
-     *
-     * @throws NullPointerException
-     *         if the specified event is {@code null}
-     */
-    void sendUpstream(ChannelEvent e);
-
-    /**
-     * Sends the specified {@link ChannelEvent} to the last
-     * {@link ChannelDownstreamHandler} in this pipeline.
-     *
-     * @throws NullPointerException
-     *         if the specified event is {@code null}
-     */
-    void sendDownstream(ChannelEvent e);
-
-    /**
-     * Schedules the specified task to be executed in the I/O thread associated
-     * with this pipeline's {@link Channel}.
-     */
-    ChannelFuture execute(Runnable task);
+    ChannelHandlerContext context(Class<? extends ChannelHandler> handlerType);
 
     /**
      * Returns the {@link Channel} that this pipeline is attached to.
      *
      * @return the channel. {@code null} if this pipeline is not attached yet.
      */
-    Channel getChannel();
-
-    /**
-     * Returns the {@link ChannelSink} that this pipeline is attached to.
-     *
-     * @return the sink. {@code null} if this pipeline is not attached yet.
-     */
-    ChannelSink getSink();
-
-    /**
-     * Attaches this pipeline to the specified {@link Channel} and
-     * {@link ChannelSink}.  Once a pipeline is attached, it can't be detached
-     * nor attached again.
-     *
-     * @throws IllegalStateException if this pipeline is attached already
-     */
-    void attach(Channel channel, ChannelSink sink);
-
-    /**
-     * Returns {@code true} if and only if this pipeline is attached to
-     * a {@link Channel}.
-     */
-    boolean isAttached();
+    Channel channel();
 
     /**
      * Returns the {@link List} of the handler names.
      */
-    List<String> getNames();
+    List<String> names();
 
     /**
      * Converts this pipeline into an ordered {@link Map} whose keys are

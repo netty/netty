@@ -62,7 +62,7 @@ public class WriteFragmenter extends SimpleChannelDownstreamHandler {
                     new ChannelFutureAggregator(e.getFuture());
             for (ChannelBuffer fragment: fragments) {
                 ChannelFuture fragmentFuture =
-                        Channels.future(ctx.getChannel(), true);
+                        Channels.future(ctx.channel(), true);
                 aggregator.addFuture(fragmentFuture);
                 Channels.write(ctx, fragmentFuture, fragment);
             }

@@ -54,15 +54,15 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
         // Suspend incoming traffic until connected to the remote host.
-        final Channel inboundChannel = e.getChannel();
+        final Channel inboundChannel = e.channel();
         inboundChannel.setReadable(false);
 
         // Start the connection attempt.
         ClientBootstrap cb = new ClientBootstrap(cf);
-        cb.getPipeline().addLast("handler", new OutboundHandler(e.getChannel()));
+        cb.getPipeline().addLast("handler", new OutboundHandler(e.channel()));
         ChannelFuture f = cb.connect(new InetSocketAddress(remoteHost, remotePort));
 
-        outboundChannel = f.getChannel();
+        outboundChannel = f.channel();
         f.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
@@ -88,7 +88,7 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
             // If outboundChannel is saturated, do not read until notified in
             // OutboundHandler.channelInterestChanged().
             if (!outboundChannel.isWritable()) {
-                e.getChannel().setReadable(false);
+                e.channel().setReadable(false);
             }
         }
     }
@@ -99,7 +99,7 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
         // If inboundChannel is not saturated anymore, continue accepting
         // the incoming traffic from the outboundChannel.
         synchronized (trafficLock) {
-            if (e.getChannel().isWritable()) {
+            if (e.channel().isWritable()) {
                 outboundChannel.setReadable(true);
             }
         }
@@ -116,8 +116,8 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
             throws Exception {
-        e.getCause().printStackTrace();
-        closeOnFlush(e.getChannel());
+        e.cause().printStackTrace();
+        closeOnFlush(e.channel());
     }
 
     private class OutboundHandler extends SimpleChannelUpstreamHandler {
@@ -138,7 +138,7 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
                 // If inboundChannel is saturated, do not read until notified in
                 // HexDumpProxyInboundHandler.channelInterestChanged().
                 if (!inboundChannel.isWritable()) {
-                    e.getChannel().setReadable(false);
+                    e.channel().setReadable(false);
                 }
             }
         }
@@ -149,7 +149,7 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
             // If outboundChannel is not saturated anymore, continue accepting
             // the incoming traffic from the inboundChannel.
             synchronized (trafficLock) {
-                if (e.getChannel().isWritable()) {
+                if (e.channel().isWritable()) {
                     inboundChannel.setReadable(true);
                 }
             }
@@ -164,8 +164,8 @@ public class HexDumpProxyInboundHandler extends SimpleChannelUpstreamHandler {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
-            e.getCause().printStackTrace();
-            closeOnFlush(e.getChannel());
+            e.cause().printStackTrace();
+            closeOnFlush(e.channel());
         }
     }
 

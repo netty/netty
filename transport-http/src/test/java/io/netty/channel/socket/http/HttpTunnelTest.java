@@ -147,9 +147,9 @@ public class HttpTunnelTest {
                         .getLocalHost(), 12345));
         assertTrue(connectFuture.await(1000L));
         assertTrue(connectFuture.isSuccess());
-        assertNotNull(connectFuture.getChannel());
+        assertNotNull(connectFuture.channel());
 
-        Channel clientChannel = connectFuture.getChannel();
+        Channel clientChannel = connectFuture.channel();
         activeConnections.add(clientChannel);
         assertEquals(serverChannel.getLocalAddress(),
                 clientChannel.getRemoteAddress());
@@ -172,7 +172,7 @@ public class HttpTunnelTest {
                         .getLocalHost(), 12345));
         assertTrue(connectFuture.await(1000L));
 
-        Channel clientEnd = connectFuture.getChannel();
+        Channel clientEnd = connectFuture.channel();
         activeConnections.add(clientEnd);
 
         assertTrue(serverEndLatch.await(1000, TimeUnit.MILLISECONDS));
@@ -193,7 +193,7 @@ public class HttpTunnelTest {
                         .getLocalHost(), 12345));
         assertTrue(connectFuture.await(1000L));
 
-        Channel clientEnd = connectFuture.getChannel();
+        Channel clientEnd = connectFuture.channel();
         activeConnections.add(clientEnd);
 
         assertTrue(serverEndLatch.await(1000, TimeUnit.MILLISECONDS));
@@ -213,7 +213,7 @@ public class HttpTunnelTest {
         @Override
         public void channelConnected(ChannelHandlerContext ctx,
                 ChannelStateEvent e) throws Exception {
-            serverEnd = e.getChannel();
+            serverEnd = e.channel();
             activeConnections.add(serverEnd);
             serverEndLatch.countDown();
             super.channelConnected(ctx, e);

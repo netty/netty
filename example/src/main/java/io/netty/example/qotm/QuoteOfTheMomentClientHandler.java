@@ -28,14 +28,14 @@ public class QuoteOfTheMomentClientHandler extends SimpleChannelUpstreamHandler 
         String msg = (String) e.getMessage();
         if (msg.startsWith("QOTM: ")) {
             System.out.println("Quote of the Moment: " + msg.substring(6));
-            e.getChannel().close();
+            e.channel().close();
         }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
             throws Exception {
-        e.getCause().printStackTrace();
-        e.getChannel().close();
+        e.cause().printStackTrace();
+        e.channel().close();
     }
 }

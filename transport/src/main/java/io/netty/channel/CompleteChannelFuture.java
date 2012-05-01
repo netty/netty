@@ -101,7 +101,7 @@ public abstract class CompleteChannelFuture implements ChannelFuture {
     }
 
     @Override
-    public Channel getChannel() {
+    public Channel channel() {
         return channel;
     }
 

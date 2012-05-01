@@ -133,7 +133,7 @@ public class BlockingReadHandler<E> extends SimpleChannelUpstreamHandler {
         if (e instanceof MessageEvent) {
             return getMessage((MessageEvent) e);
         } else if (e instanceof ExceptionEvent) {
-            throw (IOException) new IOException().initCause(((ExceptionEvent) e).getCause());
+            throw (IOException) new IOException().initCause(((ExceptionEvent) e).cause());
         } else {
             throw new IllegalStateException();
         }
@@ -168,7 +168,7 @@ public class BlockingReadHandler<E> extends SimpleChannelUpstreamHandler {
         if (e instanceof MessageEvent) {
             return getMessage((MessageEvent) e);
         } else if (e instanceof ExceptionEvent) {
-            throw (IOException) new IOException().initCause(((ExceptionEvent) e).getCause());
+            throw (IOException) new IOException().initCause(((ExceptionEvent) e).cause());
         } else {
             throw new IllegalStateException();
         }

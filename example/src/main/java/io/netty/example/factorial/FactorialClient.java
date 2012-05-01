@@ -53,11 +53,11 @@ public class FactorialClient {
             bootstrap.connect(new InetSocketAddress(host, port));
 
         // Wait until the connection is made successfully.
-        Channel channel = connectFuture.awaitUninterruptibly().getChannel();
+        Channel channel = connectFuture.awaitUninterruptibly().channel();
 
         // Get the handler instance to retrieve the answer.
         FactorialClientHandler handler =
-            (FactorialClientHandler) channel.getPipeline().getLast();
+            (FactorialClientHandler) channel.getPipeline().last();
 
         // Print out the answer.
         System.err.format(

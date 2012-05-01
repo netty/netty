@@ -39,7 +39,7 @@ public class FailedChannelFuture extends CompleteChannelFuture {
     }
 
     @Override
-    public Throwable getCause() {
+    public Throwable cause() {
         return cause;
     }
 

@@ -149,7 +149,7 @@ public class HttpTunnelServerChannelSinkTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
-            exceptionInPipeline = e.getCause();
+            exceptionInPipeline = e.cause();
         }
     }
 }

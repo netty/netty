@@ -173,7 +173,7 @@ public class WriteTimeoutHandler extends SimpleChannelDownstreamHandler
                 return;
             }
 
-            if (!ctx.getChannel().isOpen()) {
+            if (!ctx.channel().isOpen()) {
                 return;
             }
 

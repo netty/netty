@@ -75,7 +75,7 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
                     HttpTunnelMessageUtils
                             .createOpenTunnelRequest(tunnelChannel
                                     .getServerHostName());
-            Channel thisChannel = ctx.getChannel();
+            Channel thisChannel = ctx.channel();
             DownstreamMessageEvent event =
                     new DownstreamMessageEvent(thisChannel,
                             Channels.future(thisChannel), request,
@@ -121,7 +121,7 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
                 LOG.warn("unknown response received for tunnel " + tunnelId +
                         ", closing connection");
             }
-            Channels.close(ctx, ctx.getChannel().getCloseFuture());
+            Channels.close(ctx, ctx.channel().getCloseFuture());
         }
     }
 
@@ -143,7 +143,7 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
             HttpRequest closeRequest =
                     HttpTunnelMessageUtils.createCloseTunnelRequest(
                             tunnelChannel.getServerHostName(), tunnelId);
-            Channels.write(ctx, Channels.future(ctx.getChannel()), closeRequest);
+            Channels.write(ctx, Channels.future(ctx.channel()), closeRequest);
         } else {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("sending next request for tunnel " + tunnelId);
@@ -174,8 +174,8 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
                 HttpTunnelMessageUtils.createSendDataRequest(
                         tunnelChannel.getServerHostName(), tunnelId, data);
         DownstreamMessageEvent translatedEvent =
-                new DownstreamMessageEvent(ctx.getChannel(), e.getFuture(),
-                        request, ctx.getChannel().getRemoteAddress());
+                new DownstreamMessageEvent(ctx.channel(), e.getFuture(),
+                        request, ctx.channel().getRemoteAddress());
         queuedWrites.offer(translatedEvent);
         if (pendingRequestCount.incrementAndGet() == 1) {
             sendQueuedData(ctx);
@@ -210,7 +210,7 @@ class HttpTunnelClientSendHandler extends SimpleChannelHandler {
             LOG.debug("tunnel shutdown requested for send channel of tunnel " +
                     tunnelId);
         }
-        if (!ctx.getChannel().isConnected()) {
+        if (!ctx.channel().isConnected()) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("send channel of tunnel " + tunnelId +
                         " is already disconnected");

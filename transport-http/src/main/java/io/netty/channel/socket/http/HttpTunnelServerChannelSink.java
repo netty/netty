@@ -70,7 +70,7 @@ class HttpTunnelServerChannelSink extends AbstractChannelSink {
             if (future.isSuccess()) {
                 upstreamFuture.setSuccess();
             } else {
-                upstreamFuture.setFailure(future.getCause());
+                upstreamFuture.setFailure(future.cause());
             }
         }
     }

@@ -225,12 +225,12 @@ public abstract class AbstractTrafficShapingHandler extends
                 return;
             }
             // logger.info("WAKEUP!");
-            if (ctx != null && ctx.getChannel() != null &&
-                    ctx.getChannel().isConnected()) {
+            if (ctx != null && ctx.channel() != null &&
+                    ctx.channel().isConnected()) {
                 //logger.info(" setReadable TRUE: "+timeToWait);
                 // readSuspended = false;
                 ctx.setAttachment(null);
-                ctx.getChannel().setReadable(true);
+                ctx.channel().setReadable(true);
             }
         }
     }
@@ -267,7 +267,7 @@ public abstract class AbstractTrafficShapingHandler extends
                         .getCurrentReadBytes(), trafficCounter.getLastTime(),
                         curtime);
                 if (wait > MINIMAL_WAIT) { // At least 10ms seems a minimal time in order to
-                    Channel channel = arg0.getChannel();
+                    Channel channel = arg0.channel();
                     // try to limit the traffic
                     if (channel != null && channel.isConnected()) {
                         // Channel version

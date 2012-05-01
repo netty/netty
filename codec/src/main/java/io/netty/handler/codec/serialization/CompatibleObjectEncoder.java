@@ -99,7 +99,7 @@ public class CompatibleObjectEncoder extends OneToOneEncoder {
     private ChannelBuffer buffer(ChannelHandlerContext ctx) throws Exception {
         ChannelBuffer buf = buffer.get();
         if (buf == null) {
-            ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
+            ChannelBufferFactory factory = ctx.channel().getConfig().getBufferFactory();
             buf = ChannelBuffers.dynamicBuffer(factory);
             if (buffer.compareAndSet(null, buf)) {
                 boolean success = false;

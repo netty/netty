@@ -164,7 +164,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
             response.setHeader(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
         }
         
-        Channel ch = e.getChannel();
+        Channel ch = e.channel();
 
         // Write the initial line and the header.
         ch.write(response);
@@ -203,8 +203,8 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
             throws Exception {
-        Channel ch = e.getChannel();
-        Throwable cause = e.getCause();
+        Channel ch = e.channel();
+        Throwable cause = e.cause();
         if (cause instanceof TooLongFrameException) {
             sendError(ctx, BAD_REQUEST);
             return;
@@ -251,7 +251,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
                 CharsetUtil.UTF_8));
 
         // Close the connection as soon as the error message is sent.
-        ctx.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);
+        ctx.channel().write(response).addListener(ChannelFutureListener.CLOSE);
     }
     
     /**
@@ -265,7 +265,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelUpstreamHandler {
         setDateHeader(response);
 
         // Close the connection as soon as the error message is sent.
-        ctx.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);
+        ctx.channel().write(response).addListener(ChannelFutureListener.CLOSE);
     }
     
     /**

@@ -66,7 +66,7 @@ public class SctpClient {
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
 
         // Wait until the connection is closed or the connection attempt fails.
-        future.getChannel().getCloseFuture().awaitUninterruptibly();
+        future.channel().getCloseFuture().awaitUninterruptibly();
 
         //  Please check SctpClientHandler to see, how echo message is sent & received
 

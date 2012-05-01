@@ -147,7 +147,7 @@ public class HttpTunnelingServlet extends HttpServlet {
         Channel channel = channelFactory.newChannel(pipeline);
         ChannelFuture future = channel.connect(remoteAddress).awaitUninterruptibly();
         if (!future.isSuccess()) {
-            Throwable cause = future.getCause();
+            Throwable cause = future.cause();
             if (logger.isWarnEnabled()) {
                 logger.warn("Endpoint unavailable: " + cause.getMessage(), cause);
             }
@@ -240,9 +240,9 @@ public class HttpTunnelingServlet extends HttpServlet {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
             if (logger.isWarnEnabled()) {
-                logger.warn("Unexpected exception while HTTP tunneling", e.getCause());
+                logger.warn("Unexpected exception while HTTP tunneling", e.cause());
             }
-            e.getChannel().close();
+            e.channel().close();
         }
     }
 }

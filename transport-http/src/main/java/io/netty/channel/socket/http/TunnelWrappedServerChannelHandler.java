@@ -48,7 +48,7 @@ class TunnelWrappedServerChannelHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
-        e.getChannel().getConfig().setPipelineFactory(pipelineFactory);
+        e.channel().getConfig().setPipelineFactory(pipelineFactory);
         super.channelOpen(ctx, e);
     }
 

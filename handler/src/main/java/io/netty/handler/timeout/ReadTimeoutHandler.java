@@ -248,7 +248,7 @@ public class ReadTimeoutHandler extends SimpleChannelUpstreamHandler
                 return;
             }
 
-            if (!ctx.getChannel().isOpen()) {
+            if (!ctx.channel().isOpen()) {
                 return;
             }
 

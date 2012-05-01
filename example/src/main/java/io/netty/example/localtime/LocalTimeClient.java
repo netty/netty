@@ -58,7 +58,7 @@ public class LocalTimeClient {
             bootstrap.connect(new InetSocketAddress(host, port));
 
         // Wait until the connection is made successfully.
-        Channel channel = connectFuture.awaitUninterruptibly().getChannel();
+        Channel channel = connectFuture.awaitUninterruptibly().channel();
 
         // Get the handler instance to initiate the request.
         LocalTimeClientHandler handler =

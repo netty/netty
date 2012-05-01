@@ -170,7 +170,7 @@ public interface ChannelFuture {
      * Returns a channel where the I/O operation associated with this
      * future takes place.
      */
-    Channel getChannel();
+    Channel channel();
 
     /**
      * Returns {@code true} if and only if this future is
@@ -199,7 +199,7 @@ public interface ChannelFuture {
      *         {@code null} if succeeded or this future is not
      *         completed yet.
      */
-    Throwable getCause();
+    Throwable cause();
 
     /**
      * Cancels the I/O operation associated with this future

@@ -123,16 +123,16 @@ public abstract class AbstractSocketSslEchoTest {
         ChannelFuture ccf = cb.connect(new InetSocketAddress(SctpTestUtil.LOOP_BACK, port));
         ccf.awaitUninterruptibly();
         if (!ccf.isSuccess()) {
-            logger.error("Connection attempt failed", ccf.getCause());
+            logger.error("Connection attempt failed", ccf.cause());
             sc.close().awaitUninterruptibly();
         }
         assertTrue(ccf.isSuccess());
 
-        Channel cc = ccf.getChannel();
+        Channel cc = ccf.channel();
         ChannelFuture hf = cc.getPipeline().get(SslHandler.class).handshake();
         hf.awaitUninterruptibly();
         if (!hf.isSuccess()) {
-            logger.error("Handshake failed", hf.getCause());
+            logger.error("Handshake failed", hf.cause());
             sh.channel.close().awaitUninterruptibly();
             ch.channel.close().awaitUninterruptibly();
             sc.close().awaitUninterruptibly();
@@ -207,7 +207,7 @@ public abstract class AbstractSocketSslEchoTest {
         @Override
         public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
                 throws Exception {
-            channel = e.getChannel();
+            channel = e.channel();
         }
 
         @Override
@@ -234,10 +234,10 @@ public abstract class AbstractSocketSslEchoTest {
                 throws Exception {
             logger.warn(
                     "Unexpected exception from the " +
-                    (server? "server" : "client") + " side", e.getCause());
+                    (server? "server" : "client") + " side", e.cause());
 
-            exception.compareAndSet(null, e.getCause());
-            e.getChannel().close();
+            exception.compareAndSet(null, e.cause());
+            e.channel().close();
         }
     }
 

@@ -109,7 +109,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
         boolean offered = queue.offer((MessageEvent) e);
         assert offered;
 
-        final Channel channel = ctx.getChannel();
+        final Channel channel = ctx.channel();
         if (channel.isWritable()) {
             this.ctx = ctx;
             flush(ctx, false);
@@ -182,7 +182,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
     }
 
     private synchronized void flush(ChannelHandlerContext ctx, boolean fireNow) throws Exception {
-        final Channel channel = ctx.getChannel();
+        final Channel channel = ctx.channel();
         if (!channel.isConnected()) {
             discard(ctx, fireNow);
         }
@@ -250,7 +250,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                                 public void operationComplete(ChannelFuture future)
                                         throws Exception {
                                     if (!future.isSuccess()) {
-                                        currentEvent.getFuture().setFailure(future.getCause());
+                                        currentEvent.getFuture().setFailure(future.cause());
                                         closeInput((ChunkedInput) currentEvent.getMessage());
                                     }
                                 }

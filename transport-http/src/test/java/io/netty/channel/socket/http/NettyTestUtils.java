@@ -167,7 +167,7 @@ public class NettyTestUtils {
     public static Throwable checkIsExceptionEvent(ChannelEvent ev) {
         assertTrue(ev instanceof ExceptionEvent);
         ExceptionEvent exceptionEv = (ExceptionEvent) ev;
-        return exceptionEv.getCause();
+        return exceptionEv.cause();
     }
 
     public static ChannelStateEvent checkIsStateEvent(ChannelEvent event,

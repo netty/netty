@@ -36,13 +36,13 @@ public class SctpServerHandler extends SimpleChannelUpstreamHandler {
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent messageEvent) {
         // Send back the received message to the remote peer.
         logger.log(Level.INFO, "Received " + counter.incrementAndGet() + "th message from client, sending it back.");
-        messageEvent.getChannel().write(messageEvent.getMessage());
+        messageEvent.channel().write(messageEvent.getMessage());
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent event) {
         // Close the connection when an exception is raised.
-        logger.log(Level.WARNING, "Unexpected exception from downstream.", event.getCause());
-        event.getChannel().close();
+        logger.log(Level.WARNING, "Unexpected exception from downstream.", event.cause());
+        event.channel().close();
     }
 }

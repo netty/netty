@@ -185,7 +185,7 @@ public class HttpTunnelSoakTester {
                             public void channelConnected(
                                     ChannelHandlerContext ctx,
                                     ChannelStateEvent e) throws Exception {
-                                Channel childChannel = e.getChannel();
+                                Channel childChannel = e.channel();
                                 channels.add(childChannel);
                                 s2cDataSender.setChannel(childChannel);
                                 executor.execute(s2cDataSender);
@@ -268,17 +268,17 @@ public class HttpTunnelSoakTester {
 
         if (!clientChannelFuture.isSuccess()) {
             LOG.log(Level.SEVERE, "did not connect successfully",
-                    clientChannelFuture.getCause());
+                    clientChannelFuture.cause());
             return null;
         }
 
         HttpTunnelClientChannelConfig config =
                 (HttpTunnelClientChannelConfig) clientChannelFuture
-                .getChannel().getConfig();
+                .channel().getConfig();
         config.setWriteBufferHighWaterMark(2 * 1024 * 1024);
         config.setWriteBufferLowWaterMark(1024 * 1024);
 
-        return (SocketChannel) clientChannelFuture.getChannel();
+        return (SocketChannel) clientChannelFuture.channel();
     }
 
     ChannelBuffer createRandomSizeBuffer(AtomicInteger nextWriteByte) {
@@ -350,7 +350,7 @@ public class HttpTunnelSoakTester {
         @Override
         public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
                 throws Exception {
-            channels.add(ctx.getChannel());
+            channels.add(ctx.channel());
         }
 
         public boolean waitForCompletion(long timeout, TimeUnit timeoutUnit)
@@ -369,7 +369,7 @@ public class HttpTunnelSoakTester {
         @Override
         public void channelInterestChanged(ChannelHandlerContext ctx,
                 ChannelStateEvent e) throws Exception {
-            boolean writeEnabled = ctx.getChannel().isWritable();
+            boolean writeEnabled = ctx.channel().isWritable();
             sender.setWriteEnabled(writeEnabled);
 
         }

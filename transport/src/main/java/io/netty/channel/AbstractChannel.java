@@ -15,15 +15,23 @@
  */
 package io.netty.channel;
 
-import java.net.SocketAddress;
-import java.util.concurrent.ConcurrentMap;
-
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.ConcurrentHashMap;
+
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * A skeletal {@link Channel} implementation.
  */
-public abstract class AbstractChannel implements Channel {
+public abstract class AbstractChannel extends DefaultAttributeMap implements Channel {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannel.class);
 
     static final ConcurrentMap<Integer, Channel> allChannels = new ConcurrentHashMap<Integer, Channel>();
 
@@ -44,41 +52,34 @@ public abstract class AbstractChannel implements Channel {
 
     private final Integer id;
     private final Channel parent;
-    private final ChannelFactory factory;
-    private final ChannelPipeline pipeline;
-    private final ChannelFuture succeededFuture = new SucceededChannelFuture(this);
-    private final ChannelCloseFuture closeFuture = new ChannelCloseFuture();
-    private volatile int interestOps = OP_READ;
+    private final Unsafe unsafe;
+    private final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(this);
+    private final List<ChannelFutureListener> closureListeners = new ArrayList<ChannelFutureListener>(4);
+
+    private volatile EventLoop eventLoop;
+    private volatile boolean notifiedClosureListeners;
 
     /** Cache for the string representation of this channel */
-    private boolean strValConnected;
+    private boolean strValActive;
     private String strVal;
-    private volatile Object attachment;
-    
+
     /**
      * Creates a new instance.
      *
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
-     * @param factory
-     *        the factory which created this channel
-     * @param pipeline
-     *        the pipeline which is going to be attached to this channel
-     * @param sink
-     *        the sink which will receive downstream events from the pipeline
-     *        and send upstream events to the pipeline
      */
-    protected AbstractChannel(
-            Channel parent, ChannelFactory factory,
-            ChannelPipeline pipeline, ChannelSink sink) {
-
-        this.parent = parent;
-        this.factory = factory;
-        this.pipeline = pipeline;
-
+    protected AbstractChannel(Channel parent) {
         id = allocateId(this);
+        this.parent = parent;
+        unsafe = new DefaultUnsafe();
 
-        pipeline.attach(this, sink);
+        closureListeners.add(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                allChannels.remove(id());
+            }
+        });
     }
 
     /**
@@ -87,59 +88,132 @@ public abstract class AbstractChannel implements Channel {
      *
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
-     * @param factory
-     *        the factory which created this channel
-     * @param pipeline
-     *        the pipeline which is going to be attached to this channel
-     * @param sink
-     *        the sink which will receive downstream events from the pipeline
-     *        and send upstream events to the pipeline
      */
-    protected AbstractChannel(
-            Integer id,
-            Channel parent, ChannelFactory factory,
-            ChannelPipeline pipeline, ChannelSink sink) {
-
+    protected AbstractChannel(Integer id, Channel parent) {
         this.id = id;
         this.parent = parent;
-        this.factory = factory;
-        this.pipeline = pipeline;
-        pipeline.attach(this, sink);
+        unsafe = new DefaultUnsafe();
     }
 
     @Override
-    public final Integer getId() {
+    public final Integer id() {
         return id;
     }
 
     @Override
-    public Channel getParent() {
+    public Channel parent() {
         return parent;
     }
 
     @Override
-    public ChannelFactory getFactory() {
-        return factory;
-    }
-
-    @Override
-    public ChannelPipeline getPipeline() {
+    public ChannelPipeline pipeline() {
         return pipeline;
     }
 
-    /**
-     * Returns the cached {@link SucceededChannelFuture} instance.
-     */
-    protected ChannelFuture getSucceededFuture() {
-        return succeededFuture;
+    @Override
+    public EventLoop eventLoop() {
+        return eventLoop;
+    }
+
+    @Override
+    public void bind(SocketAddress localAddress, ChannelFuture future) {
+        pipeline().bind(localAddress, future);
+    }
+
+    @Override
+    public void connect(SocketAddress remoteAddress, ChannelFuture future) {
+        pipeline().connect(remoteAddress, future);
+    }
+
+    @Override
+    public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
+        pipeline().connect(remoteAddress, localAddress, future);
+    }
+
+    @Override
+    public void disconnect(ChannelFuture future) {
+        pipeline().disconnect(future);
+    }
+
+    @Override
+    public void close(ChannelFuture future) {
+        pipeline().close(future);
+    }
+
+    @Override
+    public void deregister(ChannelFuture future) {
+        pipeline().deregister(future);
+    }
+
+    @Override
+    public ChannelBufferHolder<Object> out() {
+        return pipeline().nextOut();
+    }
+
+    @Override
+    public void flush(ChannelFuture future) {
+        pipeline().flush(future);
+    }
+
+    @Override
+    public void write(Object message, ChannelFuture future) {
+        pipeline.write(message, future);
+    }
+
+    @Override
+    public void addClosureListener(final ChannelFutureListener listener) {
+        if (listener == null) {
+            throw new NullPointerException("listener");
+        }
+        synchronized (closureListeners) {
+            if (notifiedClosureListeners) {
+                eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        notifyClosureListener(listener);
+                    }
+                });
+            } else {
+                closureListeners.add(listener);
+            }
+        }
     }
 
     /**
-     * Returns the {@link FailedChannelFuture} whose cause is an
-     * {@link UnsupportedOperationException}.
+     * A {@link Channel} implementation must call this method when it is closed.
      */
-    protected ChannelFuture getUnsupportedOperationFuture() {
-        return new FailedChannelFuture(this, new UnsupportedOperationException());
+    protected void notifyClosureListeners() {
+        final ChannelFutureListener[] array;
+        synchronized (closureListeners) {
+            if (notifiedClosureListeners) {
+                return;
+            }
+            notifiedClosureListeners = true;
+            array = closureListeners.toArray(new ChannelFutureListener[closureListeners.size()]);
+            closureListeners.clear();
+        }
+
+        eventLoop().execute(new Runnable() {
+            @Override
+            public void run() {
+                for (ChannelFutureListener l: array) {
+                    notifyClosureListener(l);
+                }
+            }
+        });
+    }
+
+    private void notifyClosureListener(final ChannelFutureListener listener) {
+        try {
+            listener.operationComplete(pipeline.succeededFuture());
+        } catch (Exception e) {
+            logger.warn("Failed to notify a closure listener.", e);
+        }
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return unsafe;
     }
 
     /**
@@ -161,134 +235,23 @@ public abstract class AbstractChannel implements Channel {
     }
 
     /**
-     * Compares the {@linkplain #getId() ID} of the two channels.
+     * Compares the {@linkplain #id() ID} of the two channels.
      */
     @Override
     public final int compareTo(Channel o) {
-        return getId().compareTo(o.getId());
+        return id().compareTo(o.id());
     }
 
-    @Override
-    public boolean isOpen() {
-        return !closeFuture.isDone();
-    }
-
-    /**
-     * Marks this channel as closed.  This method is intended to be called by
-     * an internal component - please do not call it unless you know what you
-     * are doing.
-     *
-     * @return {@code true} if and only if this channel was not marked as
-     *                      closed yet
-     */
-    protected boolean setClosed() {
-        // Deallocate the current channel's ID from allChannels so that other
-        // new channels can use it.
-        allChannels.remove(id);
-
-        return closeFuture.setClosed();
-    }
-
-    @Override
-    public ChannelFuture bind(SocketAddress localAddress) {
-        return Channels.bind(this, localAddress);
-    }
-
-    @Override
-    public ChannelFuture unbind() {
-        return Channels.unbind(this);
-    }
-
-    @Override
-    public ChannelFuture close() {
-        ChannelFuture returnedCloseFuture = Channels.close(this);
-        assert closeFuture == returnedCloseFuture;
-        return closeFuture;
-    }
-
-    @Override
-    public ChannelFuture getCloseFuture() {
-        return closeFuture;
-    }
-
-    @Override
-    public ChannelFuture connect(SocketAddress remoteAddress) {
-        return Channels.connect(this, remoteAddress);
-    }
-
-    @Override
-    public ChannelFuture disconnect() {
-        return Channels.disconnect(this);
-    }
-
-    @Override
-    public int getInterestOps() {
-        return interestOps;
-    }
-
-    @Override
-    public ChannelFuture setInterestOps(int interestOps) {
-        return Channels.setInterestOps(this, interestOps);
-    }
-
-    /**
-     * Sets the {@link #getInterestOps() interestOps} property of this channel
-     * immediately.  This method is intended to be called by an internal
-     * component - please do not call it unless you know what you are doing.
-     */
-    protected void setInterestOpsNow(int interestOps) {
-        this.interestOps = interestOps;
-    }
-
-    @Override
-    public boolean isReadable() {
-        return (getInterestOps() & OP_READ) != 0;
-    }
-
-    @Override
-    public boolean isWritable() {
-        return (getInterestOps() & OP_WRITE) == 0;
-    }
-
-    @Override
-    public ChannelFuture setReadable(boolean readable) {
-        if (readable) {
-            return setInterestOps(getInterestOps() | OP_READ);
-        } else {
-            return setInterestOps(getInterestOps() & ~OP_READ);
-        }
-    }
-
-    @Override
-    public ChannelFuture write(Object message) {
-        return Channels.write(this, message);
-    }
-
-    @Override
-    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
-        return Channels.write(this, message, remoteAddress);
-    }
-
-    @Override
-    public Object getAttachment() {
-        return attachment;
-    }
-
-    @Override
-    public void setAttachment(Object attachment) {
-        this.attachment = attachment;
-    }
-    
     /**
      * Returns the {@link String} representation of this channel.  The returned
-     * string contains the {@linkplain #getId() ID}, {@linkplain #getLocalAddress() local address},
-     * and {@linkplain #getRemoteAddress() remote address} of this channel for
+     * string contains the {@linkplain #id() ID}, {@linkplain #localAddress() local address},
+     * and {@linkplain #remoteAddress() remote address} of this channel for
      * easier identification.
      */
     @Override
     public String toString() {
-        boolean connected = isConnected();
-        if (strValConnected == connected && strVal != null) {
+        boolean active = isActive();
+        if (strValActive == active && strVal != null) {
             return strVal;
         }
 
@@ -296,17 +259,17 @@ public abstract class AbstractChannel implements Channel {
         buf.append("[id: 0x");
         buf.append(getIdString());
 
-        SocketAddress localAddress = getLocalAddress();
-        SocketAddress remoteAddress = getRemoteAddress();
+        SocketAddress localAddress = localAddress();
+        SocketAddress remoteAddress = remoteAddress();
         if (remoteAddress != null) {
             buf.append(", ");
-            if (getParent() == null) {
+            if (parent() == null) {
                 buf.append(localAddress);
-                buf.append(connected? " => " : " :> ");
+                buf.append(active? " => " : " :> ");
                 buf.append(remoteAddress);
             } else {
                 buf.append(remoteAddress);
-                buf.append(connected? " => " : " :> ");
+                buf.append(active? " => " : " :> ");
                 buf.append(localAddress);
             }
         } else if (localAddress != null) {
@@ -318,7 +281,7 @@ public abstract class AbstractChannel implements Channel {
 
         String strVal = buf.toString();
         this.strVal = strVal;
-        strValConnected = connected;
+        strValActive = active;
         return strVal;
     }
 
@@ -353,26 +316,130 @@ public abstract class AbstractChannel implements Channel {
         return answer;
     }
 
-    private final class ChannelCloseFuture extends DefaultChannelFuture {
+    private class DefaultUnsafe implements Unsafe {
 
-        public ChannelCloseFuture() {
-            super(AbstractChannel.this, false);
+        @Override
+        public void setEventLoop(EventLoop eventLoop) {
+            if (eventLoop == null) {
+                throw new NullPointerException("eventLoop");
+            }
+            if (AbstractChannel.this.eventLoop != null) {
+                throw new IllegalStateException("attached to an event loop already");
+            }
+            AbstractChannel.this.eventLoop = eventLoop;
         }
 
         @Override
-        public boolean setSuccess() {
-            // User is not supposed to call this method - ignore silently.
-            return false;
+        public java.nio.channels.Channel ch() {
+            return javaChannel();
         }
 
         @Override
-        public boolean setFailure(Throwable cause) {
-            // User is not supposed to call this method - ignore silently.
-            return false;
+        public ChannelBufferHolder<Object> out() {
+            return firstOut();
         }
 
-        boolean setClosed() {
-            return super.setSuccess();
+        @Override
+        public void bind(final SocketAddress localAddress, final ChannelFuture future) {
+            if (eventLoop().inEventLoop()) {
+                doBind(localAddress, future);
+            } else {
+                eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        doBind(localAddress, future);
+                    }
+                });
+            }
+        }
+
+        @Override
+        public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelFuture future) {
+            if (eventLoop().inEventLoop()) {
+                doConnect(remoteAddress, localAddress, future);
+            } else {
+                eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        doConnect(remoteAddress, localAddress, future);
+                    }
+                });
+            }
+        }
+
+        @Override
+        public void disconnect(final ChannelFuture future) {
+            if (eventLoop().inEventLoop()) {
+                doDisconnect(future);
+            } else {
+                eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        doDisconnect(future);
+                    }
+                });
+            }
+        }
+
+        @Override
+        public void close(final ChannelFuture future) {
+            if (eventLoop().inEventLoop()) {
+                doClose(future);
+            } else {
+                eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        doClose(future);
+                    }
+                });
+            }
+        }
+
+        @Override
+        public void deregister(final ChannelFuture future) {
+            if (eventLoop().inEventLoop()) {
+                doDeregister(future);
+            } else {
+                eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        doDeregister(future);
+                    }
+                });
+            }
+        }
+
+        @Override
+        public int read() throws IOException {
+            assert eventLoop().inEventLoop();
+            return doRead();
+        }
+
+        @Override
+        public int flush(final ChannelFuture future) {
+            if (eventLoop().inEventLoop()) {
+                return doFlush(future);
+            } else {
+                eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        doFlush(future);
+                    }
+                });
+                return -1; // Unknown
+            }
         }
     }
+
+    protected abstract java.nio.channels.Channel javaChannel();
+    protected abstract ChannelBufferHolder<Object> firstOut();
+
+    protected abstract void doBind(SocketAddress localAddress, ChannelFuture future);
+    protected abstract void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future);
+    protected abstract void doDisconnect(ChannelFuture future);
+    protected abstract void doClose(ChannelFuture future);
+    protected abstract void doDeregister(ChannelFuture future);
+
+    protected abstract int doRead();
+    protected abstract int doFlush(ChannelFuture future);
 }

@@ -204,7 +204,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
 
         if (cumulation == null) {
             // the cumulation buffer is not created yet so just pass the input to callDecode(...) method
-            callDecode(ctx, e.getChannel(), input, e.getRemoteAddress());
+            callDecode(ctx, e.channel(), input, e.getRemoteAddress());
             if (input.readable()) {
                 // seems like there is something readable left in the input buffer. So create the cumulation buffer and copy the input into it
                 (this.cumulation = newCumulationBuffer(ctx, input.readableBytes())).writeBytes(input);
@@ -216,7 +216,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
                 cumulation.discardReadBytes();
             }
             cumulation.writeBytes(input);
-            callDecode(ctx, e.getChannel(), cumulation, e.getRemoteAddress());
+            callDecode(ctx, e.channel(), cumulation, e.getRemoteAddress());
             if (!cumulation.readable()) {
                 this.cumulation = null;
             }
@@ -333,13 +333,13 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
 
             if (cumulation.readable()) {
                 // Make sure all frames are read before notifying a closed channel.
-                callDecode(ctx, ctx.getChannel(), cumulation, null);
+                callDecode(ctx, ctx.channel(), cumulation, null);
             }
 
             // Call decodeLast() finally.  Please note that decodeLast() is
             // called even if there's nothing more to read from the buffer to
             // notify a user that the connection was closed explicitly.
-            Object partialFrame = decodeLast(ctx, ctx.getChannel(), cumulation);
+            Object partialFrame = decodeLast(ctx, ctx.channel(), cumulation);
             if (partialFrame != null) {
                 unfoldAndFireMessageReceived(ctx, null, partialFrame);
             }
@@ -359,7 +359,7 @@ public abstract class FrameDecoder extends SimpleChannelUpstreamHandler {
      */
     protected ChannelBuffer newCumulationBuffer(
             ChannelHandlerContext ctx, int minimumCapacity) {
-        ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
+        ChannelBufferFactory factory = ctx.channel().getConfig().getBufferFactory();
         return ChannelBuffers.dynamicBuffer(
                 factory.getDefaultOrder(), Math.max(minimumCapacity, 256), factory);
     }

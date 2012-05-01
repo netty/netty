@@ -109,7 +109,7 @@ public class SctpMultiHomingEchoTest {
         ChannelFuture bindFuture = cb.bind(new InetSocketAddress(SctpTestUtil.LOOP_BACK, 0));
         assertTrue(bindFuture.awaitUninterruptibly().isSuccess());
 
-        SctpChannel clientChannel = (SctpChannel) bindFuture.getChannel();
+        SctpChannel clientChannel = (SctpChannel) bindFuture.channel();
 
         //adding a muti-homing address to client channel
         ChannelFuture multiHomingBindFuture = clientChannel.bindAddress(InetAddress.getByName(SctpTestUtil.LOOP_BACK2));
@@ -196,7 +196,7 @@ public class SctpMultiHomingEchoTest {
         @Override
         public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
                 throws Exception {
-            channel = e.getChannel();
+            channel = e.channel();
         }
 
         @Override
@@ -221,8 +221,8 @@ public class SctpMultiHomingEchoTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
-            if (exception.compareAndSet(null, e.getCause())) {
-                e.getChannel().close();
+            if (exception.compareAndSet(null, e.cause())) {
+                e.channel().close();
             }
         }
 

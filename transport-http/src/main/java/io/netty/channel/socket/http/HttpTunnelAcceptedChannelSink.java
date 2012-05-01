@@ -74,7 +74,7 @@ class HttpTunnelAcceptedChannelSink extends AbstractChannelSink {
         }
 
         final HttpTunnelAcceptedChannelReceiver channel =
-                (HttpTunnelAcceptedChannelReceiver) ev.getChannel();
+                (HttpTunnelAcceptedChannelReceiver) ev.channel();
         final ChannelBuffer message = (ChannelBuffer) ev.getMessage();
         final int messageSize = message.readableBytes();
         final ChannelFuture future = ev.getFuture();
@@ -98,7 +98,7 @@ class HttpTunnelAcceptedChannelSink extends AbstractChannelSink {
     private void handleStateEvent(ChannelStateEvent ev) {
         /* TODO: as any of disconnect, unbind or close destroys a server
            channel, should we fire all three events always? */
-        Channel owner = ev.getChannel();
+        Channel owner = ev.channel();
         switch (ev.getState()) {
         case OPEN:
             if (Boolean.FALSE.equals(ev.getValue())) {

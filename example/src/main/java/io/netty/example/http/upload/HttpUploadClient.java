@@ -154,9 +154,9 @@ public class HttpUploadClient {
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
         // Wait until the connection attempt succeeds or fails.
-        Channel channel = future.awaitUninterruptibly().getChannel();
+        Channel channel = future.awaitUninterruptibly().channel();
         if (!future.isSuccess()) {
-            future.getCause().printStackTrace();
+            future.cause().printStackTrace();
             bootstrap.releaseExternalResources();
             return null;
         }
@@ -226,9 +226,9 @@ public class HttpUploadClient {
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
         // Wait until the connection attempt succeeds or fails.
-        Channel channel = future.awaitUninterruptibly().getChannel();
+        Channel channel = future.awaitUninterruptibly().channel();
         if (!future.isSuccess()) {
-            future.getCause().printStackTrace();
+            future.cause().printStackTrace();
             bootstrap.releaseExternalResources();
             return null;
         }
@@ -312,9 +312,9 @@ public class HttpUploadClient {
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
         // Wait until the connection attempt succeeds or fails.
-        Channel channel = future.awaitUninterruptibly().getChannel();
+        Channel channel = future.awaitUninterruptibly().channel();
         if (!future.isSuccess()) {
-            future.getCause().printStackTrace();
+            future.cause().printStackTrace();
             bootstrap.releaseExternalResources();
             return;
         }

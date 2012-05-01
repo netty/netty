@@ -231,7 +231,7 @@ public class HttpTunnelServerChannelTest {
             Object expectedValue) {
         assertTrue(ev instanceof UpstreamChannelStateEvent);
         UpstreamChannelStateEvent checkedEv = (UpstreamChannelStateEvent) ev;
-        assertSame(expectedChannel, checkedEv.getChannel());
+        assertSame(expectedChannel, checkedEv.channel());
         assertEquals(expectedState, checkedEv.getState());
         assertEquals(expectedValue, checkedEv.getValue());
     }

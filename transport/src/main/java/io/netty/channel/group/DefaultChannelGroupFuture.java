@@ -16,6 +16,12 @@
 package io.netty.channel.group;
 
 import static java.util.concurrent.TimeUnit.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.logging.InternalLogger;
+import io.netty.logging.InternalLoggerFactory;
+import io.netty.util.internal.DeadLockProofWorker;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,13 +31,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.logging.InternalLogger;
-import io.netty.logging.InternalLoggerFactory;
-import io.netty.util.internal.DeadLockProofWorker;
 
 /**
  * The default {@link ChannelGroupFuture} implementation.
@@ -87,7 +86,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
 
         Map<Integer, ChannelFuture> futureMap = new LinkedHashMap<Integer, ChannelFuture>();
         for (ChannelFuture f: futures) {
-            futureMap.put(f.getChannel().getId(), f);
+            futureMap.put(f.channel().id(), f);
         }
 
         this.futures = Collections.unmodifiableMap(futureMap);
@@ -127,7 +126,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
 
     @Override
     public ChannelFuture find(Channel channel) {
-        return futures.get(channel.getId());
+        return futures.get(channel.id());
     }
 
     @Override
@@ -333,7 +332,7 @@ public class DefaultChannelGroupFuture implements ChannelGroupFuture {
         }
     }
 
-    private void checkDeadLock() {
+    private static void checkDeadLock() {
         if (DeadLockProofWorker.PARENT.get() != null) {
             throw new IllegalStateException(
                     "await*() in I/O thread causes a dead lock or " +

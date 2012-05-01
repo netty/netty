@@ -94,9 +94,9 @@ public class WebSocketSslServerHandler extends SimpleChannelUpstreamHandler {
                 this.getWebSocketLocation(req), null, false);
         this.handshaker = wsFactory.newHandshaker(req);
         if (this.handshaker == null) {
-            wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.getChannel());
+            wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());
         } else {
-            this.handshaker.handshake(ctx.getChannel(), req);
+            this.handshaker.handshake(ctx.channel(), req);
         }
     }
 
@@ -104,10 +104,10 @@ public class WebSocketSslServerHandler extends SimpleChannelUpstreamHandler {
 
         // Check for closing frame
         if (frame instanceof CloseWebSocketFrame) {
-            this.handshaker.close(ctx.getChannel(), (CloseWebSocketFrame) frame);
+            this.handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
             return;
         } else if (frame instanceof PingWebSocketFrame) {
-            ctx.getChannel().write(new PongWebSocketFrame(frame.getBinaryData()));
+            ctx.channel().write(new PongWebSocketFrame(frame.getBinaryData()));
             return;
         } else if (!(frame instanceof TextWebSocketFrame)) {
             throw new UnsupportedOperationException(String.format("%s frame types not supported", frame.getClass()
@@ -117,9 +117,9 @@ public class WebSocketSslServerHandler extends SimpleChannelUpstreamHandler {
         // Send the uppercase string back.
         String request = ((TextWebSocketFrame) frame).getText();
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s received %s", ctx.getChannel().getId(), request));
+            logger.debug(String.format("Channel %s received %s", ctx.channel().getId(), request));
         }
-        ctx.getChannel().write(new TextWebSocketFrame(request.toUpperCase()));
+        ctx.channel().write(new TextWebSocketFrame(request.toUpperCase()));
     }
 
     private void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
@@ -130,7 +130,7 @@ public class WebSocketSslServerHandler extends SimpleChannelUpstreamHandler {
         }
 
         // Send the response and close the connection if necessary.
-        ChannelFuture f = ctx.getChannel().write(res);
+        ChannelFuture f = ctx.channel().write(res);
         if (!isKeepAlive(req) || res.getStatus().getCode() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
@@ -138,8 +138,8 @@ public class WebSocketSslServerHandler extends SimpleChannelUpstreamHandler {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        e.getCause().printStackTrace();
-        e.getChannel().close();
+        e.cause().printStackTrace();
+        e.channel().close();
     }
 
     private String getWebSocketLocation(HttpRequest req) {

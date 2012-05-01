@@ -294,7 +294,7 @@ public class BufferedWriteHandler extends SimpleChannelHandler {
         }
 
         ChannelBuffer composite = ChannelBuffers.wrappedBuffer(data);
-        ChannelFuture future = Channels.future(ctx.getChannel());
+        ChannelFuture future = Channels.future(ctx.channel());
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future)
@@ -304,7 +304,7 @@ public class BufferedWriteHandler extends SimpleChannelHandler {
                         e.getFuture().setSuccess();
                     }
                 } else {
-                    Throwable cause = future.getCause();
+                    Throwable cause = future.cause();
                     for (MessageEvent e: pendingWrites) {
                         e.getFuture().setFailure(cause);
                     }

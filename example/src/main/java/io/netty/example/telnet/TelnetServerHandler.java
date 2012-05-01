@@ -50,9 +50,9 @@ public class TelnetServerHandler extends SimpleChannelUpstreamHandler {
     public void channelConnected(
             ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         // Send greeting for a new connection.
-        e.getChannel().write(
+        e.channel().write(
                 "Welcome to " + InetAddress.getLocalHost().getHostName() + "!\r\n");
-        e.getChannel().write("It is " + new Date() + " now.\r\n");
+        e.channel().write("It is " + new Date() + " now.\r\n");
     }
 
     @Override
@@ -77,7 +77,7 @@ public class TelnetServerHandler extends SimpleChannelUpstreamHandler {
 
         // We do not need to write a ChannelBuffer here.
         // We know the encoder inserted at TelnetPipelineFactory will do the conversion.
-        ChannelFuture future = e.getChannel().write(response);
+        ChannelFuture future = e.channel().write(response);
 
         // Close the connection after sending 'Have a good day!'
         // if the client has sent 'bye'.
@@ -92,7 +92,7 @@ public class TelnetServerHandler extends SimpleChannelUpstreamHandler {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.",
-                e.getCause());
-        e.getChannel().close();
+                e.cause());
+        e.channel().close();
     }
 }

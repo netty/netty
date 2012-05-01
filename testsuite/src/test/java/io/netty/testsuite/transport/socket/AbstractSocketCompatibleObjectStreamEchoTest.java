@@ -98,7 +98,7 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
         ChannelFuture ccf = cb.connect(new InetSocketAddress(SocketAddresses.LOCALHOST, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
-        Channel cc = ccf.getChannel();
+        Channel cc = ccf.channel();
         for (String element : data) {
             cc.write(element);
         }
@@ -162,7 +162,7 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
         @Override
         public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
                 throws Exception {
-            channel = e.getChannel();
+            channel = e.channel();
         }
 
         @Override
@@ -182,8 +182,8 @@ public abstract class AbstractSocketCompatibleObjectStreamEchoTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
-            if (exception.compareAndSet(null, e.getCause())) {
-                e.getChannel().close();
+            if (exception.compareAndSet(null, e.cause())) {
+                e.channel().close();
             }
         }
     }

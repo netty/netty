@@ -28,12 +28,12 @@ public abstract class AbstractOioChannelSink extends AbstractChannelSink {
 
     @Override
     public ChannelFuture execute(final ChannelPipeline pipeline, final Runnable task) {
-        Channel ch = pipeline.getChannel();
+        Channel ch = pipeline.channel();
         if (ch instanceof AbstractOioChannel) {
             AbstractOioChannel channel = (AbstractOioChannel) ch;
             Worker worker = channel.worker;
             if (worker != null) {
-                ChannelRunnableWrapper wrapper = new ChannelRunnableWrapper(pipeline.getChannel(), task);
+                ChannelRunnableWrapper wrapper = new ChannelRunnableWrapper(pipeline.channel(), task);
                 channel.worker.executeInIoThread(wrapper);
                 return wrapper;
             }

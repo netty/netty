@@ -140,7 +140,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
             // Stream-IDs must be monotonically increassing
             if (streamID < lastGoodStreamID) {
-                issueSessionError(ctx, e.getChannel(), e.getRemoteAddress());
+                issueSessionError(ctx, e.channel(), e.getRemoteAddress());
                 return;
             }
 
@@ -219,7 +219,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
             SpdyPingFrame spdyPingFrame = (SpdyPingFrame) msg;
             
             if (isRemoteInitiatedID(spdyPingFrame.getID())) {
-                Channels.write(ctx, Channels.future(e.getChannel()), spdyPingFrame, e.getRemoteAddress());
+                Channels.write(ctx, Channels.future(e.channel()), spdyPingFrame, e.getRemoteAddress());
                 return;
             }
             
@@ -371,7 +371,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
         removeStream(streamID);
         SpdyRstStreamFrame spdyRstStreamFrame = new DefaultSpdyRstStreamFrame(streamID, status);
-        Channels.write(ctx, Channels.future(e.getChannel()), spdyRstStreamFrame, e.getRemoteAddress());
+        Channels.write(ctx, Channels.future(e.channel()), spdyRstStreamFrame, e.getRemoteAddress());
     }
 
     /*
@@ -447,16 +447,16 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
 
     private void sendGoAwayFrame(ChannelHandlerContext ctx, ChannelStateEvent e) {
         // Avoid NotYetConnectedException
-        if (!e.getChannel().isConnected()) {
+        if (!e.channel().isConnected()) {
             ctx.sendDownstream(e);
             return;
         }
 
-        ChannelFuture future = sendGoAwayFrame(ctx, e.getChannel(), null);
+        ChannelFuture future = sendGoAwayFrame(ctx, e.channel(), null);
         if (spdySession.noActiveStreams()) {
             future.addListener(new ClosingChannelFutureListener(ctx, e));
         } else {
-            closeSessionFuture = Channels.future(e.getChannel());
+            closeSessionFuture = Channels.future(e.channel());
             closeSessionFuture.addListener(new ClosingChannelFutureListener(ctx, e));
         }
     }
@@ -483,7 +483,7 @@ public class SpdySessionHandler extends SimpleChannelUpstreamHandler
         }
 
         public void operationComplete(ChannelFuture sentGoAwayFuture) throws Exception {
-            if (!(sentGoAwayFuture.getCause() instanceof ClosedChannelException)) {
+            if (!(sentGoAwayFuture.cause() instanceof ClosedChannelException)) {
                 Channels.close(ctx, e.getFuture());
             } else {
                 e.getFuture().setSuccess();

@@ -201,7 +201,7 @@ public class SslHandler extends FrameDecoder
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             if (!future.isSuccess()) {
-                Channels.fireExceptionCaught(future.getChannel(), future.getCause());
+                Channels.fireExceptionCaught(future.channel(), future.cause());
             }
         }
         
@@ -346,7 +346,7 @@ public class SslHandler extends FrameDecoder
         }
 
         ChannelHandlerContext ctx = this.ctx;
-        Channel channel = ctx.getChannel();
+        Channel channel = ctx.channel();
         ChannelFuture handshakeFuture;
         Exception exception = null;
 
@@ -386,7 +386,7 @@ public class SslHandler extends FrameDecoder
      */
     public ChannelFuture close() {
         ChannelHandlerContext ctx = this.ctx;
-        Channel channel = ctx.getChannel();
+        Channel channel = ctx.channel();
         try {
             engine.closeOutbound();
             return wrapNonAppData(ctx, channel);
@@ -491,7 +491,7 @@ public class SslHandler extends FrameDecoder
         try {
             super.channelDisconnected(ctx, e);
         } finally {
-            unwrap(ctx, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
+            unwrap(ctx, e.channel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
             engine.closeOutbound();
             if (!sentCloseNotify.get() && handshaken) {
                 try {
@@ -509,7 +509,7 @@ public class SslHandler extends FrameDecoder
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
             throws Exception {
 
-        Throwable cause = e.getCause();
+        Throwable cause = e.cause();
         if (cause instanceof IOException) {
             if (cause instanceof ClosedChannelException) {
                 synchronized (ignoreClosedChannelExceptionLock) {
@@ -538,7 +538,7 @@ public class SslHandler extends FrameDecoder
 
                     // Close the connection explicitly just in case the transport
                     // did not close the connection automatically.
-                    Channels.close(ctx, succeededFuture(e.getChannel()));
+                    Channels.close(ctx, succeededFuture(e.channel()));
                     return;
                 }
             }
@@ -843,7 +843,7 @@ public class SslHandler extends FrameDecoder
                         @Override
                         public void operationComplete(ChannelFuture future)
                                 throws Exception {
-                            if (future.getCause() instanceof ClosedChannelException) {
+                            if (future.cause() instanceof ClosedChannelException) {
                                 synchronized (ignoreClosedChannelExceptionLock) {
                                     ignoreClosedChannelException ++;
                                 }
@@ -972,7 +972,7 @@ public class SslHandler extends FrameDecoder
             outAppBuf.flip();
 
             if (outAppBuf.hasRemaining()) {
-                ChannelBuffer frame = ctx.getChannel().getConfig().getBufferFactory().getBuffer(outAppBuf.remaining());
+                ChannelBuffer frame = ctx.channel().getConfig().getBufferFactory().getBuffer(outAppBuf.remaining());
                 frame.writeBytes(outAppBuf.array(), 0, frame.capacity());
                 return frame;
             } else {
@@ -1033,7 +1033,7 @@ public class SslHandler extends FrameDecoder
                             "closing the connection"));
 
             // Close the connection to stop renegotiation.
-            Channels.close(ctx, succeededFuture(ctx.getChannel()));
+            Channels.close(ctx, succeededFuture(ctx.channel()));
         }
     }
 
@@ -1106,7 +1106,7 @@ public class SslHandler extends FrameDecoder
 
     private void closeOutboundAndChannel(
             final ChannelHandlerContext context, final ChannelStateEvent e) {
-        if (!e.getChannel().isConnected()) {
+        if (!e.channel().isConnected()) {
             context.sendDownstream(e);
             return;
         }
@@ -1114,7 +1114,7 @@ public class SslHandler extends FrameDecoder
         boolean success = false;
         try {
             try {
-                unwrap(context, e.getChannel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
+                unwrap(context, e.channel(), ChannelBuffers.EMPTY_BUFFER, 0, 0);
             } catch (SSLException ex) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("Failed to unwrap before sending a close_notify message", ex);
@@ -1125,7 +1125,7 @@ public class SslHandler extends FrameDecoder
                 if (sentCloseNotify.compareAndSet(false, true)) {
                     engine.closeOutbound();
                     try {
-                        ChannelFuture closeNotifyFuture = wrapNonAppData(context, e.getChannel());
+                        ChannelFuture closeNotifyFuture = wrapNonAppData(context, e.channel());
                         closeNotifyFuture.addListener(
                                 new ClosingChannelFutureListener(context, e));
                         success = true;
@@ -1168,7 +1168,7 @@ public class SslHandler extends FrameDecoder
 
         @Override
         public void operationComplete(ChannelFuture closeNotifyFuture) throws Exception {
-            if (!(closeNotifyFuture.getCause() instanceof ClosedChannelException)) {
+            if (!(closeNotifyFuture.cause() instanceof ClosedChannelException)) {
                 Channels.close(context, e.getFuture());
             } else {
                 e.getFuture().setSuccess();

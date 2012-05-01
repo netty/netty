@@ -56,7 +56,7 @@ public class ChannelWritableByteChannel implements WritableByteChannel {
     
     @Override
     public boolean isOpen() {
-        return !closed && context.getChannel().isOpen();
+        return !closed && context.channel().isOpen();
     }
 
     @Override
@@ -69,7 +69,7 @@ public class ChannelWritableByteChannel implements WritableByteChannel {
         int written = src.remaining();
         
         // create a new ChannelFuture and add it to the aggregator
-        ChannelFuture future =  Channels.future(context.getChannel(), true);
+        ChannelFuture future =  Channels.future(context.channel(), true);
         aggregator.addFuture(future);
         
         Channels.write(context, future, ChannelBuffers.wrappedBuffer(src), remote);

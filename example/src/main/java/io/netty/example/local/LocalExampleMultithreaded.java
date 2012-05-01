@@ -74,22 +74,22 @@ public class LocalExampleMultithreaded {
             channelFuture.awaitUninterruptibly();
             if (! channelFuture.isSuccess()) {
                 System.err.println("CANNOT CONNECT");
-                channelFuture.getCause().printStackTrace();
+                channelFuture.cause().printStackTrace();
                 break;
             }
             ChannelFuture lastWriteFuture = null;
             for (String line: commands) {
                 // Sends the received line to the server.
-                lastWriteFuture = channelFuture.getChannel().write(line);
+                lastWriteFuture = channelFuture.channel().write(line);
             }
 
             // Wait until all messages are flushed before closing the channel.
             if (lastWriteFuture != null) {
                 lastWriteFuture.awaitUninterruptibly();
             }
-            channelFuture.getChannel().close();
+            channelFuture.channel().close();
             // Wait until the connection is closed or the connection attempt fails.
-            channelFuture.getChannel().getCloseFuture().awaitUninterruptibly();
+            channelFuture.channel().getCloseFuture().awaitUninterruptibly();
             System.err.println("End " + j);
         }
 

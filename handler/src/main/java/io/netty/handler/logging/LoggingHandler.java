@@ -213,7 +213,7 @@ public class LoggingHandler implements ChannelUpstreamHandler, ChannelDownstream
 
             // Log the message (and exception if available.)
             if (e instanceof ExceptionEvent) {
-                getLogger().log(level, msg, ((ExceptionEvent) e).getCause());
+                getLogger().log(level, msg, ((ExceptionEvent) e).cause());
             } else {
                 getLogger().log(level, msg);
             }

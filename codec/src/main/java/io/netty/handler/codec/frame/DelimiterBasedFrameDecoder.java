@@ -257,13 +257,13 @@ public class DelimiterBasedFrameDecoder extends FrameDecoder {
     private void fail(ChannelHandlerContext ctx, long frameLength) {
         if (frameLength > 0) {
             Channels.fireExceptionCaught(
-                    ctx.getChannel(),
+                    ctx.channel(),
                     new TooLongFrameException(
                             "frame length exceeds " + maxFrameLength +
                             ": " + frameLength + " - discarded"));
         } else {
             Channels.fireExceptionCaught(
-                    ctx.getChannel(),
+                    ctx.channel(),
                     new TooLongFrameException(
                             "frame length exceeds " + maxFrameLength +
                             " - discarding"));

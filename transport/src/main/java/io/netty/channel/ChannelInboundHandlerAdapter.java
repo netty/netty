@@ -28,32 +28,32 @@ public class ChannelInboundHandlerAdapter<I> implements ChannelInboundHandler<I>
 
     @Override
     public void channelRegistered(ChannelInboundHandlerContext<I> ctx) throws Exception {
-        ctx.next().channelRegistered();
+        ctx.fireChannelRegistered();
     }
 
     @Override
     public void channelUnregistered(ChannelInboundHandlerContext<I> ctx) throws Exception {
-        ctx.next().channelUnregistered();
+        ctx.fireChannelUnregistered();
     }
 
     @Override
     public void channelActive(ChannelInboundHandlerContext<I> ctx) throws Exception {
-        ctx.next().channelActive();
+        ctx.fireChannelActive();
     }
 
     @Override
     public void channelInactive(ChannelInboundHandlerContext<I> ctx) throws Exception {
-        ctx.next().channelInactive();
+        ctx.fireChannelInactive();
     }
 
     @Override
     public void exceptionCaught(ChannelInboundHandlerContext<I> ctx, Throwable cause) throws Exception {
-        ctx.next().exceptionCaught(cause);
+        ctx.fireExceptionCaught(cause);
     }
 
     @Override
     public void userEventTriggered(ChannelInboundHandlerContext<I> ctx, Object evt) throws Exception {
-        ctx.next().userEventTriggered(evt);
+        ctx.fireUserEventTriggered(evt);
     }
 
     @Override
@@ -65,7 +65,7 @@ public class ChannelInboundHandlerAdapter<I> implements ChannelInboundHandler<I>
     public void inboundBufferUpdated(ChannelInboundHandlerContext<I> ctx) throws Exception {
         if (ctx.in().hasMessageBuffer()) {
             Queue<I> in = ctx.in().messageBuffer();
-            Queue<Object> nextIn = ctx.next().in().messageBuffer();
+            Queue<Object> nextIn = ctx.nextIn().messageBuffer();
             for (;;) {
                 I msg = in.poll();
                 if (msg == null) {
@@ -75,9 +75,10 @@ public class ChannelInboundHandlerAdapter<I> implements ChannelInboundHandler<I>
             }
         } else {
             ChannelBuffer in = ctx.in().byteBuffer();
-            ChannelBuffer nextIn = ctx.next().in().byteBuffer();
+            ChannelBuffer nextIn = ctx.nextIn().byteBuffer();
             nextIn.writeBytes(in);
         }
+        ctx.fireInboundBufferUpdated();
     }
 
 }

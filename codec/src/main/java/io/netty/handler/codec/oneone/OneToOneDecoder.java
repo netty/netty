@@ -63,7 +63,7 @@ public abstract class OneToOneDecoder implements ChannelUpstreamHandler {
 
         MessageEvent e = (MessageEvent) evt;
         Object originalMessage = e.getMessage();
-        Object decodedMessage = decode(ctx, e.getChannel(), originalMessage);
+        Object decodedMessage = decode(ctx, e.channel(), originalMessage);
         if (originalMessage == decodedMessage) {
             ctx.sendUpstream(evt);
         } else if (decodedMessage != null) {

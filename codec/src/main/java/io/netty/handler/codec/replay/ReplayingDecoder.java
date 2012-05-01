@@ -438,7 +438,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
             int oldReaderIndex = input.readerIndex();
             int inputSize = input.readableBytes();
             callDecode(
-                    ctx, e.getChannel(),
+                    ctx, e.channel(),
                     input, replayable,
                     e.getRemoteAddress());
 
@@ -475,7 +475,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
                 cumulation.discardReadBytes();
             }
             cumulation.writeBytes(input);
-            callDecode(ctx, e.getChannel(), cumulation, replayable, e.getRemoteAddress());
+            callDecode(ctx, e.channel(), cumulation, replayable, e.getRemoteAddress());
             if (!cumulation.readable()) {
                 this.cumulation = null;
                 replayable = ReplayingDecoderBuffer.EMPTY_BUFFER;
@@ -579,13 +579,13 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
 
             if (cumulation != null && cumulation.readable()) {
                 // Make sure all data was read before notifying a closed channel.
-                callDecode(ctx, e.getChannel(), cumulation, replayable, null);
+                callDecode(ctx, e.channel(), cumulation, replayable, null);
             }
 
             // Call decodeLast() finally.  Please note that decodeLast() is
             // called even if there's nothing more to read from the buffer to
             // notify a user that the connection was closed explicitly.
-            Object partiallyDecoded = decodeLast(ctx, e.getChannel(), replayable, state);
+            Object partiallyDecoded = decodeLast(ctx, e.channel(), replayable, state);
             if (partiallyDecoded != null) {
                 unfoldAndFireMessageReceived(ctx, partiallyDecoded, null);
             }
@@ -608,7 +608,7 @@ public abstract class ReplayingDecoder<T extends Enum<T>>
      */
     protected ChannelBuffer newCumulationBuffer(
             ChannelHandlerContext ctx, int minimumCapacity) {
-        ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
+        ChannelBufferFactory factory = ctx.channel().getConfig().getBufferFactory();
         return ChannelBuffers.dynamicBuffer(
                 factory.getDefaultOrder(), Math.max(minimumCapacity, 256), factory);
     }

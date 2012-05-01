@@ -70,11 +70,11 @@ class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler 
 
     private void handleOpenTunnel(ChannelHandlerContext ctx) {
         String tunnelId =
-                messageSwitch.createTunnel((InetSocketAddress) ctx.getChannel()
+                messageSwitch.createTunnel((InetSocketAddress) ctx.channel()
                         .getRemoteAddress());
         if (LOG.isDebugEnabled()) {
             LOG.debug("open tunnel request received from " +
-                    ctx.getChannel().getRemoteAddress() + " - allocated ID " +
+                    ctx.channel().getRemoteAddress() + " - allocated ID " +
                     tunnelId);
         }
         respondWith(ctx,
@@ -126,7 +126,7 @@ class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler 
         if (LOG.isDebugEnabled()) {
             LOG.debug("poll data request received for tunnel " + tunnelId);
         }
-        messageSwitch.pollOutboundData(tunnelId, ctx.getChannel());
+        messageSwitch.pollOutboundData(tunnelId, ctx.channel());
     }
 
     private String checkTunnelId(HttpRequest request, ChannelHandlerContext ctx) {
@@ -149,7 +149,7 @@ class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler 
      */
     private ChannelFuture respondWith(ChannelHandlerContext ctx,
             HttpResponse response) {
-        ChannelFuture writeFuture = Channels.future(ctx.getChannel());
+        ChannelFuture writeFuture = Channels.future(ctx.channel());
         Channels.write(ctx, writeFuture, response);
         return writeFuture;
     }
@@ -161,7 +161,7 @@ class AcceptedServerChannelRequestDispatch extends SimpleChannelUpstreamHandler 
     private void respondWithRejection(ChannelHandlerContext ctx,
             HttpRequest rejectedRequest, String errorMessage) {
         if (LOG.isWarnEnabled()) {
-            SocketAddress remoteAddress = ctx.getChannel().getRemoteAddress();
+            SocketAddress remoteAddress = ctx.channel().getRemoteAddress();
             String tunnelId =
                     HttpTunnelMessageUtils.extractTunnelId(rejectedRequest);
             if (tunnelId == null) {

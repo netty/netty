@@ -76,10 +76,10 @@ public class FixedLengthFrameDecoder extends FrameDecoder {
 
     @Override
     protected ChannelBuffer newCumulationBuffer(ChannelHandlerContext ctx, int minimumCapacity) {
-        ChannelBufferFactory factory = ctx.getChannel().getConfig().getBufferFactory();
+        ChannelBufferFactory factory = ctx.channel().getConfig().getBufferFactory();
         if (allocateFullBuffer) {
             return ChannelBuffers.dynamicBuffer(
-                    factory.getDefaultOrder(), frameLength, ctx.getChannel().getConfig().getBufferFactory());
+                    factory.getDefaultOrder(), frameLength, ctx.channel().getConfig().getBufferFactory());
         }
         return super.newCumulationBuffer(ctx, minimumCapacity);
     }

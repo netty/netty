@@ -288,7 +288,7 @@ public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChanne
                 }
 
                 if (z.next_out_index != 0) {
-                    result = ctx.getChannel().getConfig().getBufferFactory().getBuffer(
+                    result = ctx.channel().getConfig().getBufferFactory().getBuffer(
                             uncompressed.order(), out, 0, z.next_out_index);
                 } else {
                     result = ChannelBuffers.EMPTY_BUFFER;
@@ -330,7 +330,7 @@ public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChanne
             if (evt != null) {
                 ctx.sendDownstream(evt);
             }
-            return Channels.succeededFuture(ctx.getChannel());
+            return Channels.succeededFuture(ctx.channel());
         }
 
         ChannelBuffer footer;
@@ -352,19 +352,19 @@ public class ZlibEncoder extends OneToOneEncoder implements LifeCycleAwareChanne
                 int resultCode = z.deflate(JZlib.Z_FINISH);
                 if (resultCode != JZlib.Z_OK && resultCode != JZlib.Z_STREAM_END) {
                     future = Channels.failedFuture(
-                            ctx.getChannel(),
+                            ctx.channel(),
                             ZlibUtil.exception(z, "compression failure", resultCode));
                     footer = null;
                 } else if (z.next_out_index != 0) {
-                    future = Channels.future(ctx.getChannel());
+                    future = Channels.future(ctx.channel());
                     footer =
-                        ctx.getChannel().getConfig().getBufferFactory().getBuffer(
+                        ctx.channel().getConfig().getBufferFactory().getBuffer(
                                 out, 0, z.next_out_index);
                 } else {
                     // Note that we should never use a SucceededChannelFuture
                     // here just in case any downstream handler or a sink wants
                     // to notify a write error.
-                    future = Channels.future(ctx.getChannel());
+                    future = Channels.future(ctx.channel());
                     footer = ChannelBuffers.EMPTY_BUFFER;
                 }
             } finally {

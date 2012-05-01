@@ -53,7 +53,7 @@ public final class RedisClient {
         });
         ChannelFuture redis = cb.connect(new InetSocketAddress("localhost", 6379));
         redis.await().rethrowIfFailed();
-        Channel channel = redis.getChannel();
+        Channel channel = redis.channel();
 
         channel.write(new Command("set", "1", "value"));
         System.out.print(blockingReadHandler.read());

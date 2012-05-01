@@ -292,8 +292,8 @@ public class ServerBootstrap extends Bootstrap {
         // Wait for the future.
         future.awaitUninterruptibly();
         if (!future.isSuccess()) {
-            future.getChannel().close().awaitUninterruptibly();
-            throw new ChannelException("Failed to bind to: " + localAddress, future.getCause());
+            future.channel().close().awaitUninterruptibly();
+            throw new ChannelException("Failed to bind to: " + localAddress, future.cause());
         }
 
         return channel;
@@ -317,7 +317,7 @@ public class ServerBootstrap extends Bootstrap {
                 ChannelStateEvent evt) {
 
             try {
-                evt.getChannel().getConfig().setPipelineFactory(getPipelineFactory());
+                evt.channel().getConfig().setPipelineFactory(getPipelineFactory());
 
                 // Split options into two categories: parent and child.
                 Map<String, Object> allOptions = getOptions();
@@ -333,12 +333,12 @@ public class ServerBootstrap extends Bootstrap {
                 }
 
                 // Apply parent options.
-                evt.getChannel().getConfig().setOptions(parentOptions);
+                evt.channel().getConfig().setOptions(parentOptions);
             } finally {
                 ctx.sendUpstream(evt);
             }
 
-            boolean finished = futureQueue.offer(evt.getChannel().bind(localAddress));
+            boolean finished = futureQueue.offer(evt.channel().bind(localAddress));
             assert finished;
         }
 
@@ -359,7 +359,7 @@ public class ServerBootstrap extends Bootstrap {
         public void exceptionCaught(
                 ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
-            boolean finished = futureQueue.offer(failedFuture(e.getChannel(), e.getCause()));
+            boolean finished = futureQueue.offer(failedFuture(e.channel(), e.cause()));
             assert finished;
             ctx.sendUpstream(e);
         }

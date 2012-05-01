@@ -88,6 +88,6 @@ class HttpTunnelClientPollHandler extends SimpleChannelHandler {
         HttpRequest request =
                 HttpTunnelMessageUtils.createReceiveDataRequest(
                         tunnelChannel.getServerHostName(), tunnelId);
-        Channels.write(ctx, Channels.future(ctx.getChannel()), request);
+        Channels.write(ctx, Channels.future(ctx.channel()), request);
     }
 }

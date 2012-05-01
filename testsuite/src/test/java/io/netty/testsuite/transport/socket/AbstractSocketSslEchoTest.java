@@ -130,17 +130,17 @@ public abstract class AbstractSocketSslEchoTest {
         ccf.awaitUninterruptibly();
         if (!ccf.isSuccess()) {
             if(logger.isErrorEnabled()) {
-                logger.error("Connection attempt failed", ccf.getCause());
+                logger.error("Connection attempt failed", ccf.cause());
             }
             sc.close().awaitUninterruptibly();
         }
         assertTrue(ccf.isSuccess());
 
-        Channel cc = ccf.getChannel();
+        Channel cc = ccf.channel();
         ChannelFuture hf = cc.getPipeline().get(SslHandler.class).handshake();
         hf.awaitUninterruptibly();
         if (!hf.isSuccess()) {
-            logger.error("Handshake failed", hf.getCause());
+            logger.error("Handshake failed", hf.cause());
             sh.channel.close().awaitUninterruptibly();
             ch.channel.close().awaitUninterruptibly();
             sc.close().awaitUninterruptibly();
@@ -215,7 +215,7 @@ public abstract class AbstractSocketSslEchoTest {
         @Override
         public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
                 throws Exception {
-            channel = e.getChannel();
+            channel = e.channel();
         }
 
         @Override
@@ -243,11 +243,11 @@ public abstract class AbstractSocketSslEchoTest {
             if (logger.isWarnEnabled()) {
                 logger.warn(
                         "Unexpected exception from the " +
-                        (server? "server" : "client") + " side", e.getCause());
+                        (server? "server" : "client") + " side", e.cause());
             }
 
-            exception.compareAndSet(null, e.getCause());
-            e.getChannel().close();
+            exception.compareAndSet(null, e.cause());
+            e.channel().close();
         }
     }
 

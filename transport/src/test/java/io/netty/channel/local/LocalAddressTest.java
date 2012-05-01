@@ -76,13 +76,13 @@ public class LocalAddressTest {
         connectFuture.awaitUninterruptibly();
 
         // Send a message event up the pipeline.
-        Channels.fireMessageReceived(connectFuture.getChannel(), "Hello, World");
+        Channels.fireMessageReceived(connectFuture.channel(), "Hello, World");
 
         // Close the channel
-        connectFuture.getChannel().close();
+        connectFuture.channel().close();
 
         // Wait until the connection is closed, or the connection attempt fails
-        connectFuture.getChannel().getCloseFuture().awaitUninterruptibly();
+        connectFuture.channel().getCloseFuture().awaitUninterruptibly();
         
         sb.releaseExternalResources();
         cb.releaseExternalResources();
@@ -131,13 +131,13 @@ public class LocalAddressTest {
         connectFuture.awaitUninterruptibly();
 
         // Send a message event up the pipeline.
-        Channels.fireMessageReceived(connectFuture.getChannel(), "Hello, World");
+        Channels.fireMessageReceived(connectFuture.channel(), "Hello, World");
 
         // Close the channel
-        connectFuture.getChannel().close();
+        connectFuture.channel().close();
 
         // Wait until the connection is closed, or the connection attempt fails
-        connectFuture.getChannel().getCloseFuture().awaitUninterruptibly();
+        connectFuture.channel().getCloseFuture().awaitUninterruptibly();
 
         
         sb.releaseExternalResources();

@@ -41,13 +41,13 @@ class HttpTunnelClientChannelSink extends AbstractChannelSink {
 
     private void handleMessageEvent(MessageEvent e) {
         HttpTunnelClientChannel channel =
-                (HttpTunnelClientChannel) e.getChannel();
+                (HttpTunnelClientChannel) e.channel();
         channel.sendData(e);
     }
 
     private void handleChannelStateEvent(ChannelStateEvent e) {
         HttpTunnelClientChannel channel =
-                (HttpTunnelClientChannel) e.getChannel();
+                (HttpTunnelClientChannel) e.channel();
 
         switch (e.getState()) {
         case CONNECTED:

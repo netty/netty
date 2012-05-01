@@ -27,6 +27,6 @@ public class SucceededChannelFutureTest {
         SucceededChannelFuture future = new SucceededChannelFuture(channel);
 
         assertTrue(future.isSuccess());
-        assertNull(future.getCause());
+        assertNull(future.cause());
     }
 }

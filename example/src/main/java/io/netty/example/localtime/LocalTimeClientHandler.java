@@ -102,7 +102,7 @@ public class LocalTimeClientHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
             throws Exception {
-        channel = e.getChannel();
+        channel = e.channel();
         super.channelOpen(ctx, e);
     }
 
@@ -119,7 +119,7 @@ public class LocalTimeClientHandler extends SimpleChannelUpstreamHandler {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.",
-                e.getCause());
-        e.getChannel().close();
+                e.cause());
+        e.channel().close();
     }
 }

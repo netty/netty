@@ -63,7 +63,7 @@ public class EchoClientHandler extends SimpleChannelUpstreamHandler {
             ChannelHandlerContext ctx, ChannelStateEvent e) {
         // Send the first message.  Server will not send anything here
         // because the firstMessage's capacity is 0.
-        e.getChannel().write(firstMessage);
+        e.channel().write(firstMessage);
     }
 
     @Override
@@ -71,7 +71,7 @@ public class EchoClientHandler extends SimpleChannelUpstreamHandler {
             ChannelHandlerContext ctx, MessageEvent e) {
         // Send back the received message to the remote peer.
         transferredBytes.addAndGet(((ChannelBuffer) e.getMessage()).readableBytes());
-        e.getChannel().write(e.getMessage());
+        e.channel().write(e.getMessage());
     }
 
     @Override
@@ -81,7 +81,7 @@ public class EchoClientHandler extends SimpleChannelUpstreamHandler {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.",
-                e.getCause());
-        e.getChannel().close();
+                e.cause());
+        e.channel().close();
     }
 }

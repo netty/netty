@@ -251,7 +251,7 @@ public class HttpTunnelClientChannelTest {
                 bindFailureReason);
         assertTrue(bindFuture.isDone());
         assertFalse(bindFuture.isSuccess());
-        assertSame(bindFailureReason, bindFuture.getCause());
+        assertSame(bindFailureReason, bindFuture.cause());
     }
 
     @Test
@@ -264,6 +264,6 @@ public class HttpTunnelClientChannelTest {
                 bindFailureReason);
         assertTrue(bindFuture.isDone());
         assertFalse(bindFuture.isSuccess());
-        assertSame(bindFailureReason, bindFuture.getCause());
+        assertSame(bindFailureReason, bindFuture.cause());
     }
 }

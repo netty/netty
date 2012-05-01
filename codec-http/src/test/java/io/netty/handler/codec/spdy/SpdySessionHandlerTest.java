@@ -281,18 +281,18 @@ public class SpdySessionHandlerTest {
             SpdySynStreamFrame spdySynStreamFrame =
                 new DefaultSpdySynStreamFrame(streamID, 0, (byte) 0);
             spdySynStreamFrame.setLast(true);
-            Channels.write(e.getChannel(), spdySynStreamFrame);
+            Channels.write(e.channel(), spdySynStreamFrame);
             spdySynStreamFrame.setStreamID(spdySynStreamFrame.getStreamID() + 2);
-            Channels.write(e.getChannel(), spdySynStreamFrame);
+            Channels.write(e.channel(), spdySynStreamFrame);
             spdySynStreamFrame.setStreamID(spdySynStreamFrame.getStreamID() + 2);
-            Channels.write(e.getChannel(), spdySynStreamFrame);
+            Channels.write(e.channel(), spdySynStreamFrame);
             spdySynStreamFrame.setStreamID(spdySynStreamFrame.getStreamID() + 2);
-            Channels.write(e.getChannel(), spdySynStreamFrame);
+            Channels.write(e.channel(), spdySynStreamFrame);
 
             // Limit the number of concurrent streams to 3
             SpdySettingsFrame spdySettingsFrame = new DefaultSpdySettingsFrame();
             spdySettingsFrame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 3);
-            Channels.write(e.getChannel(), spdySettingsFrame);
+            Channels.write(e.channel(), spdySettingsFrame);
         }
 
         @Override
@@ -303,7 +303,7 @@ public class SpdySessionHandlerTest {
                 (msg instanceof SpdyPingFrame) ||
                 (msg instanceof SpdyHeadersFrame)) {
 
-                Channels.write(e.getChannel(), msg, e.getRemoteAddress());
+                Channels.write(e.channel(), msg, e.getRemoteAddress());
                 return;
             }
 
@@ -318,7 +318,7 @@ public class SpdySessionHandlerTest {
                     spdySynReplyFrame.addHeader(entry.getKey(), entry.getValue());
                 }
 
-                Channels.write(e.getChannel(), spdySynReplyFrame, e.getRemoteAddress());
+                Channels.write(e.channel(), spdySynReplyFrame, e.getRemoteAddress());
                 return;
             }
 
@@ -326,7 +326,7 @@ public class SpdySessionHandlerTest {
 
                 SpdySettingsFrame spdySettingsFrame = (SpdySettingsFrame) msg;
                 if (spdySettingsFrame.isSet(closeSignal)) {
-                    Channels.close(e.getChannel());
+                    Channels.close(e.channel());
                 }
             }
         }

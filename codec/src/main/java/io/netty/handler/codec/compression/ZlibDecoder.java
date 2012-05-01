@@ -112,7 +112,7 @@ public class ZlibDecoder extends OneToOneDecoder {
                 byte[] out = new byte[in.length << 1];
                 ChannelBuffer decompressed = ChannelBuffers.dynamicBuffer(
                         compressed.order(), out.length,
-                        ctx.getChannel().getConfig().getBufferFactory());
+                        ctx.channel().getConfig().getBufferFactory());
                 z.next_out = out;
                 z.next_out_index = 0;
                 z.avail_out = out.length;

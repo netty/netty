@@ -29,32 +29,32 @@ public class ChannelHandlerAdapter<I, O> implements ChannelInboundHandler<I>, Ch
 
     @Override
     public void channelRegistered(ChannelInboundHandlerContext<I> ctx) throws Exception {
-        ctx.next().channelRegistered();
+        ctx.fireChannelRegistered();
     }
 
     @Override
     public void channelUnregistered(ChannelInboundHandlerContext<I> ctx) throws Exception {
-        ctx.next().channelUnregistered();
+        ctx.fireChannelUnregistered();
     }
 
     @Override
     public void channelActive(ChannelInboundHandlerContext<I> ctx) throws Exception {
-        ctx.next().channelActive();
+        ctx.fireChannelActive();
     }
 
     @Override
     public void channelInactive(ChannelInboundHandlerContext<I> ctx) throws Exception {
-        ctx.next().channelInactive();
+        ctx.fireChannelInactive();
     }
 
     @Override
     public void exceptionCaught(ChannelInboundHandlerContext<I> ctx, Throwable cause) throws Exception {
-        ctx.next().exceptionCaught(cause);
+        ctx.fireExceptionCaught(cause);
     }
 
     @Override
     public void userEventTriggered(ChannelInboundHandlerContext<I> ctx, Object evt) throws Exception {
-        ctx.next().userEventTriggered(evt);
+        ctx.fireUserEventTriggered(evt);
     }
 
     @Override
@@ -66,7 +66,7 @@ public class ChannelHandlerAdapter<I, O> implements ChannelInboundHandler<I>, Ch
     public void inboundBufferUpdated(ChannelInboundHandlerContext<I> ctx) throws Exception {
         if (ctx.in().hasMessageBuffer()) {
             Queue<I> in = ctx.in().messageBuffer();
-            Queue<Object> nextIn = ctx.next().in().messageBuffer();
+            Queue<Object> nextIn = ctx.nextIn().messageBuffer();
             for (;;) {
                 I msg = in.poll();
                 if (msg == null) {
@@ -76,34 +76,35 @@ public class ChannelHandlerAdapter<I, O> implements ChannelInboundHandler<I>, Ch
             }
         } else {
             ChannelBuffer in = ctx.in().byteBuffer();
-            ChannelBuffer nextIn = ctx.next().in().byteBuffer();
+            ChannelBuffer nextIn = ctx.nextIn().byteBuffer();
             nextIn.writeBytes(in);
         }
+        ctx.fireInboundBufferUpdated();
     }
 
     @Override
     public void bind(ChannelOutboundHandlerContext<O> ctx, SocketAddress localAddress, ChannelFuture future) throws Exception {
-        ctx.next().bind(localAddress, future);
+        ctx.bind(localAddress, future);
     }
 
     @Override
     public void connect(ChannelOutboundHandlerContext<O> ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) throws Exception {
-        ctx.next().connect(remoteAddress, localAddress, future);
+        ctx.connect(remoteAddress, localAddress, future);
     }
 
     @Override
     public void disconnect(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) throws Exception {
-        ctx.next().disconnect(future);
+        ctx.disconnect(future);
     }
 
     @Override
     public void close(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) throws Exception {
-        ctx.next().close(future);
+        ctx.close(future);
     }
 
     @Override
     public void deregister(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) throws Exception {
-        ctx.next().deregister(future);
+        ctx.deregister(future);
     }
 
     @Override
@@ -112,10 +113,10 @@ public class ChannelHandlerAdapter<I, O> implements ChannelInboundHandler<I>, Ch
     }
 
     @Override
-    public void outboundBufferUpdated(ChannelOutboundHandlerContext<O> ctx) throws Exception {
+    public void flush(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) throws Exception {
         if (ctx.out().hasMessageBuffer()) {
             Queue<O> out = ctx.out().messageBuffer();
-            Queue<Object> nextOut = ctx.next().out().messageBuffer();
+            Queue<Object> nextOut = ctx.nextOut().messageBuffer();
             for (;;) {
                 O msg = out.poll();
                 if (msg == null) {
@@ -125,8 +126,9 @@ public class ChannelHandlerAdapter<I, O> implements ChannelInboundHandler<I>, Ch
             }
         } else {
             ChannelBuffer out = ctx.out().byteBuffer();
-            ChannelBuffer nextOut = ctx.next().out().byteBuffer();
+            ChannelBuffer nextOut = ctx.nextOut().byteBuffer();
             nextOut.writeBytes(out);
         }
+        ctx.flush(future);
     }
 }

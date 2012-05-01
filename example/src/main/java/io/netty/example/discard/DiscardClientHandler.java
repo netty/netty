@@ -93,8 +93,8 @@ public class DiscardClientHandler extends SimpleChannelUpstreamHandler {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.",
-                e.getCause());
-        e.getChannel().close();
+                e.cause());
+        e.channel().close();
     }
 
     private void generateTraffic(ChannelStateEvent e) {
@@ -102,7 +102,7 @@ public class DiscardClientHandler extends SimpleChannelUpstreamHandler {
         // A channel becomes unwritable when its internal buffer is full.
         // If you keep writing messages ignoring this property,
         // you will end up with an OutOfMemoryError.
-        Channel channel = e.getChannel();
+        Channel channel = e.channel();
         while (channel.isWritable()) {
             ChannelBuffer m = nextMessage();
             if (m == null) {

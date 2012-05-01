@@ -29,27 +29,27 @@ public class ChannelOutboundHandlerAdapter<O> implements ChannelOutboundHandler<
 
     @Override
     public void bind(ChannelOutboundHandlerContext<O> ctx, SocketAddress localAddress, ChannelFuture future) throws Exception {
-        ctx.next().bind(localAddress, future);
+        ctx.bind(localAddress, future);
     }
 
     @Override
     public void connect(ChannelOutboundHandlerContext<O> ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) throws Exception {
-        ctx.next().connect(remoteAddress, localAddress, future);
+        ctx.connect(remoteAddress, localAddress, future);
     }
 
     @Override
     public void disconnect(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) throws Exception {
-        ctx.next().disconnect(future);
+        ctx.disconnect(future);
     }
 
     @Override
     public void close(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) throws Exception {
-        ctx.next().close(future);
+        ctx.close(future);
     }
 
     @Override
     public void deregister(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) throws Exception {
-        ctx.next().deregister(future);
+        ctx.deregister(future);
     }
 
     @Override
@@ -58,10 +58,10 @@ public class ChannelOutboundHandlerAdapter<O> implements ChannelOutboundHandler<
     }
 
     @Override
-    public void outboundBufferUpdated(ChannelOutboundHandlerContext<O> ctx) throws Exception {
+    public void flush(ChannelOutboundHandlerContext<O> ctx, ChannelFuture future) throws Exception {
         if (ctx.out().hasMessageBuffer()) {
             Queue<O> out = ctx.out().messageBuffer();
-            Queue<Object> nextOut = ctx.next().out().messageBuffer();
+            Queue<Object> nextOut = ctx.nextOut().messageBuffer();
             for (;;) {
                 O msg = out.poll();
                 if (msg == null) {
@@ -71,8 +71,9 @@ public class ChannelOutboundHandlerAdapter<O> implements ChannelOutboundHandler<
             }
         } else {
             ChannelBuffer out = ctx.out().byteBuffer();
-            ChannelBuffer nextOut = ctx.next().out().byteBuffer();
+            ChannelBuffer nextOut = ctx.nextOut().byteBuffer();
             nextOut.writeBytes(out);
         }
+        ctx.flush(future);
     }
 }

@@ -236,17 +236,17 @@ public class BootstrapTest {
 
         ChannelPipeline p = b.getPipeline();
 
-        assertSame(p.getFirst(), m.get("a"));
-        assertEquals("a", p.getContext(p.getFirst()).getName());
+        assertSame(p.first(), m.get("a"));
+        assertEquals("a", p.context(p.first()).name());
         p.removeFirst();
-        assertSame(p.getFirst(), m.get("b"));
-        assertEquals("b", p.getContext(p.getFirst()).getName());
+        assertSame(p.first(), m.get("b"));
+        assertEquals("b", p.context(p.first()).name());
         p.removeFirst();
-        assertSame(p.getFirst(), m.get("c"));
-        assertEquals("c", p.getContext(p.getFirst()).getName());
+        assertSame(p.first(), m.get("c"));
+        assertEquals("c", p.context(p.first()).name());
         p.removeFirst();
-        assertSame(p.getFirst(), m.get("d"));
-        assertEquals("d", p.getContext(p.getFirst()).getName());
+        assertSame(p.first(), m.get("d"));
+        assertEquals("d", p.context(p.first()).name());
         p.removeFirst();
 
         try {

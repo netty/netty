@@ -75,7 +75,7 @@ public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-        Throwable cause = e.getCause();
+        Throwable cause = e.cause();
         if (cause instanceof ConnectException) {
             startTime = -1;
             println("Failed to connect: " + cause.getMessage());
@@ -86,7 +86,7 @@ public class UptimeClientHandler extends SimpleChannelUpstreamHandler {
         } else {
             cause.printStackTrace();
         }
-        ctx.getChannel().close();
+        ctx.channel().close();
     }
 
     void println(String msg) {

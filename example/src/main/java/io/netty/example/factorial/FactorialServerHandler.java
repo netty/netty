@@ -65,7 +65,7 @@ public class FactorialServerHandler extends SimpleChannelUpstreamHandler {
         }
         lastMultiplier = number.intValue();
         factorial = factorial.multiply(number);
-        e.getChannel().write(factorial);
+        e.channel().write(factorial);
     }
 
     @Override
@@ -81,7 +81,7 @@ public class FactorialServerHandler extends SimpleChannelUpstreamHandler {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.",
-                e.getCause());
-        e.getChannel().close();
+                e.cause());
+        e.channel().close();
     }
 }

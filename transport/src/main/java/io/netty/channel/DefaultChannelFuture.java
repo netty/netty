@@ -90,7 +90,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     }
 
     @Override
-    public Channel getChannel() {
+    public Channel channel() {
         return channel;
     }
 
@@ -105,7 +105,7 @@ public class DefaultChannelFuture implements ChannelFuture {
     }
 
     @Override
-    public synchronized Throwable getCause() {
+    public synchronized Throwable cause() {
         if (cause != CANCELLED) {
             return cause;
         } else {
@@ -183,7 +183,7 @@ public class DefaultChannelFuture implements ChannelFuture {
             return this;
         }
         
-        Throwable cause = getCause();
+        Throwable cause = cause();
         if (cause == null) {
             return this;
         }

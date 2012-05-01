@@ -60,7 +60,7 @@ public class StdioLogger {
 
                         final String message = (String) e.getMessage();
                         synchronized (System.out) {
-                            e.getChannel().write("Message received: " + message);
+                            e.channel().write("Message received: " + message);
                         }
                         if ("exit".equals(message)) {
                             running = false;
@@ -77,7 +77,7 @@ public class StdioLogger {
         ChannelFuture connectFuture = bootstrap.connect(new IoStreamAddress(System.in, System.out));
 
         // Wait until the connection is made successfully.
-        Channel channel = connectFuture.awaitUninterruptibly().getChannel();
+        Channel channel = connectFuture.awaitUninterruptibly().channel();
 
         while (running) {
             try {

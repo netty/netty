@@ -60,7 +60,7 @@ public class ChannelFutureAggregator implements ChannelFutureListener {
             } else {
                 pendingFutures.remove(future);
                 if (!future.isSuccess()) {
-                    aggregateFuture.setFailure(future.getCause());
+                    aggregateFuture.setFailure(future.cause());
                     for (ChannelFuture pendingFuture: pendingFutures) {
                         pendingFuture.cancel();
                     }

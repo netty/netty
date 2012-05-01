@@ -42,7 +42,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent event = (ChannelStateEvent) e;
             NioClientSocketChannel channel =
-                (NioClientSocketChannel) event.getChannel();
+                (NioClientSocketChannel) event.channel();
             ChannelFuture future = event.getFuture();
             ChannelState state = event.getState();
             Object value = event.getValue();
@@ -73,7 +73,7 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             }
         } else if (e instanceof MessageEvent) {
             MessageEvent event = (MessageEvent) e;
-            NioSocketChannel channel = (NioSocketChannel) event.getChannel();
+            NioSocketChannel channel = (NioSocketChannel) event.channel();
             boolean offered = channel.writeBufferQueue.offer(event);
             assert offered;
             channel.getWorker().writeFromUserCode(channel);

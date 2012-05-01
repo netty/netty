@@ -74,32 +74,32 @@ public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
                 this.getWebSocketLocation(req), null, false);
         this.handshaker = wsFactory.newHandshaker(req);
         if (this.handshaker == null) {
-            wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.getChannel());
+            wsFactory.sendUnsupportedWebSocketVersionResponse(ctx.channel());
         } else {
-            this.handshaker.handshake(ctx.getChannel(), req);
+            this.handshaker.handshake(ctx.channel(), req);
         }
     }
 
     private void handleWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) {
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Channel %s received %s", ctx.getChannel().getId(), frame.getClass()
+            logger.debug(String.format("Channel %s received %s", ctx.channel().getId(), frame.getClass()
                     .getSimpleName()));
         }
 
         if (frame instanceof CloseWebSocketFrame) {
-            this.handshaker.close(ctx.getChannel(), (CloseWebSocketFrame) frame);
+            this.handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame);
         } else if (frame instanceof PingWebSocketFrame) {
-            ctx.getChannel().write(
+            ctx.channel().write(
                     new PongWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
         } else if (frame instanceof TextWebSocketFrame) {
             // String text = ((TextWebSocketFrame) frame).getText();
-            ctx.getChannel().write(
+            ctx.channel().write(
                     new TextWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
         } else if (frame instanceof BinaryWebSocketFrame) {
-            ctx.getChannel().write(
+            ctx.channel().write(
                     new BinaryWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
         } else if (frame instanceof ContinuationWebSocketFrame) {
-            ctx.getChannel().write(
+            ctx.channel().write(
                     new ContinuationWebSocketFrame(frame.isFinalFragment(), frame.getRsv(), frame.getBinaryData()));
         } else if (frame instanceof PongWebSocketFrame) {
             // Ignore
@@ -117,7 +117,7 @@ public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
         }
 
         // Send the response and close the connection if necessary.
-        ChannelFuture f = ctx.getChannel().write(res);
+        ChannelFuture f = ctx.channel().write(res);
         if (!isKeepAlive(req) || res.getStatus().getCode() != 200) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
@@ -125,8 +125,8 @@ public class AutobahnServerHandler extends SimpleChannelUpstreamHandler {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        e.getCause().printStackTrace();
-        e.getChannel().close();
+        e.cause().printStackTrace();
+        e.channel().close();
     }
 
     private String getWebSocketLocation(HttpRequest req) {

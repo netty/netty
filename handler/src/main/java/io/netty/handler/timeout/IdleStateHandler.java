@@ -350,7 +350,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
 
     protected void channelIdle(
             ChannelHandlerContext ctx, IdleState state, long lastActivityTimeMillis) throws Exception {
-        ctx.sendUpstream(new DefaultIdleStateEvent(ctx.getChannel(), state, lastActivityTimeMillis));
+        ctx.sendUpstream(new DefaultIdleStateEvent(ctx.channel(), state, lastActivityTimeMillis));
     }
 
     private final class ReaderIdleTimeoutTask implements TimerTask {
@@ -363,7 +363,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
 
         @Override
         public void run(Timeout timeout) throws Exception {
-            if (timeout.isCancelled() || !ctx.getChannel().isOpen()) {
+            if (timeout.isCancelled() || !ctx.channel().isOpen()) {
                 return;
             }
 
@@ -399,7 +399,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
 
         @Override
         public void run(Timeout timeout) throws Exception {
-            if (timeout.isCancelled() || !ctx.getChannel().isOpen()) {
+            if (timeout.isCancelled() || !ctx.channel().isOpen()) {
                 return;
             }
 
@@ -434,7 +434,7 @@ public class IdleStateHandler extends SimpleChannelUpstreamHandler
 
         @Override
         public void run(Timeout timeout) throws Exception {
-            if (timeout.isCancelled() || !ctx.getChannel().isOpen()) {
+            if (timeout.isCancelled() || !ctx.channel().isOpen()) {
                 return;
             }
 

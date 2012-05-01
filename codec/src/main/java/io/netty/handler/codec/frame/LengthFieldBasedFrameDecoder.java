@@ -439,13 +439,13 @@ public class LengthFieldBasedFrameDecoder extends FrameDecoder {
     private void fail(ChannelHandlerContext ctx, long frameLength) {
         if (frameLength > 0) {
             Channels.fireExceptionCaught(
-                    ctx.getChannel(),
+                    ctx.channel(),
                     new TooLongFrameException(
                             "Adjusted frame length exceeds " + maxFrameLength +
                             ": " + frameLength + " - discarded"));
         } else {
             Channels.fireExceptionCaught(
-                    ctx.getChannel(),
+                    ctx.channel(),
                     new TooLongFrameException(
                             "Adjusted frame length exceeds " + maxFrameLength +
                             " - discarding"));

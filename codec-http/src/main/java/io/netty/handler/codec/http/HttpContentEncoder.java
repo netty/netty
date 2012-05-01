@@ -154,7 +154,7 @@ public abstract class HttpContentEncoder extends SimpleChannelHandler {
                     // the last product on closure,
                     if (lastProduct.readable()) {
                         Channels.write(
-                                ctx, Channels.succeededFuture(e.getChannel()), new DefaultHttpChunk(lastProduct), e.getRemoteAddress());
+                                ctx, Channels.succeededFuture(e.channel()), new DefaultHttpChunk(lastProduct), e.getRemoteAddress());
                     }
 
                     // Emit the last chunk.

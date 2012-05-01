@@ -41,7 +41,7 @@ class SctpClientPipelineSink extends AbstractNioChannelSink {
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent event = (ChannelStateEvent) e;
             SctpClientChannel channel =
-                (SctpClientChannel) event.getChannel();
+                (SctpClientChannel) event.channel();
             ChannelFuture future = event.getFuture();
             ChannelState state = event.getState();
             Object value = event.getValue();
@@ -80,7 +80,7 @@ class SctpClientPipelineSink extends AbstractNioChannelSink {
             }
         } else if (e instanceof MessageEvent) {
             MessageEvent event = (MessageEvent) e;
-            SctpChannelImpl channel = (SctpChannelImpl) event.getChannel();
+            SctpChannelImpl channel = (SctpChannelImpl) event.channel();
             boolean offered = channel.getWriteBufferQueue().offer(event);
             assert offered;
             channel.getWorker().writeFromUserCode(channel);

@@ -67,7 +67,7 @@ class OioServerSocketPipelineSink extends AbstractOioChannelSink {
 
         ChannelStateEvent event = (ChannelStateEvent) e;
         OioServerSocketChannel channel =
-            (OioServerSocketChannel) event.getChannel();
+            (OioServerSocketChannel) event.channel();
         ChannelFuture future = event.getFuture();
         ChannelState state = event.getState();
         Object value = event.getValue();
@@ -92,7 +92,7 @@ class OioServerSocketPipelineSink extends AbstractOioChannelSink {
         if (e instanceof ChannelStateEvent) {
             ChannelStateEvent event = (ChannelStateEvent) e;
             OioAcceptedSocketChannel channel =
-                (OioAcceptedSocketChannel) event.getChannel();
+                (OioAcceptedSocketChannel) event.channel();
             ChannelFuture future = event.getFuture();
             ChannelState state = event.getState();
             Object value = event.getValue();
@@ -115,7 +115,7 @@ class OioServerSocketPipelineSink extends AbstractOioChannelSink {
             }
         } else if (e instanceof MessageEvent) {
             MessageEvent event = (MessageEvent) e;
-            OioSocketChannel channel = (OioSocketChannel) event.getChannel();
+            OioSocketChannel channel = (OioSocketChannel) event.channel();
             ChannelFuture future = event.getFuture();
             Object message = event.getMessage();
             OioWorker.write(channel, future, message);

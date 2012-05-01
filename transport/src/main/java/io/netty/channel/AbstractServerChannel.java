@@ -16,77 +16,81 @@
 package io.netty.channel;
 
 import java.net.SocketAddress;
+import java.util.AbstractQueue;
+import java.util.Collections;
+import java.util.Iterator;
 
 /**
  * A skeletal server-side {@link Channel} implementation.  A server-side
  * {@link Channel} does not allow the following operations:
  * <ul>
- * <li>{@link #connect(SocketAddress)}</li>
- * <li>{@link #disconnect()}</li>
- * <li>{@link #getInterestOps()}</li>
- * <li>{@link #setInterestOps(int)}</li>
- * <li>{@link #write(Object)}</li>
- * <li>{@link #write(Object, SocketAddress)}</li>
+ * <li>{@link #connect(SocketAddress, ChannelFuture)}</li>
+ * <li>{@link #disconnect(ChannelFuture)}</li>
+ * <li>{@link #flush(ChannelFuture)}</li>
  * <li>and the shortcut methods which calls the methods mentioned above
  * </ul>
  */
 public abstract class AbstractServerChannel extends AbstractChannel implements ServerChannel {
 
+    private final ChannelBufferHolder<Object> out = ChannelBufferHolders.messageBuffer(new NoopQueue());
+
     /**
      * Creates a new instance.
-     *
-     * @param factory
-     *        the factory which created this channel
-     * @param pipeline
-     *        the pipeline which is going to be attached to this channel
-     * @param sink
-     *        the sink which will receive downstream events from the pipeline
-     *        and send upstream events to the pipeline
      */
-    protected AbstractServerChannel(
-            ChannelFactory factory,
-            ChannelPipeline pipeline,
-            ChannelSink sink) {
-        super(null, factory, pipeline, sink);
+    protected AbstractServerChannel() {
+        super(null);
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress) {
-        return getUnsupportedOperationFuture();
+    public ChannelBufferHolder<Object> out() {
+        return out;
     }
 
     @Override
-    public ChannelFuture disconnect() {
-        return getUnsupportedOperationFuture();
+    public SocketAddress remoteAddress() {
+        return null;
     }
 
     @Override
-    public int getInterestOps() {
-        return OP_NONE;
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
+        future.setFailure(new UnsupportedOperationException());
     }
 
     @Override
-    public ChannelFuture setInterestOps(int interestOps) {
-        return getUnsupportedOperationFuture();
+    protected void doDisconnect(ChannelFuture future) {
+        future.setFailure(new UnsupportedOperationException());
     }
 
     @Override
-    protected void setInterestOpsNow(int interestOps) {
-        // Ignore.
+    protected int doFlush(ChannelFuture future) {
+        future.setFailure(new UnsupportedOperationException());
+        return 0;
     }
 
-    @Override
-    public ChannelFuture write(Object message) {
-        return getUnsupportedOperationFuture();
-    }
+    private static class NoopQueue extends AbstractQueue<Object> {
+        @Override
+        public boolean offer(Object e) {
+            return false;
+        }
 
-    @Override
-    public ChannelFuture write(Object message, SocketAddress remoteAddress) {
-        return getUnsupportedOperationFuture();
-    }
+        @Override
+        public Object poll() {
+            return null;
+        }
 
-    @Override
-    public boolean isConnected() {
-        return false;
+        @Override
+        public Object peek() {
+            return null;
+        }
+
+        @Override
+        public Iterator<Object> iterator() {
+            return Collections.emptyList().iterator();
+        }
+
+        @Override
+        public int size() {
+            return 0;
+        }
     }
 }

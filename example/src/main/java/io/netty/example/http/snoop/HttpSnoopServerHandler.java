@@ -152,7 +152,7 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
         }
 
         // Write the response.
-        ChannelFuture future = e.getChannel().write(response);
+        ChannelFuture future = e.channel().write(response);
 
         // Close the non-keep-alive connection after the write operation is done.
         if (!keepAlive) {
@@ -162,13 +162,13 @@ public class HttpSnoopServerHandler extends SimpleChannelUpstreamHandler {
 
     private void send100Continue(MessageEvent e) {
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, CONTINUE);
-        e.getChannel().write(response);
+        e.channel().write(response);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
             throws Exception {
-        e.getCause().printStackTrace();
-        e.getChannel().close();
+        e.cause().printStackTrace();
+        e.channel().close();
     }
 }

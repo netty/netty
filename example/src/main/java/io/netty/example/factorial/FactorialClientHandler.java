@@ -93,7 +93,7 @@ public class FactorialClientHandler extends SimpleChannelUpstreamHandler {
         receivedMessages ++;
         if (receivedMessages == count) {
             // Offer the answer after closing the connection.
-            e.getChannel().close().addListener(new ChannelFutureListener() {
+            e.channel().close().addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) {
                     boolean offered = answer.offer((BigInteger) e.getMessage());
@@ -109,12 +109,12 @@ public class FactorialClientHandler extends SimpleChannelUpstreamHandler {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.",
-                e.getCause());
-        e.getChannel().close();
+                e.cause());
+        e.channel().close();
     }
 
     private void sendNumbers(ChannelStateEvent e) {
-        Channel channel = e.getChannel();
+        Channel channel = e.channel();
         while (channel.isWritable()) {
             if (i <= count) {
                 channel.write(Integer.valueOf(i));

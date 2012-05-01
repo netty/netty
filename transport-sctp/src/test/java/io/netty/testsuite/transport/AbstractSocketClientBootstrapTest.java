@@ -76,7 +76,7 @@ public abstract class AbstractSocketClientBootstrapTest {
         ChannelFuture future = bootstrap.connect();
         future.awaitUninterruptibly();
         assertFalse(future.isSuccess());
-        assertTrue(future.getCause() instanceof IOException);
+        assertTrue(future.cause() instanceof IOException);
     }
 
     @Test(timeout = 10000)
@@ -109,12 +109,12 @@ public abstract class AbstractSocketClientBootstrapTest {
             serverChannel.accept();
             future.awaitUninterruptibly();
 
-            if (future.getCause() != null) {
-                throw future.getCause();
+            if (future.cause() != null) {
+                throw future.cause();
             }
             assertTrue(future.isSuccess());
 
-            future.getChannel().close().awaitUninterruptibly();
+            future.channel().close().awaitUninterruptibly();
         } finally {
             try {
                 serverChannel.close();
@@ -152,12 +152,12 @@ public abstract class AbstractSocketClientBootstrapTest {
             serverChannel.accept();
             future.awaitUninterruptibly();
 
-            if (future.getCause() != null) {
-                throw future.getCause();
+            if (future.cause() != null) {
+                throw future.cause();
             }
             assertTrue(future.isSuccess());
 
-            future.getChannel().close().awaitUninterruptibly();
+            future.channel().close().awaitUninterruptibly();
         } finally {
             try {
                 serverChannel.close();

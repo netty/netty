@@ -28,7 +28,7 @@ public class FailedChannelFutureTest {
         FailedChannelFuture future = new FailedChannelFuture(channel, e);
 
         assertFalse(future.isSuccess());
-        assertSame(e, future.getCause());
+        assertSame(e, future.cause());
     }
 
     @Test(expected = NullPointerException.class)

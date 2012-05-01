@@ -107,7 +107,7 @@ public class WebSocketClient {
                             new InetSocketAddress(uri.getHost(), uri.getPort()));
             future.awaitUninterruptibly().rethrowIfFailed();
     
-            ch = future.getChannel();
+            ch = future.channel();
             handshaker.handshake(ch).awaitUninterruptibly().rethrowIfFailed();
             
             // Send 10 messages and wait for responses

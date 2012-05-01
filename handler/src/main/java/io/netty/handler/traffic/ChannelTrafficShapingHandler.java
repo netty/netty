@@ -95,11 +95,11 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
             throws Exception {
         // readSuspended = true;
         ctx.setAttachment(Boolean.TRUE);
-        ctx.getChannel().setReadable(false);
+        ctx.channel().setReadable(false);
         if (trafficCounter == null) {
             // create a new counter now
             trafficCounter = new TrafficCounter(this, executor, "ChannelTC" +
-                    ctx.getChannel().getId(), checkInterval);
+                    ctx.channel().getId(), checkInterval);
         }
         if (trafficCounter != null) {
             trafficCounter.start();
@@ -107,7 +107,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
         super.channelConnected(ctx, e);
         // readSuspended = false;
         ctx.setAttachment(null);
-        ctx.getChannel().setReadable(true);
+        ctx.channel().setReadable(true);
     }
 
 }

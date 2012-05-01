@@ -84,7 +84,7 @@ public abstract class AbstractSocketEchoTest {
         ChannelFuture ccf = cb.connect(new InetSocketAddress(SocketAddresses.LOCALHOST, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
 
-        Channel cc = ccf.getChannel();
+        Channel cc = ccf.channel();
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
             cc.write(ChannelBuffers.wrappedBuffer(data, i, length));
@@ -150,7 +150,7 @@ public abstract class AbstractSocketEchoTest {
         @Override
         public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
                 throws Exception {
-            channel = e.getChannel();
+            channel = e.channel();
         }
 
         @Override
@@ -175,8 +175,8 @@ public abstract class AbstractSocketEchoTest {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
                 throws Exception {
-            if (exception.compareAndSet(null, e.getCause())) {
-                e.getChannel().close();
+            if (exception.compareAndSet(null, e.cause())) {
+                e.channel().close();
             }
         }
     }

@@ -170,7 +170,7 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
                     }
 
                     // Write HEADERS frame and append Data Frame
-                    ChannelFuture future = Channels.future(e.getChannel());
+                    ChannelFuture future = Channels.future(e.channel());
                     future.addListener(new SpdyFrameWriter(ctx, e, spdyDataFrame));
                     Channels.write(ctx, future, spdyHeadersFrame, e.getRemoteAddress());
                 }
@@ -195,7 +195,7 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
         spdyDataFrame.setLast(true);
 
         // Create new future and add listener
-        ChannelFuture future = Channels.future(e.getChannel());
+        ChannelFuture future = Channels.future(e.channel());
         future.addListener(new SpdyFrameWriter(ctx, e, spdyDataFrame));
 
         return future;
@@ -219,7 +219,7 @@ public class SpdyHttpEncoder implements ChannelDownstreamHandler {
             } else if (future.isCancelled()) {
                 e.getFuture().cancel();
             } else {
-                e.getFuture().setFailure(future.getCause());
+                e.getFuture().setFailure(future.cause());
             }
         }
     }

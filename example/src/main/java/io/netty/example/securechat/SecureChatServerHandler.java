@@ -69,7 +69,7 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
             ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         // Unregister the channel from the global channel list
         // so the channel does not receive messages anymore.
-        channels.remove(e.getChannel());
+        channels.remove(e.channel());
     }
 
     @Override
@@ -81,8 +81,8 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
 
         // Send the received message to all channels but the current one.
         for (Channel c: channels) {
-            if (c != e.getChannel()) {
-                c.write("[" + e.getChannel().getRemoteAddress() + "] " +
+            if (c != e.channel()) {
+                c.write("[" + e.channel().getRemoteAddress() + "] " +
                         request + '\n');
             } else {
                 c.write("[you] " + request + '\n');
@@ -91,7 +91,7 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
 
         // Close the connection if the client has sent 'bye'.
         if (request.toLowerCase().equals("bye")) {
-            e.getChannel().close();
+            e.channel().close();
         }
     }
 
@@ -101,8 +101,8 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
         logger.log(
                 Level.WARNING,
                 "Unexpected exception from downstream.",
-                e.getCause());
-        e.getChannel().close();
+                e.cause());
+        e.channel().close();
     }
 
     private static final class Greeter implements ChannelFutureListener {
@@ -117,19 +117,19 @@ public class SecureChatServerHandler extends SimpleChannelUpstreamHandler {
         public void operationComplete(ChannelFuture future) throws Exception {
             if (future.isSuccess()) {
                 // Once session is secured, send a greeting.
-                future.getChannel().write(
+                future.channel().write(
                         "Welcome to " + InetAddress.getLocalHost().getHostName() +
                         " secure chat service!\n");
-                future.getChannel().write(
+                future.channel().write(
                         "Your session is protected by " +
                         sslHandler.getEngine().getSession().getCipherSuite() +
                         " cipher suite.\n");
 
                 // Register the channel to the global channel list
                 // so the channel received the messages from others.
-                channels.add(future.getChannel());
+                channels.add(future.channel());
             } else {
-                future.getChannel().close();
+                future.channel().close();
             }
         }
     }
