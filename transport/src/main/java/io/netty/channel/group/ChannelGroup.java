@@ -23,7 +23,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ServerChannel;
 import io.netty.util.CharsetUtil;
 
-import java.net.SocketAddress;
 import java.util.Set;
 
 /**
@@ -115,19 +114,6 @@ public interface ChannelGroup extends Set<Channel>, Comparable<ChannelGroup> {
      *         the operation is done for all channels
      */
     ChannelGroupFuture write(Object message);
-
-    /**
-     * Writes the specified {@code message} with the specified
-     * {@code remoteAddress} to all {@link Channel}s in this group.  If the
-     * specified {@code message} is an instance of {@link ChannelBuffer}, it is
-     * automatically {@linkplain ChannelBuffer#duplicate() duplicated} to avoid
-     * a race condition. Please note that this operation is asynchronous as
-     * {@link Channel#write(Object, SocketAddress)} is.
-     *
-     * @return the {@link ChannelGroupFuture} instance that notifies when
-     *         the operation is done for all channels
-     */
-    ChannelGroupFuture write(Object message, SocketAddress remoteAddress);
 
     /**
      * Disconnects all {@link Channel}s in this group from their remote peers.

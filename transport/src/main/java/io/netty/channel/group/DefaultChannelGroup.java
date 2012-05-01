@@ -22,7 +22,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ServerChannel;
 import io.netty.util.internal.ConcurrentHashMap;
 
-import java.net.SocketAddress;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -117,7 +116,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
         boolean added = map.putIfAbsent(channel.id(), channel) == null;
         if (added) {
-            channel.getCloseFuture().addListener(remover);
+            channel.addClosureListener(remover);
         }
         return added;
     }
@@ -133,9 +132,9 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         } else if (o instanceof Channel) {
             c = (Channel) o;
             if (c instanceof ServerChannel) {
-                c = serverChannels.remove(c.getId());
+                c = serverChannels.remove(c.id());
             } else {
-                c = nonServerChannels.remove(c.getId());
+                c = nonServerChannels.remove(c.id());
             }
         }
 
@@ -143,7 +142,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             return false;
         }
 
-        c.getCloseFuture().removeListener(remover);
+        c.removeClosureListener(remover);
         return true;
     }
 
@@ -182,10 +181,14 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             new LinkedHashMap<Integer, ChannelFuture>(size());
 
         for (Channel c: serverChannels.values()) {
-            futures.put(c.getId(), c.close().awaitUninterruptibly());
+            ChannelFuture f = c.newFuture();
+            c.close(f);
+            futures.put(c.id(), f.awaitUninterruptibly());
         }
         for (Channel c: nonServerChannels.values()) {
-            futures.put(c.getId(), c.close());
+            ChannelFuture f = c.newFuture();
+            c.close(f);
+            futures.put(c.id(), f);
         }
 
         return new DefaultChannelGroupFuture(this, futures);
@@ -197,55 +200,14 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             new LinkedHashMap<Integer, ChannelFuture>(size());
 
         for (Channel c: serverChannels.values()) {
-            futures.put(c.getId(), c.disconnect().awaitUninterruptibly());
+            ChannelFuture f = c.newFuture();
+            c.disconnect(f);
+            futures.put(c.id(), f.awaitUninterruptibly());
         }
         for (Channel c: nonServerChannels.values()) {
-            futures.put(c.getId(), c.disconnect());
-        }
-
-        return new DefaultChannelGroupFuture(this, futures);
-    }
-
-    @Override
-    public ChannelGroupFuture setInterestOps(int interestOps) {
-        Map<Integer, ChannelFuture> futures =
-            new LinkedHashMap<Integer, ChannelFuture>(size());
-
-        for (Channel c: serverChannels.values()) {
-            futures.put(c.getId(), c.setInterestOps(interestOps).awaitUninterruptibly());
-        }
-        for (Channel c: nonServerChannels.values()) {
-            futures.put(c.getId(), c.setInterestOps(interestOps));
-        }
-
-        return new DefaultChannelGroupFuture(this, futures);
-    }
-
-    @Override
-    public ChannelGroupFuture setReadable(boolean readable) {
-        Map<Integer, ChannelFuture> futures =
-            new LinkedHashMap<Integer, ChannelFuture>(size());
-
-        for (Channel c: serverChannels.values()) {
-            futures.put(c.getId(), c.setReadable(readable).awaitUninterruptibly());
-        }
-        for (Channel c: nonServerChannels.values()) {
-            futures.put(c.getId(), c.setReadable(readable));
-        }
-
-        return new DefaultChannelGroupFuture(this, futures);
-    }
-
-    @Override
-    public ChannelGroupFuture unbind() {
-        Map<Integer, ChannelFuture> futures =
-            new LinkedHashMap<Integer, ChannelFuture>(size());
-
-        for (Channel c: serverChannels.values()) {
-            futures.put(c.getId(), c.unbind().awaitUninterruptibly());
-        }
-        for (Channel c: nonServerChannels.values()) {
-            futures.put(c.getId(), c.unbind());
+            ChannelFuture f = c.newFuture();
+            c.disconnect(f);
+            futures.put(c.id(), f);
         }
 
         return new DefaultChannelGroupFuture(this, futures);
@@ -258,28 +220,15 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
         if (message instanceof ChannelBuffer) {
             ChannelBuffer buf = (ChannelBuffer) message;
             for (Channel c: nonServerChannels.values()) {
-                futures.put(c.getId(), c.write(buf.duplicate()));
+                ChannelFuture f = c.newFuture();
+                c.write(buf.duplicate(), f);
+                futures.put(c.id(), f);
             }
         } else {
             for (Channel c: nonServerChannels.values()) {
-                futures.put(c.getId(), c.write(message));
-            }
-        }
-        return new DefaultChannelGroupFuture(this, futures);
-    }
-
-    @Override
-    public ChannelGroupFuture write(Object message, SocketAddress remoteAddress) {
-        Map<Integer, ChannelFuture> futures =
-            new LinkedHashMap<Integer, ChannelFuture>(size());
-        if (message instanceof ChannelBuffer) {
-            ChannelBuffer buf = (ChannelBuffer) message;
-            for (Channel c: nonServerChannels.values()) {
-                futures.put(c.getId(), c.write(buf.duplicate(), remoteAddress));
-            }
-        } else {
-            for (Channel c: nonServerChannels.values()) {
-                futures.put(c.getId(), c.write(message, remoteAddress));
+                ChannelFuture f = c.newFuture();
+                c.write(message, f);
+                futures.put(c.id(), f);
             }
         }
         return new DefaultChannelGroupFuture(this, futures);
