@@ -36,6 +36,17 @@ public final class ConversionUtil {
     }
 
     /**
+     * Converts the specified object into a long integer.
+     */
+    public static long toLong(Object value) {
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        } else {
+            return Long.parseLong(String.valueOf(value));
+        }
+    }
+
+    /**
      * Converts the specified object into a boolean.
      */
     public static boolean toBoolean(Object value) {
