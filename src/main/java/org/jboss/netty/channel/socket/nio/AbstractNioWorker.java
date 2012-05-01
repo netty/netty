@@ -684,9 +684,10 @@ abstract class AbstractNioWorker implements Worker {
                     } else {
                         cause = new ClosedChannelException();
                     }
-                    evt.getFuture().setFailure(cause);
                     fireExceptionCaught = true;
                 }
+                evt.getFuture().setFailure(cause);
+
                
             }
         }
