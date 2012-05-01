@@ -15,14 +15,11 @@
  */
 package io.netty.channel;
 
-import java.nio.ByteOrder;
-import java.util.Map;
-
-import io.netty.buffer.ChannelBuffer;
 import io.netty.buffer.ChannelBufferFactory;
-import io.netty.buffer.HeapChannelBufferFactory;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.socket.nio.NioSocketChannelConfig;
+
+import java.util.Map;
 
 /**
  * A set of configuration properties of a {@link Channel}.
@@ -92,38 +89,6 @@ public interface ChannelConfig {
      * @return {@code true} if and only if the property has been set
      */
     boolean setOption(String name, Object value);
-
-    /**
-     * Returns the default {@link ChannelBufferFactory} used to create a new
-     * {@link ChannelBuffer}.  The default is {@link HeapChannelBufferFactory}.
-     * You can specify a different factory to change the default
-     * {@link ByteOrder} for example.
-     */
-    ChannelBufferFactory getBufferFactory();
-
-    /**
-     * Sets the default {@link ChannelBufferFactory} used to create a new
-     * {@link ChannelBuffer}.  The default is {@link HeapChannelBufferFactory}.
-     * You can specify a different factory to change the default
-     * {@link ByteOrder} for example.
-     */
-    void setBufferFactory(ChannelBufferFactory bufferFactory);
-
-    /**
-     * Returns the {@link ChannelPipelineFactory} which will be used when
-     * a child channel is created.  If the {@link Channel} does not create
-     * a child channel, this property is not used at all, and therefore will
-     * be ignored.
-     */
-    ChannelPipelineFactory getPipelineFactory();
-
-    /**
-     * Sets the {@link ChannelPipelineFactory} which will be used when
-     * a child channel is created.  If the {@link Channel} does not create
-     * a child channel, this property is not used at all, and therefore will
-     * be ignored.
-     */
-    void setPipelineFactory(ChannelPipelineFactory pipelineFactory);
 
     /**
      * Returns the connect timeout of the channel in milliseconds.  If the
