@@ -37,7 +37,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
 
     private final Channel channel;
-    private final ChannelFuture succeededFuture;
     private volatile DefaultChannelHandlerContext head;
     private volatile DefaultChannelHandlerContext tail;
     private final Map<String, DefaultChannelHandlerContext> name2ctx =
@@ -48,16 +47,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             throw new NullPointerException("channel");
         }
         this.channel = channel;
-        succeededFuture = new SucceededChannelFuture(channel);
     }
 
     @Override
     public Channel channel() {
         return channel;
-    }
-
-    ChannelFuture succeededFuture() {
-        return succeededFuture;
     }
 
     @Override
@@ -1138,17 +1132,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public ChannelFuture newFuture() {
-            return new DefaultChannelFuture(channel(), false);
+            return channel().newFuture();
         }
 
         @Override
         public ChannelFuture newSucceededFuture() {
-            return succeededFuture();
+            return channel().newSucceededFuture();
         }
 
         @Override
         public ChannelFuture newFailedFuture(Throwable cause) {
-            return new FailedChannelFuture(channel(), cause);
+            return channel().newFailedFuture(cause);
         }
     }
 }

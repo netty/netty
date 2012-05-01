@@ -53,8 +53,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final Integer id;
     private final Channel parent;
     private final Unsafe unsafe;
-    private final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(this);
+    private final ChannelPipeline pipeline = new DefaultChannelPipeline(this);
     private final List<ChannelFutureListener> closureListeners = new ArrayList<ChannelFutureListener>(4);
+    private final ChannelFuture succeededFuture = new SucceededChannelFuture(this);
 
     private volatile EventLoop eventLoop;
     private volatile boolean notifiedClosureListeners;
@@ -160,6 +161,24 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         pipeline.write(message, future);
     }
 
+
+
+    @Override
+    public ChannelFuture newFuture() {
+        return new DefaultChannelFuture(this, false);
+    }
+
+    @Override
+    public ChannelFuture newSucceededFuture() {
+        return succeededFuture;
+    }
+
+    @Override
+    public ChannelFuture newFailedFuture(Throwable cause) {
+        return new FailedChannelFuture(this, cause);
+    }
+
+
     @Override
     public void addClosureListener(final ChannelFutureListener listener) {
         if (listener == null) {
@@ -175,6 +194,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 });
             } else {
                 closureListeners.add(listener);
+            }
+        }
+    }
+
+    @Override
+    public void removeClosureListener(ChannelFutureListener listener) {
+        if (listener == null) {
+            throw new NullPointerException("listener");
+        }
+        synchronized (closureListeners) {
+            if (!notifiedClosureListeners) {
+                closureListeners.remove(listener);
             }
         }
     }
@@ -205,7 +236,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private void notifyClosureListener(final ChannelFutureListener listener) {
         try {
-            listener.operationComplete(pipeline.succeededFuture());
+            listener.operationComplete(newSucceededFuture());
         } catch (Exception e) {
             logger.warn("Failed to notify a closure listener.", e);
         }

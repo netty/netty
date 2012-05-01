@@ -106,7 +106,7 @@ import java.nio.channels.SelectionKey;
  *
  * @apiviz.exclude ^io\.netty\.channel\.([a-z]+\.)+[^\.]+Channel$
  */
-public interface Channel extends AttributeMap, Comparable<Channel> {
+public interface Channel extends AttributeMap, ChannelFutureFactory, Comparable<Channel> {
 
     /**
      * Returns the unique integer ID of this channel.
@@ -176,6 +176,7 @@ public interface Channel extends AttributeMap, Comparable<Channel> {
     void write(Object message, ChannelFuture future);
 
     void addClosureListener(ChannelFutureListener listener);
+    void removeClosureListener(ChannelFutureListener remover);
 
     Unsafe unsafe();
 

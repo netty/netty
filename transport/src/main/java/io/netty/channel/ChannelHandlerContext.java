@@ -18,6 +18,8 @@ package io.netty.channel;
 
 import io.netty.util.AttributeMap;
 
+import java.nio.channels.Channels;
+
 /**
  * Enables a {@link ChannelHandler} to interact with its {@link ChannelPipeline}
  * and other handlers.  A handler can send a {@link ChannelEvent} upstream or
@@ -120,7 +122,7 @@ import io.netty.util.AttributeMap;
  * pipeline,  and how to handle the event in your application.
  * @apiviz.owns io.netty.channel.ChannelHandler
  */
-public interface ChannelHandlerContext extends AttributeMap, ChannelHandlerInvoker {
+public interface ChannelHandlerContext extends AttributeMap, ChannelHandlerInvoker, ChannelFutureFactory {
     Channel channel();
     ChannelPipeline pipeline();
 
@@ -129,8 +131,4 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelHandlerInvok
 
     boolean canHandleInbound();
     boolean canHandleOutbound();
-
-    ChannelFuture newFuture();
-    ChannelFuture newSucceededFuture();
-    ChannelFuture newFailedFuture(Throwable cause);
 }
