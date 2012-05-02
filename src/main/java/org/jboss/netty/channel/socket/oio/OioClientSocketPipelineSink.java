@@ -18,7 +18,6 @@ package org.jboss.netty.channel.socket.oio;
 import static org.jboss.netty.channel.Channels.*;
 
 import java.io.PushbackInputStream;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 
@@ -31,7 +30,6 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
-import org.jboss.netty.util.internal.SocketUtil;
 
 class OioClientSocketPipelineSink extends AbstractOioChannelSink {
 
@@ -104,8 +102,6 @@ class OioClientSocketPipelineSink extends AbstractOioChannelSink {
         future.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
 
         try {
-            remoteAddress = SocketUtil.stripZoneId((InetSocketAddress) remoteAddress);
-
             channel.socket.connect(
                     remoteAddress, channel.getConfig().getConnectTimeoutMillis());
             connected = true;

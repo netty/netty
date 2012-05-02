@@ -19,7 +19,6 @@ import static org.jboss.netty.channel.Channels.*;
 
 import java.io.IOException;
 import java.net.ConnectException;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
@@ -45,7 +44,6 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import org.jboss.netty.util.internal.DeadLockProofWorker;
 import org.jboss.netty.util.internal.QueueFactory;
-import org.jboss.netty.util.internal.SocketUtil;
 
 class NioClientSocketPipelineSink extends AbstractNioChannelSink {
 
@@ -138,7 +136,6 @@ class NioClientSocketPipelineSink extends AbstractNioChannelSink {
             final NioClientSocketChannel channel, final ChannelFuture cf,
             SocketAddress remoteAddress) {
         try {
-            remoteAddress = SocketUtil.stripZoneId((InetSocketAddress) remoteAddress);
             if (channel.channel.connect(remoteAddress)) {
                 channel.worker.register(channel, cf);
             } else {
