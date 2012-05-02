@@ -115,9 +115,9 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         int written = 0;
         while (written < size) {
             written += localfileChannel.write(byteBuffer);
-            localfileChannel.force(false);
         }
         buffer.readerIndex(buffer.readerIndex() + written);
+        localfileChannel.force(false);
         localfileChannel.close();
         completed = true;
     }
@@ -141,7 +141,6 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             }
             while (written < localsize) {
                 written += fileChannel.write(byteBuffer);
-                fileChannel.force(false);
             }
             size += localsize;
             buffer.readerIndex(buffer.readerIndex() + written);
@@ -154,6 +153,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 FileOutputStream outputStream = new FileOutputStream(file);
                 fileChannel = outputStream.getChannel();
             }
+            fileChannel.force(false);
             fileChannel.close();
             fileChannel = null;
             completed = true;
@@ -191,9 +191,10 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         while (read > 0) {
             byteBuffer.position(read).flip();
             written += localfileChannel.write(byteBuffer);
-            localfileChannel.force(false);
             read = inputStream.read(bytes);
         }
+        localfileChannel.force(false);
+        localfileChannel.close());
         size = written;
         if (definedSize > 0 && definedSize < size) {
             file.delete();
@@ -288,6 +289,8 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             FileChannel in = inputStream.getChannel();
             FileChannel out = outputStream.getChannel();
             long destsize = in.transferTo(0, size, out);
+            in.close();
+            out.close();
             if (destsize == size) {
                 file.delete();
                 file = dest;
