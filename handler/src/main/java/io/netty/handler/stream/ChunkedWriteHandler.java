@@ -77,7 +77,7 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
 
     private final Queue<MessageEvent> queue = QueueFactory.createQueue(MessageEvent.class);
 
-    private ChannelHandlerContext ctx;
+    private volatile ChannelHandlerContext ctx;
     private MessageEvent currentEvent;
 
     /**
