@@ -190,8 +190,10 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
     }
 
     private void flush(ChannelHandlerContext ctx, boolean fireNow) {
+        boolean acquired = false;
+        
         // use CAS to see if the have flush already running, if so we don't need to take futher actions
-        if (flush.compareAndSet(false, true)) {
+        if (acquired = flush.compareAndSet(false, true)) {
             try {
                 
                 final Channel channel = ctx.getChannel();
@@ -286,7 +288,11 @@ public class ChunkedWriteHandler implements ChannelUpstreamHandler, ChannelDowns
                 // mark the flush as done
                 flush.set(false);
             }
-
+        }
+        
+        Channel channel = ctx.getChannel();
+        if (acquired && !channel.isConnected() || (channel.isWritable() && !queue.isEmpty())) {
+            flush(ctx, fireNow);
         }
     }
 
