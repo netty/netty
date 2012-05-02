@@ -851,7 +851,7 @@ public class HttpPostRequestDecoder {
         }
 
         while (sao.pos < sao.limit) {
-            char c = (char) sao.bytes[sao.pos ++];
+            char c = (char) ()sao.bytes[sao.pos ++] & 0xFF);
             if (!Character.isISOControl(c) && !Character.isWhitespace(c)) {
                 sao.setReadPosition(1);
                 return;
