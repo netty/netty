@@ -52,7 +52,22 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
+    protected ChannelBufferHolder<Object> firstOut() {
+        return out;
+    }
+
+    @Override
+    protected SocketAddress remoteAddress0() {
+        return null;
+    }
+
+    @Override
     protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future) {
+        future.setFailure(new UnsupportedOperationException());
+    }
+
+    @Override
+    protected void doFinishConnect(ChannelFuture future) {
         future.setFailure(new UnsupportedOperationException());
     }
 

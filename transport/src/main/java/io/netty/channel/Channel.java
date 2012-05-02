@@ -175,6 +175,8 @@ public interface Channel extends AttributeMap, ChannelFutureFactory, Comparable<
     void flush(ChannelFuture future);
     void write(Object message, ChannelFuture future);
 
+    // FIXME: Introduce more flexible channel state notification mechanism
+    //        - notify me when channel becomes (un)registered, (in)active
     void addClosureListener(ChannelFutureListener listener);
     void removeClosureListener(ChannelFutureListener remover);
 
@@ -190,6 +192,7 @@ public interface Channel extends AttributeMap, ChannelFutureFactory, Comparable<
         void register(EventLoop eventLoop, ChannelFuture future);
         void bind(SocketAddress localAddress, ChannelFuture future);
         void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future);
+        void finishConnect();
         void disconnect(ChannelFuture future);
         void close(ChannelFuture future);
         void deregister(ChannelFuture future);

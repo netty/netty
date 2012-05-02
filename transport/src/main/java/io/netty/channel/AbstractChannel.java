@@ -58,7 +58,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final ChannelFuture succeededFuture = new SucceededChannelFuture(this);
 
     private volatile EventLoop eventLoop;
+    private volatile boolean registered;
     private volatile boolean notifiedClosureListeners;
+    private ChannelFuture connectFuture;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -114,6 +116,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public EventLoop eventLoop() {
         return eventLoop;
+    }
+
+    @Override
+    public boolean isRegistered() {
+        return registered;
     }
 
     @Override
@@ -210,10 +217,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
-    /**
-     * A {@link Channel} implementation must call this method when it is closed.
-     */
-    protected void notifyClosureListeners() {
+    private void notifyClosureListeners() {
         final ChannelFutureListener[] array;
         synchronized (closureListeners) {
             if (notifiedClosureListeners) {
@@ -382,6 +386,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             assert eventLoop().inEventLoop();
             doRegister(future);
+            assert future.isDone();
+            if (registered = future.isSuccess()) {
+                pipeline().fireChannelRegistered();
+            }
         }
 
         @Override
@@ -400,16 +408,30 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelFuture future) {
+            // XXX: What if a user makes a connection attempt twice?
             if (eventLoop().inEventLoop()) {
                 doConnect(remoteAddress, localAddress, future);
+                if (!future.isDone()) {
+                    connectFuture = future;
+                }
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
                         doConnect(remoteAddress, localAddress, future);
+                        if (!future.isDone()) {
+                            connectFuture = future;
+                        }
                     }
                 });
             }
+        }
+
+        @Override
+        public void finishConnect() {
+            assert eventLoop().inEventLoop();
+            assert connectFuture != null;
+            doFinishConnect(connectFuture);
         }
 
         @Override
@@ -430,11 +452,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public void close(final ChannelFuture future) {
             if (eventLoop().inEventLoop()) {
                 doClose(future);
+                notifyClosureListeners();
             } else {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
                         doClose(future);
+                        notifyClosureListeners();
                     }
                 });
             }
@@ -446,6 +470,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 try {
                     doDeregister(future);
                 } finally {
+                    registered = false;
+                    pipeline().fireChannelUnregistered();
                     eventLoop = null;
                 }
             } else {
@@ -455,6 +481,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         try {
                             doDeregister(future);
                         } finally {
+                            registered = false;
+                            pipeline().fireChannelUnregistered();
                             eventLoop = null;
                         }
                     }
@@ -493,6 +521,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract void doRegister(ChannelFuture future);
     protected abstract void doBind(SocketAddress localAddress, ChannelFuture future);
     protected abstract void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelFuture future);
+    protected abstract void doFinishConnect(ChannelFuture future);
     protected abstract void doDisconnect(ChannelFuture future);
     protected abstract void doClose(ChannelFuture future);
     protected abstract void doDeregister(ChannelFuture future);

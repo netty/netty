@@ -15,54 +15,32 @@
  */
 package io.netty.channel.socket.nio;
 
-import static io.netty.channel.Channels.*;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.channels.ServerSocketChannel;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
 import io.netty.channel.AbstractServerChannel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelSink;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.logging.InternalLogger;
 import io.netty.logging.InternalLoggerFactory;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.ServerSocketChannel;
+
 final class NioServerSocketChannel extends AbstractServerChannel
-                             implements io.netty.channel.socket.ServerSocketChannel, NioChannel {
+                             implements io.netty.channel.socket.ServerSocketChannel {
 
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
-    final ServerSocketChannel socket;
-    final Lock shutdownLock = new ReentrantLock();
-    final NioWorker worker;
-    final WorkerPool<NioWorker> workers;
-    
-    
+    private final ServerSocketChannel socket;
     private final ServerSocketChannelConfig config;
+    private volatile InetSocketAddress localAddress;
+    private volatile SelectionKey selectionKey;
 
-    static NioServerSocketChannel create(ChannelFactory factory,
-            ChannelPipeline pipeline, ChannelSink sink, NioWorker worker, WorkerPool<NioWorker> workers) {
-        NioServerSocketChannel instance =
-                new NioServerSocketChannel(factory, pipeline, sink, worker, workers);
-        fireChannelOpen(instance);
-        return instance;
-    }
-
-    private NioServerSocketChannel(
-            ChannelFactory factory,
-            ChannelPipeline pipeline,
-            ChannelSink sink, NioWorker worker, WorkerPool<NioWorker> workers) {
-
-        super(factory, pipeline, sink);
-        this.worker = worker;
-        this.workers = workers;
+    public NioServerSocketChannel() {
         try {
             socket = ServerSocketChannel.open();
         } catch (IOException e) {
@@ -90,32 +68,114 @@ final class NioServerSocketChannel extends AbstractServerChannel
     }
 
     @Override
-    public ServerSocketChannelConfig getConfig() {
+    public ServerSocketChannelConfig config() {
         return config;
     }
 
     @Override
-    public InetSocketAddress getLocalAddress() {
-        return (InetSocketAddress) socket.socket().getLocalSocketAddress();
+    public boolean isActive() {
+        // TODO Auto-generated method stub
+        return false;
     }
 
     @Override
-    public InetSocketAddress getRemoteAddress() {
+    public InetSocketAddress localAddress() {
+        InetSocketAddress localAddress = this.localAddress;
+        if (localAddress == null) {
+            try {
+                this.localAddress = localAddress =
+                    (InetSocketAddress) unsafe().localAddress();
+            } catch (Throwable t) {
+                // Sometimes fails on a closed socket in Windows.
+                return null;
+            }
+        }
+        return localAddress;
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
         return null;
     }
 
     @Override
-    public boolean isBound() {
-        return isOpen() && socket.socket().isBound();
+    protected java.nio.channels.ServerSocketChannel javaChannel() {
+        return socket;
     }
 
     @Override
-    protected boolean setClosed() {
-        return super.setClosed();
+    protected SocketAddress localAddress0() {
+        return socket.socket().getLocalSocketAddress();
     }
 
     @Override
-    public NioWorker getWorker() {
-        return worker;
+    protected void doRegister(ChannelFuture future) {
+        if (!(eventLoop() instanceof SelectorEventLoop)) {
+            throw new ChannelException("unsupported event loop: " + eventLoop().getClass().getName());
+        }
+
+        SelectorEventLoop loop = (SelectorEventLoop) eventLoop();
+        try {
+            selectionKey = javaChannel().register(loop.selector, javaChannel().validOps(), this);
+        } catch (Exception e) {
+            throw new ChannelException("failed to register a channel", e);
+        }
+    }
+
+    @Override
+    protected void doBind(SocketAddress localAddress, ChannelFuture future) {
+        try {
+            javaChannel().socket().bind(localAddress);
+            future.setSuccess();
+            pipeline().fireChannelActive();
+        } catch (Exception e) {
+            future.setFailure(e);
+        }
+    }
+
+    @Override
+    protected void doClose(ChannelFuture future) {
+        try {
+            javaChannel().close();
+        } catch (Exception e) {
+            logger.warn("Failed to close a channel.", e);
+        }
+
+        future.setSuccess();
+        pipeline().fireChannelInactive();
+
+        if (isRegistered()) {
+            deregister(null);
+        }
+    }
+
+    @Override
+    protected void doDeregister(ChannelFuture future) {
+        try {
+            selectionKey.cancel();
+            future.setSuccess();
+            pipeline().fireChannelUnregistered();
+        } catch (Exception e) {
+            future.setFailure(e);
+        }
+    }
+
+    @Override
+    protected int doRead() {
+        int acceptedConns = 0;
+        for (;;) {
+            try {
+                java.nio.channels.SocketChannel ch = javaChannel().accept();
+                if (ch == null) {
+                    break;
+                }
+                pipeline().nextIn().messageBuffer().add(new NioSocketChannel(this, ch));
+            } catch (ChannelException e) {
+                pipeline().fireExceptionCaught(e);
+            } catch (Exception e) {
+                pipeline().fireExceptionCaught(new ChannelException("failed to accept a connection", e));
+            }
+        }
+        return acceptedConns;
     }
 }

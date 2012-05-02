@@ -17,41 +17,21 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectableChannel;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.nio.channels.SelectionKey;
 
 public abstract class AbstractNioChannel extends AbstractChannel {
 
-    /**
-     * Indicates if there is a {@link WriteTask} in the task queue.
-     */
-    final AtomicBoolean writeTaskInTaskQueue = new AtomicBoolean();
-
-    /**
-     * Keeps track of the number of bytes that the {@link WriteRequestQueue} currently
-     * contains.
-     */
-    final AtomicInteger writeBufferSize = new AtomicInteger();
-
-    /**
-     * Keeps track of the highWaterMark.
-     */
-    final AtomicInteger highWaterMarkCounter = new AtomicInteger();
-
-    /**
-     * Boolean that indicates that write operation is in progress.
-     */
-    protected boolean inWriteNowLoop;
-    protected boolean writeSuspended;
-
+    private final SelectableChannel ch;
 
     private volatile InetSocketAddress localAddress;
-    volatile InetSocketAddress remoteAddress;
+    private volatile InetSocketAddress remoteAddress;
 
-    private final SelectableChannel ch;
+    private volatile SelectionKey selectionKey;
 
     protected AbstractNioChannel(Integer id, Channel parent, SelectableChannel ch) {
         super(id, parent);
@@ -66,6 +46,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     @Override
     protected SelectableChannel javaChannel() {
         return ch;
+    }
+
+    protected SelectionKey selectionKey() {
+        assert selectionKey != null;
+        return selectionKey;
     }
 
     @Override
@@ -100,4 +85,18 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     public abstract NioChannelConfig config();
+
+    @Override
+    protected void doRegister(ChannelFuture future) {
+        if (!(eventLoop() instanceof SelectorEventLoop)) {
+            throw new ChannelException("unsupported event loop: " + eventLoop().getClass().getName());
+        }
+
+        SelectorEventLoop loop = (SelectorEventLoop) eventLoop();
+        try {
+            selectionKey = javaChannel().register(loop.selector, javaChannel().validOps() & ~SelectionKey.OP_WRITE, this);
+        } catch (Exception e) {
+            throw new ChannelException("failed to register a channel", e);
+        }
+    }
 }
